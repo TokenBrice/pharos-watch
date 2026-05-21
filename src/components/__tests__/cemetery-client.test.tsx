@@ -8,6 +8,10 @@ vi.mock("next/image", () => ({
   default: ({ alt, ...props }: ImgHTMLAttributes<HTMLImageElement>) => <img alt={alt} {...props} />,
 }));
 
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
+
 vi.mock("@shared/lib/dead-stablecoins", () => ({
   CAUSE_HEX: {
     "algorithmic-failure": "#ef4444",

@@ -401,15 +401,23 @@ export function KeyInfoCard({
                       <button
                         type="button"
                         onClick={() => copyContractAddress(quickCopyContract.chain, quickCopyContract.address)}
-                        className="pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                        className="pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
                         title="Copy address"
                         aria-label={`Copy ${chain?.name ?? quickCopyContract.chain} contract address`}
                       >
-                        {copiedChain === quickCopyContract.chain ? (
-                          <Check className="h-4 w-4 text-emerald-500" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
+                        <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                          <Copy
+                            className={`pharos-copy-icon absolute h-4 w-4 ${copiedChain === quickCopyContract.chain ? "opacity-0" : "opacity-100"}`}
+                            aria-hidden="true"
+                          />
+                          <Check
+                            className={`pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copiedChain === quickCopyContract.chain ? "opacity-100" : "opacity-0"}`}
+                            aria-hidden="true"
+                          />
+                          {copiedChain === quickCopyContract.chain ? (
+                            <span key={copiedChain} className="pharos-copy-ring" aria-hidden="true" />
+                          ) : null}
+                        </span>
                       </button>
                     </div>
                     {explorerUrl && (
@@ -482,15 +490,23 @@ export function KeyInfoCard({
                       </span>
                       <button
                         onClick={() => copyContractAddress(openContract.chain, openContract.address)}
-                        className="pharos-focus-ring inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+                        className="pharos-focus-ring relative inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
                         title="Copy address"
                         aria-label="Copy address"
                       >
-                        {copiedChain === openContract.chain ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-500" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
+                        <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+                          <Copy
+                            className={`pharos-copy-icon absolute h-3.5 w-3.5 ${copiedChain === openContract.chain ? "opacity-0" : "opacity-100"}`}
+                            aria-hidden="true"
+                          />
+                          <Check
+                            className={`pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copiedChain === openContract.chain ? "opacity-100" : "opacity-0"}`}
+                            aria-hidden="true"
+                          />
+                          {copiedChain === openContract.chain ? (
+                            <span key={copiedChain} className="pharos-copy-ring" aria-hidden="true" />
+                          ) : null}
+                        </span>
                       </button>
                     </div>
                     {explorerUrl && (

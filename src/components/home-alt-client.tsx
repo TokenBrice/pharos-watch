@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -21,6 +21,7 @@ import {
 import { HomeAltHero } from "@/components/home-alt-hero";
 import { HomeAltMiniCardGrid } from "@/components/home-alt-mini-card-grid";
 import { HomeAltCalloutStrip } from "@/components/home-alt-callout-strip";
+import { LazySection } from "@/components/lazy-section";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
@@ -52,8 +53,42 @@ const StablecoinTable = dynamic(
 const HOME_ALT_DEFAULT_COLUMNS: readonly ColumnId[] = ALL_COLUMNS.map((column) => column.id);
 const HOME_ALT_COLUMN_PREFERENCE_NAMESPACE = "pharos-home-alt-table-v2";
 
+/**
+ * M14 — force-mount below-fold panels when the URL carries an anchor so the
+ * browser can resolve the scroll target. Hash changes during the session
+ * don't matter; the lazy gate has long since unmounted by then.
+ */
+function useHashTargetForceMount() {
+  const [forced, setForced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash && window.location.hash !== "#") {
+      // One-shot setState that runs only when the URL arrives with a hash.
+      // The empty dep array guarantees it never re-fires, so the cascade
+      // lint rule is a false positive here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForced(true);
+    }
+  }, []);
+  return forced;
+}
+
+function BelowFold({
+  forced,
+  minHeight,
+  children,
+}: {
+  forced: boolean;
+  minHeight: number;
+  children: React.ReactNode;
+}) {
+  if (forced) return <>{children}</>;
+  return <LazySection minHeight={minHeight}>{children}</LazySection>;
+}
+
 export function HomeAltClient() {
   const filters = useHomeAltFilters();
+  const hashTargetForcesMount = useHashTargetForceMount();
   const { data: stablecoinsData, isLoading } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData } = usePegSummary();
@@ -85,16 +120,18 @@ export function HomeAltClient() {
       </div>
 
       {/* Editorial band — single hairline divides it from the dashboard above */}
-      <section
-        aria-label="Daily digest"
-        className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3"
-      >
-        <DailyDigest variant="preview" />
-      </section>
+      <BelowFold forced={hashTargetForcesMount} minHeight={220}>
+        <section
+          aria-label="Daily digest"
+          className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3"
+        >
+          <DailyDigest variant="preview" />
+        </section>
 
-      <div className="mt-3 sm:mt-3.5">
-        <HomeAltCalloutStrip />
-      </div>
+        <div className="mt-3 sm:mt-3.5">
+          <HomeAltCalloutStrip />
+        </div>
+      </BelowFold>
 
       <section
         aria-labelledby="home-alt-rankings"

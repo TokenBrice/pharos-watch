@@ -92,13 +92,13 @@ export function PublicServiceSummarySection({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
               <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Successful Sync</div>
-              <div className="mt-2 font-mono text-sm text-foreground">
+              <div className="mt-2 pharos-numeric text-sm text-foreground">
                 {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
               </div>
             </div>
             <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
               <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Rollup</div>
-              <div className="mt-2 font-mono text-sm text-foreground">
+              <div className="mt-2 pharos-numeric text-sm text-foreground">
                 {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
               </div>
             </div>
@@ -183,11 +183,11 @@ export function PublicServiceSummarySection({
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
               <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Subscribers</div>
-              <div className="mt-2 font-mono text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
+              <div className="mt-2 pharos-numeric text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
             </div>
             <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
               <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Dispatch</div>
-              <div className="mt-2 font-mono text-sm text-foreground">
+              <div className="mt-2 pharos-numeric text-sm text-foreground">
                 {telegramSummary.lastDispatchAt
                   ? formatTimestampSeconds(telegramSummary.lastDispatchAt)
                   : "No dispatch recorded"}

@@ -112,7 +112,7 @@ export function LiquidityClient() {
       {summaryStats && liquidityMap && <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />}
 
       {/* Filters + Leaderboard */}
-      <div className="space-y-3">
+      <section id="data" aria-label="Data table" tabIndex={-1} className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="pharos-kicker">Liquidity Leaderboard</h2>
           <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export function LiquidityClient() {
         </div>
 
         <LiquidityTable rows={scoredRows} logos={logos} searchQuery={deferredSearch} onRowClick={handleRowClick} />
-      </div>
+      </section>
 
       {unratedRows.length > 0 && (
         <div className="space-y-3">

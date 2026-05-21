@@ -848,7 +848,7 @@ export function PharosWatchBotMiniAppClient() {
               </span>
             </div>
           </div>
-          {startParam ? <p className="mt-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground">Launch intent: <span className="font-mono text-foreground">{startParam}</span></p> : null}
+          {startParam ? <p className="mt-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground">Launch intent: <span className="font-mono tabular-nums text-foreground">{startParam}</span></p> : null}
         </header>
 
         <span className="sr-only" aria-live="polite">{announcement}</span>

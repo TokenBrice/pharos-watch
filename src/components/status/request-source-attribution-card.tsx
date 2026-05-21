@@ -18,7 +18,7 @@ function metricRow(label: string, value: number) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-mono text-foreground">{formatCompactCount(value)}</span>
+      <span className="pharos-numeric text-foreground">{formatCompactCount(value)}</span>
     </div>
   );
 }
@@ -53,9 +53,9 @@ export function RequestSourceAttributionCard({
       description={
         <>
           Total request demand across same-origin{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">/_site-data/*</code>{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">/_site-data/*</code>{" "}
           and{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">api.pharos.watch</code>.
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">api.pharos.watch</code>.
           Site demand includes Pages cache hits plus website-owned public API keys; external excludes those keys.
         </>
       }
@@ -121,7 +121,7 @@ export function RequestSourceAttributionCard({
                           site {formatPercent(lane.siteSharePct, 1)} · external {formatPercent(lane.externalSharePct, 1)}
                         </div>
                       </div>
-                      <div className="font-mono text-sm text-foreground">{formatCompactCount(lane.totalRequests)}</div>
+                      <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(lane.totalRequests)}</div>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/70">
                       <div className="flex h-full">
@@ -154,11 +154,11 @@ export function RequestSourceAttributionCard({
                   <div key={route.routeKey} className="rounded-lg border border-border/50 bg-background/40 px-3 py-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="truncate font-mono text-xs text-foreground">{route.routePath}</div>
+                        <div className="truncate font-mono tabular-nums text-xs text-foreground">{route.routePath}</div>
                         <div className="text-[11px] text-muted-foreground">{route.routeKey}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-mono text-sm text-foreground">{formatCompactCount(route.totalRequests)}</div>
+                        <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(route.totalRequests)}</div>
                         <div className="text-[11px] text-muted-foreground">ext {formatPercent(route.externalSharePct, 1)}</div>
                       </div>
                     </div>
@@ -190,8 +190,8 @@ export function RequestSourceAttributionCard({
                 {buckets.length > 0 ? buckets.slice(-8).map((bucket) => (
                   <div key={bucket.bucketStart} className="space-y-1">
                     <div className="flex items-center justify-between gap-2 text-[11px]">
-                      <span className="font-mono text-muted-foreground">{formatBucketLabel(bucket.bucketStart)}</span>
-                      <span className="font-mono text-foreground">{formatCompactCount(bucket.totalRequests)}</span>
+                      <span className="pharos-numeric text-muted-foreground">{formatBucketLabel(bucket.bucketStart)}</span>
+                      <span className="pharos-numeric text-foreground">{formatCompactCount(bucket.totalRequests)}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-muted/70">
                       <div className="flex h-full">

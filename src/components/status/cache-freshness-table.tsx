@@ -86,7 +86,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     return (
       <tr key={key} className="border-b last:border-0">
         <td className="py-2 align-top">
-          <div className="font-mono text-xs">{key}</div>
+          <div className="font-mono tabular-nums text-xs">{key}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
             availability budget {formatElapsedSeconds(cache.availabilityMaxAge ?? cache.maxAge)}
           </div>
@@ -95,7 +95,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         <td className="py-2 align-top text-xs">{describeProducer(cache)}</td>
         <td className="py-2 align-top">
           <div>{cache.ageSeconds != null ? formatElapsedSeconds(cache.ageSeconds) : "—"}</div>
-          <div className="mt-1 font-mono text-xs text-muted-foreground">
+          <div className="mt-1 pharos-numeric text-xs text-muted-foreground">
             {band.ratio != null ? `${band.ratio.toFixed(2)}x` : "—"}
           </div>
         </td>

@@ -12,6 +12,7 @@ import { useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { usePreference } from "@/hooks/use-preferences";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
@@ -19,6 +20,8 @@ import { DepegTrackerTable } from "@/components/depeg-tracker-table";
 import { DEWSSummary } from "@/components/dews-summary";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { PegHeatmap } from "@/components/peg-heatmap";
+import { PegDeviationStrip } from "@/components/peg-deviation-strip";
+import { PegCohortRidge } from "@/components/peg-cohort-ridge";
 import { DepegFeed } from "@/components/depeg-feed";
 import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
 import { trackEvent, trackSearch } from "@/lib/analytics";
@@ -60,6 +63,9 @@ export function DepegClient() {
   } = useInfiniteDepegEvents({ includePending: true });
   const { data: logos } = useLogos();
   const router = useRouter();
+
+  // Heatmap-vs-strip view preference (council D12). Default = grid.
+  const [depegView, setDepegView] = usePreference<string>("pharos-depeg-view", "grid");
 
   // Unified filter state (shared by table + heatmap)
   const { getParam, setParam } = useUrlFilters();
@@ -236,9 +242,14 @@ export function DepegClient() {
         </div>
       </div>
 
+      {/* Cohort deviation shape (Council D15) — standalone ridge plot */}
+      <SectionErrorBoundary name="cohort-ridge">
+        <PegCohortRidge coins={pegData?.coins ?? []} />
+      </SectionErrorBoundary>
+
       {/* Filters + Table */}
       <SectionErrorBoundary name="depeg-table">
-        <div className="space-y-3">
+        <section id="data" aria-label="Data table" tabIndex={-1} className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="pharos-kicker">Leaderboard and heatmap filters</h2>
             <div className="flex flex-wrap items-center gap-3">
@@ -284,7 +295,7 @@ export function DepegClient() {
             logos={logos}
             onRowClick={handleRowClick}
           />
-        </div>
+        </section>
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="active-depeg-feed">
@@ -320,21 +331,44 @@ export function DepegClient() {
         </div>
       </SectionErrorBoundary>
 
-      {/* Peg Heatmap (moved from homepage) — shares filter state */}
+      {/* Peg Heatmap (moved from homepage) — shares filter state.
+          Council D12: Grid / Strip view toggle, default = grid. */}
       <SectionErrorBoundary name="heatmap">
-        <PegHeatmap
-          coins={filteredPegCoins}
-          logos={logos}
-          isLoading={isPegLoading}
-          pegFilter={pegFilter}
-          typeFilter={typeFilter}
-          onPegFilterChange={setPegFilter}
-          onTypeFilterChange={setTypeFilter}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          fallbackPegTypes={pegData?.summary?.fallbackPegRates}
-          hideFilters
-        />
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <ToggleGroup
+              type="single"
+              value={depegView}
+              onValueChange={(v) => v && setDepegView(v)}
+              className="flex gap-1"
+              aria-label="Live peg deviation view"
+            >
+              <ToggleGroupItem value="grid" variant="outline" size="sm" className="text-xs">
+                Grid
+              </ToggleGroupItem>
+              <ToggleGroupItem value="strip" variant="outline" size="sm" className="text-xs">
+                Strip
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          {depegView === "strip" ? (
+            <PegDeviationStrip coins={filteredPegCoins} />
+          ) : (
+            <PegHeatmap
+              coins={filteredPegCoins}
+              logos={logos}
+              isLoading={isPegLoading}
+              pegFilter={pegFilter}
+              typeFilter={typeFilter}
+              onPegFilterChange={setPegFilter}
+              onTypeFilterChange={setTypeFilter}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              fallbackPegTypes={pegData?.summary?.fallbackPegRates}
+              hideFilters
+            />
+          )}
+        </div>
       </SectionErrorBoundary>
 
     </div>

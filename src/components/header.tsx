@@ -88,8 +88,8 @@ export function Header() {
         <Link href="/" className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold">
           <PharosLogo size={32} priority />
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="text-[1.05rem] font-mono uppercase tracking-[0.18em]">PHAROS</span>
-            <span className="truncate text-[10px] font-mono lowercase tracking-[0.08em] text-muted-foreground/80">
+            <span className="text-[1.05rem] font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</span>
+            <span className="truncate text-[10px] font-mono tabular-nums lowercase tracking-[0.08em] text-muted-foreground/80">
               live stablecoin signals
             </span>
           </span>
@@ -122,7 +122,7 @@ export function Header() {
             <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
               <Link href="/" onClick={() => setOpen(false)} className="pharos-focus-ring flex items-center gap-3 rounded-md">
                 <PharosLogo size={28} />
-                <SheetTitle className="text-lg font-mono uppercase tracking-[0.18em]">PHAROS</SheetTitle>
+                <SheetTitle className="text-lg font-mono tabular-nums uppercase tracking-[0.18em]">PHAROS</SheetTitle>
               </Link>
               <SheetDescription className="sr-only">
                 Main navigation for Pharos dashboard routes, monitoring tools, references, and companion experiences.

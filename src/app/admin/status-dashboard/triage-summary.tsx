@@ -175,7 +175,7 @@ export function TriageSummary({
                         {cause.severity}
                       </span>
                       <span className="text-[11px] text-muted-foreground">{cause.layer}</span>
-                      <span className="font-mono text-[11px] text-muted-foreground">{cause.code}</span>
+                      <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{cause.code}</span>
                     </div>
                     <div className="mt-1.5 text-sm leading-relaxed text-foreground">{cause.message}</div>
                     {cause.runbookUrl && (

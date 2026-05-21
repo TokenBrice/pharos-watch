@@ -87,7 +87,7 @@ export function MethodologyVersionCard({
         </div>
         <ul className="flex flex-wrap gap-2 text-xs">
           {entry.commits.map((sha) => (
-            <li key={sha} className="rounded-full border border-border/50 bg-background/45 px-3 py-1 font-mono">
+            <li key={sha} className="rounded-full border border-border/50 bg-background/45 px-3 py-1 pharos-numeric">
               {sha}
             </li>
           ))}

@@ -143,29 +143,29 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
         </div>
       </div>
       <p className="text-muted-foreground">
-        APY: <span className="font-mono">{d.y.toFixed(2)}%</span>
+        APY: <span className="pharos-numeric">{d.y.toFixed(2)}%</span>
       </p>
       <p className="text-muted-foreground">
-        Benchmark: <span className="font-mono">{d.benchmarkRate.toFixed(2)}%</span>{" "}
+        Benchmark: <span className="pharos-numeric">{d.benchmarkRate.toFixed(2)}%</span>{" "}
         <span className="text-[11px]">({d.benchmarkLabel})</span>
       </p>
       <p className="text-muted-foreground">
         Excess:{" "}
-        <span className="font-mono">
+        <span className="pharos-numeric">
           {d.excessYield !== null ? `${d.excessYield >= 0 ? "+" : ""}${d.excessYield.toFixed(2)}%` : "—"}
         </span>
       </p>
       {d.isClipped && d.clipThreshold !== null ? (
         <p className="text-muted-foreground">
-          Chart rail: <span className="font-mono">&gt; {d.clipThreshold.toFixed(0)}%</span>
+          Chart rail: <span className="pharos-numeric">&gt; {d.clipThreshold.toFixed(0)}%</span>
         </p>
       ) : null}
       <p className="text-muted-foreground">
-        Safety: <span className="font-mono">{d.safetyGrade ?? "—"}</span> ({d.x}/100)
+        Safety: <span className="font-mono tabular-nums">{d.safetyGrade ?? "—"}</span> ({d.x}/100)
       </p>
       <p className="text-muted-foreground">Type: {YIELD_TYPE_LABELS[d.yieldType] ?? d.yieldType}</p>
       <p className="text-muted-foreground">
-        PYS: <span className="font-mono">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"}</span>
+        PYS: <span className="pharos-numeric">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"}</span>
       </p>
       <p className="text-muted-foreground">Source: {d.yieldSource}</p>
     </PharosChartTooltip>

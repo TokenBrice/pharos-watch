@@ -13,10 +13,12 @@ import { BlacklistStatusDrilldown } from "@/components/blacklist-status-drilldow
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
+import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-meter";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
+import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -87,6 +89,11 @@ export default function FreezeWatchClient() {
     pageSize,
   } = useFreezeWatchPageController();
 
+  const focusedCoin =
+    stablecoinFilter !== "all"
+      ? stablecoins?.find((coin) => coin.symbol === stablecoinFilter)
+      : null;
+
   return (
     <FeaturePageShell
       breadcrumbName="FreezeWatch"
@@ -106,6 +113,13 @@ export default function FreezeWatchClient() {
         </p>
       )}
     >
+      {focusedCoin ? (
+        <CoinCrossTrackerHatnote
+          coinId={focusedCoin.id}
+          coinSymbol={focusedCoin.symbol}
+          currentTracker="freezewatch"
+        />
+      ) : null}
       <QueryErrorNotice
         error={error}
         hasData={!!summary || events.length > 0}
@@ -119,6 +133,14 @@ export default function FreezeWatchClient() {
           { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta },
         ]}
       />
+
+      {stablecoinFilter !== "all" && coinIdBySymbol(stablecoinFilter) ? (
+        <CoinCrossTrackerHatnote
+          coinId={coinIdBySymbol(stablecoinFilter)!}
+          coinSymbol={stablecoinFilter}
+          currentTracker="freezewatch"
+        />
+      ) : null}
 
       <FreezeWatchSection
         eyebrow="Exposure"
@@ -184,15 +206,17 @@ export default function FreezeWatchClient() {
           </div>
         </div>
 
-        <BlacklistTable
-          events={events}
-          isLoading={pageLoading}
-          page={clampedPage}
-          pageSize={pageSize}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          onSortChange={handleSortChange}
-        />
+        <section id="data" aria-label="Data table" tabIndex={-1}>
+          <BlacklistTable
+            events={events}
+            isLoading={pageLoading}
+            page={clampedPage}
+            pageSize={pageSize}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
+          />
+        </section>
 
         {total > 0 && (
           <TablePagination

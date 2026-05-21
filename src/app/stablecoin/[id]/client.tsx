@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { BackToSource } from "@/components/back-to-source";
 import { ReportCardDetail } from "@/components/report-card";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -298,6 +299,7 @@ export default function StablecoinDetailClient({
 
   return (
     <div>
+      <BackToSource className="mb-2" />
       {viewModel.supplyError != null ? (
         <QueryErrorNotice
           error={viewModel.supplyError}
@@ -337,16 +339,15 @@ export default function StablecoinDetailClient({
       />
 
       {/* ── Navigation zone ──
-        Intentionally NOT wrapped in a div: position: sticky only sticks
-        within its containing block. A wrapper whose only child is this nav
-        would have zero extra height and the nav would scroll off immediately.
-        Keep this as a direct child of the outer detail container. */}
+        Banner scrollspy stays for <lg viewports; on lg+ the sticky right-rail
+        TOC inside the grid below takes over. Keep the breakpoint class on
+        the sticky element so a short wrapper does not constrain it. */}
       <LongformScrollspyNav
         sections={detailSections}
         railLabel="Jump to Section"
         navAriaLabel="Stablecoin detail section navigation"
         onActiveChange={setActiveBannerId}
-        className="mt-6"
+        className="mt-6 lg:hidden"
         rightSlot={
           <div className="hidden items-center gap-2 text-xs sm:flex">
             <Link
@@ -370,8 +371,11 @@ export default function StablecoinDetailClient({
         showDepthHint
       />
 
+      <div className="mt-6 lg:grid lg:grid-cols-[minmax(0,1fr)_14rem] lg:gap-10">
+      <div className="min-w-0">
+
       {/* ── Key Info ── */}
-      <div className="mt-6">
+      <div>
         <section id="info">
           <KeyInfoCard
             meta={viewModel.coin}
@@ -521,6 +525,20 @@ export default function StablecoinDetailClient({
           {exploreNextContent}
         </div>
       ) : null}
+
+      </div>{/* /min-w-0 content column */}
+
+      <aside className="hidden lg:block" aria-label="Section navigation">
+        <LongformScrollspyNav
+          sections={detailSections}
+          variant="rail"
+          railLabel="On this page"
+          navAriaLabel="Stablecoin detail section navigation"
+          onActiveChange={setActiveBannerId}
+        />
+      </aside>
+
+      </div>{/* /grid wrapper */}
 
       <FeedbackModal
         open={feedbackOpen}

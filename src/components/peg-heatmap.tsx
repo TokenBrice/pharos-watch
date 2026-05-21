@@ -173,7 +173,7 @@ export function PegHeatmap({
                     )}
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
                     <span className="text-xs font-medium truncate max-w-full">{coin.symbol}</span>
-                    <span className="inline-flex items-center gap-0.5 text-xs font-mono font-semibold">
+                    <span className="inline-flex items-center gap-0.5 text-xs pharos-numeric font-semibold">
                       <DeviationIcon absBps={absBps} className="h-2.5 w-2.5" />
                       {sign}{coin.currentDeviationBps}
                     </span>

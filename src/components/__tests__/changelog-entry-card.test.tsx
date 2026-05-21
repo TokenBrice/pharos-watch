@@ -1,6 +1,11 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
+
 import { ChangelogEntryCard } from "@/components/changelog-entry-card";
 import type { ChangelogEntry } from "@/data/changelogs/types";
 

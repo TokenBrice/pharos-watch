@@ -81,12 +81,12 @@ export function TransitionTimeline({
                         <th scope="row" className="py-2 text-left text-xs font-normal text-muted-foreground">
                           {new Date(transition.at * 1000).toLocaleString()}
                         </th>
-                        <td className="py-2 font-mono text-xs">
+                        <td className="py-2 font-mono tabular-nums text-xs">
                           {(transition.from ?? "init")} → {transition.to}
                         </td>
-                        <td className="py-2 font-mono text-xs">{transition.rawStatus}</td>
+                        <td className="py-2 font-mono tabular-nums text-xs">{transition.rawStatus}</td>
                         <td className="py-2 text-xs text-muted-foreground">{transition.reason}</td>
-                        <td className="py-2 font-mono text-xs">{(transition.confidence * 100).toFixed(1)}%</td>
+                        <td className="py-2 pharos-numeric text-xs">{(transition.confidence * 100).toFixed(1)}%</td>
                         <td className="py-2">
                           <button
                             type="button"
@@ -110,7 +110,7 @@ export function TransitionTimeline({
                                   <div key={`${transition.id}-${cause.code}`} className="rounded-md border border-border/60 px-3 py-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                       <SeverityPill severity={cause.severity} />
-                                      <span className="font-mono text-[11px] text-muted-foreground">{formatCause(cause)}</span>
+                                      <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{formatCause(cause)}</span>
                                     </div>
                                     <div className="mt-1 text-xs text-muted-foreground">{cause.message}</div>
                                   </div>

@@ -49,7 +49,7 @@ export function PharosLogoWithText({
       <PharosLogo size={size} priority={priority} />
       <span 
         className={cn(
-          "font-mono text-[1.05rem] font-semibold uppercase tracking-[0.18em]",
+          "font-mono tabular-nums text-[1.05rem] font-semibold uppercase tracking-[0.18em]",
           textClassName
         )}
       >

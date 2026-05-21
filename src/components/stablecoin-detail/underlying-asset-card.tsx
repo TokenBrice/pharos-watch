@@ -29,7 +29,7 @@ export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetC
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="text-sm font-semibold text-foreground">{parent.name}</span>
-            <span className="font-mono text-xs text-muted-foreground">{parent.symbol}</span>
+            <span className="font-mono tabular-nums text-xs text-muted-foreground">{parent.symbol}</span>
           </div>
           <p className="text-xs text-muted-foreground">
             Modeled as a {getVariantAccessibleLabel(kind).toLowerCase()} of {parent.symbol}.

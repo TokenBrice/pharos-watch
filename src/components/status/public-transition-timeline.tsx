@@ -79,11 +79,11 @@ export function PublicTransitionTimeline({
                   const toTone = getStatusTone(transition.to as "healthy" | "degraded" | "stale");
                   return (
                     <tr key={transition.id} className="border-b last:border-0">
-                      <td className="py-2.5 font-mono text-xs text-muted-foreground">
+                      <td className="py-2.5 pharos-numeric text-xs text-muted-foreground">
                         {new Date(transition.at * 1000).toLocaleString(undefined, { timeZoneName: "short" })}
                       </td>
                       <td className="py-2.5">
-                        <span className="font-mono text-xs">
+                        <span className="font-mono tabular-nums text-xs">
                           {transition.from ?? "init"} → {transition.to}
                         </span>
                       </td>

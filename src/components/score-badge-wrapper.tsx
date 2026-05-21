@@ -32,7 +32,7 @@ interface ScoreBadgeWrapperProps {
 }
 
 const SUFFIX_CLASS =
-  "ml-1 font-mono text-[10px] text-muted-foreground select-none";
+  "ml-1 pharos-numeric text-[10px] text-muted-foreground select-none";
 
 const ScoreBadgeTrigger = forwardRef<
   HTMLButtonElement,

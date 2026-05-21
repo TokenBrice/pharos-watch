@@ -143,7 +143,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
           />
         </section>
 
-        <section aria-labelledby="table-heading" className="order-3 md:order-2">
+        <section id="data" tabIndex={-1} aria-labelledby="table-heading" className="order-3 md:order-2">
           <h2 id="table-heading" className="pharos-kicker">
             Per-Coin Flows
           </h2>

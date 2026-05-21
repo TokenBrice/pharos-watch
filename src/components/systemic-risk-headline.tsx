@@ -39,7 +39,7 @@ export function SystemicRiskHeadline({ risks, logos, onOpenSimulator }: Systemic
               What happens if a major stablecoin fails?
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              <span className="font-mono font-semibold text-foreground">{formatCurrency(totalAtRisk)}</span>{" "}
+              <span className="pharos-numeric font-semibold text-foreground">{formatCurrency(totalAtRisk)}</span>{" "}
               in downstream supply depends on just {top3.length} coins.{" "}
               <button
                 type="button"
@@ -76,7 +76,7 @@ export function SystemicRiskHeadline({ risks, logos, onOpenSimulator }: Systemic
                   {risk.affectedCount} dependent{risk.affectedCount !== 1 ? "s" : ""}
                 </span>
               </div>
-              <span className="font-mono text-xs font-semibold text-muted-foreground">
+              <span className="pharos-numeric text-xs font-semibold text-muted-foreground">
                 {formatCurrency(risk.dependentSupplyAtRisk)}
               </span>
             </div>

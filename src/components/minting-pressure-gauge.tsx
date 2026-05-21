@@ -103,7 +103,7 @@ export function MintingPressureGauge({
           >
             {ui.label}
           </span>
-          <span className={cn("font-mono", ui.valueClass)}>
+          <span className={cn("pharos-numeric", ui.valueClass)}>
             {display == null ? "NR" : `${getNetPrefix(display)}${display} / 100`}
           </span>
         </div>

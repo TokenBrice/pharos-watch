@@ -130,7 +130,7 @@ export function NauticalChart({
         <HealthBandLegend />
       </div>
 
-      <p className="border-b border-border/60 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:hidden">
+      <p className="border-b border-border/60 px-4 py-2 font-mono tabular-nums text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:hidden">
         Swipe harbor chart horizontally. Tap a vessel to inspect the selected harbor below.
       </p>
 

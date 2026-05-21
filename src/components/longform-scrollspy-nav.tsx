@@ -21,6 +21,11 @@ interface LongformScrollspyNavProps {
   showDepthHint?: boolean;
   /** Called whenever the currently-in-view section changes. */
   onActiveChange?: (id: string) => void;
+  /**
+   * `banner` (default) renders a horizontal sticky bar.
+   * `rail` renders a thin vertical column intended for a sticky right-rail TOC.
+   */
+  variant?: "banner" | "rail";
 }
 
 const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
@@ -91,6 +96,7 @@ export function LongformScrollspyNav({
   className,
   showDepthHint,
   onActiveChange,
+  variant = "banner",
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -113,6 +119,13 @@ export function LongformScrollspyNav({
     if (!railNode || sectionNodes.length === 0) return;
 
     const applyScrollMargins = () => {
+      // When two scrollspy navs are mounted in different responsive contexts
+      // (banner on <lg, rail on lg+), the hidden instance has display:none and
+      // a zero-size bounding box. Skip writing scroll margins from the hidden
+      // instance so the visible one wins.
+      const railRect = railNode.getBoundingClientRect();
+      if (railRect.width === 0 && railRect.height === 0) return;
+
       const railOffset = getRailOffset(railNode);
       // `calc(...)` lets the mobile sticky summary's CSS var feed back into
       // scroll-margin reactively without a separate observer wiring.
@@ -175,12 +188,56 @@ export function LongformScrollspyNav({
 
   if (sections.length === 0) return null;
 
+  if (variant === "rail") {
+    return (
+      <div
+        ref={railRef}
+        className={cn(
+          "sticky top-[calc(env(safe-area-inset-top)+4.5rem)] w-[14rem] self-start",
+          className,
+        )}
+      >
+        <p className="px-2 pb-3 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          {railLabel}
+        </p>
+        <nav aria-label={navAriaLabel}>
+          <ul className="flex flex-col gap-px border-l border-border/60">
+            {sections.map((section) => {
+              const isActive = effectiveActiveId === section.id;
+              return (
+                <li key={section.id}>
+                  <a
+                    href={`#${section.id}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
+                      setActiveId(section.id);
+                    }}
+                    aria-current={isActive ? "true" : undefined}
+                    className={cn(
+                      "pharos-focus-ring relative -ml-px block truncate border-l py-1.5 pl-3 pr-2 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors",
+                      isActive
+                        ? "border-foreground text-foreground"
+                        : "border-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+                    )}
+                  >
+                    {section.label}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:top-0 md:mx-0 md:rounded-2xl md:px-4 md:py-2.5",
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:mx-0 md:rounded-2xl md:px-4 md:py-2.5",
           className,
         )}
       >

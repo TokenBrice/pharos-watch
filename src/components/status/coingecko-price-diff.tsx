@@ -86,7 +86,7 @@ export function CoinGeckoPriceDiffCard({
               >
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-medium text-foreground">{row.symbol}</span>
+                    <span className="font-mono tabular-nums text-sm font-medium text-foreground">{row.symbol}</span>
                     <span className="truncate text-sm text-muted-foreground">{row.name}</span>
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -97,7 +97,7 @@ export function CoinGeckoPriceDiffCard({
                   </div>
                 </div>
                 <span
-                  className={`rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium ${getDiffBadgeClass(row.diffPct)}`}
+                  className={`rounded-full border px-2.5 py-1 pharos-numeric text-[11px] font-medium ${getDiffBadgeClass(row.diffPct)}`}
                 >
                   {row.diffPct.toFixed(2)}%
                 </span>

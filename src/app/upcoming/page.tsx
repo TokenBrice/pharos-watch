@@ -77,7 +77,7 @@ export default function UpcomingPage() {
       >
         Want a launch alert instead of checking back manually? Send{" "}
         <span className="inline-flex items-center gap-1 align-middle">
-          <code className="rounded bg-background/70 px-1.5 py-0.5 text-xs font-mono text-foreground">
+          <code className="rounded bg-background/70 px-1.5 py-0.5 text-xs font-mono tabular-nums text-foreground">
             {GLOBAL_LAUNCH_ALERT_COMMAND}
           </code>
           <CopyButton

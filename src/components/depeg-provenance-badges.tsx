@@ -1,3 +1,5 @@
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 interface DepegProvenanceBadgesProps {
   pendingReason: string | null;
   confirmationSources: string | null;
@@ -56,35 +58,57 @@ export function DepegProvenanceBadges({
   reasonLeadingClass = "",
 }: DepegProvenanceBadgesProps) {
   if (!pendingReason && !confirmationSources && !source) return null;
+  const sourceTooltip = source === "live"
+    ? "Detected by the live depeg pipeline."
+    : "Inserted by historical backfill.";
   return (
-    <>
+    <TooltipProvider delayDuration={220}>
       {source ? (
-        <span
-          data-testid="event-source"
-          className={`${reasonLeadingClass} ${BADGE_CLASS}`.trim()}
-          title={source === "live" ? "Detected by the live depeg pipeline." : "Inserted by historical backfill."}
-        >
-          {source}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              data-testid="event-source"
+              className={`${reasonLeadingClass} ${BADGE_CLASS} cursor-help`.trim()}
+              aria-label={sourceTooltip}
+            >
+              {source}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="text-[11px]">{sourceTooltip}</TooltipContent>
+        </Tooltip>
       ) : null}
       {pendingReason ? (
-        <span
-          data-testid="event-pending-reason"
-          className={`${source ? "ml-1 " : reasonLeadingClass + " "}${BADGE_CLASS}`.trim()}
-          title="Reason this incident used the pending-confirmation path."
-        >
-          {labelReason(pendingReason)}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              data-testid="event-pending-reason"
+              className={`${source ? "ml-1 " : reasonLeadingClass + " "}${BADGE_CLASS} cursor-help`.trim()}
+              aria-label="Reason this incident used the pending-confirmation path."
+            >
+              {labelReason(pendingReason)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="text-[11px]">
+            Reason this incident used the pending-confirmation path.
+          </TooltipContent>
+        </Tooltip>
       ) : null}
       {confirmationSources ? (
-        <span
-          data-testid="event-confirmed-by"
-          className={`${pendingReason || source ? "ml-1 " : reasonLeadingClass + " "}${BADGE_CLASS}`.trim()}
-          title="Sources that corroborated the pending incident."
-        >
-          confirmed: {labelConfirmationSources(confirmationSources)}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              data-testid="event-confirmed-by"
+              className={`${pendingReason || source ? "ml-1 " : reasonLeadingClass + " "}${BADGE_CLASS} cursor-help`.trim()}
+              aria-label="Sources that corroborated the pending incident."
+            >
+              confirmed: {labelConfirmationSources(confirmationSources)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="text-[11px]">
+            Sources that corroborated the pending incident.
+          </TooltipContent>
+        </Tooltip>
       ) : null}
-    </>
+    </TooltipProvider>
   );
 }

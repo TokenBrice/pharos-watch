@@ -39,7 +39,7 @@ export function PageError({
         Dashboard
       </Link>
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-        <h2 className="text-2xl font-bold font-mono">{title}</h2>
+        <h2 className="text-2xl font-bold font-mono tabular-nums">{title}</h2>
         <p className="text-muted-foreground text-sm">{message}</p>
         <button
           onClick={handleRetry}

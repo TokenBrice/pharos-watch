@@ -122,7 +122,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-sm">{display.label}</CardTitle>
-            {display.label !== job && <CardDescription className="font-mono text-xs">{job}</CardDescription>}
+            {display.label !== job && <CardDescription className="font-mono tabular-nums text-xs">{job}</CardDescription>}
             {display.schedule && (
               <CardDescription className="text-xs text-muted-foreground">
                 {display.triggerMode === "isolated" ? "isolated trigger" : "shared trigger"} · {display.schedule}

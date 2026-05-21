@@ -42,7 +42,7 @@ export function SectionBanner({
       />
       <h2
         id={id}
-        className="scroll-mt-32 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] sm:text-[12px]"
+        className="scroll-mt-32 font-mono tabular-nums text-[11px] font-semibold uppercase tracking-[0.2em] sm:text-[12px]"
       >
         <a
           href={`#${id}`}

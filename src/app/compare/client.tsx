@@ -7,6 +7,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { useCompareSelection } from "@/hooks/use-compare-selection";
 import { useCompareDataModel } from "@/hooks/use-compare-data-model";
 import { useCompareShareActions } from "@/hooks/use-compare-share-actions";
+import { usePreference } from "@/hooks/use-preferences";
 import { CoinFlowCard } from "@/components/coin-flow-card";
 import { formatCurrency } from "@shared/lib/format";
 import { CoinSelector } from "@/components/coin-selector";
@@ -15,13 +16,17 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Share2, X, Download } from "lucide-react";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { CompareEmptyState } from "@/components/compare-empty-state";
+import { resolveCohortBaseline, type CompareRadarCohort } from "@/components/radar-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { cn } from "@/lib/utils";
 import {
   COMPARISON_PRESETS,
   MAX_COMPARE_COINS,
+  getPresetCoins,
 } from "@/lib/compare-config";
 import type { CoinOption } from "@/lib/compare-types";
 
@@ -174,6 +179,44 @@ export function CompareClient() {
     dimensionOrder: DIMENSION_ORDER,
     dimensionLabels: DIMENSION_SHORT_LABELS,
   });
+
+  const [radarCohort, setRadarCohort] = usePreference<CompareRadarCohort>(
+    "pharos-compare-radar-cohort",
+    "peg",
+    {
+      decode: (raw) =>
+        raw === "peg" || raw === "mechanism" || raw === "all" ? raw : "peg",
+    },
+  );
+
+  const cohortBaseline = useMemo(() => {
+    const allCards = reportCardsData?.cards ?? [];
+    if (allCards.length === 0 || radarCards.length === 0) {
+      return {
+        effectiveCohort: "all" as CompareRadarCohort,
+        medians: null,
+        memberCount: 0,
+      };
+    }
+    const leadCardId = radarCards[0].card.id;
+    const leadMeta = TRACKED_META_BY_ID.get(leadCardId);
+    const leadPeg = leadMeta?.flags.pegCurrency ?? null;
+    const leadMech = leadMeta?.mechanismArchetype ?? null;
+    const cohortCards =
+      radarCohort === "peg"
+        ? allCards.filter((card) => {
+            const meta = TRACKED_META_BY_ID.get(card.id);
+            return meta?.flags.pegCurrency === leadPeg;
+          })
+        : radarCohort === "mechanism"
+          ? allCards.filter((card) => {
+              const meta = TRACKED_META_BY_ID.get(card.id);
+              return meta?.mechanismArchetype === leadMech;
+            })
+          : allCards;
+    return resolveCohortBaseline(radarCohort, allCards, cohortCards);
+  }, [radarCards, radarCohort, reportCardsData?.cards]);
+
   const activeSelectionLabel = selectedCoins
     .filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null)
     .map((coin) => coin.symbol)
@@ -362,7 +405,7 @@ export function CompareClient() {
         <CompareEmptyState
           presets={COMPARISON_PRESETS}
           logos={logos}
-          onApplyPreset={(preset) => applyPreset(preset.coins, preset.title)}
+          onApplyPreset={(preset) => applyPreset(getPresetCoins(preset), preset.title)}
         />
       )}
 
@@ -436,11 +479,17 @@ export function CompareClient() {
 
             {radarCards.length >= 2 && (
               <Card className="h-full flex flex-col">
-                <CardHeader>
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <CardTitle className="pharos-kicker">Safety Score Comparison</CardTitle>
+                  <CohortToggle
+                    cohort={radarCohort}
+                    onChange={setRadarCohort}
+                    effective={cohortBaseline.effectiveCohort}
+                    memberCount={cohortBaseline.memberCount}
+                  />
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col items-center justify-center">
-                  <CompareRadar cards={radarCards} size={300} />
+                  <CompareRadar cards={radarCards} size={300} cohortMedians={cohortBaseline.medians} />
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
                     {radarCards.map(({ card, color }) => (
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">
@@ -450,6 +499,22 @@ export function CompareClient() {
                         </span>
                       </div>
                     ))}
+                    {cohortBaseline.medians ? (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <span
+                          aria-hidden="true"
+                          className="inline-block h-0 w-4 border-t border-dashed border-muted-foreground/60"
+                        />
+                        <span>
+                          {cohortBaseline.effectiveCohort === "peg"
+                            ? "Peg cohort"
+                            : cohortBaseline.effectiveCohort === "mechanism"
+                              ? "Mechanism cohort"
+                              : "All tracked"}{" "}
+                          median ({cohortBaseline.memberCount})
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -457,6 +522,55 @@ export function CompareClient() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CohortToggle — D10 control pill for the radar baseline cohort.
+// ---------------------------------------------------------------------------
+
+const COHORT_OPTIONS: { value: CompareRadarCohort; label: string }[] = [
+  { value: "peg", label: "Peg" },
+  { value: "mechanism", label: "Mechanism" },
+  { value: "all", label: "All" },
+];
+
+interface CohortToggleProps {
+  cohort: CompareRadarCohort;
+  effective: CompareRadarCohort;
+  memberCount: number;
+  onChange: (next: CompareRadarCohort) => void;
+}
+
+function CohortToggle({ cohort, effective, memberCount, onChange }: CohortToggleProps) {
+  return (
+    <div className="flex flex-col items-stretch gap-1 sm:items-end">
+      <span className="pharos-meta">Cohort baseline</span>
+      <div className="flex flex-wrap gap-1" role="group" aria-label="Cohort baseline">
+        {COHORT_OPTIONS.map((option) => {
+          const isActive = cohort === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              aria-pressed={isActive}
+              className={cn(
+                "pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs",
+                isActive ? "pharos-control-pill-active" : "",
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      {cohort !== effective ? (
+        <span className="text-[10px] text-muted-foreground">
+          Falling back to All ({memberCount}); selected cohort too thin.
+        </span>
+      ) : null}
     </div>
   );
 }

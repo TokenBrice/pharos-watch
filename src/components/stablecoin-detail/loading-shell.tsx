@@ -28,7 +28,7 @@ export function StablecoinDetailLoadingShell({
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-2xl font-extrabold tracking-tighter text-foreground">{coin.name}</h2>
-                  <span className="text-base font-mono text-muted-foreground">{coin.symbol}</span>
+                  <span className="text-base font-mono tabular-nums text-muted-foreground">{coin.symbol}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} ·{" "}

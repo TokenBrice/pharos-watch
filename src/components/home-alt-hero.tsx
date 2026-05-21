@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Area, AreaChart } from "recharts";
-import { ChartSkeleton } from "@/components/chart-skeleton";
+import { ChartShellSkeleton, ChartSkeleton } from "@/components/chart-skeleton";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { useStablecoins, useSupplyHistory } from "@/hooks/use-stablecoins";
@@ -15,6 +15,8 @@ import {
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { formatCurrency, getNetColor } from "@shared/lib/format";
+
+const HOME_ALT_CHART_MARGIN = { top: 12, right: 16, bottom: 12, left: 0 } as const;
 
 export function HomeAltHero(): React.JSX.Element {
   const { data: stablecoins } = useStablecoins();
@@ -116,11 +118,12 @@ export function HomeAltHero(): React.JSX.Element {
         aria-label="Stablecoin market cap history by major cohort"
       >
         {isChartReady && rows.length > 0 ? (
+          <div className="animate-fade-in">
           <AreaChart
             width={width}
             height={height}
             data={rows}
-            margin={{ top: 12, right: 16, bottom: 12, left: 0 }}
+            margin={HOME_ALT_CHART_MARGIN}
           >
             <defs>
               <linearGradient id="homeAltUsdtGrad" x1={0} y1={0} x2={0} y2={1}>
@@ -194,6 +197,15 @@ export function HomeAltHero(): React.JSX.Element {
               {...animProps}
             />
           </AreaChart>
+          </div>
+        ) : isChartReady ? (
+          <ChartShellSkeleton
+            width={width}
+            height={height}
+            margin={HOME_ALT_CHART_MARGIN}
+            yTickFormatter={(value) => formatCurrency(value, 0)}
+            ariaLabel="Stablecoin market cap chart loading"
+          />
         ) : (
           <div className="p-5">
             <ChartSkeleton className="h-full w-full" />

@@ -16,7 +16,7 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 
@@ -273,12 +273,16 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
           >
             <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
               <span>+ benchmark adj.</span>
-              <span
-                title={`${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of ${formatSignedPercent(benchmarkSpread, 1)} spread vs ${benchmarkRefLabel}`}
-                className="inline-flex h-3 w-3 cursor-help items-center justify-center rounded-full text-muted-foreground/70"
-              >
-                <Info className="h-3 w-3" aria-hidden="true" />
-              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex h-3 w-3 cursor-help items-center justify-center rounded-full text-muted-foreground/70">
+                    <Info className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[260px] text-[11px]">
+                  {`${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of ${formatSignedPercent(benchmarkSpread, 1)} spread vs ${benchmarkRefLabel}`}
+                </TooltipContent>
+              </Tooltip>
               {showBenchmarkFallback ? (
                 <ClampBadge
                   mode={mode}
@@ -342,15 +346,18 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
             aria-label="Active source-risk drivers"
           >
             {sourceRiskDrivers.map((driver) => (
-              <span
-                key={driver.key}
-                role="listitem"
-                className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
-                title={driver.description}
-                aria-label={`${driver.label}: ${driver.description}`}
-              >
-                {driver.label}
-              </span>
+              <Tooltip key={driver.key}>
+                <TooltipTrigger asChild>
+                  <span
+                    role="listitem"
+                    className="inline-flex cursor-help items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
+                    aria-label={`${driver.label}: ${driver.description}`}
+                  >
+                    {driver.label}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[260px] text-[11px]">{driver.description}</TooltipContent>
+              </Tooltip>
             ))}
           </div>
         )}
@@ -464,20 +471,22 @@ export function PysBreakdown(props: PysBreakdownProps) {
   }
 
   return (
-    <details className="group relative inline-flex min-w-0 flex-col">
-      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
-        <span className={cn("font-mono text-2xl tabular-nums", props.toneClass)}>{props.score.toFixed(1)}</span>
-        <span className="flex items-center gap-0.5 text-[11px] font-medium text-muted-foreground underline decoration-dashed underline-offset-2">
-          <span className="group-open:hidden">Breakdown</span>
-          <span className="hidden group-open:inline">Hide</span>
-          <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
-        </span>
-      </summary>
-      <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[280px] sm:-translate-x-1/2 sm:pt-0">
-        <div className="w-[260px] rounded-md border border-border bg-popover px-3 py-2 shadow-md">
-          <PysBreakdownBody {...props} />
+    <TooltipProvider delayDuration={220}>
+      <details className="group relative inline-flex min-w-0 flex-col">
+        <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
+          <span className={cn("font-mono text-2xl tabular-nums", props.toneClass)}>{props.score.toFixed(1)}</span>
+          <span className="flex items-center gap-0.5 text-[11px] font-medium text-muted-foreground underline decoration-dashed underline-offset-2">
+            <span className="group-open:hidden">Breakdown</span>
+            <span className="hidden group-open:inline">Hide</span>
+            <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
+          </span>
+        </summary>
+        <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[280px] sm:-translate-x-1/2 sm:pt-0">
+          <div className="w-[260px] rounded-md border border-border bg-popover px-3 py-2 shadow-md">
+            <PysBreakdownBody {...props} />
+          </div>
         </div>
-      </div>
-    </details>
+      </details>
+    </TooltipProvider>
   );
 }

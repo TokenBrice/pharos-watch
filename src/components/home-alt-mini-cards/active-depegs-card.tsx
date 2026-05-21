@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
+import { useFlashOnChange } from "@/hooks/use-flash-on-change";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
@@ -78,6 +79,9 @@ export function ActiveDepegsCard(): React.JSX.Element {
       .slice(0, 8);
   }, [activeEvents]);
 
+  // Flash only the lead count when the number of active depegs changes (skips mount).
+  const flashClass = useFlashOnChange(rows.length);
+
   return (
     <div className="pharos-card-shell flex h-full flex-col gap-3 p-4">
       <div className="flex items-baseline justify-between gap-2">
@@ -105,7 +109,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
               aria-hidden="true"
               className="animate-pharos-pulse inline-block h-2 w-2 shrink-0 self-center rounded-full bg-red-600 dark:bg-red-500"
             />
-            <span className="font-mono text-5xl font-bold tabular-nums tracking-tight text-foreground">
+            <span className={`rounded-md font-mono text-5xl font-bold tabular-nums tracking-tight text-foreground ${flashClass}`}>
               {rows.length}
             </span>
             <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">

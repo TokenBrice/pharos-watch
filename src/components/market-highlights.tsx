@@ -168,7 +168,7 @@ function DepegEntry({
         {entry.symbol}
       </span>
       <span
-        className={`ml-auto inline-flex shrink-0 items-center gap-0.5 font-mono text-xs font-semibold ${depegColorClass(entry.bps)}`}
+        className={`ml-auto inline-flex shrink-0 items-center gap-0.5 pharos-numeric text-xs font-semibold ${depegColorClass(entry.bps)}`}
       >
         <DepegIcon bps={entry.bps} />
         {deviation}
@@ -203,7 +203,7 @@ function MoverEntry({
         {entry.symbol}
       </span>
       <span
-        className={`ml-auto shrink-0 font-mono text-xs font-semibold ${getNetColor(entry.pctChange, { positiveInclusiveZero: true })}`}
+        className={`ml-auto shrink-0 pharos-numeric text-xs font-semibold ${getNetColor(entry.pctChange, { positiveInclusiveZero: true })}`}
       >
         {change}
       </span>
@@ -235,7 +235,7 @@ function SectionHeader({
         </div>
         <p className="text-[11px] leading-snug text-muted-foreground">{detail}</p>
       </div>
-      <span className="shrink-0 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <span className="shrink-0 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 font-mono tabular-nums text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {badge}
       </span>
     </div>

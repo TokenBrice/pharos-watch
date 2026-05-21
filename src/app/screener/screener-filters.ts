@@ -189,6 +189,10 @@ export interface ScreenerRow {
   safetyDependencyRiskScore: number | null;
   /** Blacklistability bucket. null = unspecified (no per-coin override). */
   blacklistable: BlacklistableValue | null;
+  /** Compact peg-deviation samples for the desktop 30d peg sparkline. */
+  pegDeviationSeries?: ReadonlyArray<number | null>;
+  /** Compact supply samples for the desktop 30d supply sparkline. */
+  supplySeries?: ReadonlyArray<number | null>;
 }
 
 export type ScreenerSortKey =

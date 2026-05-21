@@ -19,7 +19,7 @@ function MetricCard({ label, value, pct, severity }: { label: string; value: num
   return (
     <div className="rounded-lg border border-border/50 p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`font-mono text-2xl font-bold ${colors[severity] ?? ""}`}>{value}</div>
+      <div className={`pharos-numeric text-2xl font-bold ${colors[severity] ?? ""}`}>{value}</div>
       <div className="text-xs text-muted-foreground">{pct}</div>
     </div>
   );

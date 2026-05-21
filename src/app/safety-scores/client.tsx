@@ -271,16 +271,18 @@ export function ReportCardsClient() {
 
       <SafetyResultsSummary count={filteredCards.length} gradeFilter={gradeFilter} />
 
-      {filteredCards.length === 0 ? (
-        <SafetyEmptyState
-          gradeFilter={gradeFilter}
-          onClearFilter={() => setGradeFilter("all")}
-        />
-      ) : showGroupedCards ? (
-        <SafetyCardsGrid groupedCards={groupedCards} renderCard={renderMiniCard} />
-      ) : (
-        <SafetyCardsGrid cards={filteredCards} renderCard={renderMiniCard} />
-      )}
+      <section id="data" aria-label="Data table" tabIndex={-1}>
+        {filteredCards.length === 0 ? (
+          <SafetyEmptyState
+            gradeFilter={gradeFilter}
+            onClearFilter={() => setGradeFilter("all")}
+          />
+        ) : showGroupedCards ? (
+          <SafetyCardsGrid groupedCards={groupedCards} renderCard={renderMiniCard} />
+        ) : (
+          <SafetyCardsGrid cards={filteredCards} renderCard={renderMiniCard} />
+        )}
+      </section>
     </div>
   );
 }

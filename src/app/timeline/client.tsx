@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Radar, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
@@ -656,6 +658,7 @@ export function TimelineClient() {
 
   const phosphorActive = persistedPhosphor && isDark;
   const phosphorToggleVisible = themeMounted && isDark;
+  const focusedCoinMeta = filters.coin ? TRACKED_META_BY_ID.get(filters.coin) : null;
 
   return (
     <div className={`space-y-6${phosphorActive ? " phosphor-green" : ""}`}>
@@ -665,6 +668,14 @@ export function TimelineClient() {
       >
         Skip to events
       </a>
+
+      {focusedCoinMeta ? (
+        <CoinCrossTrackerHatnote
+          coinId={focusedCoinMeta.id}
+          coinSymbol={focusedCoinMeta.symbol}
+          currentTracker="timeline"
+        />
+      ) : null}
 
       <SummaryBand
         loadedCount={visibleEvents.length}
@@ -723,16 +734,22 @@ export function TimelineClient() {
         {loadAnnouncement}
       </div>
 
+      <section id="data" aria-label="Data feed" tabIndex={-1}>
       {isLoading ? (
-        <EventSkeleton />
+        <section id="data" aria-label="Event tape" tabIndex={-1}>
+          <EventSkeleton />
+        </section>
       ) : visibleEvents.length === 0 ? (
-        <EmptyState
-          onClearAll={fallback.apply}
-          activeChips={emptyStateChips}
-          fallbackLabel={fallback.label}
-        />
+        <section id="data" aria-label="Event tape" tabIndex={-1}>
+          <EmptyState
+            onClearAll={fallback.apply}
+            activeChips={emptyStateChips}
+            fallbackLabel={fallback.label}
+          />
+        </section>
       ) : (
-        <div id="tape-feed" className="space-y-4">
+        <section id="data" aria-label="Event tape" tabIndex={-1} className="space-y-4">
+          <div id="tape-feed" className="space-y-4">
           {bufferEvent ? (
             <div className="border-y border-border/60 bg-amber-500/5">
               <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -792,8 +809,10 @@ export function TimelineClient() {
               {" ─────"}
             </p>
           ) : null}
-        </div>
+          </div>
+        </section>
       )}
+      </section>
     </div>
   );
 }

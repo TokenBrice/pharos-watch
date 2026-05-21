@@ -74,7 +74,7 @@ function SignalTile({
     <div className="rounded-lg border border-black/8 bg-white/45 px-3.5 py-3 dark:border-white/10 dark:bg-black/15">
       <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-white/55">{label}</p>
       <div className="mt-1.5 flex items-baseline justify-between gap-2">
-        <span className="font-mono text-lg font-semibold tracking-tight text-slate-950 dark:text-white">{value}</span>
+        <span className="pharos-numeric text-lg font-semibold tracking-tight text-slate-950 dark:text-white">{value}</span>
         <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", toneClassName)}>
           {getStatusTone(tone).label}
         </span>
@@ -93,7 +93,7 @@ function MetaRow({
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-white/48">{label}</span>
-      <span className="font-mono text-xs text-slate-950 dark:text-white">{value}</span>
+      <span className="pharos-numeric text-xs text-slate-950 dark:text-white">{value}</span>
     </div>
   );
 }

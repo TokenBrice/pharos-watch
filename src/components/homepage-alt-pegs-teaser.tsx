@@ -64,13 +64,13 @@ export function HomepageAltPegsTeaser({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
                 <p className="pharos-kicker">Non-commodity Non-USD</p>
-                <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                <p className="mt-1 pharos-numeric text-sm font-semibold text-foreground">
                   {formatCurrency(snapshot.fiatNonUsdMarketCap, 1)}
                 </p>
               </div>
               <div className="rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
                 <p className="pharos-kicker">Commodities</p>
-                <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                <p className="mt-1 pharos-numeric text-sm font-semibold text-foreground">
                   {formatCurrency(snapshot.commodityMarketCap, 1)}
                 </p>
               </div>
@@ -93,7 +93,7 @@ export function HomepageAltPegsTeaser({
                       />
                       <span className="truncate text-sm font-medium text-foreground">{row.label}</span>
                     </div>
-                    <span className="font-mono text-xs text-muted-foreground">{formatPercent(row.sharePct)}</span>
+                    <span className="pharos-numeric text-xs text-muted-foreground">{formatPercent(row.sharePct)}</span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/30">
                     <div

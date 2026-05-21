@@ -126,7 +126,7 @@ export function StressTestPanel({
                     <span className="font-medium block truncate">{risk.symbol}</span>
                     <span className="text-xs text-muted-foreground">
                       {risk.affectedCount} dependent{risk.affectedCount !== 1 ? "s" : ""}{" "}
-                      <span className="font-mono">({formatCurrency(risk.dependentSupplyAtRisk)})</span>
+                      <span className="pharos-numeric">({formatCurrency(risk.dependentSupplyAtRisk)})</span>
                     </span>
                   </div>
                   <Button
@@ -219,7 +219,7 @@ export function StressTestPanel({
               <strong className="text-amber-700 dark:text-amber-400">{stressTest.headline.affectedCount}</strong>
               {" "}coin{stressTest.headline.affectedCount !== 1 ? "s" : ""} affected
               {stressTest.headline.totalAtRisk > 0 && (
-                <>, <strong className="font-mono">{formatCurrency(stressTest.headline.totalAtRisk)}</strong> at risk</>
+                <>, <strong className="pharos-numeric">{formatCurrency(stressTest.headline.totalAtRisk)}</strong> at risk</>
               )}
             </span>
           </div>
@@ -268,7 +268,7 @@ export function StressTestPanel({
                           </div>
                         </div>
                       </th>
-                      <td className="py-2.5 pr-3 text-muted-foreground font-mono text-xs hidden sm:table-cell">
+                      <td className="py-2.5 pr-3 text-muted-foreground pharos-numeric text-xs hidden sm:table-cell">
                         {mcap != null ? formatCurrency(mcap) : "—"}
                       </td>
                       <td className="py-2.5 pr-3 text-center">
@@ -290,7 +290,7 @@ export function StressTestPanel({
                         />
                       </td>
                       <td className="py-2.5 text-right">
-                        <span className={cn("font-mono font-semibold", severityColor)}>
+                        <span className={cn("pharos-numeric font-semibold", severityColor)}>
                           {impact.delta > 0 ? "+" : ""}{impact.delta}
                         </span>
                         {severity >= 5 && (

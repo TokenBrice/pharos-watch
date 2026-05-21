@@ -82,12 +82,12 @@ export function DiscoveryCandidatesCard({
         {visible.map((c) => (
           <div key={c.id} className="flex items-center justify-between gap-2 rounded-md border border-border/50 px-3 py-2">
             <div className="flex items-center gap-2 overflow-hidden">
-              <span className="shrink-0 font-mono text-sm font-medium">{c.symbol}</span>
+              <span className="shrink-0 font-mono tabular-nums text-sm font-medium">{c.symbol}</span>
               <span className="truncate text-xs text-muted-foreground">{c.name}</span>
               <SourceBadge source={c.source} />
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="font-mono text-xs">{c.marketCap == null ? "—" : formatCurrency(c.marketCap, 1)}</span>
+              <span className="pharos-numeric text-xs">{c.marketCap == null ? "—" : formatCurrency(c.marketCap, 1)}</span>
               <span className="text-[10px] text-muted-foreground">{c.daysSeen}d seen</span>
               <span className="text-[10px] text-muted-foreground">
                 seen {formatElapsedSeconds(Math.max(0, nowSeconds - c.lastSeen))} ago

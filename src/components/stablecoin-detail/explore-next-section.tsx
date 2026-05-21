@@ -141,7 +141,7 @@ export function ExploreNextSection({
                   title={peer.name}
                 >
                   <StablecoinLogo src={logos[peer.id]} name={peer.name} size={16} />
-                  <span className="font-mono font-medium">{peer.symbol}</span>
+                  <span className="font-mono tabular-nums font-medium">{peer.symbol}</span>
                 </Link>
               ))}
             </div>
@@ -164,7 +164,7 @@ export function ExploreNextSection({
                     <StablecoinLogo src={logos[page.counterpartId]} name={page.counterpartName} size={18} />
                     <span className="min-w-0 flex-1">
                       <span className="text-muted-foreground">vs </span>
-                      <span className="font-mono font-medium">{page.counterpartSymbol}</span>
+                      <span className="font-mono tabular-nums font-medium">{page.counterpartSymbol}</span>
                     </span>
                     <ArrowRight
                       aria-hidden="true"

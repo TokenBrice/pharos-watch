@@ -6,6 +6,7 @@ import { PresetCard } from "@/components/preset-card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import type { ComparePreset } from "@/lib/compare-types";
+import { getPresetCoins } from "@/lib/compare-config";
 
 interface CompareEmptyStateProps {
   presets: readonly ComparePreset[];
@@ -113,7 +114,8 @@ function ComparePresetCard({
   onApplyPreset: (preset: ComparePreset) => void;
   featured?: boolean;
 }) {
-  const previewItems = preset.coins
+  const coins = getPresetCoins(preset);
+  const previewItems = coins
     .slice(0, featured ? 4 : 3)
     .map((coinId) => {
       const coin = TRACKED_META_BY_ID.get(coinId);
@@ -127,7 +129,7 @@ function ComparePresetCard({
     })
     .filter((item) => item != null);
 
-  const chips = preset.coins
+  const chips = coins
     .map((coinId) => {
       const coin = TRACKED_META_BY_ID.get(coinId);
       return coin
@@ -193,7 +195,7 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
           </div>
         }
         preview={
-          <ComparePreview logos={logos} featuredCoins={featured.flatMap((preset) => preset.coins).slice(0, 4)} />
+          <ComparePreview logos={logos} featuredCoins={featured.flatMap(getPresetCoins).slice(0, 4)} />
         }
       />
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
+import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -103,4 +105,5 @@ export default createClientFeaturePage({
     ),
   },
   beforeClient: COVERAGE_STATIC_SECTION,
+  afterClient: <SeeAlsoFooter links={SEE_ALSO_GRAPH["/coverage/"]} />,
 });

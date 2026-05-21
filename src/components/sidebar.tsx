@@ -4,7 +4,20 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
-import { ChevronsLeft, ChevronsRight, ChevronRight, ExternalLink, Moon, Search, Sun } from "lucide-react";
+import {
+  AlertOctagon,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronRight,
+  ExternalLink,
+  Info,
+  Moon,
+  Search,
+  Sun,
+} from "lucide-react";
+import { PharosIcon } from "@/components/pharos-icon";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
@@ -15,6 +28,7 @@ import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
 import type { SidebarNavSignal } from "@/lib/sidebar-signals";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
+import { useNavPrefetch } from "@/hooks/use-nav-prefetch";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
@@ -99,12 +113,26 @@ const SIDEBAR_SIGNAL_TONE_CLASS: Record<SidebarNavSignal["tone"], string> = {
   danger: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
 };
 
+/* WCAG 1.4.1 Use of Color — pair the tone with a Lucide glyph so the signal
+ * survives monochrome viewing and colour-blindness. `null` for neutral keeps
+ * the chrome calm when nothing is happening. */
+const SIDEBAR_SIGNAL_TONE_ICON: Record<SidebarNavSignal["tone"], typeof AlertTriangle | null> = {
+  neutral: null,
+  info: Info,
+  healthy: CheckCircle2,
+  warning: AlertTriangle,
+  danger: AlertOctagon,
+};
+
 function SidebarNavSignalIndicator({ signal }: { signal: SidebarNavSignal }) {
   if (signal.kind === "accent") return null;
 
+  const ToneIcon = SIDEBAR_SIGNAL_TONE_ICON[signal.tone];
+
   if (signal.kind === "dot") {
     return (
-      <span className="ml-auto flex items-center" title={signal.title} aria-hidden="true">
+      <span className="ml-auto inline-flex items-center gap-1" title={signal.title} aria-hidden="true">
+        {ToneIcon ? <ToneIcon className="h-2.5 w-2.5" /> : null}
         <span className={cn("h-2.5 w-2.5 rounded-full border", SIDEBAR_SIGNAL_TONE_CLASS[signal.tone])} />
       </span>
     );
@@ -113,12 +141,13 @@ function SidebarNavSignalIndicator({ signal }: { signal: SidebarNavSignal }) {
   return (
     <span
       className={cn(
-        "ml-auto inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-mono font-semibold tabular-nums",
+        "ml-auto inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-mono font-semibold tabular-nums",
         SIDEBAR_SIGNAL_TONE_CLASS[signal.tone],
       )}
       title={signal.title}
       aria-hidden="true"
     >
+      {ToneIcon ? <ToneIcon className="h-2.5 w-2.5" /> : null}
       {signal.text}
     </span>
   );
@@ -129,11 +158,13 @@ function SidebarNavItem({
   expanded,
   isActive,
   signal,
+  onPrefetch,
 }: {
   item: NavItem;
   expanded: boolean;
   isActive: boolean;
   signal?: SidebarNavSignal | null;
+  onPrefetch?: (href: string) => void;
 }) {
   const Icon = item.icon;
   const accentBg = signal?.accentClass;
@@ -166,17 +197,21 @@ function SidebarNavItem({
         aria-label={ariaLabel}
         className={externalClassName}
       >
-        <Icon className="h-4 w-4 shrink-0 text-[oklch(0.55_0.13_84)] dark:text-[oklch(0.82_0.16_84)]" />
+        <PharosIcon icon={Icon} className="shrink-0 text-[oklch(0.55_0.13_84)] dark:text-[oklch(0.82_0.16_84)]" />
         {expanded && <span className="min-w-0 text-sm truncate font-medium">{item.label}</span>}
         {expanded && (
-          <ExternalLink
-            className="ml-auto h-3 w-3 shrink-0 text-[oklch(0.55_0.13_84_/_0.7)] dark:text-[oklch(0.82_0.16_84_/_0.7)]"
+          <PharosIcon
+            icon={ExternalLink}
+            size="micro"
+            className="ml-auto shrink-0 text-[oklch(0.55_0.13_84_/_0.7)] dark:text-[oklch(0.82_0.16_84_/_0.7)]"
             aria-hidden="true"
           />
         )}
       </a>
     );
   }
+
+  const handlePrefetch = onPrefetch ? () => onPrefetch(item.href) : undefined;
 
   return (
     <Link
@@ -185,8 +220,10 @@ function SidebarNavItem({
       aria-label={ariaLabel}
       aria-current={isActive ? "page" : undefined}
       className={className}
+      onMouseEnter={handlePrefetch}
+      onFocus={handlePrefetch}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <PharosIcon icon={Icon} className="shrink-0" />
       {expanded && <span className="min-w-0 text-sm truncate">{item.label}</span>}
       {expanded && signal ? <SidebarNavSignalIndicator signal={signal} /> : null}
     </Link>
@@ -206,14 +243,16 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
       }`}
     >
       <div className="relative h-4 w-4 shrink-0">
-        <Sun 
-          className={`h-4 w-4 absolute transition-all duration-200 ${
+        <PharosIcon
+          icon={Sun}
+          className={`absolute transition-all duration-200 ${
             isDark ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'
           }`}
           aria-hidden="true"
         />
-        <Moon 
-          className={`h-4 w-4 absolute transition-all duration-200 ${
+        <PharosIcon
+          icon={Moon}
+          className={`absolute transition-all duration-200 ${
             isDark ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'
           }`}
           aria-hidden="true"
@@ -225,10 +264,11 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
 }
 
 function SidebarGroup({
-  groupKey, label, items, expanded: sidebarExpanded, isGroupExpanded, onToggle, pathname, navSignals,
+  groupKey, label, items, expanded: sidebarExpanded, isGroupExpanded, onToggle, pathname, navSignals, onPrefetch,
 }: {
   groupKey: string; label: string; items: NavItem[]; expanded: boolean;
   isGroupExpanded: boolean; onToggle: () => void; pathname: string; navSignals: Record<string, SidebarNavSignal | null>;
+  onPrefetch?: (href: string) => void;
 }) {
   return (
     <div>
@@ -240,7 +280,10 @@ function SidebarGroup({
           aria-controls={`nav-group-${groupKey}`}
         >
           {label}
-          <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${isGroupExpanded ? "rotate-90" : ""}`} />
+          <ChevronRight
+            className={`h-3 w-3 ${isGroupExpanded ? "rotate-90" : ""}`}
+            style={{ transition: "transform 160ms var(--motion-ease-standard)" }}
+          />
         </button>
       )}
       {sidebarExpanded ? (
@@ -259,6 +302,7 @@ function SidebarGroup({
                     expanded={sidebarExpanded}
                     isActive={isRouteActive(pathname, item.href)}
                     signal={navSignals[item.href]}
+                    onPrefetch={onPrefetch}
                   />
                 ))}
               </div>
@@ -271,7 +315,14 @@ function SidebarGroup({
       ) : (
         <div className="space-y-0.5">
           {items.map((item) => (
-            <SidebarNavItem key={item.href} item={item} expanded={false} isActive={isRouteActive(pathname, item.href)} signal={navSignals[item.href]} />
+            <SidebarNavItem
+              key={item.href}
+              item={item}
+              expanded={false}
+              isActive={isRouteActive(pathname, item.href)}
+              signal={navSignals[item.href]}
+              onPrefetch={onPrefetch}
+            />
           ))}
         </div>
       )}
@@ -285,6 +336,7 @@ export function Sidebar() {
   const { isExpanded: isGroupExpanded, toggle } = useNavCollapse();
   const navSignals = useSidebarNavSignals();
   const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
+  const { prefetch } = useNavPrefetch();
   const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start" || (startHereReady && shouldShowStartHereNav));
 
   // Keyboard shortcut: [ and ] toggle sidebar pin state.
@@ -328,7 +380,7 @@ export function Sidebar() {
           expanded ? "mx-2 mt-1 px-3 py-2.5" : "mx-auto mt-1 px-0 py-2 justify-center w-10"
         }`}
       >
-        <Search className="h-4 w-4 shrink-0" />
+        <PharosIcon icon={Search} className="shrink-0" />
         {expanded && <span className="text-sm">Search</span>}
         {expanded && (
           <kbd className="ml-auto text-[10px] font-mono text-muted-foreground/70 border border-border/75 rounded-md px-1.5 py-0.5">
@@ -348,6 +400,7 @@ export function Sidebar() {
               expanded={expanded}
               isActive={isRouteActive(pathname, item.href)}
               signal={navSignals[item.href]}
+              onPrefetch={prefetch}
             />
           ))}
         </div>
@@ -362,6 +415,7 @@ export function Sidebar() {
             onToggle={() => toggle(group.key)}
             pathname={pathname}
             navSignals={navSignals}
+            onPrefetch={prefetch}
           />
         ))}
 
@@ -388,6 +442,7 @@ export function Sidebar() {
             item={item}
             expanded={expanded}
             isActive={isRouteActive(pathname, item.href)}
+            onPrefetch={prefetch}
           />
         ))}
         <ThemeSidebarItem expanded={expanded} />
@@ -401,11 +456,11 @@ export function Sidebar() {
         >
           {expanded ? (
             <>
-              <ChevronsLeft className="h-4 w-4 shrink-0" />
+              <PharosIcon icon={ChevronsLeft} className="shrink-0" />
               <span className="text-sm">{pinned ? "Unpin" : "Pin open"}</span>
             </>
           ) : (
-            <ChevronsRight className="h-4 w-4 shrink-0" />
+            <PharosIcon icon={ChevronsRight} className="shrink-0" />
           )}
         </button>
       </div>

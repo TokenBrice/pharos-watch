@@ -78,23 +78,23 @@ export function MintBurnReconciliationCard({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-border/50 p-3">
             <div className="text-xs text-muted-foreground">Compared</div>
-            <div className="font-mono text-xl font-semibold">{summary.comparedCoins}</div>
+            <div className="pharos-numeric text-xl font-semibold">{summary.comparedCoins}</div>
           </div>
           <div className="rounded-lg border border-red-500/20 p-3">
             <div className="text-xs text-muted-foreground">Critical</div>
-            <div className="font-mono text-xl font-semibold text-red-700 dark:text-red-300">
+            <div className="pharos-numeric text-xl font-semibold text-red-700 dark:text-red-300">
               {summary.criticalCount}
             </div>
           </div>
           <div className="rounded-lg border border-amber-500/20 p-3">
             <div className="text-xs text-muted-foreground">Warn</div>
-            <div className="font-mono text-xl font-semibold text-amber-700 dark:text-amber-300">
+            <div className="pharos-numeric text-xl font-semibold text-amber-700 dark:text-amber-300">
               {summary.warnCount}
             </div>
           </div>
           <div className="rounded-lg border border-border/50 p-3">
             <div className="text-xs text-muted-foreground">Insufficient source</div>
-            <div className="font-mono text-xl font-semibold text-muted-foreground">{summary.insufficientCount}</div>
+            <div className="pharos-numeric text-xl font-semibold text-muted-foreground">{summary.insufficientCount}</div>
           </div>
         </div>
 
@@ -145,7 +145,7 @@ export function MintBurnReconciliationCard({
                 </div>
                 <div className="min-w-0 text-right">
                   <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Gap</div>
-                  <div className={cn("font-mono text-sm font-semibold", statusTone(row.status))}>
+                  <div className={cn("pharos-numeric text-sm font-semibold", statusTone(row.status))}>
                     {row.absoluteDiffUsd == null ? "—" : formatCurrency(row.absoluteDiffUsd)}
                   </div>
                 </div>
@@ -154,17 +154,17 @@ export function MintBurnReconciliationCard({
               <div className="mt-3 grid gap-3 border-t border-border/50 pt-3 text-xs text-muted-foreground sm:grid-cols-3">
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.18em]">Flow net 24h</div>
-                  <div className="mt-1 font-mono text-foreground">{formatCurrency(row.flowNet24hUsd)}</div>
+                  <div className="mt-1 pharos-numeric text-foreground">{formatCurrency(row.flowNet24hUsd)}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.18em]">Chain delta 24h</div>
-                  <div className="mt-1 font-mono text-foreground">
+                  <div className="mt-1 pharos-numeric text-foreground">
                     {row.chainSupplyDelta24hUsd == null ? "—" : formatCurrency(row.chainSupplyDelta24hUsd)}
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-[0.18em]">Diff ratio</div>
-                  <div className="mt-1 font-mono text-foreground">
+                  <div className="mt-1 pharos-numeric text-foreground">
                     {row.diffRatio == null ? "—" : `${(row.diffRatio * 100).toFixed(1)}%`}
                   </div>
                 </div>

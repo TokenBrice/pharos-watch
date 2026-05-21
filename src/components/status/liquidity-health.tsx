@@ -106,19 +106,19 @@ export function LiquidityHealthCard({
           <div className="rounded-lg border border-border/50 p-3">
             <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Current coverage mix</div>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Primary: <span className="font-mono">{currentClasses.primary}</span></div>
-              <div>Mixed: <span className="font-mono">{currentClasses.mixed}</span></div>
-              <div>Fallback: <span className="font-mono">{currentClasses.fallback}</span></div>
-              <div>Unobserved: <span className="font-mono">{currentClasses.unobserved}</span></div>
+              <div>Primary: <span className="pharos-numeric">{currentClasses.primary}</span></div>
+              <div>Mixed: <span className="pharos-numeric">{currentClasses.mixed}</span></div>
+              <div>Fallback: <span className="pharos-numeric">{currentClasses.fallback}</span></div>
+              <div>Unobserved: <span className="pharos-numeric">{currentClasses.unobserved}</span></div>
             </div>
           </div>
           <div className="rounded-lg border border-border/50 p-3">
             <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Previous coverage mix</div>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>Primary: <span className="font-mono">{previousClasses.primary}</span></div>
-              <div>Mixed: <span className="font-mono">{previousClasses.mixed}</span></div>
-              <div>Fallback: <span className="font-mono">{previousClasses.fallback}</span></div>
-              <div>Unobserved: <span className="font-mono">{previousClasses.unobserved}</span></div>
+              <div>Primary: <span className="pharos-numeric">{previousClasses.primary}</span></div>
+              <div>Mixed: <span className="pharos-numeric">{previousClasses.mixed}</span></div>
+              <div>Fallback: <span className="pharos-numeric">{previousClasses.fallback}</span></div>
+              <div>Unobserved: <span className="pharos-numeric">{previousClasses.unobserved}</span></div>
             </div>
           </div>
         </div>

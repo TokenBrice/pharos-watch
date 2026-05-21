@@ -33,11 +33,11 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
-import type { ReportCardGrade } from "@shared/types";
+import type { PegSummaryCoin, ReportCardGrade, StablecoinData } from "@shared/types";
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -74,6 +74,21 @@ function getHydratedSnapshot() {
 
 function getServerHydrationSnapshot() {
   return false;
+}
+
+function buildSupplySeries(asset: StablecoinData | undefined): ReadonlyArray<number | null> | undefined {
+  if (!asset) return undefined;
+  const current = getCirculatingRaw(asset);
+  const prevMonth = getPrevMonthRawOrNull(asset);
+  return prevMonth == null ? undefined : [prevMonth, current];
+}
+
+function buildPegDeviationSeries(pegCoin: PegSummaryCoin | undefined): ReadonlyArray<number | null> | undefined {
+  if (pegCoin?.currentDeviationBps == null) return undefined;
+  return [
+    pegCoin.worstDeviationBps ?? pegCoin.currentDeviationBps,
+    pegCoin.currentDeviationBps,
+  ];
 }
 
 export function ScreenerClient() {
@@ -170,12 +185,15 @@ export function ScreenerClient() {
   const allRows = useMemo<ScreenerRow[]>(() => {
     if (!stablecoinsData?.peggedAssets) return [];
     const supplyById = new Map<string, number>();
+    const supplySeriesById = new Map<string, ReadonlyArray<number | null>>();
     for (const asset of stablecoinsData.peggedAssets) {
       supplyById.set(asset.id, getCirculatingRaw(asset));
+      const supplySeries = buildSupplySeries(asset);
+      if (supplySeries) supplySeriesById.set(asset.id, supplySeries);
     }
-    const pegById = new Map<string, number | null>();
+    const pegById = new Map<string, PegSummaryCoin>();
     for (const coin of pegData?.coins ?? []) {
-      pegById.set(coin.id, coin.pegScore);
+      pegById.set(coin.id, coin);
     }
     const reportById = new Map<string, {
       grade: ReportCardGrade;
@@ -210,6 +228,7 @@ export function ScreenerClient() {
     for (const meta of CLIENT_TRACKED_STABLECOINS) {
       const lifecycle = meta.status ?? "active";
       const safety = reportById.get(meta.id) ?? null;
+      const pegCoin = pegById.get(meta.id);
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -219,7 +238,7 @@ export function ScreenerClient() {
         mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? 0,
-        pegScore: pegById.get(meta.id) ?? null,
+        pegScore: pegCoin?.pegScore ?? null,
         dewsScore: dewsById.get(meta.id) ?? null,
         liquidityScore: liquidityById.get(meta.id) ?? null,
         safetyGrade: safety?.grade ?? null,
@@ -230,6 +249,8 @@ export function ScreenerClient() {
         safetyDecentralizationScore: safety?.decentralization ?? null,
         safetyDependencyRiskScore: safety?.dependencyRisk ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
+        pegDeviationSeries: buildPegDeviationSeries(pegCoin),
+        supplySeries: supplySeriesById.get(meta.id),
       });
     }
     return rows;
@@ -339,14 +360,16 @@ export function ScreenerClient() {
         }
       />
 
-      <ScreenerTable
-        rows={sortedRows}
-        logos={logos}
-        isLoading={isStablecoinsLoading || scoreFilterDataLoading}
-        onClearFilters={active ? resetFilters : undefined}
-        hasActiveFilters={active}
-        sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
-      />
+      <section id="data" aria-label="Data table" tabIndex={-1}>
+        <ScreenerTable
+          rows={sortedRows}
+          logos={logos}
+          isLoading={isStablecoinsLoading || scoreFilterDataLoading}
+          onClearFilters={active ? resetFilters : undefined}
+          hasActiveFilters={active}
+          sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
+        />
+      </section>
     </div>
   );
 }

@@ -272,6 +272,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${SITE_URL}/about/style/`,
+      lastModified: lastEdited("/about/style/"),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/about/bluechip/`,
+      lastModified: lastEdited("/about/bluechip/"),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/learn/glossary/`,
+      lastModified: lastEdited("/learn/glossary/"),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/sitemap-tree/`,
+      lastModified: lastEdited("/sitemap-tree/"),
+      changeFrequency: "monthly",
+      priority: 0.3,
+    },
+    {
       url: `${SITE_URL}/api/`,
       // eslint-disable-next-line no-restricted-syntax -- "/api/" here is the public docs page slug, not an API endpoint; LAST_EDITED is keyed by site URLs.
       lastModified: lastEdited("/api/"),

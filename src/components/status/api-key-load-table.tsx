@@ -37,11 +37,11 @@ export function ApiKeyLoadTable({
       description={
         <>
           Authenticated API-key requests on the public{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">api.pharos.watch</code>{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">api.pharos.watch</code>{" "}
           lane. Excludes{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">/_site-data/*</code>
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">/_site-data/*</code>
           , the{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">site-api</code>{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">site-api</code>{" "}
           lane, and admin/telegram-webhook routes.
         </>
       }
@@ -109,17 +109,17 @@ export function ApiKeyLoadTable({
                     <tr key={row.apiKeyId} className="border-b last:border-0">
                       <td className="py-2 align-top">
                         <div className="font-medium text-foreground">{row.name}</div>
-                        <div className="mt-1 font-mono text-xs text-muted-foreground">{row.maskedToken}</div>
+                        <div className="mt-1 font-mono tabular-nums text-xs text-muted-foreground">{row.maskedToken}</div>
                       </td>
                       <td className="py-2 align-top">
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${trafficClassBadgeClassName(row.trafficClass)}`}>
                           {row.trafficClass}
                         </span>
                       </td>
-                      <td className="py-2 align-top font-mono text-foreground">{formatCompactCount(row.requestCount)}</td>
-                      <td className="py-2 align-top font-mono text-foreground">{formatPercent(row.shareOfKeyedRequestsPct, 1)}</td>
-                      <td className="py-2 align-top font-mono text-foreground">{formatPercent(row.shareOfTotalPublicApiRequestsPct, 1)}</td>
-                      <td className="py-2 align-top font-mono text-muted-foreground">{formatCompactCount(row.rateLimitPerMinute)}/min</td>
+                      <td className="py-2 align-top pharos-numeric text-foreground">{formatCompactCount(row.requestCount)}</td>
+                      <td className="py-2 align-top pharos-numeric text-foreground">{formatPercent(row.shareOfKeyedRequestsPct, 1)}</td>
+                      <td className="py-2 align-top pharos-numeric text-foreground">{formatPercent(row.shareOfTotalPublicApiRequestsPct, 1)}</td>
+                      <td className="py-2 align-top pharos-numeric text-muted-foreground">{formatCompactCount(row.rateLimitPerMinute)}/min</td>
                       <td className="py-2 align-top">
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(status)}`}>
                           {status}

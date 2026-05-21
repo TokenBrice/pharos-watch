@@ -32,7 +32,7 @@ export function ApiKeyInventorySummary({ items }: { items: readonly ApiKeySummar
       {items.map((item) => (
         <div key={item.label} className="rounded-lg border border-border/60 bg-background/35 px-3 py-2">
           <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
-          <div className="mt-1 font-mono text-xl font-semibold text-foreground">{item.value}</div>
+          <div className="mt-1 pharos-numeric text-xl font-semibold text-foreground">{item.value}</div>
           <div className="text-[11px] text-muted-foreground">{item.detail}</div>
         </div>
       ))}
@@ -183,7 +183,7 @@ export function ApiKeyRowEditor({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="text-sm font-medium text-foreground">{apiKey.name}</div>
-          <div className="font-mono text-xs text-muted-foreground">{apiKey.maskedToken}</div>
+          <div className="font-mono tabular-nums text-xs text-muted-foreground">{apiKey.maskedToken}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${apiKeyStatusBadgeClassName(keyStatus)}`}>
@@ -271,7 +271,7 @@ export function ApiKeyRowEditor({
 
       {draft.expiryMode === "non-expiring" ? (
         <div className="rounded-md border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-xs text-muted-foreground">
-          Saving will persist <span className="font-mono">expiresAt: null</span> as an explicit non-expiring exception.
+          Saving will persist <span className="font-mono tabular-nums">expiresAt: null</span> as an explicit non-expiring exception.
         </div>
       ) : null}
 

@@ -29,14 +29,14 @@ export function RedemptionBackstopCard({
         {/* ── arrange: Hero score + Exit, separated from metadata ── */}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
-            <Badge variant="outline" className={cn("px-2.5 py-1 font-mono text-lg", viewModel.scoreToneClass)}>
+            <Badge variant="outline" className={cn("px-2.5 py-1 pharos-numeric text-lg", viewModel.scoreToneClass)}>
               {viewModel.heroScoreLabel}
             </Badge>
           </ScoreBadgeWrapper>
           {viewModel.showExitScore && (
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <MethodologyLabel topic="effectiveExit">Exit</MethodologyLabel>
-              <span className="font-mono text-foreground">{viewModel.exitScoreLabel}</span>
+              <span className="pharos-numeric text-foreground">{viewModel.exitScoreLabel}</span>
             </span>
           )}
         </div>
@@ -165,22 +165,22 @@ export function RedemptionBackstopCard({
           </summary>
           <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 px-3 py-2">
-              Access score <span className={cn("font-mono", viewModel.scoreBreakdown.access.textClass)}>{viewModel.scoreBreakdown.access.score ?? "—"}</span>
+              Access score <span className={cn("pharos-numeric", viewModel.scoreBreakdown.access.textClass)}>{viewModel.scoreBreakdown.access.score ?? "—"}</span>
             </div>
             <div className="rounded-lg border border-border/60 px-3 py-2">
-              Settlement <span className={cn("font-mono", viewModel.scoreBreakdown.settlement.textClass)}>{viewModel.scoreBreakdown.settlement.score ?? "—"}</span>
+              Settlement <span className={cn("pharos-numeric", viewModel.scoreBreakdown.settlement.textClass)}>{viewModel.scoreBreakdown.settlement.score ?? "—"}</span>
             </div>
             <div className="rounded-lg border border-border/60 px-3 py-2">
-              Execution <span className={cn("font-mono", viewModel.scoreBreakdown.execution.textClass)}>{viewModel.scoreBreakdown.execution.score ?? "—"}</span>
+              Execution <span className={cn("pharos-numeric", viewModel.scoreBreakdown.execution.textClass)}>{viewModel.scoreBreakdown.execution.score ?? "—"}</span>
             </div>
             <div className="rounded-lg border border-border/60 px-3 py-2">
-              Capacity <span className={cn("font-mono", viewModel.scoreBreakdown.capacity.textClass)}>{viewModel.scoreBreakdown.capacity.score ?? "—"}</span>
+              Capacity <span className={cn("pharos-numeric", viewModel.scoreBreakdown.capacity.textClass)}>{viewModel.scoreBreakdown.capacity.score ?? "—"}</span>
             </div>
             <div className="rounded-lg border border-border/60 px-3 py-2">
-              Output quality <span className={cn("font-mono", viewModel.scoreBreakdown.outputQuality.textClass)}>{viewModel.scoreBreakdown.outputQuality.score ?? "—"}</span>
+              Output quality <span className={cn("pharos-numeric", viewModel.scoreBreakdown.outputQuality.textClass)}>{viewModel.scoreBreakdown.outputQuality.score ?? "—"}</span>
             </div>
             <div className="rounded-lg border border-border/60 px-3 py-2">
-              Cost <span className={cn("font-mono", viewModel.scoreBreakdown.cost.textClass)}>{viewModel.scoreBreakdown.cost.score ?? "—"}</span>
+              Cost <span className={cn("pharos-numeric", viewModel.scoreBreakdown.cost.textClass)}>{viewModel.scoreBreakdown.cost.score ?? "—"}</span>
               {viewModel.scoreBreakdown.cost.suffix ?? ""}
             </div>
           </div>

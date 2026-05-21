@@ -61,7 +61,7 @@ export function BackingBreakdown({
           >
             <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-sky-500 via-violet-500 to-amber-500" />
             <span>All</span>
-            <span className="font-mono text-muted-foreground">{coins.length}</span>
+            <span className="pharos-numeric text-muted-foreground">{coins.length}</span>
             {activeFilter === null && <span className="ml-1 text-xs">●</span>}
           </button>
           {Object.entries(backingTotals).map(([type, amount]) => {
@@ -80,7 +80,7 @@ export function BackingBreakdown({
               >
                 <div className={cn("h-2.5 w-2.5 rounded-full", BACKING_BAR_COLORS[type])} />
                 <span>{BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? (type === "other" ? "Other" : type)}</span>
-                <span className="font-mono text-muted-foreground">{pct.toFixed(1)}%</span>
+                <span className="pharos-numeric text-muted-foreground">{pct.toFixed(1)}%</span>
                 {isActive && <span className="ml-1 text-xs">✕</span>}
               </button>
             );

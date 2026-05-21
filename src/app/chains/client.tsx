@@ -13,6 +13,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChainCohortLattice } from "@/components/chains/chain-cohort-lattice";
 import { cn } from "@/lib/utils";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { formatSignedPercent, getNetColor } from "@shared/lib/format";
@@ -29,7 +30,6 @@ import { NauticalChart } from "./nautical-chart";
 import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
 import { nextHarborSweepId } from "./nautical-scene-math";
 import { SelectedHarborPanel } from "./selected-harbor-panel";
-
 /** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
 const DOMINANCE_COLORS = [
   "oklch(0.62 0.14 250)", // blue
@@ -397,6 +397,8 @@ export function ChainsLeaderboardClient() {
         />
 
         <SelectedHarborPanel entry={selectedHarbor} />
+
+        <ChainCohortLattice chains={chartChains} />
 
         {/* Table */}
         <p className="sm:hidden font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">

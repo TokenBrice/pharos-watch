@@ -169,7 +169,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
             {/* Content */}
             <div className="min-w-0 flex-1 pb-4">
               <div className="flex flex-wrap items-baseline gap-2">
-                <span className="font-mono text-xs text-muted-foreground">{dateDisplay}</span>
+                <span className="pharos-numeric text-xs text-muted-foreground">{dateDisplay}</span>
                 <span
                   className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${MILESTONE_TYPE_BADGE[m.type]}`}
                 >
@@ -255,7 +255,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
           <p className="pharos-kicker">Copy Exact Bot Command</p>
           <div className="mt-2 flex items-center gap-2">
-            <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono text-foreground sm:text-sm">
+            <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono tabular-nums text-foreground sm:text-sm">
               {launchAlertCommand}
             </code>
             <CopyButton
@@ -320,7 +320,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
             {coin.name} ({coin.symbol}) Pre-launch Stablecoin Tracker
           </h1>
-          <p className="font-mono text-sm text-muted-foreground">{coin.symbol}</p>
+          <p className="font-mono tabular-nums text-sm text-muted-foreground">{coin.symbol}</p>
         </div>
       </header>
 
@@ -482,7 +482,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                 className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/45 px-3 py-2"
               >
                 <span className="text-sm">{slice.name}</span>
-                <span className="shrink-0 font-mono text-sm text-muted-foreground">{slice.pct}%</span>
+                <span className="shrink-0 pharos-numeric text-sm text-muted-foreground">{slice.pct}%</span>
               </div>
             ))}
           </div>
@@ -548,7 +548,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
                 className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-border/60 bg-background/50 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
               >
                 <StablecoinLogo src={logos[rel.id]} name={rel.name} size={20} />
-                <span className="font-mono text-xs font-medium">{rel.symbol}</span>
+                <span className="font-mono tabular-nums text-xs font-medium">{rel.symbol}</span>
               </Link>
             ))}
           </div>

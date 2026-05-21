@@ -18,6 +18,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { SectionSkeleton } from "@/components/homepage-skeletons";
+import { LazySection } from "@/components/lazy-section";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { HomepageSectionBand } from "@/components/homepage-sections";
 import { HomepageAltPegsTeaser } from "@/components/homepage-alt-pegs-teaser";
@@ -92,8 +93,46 @@ function useDeferredHomepageOptionalQueries(criticalQueriesSettled: boolean) {
   return enabled;
 }
 
+/**
+ * Mount-on-arrival when the document loads with `#anchor` in the URL: anchor
+ * scroll only works once the target section is actually in the DOM, so we
+ * skip the LazySection gate entirely when a hash is present. Hash changes
+ * during the session don't need to flip the flag — the gate has long since
+ * unmounted by then.
+ */
+function useHashTargetForceMount() {
+  const [forced, setForced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash && window.location.hash !== "#") {
+      // One-shot setState that runs only when the URL arrives with a hash.
+      // The empty dep array guarantees it never re-fires, so the cascade
+      // lint rule is a false positive here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForced(true);
+    }
+  }, []);
+  return forced;
+}
+
+function BelowFold({
+  forced,
+  minHeight,
+  children,
+}: {
+  forced: boolean;
+  minHeight: number;
+  children: React.ReactNode;
+}) {
+  if (forced) return <>{children}</>;
+  return <LazySection minHeight={minHeight}>{children}</LazySection>;
+}
+
 export function HomepageClient() {
   const [showFilters, setShowFilters] = useState(false);
+  // M14 — when the URL carries an anchor, mount below-fold panels immediately
+  // so the browser can resolve the scroll target.
+  const hashTargetForcesMount = useHashTargetForceMount();
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices, meta: pricesMeta } = useStablecoins();
   const { data: logos } = useLogos();
   const {
@@ -329,19 +368,24 @@ export function HomepageClient() {
         </section>
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary name="digest">
-        <div className="space-y-2">
-          <p className="pharos-meta text-muted-foreground/80">
-            A short editorial summary Pharos publishes daily on the state of the market.
-          </p>
-          <DailyDigest variant="preview" />
-        </div>
-      </SectionErrorBoundary>
+      <BelowFold forced={hashTargetForcesMount} minHeight={260}>
+        <SectionErrorBoundary name="digest">
+          <div className="space-y-2">
+            <p className="pharos-meta text-muted-foreground/80">
+              A short editorial summary Pharos publishes daily on the state of the market.
+            </p>
+            <DailyDigest variant="preview" />
+          </div>
+        </SectionErrorBoundary>
+      </BelowFold>
 
-      <SectionErrorBoundary name="upcoming-stablecoins">
-        <UpcomingStablecoinsSection logos={logos} />
-      </SectionErrorBoundary>
+      <BelowFold forced={hashTargetForcesMount} minHeight={320}>
+        <SectionErrorBoundary name="upcoming-stablecoins">
+          <UpcomingStablecoinsSection logos={logos} />
+        </SectionErrorBoundary>
+      </BelowFold>
 
+      <BelowFold forced={hashTargetForcesMount} minHeight={720}>
       <section
         aria-label="Core monitoring"
         className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
@@ -415,7 +459,9 @@ export function HomepageClient() {
           </div>
         </SectionErrorBoundary>
       </section>
+      </BelowFold>
 
+      <BelowFold forced={hashTargetForcesMount} minHeight={680}>
       <section
         aria-label="Research surfaces"
         className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
@@ -442,6 +488,7 @@ export function HomepageClient() {
           <HomepageAltPegsTeaser snapshot={altPegSnapshot} isLoading={isLoading} />
         </SectionErrorBoundary>
       </section>
+      </BelowFold>
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-relaxed text-muted-foreground">

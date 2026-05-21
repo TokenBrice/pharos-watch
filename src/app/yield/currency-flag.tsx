@@ -134,7 +134,7 @@ export function CurrencyFlag({ currency, className }: { currency: string; classN
     return (
       <span
         aria-hidden="true"
-        className={`inline-flex h-[15px] w-5 items-center justify-center rounded-[2px] bg-muted/40 text-[8px] font-mono text-muted-foreground/70 ring-1 ring-border/40 ${className ?? ""}`}
+        className={`inline-flex h-[15px] w-5 items-center justify-center rounded-[2px] bg-muted/40 text-[8px] font-mono tabular-nums text-muted-foreground/70 ring-1 ring-border/40 ${className ?? ""}`}
       >
         {currency.slice(0, 2)}
       </span>

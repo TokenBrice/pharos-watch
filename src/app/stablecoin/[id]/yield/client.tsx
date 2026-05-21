@@ -80,7 +80,7 @@ function StablecoinYieldDetailHeader({
                 <h1 className="text-2xl font-extrabold tracking-tighter text-foreground sm:text-3xl">
                   {staticCoin.name}
                 </h1>
-                <span className="font-mono text-base text-muted-foreground">{staticCoin.symbol}</span>
+                <span className="font-mono tabular-nums text-base text-muted-foreground">{staticCoin.symbol}</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 {GOVERNANCE_LABELS[staticCoin.flags.governance] ?? staticCoin.flags.governance} ·{" "}
@@ -401,13 +401,13 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                   <div className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       <span className="font-medium">{formatYieldWarningSignal(event.signal)}</span>
-                      <span className="font-mono text-xs text-amber-700/80 dark:text-amber-300/75">
+                      <span className="pharos-numeric text-xs text-amber-700/80 dark:text-amber-300/75">
                         {formatChartDate(event.timestamp, "with-time")}
                       </span>
                     </div>
                     <p className="text-xs text-amber-700/80 dark:text-amber-300/75">
                       {event.sourceLabel ? `${event.sourceLabel} at ` : "APY "}
-                      <span className="font-mono">{formatPercent(event.apy)}</span>
+                      <span className="pharos-numeric">{formatPercent(event.apy)}</span>
                     </p>
                   </div>
                 </li>
@@ -461,12 +461,12 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                             ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
                             : `Switched to ${event.toSourceLabel ?? "—"}`}
                         </span>
-                        <span className="font-mono text-xs text-sky-700/80 dark:text-sky-300/75">
+                        <span className="pharos-numeric text-xs text-sky-700/80 dark:text-sky-300/75">
                           {formatChartDate(event.timestamp, "with-time")}
                         </span>
                       </div>
                       <p className="text-xs text-sky-700/80 dark:text-sky-300/75">
-                        APY at switch: <span className="font-mono">{formatPercent(event.apy)}</span>
+                        APY at switch: <span className="pharos-numeric">{formatPercent(event.apy)}</span>
                       </p>
                     </div>
                   </li>

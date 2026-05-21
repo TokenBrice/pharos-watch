@@ -95,7 +95,7 @@ export function ApiKeyRequestCard({
           <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
           <div className="flex flex-wrap gap-2">
             {request.intendedEndpoints.length > 0 ? request.intendedEndpoints.map((endpoint) => (
-              <span key={endpoint} className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-xs text-muted-foreground">
+              <span key={endpoint} className="rounded-md border border-border/60 bg-background px-2 py-1 font-mono tabular-nums text-xs text-muted-foreground">
                 {endpoint}
               </span>
             )) : (

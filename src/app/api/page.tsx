@@ -179,13 +179,13 @@ export default function ApiAccessPage() {
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <p>
                 Base URL:{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
                   https://api.pharos.watch
                 </code>
               </p>
               <p>
                 Header:{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
                   X-API-Key
                 </code>
               </p>
@@ -232,14 +232,14 @@ export default function ApiAccessPage() {
                 className="pharos-focus-ring rounded-2xl border border-border/60 bg-card/72 px-4 py-4 transition-colors hover:bg-accent"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <span className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] font-bold leading-tight text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight text-emerald-600 dark:text-emerald-400">
                     {endpoint.method}
                   </span>
                   <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                 </div>
-                <code className="mt-3 block truncate font-mono text-[0.82rem] text-foreground">{endpoint.path}</code>
+                <code className="mt-3 block truncate font-mono tabular-nums text-[0.82rem] text-foreground">{endpoint.path}</code>
                 <h3 className="mt-2 text-sm font-semibold tracking-tight text-foreground">{endpoint.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{endpoint.description}</p>
               </Link>
@@ -269,7 +269,7 @@ export default function ApiAccessPage() {
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <li>
               Send{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code>{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">X-API-Key</code>{" "}
               on protected public routes.
             </li>
             <li>Self-serve keys start at 30 requests per minute and expire after 60 days.</li>

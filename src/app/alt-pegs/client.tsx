@@ -83,17 +83,17 @@ function AltPegSnapshotHero({
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
               <p className="pharos-kicker">1Y Share Change</p>
-              <p className="mt-1 font-mono text-lg font-semibold text-foreground">
+              <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">
                 {formatPctPointDelta(yearlyShareDeltaPctPoints)}
               </p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
               <p className="pharos-kicker">Tracked Coins</p>
-              <p className="mt-1 font-mono text-lg font-semibold text-foreground">{altCoinCount}</p>
+              <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">{altCoinCount}</p>
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/15 px-3 py-3">
               <p className="pharos-kicker">Active Peg Cohorts</p>
-              <p className="mt-1 font-mono text-lg font-semibold text-foreground">{altPegCount}</p>
+              <p className="mt-1 pharos-numeric text-lg font-semibold text-foreground">{altPegCount}</p>
             </div>
           </div>
         </div>
@@ -113,7 +113,7 @@ function AltPegSnapshotHero({
                 <span className="size-2 rounded-full bg-[color:var(--chart-5)]" aria-hidden="true" />
                 Commodities
               </p>
-              <p className="mt-1 font-mono text-base font-semibold text-foreground">
+              <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
                 {formatCurrency(commodityMarketCap, 1)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{formatPercent(commodityShare)} of alt-peg market</p>
@@ -123,7 +123,7 @@ function AltPegSnapshotHero({
                 <span className="size-2 rounded-full bg-[color:var(--brand-accent)]" aria-hidden="true" />
                 Non-commodity Non-USD
               </p>
-              <p className="mt-1 font-mono text-base font-semibold text-foreground">
+              <p className="mt-1 pharos-numeric text-base font-semibold text-foreground">
                 {formatCurrency(fiatNonUsdMarketCap, 1)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{formatPercent(nonCommodityShare)} of alt-peg market</p>

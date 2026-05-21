@@ -209,7 +209,7 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
   );
 
   return (
-    <div className="sticky top-0 z-0 space-y-3 border-y border-border/60 bg-background/90 px-3 py-3 font-mono text-xs backdrop-blur supports-[backdrop-filter]:bg-background/75">
+    <div className="sticky top-0 z-0 space-y-3 border-y border-border/60 bg-background/90 px-3 py-3 font-mono tabular-nums text-xs backdrop-blur supports-[backdrop-filter]:bg-background/75">
       {coin && onClearCoin ? (
         <div className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Active coin filter">
           <button

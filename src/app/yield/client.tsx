@@ -376,7 +376,7 @@ export function YieldClient() {
           />
         </section>
 
-        <section aria-labelledby="leaderboard-heading" className="order-4">
+        <section id="data" tabIndex={-1} aria-labelledby="leaderboard-heading" className="order-4">
           <div className="space-y-3">
             <YieldLeaderboard
               rows={visibleRows}

@@ -11,8 +11,21 @@ import {
 } from "@shared/lib/format";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import { PegGauge } from "@/components/peg-gauge";
+import { MethodologyLinkBadge } from "@/components/methodology-link-badge";
+import type { MetricKey } from "@/lib/methodology-anchors";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
+
+/**
+ * Map a tertiary-metric `key` to a methodology anchor. Metrics without a
+ * mapping (e.g. excess-yield, performance-vs-usd, blacklistable) skip the
+ * (method) badge — those have their own contextual hint links elsewhere.
+ */
+const METRIC_TO_METHODOLOGY: Record<string, MetricKey | undefined> = {
+  dews: "dews",
+  "peg-score": "peg-score",
+  liquidity: "liquidity-score",
+};
 
 export interface HeroTertiaryMetricConfig {
   key: string;
@@ -34,6 +47,7 @@ export interface HeroSignalRailItem {
 }
 
 function MetricChip({
+  metricKey,
   label,
   value,
   subValue,
@@ -43,6 +57,7 @@ function MetricChip({
   mobileFull = false,
   mobileHideSub = false,
 }: {
+  metricKey?: string;
   label: React.ReactNode;
   value: React.ReactNode;
   subValue?: string;
@@ -53,6 +68,7 @@ function MetricChip({
   mobileHideSub?: boolean;
 }) {
   const isEmpty = value === "—";
+  const methodologyMetric = metricKey ? METRIC_TO_METHODOLOGY[metricKey] : undefined;
 
   return (
     <div
@@ -77,6 +93,7 @@ function MetricChip({
           {subValue}
         </span>
       )}
+      {methodologyMetric && !isEmpty && !mobile ? <MethodologyLinkBadge metric={methodologyMetric} /> : null}
     </div>
   );
 }
@@ -111,6 +128,7 @@ export function HeroTertiaryMetrics({
           {regularMetrics.map((metric) => (
             <MetricChip
               key={metric.key}
+              metricKey={metric.key}
               label={metric.mobileLabel ?? metric.label}
               value={metric.value}
               subValue={metric.subValue}
@@ -124,6 +142,7 @@ export function HeroTertiaryMetrics({
           <div className="mt-2 flex items-stretch gap-2">
             <div className="min-w-0 flex-1">
               <MetricChip
+                metricKey={excessMetric.key}
                 label={excessMetric.mobileLabel ?? excessMetric.label}
                 value={excessMetric.value}
                 subValue={excessMetric.subValue}
@@ -146,6 +165,7 @@ export function HeroTertiaryMetrics({
         {performanceMetric ? (
           <div className="mt-2">
             <MetricChip
+              metricKey={performanceMetric.key}
               label={performanceMetric.mobileLabel ?? performanceMetric.label}
               value={performanceMetric.value}
               subValue={performanceMetric.subValue}
@@ -173,6 +193,7 @@ export function HeroTertiaryMetrics({
         {metrics.map((metric) => (
           <MetricChip
             key={metric.key}
+            metricKey={metric.key}
             label={metric.label}
             value={metric.value}
             subValue={metric.subValue}

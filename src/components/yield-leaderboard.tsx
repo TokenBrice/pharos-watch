@@ -122,9 +122,15 @@ function LeaderboardHeading({
           <button
             type="button"
             onClick={handleCopy}
-            className="pharos-focus-ring mt-2 inline-flex items-center text-[11px] font-medium text-frost-blue underline-offset-2 hover:underline"
+            className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-[11px] font-medium text-frost-blue underline-offset-2 hover:underline"
           >
-            {copied ? "Copied!" : "Copy URL"}
+            <span
+              className={`pharos-copy-icon ${copied ? "text-emerald-600 dark:text-emerald-400" : ""}`}
+              aria-live="polite"
+            >
+              {copied ? "Copied!" : "Copy URL"}
+            </span>
+            {copied ? <span key="copy-ring" className="pharos-copy-ring" aria-hidden="true" /> : null}
           </button>
         </TooltipContent>
       </Tooltip>

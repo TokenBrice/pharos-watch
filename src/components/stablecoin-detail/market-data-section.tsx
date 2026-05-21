@@ -1,8 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { ChartAnnotationLegend } from "@/components/chart-primitives";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChartAnnotationLegend,
+  ChartBrush,
+  MarketDataChartSyncProvider,
+  useMarketDataChartSync,
+} from "@/components/chart-primitives";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { LazySection } from "@/components/lazy-section";
@@ -13,6 +18,13 @@ import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
+
+const RANGE_MS: Record<string, number> = {
+  "7d": 7 * 86400000,
+  "30d": 30 * 86400000,
+  "90d": 90 * 86400000,
+  "1y": 365 * 86400000,
+};
 
 interface MarketDataSectionProps {
   stablecoinId: string;
@@ -38,13 +50,65 @@ export function MarketDataSection({
 }: MarketDataSectionProps) {
   const [range, setRange] = useState<TimeRangeOption>("all");
 
-  const fromMs =
-    supplyHistory.length > 0 ? (supplyHistory[0].date ?? 0) * 1000 : null;
-  const toMs =
-    supplyHistory.length > 0
-      ? (supplyHistory[supplyHistory.length - 1].date ?? 0) * 1000
-      : null;
-  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
+  return (
+    <MarketDataChartSyncProvider>
+      <MarketDataSectionBody
+        stablecoinId={stablecoinId}
+        supplyHistory={supplyHistory}
+        pegCurrency={pegCurrency}
+        frozenNote={frozenNote}
+        range={range}
+        setRange={setRange}
+      />
+    </MarketDataChartSyncProvider>
+  );
+}
+interface MarketDataSectionBodyProps extends MarketDataSectionProps {
+  range: TimeRangeOption;
+  setRange: (next: TimeRangeOption) => void;
+}
+
+/**
+ * Inner body — kept separate so we can call `useMarketDataChartSync()` for
+ * the brush wiring (the provider must be in scope).
+ */
+function MarketDataSectionBody({
+  stablecoinId,
+  supplyHistory,
+  pegCurrency,
+  frozenNote,
+  range,
+  setRange,
+}: MarketDataSectionBodyProps) {
+  const sync = useMarketDataChartSync();
+
+  // Brush domain matches the active controlled range, not the entire supply
+  // history — brushing inside "30d" lets you focus a few days.
+  const brushDomain = useMemo<readonly [number, number] | null>(() => {
+    if (supplyHistory.length === 0) return null;
+    const lastTs = (supplyHistory[supplyHistory.length - 1].date ?? 0) * 1000;
+    if (range === "all") {
+      const firstTs = (supplyHistory[0].date ?? 0) * 1000;
+      return [firstTs, lastTs];
+    }
+    const cutoff = RANGE_MS[range];
+    if (!cutoff) return null;
+    return [lastTs - cutoff, lastTs];
+  }, [range, supplyHistory]);
+
+  // Clear brush when the active range changes — the previous selection no
+  // longer makes sense in the new domain. `setBrushedRange` is stable from
+  // the provider (memoized) so it's safe to include.
+  const setBrushedRange = sync?.setBrushedRange;
+  useEffect(() => {
+    setBrushedRange?.(null);
+  }, [range, setBrushedRange]);
+
+  // Annotation legend reflects the brushed window when present, else the
+  // full controlled range.
+  const annotationFromMs = sync?.brushedRange?.[0] ?? brushDomain?.[0] ?? null;
+  const annotationToMs = sync?.brushedRange?.[1] ?? brushDomain?.[1] ?? null;
+  const { data: annotations } = useChartAnnotations(stablecoinId, annotationFromMs, annotationToMs);
 
   return (
     <section id="chart" aria-label="Market data charts" className="space-y-4">
@@ -79,6 +143,33 @@ export function MarketDataSection({
             />
           </LazySection>
         </div>
+        {brushDomain && sync ? (
+          <div className="border-t border-border/50 px-4 py-2 sm:px-6">
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                Brush
+              </p>
+              {sync.brushedRange ? (
+                <button
+                  type="button"
+                  onClick={() => sync.setBrushedRange(null)}
+                  className="pharos-focus-ring text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </button>
+              ) : (
+                <span className="text-[10px] text-muted-foreground/50">
+                  Drag to focus a window
+                </span>
+              )}
+            </div>
+            <ChartBrush
+              domain={brushDomain}
+              value={sync.brushedRange}
+              onChange={sync.setBrushedRange}
+            />
+          </div>
+        ) : null}
         {annotations.length > 0 ? (
           <div className="border-t border-border/50 px-4 py-3 sm:px-6">
             <ChartAnnotationLegend

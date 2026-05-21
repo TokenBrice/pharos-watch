@@ -31,7 +31,7 @@ export function CoverageMobileCard({ row, logoSrc }: CoverageMobileCardProps) {
 
           <div className="shrink-0 text-right">
             <div className="pharos-kicker">Available</div>
-            <div className="font-mono text-lg font-semibold text-foreground">
+            <div className="pharos-numeric text-lg font-semibold text-foreground">
               {row.coverageCount}/{COVERAGE_FEATURES.length}
             </div>
             <div className="mt-0.5 text-[10px] font-medium text-muted-foreground">

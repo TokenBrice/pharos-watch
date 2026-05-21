@@ -81,7 +81,7 @@ export function HomeAltCalloutStrip(): JSX.Element {
                 <Emblem />
               </span>
               <div className="min-w-0">
-                <p className="font-mono text-[11px] font-medium uppercase tracking-wider leading-tight text-foreground">
+                <p className="font-mono tabular-nums text-[11px] font-medium uppercase tracking-wider leading-tight text-foreground">
                   {name}
                 </p>
                 <p className="truncate text-[11px] leading-snug text-muted-foreground">

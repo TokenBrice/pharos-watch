@@ -40,7 +40,7 @@ function PortfolioPreview() {
           </div>
           <div className="mt-4 rounded-2xl border border-border/50 bg-muted/20 p-3">
             <p className="text-xs text-muted-foreground">Overall score</p>
-            <p className="mt-1 font-mono text-2xl text-foreground">84.6</p>
+            <p className="mt-1 pharos-numeric text-2xl text-foreground">84.6</p>
           </div>
         </div>
 
@@ -58,7 +58,7 @@ function PortfolioPreview() {
               <div key={label} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{label}</span>
-                  <span className="font-mono text-foreground">{value}</span>
+                  <span className="pharos-numeric text-foreground">{value}</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted/30">
                   <div

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import {
+  EmptyStateIllustration,
+  type EmptyStateKind,
+} from "@/components/empty-state-illustration";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { FilterTag, StablecoinData } from "@shared/types";
@@ -26,51 +29,60 @@ export function StablecoinTableEmptyState({
   onClearSearch,
   onClearFilters,
 }: StablecoinTableEmptyStateProps) {
+  // Map the local state (search vs filters vs cold-start) onto the canonical
+  // EmptyStateKind enum so this surface stops shipping bespoke copy.
+  const kind: EmptyStateKind = searchQuery
+    ? "no-results"
+    : activeFilters.length > 0
+      ? "no-matches"
+      : "no-data";
+  const title = searchQuery
+    ? `No results for "${searchQuery}"`
+    : activeFilters.length > 0
+      ? "No stablecoins match your filters"
+      : "No stablecoin data available";
+  const description =
+    activeFilters.length > 0 || searchQuery
+      ? "Try adjusting your filters or clearing them to see the full tracked universe."
+      : "Check back soon — we're constantly monitoring the market.";
+  const showActions = !!searchQuery || activeFilters.length > 0;
   return (
     <TableRow>
       <TableCell colSpan={99} className="py-10">
         <div className="flex flex-col items-center text-center">
-          <EmptyStateIllustration variant={searchQuery ? "search" : "data"} />
-          <div className="mx-auto mt-5 max-w-lg space-y-2">
-            <p className="text-base font-medium text-foreground">
-              {searchQuery
-                ? `No results for "${searchQuery}"`
-                : activeFilters.length > 0
-                  ? "No stablecoins match your filters"
-                  : "No stablecoin data available"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {activeFilters.length > 0
-                ? "Try adjusting your filters or clearing them to see the full tracked universe."
-                : "Check back soon — we're constantly monitoring the market."}
-            </p>
-          </div>
-          {(searchQuery || activeFilters.length > 0) && (
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-              {activeFilters.length > 0 && onClearFilters && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={onClearFilters}
-                  className="gap-1.5 rounded-full"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Clear all filters
-                </Button>
-              )}
-              {searchQuery && onClearSearch && (
-                <Button
-                  variant={activeFilters.length > 0 ? "outline" : "default"}
-                  size="sm"
-                  onClick={onClearSearch}
-                  className="gap-1.5 rounded-full"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Clear search
-                </Button>
-              )}
-            </div>
-          )}
+          <EmptyStateIllustration
+            kind={kind}
+            title={title}
+            description={description}
+            action={
+              showActions ? (
+                <>
+                  {activeFilters.length > 0 && onClearFilters ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={onClearFilters}
+                      className="gap-1.5 rounded-full"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Clear all filters
+                    </Button>
+                  ) : null}
+                  {searchQuery && onClearSearch ? (
+                    <Button
+                      variant={activeFilters.length > 0 ? "outline" : "default"}
+                      size="sm"
+                      onClick={onClearSearch}
+                      className="gap-1.5 rounded-full"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Clear search
+                    </Button>
+                  ) : null}
+                </>
+              ) : undefined
+            }
+          />
           {(searchQuery || activeFilters.length > 0) && data && data.length > 0 && (
             <div className="mt-6 border-t border-border/50 pt-5">
               <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">

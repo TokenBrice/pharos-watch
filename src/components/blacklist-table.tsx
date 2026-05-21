@@ -6,6 +6,7 @@ import { DataTableShell, type DataTableColumn } from "@/components/data-table-sh
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/csv-export";
 import { getNextSortState } from "@/hooks/use-sort";
@@ -185,7 +186,7 @@ export function BlacklistTable({
   }
 
   return (
-    <>
+    <TooltipProvider delayDuration={220}>
       <div className="space-y-3 md:hidden">
         <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -283,7 +284,7 @@ export function BlacklistTable({
           )}
         </DataTableShell>
       </div>
-    </>
+    </TooltipProvider>
   );
 }
 
@@ -323,24 +324,40 @@ function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: 
 }
 
 function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
+  const sourceTooltip = AMOUNT_SOURCE_TOOLTIPS[evt.amountSource];
+  const statusTooltip = AMOUNT_STATUS_TOOLTIPS[evt.amountStatus];
   return (
     <>
       {formatBlacklistAmountCell(evt)}
       {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
-        <span
-          className="ml-1 inline-flex rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-          title={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}
-        >
-          {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="ml-1 inline-flex cursor-help rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+              aria-label={sourceTooltip ?? undefined}
+            >
+              {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
+            </span>
+          </TooltipTrigger>
+          {sourceTooltip ? (
+            <TooltipContent className="max-w-[260px] text-[11px]">{sourceTooltip}</TooltipContent>
+          ) : null}
+        </Tooltip>
       ) : null}
       {evt.amountStatus !== "resolved" && (
-        <span
-          className="ml-1 inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-          title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}
-        >
-          {evt.amountStatus.replace(/_/g, " ")}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+              aria-label={statusTooltip ?? undefined}
+            >
+              {evt.amountStatus.replace(/_/g, " ")}
+            </span>
+          </TooltipTrigger>
+          {statusTooltip ? (
+            <TooltipContent className="max-w-[260px] text-[11px]">{statusTooltip}</TooltipContent>
+          ) : null}
+        </Tooltip>
       )}
     </>
   );
@@ -398,14 +415,38 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
           {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
-            <span className="rounded border border-border px-1.5 py-1" title={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}>
-              {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="cursor-help rounded border border-border px-1.5 py-1"
+                  aria-label={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource] ?? undefined}
+                >
+                  {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
+                </span>
+              </TooltipTrigger>
+              {AMOUNT_SOURCE_TOOLTIPS[evt.amountSource] ? (
+                <TooltipContent className="max-w-[260px] text-[11px]">
+                  {AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}
+                </TooltipContent>
+              ) : null}
+            </Tooltip>
           ) : null}
           {evt.amountStatus !== "resolved" ? (
-            <span className="rounded border border-border px-1.5 py-1" title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}>
-              {evt.amountStatus.replace(/_/g, " ")}
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="cursor-help rounded border border-border px-1.5 py-1"
+                  aria-label={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus] ?? undefined}
+                >
+                  {evt.amountStatus.replace(/_/g, " ")}
+                </span>
+              </TooltipTrigger>
+              {AMOUNT_STATUS_TOOLTIPS[evt.amountStatus] ? (
+                <TooltipContent className="max-w-[260px] text-[11px]">
+                  {AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}
+                </TooltipContent>
+              ) : null}
+            </Tooltip>
           ) : null}
         </div>
         <BlacklistTxLink event={evt} />

@@ -71,7 +71,7 @@ function GoalCard({
         <div className="min-w-0 space-y-3">
           <span
             className={cn(
-              "inline-flex rounded-full border px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.16em]",
+              "inline-flex rounded-full border px-2.5 py-1 pharos-numeric text-[11px] font-semibold tracking-[0.16em]",
               tone.badge,
             )}
           >
@@ -173,16 +173,16 @@ function StartHeroSection() {
             <p className="max-w-xl text-base leading-8 text-muted-foreground lg:max-w-[44ch]">
               <span className="sm:hidden">
                 Live risk surveillance across{" "}
-                <span className="font-mono text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
+                <span className="pharos-numeric text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
                 stability, on-chain liquidity, dependency exposure, and issuer behavior, scored every{" "}
-                <span className="font-mono text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
+                <span className="pharos-numeric text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
                 on-chain reads.
               </span>
               <span className="hidden sm:inline">
                 Live risk surveillance across{" "}
-                <span className="font-mono text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
+                <span className="pharos-numeric text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
                 stability, on-chain liquidity, dependency exposure, and issuer behavior, scored every{" "}
-                <span className="font-mono text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
+                <span className="pharos-numeric text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
                 on-chain reads. Built by{" "}
                 <Link
                   href="/about/"
@@ -198,7 +198,7 @@ function StartHeroSection() {
             <div className="space-y-1.5">
               <p
                 aria-label="Pharos posture"
-                className="font-mono text-[11px] uppercase leading-relaxed tracking-[0.18em] text-muted-foreground"
+                className="font-mono tabular-nums text-[11px] uppercase leading-relaxed tracking-[0.18em] text-muted-foreground"
               >
                 Free · Independent · Donation-funded · No fees · No ads
               </p>
@@ -282,7 +282,7 @@ function ScoresSection() {
               {/* Order number — mono, hairline */}
               <p
                 aria-hidden="true"
-                className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/85 lg:pt-1"
+                className="pharos-numeric text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/85 lg:pt-1"
               >
                 {String(index + 1).padStart(2, "0")}
               </p>
@@ -290,14 +290,14 @@ function ScoresSection() {
               {/* Score body */}
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="font-mono text-sm font-semibold uppercase tracking-[0.16em] text-foreground">
+                  <span className="font-mono tabular-nums text-sm font-semibold uppercase tracking-[0.16em] text-foreground">
                     {score.name}
                   </span>
                   <span className="text-xs text-muted-foreground">{score.fullName}</span>
                 </div>
                 <p className="text-base font-medium tracking-tight text-foreground">{score.question}</p>
                 <p className="text-sm leading-relaxed text-muted-foreground">{score.inputs}</p>
-                <p className="font-mono text-xs leading-relaxed text-muted-foreground/85">{score.cadence}</p>
+                <p className="font-mono tabular-nums text-xs leading-relaxed text-muted-foreground/85">{score.cadence}</p>
               </div>
 
               {/* Links — one arrow on primary, none on secondary */}
@@ -321,7 +321,7 @@ function ScoresSection() {
         </article>
 
         <p className="text-xs leading-relaxed text-muted-foreground/85">
-          Sources: <span className="font-mono text-muted-foreground">DefiLlama, CoinGecko, Etherscan, TronGrid</span>,
+          Sources: <span className="font-mono tabular-nums text-muted-foreground">DefiLlama, CoinGecko, Etherscan, TronGrid</span>,
           protocol-native APIs, and direct on-chain reads via the Pharos Worker. Full source list and pipeline diagram
           on{" "}
           <Link

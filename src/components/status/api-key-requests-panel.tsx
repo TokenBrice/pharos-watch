@@ -115,7 +115,7 @@ export function ApiKeyRequestsPanel() {
             {requestSummary.map((item) => (
               <div key={item.label} className="rounded-lg border border-border/60 bg-background/35 px-3 py-2">
                 <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
-                <div className="mt-1 font-mono text-xl font-semibold text-foreground">{item.value}</div>
+                <div className="mt-1 pharos-numeric text-xl font-semibold text-foreground">{item.value}</div>
                 <div className="text-[11px] text-muted-foreground">{item.detail}</div>
               </div>
             ))}
