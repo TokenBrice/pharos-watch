@@ -36,7 +36,7 @@ const FLOWS_SHELL_PROPS = {
   ],
 } as const;
 
-function FlowsHeaderSupplement({ scopeLabel, syncWarning }: { scopeLabel: string; syncWarning: string | null }) {
+function FlowsHeaderSupplement({ syncWarning }: { syncWarning: string | null }) {
   return (
     <div className="space-y-3">
       <p className="pharos-lead hidden sm:block">
@@ -44,11 +44,6 @@ function FlowsHeaderSupplement({ scopeLabel, syncWarning }: { scopeLabel: string
         whether today&apos;s activity is stronger or weaker than each coin&apos;s recent norm, and the Bank Run Gauge
         aggregates that baseline-relative pressure across tracked issuance and redemption activity.
       </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300">
-          {scopeLabel}
-        </span>
-      </div>
       {syncWarning ? (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
           {syncWarning}
@@ -93,7 +88,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   return (
     <FeaturePageShell
       {...FLOWS_SHELL_PROPS}
-      headerSupplement={<FlowsHeaderSupplement scopeLabel={scopeLabel} syncWarning={syncWarning} />}
+      headerSupplement={<FlowsHeaderSupplement syncWarning={syncWarning} />}
     >
       <QueryErrorNotice
         error={error}
