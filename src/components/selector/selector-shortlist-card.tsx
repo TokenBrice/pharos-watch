@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { YieldSourceLink } from "@/components/yield-source-link";
 import { cn } from "@/lib/utils";
 import type {
   SelectorComponent,
@@ -27,6 +28,8 @@ interface SelectorShortlistCardProps {
    * strongest forward action; with a single result, Open detail is.
    */
   prominentOpenDetail?: boolean;
+  /** External URL for the recommended yield source, when available. */
+  yieldSourceUrl?: string | null;
 }
 
 const PROFILE_LABEL: Record<SelectorProfile, string> = {
@@ -166,6 +169,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     whyText,
     watchText,
     prominentOpenDetail = false,
+    yieldSourceUrl,
   } = props;
   const chips = buildEvidenceChips(rec, isMobile);
   const recWithProse = rec as SelectorRecommendation & {
@@ -294,6 +298,16 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
               {precisStaleness(rec.recommendedSource.freshness.ageSeconds)} old.
             </span>
           </p>
+          {yieldSourceUrl ? (
+            <p className="mt-1.5">
+              <YieldSourceLink
+                href={yieldSourceUrl}
+                className="text-xs font-medium text-foreground"
+              >
+                Open yield source
+              </YieldSourceLink>
+            </p>
+          ) : null}
         </div>
       ) : null}
 

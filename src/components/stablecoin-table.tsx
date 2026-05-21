@@ -85,7 +85,7 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     id: "name",
     label: "Name",
     sortKey: "name",
-    className: "w-[168px] max-w-[168px] lg:w-[90px] lg:max-w-[90px] xl:w-[150px] xl:max-w-[150px]",
+    className: "w-[168px] max-w-[168px] xl:w-[150px] xl:max-w-[150px]",
   },
   { id: "price", label: "Price", sortKey: "price", className: "text-right" },
   {
@@ -199,7 +199,7 @@ export function StablecoinTable({
   }, [router]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  const isMobileColumns = useIsMobile(1024);
+  const isMobileColumns = useIsMobile(1280);
 
   // Density mode
   const [density, setDensity] = useTableDensity();
@@ -211,10 +211,13 @@ export function StablecoinTable({
   // subsequent loads — the prop only seeds the default branch.
   const deviceDefault = useMemo<ColumnId[]>(
     () => {
+      if (isMobileColumns) {
+        return [...MOBILE_DEFAULT_COLUMNS];
+      }
       if (initialVisibleColumns && initialVisibleColumns.length > 0) {
         return [...initialVisibleColumns];
       }
-      return isMobileColumns ? [...MOBILE_DEFAULT_COLUMNS] : [...DEFAULT_VISIBLE_COLUMNS];
+      return [...DEFAULT_VISIBLE_COLUMNS];
     },
     [initialVisibleColumns, isMobileColumns],
   );
@@ -336,10 +339,10 @@ export function StablecoinTable({
             <Skeleton className="h-4 w-28" />
             <div className="flex-1" />
             <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-12 hidden lg:block" />
+            <Skeleton className="h-4 w-12 hidden xl:block" />
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-14" />
-            <Skeleton className="h-4 w-14 hidden lg:block" />
+            <Skeleton className="h-4 w-14 hidden xl:block" />
           </div>
         ))}
       </div>
@@ -372,17 +375,17 @@ export function StablecoinTable({
 
       <div
         ref={scrollRef}
-        className={`scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "lg:overflow-x-hidden" : ""}`}
+        className={`scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "xl:overflow-x-hidden" : ""}`}
       >
         <table
-          className={`min-w-[420px] lg:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
+          className={`min-w-[420px] xl:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
           style={isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined}
         >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
               {showPinnedControls && (
-                <TableHead scope="col" className="w-[44px] text-center lg:w-[26px]">
+                <TableHead scope="col" className="w-[44px] text-center xl:w-[26px]">
                   <span className="sr-only">Starred</span>
                 </TableHead>
               )}

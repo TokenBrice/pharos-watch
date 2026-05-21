@@ -553,6 +553,22 @@ function ResultPane({
   sessionRecovered,
 }: ResultPaneProps) {
   const { data: logos } = useLogos();
+  const yieldRankings = useYieldRankings();
+  const yieldSourceUrls = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ranking of yieldRankings.data?.rankings ?? []) {
+      const primaryKey = ranking.provenance?.sourceKey;
+      if (primaryKey && ranking.yieldSourceUrl) {
+        map.set(`${ranking.id}::${primaryKey}`, ranking.yieldSourceUrl);
+      }
+      for (const alt of ranking.altSources ?? []) {
+        if (alt.yieldSourceUrl) {
+          map.set(`${ranking.id}::${alt.sourceKey}`, alt.yieldSourceUrl);
+        }
+      }
+    }
+    return map;
+  }, [yieldRankings.data]);
   const resultFocusRef = useRef<HTMLDivElement>(null);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
   const shortlistHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -747,6 +763,11 @@ function ResultPane({
                   }
                 : { ...rec, whyText: rec.whyText ?? buildWhyText(rec) }
             ) as SelectorRecommendation;
+            const sourceKey =
+              rec.profile === "yield" ? rec.recommendedSource?.sourceKey : null;
+            const yieldSourceUrl = sourceKey
+              ? yieldSourceUrls.get(`${rec.id}::${sourceKey}`) ?? null
+              : null;
             return (
               <SelectorShortlistCard
                 key={rec.id}
@@ -757,6 +778,7 @@ function ResultPane({
                 isMobile={isMobile}
                 logoUrl={logos[rec.id] ?? undefined}
                 prominentOpenDetail={singleResult}
+                yieldSourceUrl={yieldSourceUrl}
               />
             );
           })}

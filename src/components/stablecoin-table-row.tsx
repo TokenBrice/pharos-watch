@@ -153,10 +153,10 @@ function StablecoinVirtualRowBase({
               aria-label={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
               aria-pressed={isPinned}
               title={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
-              className={`pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors lg:size-6 ${
+              className={`pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors xl:size-6 ${
                 isPinned
                   ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
-                  : "text-muted-foreground opacity-80 hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
+                  : "text-muted-foreground opacity-80 hover:text-foreground xl:opacity-0 xl:group-hover:opacity-100 xl:focus-visible:opacity-100"
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -210,7 +210,7 @@ function StablecoinVirtualRowBase({
                 >
                   {coin.name}
                 </span>
-                <span className="mt-1 flex min-w-0 items-center gap-1 lg:hidden" aria-label="Mobile risk summary">
+                <span className="mt-1 flex min-w-0 items-center gap-1 xl:hidden" aria-label="Mobile risk summary">
                   {reportCard ? (
                     <span
                       className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10px] font-mono font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
@@ -304,7 +304,7 @@ function StablecoinVirtualRowBase({
           <span className={change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
             {prevWeek > 0 ? (
               <>
-                <span className="hidden lg:inline">
+                <span className="hidden xl:inline">
                   <MiniSparkline values={supplySparklineValues} />
                 </span>
                 {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
