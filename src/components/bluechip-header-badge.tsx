@@ -6,7 +6,6 @@ import { useBluechipRatings } from "@/hooks/api-hooks";
 import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
 import { ScoreBadgeWrapper, type ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
-import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 
 interface BluechipHeaderBadgeProps {
   stablecoinId: string;
@@ -79,12 +78,6 @@ export function BluechipHeaderBadge({ stablecoinId, versionTopic, versionVariant
         Pharos Bluechip{since ? ` · since ${since}` : ""}
       </Link>
       {wrappedLink}
-      <span
-        aria-hidden="true"
-        className="font-mono text-[10px] text-muted-foreground/70"
-      >
-        Methodology {SAFETY_SCORE_VERSION_LABEL}
-      </span>
     </span>
   );
 }

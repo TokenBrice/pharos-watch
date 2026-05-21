@@ -80,11 +80,11 @@ function InfrastructureBadge({ value }: { value: Infrastructure }) {
     : "border-frost-blue/30 bg-frost-blue/10";
 
   return (
-    <div className={`flex items-center gap-2 rounded-full border ${borderClass} px-2.5 py-0.5 text-[11px]`}>
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div className={`inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 rounded-full border ${borderClass} px-2.5 py-0.5 text-[11px]`}>
+      <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Infrastructure
       </span>
-      <span className={`text-[11px] font-semibold font-mono ${colorClass}`}>{label}</span>
+      <span className={`min-w-0 break-words font-mono text-[11px] font-semibold ${colorClass}`}>{label}</span>
     </div>
   );
 }
@@ -229,7 +229,7 @@ function HeroClassificationLine({
     return (
       <p className="text-xs text-muted-foreground">
         {sentenceNode}
-        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           {taxonomyNodes}
         </span>
       </p>
