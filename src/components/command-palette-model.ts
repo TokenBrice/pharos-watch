@@ -178,6 +178,26 @@ export function fuzzyMatch(query: string, target: string): boolean {
   return t.includes(q) || t.split(/\s+/).some((word) => word.startsWith(q));
 }
 
+function scoreSearchField(query: string, target: string, weights: { exact: number; prefix: number; wordPrefix: number; contains: number }): number {
+  const q = query.toLowerCase();
+  const t = target.toLowerCase();
+  if (!q || !t) return 0;
+  if (t === q) return weights.exact;
+  if (t.startsWith(q)) return weights.prefix;
+  if (t.split(/\s+/).some((word) => word.startsWith(q))) return weights.wordPrefix;
+  if (t.includes(q)) return weights.contains;
+  return 0;
+}
+
+function scoreStablecoinSearchMatch(query: string, coin: (typeof COMMAND_PALETTE_STABLECOINS)[number]): number {
+  const [id, name, symbol] = coin;
+  return (
+    scoreSearchField(query, symbol, { exact: 100, prefix: 45, wordPrefix: 45, contains: 25 })
+    + scoreSearchField(query, name, { exact: 80, prefix: 18, wordPrefix: 16, contains: 10 })
+    + scoreSearchField(query, id, { exact: 70, prefix: 12, wordPrefix: 12, contains: 6 })
+  );
+}
+
 export function rankCommandPaletteResults<T extends { score: number; status?: string }>(
   items: T[],
 ): T[] {
@@ -281,12 +301,9 @@ export function buildCommandPaletteResultDescriptors({
     }> = [];
 
     for (const coin of COMMAND_PALETTE_STABLECOINS) {
-      const [id, name, symbol, status] = coin;
-      const symbolMatch = fuzzyMatch(q, symbol);
-      const nameMatch = fuzzyMatch(q, name);
-      const idMatch = fuzzyMatch(q, id);
-      if (!symbolMatch && !nameMatch && !idMatch) continue;
-      const score = (symbolMatch ? 3 : 0) + (nameMatch ? 2 : 0) + (idMatch ? 1 : 0);
+      const [, , , status] = coin;
+      const score = scoreStablecoinSearchMatch(q, coin);
+      if (score <= 0) continue;
       matched.push({ coin, score, status: status ?? "active" });
     }
 

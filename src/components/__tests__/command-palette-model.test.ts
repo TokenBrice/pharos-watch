@@ -66,6 +66,27 @@ describe("command palette model", () => {
     expect(pageAndActionResults.some((result) => result.section === "Actions" && result.actionId)).toBe(true);
   });
 
+  it("ranks exact ticker matches before wrapped or suffixed symbols", () => {
+    const cases = [
+      { query: "USDC", href: "/stablecoin/usdc-circle/", label: "USD Coin" },
+      { query: "usdt", href: "/stablecoin/usdt-tether/", label: "Tether" },
+    ];
+
+    for (const { query, href, label } of cases) {
+      const [firstStablecoin] = buildCommandPaletteResultDescriptors({
+        query,
+        history: [],
+        isDark: false,
+      }).filter((result) => result.section === "Stablecoins");
+
+      expect(firstStablecoin).toMatchObject({
+        href,
+        label,
+        kind: "stablecoin",
+      });
+    }
+  });
+
   it("keeps Start Here unique in the command palette route model", () => {
     expect(COMMAND_PALETTE_PAGES.filter((page) => page.href === "/start")).toHaveLength(1);
 
