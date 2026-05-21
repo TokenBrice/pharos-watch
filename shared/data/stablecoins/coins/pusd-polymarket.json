@@ -62,7 +62,7 @@
       "pct": 100,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "wrapper",
+      "depType": "collateral",
       "blacklistable": true
     }
   ],

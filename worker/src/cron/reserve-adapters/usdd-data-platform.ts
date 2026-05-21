@@ -1,4 +1,4 @@
-import type { ReserveRisk, StablecoinMeta } from "@shared/types/core";
+import type { ReserveRisk, ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -39,6 +39,7 @@ type BucketValue = {
   value: number;
   risk: ReserveRisk;
   coinId?: string;
+  depType?: ReserveSlice["depType"];
 };
 
 function assertSuccess<T extends { code?: number }>(payload: T, label: string): T {
@@ -147,6 +148,7 @@ export function adaptUsddLatestCollateral(
       value: bucketValues.psmUsdtUsd,
       risk: "low",
       coinId: "usdt-tether",
+      depType: "mechanism",
     },
     {
       name: "TRX",

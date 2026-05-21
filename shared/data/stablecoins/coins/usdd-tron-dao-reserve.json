@@ -115,7 +115,8 @@
       "name": "USDT (PSM vaults)",
       "pct": 4.9,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "depType": "mechanism"
     },
     {
       "name": "sTRX (direct vaults)",

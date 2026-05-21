@@ -94,7 +94,7 @@
           "name": "USDC deployed through Origin OUSD strategies",
           "risk": "medium",
           "coinId": "usdc-circle",
-          "depType": "wrapper"
+          "depType": "collateral"
         }
       ]
     }

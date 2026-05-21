@@ -131,7 +131,7 @@
           },
           "risk": "low",
           "coinId": "m-m0",
-          "depType": "wrapper",
+          "depType": "collateral",
           "priceUsd": 1
         },
         {
@@ -144,7 +144,7 @@
           },
           "risk": "low",
           "coinId": "usdtb-ethena",
-          "depType": "wrapper",
+          "depType": "collateral",
           "priceUsd": 1
         }
       ]

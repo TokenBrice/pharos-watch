@@ -20664,7 +20664,7 @@
             "name": "USDC deployed through Origin OUSD strategies",
             "risk": "medium",
             "coinId": "usdc-circle",
-            "depType": "wrapper"
+            "depType": "collateral"
           }
         ]
       }
@@ -21838,7 +21838,7 @@
         "pct": 100,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -22032,7 +22032,7 @@
         "pct": 100,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper",
+        "depType": "collateral",
         "blacklistable": true
       }
     ],
@@ -28973,7 +28973,7 @@
             },
             "risk": "low",
             "coinId": "m-m0",
-            "depType": "wrapper",
+            "depType": "collateral",
             "priceUsd": 1
           },
           {
@@ -28986,7 +28986,7 @@
             },
             "risk": "low",
             "coinId": "usdtb-ethena",
-            "depType": "wrapper",
+            "depType": "collateral",
             "priceUsd": 1
           }
         ]
@@ -30626,7 +30626,8 @@
         "name": "USDT (PSM vaults)",
         "pct": 4.9,
         "risk": "low",
-        "coinId": "usdt-tether"
+        "coinId": "usdt-tether",
+        "depType": "mechanism"
       },
       {
         "name": "sTRX (direct vaults)",

@@ -38,7 +38,7 @@ describe("fetchOriginVaultBalancesReserves", () => {
         pct: 100,
         risk: "medium",
         coinId: "usdc-circle",
-        depType: "wrapper",
+        depType: "collateral",
       },
     ]);
     expect(result.warnings).toBeUndefined();
