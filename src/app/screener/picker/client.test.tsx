@@ -141,6 +141,13 @@ vi.mock("@/hooks/use-stablecoins", () => ({
     isSuccess: true,
     error: null,
   }),
+  useSupplyHistory: () => ({
+    data: [],
+    dataUpdatedAt: 1,
+    isLoading: false,
+    isSuccess: true,
+    error: null,
+  }),
 }));
 
 vi.mock("@/hooks/use-hydrated", () => ({

@@ -18,6 +18,16 @@ vi.mock("next/link", async () => {
   };
 });
 
+vi.mock("@/hooks/use-stablecoins", () => ({
+  useSupplyHistory: () => ({
+    data: [],
+    dataUpdatedAt: 1,
+    isLoading: false,
+    isSuccess: true,
+    error: null,
+  }),
+}));
+
 afterEach(() => {
   cleanup();
 });

@@ -30,7 +30,7 @@ describe("SiteHeader", () => {
       <SiteHeader total={180} pegCount={19} chainCount={96} />,
     );
     expect(html).toContain(
-      "Live depeg, freeze, safety, and liquidity signals across every tracked stablecoin.",
+      "Every tracked stablecoin: backing, freeze risk, liquidity, and peg stress.",
     );
   });
 

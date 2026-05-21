@@ -5,15 +5,18 @@ import { usePathname } from "next/navigation";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 import {
   useSidebarDailyDigestSignal,
+  useSidebarBlacklistSignal,
   useSidebarHealthSignal,
   useSidebarPegSummarySignal,
   useSidebarStabilityIndexSignal,
 } from "@/hooks/use-sidebar-nav-signal-data";
 import {
+  getBlacklistNavSignal,
   getDepegNavSignal,
   getDigestNavSignal,
   getStabilityIndexNavSignal,
   getStatusNavSignal,
+  getTapeNavSignal,
   parseSidebarDigestSeenAt,
   SIDEBAR_DIGEST_SEEN_STORAGE_KEY,
   type SidebarNavSignal,
@@ -25,6 +28,7 @@ export function useSidebarNavSignals() {
   const { data: stabilityIndex } = useSidebarStabilityIndexSignal();
   const { data: health } = useSidebarHealthSignal();
   const { data: dailyDigest } = useSidebarDailyDigestSignal();
+  const { data: blacklistSummary } = useSidebarBlacklistSignal(pathname.startsWith("/freezewatch"));
   const seenDigestGeneratedAt = useMemo(() => {
     if (pathname.startsWith("/digest") && dailyDigest?.generatedAt != null) {
       return dailyDigest.generatedAt;
@@ -44,12 +48,12 @@ export function useSidebarNavSignals() {
   return useMemo<Record<string, SidebarNavSignal | null>>(
     () => ({
       "/depeg": getDepegNavSignal(pegSummary),
-      "/timeline": null,
+      "/timeline": getTapeNavSignal(pegSummary),
       "/stability-index": getStabilityIndexNavSignal(stabilityIndex),
-      "/freezewatch": null,
+      "/freezewatch": getBlacklistNavSignal(blacklistSummary),
       "/status": getStatusNavSignal(health),
       "/digest": getDigestNavSignal(dailyDigest?.generatedAt, seenDigestGeneratedAt),
     }),
-    [dailyDigest?.generatedAt, health, pegSummary, seenDigestGeneratedAt, stabilityIndex],
+    [blacklistSummary, dailyDigest?.generatedAt, health, pegSummary, seenDigestGeneratedAt, stabilityIndex],
   );
 }

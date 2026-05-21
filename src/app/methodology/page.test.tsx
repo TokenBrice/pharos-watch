@@ -1,13 +1,18 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import MethodologyPage from "@/app/methodology/page";
+
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
 
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
 }));
+
+import MethodologyPage from "@/app/methodology/page";
 
 describe("MethodologyPage", () => {
   it("renders the reader guide, reading map, and section rail", () => {

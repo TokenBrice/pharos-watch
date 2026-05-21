@@ -263,7 +263,7 @@ function buildScreenerHrefFromFilters(filters: Record<string, string | string[] 
 
 // ── Tape filter mini-parser ─────────────────────────────────────────────────
 
-const TAPE_ALLOWED_KEYS = new Set(["severity", "type", "stablecoin", "chain"]);
+const TAPE_ALLOWED_KEYS = new Set(["severity", "type", "coin", "stablecoin", "chain"]);
 
 function parseTapeTokens(rest: string): Record<string, string> {
   const tokens = rest.split(/\s+/).filter(Boolean);
@@ -273,7 +273,7 @@ function parseTapeTokens(rest: string): Record<string, string> {
     if (!m) continue;
     const key = m[1].toLowerCase();
     if (!TAPE_ALLOWED_KEYS.has(key)) continue;
-    filters[key] = m[2].trim();
+    filters[key === "stablecoin" ? "coin" : key] = m[2].trim();
   }
   return filters;
 }
