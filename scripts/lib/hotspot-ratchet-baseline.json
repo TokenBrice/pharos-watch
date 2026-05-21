@@ -72,9 +72,9 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/app/chains/[chain]/client.tsx": {
-    "fileLines": 142,
-    "maxFunctionLines": 120,
-    "branchCount": 7,
+    "fileLines": 134,
+    "maxFunctionLines": 113,
+    "branchCount": 6,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 620,
@@ -144,8 +144,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 296,
-    "maxFunctionLines": 282,
+    "fileLines": 293,
+    "maxFunctionLines": 278,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -168,7 +168,7 @@
     "notes": "PegScore and DEWS now share an isolated section body, but the dual-surface copy is still oversized. Split PegScore-specific and DEWS-specific detail blocks before adding more content."
   },
   "src/app/methodology/scoring-changelog/content-v7-0.tsx": {
-    "fileLines": 748,
+    "fileLines": 767,
     "maxFunctionLines": 45,
     "branchCount": 0,
     "disposition": "queued-p4",

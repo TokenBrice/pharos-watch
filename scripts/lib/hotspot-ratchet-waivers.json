@@ -1,4 +1,20 @@
 {
+  "src/components/chart-primitives.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Design Council Wave 4/6 added the shared brush+crosshair sync context, annotation glyph differentiation, the annotation-density strip, and the sr-only ChartDataTable/Disclosure primitives (A2) on top of the existing axis/legend/annotation toolkit. Intentionally a shared chart-primitive hub; a follow-up pass should split the static-axis/skeleton primitives, the sync-context brush, and the data-table accessibility layer into sibling modules."
+  },
+  "src/components/command-palette.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes."
+  },
+  "src/app/compare/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Design Council Wave 4 added the radar cohort-median baseline toggle and the filter-context breadcrumb registration alongside the existing multi-coin selector, range control, and chart orchestration. Split cohort-baseline derivation and selection orchestration into hooks in a follow-up compare cleanup pass."
+  },
+  "src/components/stablecoin-table.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Design Council Wave 2/9 added the geometry-matched skeleton, View-Transition sort wrapping, the j/k row cursor + numeric-sort listener, and the background RefreshingBar to the virtualized home table. Split the skeleton, cursor, and refresh-indicator concerns out of the table shell in a follow-up power-user-table cleanup."
+  },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
@@ -43,10 +59,6 @@
     "disposition": "queued-p4",
     "notes": "Phase 2 added the evaluateOffchainConfirmer discriminated union to flatten the 9-level branch tree. Residual height is in the main loop's structural orchestration (primary/native/DEX/CEX/pool collection). Next /simplify pass should extract buildConfirmationPlan and evaluatePromotionDecision."
   },
-  "worker/src/cron/blacklist/amount-recovery.ts": {
-    "disposition": "queued-p4",
-    "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Phase 2 converted to options-object signatures; remaining height needs a dedicated blacklist cron cleanup that splits chain fetch, event normalization, and balance reconciliation."
-  },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
     "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass."
@@ -70,10 +82,6 @@
   "worker/src/cron/yield-sync/publication.ts": {
     "disposition": "queued-p4",
     "notes": "Yield publication now owns source arbitration output shaping, decision evidence persistence, atomic publication metadata, and alternative-source projection for v8 decision ledgers. Keep waived for this rollout; split decision persistence and ranking row projection into narrower modules in the next yield-sync cleanup."
-  },
-  "src/components/yield-history-chart.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Yield history chart coordinates responsive chart sizing, tooltip state, history data shaping, and source-decision overlays for the per-coin yield surface. Keep waived for the v8 rollout; extract chart model preparation and overlay rendering before adding more chart modes."
   },
   "src/components/key-info-card.tsx": {
     "disposition": "queued-p4",

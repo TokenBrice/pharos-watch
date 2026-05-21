@@ -22,6 +22,31 @@ const MODULE_ALLOWLIST = new Set([
   "worker/src/__mocks__/resvg-stub.ts",
   "worker/src/__mocks__/satori-stub.ts",
   "worker/src/__mocks__/wasm-module-stub.ts",
+  // Council scaffolds whose primary hosts already use the older
+  // MethodologyHint/Label/CardActions integration; the badge variant remains
+  // available for future score surfaces that prefer the inline `(method)`
+  // affordance over the tooltip.
+  "src/components/methodology-link-badge.tsx",
+  // Council scaffolds awaiting full host adoption — not in the Wave 8 brief.
+  "src/components/console-signature.tsx",
+  "src/components/motion-preference-toggle.tsx",
+  "src/components/peg-cohort-ridge.tsx",
+  "src/components/peg-deviation-strip.tsx",
+  // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
+  // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
+  // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
+  // is now consumed by src/components/command-palette.tsx.)
+  "src/lib/filter-summaries.ts",
+  // 404 / NotFound infrastructure scaffolds; full not-found adoption deferred.
+  "src/lib/route-guess.ts",
+  "src/lib/route-labels.ts",
+  // URL codec schemas waiting for per-tracker adoption (compare / yield /
+  // liquidity / safety-scores / freezewatch).
+  "src/lib/url-schemas/compare.ts",
+  "src/lib/url-schemas/freezewatch.ts",
+  "src/lib/url-schemas/liquidity.ts",
+  "src/lib/url-schemas/safety-scores.ts",
+  "src/lib/url-schemas/yield.ts",
 ]);
 const EXPORT_ALLOWLIST = new Set([
   // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
@@ -166,6 +191,72 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/start-here-callout.ts::MAX_START_HERE_HOMEPAGE_SESSIONS",
   "src/lib/status-dashboard-model.ts::getTopCauses",
   "src/lib/yield-constants.ts::WARNING_SIGNAL_LABELS",
+  // Static chart primitives consumed by validation-deferred chart wrappers.
+  "src/components/chart-primitives.tsx::StaticTimeXAxis",
+  "src/components/chart-primitives.tsx::StaticMonoYAxis",
+  "src/components/chart-primitives.tsx::StaticTimeGrid",
+  // ANNOTATION_HEX_COLORS + bucketAnnotationsByQuarter are consumed by sibling
+  // chart helpers in the same file; the static scan does not resolve same-file
+  // references. ChartDataTableDisclosure is the a11y disclosure companion to
+  // ChartDataTable, awaiting per-chart adoption.
+  "src/components/chart-primitives.tsx::ANNOTATION_HEX_COLORS",
+  "src/components/chart-primitives.tsx::bucketAnnotationsByQuarter",
+  "src/components/chart-primitives.tsx::ChartDataTableDisclosure",
+  // Consumed by the KpiBar host within the same module; same-file reference
+  // the static scan cannot resolve.
+  "src/components/kpi-bar-parts.tsx::PsiBandHistoryStrip",
+  // Sizing constant exported for downstream icon consumers.
+  "src/components/pharos-icon.tsx::ICON_SIZE",
+  // Storage key + snapshot reader exported for tests and one-off lookups
+  // (e.g. compare-config presets). External consumption is intermittent.
+  "src/hooks/use-watchlist.ts::WATCHLIST_STORAGE_KEY",
+  "src/hooks/use-watchlist.ts::readWatchlistSnapshot",
+  // Consumed internally by buildAllCoinTrackerLinks; the static scan does not
+  // resolve same-file references.
+  "src/lib/coin-tracker-links.ts::buildCoinTrackerLink",
+  // Council scaffolds whose modules are allowlisted above; allowlist their
+  // primary exports so the named-exports pass doesn't re-surface them.
+  "src/components/methodology-link-badge.tsx::MethodologyLinkBadge",
+  "src/components/console-signature.tsx::ConsoleSignature",
+  "src/components/motion-preference-toggle.tsx::MotionPreferenceToggle",
+  "src/components/peg-cohort-ridge.tsx::PegCohortRidge",
+  "src/components/peg-deviation-strip.tsx::PegDeviationStrip",
+  // parsePaletteInput + buildCompareHrefFromCoinIds are consumed by
+  // src/components/command-palette.tsx. resolveCoinIdFromToken is only consumed
+  // internally by parsePaletteInput; the static scan does not resolve same-file
+  // references, so it stays allowlisted.
+  "src/lib/command-palette-verbs.ts::resolveCoinIdFromToken",
+  "src/lib/filter-summaries.ts::summarizeScreenerFilters",
+  "src/lib/filter-summaries.ts::summarizeYieldFilters",
+  "src/lib/filter-summaries.ts::summarizeLiquidityFilters",
+  "src/lib/filter-summaries.ts::summarizeCompareFilters",
+  "src/lib/filter-summaries.ts::getMechanismArchetypeLabel",
+  "src/lib/route-guess.ts::guessRoute",
+  "src/lib/route-labels.ts::ROUTE_LABELS",
+  "src/lib/route-labels.ts::normalizeRoutePath",
+  "src/lib/route-labels.ts::routeLabelFor",
+  "src/lib/route-labels.ts::buildRouteBreadcrumb",
+  // Generic URL-codec hook + schemas: staged P2 infra. The codec is ready and the
+  // per-surface schemas exist; tracker adoption (compare/yield/liquidity/etc.) lands
+  // incrementally. Consumed together once a tracker swaps to useTypedUrlState.
+  "src/hooks/use-url-filters.ts::useTypedUrlState",
+  "src/lib/url-schemas/compare.ts::COMPARE_RANGES",
+  "src/lib/url-schemas/compare.ts::COMPARE_URL_SCHEMA",
+  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_EVENT_TYPES",
+  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_SORT_KEYS",
+  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_SORT_DIRECTIONS",
+  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_STATUS_BUCKETS",
+  "src/lib/url-schemas/freezewatch.ts::FREEZEWATCH_URL_SCHEMA",
+  "src/lib/url-schemas/liquidity.ts::LIQUIDITY_URL_SCHEMA",
+  "src/lib/url-schemas/safety-scores.ts::SAFETY_STRESS_GRADES",
+  "src/lib/url-schemas/safety-scores.ts::SAFETY_SCORES_URL_SCHEMA",
+  "src/lib/url-schemas/yield.ts::YIELD_WARNINGS_VALUES",
+  "src/lib/url-schemas/yield.ts::YIELD_OPPORTUNITY_VALUES",
+  "src/lib/url-schemas/yield.ts::YIELD_DEPTH_VALUES",
+  "src/lib/url-schemas/yield.ts::YIELD_SOURCE_CHANGED_VALUES",
+  "src/lib/url-schemas/yield.ts::YIELD_TRENDING_VALUES",
+  "src/lib/url-schemas/yield.ts::YIELD_WATCHLIST_VALUES",
+  "src/lib/url-schemas/yield.ts::YIELD_URL_SCHEMA",
   "worker/src/api/mint-burn-flows-shared.ts::FLOW_CACHE_PREFIX",
   "worker/src/api/mint-burn-flows-shared.ts::readCachedFlow",
   // Thin admin handler wrappers kept for direct test/script compatibility.
