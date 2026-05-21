@@ -16,6 +16,9 @@ const COMPONENTS_DIR = join(ROOT, "src/components");
 // Relative posix-style paths (for stable match regardless of OS separator).
 const ALLOWED_SERIF_FILES = new Set<string>([
   "src/components/ai-summary.tsx",
+  // Cemetery obituaries use Newsreader display titles as an intentional
+  // editorial carve-out (Design Council B11), matching the Digest register.
+  "src/components/cemetery-tombstones.tsx",
 ]);
 
 function toPosixRel(absolute: string): string {

@@ -41,7 +41,9 @@
 
   /* ── Severity (peg deviation) ─────────────────────────────────── */
   --severity-healthy:  var(--p-green-500);
-  --severity-mild:     var(--p-amber-300);
+  /* WCAG 1.4.3: amber-300 fails AA on light surfaces. Light theme uses amber-700;
+     .dark restores amber-300 (which passes on dark). */
+  --severity-mild:     var(--p-amber-700);
   --severity-moderate: var(--p-orange-500);
   --severity-severe:   var(--p-red-600);
 
@@ -55,14 +57,14 @@
 
   /* ── Severity hex values (for Recharts / canvas) ──────────────── */
   --severity-healthy-hex:  #22c55e;
-  --severity-mild-hex:     #f59e0b;
+  --severity-mild-hex:     #b45309;
   --severity-moderate-hex: #f97316;
   --severity-severe-hex:   #ef4444;
 
   /* ── PSI Bands ────────────────────────────────────────────────── */
   --psi-bedrock:  var(--p-green-500);
   --psi-steady:   var(--p-teal-400);
-  --psi-tremor:   var(--p-amber-300);
+  --psi-tremor:   var(--p-amber-700);
   --psi-fracture: var(--p-orange-500);
   --psi-crisis:   var(--p-red-500);
   --psi-meltdown: var(--p-red-950);
@@ -70,7 +72,7 @@
   /* ── PSI Band hex values (for Recharts) ───────────────────────── */
   --psi-bedrock-hex:  #22c55e;
   --psi-steady-hex:   #14b8a6;
-  --psi-tremor-hex:   #eab308;
+  --psi-tremor-hex:   #a16207;
   --psi-fracture-hex: #f97316;
   --psi-crisis-hex:   #ef4444;
   --psi-meltdown-hex: #991b1b;
@@ -79,14 +81,14 @@
   /* ── DEWS Threat Bands ────────────────────────────────────────── */
   --dews-calm:        var(--p-green-500);
   --dews-watch:       var(--p-teal-400);
-  --dews-alert:       var(--p-amber-300);
+  --dews-alert:       var(--p-amber-700);
   --dews-warning:     var(--p-orange-500);
   --dews-danger:      var(--p-red-500);
 
   /* ── DEWS hex values (for Recharts) ─────────────────────────── */
   --dews-calm-hex:    #22c55e;
   --dews-watch-hex:   #14b8a6;
-  --dews-alert-hex:   #eab308;
+  --dews-alert-hex:   #a16207;
   --dews-warning-hex: #f97316;
   --dews-danger-hex:  #ef4444;
   --dews-radar-spoke:              oklch(0.54 0.01 260 / 0.22);
@@ -99,7 +101,7 @@
   /* ── Score Tiers ──────────────────────────────────────────────── */
   --score-green: var(--p-green-500);
   --score-blue:  var(--p-blue-500);
-  --score-amber: var(--p-amber-300);
+  --score-amber: var(--p-amber-700);
   --score-red:   var(--p-red-500);
 
   /* ── Mechanism Archetype Accents ──────────────────────────────── */
@@ -203,6 +205,15 @@
 
   /* ── Severity (same hues, adjusted lightness for dark bg) ────── */
   --severity-severe:   var(--p-red-400);
+  /* Restore the bright amber stop on dark surfaces (passes AA against the
+     dark background); the light theme darkened these to amber-700 for AA. */
+  --severity-mild:     var(--p-amber-300);
+  --severity-mild-hex: #f59e0b;
+  --psi-tremor:        var(--p-amber-300);
+  --psi-tremor-hex:    #eab308;
+  --dews-alert:        var(--p-amber-300);
+  --dews-alert-hex:    #eab308;
+  --score-amber:       var(--p-amber-300);
 
   /* ── Mechanism Archetype Accents (Dark) ────────────────────────
      Same hues, lifted lightness/chroma for legibility on dark bg. */

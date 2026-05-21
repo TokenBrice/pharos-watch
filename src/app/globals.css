@@ -51,6 +51,12 @@
    ────────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
+  /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
+     sticky table header and the mobile utility dock. Defaults to 0 on desktop
+     where `--table-header-top` is unset; the mobile breakpoint below redefines
+     both. */
+  scroll-padding-top: var(--table-header-top, 0px);
+  scroll-padding-bottom: var(--mobile-utility-safe-offset, 0px);
   --frost-blue: var(--brand-accent);
   --background: var(--surface-base);
   --foreground: var(--text-primary);
@@ -130,6 +136,27 @@
     /* Smooth theme transitions for color-related properties */
     transition: background-color var(--theme-transition-duration) var(--motion-ease-standard),
                 color var(--theme-transition-duration) var(--motion-ease-standard);
+    /* M17 — tag root for orchestrated theme cross-dissolve via the View
+       Transitions API. The single named region lets the browser fade the
+       full viewport in one coordinated act on theme swap. */
+    view-transition-name: root;
+  }
+
+  /* M17 — orchestrated theme cross-dissolve. 220ms with standard ease. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 220ms;
+    animation-timing-function: var(--motion-ease-standard);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+    }
+    ::view-transition-group(*) {
+      animation: none;
+    }
   }
   
   /* Respect reduced motion for scroll behavior */
@@ -356,6 +383,13 @@
 }
 
 @layer components {
+  /* Canonical numeric treatment: Geist Mono with tabular figures + slashed zero.
+     Use on any digit-bearing cell (prices, percentages, basis points, scores). */
+  .pharos-numeric {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
   .pharos-kicker {
     @apply text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-[11px];
     line-height: 1.2;
@@ -586,6 +620,74 @@
     background-color: oklch(0.8 0.12 85 / 0.04) !important;
   }
 
+  /* Copy-confirmation emerald ring (M16). A faint emerald ring expands
+     from the icon center after a 40ms hold, fades over 200ms. */
+  @keyframes pharos-copy-ring {
+    0% {
+      transform: translate(-50%, -50%) scale(0.6);
+      opacity: 0;
+    }
+    16% {
+      opacity: 0.45;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1.85);
+      opacity: 0;
+    }
+  }
+
+  .pharos-copy-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    border: 1.5px solid oklch(0.72 0.16 152);
+    transform: translate(-50%, -50%) scale(0.6);
+    animation: pharos-copy-ring 240ms var(--motion-ease-decelerate) 40ms both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pharos-copy-ring {
+      animation: none;
+      display: none;
+    }
+  }
+
+  /* Copy icon cross-fade (M16): 140ms fade between Copy and Check icons. */
+  .pharos-copy-icon {
+    transition: opacity 140ms var(--motion-ease-standard);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pharos-copy-icon {
+      transition: none;
+    }
+  }
+
+  /* Skeleton → content crossfade overlay (M7). Both layers share the same
+     box so opacity transitions don't cause layout reflow. */
+  .pharos-crossfade-shell {
+    position: relative;
+  }
+
+  .pharos-crossfade-layer {
+    transition: opacity 180ms var(--motion-ease-decelerate);
+  }
+
+  .pharos-crossfade-layer[data-fading-out="true"] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pharos-crossfade-layer {
+      transition: none;
+    }
+  }
+
   /* Filter chip animations */
   @keyframes pharos-chip-enter {
     from {
@@ -697,10 +799,44 @@
 }
 
 @layer utilities {
+  /* Command palette spring-in entrance (M12). 180ms with 4% overshoot.
+     Lives in the utilities layer so it overrides the tw-animate-css
+     `data-[state=open]:animate-in zoom-in-95` shorthand on DialogContent.
+     Scoped to ≥640px — mobile palette is full-screen and keeps the fade. */
+  @keyframes pharos-palette-spring-in {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.96);
+    }
+    65% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.04);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  @media (min-width: 640px) {
+    .pharos-palette-spring-in[data-state="open"] {
+      animation: pharos-palette-spring-in 180ms var(--motion-ease-spring) both;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) and (min-width: 640px) {
+    .pharos-palette-spring-in[data-state="open"] {
+      animation: pharos-fade-in 120ms linear both;
+    }
+  }
+
   .table-header-sticky thead {
     position: sticky;
     top: var(--table-header-top, 0px);
     z-index: 10;
+    /* M18 — settle the elevation rather than snap it when the header
+       becomes sticky on scroll. */
+    transition: box-shadow 200ms var(--motion-ease-decelerate);
   }
   .table-header-sticky thead tr {
     background: var(--table-header-bg);
@@ -903,6 +1039,40 @@
     background-size: 200% 100%;
   }
 
+  /* Tuned shimmer cadence — large hero/chart blocks breathe slower so the
+   * loading state feels purposeful, inline pills tick faster so short waits
+   * still read as "alive". Pair with `pharos-shimmer-stagger` on a parent to
+   * offset siblings by 80ms and avoid synchronized strobing across a row. */
+  .pharos-shimmer-lg {
+    animation-duration: 2s;
+  }
+  .pharos-shimmer-md {
+    animation-duration: 1.5s;
+  }
+  .pharos-shimmer-sm {
+    animation-duration: 1s;
+  }
+  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(2),
+  .pharos-shimmer-stagger > *:nth-child(2) .skeleton-shimmer {
+    animation-delay: 80ms;
+  }
+  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(3),
+  .pharos-shimmer-stagger > *:nth-child(3) .skeleton-shimmer {
+    animation-delay: 160ms;
+  }
+  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(4),
+  .pharos-shimmer-stagger > *:nth-child(4) .skeleton-shimmer {
+    animation-delay: 240ms;
+  }
+  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(5),
+  .pharos-shimmer-stagger > *:nth-child(5) .skeleton-shimmer {
+    animation-delay: 320ms;
+  }
+  .pharos-shimmer-stagger > .skeleton-shimmer:nth-child(n+6),
+  .pharos-shimmer-stagger > *:nth-child(n+6) .skeleton-shimmer {
+    animation-delay: 400ms;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .skeleton-shimmer {
       animation: none;
@@ -967,11 +1137,18 @@
 
   /* Enhanced table row interactions */
   [data-slot="table-row"] {
-    transition: 
+    transition:
       background-color var(--motion-duration-fast) var(--motion-ease-standard),
       transform var(--motion-duration-fast) var(--motion-ease-standard),
       border-color var(--motion-duration-fast) var(--motion-ease-standard);
     border-left: 3px solid transparent;
+  }
+
+  /* 2.4.11 Focus Not Obscured (Minimum) — when a table row receives keyboard
+     focus, ensure the sticky header and mobile dock do not clip the ring. */
+  [data-slot="table-row"]:focus-visible {
+    scroll-margin-top: var(--table-header-top, 0px);
+    scroll-margin-bottom: var(--mobile-utility-safe-offset, 0px);
   }
 
   @media (hover: hover) {
@@ -1024,6 +1201,24 @@
   /* Preserve essential motion for interaction feedback */
   [data-slot="table-row"]:hover {
     transform: none !important;
+  }
+}
+
+/*
+ * Honor `prefers-reduced-transparency` (iOS Reduce Transparency; low-vision
+ * users on Windows/macOS who disable translucency at the OS level). Flatten
+ * the body glow gradients, card-shell highlight, and DEWS calm-dot bloom so
+ * overlapping translucent surfaces no longer erode the effective contrast of
+ * content beneath them. Functional surfaces (cards, badges, panels) keep
+ * their solid background tokens and remain fully usable.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  .dark {
+    --page-glow-top: none;
+    --page-glow-bottom: none;
+    --card-shell-highlight: none;
+    --dews-radar-calm-dot-bloom: transparent;
   }
 }
 
