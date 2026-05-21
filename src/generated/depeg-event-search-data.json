@@ -1,0 +1,11 @@
+[
+  {
+    "slug": "usdc-2023-03-11",
+    "stablecoinId": "usdc-circle",
+    "symbol": "USDC",
+    "pegType": "USD",
+    "direction": "below",
+    "peakDeviationBps": 1300,
+    "startedAt": 1678492800
+  }
+]

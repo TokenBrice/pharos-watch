@@ -102,7 +102,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-public-datasets.ts` in the same Pages prebuild paths so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
 - `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `generate-docs-metadata.ts` via the same `prebuild` hook, immediately after `generate-sitemap-dates.ts`
-- `generate-cemetery-dataset.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`
+- `generate-depeg-event-search-data.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`, so client command-palette search uses a compact recent-event index instead of bundling the full synced depeg archive
+- `generate-cemetery-dataset.ts` via the same `prebuild` hook, immediately after `generate-depeg-event-search-data.ts`
 - `generate-public-datasets.ts` via the same `prebuild` hook, immediately after `generate-cemetery-dataset.ts`
 - `generate-postman-collection.ts` via the same `prebuild` hook, immediately after `generate-public-datasets.ts`
 - `generate-openapi-spec.ts` via the same `prebuild` hook, immediately after `generate-postman-collection.ts`
@@ -110,7 +111,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-markdown-exports.ts` via the `postbuild` hook, after `next build` creates `out/`
 - `generate-stablecoin-per-coin-asset.ts --check` via `npm run check:stablecoin-data` when the stablecoin catalog guard validates generated per-coin source assets
 - `check:world-map` via `validate:prebuild` to fail if `public/maps/world-countries.svg` drifts from `scripts/maintenance/build-world-map-svg.ts`
-- `check:generated-artifacts` via `validate:prebuild` to fail if any generated artifact in `scripts/lib/automation-registry.mjs` drifts, including sitemap dates, docs metadata, Cemetery exports, Postman exports, OpenAPI, `/llms.txt`, the stablecoin frozen registry, and the generated block in `docs/api-reference.md`
+- `check:generated-artifacts` via `validate:prebuild` to fail if any generated artifact in `scripts/lib/automation-registry.mjs` drifts, including sitemap dates, docs metadata, depeg search data, Cemetery exports, Postman exports, OpenAPI, `/llms.txt`, the stablecoin frozen registry, and the generated block in `docs/api-reference.md`
 - `check:agent-doc-sync` via `validate:prebuild` to fail if top-level agent guidance files drift out of sync
 - `check-seo-static.mjs` via `npm run seo:check`
 - `check-phishing-signatures.mjs` via `npm run check:phishing-signatures` after Pages builds

@@ -155,6 +155,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-docs-metadata.ts",
   },
   {
+    id: "depeg-event-search-data",
+    checkCommand: "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
+    command: "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
+    script: "scripts/maintenance/generate-depeg-event-search-data.ts",
+  },
+  {
     id: "cemetery-dataset",
     checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",

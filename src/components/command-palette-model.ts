@@ -19,7 +19,7 @@ import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
-import { DEPEG_EVENT_ENTRIES } from "@/app/depeg/[event]/page-data";
+import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 
 export type CommandPaletteSection =
   | "Run command"
@@ -551,13 +551,10 @@ export function buildCommandPaletteResultDescriptors({
       });
     }
 
-    // Recent depeg events (top ~10 by startedAt)
-    if (DEPEG_EVENT_ENTRIES.length > 0) {
-      const recentEvents = [...DEPEG_EVENT_ENTRIES]
-        .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))
-        .slice(0, 10);
-      const depegMatches: typeof recentEvents = [];
-      for (const event of recentEvents) {
+    // Recent depeg events (generated top 10 by startedAt)
+    if (depegEventSearchData.length > 0) {
+      const depegMatches: Array<(typeof depegEventSearchData)[number]> = [];
+      for (const event of depegEventSearchData) {
         if (depegMatches.length >= NEW_SECTION_RESULT_CAP) break;
         if (
           fuzzyMatch(q, event.symbol) ||

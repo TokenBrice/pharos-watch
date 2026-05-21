@@ -197,6 +197,7 @@ describe("validate-ci parity", () => {
     const expectedCommands = [
       "tsx scripts/maintenance/generate-sitemap-dates.ts",
       "tsx scripts/maintenance/generate-docs-metadata.ts",
+      "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
       "tsx scripts/maintenance/generate-cemetery-dataset.ts",
       "tsx scripts/maintenance/generate-public-datasets.ts",
       "tsx scripts/maintenance/generate-postman-collection.ts",
@@ -210,6 +211,7 @@ describe("validate-ci parity", () => {
     const expectedCheckCommands = [
       "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
       "tsx scripts/maintenance/generate-docs-metadata.ts --check",
+      "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
       "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
       "tsx scripts/maintenance/generate-public-datasets.ts --check",
       "tsx scripts/maintenance/generate-postman-collection.ts --check",
@@ -224,6 +226,7 @@ describe("validate-ci parity", () => {
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
       "sitemap-dates",
       "docs-metadata",
+      "depeg-event-search-data",
       "cemetery-dataset",
       "public-datasets",
       "postman",
