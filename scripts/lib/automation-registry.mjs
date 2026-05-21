@@ -202,6 +202,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     command: "node scripts/maintenance/generate-api-reference.mjs",
     script: "scripts/maintenance/generate-api-reference.mjs",
   },
+  {
+    id: "og-editorial",
+    checkCommand: "node scripts/maintenance/build-og-editorial.mjs --check",
+    command: "node scripts/maintenance/build-og-editorial.mjs",
+    script: "scripts/maintenance/build-og-editorial.mjs",
+  },
 ];
 
 export function buildGeneratedArtifactCommands({ check = false } = {}) {

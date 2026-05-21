@@ -45,6 +45,7 @@
     "freeze-stablecoin": "tsx scripts/maintenance/freeze-stablecoin.ts",
     "sync:digests": "tsx scripts/maintenance/sync-digests.ts",
     "serve:static-export": "npx --yes tsx scripts/maintenance/serve-static-export.mjs",
+    "test:a11y": "playwright test tests/visual/a11y/axe-routes.spec.ts",
     "test:smoke-api": "node scripts/maintenance/smoke-api.mjs",
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
     "test:smoke-ops": "node scripts/maintenance/smoke-ops.mjs",
@@ -106,6 +107,8 @@
     "seo:live-smoke": "node scripts/ci/check-seo-live-smoke.mjs",
     "seo:check": "node scripts/ci/check-seo-static.mjs",
     "og:capture": "node scripts/maintenance/screenshot-og.mjs",
+    "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
+    "check:og-editorial": "node scripts/maintenance/build-og-editorial.mjs --check",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
   },

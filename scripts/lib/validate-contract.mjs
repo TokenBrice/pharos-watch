@@ -45,6 +45,7 @@ export const COMMON_VALIDATE_PREBUILD_COMMANDS = ["npm run validate:prebuild"];
 
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
+  "npm run test:a11y",
   "npm run check:feature-flag-inlining",
   "npm run seo:check",
   "npm run check:phishing-signatures",

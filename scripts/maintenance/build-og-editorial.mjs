@@ -11,13 +11,14 @@
  * and Geist Mono subsets render faithfully (matches the build-og-learn /
  * generate-pwa-icons skill flow).
  *
- * Manual invocation only — not wired into the build chain. Re-run when
- * the template or the methodology version pin changes.
+ * Re-run when the template or the methodology version pin changes. Use
+ * `--check` in CI to fail when committed PNGs are stale.
  *
  *   node scripts/maintenance/build-og-editorial.mjs
+ *   node scripts/maintenance/build-og-editorial.mjs --check
  */
 import { firefox } from "playwright";
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -25,6 +26,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const PUBLIC = resolve(REPO_ROOT, "public");
 const STAGING = resolve(REPO_ROOT, "agents/og-editorial-staging");
+const CHECK_MODE = process.argv.includes("--check");
 
 mkdirSync(STAGING, { recursive: true });
 mkdirSync(PUBLIC, { recursive: true });
@@ -172,6 +174,7 @@ function buildHtml(svg) {
 }
 
 const browser = await firefox.launch({ headless: true });
+const staleFiles = [];
 try {
   for (const card of CARDS) {
     const svg = buildSvg({ kicker: card.kicker, title: card.title });
@@ -180,7 +183,8 @@ try {
     writeFileSync(svgPath, svg);
     writeFileSync(htmlPath, buildHtml(svg));
 
-    const outPath = resolve(PUBLIC, card.file);
+    const publicPath = resolve(PUBLIC, card.file);
+    const outPath = CHECK_MODE ? resolve(STAGING, card.file.replace(/\.png$/, ".check.png")) : publicPath;
     const page = await browser.newPage({
       viewport: { width: 1200, height: 628 },
     });
@@ -195,14 +199,30 @@ try {
       timeout: 30000,
     });
     await page.close();
+
+    if (CHECK_MODE) {
+      const expected = existsSync(publicPath) ? readFileSync(publicPath) : null;
+      const actual = readFileSync(outPath);
+      if (!expected || !actual.equals(expected)) {
+        staleFiles.push(card.file);
+      }
+    }
+
     // Clean up the staging files now that the PNG is captured.
     try {
       unlinkSync(svgPath);
       unlinkSync(htmlPath);
+      if (CHECK_MODE) unlinkSync(outPath);
     } catch {
       /* swallow */
     }
-    console.log(`Wrote ${outPath} (kicker: ${card.kicker})`);
+    console.log(`${CHECK_MODE ? "Checked" : "Wrote"} ${publicPath} (kicker: ${card.kicker})`);
+  }
+
+  if (staleFiles.length > 0) {
+    throw new Error(
+      `Editorial OG images are stale: ${staleFiles.join(", ")}. Run \`npm run build:og-editorial\` to refresh them.`,
+    );
   }
 } finally {
   await browser.close();
