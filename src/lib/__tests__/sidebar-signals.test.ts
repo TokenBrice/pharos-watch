@@ -63,6 +63,7 @@ describe("sidebar-signals", () => {
       text: "2",
       title: "2 blacklist events in the last 24h",
       tone: "warning",
+      showIcon: false,
     });
     expect(getBlacklistNavSignal({ stats: { recentCount24h: 0 } } as BlacklistSummaryResponse)).toBeNull();
   });

@@ -14,6 +14,7 @@ export interface SidebarNavSignal {
   text?: string;
   title: string;
   tone: "neutral" | "info" | "healthy" | "warning" | "danger";
+  showIcon?: boolean;
   /** Tailwind border-l class for accent-colored left border overlay. */
   accentClass?: string;
 }
@@ -95,6 +96,7 @@ export function getBlacklistNavSignal(blacklistSummary: BlacklistSummaryResponse
     text: formatCompactCount(recentCount24h),
     title: `${recentCount24h} blacklist event${recentCount24h === 1 ? "" : "s"} in the last 24h`,
     tone: "warning",
+    showIcon: false,
   };
 }
 

@@ -146,7 +146,7 @@ function SidebarNavSignalIndicator({ signal }: { signal: SidebarNavSignal }) {
       title={signal.title}
       aria-hidden="true"
     >
-      {ToneIcon ? <ToneIcon className="h-2.5 w-2.5" /> : null}
+      {ToneIcon && signal.showIcon !== false ? <ToneIcon className="h-2.5 w-2.5" /> : null}
       {signal.text}
     </span>
   );
