@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V7: readonly MethodologyChangelogEntry[] = [
     {
+      version: "7.26",
+      title: "NAV wrapper peg scoring uses configured peg references first",
+      date: "2026-05-21",
+      effectiveAt: 1779321600,
+      summary:
+        "NAV and savings wrappers with a configured peg reference now ignore their own appreciating share price for Safety Score peg and active-depeg caps, using the referenced base stablecoin's peg state instead.",
+      impact: [
+        "Yield-accruing wrapper prices above $1 no longer trigger active-depeg caps solely because the share price has appreciated",
+        "Tracked wrappers such as fxSAVE inherit peg risk from the configured base asset, while pure NAV tokens without a valid peg reference remain neutral/NR for peg tracking",
+        "Structural wrapper, dependency, collateral, and liquidity risks remain scored independently from the peg-reference correction",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "7.25",
       title: "Wrapper decentralization inherits from tracked parent assets",
       date: "2026-05-15",

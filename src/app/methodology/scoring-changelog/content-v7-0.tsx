@@ -1,5 +1,24 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV726Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.26")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        NAV and savings wrappers with a configured peg reference now use the referenced base stablecoin&apos;s peg
+        state for Safety Score peg scoring, instead of reading their own yield-accruing share price as a USD peg.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>Appreciating wrapper prices above $1 no longer trigger active-depeg D/F caps by themselves.</li>
+        <li>Tracked wrappers such as fxSAVE inherit peg risk from the configured base asset.</li>
+        <li>Wrapper, dependency, collateral, and liquidity risks remain scored through their own dimensions.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV725Entry() {
   return (
     <VersionCard

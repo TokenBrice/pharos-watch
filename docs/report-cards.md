@@ -6,12 +6,12 @@ The stablecoin registry currently contains 392 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.25`
+- **Current methodology version:** `v7.26`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.25)
+## Overall Grade (v7.26)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.25 makes wrapper Decentralization parent-aware for tracked wrapper relationships. A resolvable wrapper inherits the wrapped asset's Decentralization score with a small wrapper-kind haircut instead of falling to the old flat wrapper score.
+Current-version note: v7.26 makes NAV-wrapper peg scoring reference-aware. Yield-accruing wrappers with `pegReferenceId` use the referenced base stablecoin's peg state for the Safety Score peg multiplier and active-depeg cap, rather than treating their own appreciating share price as a USD depeg. Structural wrapper, dependency, collateral, and liquidity risks remain scored separately.
 
 ## Yield Source-Risk Boundary
 
@@ -60,7 +60,7 @@ Those reasons are documentation and handoff guards, not hidden penalties. Any fu
 - v5.5 peg fairness fixes apply automatically: tracking window is capped to coin age (`coinTrackingStart()`), per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper
 - The report-card peg dimension does not apply a second active-depeg cap before the multiplier; final D/F active-depeg caps are applied after the peg multiplier from the open event's peak deviation.
 - Pure NAV fund-share tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
-- Configured NAV wrappers over a stablecoin can inherit peg stability from a referenced base asset instead of receiving a neutral pass
+- Configured NAV wrappers over a stablecoin inherit peg stability from a referenced base asset; their own appreciating share price is ignored for peg scoring and active-depeg caps
 - Yield-bearing annotation added to detail text
 
 ### Liquidity / Exit Details

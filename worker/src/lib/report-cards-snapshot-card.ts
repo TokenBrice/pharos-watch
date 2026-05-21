@@ -72,7 +72,29 @@ function resolvePegInput(
   pegReferenceMeta: StablecoinMeta | null;
 } {
   const directPeg = pegDataById.get(meta.id);
-  if (directPeg?.pegScore != null || !meta.flags.navToken || !meta.pegReferenceId) {
+  if (meta.flags.navToken) {
+    const pegReferenceMeta = meta.pegReferenceId
+      ? (ACTIVE_META_BY_ID.get(meta.pegReferenceId) ?? null)
+      : null;
+    const pegReference = meta.pegReferenceId
+      ? pegDataById.get(meta.pegReferenceId)
+      : undefined;
+    if (pegReference && pegReference.pegScore != null) {
+      return {
+        peg: pegReference,
+        inheritedFromReference: true,
+        pegReferenceMeta,
+      };
+    }
+
+    return {
+      peg: undefined,
+      inheritedFromReference: false,
+      pegReferenceMeta,
+    };
+  }
+
+  if (directPeg?.pegScore != null || !meta.pegReferenceId) {
     return {
       peg: directPeg,
       inheritedFromReference: false,

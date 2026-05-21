@@ -86,6 +86,60 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     expect(variantCard?.rawInputs.activeDepegBps).toBeNull();
   });
 
+  it("ignores a NAV wrapper's own appreciating share price when a peg reference exists", () => {
+    const fxUsdPeg: PegSummaryCoin = {
+      id: "fxusd-f-x-protocol",
+      symbol: "fxUSD",
+      name: "fxUSD",
+      pegType: "USD",
+      pegCurrency: "USD",
+      governance: "centralized-dependent",
+      currentDeviationBps: 8,
+      pegScore: 94,
+      pegPct: 1.0008,
+      severityScore: 96,
+      spreadPenalty: 0,
+      worstDeviationBps: null,
+      activeDepeg: false,
+      eventCount: 0,
+      lastEventAt: null,
+      trackingSpanDays: 30,
+      methodologyVersion: "test",
+    };
+    const fxSaveNavPrice: PegSummaryCoin = {
+      ...fxUsdPeg,
+      id: "fxsave-f-x-protocol",
+      symbol: "fxSAVE",
+      name: "f(x) USD Saving",
+      currentDeviationBps: 1096,
+      pegScore: 35,
+      pegPct: 1.1096,
+      severityScore: 20,
+      worstDeviationBps: 1096,
+      activeDepeg: true,
+      eventCount: 1,
+    };
+
+    const { cards } = buildLiveReportCards({
+      pegDataById: new Map<string, PegSummaryCoin>([
+        ["fxusd-f-x-protocol", fxUsdPeg],
+        ["fxsave-f-x-protocol", fxSaveNavPrice],
+      ]),
+      activeDepegPeakBpsById: new Map<string, number>([["fxsave-f-x-protocol", 1096]]),
+      dexLiqMap: {},
+      redemptionBackstopMap: {},
+      bluechipMap: {},
+      resolvedBlacklistStatuses: new Map(),
+      liveReserveMap: new Map(),
+    });
+
+    const variantCard = cards.find((card) => card.id === "fxsave-f-x-protocol");
+    expect(variantCard?.rawInputs.pegScore).toBe(94);
+    expect(variantCard?.rawInputs.activeDepeg).toBe(false);
+    expect(variantCard?.rawInputs.activeDepegBps).toBeNull();
+    expect(variantCard?.dimensions.pegStability.detail).toContain("Peg reference (fxUSD)");
+  });
+
   it("derives tracked wrapper decentralization from the parent asset score", () => {
     const { cards } = buildLiveReportCards({
       pegDataById: new Map(),

@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.25 (2026-02-25 → 2026-05-15). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.26 (2026-02-25 → 2026-05-21). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+
+## v7.26 — NAV wrapper peg scoring uses configured peg references first (2026-05-21)
+
+- NAV and savings wrappers with a configured peg reference now ignore their own appreciating share price for Safety Score peg scoring and active-depeg caps
+- Yield-accruing wrapper prices above $1 no longer trigger D/F active-depeg caps solely because the share price has appreciated
+- Tracked wrappers such as fxSAVE inherit peg risk from the configured base asset, while structural wrapper, dependency, collateral, and liquidity risks remain scored separately
 
 ## v7.25 — Wrapper decentralization inherits from tracked parent assets (2026-05-15)
 
