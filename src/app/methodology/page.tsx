@@ -182,7 +182,7 @@ export default function MethodologyPage() {
       {/* Editorial preface — pinned long-form, written once, not regenerated. */}
       <section
         aria-label="Editorial preface"
-        className="mx-auto w-full max-w-[68ch] border-y border-border/60 py-10 md:py-12"
+        className="mx-auto w-full max-w-[88ch] border-y border-border/60 py-10 md:py-12"
       >
         <p className="pharos-kicker text-foreground/80">Editorial Preface</p>
         <h2
