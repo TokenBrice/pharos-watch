@@ -6,7 +6,7 @@ import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { downloadChartPng } from "@/lib/chart-export";
-import { ChartSkeleton } from "@/components/chart-skeleton";
+import { ChartShellSkeleton, ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
@@ -14,7 +14,15 @@ import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/api-hooks";
 import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { trackEvent } from "@/lib/analytics";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import {
+  DateTooltip,
+  MonoYAxis,
+  TimeGrid,
+  TimeXAxis,
+  ChartDataTable,
+  capDataForTable,
+  type ChartDataTableColumn,
+} from "@/components/chart-primitives";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { buildPsiChartData } from "@shared/lib/psi-view-model";
 import { formatRangeTickDate } from "@/lib/chart-time-range";
@@ -23,6 +31,17 @@ import { formatRangeTickDate } from "@/lib/chart-time-range";
 
 const PSI_EVENT_LABEL_CLASS =
   "[fill:var(--text-secondary)] [paint-order:stroke] [stroke:var(--surface-overlay)] [stroke-width:4px] font-medium";
+
+const PSI_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+const PSI_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; score: number }>[] = [
+  { id: "date", label: "Date", format: (row) => PSI_TABLE_DATE_FMT.format(new Date(row.ts)) },
+  { id: "score", label: "Score (0–100)", format: (row) => row.score.toFixed(1) },
+];
 
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
@@ -43,6 +62,10 @@ export function ScoreChart({
   const isMobile = useIsMobile();
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
   const formatTimestamp = useCallback((ts: number) => formatRangeTickDate(ts, range), [range]);
+  const chartMargin = useMemo(
+    () => ({ top: showHeader ? 30 : 26, right: 5, bottom: showHeader ? 20 : 8, left: 5 }),
+    [showHeader],
+  );
 
   /* Hide overlapping event labels when zoomed into a tight range */
   const visibleEvents = useMemo(() => {
@@ -100,12 +123,27 @@ export function ScoreChart({
               role="figure"
               aria-label={`PSI score history chart showing ${filteredData.length} data points`}
             >
+              {(() => {
+                const { rows, truncated } = capDataForTable(filteredData, 90);
+                return (
+                  <ChartDataTable
+                    caption={
+                      truncated
+                        ? `PSI score history — most recent ${rows.length} of ${filteredData.length} data points`
+                        : `PSI score history — ${filteredData.length} data points`
+                    }
+                    data={rows}
+                    columns={PSI_TABLE_COLUMNS}
+                  />
+                );
+              })()}
               {isChartReady ? (
+                <div className="animate-fade-in">
                 <AreaChart
                   width={width}
                   height={height}
                   data={filteredData}
-                  margin={{ top: showHeader ? 30 : 26, right: 5, bottom: showHeader ? 20 : 8, left: 5 }}
+                  margin={chartMargin}
                 >
                   <defs>
                     <linearGradient id="psiScoreGradient" x1="0" y1="0" x2="0" y2="1">
@@ -184,6 +222,16 @@ export function ScoreChart({
                     {...animProps}
                   />
                 </AreaChart>
+                </div>
+              ) : width > 0 && height > 0 ? (
+                <ChartShellSkeleton
+                  width={width}
+                  height={height}
+                  margin={chartMargin}
+                  yDomain={[0, 100]}
+                  xTickFormatter={formatTimestamp}
+                  ariaLabel="PSI score history chart loading"
+                />
               ) : (
                 <ChartSkeleton className="h-full w-full" />
               )}

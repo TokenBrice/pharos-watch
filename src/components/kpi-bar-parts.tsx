@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PharosIcon } from "@/components/pharos-icon";
+import { useFlashOnChange } from "@/hooks/use-flash-on-change";
+import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { CHART_GREEN, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
 
 type TrendDirection = "up" | "down" | "flat";
 
@@ -32,7 +36,7 @@ export function TrendChip({ label, value, direction }: { label: ReactNode; value
 
   return (
     <span className={`${KPI_CHIP_BASE} font-medium ${toneClasses}`}>
-      <Icon className="size-3" aria-hidden />
+      <PharosIcon icon={Icon} size="micro" aria-hidden />
       <span>{label}</span>
       <span className="font-mono tabular-nums">{value}</span>
     </span>
@@ -65,10 +69,131 @@ export function InfoChip({
   );
 }
 
+/**
+ * Tiny inline-SVG sparkline (D2): area fill at low opacity beneath a hairline stroke.
+ * Renders nothing when there are fewer than 2 points so we never fabricate a chart.
+ */
+export function KpiSparkline({
+  values,
+  ariaLabel,
+  tone = "auto",
+  className = "",
+}: {
+  values: number[];
+  ariaLabel: string;
+  tone?: "auto" | "signed" | "neutral";
+  className?: string;
+}) {
+  if (!values || values.length < 2) return null;
+  const width = 100;
+  const height = 28;
+  const padY = 2;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const v of values) {
+    if (!Number.isFinite(v)) continue;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
+  const range = Math.max(max - min, Math.abs(max) * 1e-6, 1e-9);
+  const plotH = height - padY * 2;
+  const stepX = values.length > 1 ? width / (values.length - 1) : 0;
+  const yFor = (v: number) => padY + (1 - (v - min) / range) * plotH;
+  const linePts = values.map((v, i) => `${(i * stepX).toFixed(2)},${yFor(v).toFixed(2)}`).join(" ");
+  const areaPts = `0,${(height).toFixed(2)} ${linePts} ${width.toFixed(2)},${(height).toFixed(2)}`;
+  const first = values[0]!;
+  const last = values[values.length - 1]!;
+  const delta = last - first;
+  const stroke =
+    tone === "neutral"
+      ? CHART_SLATE
+      : tone === "signed"
+        ? last >= 0
+          ? CHART_GREEN
+          : CHART_RED
+        : delta > 0
+          ? CHART_GREEN
+          : delta < 0
+            ? CHART_RED
+            : CHART_SLATE;
+
+  return (
+    <svg
+      role="img"
+      aria-label={ariaLabel}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      width="100%"
+      height={height}
+      className={`block motion-reduce:[&_polyline]:!transition-none ${className}`}
+    >
+      <polygon points={areaPts} fill={stroke} fillOpacity={0.18} stroke="none" />
+      <polyline
+        points={linePts}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+/**
+ * 30-cell PSI band history strip (D9). Each cell colored by `PSI_HEX_COLORS`;
+ * empty days render as a muted placeholder cell. `<title>` provides hover/focus
+ * date+band readout without a tooltip dependency.
+ */
+export function PsiBandHistoryStrip({
+  series,
+  windowDays = 30,
+  height = 16,
+  ariaLabel,
+  className = "",
+}: {
+  series: Array<{ date: number; band: string }>;
+  windowDays?: number;
+  height?: number;
+  ariaLabel?: string;
+  className?: string;
+}) {
+  const cells = Array.from({ length: windowDays }, (_, i) => series[i]);
+  return (
+    <div
+      className={`flex w-full gap-[1px] overflow-hidden rounded-[3px] ${className}`}
+      style={{ height }}
+      role="img"
+      aria-label={
+        ariaLabel ??
+        `Last ${windowDays} days of PSI band history; ${series.length} cells populated`
+      }
+    >
+      {cells.map((cell, i) => {
+        const fill = cell ? PSI_HEX_COLORS[cell.band as ConditionBand] : null;
+        const title = cell
+          ? `${new Date(cell.date * 1000).toISOString().slice(0, 10)} · ${cell.band}`
+          : "no data";
+        return (
+          <span
+            key={i}
+            className="flex-1"
+            style={{ backgroundColor: fill ?? "var(--muted-foreground, #94a3b8)", opacity: fill ? 1 : 0.18 }}
+            title={title}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function KpiCell({
   label,
   value,
   sublabel,
+  sparkline,
   valueClassName,
   centered = false,
   className = "",
@@ -76,6 +201,7 @@ export function KpiCell({
   label: ReactNode;
   value: ReactNode;
   sublabel?: ReactNode;
+  sparkline?: ReactNode;
   valueClassName?: string;
   centered?: boolean;
   className?: string;
@@ -87,6 +213,7 @@ export function KpiCell({
         <span aria-live="polite" className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
           {value}
         </span>
+        {sparkline && <div className="w-full max-w-[140px] px-1">{sparkline}</div>}
         {sublabel && <div className="flex flex-wrap items-center justify-center gap-1 pt-0.5 text-xs">{sublabel}</div>}
       </div>
     );
@@ -97,6 +224,7 @@ export function KpiCell({
       <span aria-live="polite" className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
         {value}
       </span>
+      {sparkline && <div className="-mt-1">{sparkline}</div>}
       {sublabel && <div className="flex flex-wrap items-center gap-1 pb-1 text-xs">{sublabel}</div>}
     </div>
   );
@@ -119,12 +247,14 @@ export function KpiMiniTile({
   value,
   metaPrimary,
   metaSecondary,
+  sparkline,
   valueClassName,
 }: {
   label: string;
   value: ReactNode;
   metaPrimary?: ReactNode;
   metaSecondary?: ReactNode;
+  sparkline?: ReactNode;
   valueClassName?: string;
 }) {
   return (
@@ -133,6 +263,7 @@ export function KpiMiniTile({
       <p className={`mt-1 text-base font-extrabold font-mono tabular-nums leading-tight sm:text-lg ${valueClassName ?? ""}`}>
         {value}
       </p>
+      {sparkline && <div className="-mt-0.5">{sparkline}</div>}
       {(metaPrimary || metaSecondary) && (
         <div className="mt-auto space-y-0.5 pt-1.5 text-[10px] font-mono leading-snug sm:pt-2 sm:text-[11px]">
           {metaPrimary && <div>{metaPrimary}</div>}
@@ -153,27 +284,36 @@ export interface KpiMetricDefinition {
   desktopSublabel?: ReactNode;
   mobileValueClassName?: string;
   desktopValueClassName?: string;
+  sparkline?: ReactNode;
 }
 
 export function PrimarySnapshotCard({
   value,
+  flashValue,
   band,
   delta24h,
   delta7d,
   delta30d,
   valueClassName,
+  scoreSeries,
+  bandSeries,
 }: {
   value: string;
+  flashValue?: number | null;
   band: string;
   delta24h: string | null;
   delta7d: string | null;
   delta30d: string | null;
   valueClassName?: string;
+  scoreSeries?: number[];
+  bandSeries?: Array<{ date: number; band: string }>;
 }) {
   // Detect crisis/meltdown bands for alert styling
   const isCrisis = band.toLowerCase().includes("crisis") || band.toLowerCase().includes("meltdown");
   const isTremor = band.toLowerCase().includes("tremor") || band.toLowerCase().includes("fracture");
   const isElevated = isCrisis || isTremor;
+  // Flash only the lead PSI number when its live score changes (skips mount).
+  const flashClass = useFlashOnChange(flashValue);
 
   return (
     <div
@@ -206,7 +346,7 @@ export function PrimarySnapshotCard({
             </div>
             <div
               aria-live="polite"
-              className={`font-mono text-[2.45rem] font-extrabold leading-none tabular-nums sm:text-[3.2rem] @sm:text-[3.4rem] ${valueClassName ?? ""}`}
+              className={`rounded-md font-mono text-[2.45rem] font-extrabold leading-none tabular-nums sm:text-[3.2rem] @sm:text-[3.4rem] ${valueClassName ?? ""} ${flashClass}`}
             >
               {value}
             </div>
@@ -244,6 +384,30 @@ export function PrimarySnapshotCard({
           </div>
         </div>
       </div>
+      {(scoreSeries && scoreSeries.length >= 2) || (bandSeries && bandSeries.length > 0) ? (
+        <div className="mt-2.5 space-y-1.5 sm:mt-3">
+          {scoreSeries && scoreSeries.length >= 2 ? (
+            <KpiSparkline
+              values={scoreSeries}
+              tone="auto"
+              ariaLabel={`30-day PSI trajectory; ${scoreSeries.length} points`}
+              className="opacity-90"
+            />
+          ) : null}
+          {bandSeries && bandSeries.length > 0 ? (
+            <div className="space-y-1">
+              <PsiBandHistoryStrip
+                series={bandSeries}
+                ariaLabel={`Last 30 days of PSI band classifications`}
+              />
+              <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+                <span>30d ago</span>
+                <span>today</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

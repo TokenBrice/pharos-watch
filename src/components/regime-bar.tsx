@@ -6,6 +6,27 @@ import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { getDisplayedPsi, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
 
+const DAY_SECONDS = 86_400;
+const BAND_STRIP_WINDOW_DAYS = 30;
+
+function buildBandStripCells(
+  history: ReadonlyArray<{ date: number; band: string }> | undefined,
+  computedAt: number,
+): Array<{ date: number; band: string } | null> {
+  if (!history?.length) return Array.from({ length: BAND_STRIP_WINDOW_DAYS }, () => null);
+  const todayMidnight = computedAt - (computedAt % DAY_SECONDS);
+  const completedOldestFirst = history
+    .filter((p) => p.date < todayMidnight)
+    .slice(0, BAND_STRIP_WINDOW_DAYS)
+    .reverse();
+  const out: Array<{ date: number; band: string } | null> = [];
+  for (let i = 0; i < BAND_STRIP_WINDOW_DAYS; i++) {
+    const point = completedOldestFirst[i];
+    out.push(point ? { date: point.date, band: point.band } : null);
+  }
+  return out;
+}
+
 /** Persistent 3px bar at the top of every page, colored by current PSI band. */
 export function RegimeBar() {
   const { data: psiData } = useStabilityIndexLight();
@@ -27,6 +48,9 @@ export function RegimeBar() {
   const daysInBand = psiData?.history?.length
     ? getPsiBandStreak(psiData.history, current.computedAt, band)
     : null;
+
+  // 30-day band history strip (oldest → newest). Empty cells until history hydrates.
+  const bandStripCells = buildBandStripCells(psiData?.history, current.computedAt);
 
   return (
     <button
@@ -64,6 +88,31 @@ export function RegimeBar() {
               {" "}· trend {current.components.trend > 0 ? "+" : ""}
               {current.components.trend.toFixed(1)}
             </span>
+          </div>
+          <div className="mx-auto mb-1.5 flex max-w-3xl items-center gap-2 px-4">
+            <div
+              className="flex h-[10px] flex-1 gap-[1px] overflow-hidden rounded-[2px]"
+              role="img"
+              aria-label="Last 30 days of PSI band classifications"
+            >
+              {bandStripCells.map((cell, i) => {
+                const fill = cell ? PSI_HEX_COLORS[cell.band as ConditionBand] : null;
+                const title = cell
+                  ? `${new Date(cell.date * 1000).toISOString().slice(0, 10)} · ${cell.band}`
+                  : "no data";
+                return (
+                  <span
+                    key={i}
+                    className="flex-1"
+                    style={{
+                      backgroundColor: fill ?? "rgba(255,255,255,0.18)",
+                      opacity: fill ? 1 : 0.6,
+                    }}
+                    title={title}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

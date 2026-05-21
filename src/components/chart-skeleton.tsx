@@ -1,6 +1,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
+export { ChartShellSkeleton } from "@/components/chart-primitives";
+
 interface ChartSkeletonProps {
   className?: string;
   /** "area" shows a fake area chart shape; "bars" shows horizontal bar placeholders */
@@ -8,6 +10,12 @@ interface ChartSkeletonProps {
   /** Homepage skeleton variants keep the route-local loading chrome intact. */
   type?: "area" | "bar" | "radar";
   height?: string;
+  /**
+   * When set, the skeleton fades out over 180ms so the resolved chart can
+   * cross-fade in (M7). Defaults to false; consumers that mount the skeleton
+   * during loading and the real chart once data lands can leave it untouched.
+   */
+  fadingOut?: boolean;
 }
 
 export function ChartSkeleton({
@@ -15,10 +23,17 @@ export function ChartSkeleton({
   variant = "area",
   type,
   height = "h-[300px]",
+  fadingOut = false,
 }: ChartSkeletonProps) {
   if (type) {
     return (
-      <div className={cn("relative overflow-hidden rounded-xl border border-border/50 bg-card/50", className)}>
+      <div
+        className={cn(
+          "pharos-crossfade-layer relative overflow-hidden rounded-xl border border-border/50 bg-card/50",
+          className,
+        )}
+        data-fading-out={fadingOut ? "true" : undefined}
+      >
         <div className="flex items-center justify-between border-b border-border/30 px-4 py-3">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-8 w-24 rounded-md" />
@@ -81,9 +96,10 @@ export function ChartSkeleton({
   return (
     <div
       className={cn(
-        "pharos-chart-stage skeleton-shimmer relative w-full overflow-hidden",
+        "pharos-chart-stage pharos-crossfade-layer skeleton-shimmer relative w-full overflow-hidden",
         className,
       )}
+      data-fading-out={fadingOut ? "true" : undefined}
     >
       {variant === "area" ? (
         <>

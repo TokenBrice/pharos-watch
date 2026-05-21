@@ -17,6 +17,7 @@ import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { cn } from "@/lib/utils";
 import { getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
+import { DewsBandStrip } from "@/components/dews-badge";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: getDewsSignalLabel("supply"), metricKey: "delta1d", metricLabel: "1d change" },
@@ -196,6 +197,10 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const bandHex = THREAT_BAND_HEX[typedBand] ?? THREAT_BAND_HEX.CALM;
   const availableCount = Object.values(signals).filter((s) => s.available).length;
   const amplifiers = getDewsAmplifiers(data.current);
+  // 24h-ago score for the ghost notch on the band strip. `history` is
+  // chronological (oldest first), so the entry preceding the latest is the
+  // closest daily comparison point.
+  const prevScore = history && history.length >= 2 ? history[history.length - 2].score : undefined;
 
   const sortedSignals = Object.entries(SIGNAL_META)
     .flatMap(([key, meta]) => {
@@ -218,6 +223,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
           <span className="flex items-center gap-2">
             <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
+            <DewsBandStrip score={score} prevScore={prevScore} className="hidden sm:block" />
             <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
               {THREAT_BAND_LABELS[typedBand]}
             </span>

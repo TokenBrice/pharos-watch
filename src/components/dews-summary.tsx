@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/api-hooks";
@@ -8,6 +8,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { formatCompactUsd } from "@shared/lib/format";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ThreatBand } from "@shared/lib/classification";
@@ -59,12 +60,22 @@ function DEWSDot({
   coin,
   onHover,
   onClick,
+  onFocusDot,
+  onArrowKey,
   isSelected,
+  tabIndex,
+  ariaLabel,
+  registerRef,
 }: {
   coin: ElevatedCoin;
   onHover: (id: string | null) => void;
   onClick: (id: string) => void;
+  onFocusDot: (id: string) => void;
+  onArrowKey: (direction: 1 | -1 | "first" | "last") => void;
   isSelected?: boolean;
+  tabIndex: 0 | -1;
+  ariaLabel: string;
+  registerRef: (id: string, node: SVGGElement | null) => void;
 }) {
   const hex = THREAT_BAND_HEX[coin.band];
   const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
@@ -74,20 +85,44 @@ function DEWSDot({
 
   return (
     <g
+      ref={(node) => registerRef(coin.id, node)}
       transform={`translate(${coin.x.toFixed(1)}, ${coin.y.toFixed(1)})`}
       role="button"
-      tabIndex={0}
-      aria-label={`${coin.symbol}: DEWS score ${coin.score}, band ${coin.band}`}
+      tabIndex={tabIndex}
+      aria-label={ariaLabel}
       style={{ cursor: "pointer" }}
       onMouseEnter={() => onHover(coin.id)}
       onMouseLeave={() => onHover(null)}
-      onFocus={() => onHover(coin.id)}
+      onFocus={() => {
+        onHover(coin.id);
+        onFocusDot(coin.id);
+      }}
       onBlur={() => onHover(null)}
       onClick={() => onClick(coin.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onClick(coin.id);
+          return;
+        }
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          e.preventDefault();
+          onArrowKey(1);
+          return;
+        }
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          e.preventDefault();
+          onArrowKey(-1);
+          return;
+        }
+        if (e.key === "Home") {
+          e.preventDefault();
+          onArrowKey("first");
+          return;
+        }
+        if (e.key === "End") {
+          e.preventDefault();
+          onArrowKey("last");
         }
       }}
     >
@@ -243,6 +278,24 @@ function DEWSCenter({ highest, totalCount, sweepDur }: { highest: ThreatBand; to
   );
 }
 
+// Severity rank for keyboard nav ordering (highest first).
+const ROVING_BAND_RANK: Record<ElevatedCoin["band"], number> = {
+  DANGER: 4,
+  WARNING: 3,
+  ALERT: 2,
+  WATCH: 1,
+};
+
+function buildRovingOrder(elevated: ElevatedCoin[]): ElevatedCoin[] {
+  return [...elevated].sort((a, b) => {
+    const rank = ROVING_BAND_RANK[b.band] - ROVING_BAND_RANK[a.band];
+    if (rank !== 0) return rank;
+    const mcapA = a.mcap ?? 0;
+    const mcapB = b.mcap ?? 0;
+    return mcapB - mcapA;
+  });
+}
+
 function DEWSRadar({
   elevated,
   calmDots,
@@ -271,16 +324,91 @@ function DEWSRadar({
     return () => mql.removeEventListener("change", sync);
   }, []);
 
+  // Roving tabindex: keyboard order = severity desc, then mcap desc.
+  const rovingOrder = useMemo(() => buildRovingOrder(elevated), [elevated]);
+  const [rovingFocusId, setRovingFocusId] = useState<string | null>(null);
+  const dotRefs = useRef<Map<string, SVGGElement>>(new Map());
+  const liveMessageId = `dews-live-${uid}`;
+  const [liveMessage, setLiveMessage] = useState("");
+
+  // Derived roving anchor: the user's explicit selection if still valid,
+  // otherwise the first dot in keyboard order. Derived (not effect-synced) so
+  // it stays correct when the elevated set or ordering changes without a
+  // setState-in-effect cascade.
+  const effectiveRovingId = useMemo(() => {
+    if (rovingOrder.length === 0) return null;
+    if (rovingFocusId && rovingOrder.some((c) => c.id === rovingFocusId)) return rovingFocusId;
+    return rovingOrder[0]?.id ?? null;
+  }, [rovingOrder, rovingFocusId]);
+
+  const registerRef = useCallback((id: string, node: SVGGElement | null) => {
+    if (node) dotRefs.current.set(id, node);
+    else dotRefs.current.delete(id);
+  }, []);
+
+  const focusDotById = useCallback((id: string) => {
+    const node = dotRefs.current.get(id);
+    if (node) node.focus();
+  }, []);
+
+  const handleArrow = useCallback(
+    (direction: 1 | -1 | "first" | "last") => {
+      if (rovingOrder.length === 0) return;
+      const currentIdx = effectiveRovingId
+        ? rovingOrder.findIndex((c) => c.id === effectiveRovingId)
+        : 0;
+      let nextIdx: number;
+      if (direction === "first") nextIdx = 0;
+      else if (direction === "last") nextIdx = rovingOrder.length - 1;
+      else nextIdx = Math.min(Math.max(currentIdx + direction, 0), rovingOrder.length - 1);
+      const next = rovingOrder[nextIdx];
+      if (!next) return;
+      setRovingFocusId(next.id);
+      focusDotById(next.id);
+    },
+    [rovingOrder, effectiveRovingId, focusDotById],
+  );
+
+  const buildAnnouncement = useCallback(
+    (coin: ElevatedCoin): string => {
+      const idx = rovingOrder.findIndex((c) => c.id === coin.id);
+      const position = idx >= 0 ? `${idx + 1} of ${rovingOrder.length}` : `${rovingOrder.length}`;
+      const mcap = coin.mcap && coin.mcap > 0 ? `, ${formatCompactUsd(coin.mcap)} market cap` : "";
+      return `${position}: ${coin.symbol}, ${THREAT_BAND_LABELS[coin.band]} band${mcap}`;
+    },
+    [rovingOrder],
+  );
+
+  const handleFocusDot = useCallback(
+    (id: string) => {
+      setRovingFocusId(id);
+      const coin = rovingOrder.find((c) => c.id === id);
+      if (coin) setLiveMessage(buildAnnouncement(coin));
+    },
+    [rovingOrder, buildAnnouncement],
+  );
+
   const hex = THREAT_BAND_HEX[highest];
   const dur = sweepDuration(highest);
 
   return (
-    <svg
+    <div className="relative">
+      <span
+        id={liveMessageId}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveMessage}
+      </span>
+      <svg
       className="mx-auto block"
       viewBox="0 0 560 500"
       width="100%"
       style={{ height: compact ? "100%" : undefined, maxHeight: compact ? 470 : 440 }}
-      aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}`}`}
+      aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}. Use arrow keys to navigate elevated coins.`}`}
+      aria-describedby={liveMessageId}
       role="img"
     >
       <defs>
@@ -362,6 +490,11 @@ function DEWSRadar({
           key={coin.id}
           coin={coin}
           isSelected={hoveredId === coin.id}
+          tabIndex={coin.id === effectiveRovingId ? 0 : -1}
+          ariaLabel={buildAnnouncement(coin)}
+          registerRef={registerRef}
+          onFocusDot={handleFocusDot}
+          onArrowKey={handleArrow}
           onHover={(id) => {
             if (isFinePointer) {
               setHoveredId(id);
@@ -382,7 +515,8 @@ function DEWSRadar({
           return hovered ? <DEWSTooltip coin={hovered} /> : null;
         })()}
       <DEWSCenter highest={highest} totalCount={totalCount} sweepDur={dur} />
-    </svg>
+      </svg>
+    </div>
   );
 }
 

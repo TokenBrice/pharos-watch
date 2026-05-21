@@ -1,12 +1,16 @@
 import {
   type DexLiquidityMap,
   type MintBurnFlowsResponse,
+  type StabilityIndexHistoryPoint,
   type StabilityIndexResponse,
   type StablecoinListResponse,
   type StressSignalsAllResponse,
 } from "@shared/types";
 import { getDisplayedPsi, getPsiBandStreak, getPsiCompletedDayPoint } from "@shared/lib/psi-view-model";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+
+/** Day in seconds (PSI history timestamps are seconds since epoch). */
+const DAY_SECONDS = 86_400;
 
 export function buildStablecoinSnapshot(stablecoinsData?: StablecoinListResponse) {
   if (!stablecoinsData?.peggedAssets) {
@@ -116,6 +120,34 @@ export function buildPsiSnapshot(psiData?: StabilityIndexResponse) {
     psiDelta7d: previousWeek ? psiScoreNum - previousWeek.score : null,
     psiDelta30d: previousMonth ? psiScoreNum - previousMonth.score : null,
   };
+}
+
+/**
+ * Last `windowDays` completed days of PSI history, oldest → newest, for sparkline
+ * and band-strip rendering. Returns an empty array when history is missing.
+ */
+export function buildPsiHistorySeries(
+  psiData?: StabilityIndexResponse,
+  windowDays = 30,
+): Array<Pick<StabilityIndexHistoryPoint, "date" | "score" | "band">> {
+  const history = psiData?.history;
+  const computedAt = psiData?.current?.computedAt;
+  if (!history?.length || !computedAt) return [];
+  const todayMidnight = computedAt - (computedAt % DAY_SECONDS);
+  // history is newest → oldest; reverse to oldest → newest for sparkline math.
+  const completed = history.filter((p) => p.date < todayMidnight).slice(0, windowDays).reverse();
+  return completed.map((p) => ({ date: p.date, score: p.score, band: p.band }));
+}
+
+/** Net-flow hourly buckets sorted oldest → newest, for a 24h sparkline. */
+export function buildFlowHourlySeries(
+  flowData?: MintBurnFlowsResponse,
+): Array<{ ts: number; net: number }> {
+  const hourly = flowData?.hourly;
+  if (!hourly?.length) return [];
+  return [...hourly]
+    .sort((a, b) => a.hourTs - b.hourTs)
+    .map((bucket) => ({ ts: bucket.hourTs, net: bucket.netFlowUsd }));
 }
 
 export function buildDewsBandCounts(stressData?: StressSignalsAllResponse) {

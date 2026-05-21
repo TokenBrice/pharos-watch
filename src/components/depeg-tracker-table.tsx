@@ -12,6 +12,7 @@ import {
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { DEWSBadge } from "@/components/dews-badge";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
+import { RowSparkline } from "@/components/row-sparkline";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
@@ -27,8 +28,16 @@ import {
   type DepegTableSortKey,
 } from "@/components/depeg-table-logic";
 import { MethodologyHint } from "@/components/methodology-hint";
+import type { QueryKey } from "@tanstack/react-query";
 
 export type { DepegTrackerRow } from "@/lib/depeg-sort";
+
+// M1: the depeg tracker rows derive from peg-summary + stress-signals; surface
+// a RefreshingBar while either refetches in the background.
+const DEPEG_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
+  ["peg-summary"],
+  ["stress-signals"],
+];
 
 interface DepegTrackerTableProps {
   rows: DepegTrackerRow[];
@@ -48,9 +57,21 @@ const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   { id: "worstDeviationBps", label: "Worst", sortKey: "worstDeviationBps", className: "text-right hidden lg:table-cell" },
   { id: "dexAgrees", label: "DEX Cross-check", sortKey: "dexAgrees", className: "text-center hidden xl:table-cell" },
   { id: "trackingSpanDays", label: "Tracking", sortKey: "trackingSpanDays", className: "text-right hidden xl:table-cell" },
+  { id: "peg30d", label: "30d Peg", className: "text-right w-[112px] hidden xl:table-cell" },
 ] as const;
 
 const DEWS_STALE_AFTER_SECONDS = CRON_30MIN / 1000;
+
+// W4-A row sparklines: render `null`-array placeholder until a precomputed
+// 30d peg-deviation series lands on `PegSummaryCoin`. RowSparkline downgrades
+// to a "—" inline fallback when not enough samples are present.
+const PEG_DEVIATION_PLACEHOLDER: ReadonlyArray<number | null> = Object.freeze(
+  Array<null>(30).fill(null),
+);
+
+function getDepegRowPegSeries(_row: DepegTrackerRow): ReadonlyArray<number | null> {
+  return PEG_DEVIATION_PLACEHOLDER;
+}
 
 function StatusBadge({ row }: { row: DepegTrackerRow }) {
   if (row.coin.activeDepeg) {
@@ -121,6 +142,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
       }}
       striped
       tableClassName="min-w-[420px]"
+      refreshingQueryKeys={DEPEG_REFRESH_QUERY_KEYS}
       pagination={{
         page: effectivePage,
         totalPages,
@@ -257,6 +279,19 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden xl:table-cell">
                   {formatTrackingSpanDays(coin.trackingSpanDays)}
+                </TableCell>
+                <TableCell
+                  data-column-id="peg30d"
+                  className="text-right w-[112px] hidden xl:table-cell"
+                >
+                  <RowSparkline
+                    data={getDepegRowPegSeries(row)}
+                    signed
+                    referenceValue={0}
+                    ariaLabel={`30-day peg deviation for ${coin.symbol}`}
+                    width={96}
+                    height={16}
+                  />
                 </TableCell>
               </InteractiveTableRow>
             );

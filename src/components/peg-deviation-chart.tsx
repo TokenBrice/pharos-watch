@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { LineChart, Line, ReferenceArea, ReferenceDot, ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -11,12 +11,15 @@ import { formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
+  AnnotationDensityStrip,
   ChartAnnotationLegend,
   ChartAnnotationLines,
+  ChartCrosshairOverlay,
   DateTooltip,
   MonoYAxis,
   TimeGrid,
   TimeXAxis,
+  useMarketDataChartSync,
 } from "@/components/chart-primitives";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
@@ -223,6 +226,7 @@ export function PegDeviationChart({
   embedded = false,
 }: PegDeviationChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const sync = useMarketDataChartSync();
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -242,40 +246,59 @@ export function PegDeviationChart({
     { externalRange: controlledRange },
   );
 
+  const brushedRange = sync?.brushedRange ?? null;
+  // Brushed sub-window further narrows the visible data (D4).
+  const visibleData = useMemo(() => {
+    if (!brushedRange) return filteredData;
+    const [lo, hi] = brushedRange;
+    return filteredData.filter((d) => d.ts >= lo && d.ts <= hi);
+  }, [filteredData, brushedRange]);
+
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
   // `priceSmoothed` is plotted on top of the raw `price` line (which is dimmed).
   const smoothedData = useMemo(() => {
     if (range !== "all" && range !== "1y") {
-      return filteredData.map((d) => ({ ...d, priceSmoothed: null as number | null }));
+      return visibleData.map((d) => ({ ...d, priceSmoothed: null as number | null }));
     }
     const alpha = range === "all" ? 0.04 : 0.12;
-    const smoothed = ewma(filteredData.map((d) => d.price), alpha);
-    return filteredData.map((d, i) => ({ ...d, priceSmoothed: smoothed[i] }));
-  }, [filteredData, range]);
+    const smoothed = ewma(visibleData.map((d) => d.price), alpha);
+    return visibleData.map((d, i) => ({ ...d, priceSmoothed: smoothed[i] }));
+  }, [visibleData, range]);
 
   const showSmoothed = range === "all" || range === "1y";
 
-  const fromMs = filteredData[0]?.ts ?? null;
-  const toMs = filteredData[filteredData.length - 1]?.ts ?? null;
+  const fromMs = visibleData[0]?.ts ?? null;
+  const toMs = visibleData[visibleData.length - 1]?.ts ?? null;
   const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
 
+  // D14 — wider annotation set (the full controlled range, not brushed) for
+  // the density strip. The strip reflects *available* events for the active
+  // range, so brushing into a sub-window still surfaces the parent's cadence.
+  const fullRangeFromMs = filteredData[0]?.ts ?? null;
+  const fullRangeToMs = filteredData[filteredData.length - 1]?.ts ?? null;
+  const { data: fullRangeAnnotations } = useChartAnnotations(
+    stablecoinId,
+    fullRangeFromMs,
+    fullRangeToMs,
+  );
+
   const xTicks = useMemo(() => {
-    if (range !== "all" || filteredData.length === 0) return undefined;
-    const first = filteredData[0].ts;
-    const last = filteredData[filteredData.length - 1].ts;
+    if (range !== "all" || visibleData.length === 0) return undefined;
+    const first = visibleData[0].ts;
+    const last = visibleData[visibleData.length - 1].ts;
     return buildAdaptiveMonthlyTicks(first, last);
-  }, [range, filteredData]);
+  }, [range, visibleData]);
 
   const yAxis = useMemo(
-    () => computePegYAxis(filteredData.map((d) => d.price)),
-    [filteredData],
+    () => computePegYAxis(visibleData.map((d) => d.price)),
+    [visibleData],
   );
   const formatPriceTick = useMemo(() => makePriceTickFormatter(yAxis.step), [yAxis.step]);
 
   // Header readout: current price + signed bps + named band.
   const readout = useMemo(() => {
-    if (filteredData.length === 0) return null;
-    const last = filteredData[filteredData.length - 1];
+    if (visibleData.length === 0) return null;
+    const last = visibleData[visibleData.length - 1];
     const bps = Math.round((last.price - 1) * 10_000);
     const band = classifyDeviation(bps);
     const sign = bps > 0 ? "+" : "";
@@ -289,27 +312,68 @@ export function PegDeviationChart({
       isInBand: band.label === "in-band",
       ts: last.ts,
     };
-  }, [filteredData]);
+  }, [visibleData]);
+
+  // D14 gate: density strip only on full-range view. Reserve ~12px of bottom
+  // padding so the strip sits below the axis without colliding.
+  const showDensityStrip = range === "all" && fullRangeAnnotations.length > 0;
+  const densityStripHeight = 6;
+  const densityStripBottomPad = 6;
+
+  // Stable chart margins (used by both Recharts and the crosshair overlay).
+  const margin = useMemo(() => ({
+    top: 5,
+    right: 12,
+    bottom: range === "all" ? 32 : 20,
+    left: 5,
+  }), [range]);
+  const plotInsetLeft = margin.left + 68;
+  const plotInsetRight = margin.right;
+  const plotInsetTop = margin.top;
+  const plotInsetBottom = margin.bottom;
+
+  const handleMouseMove = useCallback(
+    (e: { activeLabel?: string | number } | null) => {
+      if (!sync) return;
+      const next = e?.activeLabel != null ? Number(e.activeLabel) : null;
+      if (next == null || !Number.isFinite(next)) return;
+      sync.setHoveredTs(next);
+    },
+    [sync],
+  );
+  const handleMouseLeave = useCallback(() => {
+    sync?.setHoveredTs(null);
+  }, [sync]);
 
   if (pegCurrency !== "USD") {
     return null;
   }
 
   const chartHeightClass = "h-[250px] sm:h-[350px]";
+  const xDomain = visibleData.length > 0
+    ? ([visibleData[0].ts, visibleData[visibleData.length - 1].ts] as const)
+    : null;
 
-  const chartBody = filteredData.length > 0 ? (
-    <div
-      ref={chartContainerRef}
-      className={chartHeightClass}
-      role="figure"
-      aria-label={`Peg deviation chart showing ${filteredData.length} data points`}
-    >
+  // Available plot-area width inside the chart's left axis + right margin.
+  // Used by the density strip so its bars share the x-pixel domain.
+  const plotAreaWidth = Math.max(0, width - plotInsetLeft - plotInsetRight);
+
+  const chartBody = visibleData.length > 0 ? (
+    <div className={cn("relative", chartHeightClass)}>
+      <div
+        ref={chartContainerRef}
+        className="h-full"
+        role="figure"
+        aria-label={`Peg deviation chart showing ${visibleData.length} data points`}
+      >
       {isChartReady ? (
         <LineChart
           width={width}
           height={height}
           data={smoothedData}
-          margin={{ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }}
+          margin={margin}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
           <TimeGrid />
           <TimeXAxis
@@ -429,6 +493,36 @@ export function PegDeviationChart({
       ) : (
         <ChartSkeleton className="h-full w-full" />
       )}
+      </div>
+      {sync ? (
+        <ChartCrosshairOverlay
+          hoveredTs={sync.hoveredTs}
+          domain={xDomain}
+          plotInsetLeft={plotInsetLeft}
+          plotInsetRight={plotInsetRight}
+          plotInsetTop={plotInsetTop}
+          plotInsetBottom={plotInsetBottom}
+        />
+      ) : null}
+      {showDensityStrip && xDomain ? (
+        <div
+          aria-label="Annotation event density by quarter"
+          className="absolute"
+          style={{
+            left: plotInsetLeft,
+            bottom: densityStripBottomPad,
+            width: plotAreaWidth,
+            height: densityStripHeight,
+          }}
+        >
+          <AnnotationDensityStrip
+            annotations={fullRangeAnnotations}
+            domain={xDomain}
+            width={plotAreaWidth}
+            height={densityStripHeight}
+          />
+        </div>
+      ) : null}
     </div>
   ) : (
     <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>

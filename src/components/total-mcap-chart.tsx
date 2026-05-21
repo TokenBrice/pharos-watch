@@ -6,23 +6,29 @@ import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { downloadChartPng } from "@/lib/chart-export";
-import { ChartSkeleton } from "@/components/chart-skeleton";
+import { ChartShellSkeleton, ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import { usePreference } from "@/hooks/use-preferences";
 import { formatCurrency } from "@shared/lib/format";
-import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { ChartLegendChip, ChartScaleToggle, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { buildTotalMcapChartRows, TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS } from "@/lib/total-mcap-chart";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 
+const TOTAL_MCAP_CHART_MARGIN = { top: 8, right: 16, bottom: 16, left: 0 } as const;
+
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
+  // Log toggle persisted but disabled on stacked area (mathematically misleading).
+  // See ChartScaleToggle below: rendered greyed-out with explanatory title.
+  const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);
   const { data, isLoading } = useStablecoinCharts();
   const { data: usdtHistory } = useSupplyHistory("usdt-tether", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
   const { data: usdcHistory } = useSupplyHistory("usdc-circle", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
@@ -87,6 +93,12 @@ export function TotalMcapChart() {
           </p>
         </div>
         <CardAction className="col-start-1 row-start-2 mt-2 flex w-full min-w-0 items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
+          <ChartScaleToggle
+            value={logScale ? "log" : "lin"}
+            onChange={(v) => setLogScale(v === "log")}
+            disabled
+            disabledTitle="Log scale is disabled on stacked area — magnitudes don't sum on a log axis."
+          />
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
           <Button
             variant="ghost"
@@ -124,11 +136,12 @@ export function TotalMcapChart() {
                 aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}
               >
                 {isChartReady ? (
+                  <div className="animate-fade-in">
                   <AreaChart
                     width={width}
                     height={height}
                     data={filteredData}
-                    margin={{ top: 8, right: 16, bottom: 16, left: 0 }}
+                    margin={TOTAL_MCAP_CHART_MARGIN}
                   >
                   <defs>
                     <linearGradient id="usdtGrad" x1={0} y1={0} x2={0} y2={1}>
@@ -205,6 +218,15 @@ export function TotalMcapChart() {
                     {...animProps}
                   />
                   </AreaChart>
+                  </div>
+                ) : width > 0 && height > 0 ? (
+                  <ChartShellSkeleton
+                    width={width}
+                    height={height}
+                    margin={TOTAL_MCAP_CHART_MARGIN}
+                    yTickFormatter={(value) => formatCurrency(value, 0)}
+                    ariaLabel="Total stablecoin market cap chart loading"
+                  />
                 ) : (
                   <ChartSkeleton className="h-full w-full" />
                 )}

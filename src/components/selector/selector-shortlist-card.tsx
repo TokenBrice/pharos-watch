@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { YieldSourceLink } from "@/components/yield-source-link";
+import { RowSparkline } from "@/components/row-sparkline";
+import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";
+import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
 import type {
   SelectorComponent,
   SelectorInput,
@@ -214,6 +218,8 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         </div>
       </div>
 
+      <CardTrendStrips coinId={rec.id} symbol={rec.symbol} safetyGrade={rec.safetyGrade} isMobile={isMobile} />
+
       <div className="mt-3 space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           Evidence checked
@@ -338,6 +344,99 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         ) : null}
       </div>
     </li>
+  );
+}
+
+/**
+ * Cohort-tinted sparklines (D13). Renders a 7d peg-deviation strip (signed,
+ * baselined at the rec's most-recent price) and a 30d supply strip beneath
+ * the identity row. Mobile gates to peg-deviation only to avoid crowding.
+ */
+function CardTrendStrips({
+  coinId,
+  symbol,
+  safetyGrade,
+  isMobile,
+}: {
+  coinId: string;
+  symbol: string;
+  safetyGrade: SelectorRecommendation["safetyGrade"];
+  isMobile: boolean;
+}) {
+  const { data: history, isLoading } = useSupplyHistory(coinId, 30);
+  const tint = GRADE_RADAR_COLORS[gradeRange(safetyGrade)] ?? GRADE_RADAR_COLORS.NR;
+
+  const { pegSeries, supplySeries, pegBaseline } = useMemo(() => {
+    if (!history || history.length === 0) {
+      return { pegSeries: [], supplySeries: [], pegBaseline: null as number | null };
+    }
+    const sorted = [...history].sort((a, b) => a.date - b.date);
+    const cutoff7d = sorted.length > 0 ? sorted[sorted.length - 1].date - 7 * 86_400 : 0;
+    const recent7d = sorted.filter((p) => p.date >= cutoff7d);
+    const recentSupply = sorted.slice(-30).map((p) => p.circulatingUsd);
+    // Baseline = the most recent finite price; the strip renders price minus
+    // baseline so the line diverges around a flat 0 reference.
+    const finitePrices = recent7d
+      .map((p) => p.price)
+      .filter((p): p is number => p != null && Number.isFinite(p));
+    const baseline = finitePrices.length > 0 ? finitePrices[finitePrices.length - 1] : null;
+    return {
+      pegSeries: recent7d.map((p) => (p.price == null || !Number.isFinite(p.price) ? null : p.price)),
+      supplySeries: recentSupply.map((s) => (Number.isFinite(s) ? s : null)),
+      pegBaseline: baseline,
+    };
+  }, [history]);
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div aria-hidden="true" className="h-4 w-full rounded bg-muted/15" />
+        {!isMobile ? <div aria-hidden="true" className="h-4 w-full rounded bg-muted/15" /> : null}
+      </div>
+    );
+  }
+
+  const pegAvailable = pegSeries.filter((v) => v != null).length >= 2 && pegBaseline != null;
+  const supplyAvailable = supplySeries.filter((v) => v != null).length >= 2;
+
+  if (!pegAvailable && !supplyAvailable) return null;
+
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {pegAvailable ? (
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            7d peg
+          </p>
+          <RowSparkline
+            data={pegSeries}
+            signed
+            referenceValue={pegBaseline ?? 1}
+            positiveColor={tint}
+            negativeColor={tint}
+            ariaLabel={`${symbol} 7-day price trajectory relative to its current peg level`}
+            srSummary="Cohort-tinted strip; colour reflects this asset's safety grade."
+            className="w-full"
+            height={16}
+          />
+        </div>
+      ) : null}
+      {!isMobile && supplyAvailable ? (
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            30d supply
+          </p>
+          <RowSparkline
+            data={supplySeries}
+            positiveColor={tint}
+            ariaLabel={`${symbol} 30-day circulating supply trend`}
+            srSummary="Cohort-tinted strip; colour reflects this asset's safety grade."
+            className="w-full"
+            height={16}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -15,7 +15,9 @@ import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import {
   buildDewsBandCounts,
   buildDexSnapshot,
+  buildFlowHourlySeries,
   buildFlowSnapshot,
+  buildPsiHistorySeries,
   buildPsiSnapshot,
   buildStablecoinSnapshot,
 } from "@/components/kpi-bar-view-model";
@@ -24,6 +26,7 @@ import {
   KpiCell,
   KpiMiniTile,
   KpiSkeleton,
+  KpiSparkline,
   PrimarySnapshotCard,
   TrendChip,
   trendDirection,
@@ -92,6 +95,14 @@ export function KpiBar() {
         : "neutral";
 
   const dewsBandCounts = useMemo(() => buildDewsBandCounts(stressData), [stressData]);
+  const psiHistorySeries = useMemo(() => buildPsiHistorySeries(psiData, 30), [psiData]);
+  const psiScoreSeries = useMemo(() => psiHistorySeries.map((p) => p.score), [psiHistorySeries]);
+  const psiBandSeries = useMemo(
+    () => psiHistorySeries.map((p) => ({ date: p.date, band: p.band })),
+    [psiHistorySeries],
+  );
+  const flowHourlySeries = useMemo(() => buildFlowHourlySeries(flowData), [flowData]);
+  const flowSparkValues = useMemo(() => flowHourlySeries.map((b) => b.net), [flowHourlySeries]);
 
   /* ---------- entrance choreography (hooks must be called unconditionally) ---------- */
   const { delayFor } = useEntranceSequence();
@@ -255,6 +266,14 @@ export function KpiBar() {
       desktopSublabel: <InfoChip label="7d net" value={netFlow7Display} tone={netFlow7Tone} />,
       mobileValueClassName: netFlow24Class,
       desktopValueClassName: netFlow24Class,
+      sparkline:
+        flowSparkValues.length >= 2 ? (
+          <KpiSparkline
+            values={flowSparkValues}
+            tone="signed"
+            ariaLabel={`24-hour net mint/burn flow trajectory`}
+          />
+        ) : null,
     },
   ];
 
@@ -287,11 +306,14 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
+            flashValue={hasPsiData ? psiScoreNum : null}
             band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
             delta30d={psiDelta30dValue}
             valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
+            scoreSeries={psiScoreSeries}
+            bandSeries={psiBandSeries}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -309,6 +331,7 @@ export function KpiBar() {
                 metaPrimary={metric.mobileMetaPrimary}
                 metaSecondary={metric.mobileMetaSecondary}
                 valueClassName={metric.mobileValueClassName}
+                sparkline={metric.sparkline}
               />
             </div>
           ))}
@@ -325,11 +348,14 @@ export function KpiBar() {
         >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
+            flashValue={hasPsiData ? psiScoreNum : null}
             band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
             delta24h={psiDelta24hValue}
             delta7d={psiDelta7dValue}
             delta30d={psiDelta30dValue}
             valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
+            scoreSeries={psiScoreSeries}
+            bandSeries={psiBandSeries}
           />
         </div>
 
@@ -347,6 +373,7 @@ export function KpiBar() {
               value={metric.value}
               valueClassName={`text-lg${metric.desktopValueClassName ? ` ${metric.desktopValueClassName}` : ""}`}
               sublabel={metric.desktopSublabel}
+              sparkline={metric.sparkline}
               centered
               className="flex-1"
             />
