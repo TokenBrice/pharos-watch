@@ -4504,7 +4504,11 @@
     },
     "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "staked-usd1"
+    "archetypeOverride": true,
+    "geckoId": "staked-usd1",
+    "variantOf": "usd1-world-liberty-financial",
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "susdai-usd-ai",
@@ -4652,7 +4656,10 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
-    "geckoId": "syrupusdc"
+    "geckoId": "syrupusdc",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "syrupusdt-maple",
@@ -4668,7 +4675,10 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
-    "geckoId": "syrupusdt"
+    "geckoId": "syrupusdt",
+    "variantOf": "usdt-tether",
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "syusd-aegis",
@@ -6839,7 +6849,10 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
-    "geckoId": "yield-optimizer-usd"
+    "geckoId": "yield-optimizer-usd",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "yusd-aegis",
@@ -6873,6 +6886,8 @@
     },
     "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
     "geckoId": "yieldfi-ytoken",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
     "canBeBlacklisted": "possible"
   },
   {

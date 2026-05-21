@@ -11,6 +11,9 @@
     "rwa": false,
     "navToken": true
   },
+  "pegReferenceId": "usdc-circle",
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
   "collateral": "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
   "pegMechanism": "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
   "detailProvider": "coingecko",
@@ -60,10 +63,11 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: syrupUSDC resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "evidence": "Explicit Yes retained: syrupUSDC is a tracked strategy-vault variant whose parent USDC has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },

@@ -159,7 +159,7 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("stusds-sky")).toBe(true);
     expect(allVariants.has("busd0-usual")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(35);
+    expect(allVariants.size).toBe(40);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(new Set([
@@ -169,16 +169,21 @@ describe("buildTrackedIdSet", () => {
       "gtusdc-gauntlet",
       "gtusdcp-gauntlet",
       "hbusdt-hyperbeat",
+      "susd1plus-lorenzo",
       "savusd-avant",
       "susdai-usd-ai",
       "steakusdc-steakhouse",
       "steakusdt-steakhouse",
       "stcusd-cap",
+      "syrupusdc-maple",
+      "syrupusdt-maple",
       "syzusd-yuzu",
       "msy-main-street",
       "said-gaib",
       "yvusdc-yearn",
       "ybold-yearn",
+      "yousd-yield-optimizer",
+      "yusd-yieldfi",
     ]));
 
     const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);

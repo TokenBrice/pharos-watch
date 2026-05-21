@@ -141,4 +141,68 @@ describe("validateVariantRelationships", () => {
     expect(selfCycleError).toBeDefined();
     expect(selfCycleError).toContain("must not reference the asset itself");
   });
+
+  it("fails when an active USD nav token has a direct wrapper parent but no variant metadata", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    const child = makeCoin({
+      id: "missing-variant",
+      pegReferenceId: "parent-a",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: true,
+        rwa: false,
+        navToken: true,
+      },
+      reserves: [
+        {
+          name: "Parent wrapper exposure",
+          pct: 100,
+          risk: "medium",
+          coinId: "parent-a",
+          depType: "wrapper",
+        },
+      ],
+    });
+
+    const errors = validateVariantRelationships([parent, child]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("missing-variant");
+    expect(errors[0]).toContain("does not declare variantOf / variantKind");
+  });
+
+  it("does not infer a missing variant for mixed-strategy NAV tokens", () => {
+    const parentA = makeParent("parent-a", "fiat-cash");
+    const parentB = makeParent("parent-b", "fiat-cash");
+    const child = makeCoin({
+      id: "mixed-strategy",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: true,
+        rwa: false,
+        navToken: true,
+      },
+      reserves: [
+        {
+          name: "First parent",
+          pct: 50,
+          risk: "medium",
+          coinId: "parent-a",
+          depType: "wrapper",
+        },
+        {
+          name: "Second parent",
+          pct: 50,
+          risk: "medium",
+          coinId: "parent-b",
+          depType: "wrapper",
+        },
+      ],
+    });
+
+    expect(validateVariantRelationships([parentA, parentB, child])).toEqual([]);
+  });
 });

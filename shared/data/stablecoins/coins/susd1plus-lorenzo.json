@@ -12,9 +12,12 @@
     "navToken": true
   },
   "pegReferenceId": "usd1-world-liberty-financial",
+  "variantOf": "usd1-world-liberty-financial",
+  "variantKind": "strategy-vault",
   "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
   "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "archetypeOverride": true,
   "detailProvider": "coingecko",
   "geckoId": "staked-usd1",
   "cmcSlug": "lorenzo-staked-usd1",
@@ -39,10 +42,11 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sUSD1+ resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "evidence": "Explicit Yes retained: sUSD1+ is a tracked strategy-vault variant whose parent USD1 has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },

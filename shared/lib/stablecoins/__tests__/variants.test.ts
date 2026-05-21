@@ -32,8 +32,10 @@ describe("stablecoin variants", () => {
     expect(isTrackedVariant("susdai-usd-ai")).toBe(true);
     expect(isTrackedVariant("busd0-usual")).toBe(true);
     expect(isTrackedVariant("sbold-k3-capital")).toBe(true);
+    expect(isTrackedVariant("syrupusdc-maple")).toBe(true);
+    expect(isTrackedVariant("syrupusdt-maple")).toBe(true);
+    expect(isTrackedVariant("yusd-yieldfi")).toBe(true);
     expect(isTrackedVariant("usde-ethena")).toBe(false);
-    expect(isTrackedVariant("syrupusdc-maple")).toBe(false);
   });
 
   it("never resolves an unauthored tracked variant to a weaker blacklistable status than its parent", () => {

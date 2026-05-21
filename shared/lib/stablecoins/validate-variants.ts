@@ -5,6 +5,28 @@ function hasVariantFields(meta: StablecoinMeta): boolean {
   return meta.variantOf != null || meta.variantKind != null;
 }
 
+function collectDirectWrapperParentCandidates(meta: StablecoinMeta): string[] {
+  const candidates = new Set<string>();
+
+  if (meta.pegReferenceId != null) {
+    candidates.add(meta.pegReferenceId);
+  }
+
+  for (const dependency of meta.dependencies ?? []) {
+    if (dependency.type === "wrapper") {
+      candidates.add(dependency.id);
+    }
+  }
+
+  for (const reserve of meta.reserves ?? []) {
+    if (reserve.depType === "wrapper" && reserve.coinId != null) {
+      candidates.add(reserve.coinId);
+    }
+  }
+
+  return [...candidates];
+}
+
 export function validateVariantRelationships(tracked: StablecoinMeta[]): string[] {
   const errors: string[] = [];
   const metaById = new Map(tracked.map((meta) => [meta.id, meta]));
@@ -15,6 +37,25 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
   );
 
   for (const meta of tracked) {
+    if (
+      !hasVariantFields(meta) &&
+      isActiveStablecoinMeta(meta) &&
+      meta.flags.navToken === true &&
+      meta.flags.pegCurrency === "USD"
+    ) {
+      const activeNonNavParents = collectDirectWrapperParentCandidates(meta).filter((id) => {
+        const parent = metaById.get(id);
+        return parent != null && isActiveStablecoinMeta(parent) && parent.flags.navToken !== true;
+      });
+
+      if (activeNonNavParents.length === 1) {
+        errors.push(
+          `${meta.id}: active USD navToken has direct wrapper exposure to ${activeNonNavParents[0]} but does not declare variantOf / variantKind. ` +
+            `Fix: add variantOf "${activeNonNavParents[0]}" with the appropriate variantKind, or remove the direct wrapper parent signal if this is not a tracked parent-child variant.`,
+        );
+      }
+    }
+
     if (!hasVariantFields(meta)) continue;
 
     if (meta.variantOf == null || meta.variantKind == null) {
