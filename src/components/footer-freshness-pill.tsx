@@ -93,8 +93,6 @@ export function FooterFreshnessPill() {
 
   return (
     <div
-      role="status"
-      aria-label="Live data freshness"
       className="inline-flex items-center gap-1.5 text-3xs font-mono tabular-nums text-muted-foreground"
     >
       <span

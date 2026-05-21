@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ServerCrash } from "lucide-react";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PageErrorEditorial } from "@/components/page-error-editorial";
+import { buildRequestUrl } from "@/lib/api";
 import { isHardReloadableRouteError } from "@/lib/route-error-recovery";
 
 type HealthState = "unknown" | "ok" | "degraded";
@@ -28,7 +29,7 @@ export default function RootError({ error, reset }: RootErrorProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(API_PATHS.health(), { headers: { Accept: "application/json" } })
+    fetch(buildRequestUrl(API_PATHS.health()), { headers: { Accept: "application/json" } })
       .then((response) => (response.ok ? response.json() : Promise.reject(response)))
       .then((data: unknown) => {
         if (cancelled) return;

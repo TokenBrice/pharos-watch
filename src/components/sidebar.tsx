@@ -274,7 +274,7 @@ function SidebarGroup({
       {sidebarExpanded && (
         <button
           onClick={onToggle}
-          className="flex w-full items-center justify-between px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65 hover:text-muted-foreground transition-colors"
+          className="flex min-h-7 w-full items-center justify-between px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground transition-colors hover:text-foreground"
           aria-expanded={isGroupExpanded}
           aria-controls={`nav-group-${groupKey}`}
         >
@@ -308,7 +308,7 @@ function SidebarGroup({
             </div>
           </div>
           {!isGroupExpanded && (
-            <div className="px-5 text-[11px] italic text-muted-foreground/40">{items.length} pages</div>
+            <div className="px-5 text-[11px] italic text-muted-foreground">{items.length} pages</div>
           )}
         </>
       ) : (

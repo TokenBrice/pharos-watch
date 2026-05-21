@@ -28,10 +28,15 @@ function applyToBody(pref: MotionPreference) {
   if (typeof document === "undefined") return;
   const systemReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   const effectiveReduced = pref === "reduced" || (pref === "system" && systemReduced);
-  if (effectiveReduced) {
-    document.body.setAttribute("data-motion", "reduced");
-  } else {
-    document.body.removeAttribute("data-motion");
+  const motionValue = pref === "full" ? "full" : effectiveReduced ? "reduced" : null;
+  const roots = [document.documentElement, document.body];
+
+  for (const root of roots) {
+    if (motionValue) {
+      root.setAttribute("data-motion", motionValue);
+    } else {
+      root.removeAttribute("data-motion");
+    }
   }
 }
 
@@ -80,9 +85,8 @@ export interface MotionPreferenceApi {
 
 /**
  * Site-level reduce-motion toggle (IDEA-11). Persists to localStorage and
- * mirrors the effective state onto `<body data-motion="reduced">` so CSS rules
- * can opt out of motion in addition to the OS-level `prefers-reduced-motion`
- * media query.
+ * mirrors the effective state onto the root/body `data-motion` attribute so
+ * CSS can honor the explicit override in addition to the OS-level media query.
  */
 export function useMotionPreference(): MotionPreferenceApi {
   const preference = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

@@ -371,7 +371,26 @@ function CohortStrip({ cohortKey, label, dots, maxSupply, onHoverDot, onLeaveDot
             const color = THREAT_BAND_HEX[dot.band];
             return (
               <g key={dot.id}>
-                <Link href={buildStablecoinUrl(dot.id)} aria-label={`${dot.name} at ${formatSignedBps(dot.bps)} bps`}>
+                <Link
+                  href={buildStablecoinUrl(dot.id)}
+                  aria-label={`${dot.name} at ${formatSignedBps(dot.bps)} bps`}
+                  onMouseEnter={() => {
+                    setActive(dot);
+                    onHoverDot(dot, cx, midY);
+                  }}
+                  onFocus={() => {
+                    setActive(dot);
+                    onHoverDot(dot, cx, midY);
+                  }}
+                  onBlur={() => {
+                    setActive(null);
+                    onLeaveDot();
+                  }}
+                  onMouseLeave={() => {
+                    setActive(null);
+                    onLeaveDot();
+                  }}
+                >
                   <circle
                     cx={cx}
                     cy={midY}
@@ -381,19 +400,6 @@ function CohortStrip({ cohortKey, label, dots, maxSupply, onHoverDot, onLeaveDot
                     stroke={color}
                     strokeWidth={isActive ? 1.5 : 0.5}
                     className="cursor-pointer transition-[fill-opacity,r] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-ring"
-                    tabIndex={0}
-                    onMouseEnter={() => {
-                      setActive(dot);
-                      onHoverDot(dot, cx, midY);
-                    }}
-                    onFocus={() => {
-                      setActive(dot);
-                      onHoverDot(dot, cx, midY);
-                    }}
-                    onBlur={() => {
-                      setActive(null);
-                      onLeaveDot();
-                    }}
                   />
                 </Link>
               </g>

@@ -734,84 +734,84 @@ export function TimelineClient() {
         {loadAnnouncement}
       </div>
 
-      <section id="data" aria-label="Data feed" tabIndex={-1}>
-      {isLoading ? (
-        <section id="data" aria-label="Event tape" tabIndex={-1}>
-          <EventSkeleton />
-        </section>
-      ) : visibleEvents.length === 0 ? (
-        <section id="data" aria-label="Event tape" tabIndex={-1}>
-          <EmptyState
-            onClearAll={fallback.apply}
-            activeChips={emptyStateChips}
-            fallbackLabel={fallback.label}
-          />
-        </section>
-      ) : (
-        <section id="data" aria-label="Event tape" tabIndex={-1} className="space-y-4">
-          <div id="tape-feed" className="space-y-4">
-          {bufferEvent ? (
-            <div className="border-y border-border/60 bg-amber-500/5">
-              <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                <span aria-hidden="true">► </span>
-                <span className="font-semibold text-foreground">PINNED</span>
-                <span aria-hidden="true"> · </span>
-                <span>Linked from URL</span>
-              </p>
-              <EventCard
-                event={bufferEvent}
-                logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
-                highlighted={highlightedId === bufferEvent.id}
-                domId={eventDomId(bufferEvent.id)}
-              />
-            </div>
-          ) : null}
-          {digestedDays.map((day) => (
-            <DayDigestSection
-              key={day.dayKey}
-              day={day}
-              nowMs={nowMs}
-              logos={logos}
-              highlightedId={highlightedId}
-              openCount={openCountByDay.get(day.dayKey) ?? 0}
-            />
-          ))}
-          {hasNextPage ? (
-            <div className="pt-2 text-center">
-              <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isFetchingNextPage}>
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden="true" />
-                    Loading…
-                  </>
-                ) : total != null && total > rawEvents.length ? (
-                  `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
-                ) : (
-                  "Load more"
-                )}
-              </Button>
-              <div ref={sentinelRef} aria-hidden="true" />
-            </div>
-          ) : nextCursor == null && rawEvents.length > 0 ? (
-            <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground">
-              ───── END OF TAPE
-              {" · "}
-              {(total ?? rawEvents.length).toLocaleString()} EVT
-              {" · WINDOW "}
-              {WINDOW_SHORT[filters.window]}
-              {" · "}
-              {SEVERITY_LABEL_BARE[filters.severity].toUpperCase()}
-              {filters.severity === "critical" ? "" : "+"}
-              {" · CURSOR: NULL · LAST FILE: "}
-              {lastEventTs != null
-                ? new Date(lastEventTs).toISOString().replace(".000Z", "Z")
-                : new Date(dataUpdatedAt).toISOString().replace(".000Z", "Z")}
-              {" ─────"}
-            </p>
-          ) : null}
+      <section id="data" aria-label="Event tape" tabIndex={-1}>
+        {isLoading ? (
+          <div>
+            <EventSkeleton />
           </div>
-        </section>
-      )}
+        ) : visibleEvents.length === 0 ? (
+          <div>
+            <EmptyState
+              onClearAll={fallback.apply}
+              activeChips={emptyStateChips}
+              fallbackLabel={fallback.label}
+            />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div id="tape-feed" className="space-y-4">
+              {bufferEvent ? (
+                <div className="border-y border-border/60 bg-amber-500/5">
+                  <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <span aria-hidden="true">► </span>
+                    <span className="font-semibold text-foreground">PINNED</span>
+                    <span aria-hidden="true"> · </span>
+                    <span>Linked from URL</span>
+                  </p>
+                  <EventCard
+                    event={bufferEvent}
+                    logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
+                    highlighted={highlightedId === bufferEvent.id}
+                    domId={eventDomId(bufferEvent.id)}
+                  />
+                </div>
+              ) : null}
+              {digestedDays.map((day) => (
+                <DayDigestSection
+                  key={day.dayKey}
+                  day={day}
+                  nowMs={nowMs}
+                  logos={logos}
+                  highlightedId={highlightedId}
+                  openCount={openCountByDay.get(day.dayKey) ?? 0}
+                />
+              ))}
+              {hasNextPage ? (
+                <div className="pt-2 text-center">
+                  <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isFetchingNextPage}>
+                    {isFetchingNextPage ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden="true" />
+                        Loading…
+                      </>
+                    ) : total != null && total > rawEvents.length ? (
+                      `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
+                    ) : (
+                      "Load more"
+                    )}
+                  </Button>
+                  <div ref={sentinelRef} aria-hidden="true" />
+                </div>
+              ) : nextCursor == null && rawEvents.length > 0 ? (
+                <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground">
+                  ───── END OF TAPE
+                  {" · "}
+                  {(total ?? rawEvents.length).toLocaleString()} EVT
+                  {" · WINDOW "}
+                  {WINDOW_SHORT[filters.window]}
+                  {" · "}
+                  {SEVERITY_LABEL_BARE[filters.severity].toUpperCase()}
+                  {filters.severity === "critical" ? "" : "+"}
+                  {" · CURSOR: NULL · LAST FILE: "}
+                  {lastEventTs != null
+                    ? new Date(lastEventTs).toISOString().replace(".000Z", "Z")
+                    : new Date(dataUpdatedAt).toISOString().replace(".000Z", "Z")}
+                  {" ─────"}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

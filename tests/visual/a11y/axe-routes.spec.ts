@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import type { Result } from "axe-core";
 
 /**
  * Wave 6 IDEA-16: automated axe-core regression floor.
@@ -13,9 +14,8 @@ import AxeBuilder from "@axe-core/playwright";
  * exhaustively cover every component. As subsequent waves close existing
  * violations, this floor ratchets upward automatically.
  *
- * `ALLOWED_VIOLATIONS` is deliberately conservative. Every entry should be
- * accompanied by a short comment naming the future fix that would let it be
- * removed.
+ * Known debt is waived at the node level. Do not disable whole axe rules here:
+ * that hides broad regressions on routes that already pass the same rule.
  */
 const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
   { path: "/about", tier: "discovery" },
@@ -29,40 +29,48 @@ const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag22a", "wcag22aa"];
 
-const ALLOWED_VIOLATIONS: string[] = [
-  // `color-contrast`: the sidebar nav-group toggle and a handful of other
-  // semantic-amber surfaces still fail AA against their light-mode card
-  // background. Council IDEA-3 (severity / threat-band tokens to AA on both
-  // themes) is the planned fix; remove this allowlist entry when that ships.
-  "color-contrast",
-  // `target-size` (WCAG 2.2 AA, 2.5.8): the sidebar nav-group toggle and a
-  // few dense control pills resolve below the 24x24 CSS-px minimum on
-  // desktop. Council IDEA-14 (sweep desktop targets to ≥24x24 or 24px
-  // spacing) is the planned fix; remove this entry when that ships.
-  "target-size",
-];
+interface AxeNodeWaiver {
+  routePath: string;
+  ruleId: string;
+  target: string;
+  note: string;
+}
+
+const KNOWN_NODE_WAIVERS: readonly AxeNodeWaiver[] = [];
+
+function isWaivedNode(routePath: string, violation: Result, target: string): boolean {
+  return KNOWN_NODE_WAIVERS.some(
+    (waiver) =>
+      waiver.routePath === routePath &&
+      waiver.ruleId === violation.id &&
+      waiver.target === target,
+  );
+}
 
 for (const route of ROUTES) {
   test(`a11y: ${route.path} (${route.tier})`, async ({ page }) => {
     await page.goto(route.path);
     await page.waitForLoadState("networkidle");
 
-    const builder = new AxeBuilder({ page }).withTags(TAGS);
-    if (ALLOWED_VIOLATIONS.length > 0) {
-      builder.disableRules(ALLOWED_VIOLATIONS);
-    }
-    const results = await builder.analyze();
+    const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
 
     // Surface a readable failure: rule id + node count + first selector per
     // violation. This is the most useful signal when triaging which a11y
     // fix to ship next.
-    const summary = results.violations.map((violation) => ({
-      id: violation.id,
-      impact: violation.impact,
-      help: violation.help,
-      nodeCount: violation.nodes.length,
-      firstTarget: violation.nodes[0]?.target?.[0],
-    }));
+    const summary = results.violations
+      .map((violation) => {
+        const nodes = violation.nodes.filter((node) =>
+          !node.target.some((target) => isWaivedNode(route.path, violation, target)),
+        );
+        return {
+          id: violation.id,
+          impact: violation.impact,
+          help: violation.help,
+          nodeCount: nodes.length,
+          firstTarget: nodes[0]?.target?.[0],
+        };
+      })
+      .filter((violation) => violation.nodeCount > 0);
 
     expect(summary, "axe-core violations").toEqual([]);
   });
