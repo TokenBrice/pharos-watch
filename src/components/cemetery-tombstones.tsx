@@ -8,6 +8,8 @@ import { formatCurrency, formatDeathDate } from "@shared/lib/format";
 import type { CauseOfDeath } from "@shared/types";
 import { buildCemeteryYearSections } from "@/lib/cemetery";
 import { YEAR_MS } from "@/lib/constants";
+import { EDITORIAL_BODY_STYLE } from "@/lib/digest";
+import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import styles from "./cemetery-tombstones.module.css";
 
@@ -15,7 +17,39 @@ import styles from "./cemetery-tombstones.module.css";
  * Visual note: SVG illustrations (hammer, flowers) use semantic CSS variables with
  * hex fallbacks so they adapt to both light and dark themes. The cemetery scene uses
  * local CSS modules because its atmosphere is a one-off memorial treatment.
+ *
+ * Editorial treatment: cemetery entries with a Newsreader display title in
+ * `EDITORIAL_TITLES` are promoted to authored obituaries — kicker + serif
+ * headline + Courier-italic body + cause-of-death byline chip. The map is
+ * hand-curated to entries with strong factual grounding; the long tail of
+ * decommissioned coins keeps the structural plaque treatment so the cemetery
+ * never asserts more than the historical record supports.
  */
+
+const EDITORIAL_TITLES: Record<string, string> = {
+  "ust-terrausd-2022-05":
+    "How TerraUSD lost its peg and $40 billion in 72 hours",
+  "busd-binance-usd-2023-02":
+    "How a regulator quietly ended the third-largest stablecoin",
+  "iron-iron-2021-06":
+    "How crypto's first bank run ate Iron Finance in eight hours",
+  "esd-empty-set-dollar-2021-01":
+    "How seigniorage coupons promised stability and delivered ruin",
+  "bac-basis-cash-2021-01":
+    "How Do Kwon's first stablecoin failed before he built the second",
+  "usdn-neutrino-usd-2022-04":
+    "How WAVES collateral dragged Neutrino USD into its own gravity well",
+  "fei-fei-usd-2022-08":
+    "How a $1.3B launch ended in a 1:1 DAI redemption vote",
+  "husd-husd-2022-10":
+    "How Justin Sun's Huobi acquisition unwound HUSD overnight",
+  "dsd-dynamic-set-dollar-2021-01":
+    "How Dynamic Set Dollar discovered faster reflexivity cuts both ways",
+  "vai-vai-2021-09":
+    "How Venus's $77M bad-debt crisis broke its native stablecoin",
+  "tor-tor-2023-07":
+    "How the Multichain exploit ended Hector Network's stablecoin",
+};
 
 type TombSize = "lg" | "md" | "sm";
 
@@ -162,18 +196,38 @@ function getObituaryLead(obituary: string): string {
   return lead.endsWith(".") ? lead : `${lead}.`;
 }
 
+/**
+ * Format the obituary kicker date in long-form for the editorial header
+ * (e.g. "2022-05" → "May 2022"). Falls back to the raw value if the input
+ * does not match the expected YYYY-MM pattern.
+ */
+function formatObituaryKickerDate(deathDate: string): string {
+  const match = /^(\d{4})-(\d{2})/.exec(deathDate);
+  if (!match) return deathDate;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const monthName = MONTHS[month - 1];
+  return monthName ? `${monthName} ${year}` : deathDate;
+}
+
 function Tombstone({
   coin,
   index,
   onSelect,
   flowerCount,
   onPayRespects,
+  isEditorial,
 }: {
   coin: CemeteryEntry;
   index: number;
   onSelect: (coinId: string) => void;
   flowerCount: number;
   onPayRespects: (coinId: string) => void;
+  isEditorial: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const tombRef = useRef<HTMLDivElement>(null);
@@ -375,7 +429,11 @@ function Tombstone({
         )}
       </div>
 
-      {/* Tooltip */}
+      {/* Editorial plaque — kicker, Newsreader display title (top-20 only),
+          cause-of-death byline chip, Courier-italic obituary body, structural
+          detail grid. The long-tail of cemetery entries (no display title and
+          no peak mcap) keeps a tighter lead-only treatment so the cemetery
+          never promotes more than the historical record supports. */}
       <div
         className={cn(styles.plaque, "pointer-events-none")}
         style={{ "--plaque-shift": `${tooltipShift}px` } as CSSProperties}
@@ -395,17 +453,52 @@ function Tombstone({
               <span className="text-xs font-bold text-muted-foreground">{coin.symbol.charAt(0)}</span>
             )}
           </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold leading-tight text-popover-foreground">{coin.name}</span>
-            <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-              <span className="font-mono tabular-nums">{coin.symbol}</span>
-              <span className={cause.textColor}>{cause.label}</span>
+          <span className="min-w-0 flex-1">
+            <span className="pharos-kicker block">
+              Obituary &middot; {formatObituaryKickerDate(coin.deathDate)}
+            </span>
+            <span className="mt-1 block truncate text-[13px] font-semibold leading-tight text-popover-foreground">
+              {coin.name}
+              <span className="ml-1.5 font-mono text-[11px] font-normal tabular-nums text-muted-foreground">
+                {coin.symbol}
+              </span>
             </span>
           </span>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          {getObituaryLead(coin.obituary)}
+
+        {isEditorial && EDITORIAL_TITLES[coin.id] && (
+          <h3
+            className={cn(
+              digestDisplay.className,
+              "mt-2.5 text-[1.05rem] font-semibold leading-[1.15] tracking-[-0.01em] text-popover-foreground [text-wrap:balance]",
+            )}
+          >
+            {EDITORIAL_TITLES[coin.id]}
+          </h3>
+        )}
+
+        <span
+          className={cn(
+            "mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em]",
+            cause.textColor,
+            cause.borderColor,
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+          {cause.label}
+        </span>
+
+        <p
+          className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground"
+          style={EDITORIAL_BODY_STYLE}
+        >
+          {isEditorial ? coin.obituary : getObituaryLead(coin.obituary)}
         </p>
+
         <div className={styles.detailGrid}>
           <div className={styles.detailCell}>
             <div className="text-[10px] text-muted-foreground">Death</div>
@@ -445,6 +538,18 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
   const [flowers, setFlowers] = useState<Record<string, number>>({});
   const sections = useMemo(() => buildCemeteryYearSections(coins), [coins]);
 
+  // Top 20 entries by peak mcap get the full editorial obituary treatment in
+  // the hover plaque. The rest of the cemetery keeps the structural lead-only
+  // treatment so the surface never asserts authorship it does not have.
+  const editorialIds = useMemo(() => {
+    const sorted = coins
+      .filter((c) => typeof c.peakMcap === "number" && c.peakMcap > 0)
+      .slice()
+      .sort((a, b) => (b.peakMcap ?? 0) - (a.peakMcap ?? 0))
+      .slice(0, 20);
+    return new Set(sorted.map((c) => c.id));
+  }, [coins]);
+
   const handlePayRespects = useCallback((coinId: string) => {
     setFlowers((prev) => {
       const current = prev[coinId] ?? 0;
@@ -479,6 +584,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
                         onSelect={onSelect}
                         flowerCount={flowers[coin.id] ?? 0}
                         onPayRespects={handlePayRespects}
+                        isEditorial={editorialIds.has(coin.id)}
                       />
                     ))}
                   </div>

@@ -25,7 +25,7 @@ export const metadata = buildPageMetadata({
   description:
     "Auth model, API-key requirements, host split, and the full Pharos endpoint reference for external integrations.",
   canonical: "/about/api/",
-  ogImage: `${SITE_URL}/og-about.png`,
+  ogImage: `${SITE_URL}/og-editorial-about.png`,
 });
 
 const HERO_LANES = [
@@ -94,7 +94,7 @@ function renderInlineMarkdown(text: string) {
     const token = match[0];
     if (token.startsWith("`") && token.endsWith("`")) {
       parts.push(
-        <code key={`code-${key++}`} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">
+        <code key={`code-${key++}`} className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
           {token.slice(1, -1)}
         </code>,
       );
@@ -239,7 +239,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
                 {subsection.method ? (
                   <span
                     className={cn(
-                      "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono text-[11px] font-bold leading-tight",
+                      "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight",
                       subsection.method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-400",
                       subsection.method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-400",
                     )}
@@ -247,7 +247,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
                     {subsection.method}
                   </span>
                 ) : null}
-                <code className="font-mono text-[0.92rem]">
+                <code className="font-mono tabular-nums text-[0.92rem]">
                   {stripMarkdownHeadingFormatting(subsection.title).replace(/^(GET|POST)\s+/, "")}
                 </code>
               </h3>
@@ -300,7 +300,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
             {endpoint.method ? (
               <span
                 className={cn(
-                  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono text-[11px] font-bold leading-tight",
+                  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight",
                   endpoint.method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-500",
                   endpoint.method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-500",
                 )}
@@ -308,7 +308,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
                 {endpoint.method}
               </span>
             ) : null}
-            <code className="truncate font-mono text-[0.82rem] text-foreground">{endpoint.path}</code>
+            <code className="truncate font-mono tabular-nums text-[0.82rem] text-foreground">{endpoint.path}</code>
           </Link>
         ))}
       </div>
@@ -375,8 +375,8 @@ export default async function AboutApiPage() {
               <p className="pharos-kicker">External Integrations</p>
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.3rem]">API Reference</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                The public integration lane is <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">https://api.pharos.watch</code>.
-                In production, protected public routes require <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code>.
+                The public integration lane is <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">https://api.pharos.watch</code>.
+                In production, protected public routes require <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">X-API-Key</code>.
                 The website itself does not use that lane directly; it talks to the internal site-data proxy instead.
               </p>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
@@ -421,7 +421,7 @@ export default async function AboutApiPage() {
             <p className="pharos-kicker">Quick Facts</p>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <li>
-                <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code>
+                <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">X-API-Key</code>
               </li>
               <li>
                 <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)

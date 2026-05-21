@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChangelogEntryCard } from "@/components/changelog-entry-card";
 import { ChangelogWeekNav } from "@/components/changelog-week-nav";
+import { EditorialMasthead } from "@/components/editorial-masthead";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { changelogs } from "@/data/changelogs";
@@ -22,6 +23,17 @@ export default function ChangelogPage() {
     changelogs.map((e) => new Date(e.dateRange.to + "T00:00:00").getFullYear()),
   );
   const multiYear = years.size > 1;
+  const latestEntry = changelogs[0];
+  const latestYear = latestEntry
+    ? new Date(latestEntry.dateRange.to + "T00:00:00").getFullYear()
+    : new Date().getFullYear();
+  const mastheadDate = latestEntry
+    ? new Date(latestEntry.dateRange.to + "T00:00:00").toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : undefined;
   const changelogJsonLd = safeJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -52,10 +64,16 @@ export default function ChangelogPage() {
       variant="longform"
       containerClassName="mx-auto max-w-3xl"
       preface={(
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: changelogJsonLd }}
-        />
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: changelogJsonLd }}
+          />
+          <EditorialMasthead
+            issueNumber={`Volume ${latestYear}`}
+            date={mastheadDate}
+          />
+        </>
       )}
       leadParagraphs={[
         <>
@@ -90,7 +108,7 @@ export default function ChangelogPage() {
             <Fragment key={entry.dateRange.to}>
               {showYearDivider && (
                 <li className={`relative pl-8 ${i > 0 ? "mt-14" : ""}`}>
-                  <span className="text-sm font-mono font-medium text-muted-foreground/70">
+                  <span className="text-sm pharos-numeric font-medium text-muted-foreground/70">
                     {year}
                   </span>
                 </li>

@@ -30,3 +30,28 @@ export const INDEXABLE_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(
 export const eventBySlug: ReadonlyMap<string, DepegEventEntry> = new Map(
   DEPEG_EVENT_ENTRIES.map((event) => [event.slug, event] as const),
 );
+
+/**
+ * Incident numbers for confirmed event pages.
+ *
+ * Assigned in chronological order — the oldest confirmed event is Incident #1,
+ * counting forward. Numbers are stable across rebuilds as long as a slug stays
+ * confirmed; if an event is rejected later, numbers downstream shift by one,
+ * which is acceptable because rejected events lose their permanent URL too.
+ *
+ * The chronological direction (ascending, not the sync-script's descending
+ * order) is the canonical convention for serial publication numbering.
+ */
+export const INCIDENT_NUMBER_BY_SLUG: ReadonlyMap<string, number> = (() => {
+  const ascending = [...DEPEG_EVENT_ENTRIES].sort((a, b) => {
+    if (a.startedAt !== b.startedAt) return a.startedAt - b.startedAt;
+    return a.slug.localeCompare(b.slug);
+  });
+  return new Map(ascending.map((event, index) => [event.slug, index + 1] as const));
+})();
+
+export function formatIncidentNumber(slug: string): string | null {
+  const number = INCIDENT_NUMBER_BY_SLUG.get(slug);
+  if (number == null) return null;
+  return String(number).padStart(3, "0");
+}

@@ -18,7 +18,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",
   description: cemeteryDescription,
   canonical: "/cemetery/",
-  ogImage: `${SITE_URL}/og-cemetery.png`,
+  ogImage: `${SITE_URL}/og-editorial-cemetery.png`,
 });
 
 const FAQ_ITEMS = [

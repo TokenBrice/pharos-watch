@@ -56,9 +56,9 @@ export function MintBurnFlowMethodologySection() {
                 />
               </div>
               <WorkedExample summary="Worked example (verified against computeFlowIntensity)">
-                <p className="font-mono">Inputs: currentNet=-$0.2M, baselineNet=-$7.5M, baselineAbs=$40M</p>
-                <p className="font-mono">denominator=max(40M*0.3,1M)=12M; z=(-0.2M-(-7.5M))/12M=0.608</p>
-                <p className="font-mono">pressureShift=clamp(-100,100,z*50)=30.4</p>
+                <p className="pharos-numeric">Inputs: currentNet=-$0.2M, baselineNet=-$7.5M, baselineAbs=$40M</p>
+                <p className="pharos-numeric">denominator=max(40M*0.3,1M)=12M; z=(-0.2M-(-7.5M))/12M=0.608</p>
+                <p className="pharos-numeric">pressureShift=clamp(-100,100,z*50)=30.4</p>
                 <p>
                   Result: <span className="text-foreground">still burning today, but much lighter than its baseline.</span>
                 </p>
@@ -184,7 +184,7 @@ export function MintBurnFlowMethodologySection() {
                     This is the existing Flow Intensity formula under clearer naming. It measures how far current 24-hour
                     flow pressure deviates from the coin&apos;s own trailing 30 fully closed daily configured issuance-chain baseline.
                   </p>
-                  <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+                  <p className="pharos-numeric text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     denominator = max(baselineDailyAbs &times; 0.3, $1M)
                     <br />
                     z = (currentDailyNet &minus; baselineDailyNet) / denominator

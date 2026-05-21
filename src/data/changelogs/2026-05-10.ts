@@ -4,6 +4,8 @@ export const entry: ChangelogEntry = {
   dateRange: { from: "2026-05-04", to: "2026-05-10" },
   headline:
     "Non-USD stablecoin batch ships, DEX pricing gains confidence telemetry, and Telegram adds depeg-step commands.",
+  fieldNotes:
+    "A quieter week, spent strengthening the parts of Pharos that nobody asks about until they fail. DEX pricing learned to admit when a source is wobbly. The reserve adapter set widened past the dollar peg. USND moved from the live shelf to the cemetery archive after the rsETH incident — the page stays, the watch ends. Most of the work this week was the kind that doesn't ship as a feature: an audit pass on freezability, a recalibration of issuer control posture.",
   summary: [
     {
       label: "Non-USD coverage expansion",

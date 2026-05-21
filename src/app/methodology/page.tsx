@@ -18,13 +18,15 @@ import {
   READER_GUIDE_COPY,
 } from "./methodology-shared";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { digestDisplay } from "@/lib/fonts/digest";
+import { EDITORIAL_BODY_STYLE } from "@/lib/digest";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
   description:
     "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests. Transparent scoring for every stablecoin.",
   canonical: "/methodology/",
-  ogImage: `${SITE_URL}/og-methodology.png`,
+  ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
 
 export default function MethodologyPage() {
@@ -83,7 +85,7 @@ export default function MethodologyPage() {
               "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests.",
             author: { "@id": `${SITE_URL}#person-tokenbrice` },
             publisher: { "@id": `${SITE_URL}#organization` },
-            image: `${SITE_URL}/og-methodology.png`,
+            image: `${SITE_URL}/og-editorial-methodology.png`,
             mainEntityOfPage: `${SITE_URL}/methodology/`,
             keywords: ["stablecoin methodology", "safety score", "PegScore", "DEWS", "PSI", "liquidity score"],
           }),
@@ -176,6 +178,90 @@ export default function MethodologyPage() {
           ))}
         </CardContent>
       </Card>
+
+      {/* Editorial preface — pinned long-form, written once, not regenerated. */}
+      <section
+        aria-label="Editorial preface"
+        className="mx-auto w-full max-w-[68ch] border-y border-border/60 py-10 md:py-12"
+      >
+        <p className="pharos-kicker text-foreground/80">Editorial Preface</p>
+        <h2
+          className={cn(
+            digestDisplay.className,
+            "mt-3 text-[clamp(1.8rem,3.6vw,2.6rem)] font-semibold leading-[1.04] tracking-[-0.025em] text-foreground [text-wrap:balance]",
+          )}
+        >
+          How Pharos grades every stablecoin, and what it refuses to grade.
+        </h2>
+        <div
+          className="mt-6 space-y-5 text-[1.02rem] leading-[1.85] text-foreground/88 sm:text-[1.06rem]"
+          style={EDITORIAL_BODY_STYLE}
+        >
+          <p>
+            Every safety grade Pharos publishes is the answer to one question:
+            if this stablecoin started bleeding tomorrow, how much of the loss
+            would the holder eat before the system stopped it? Four base
+            dimensions answer different parts of that question. Liquidity / Exit
+            (30%) measures whether you can leave at all. Dependency Risk (25%)
+            measures whether something else has to hold for this one to hold.
+            Resilience (20%) measures the quality of what backs the coin and
+            who is allowed to touch it. Decentralization (15%) measures whether
+            anyone can switch the lights off. We weight them in that order
+            because, in every real depeg we have studied, the exit was already
+            gone before the press release went out.
+          </p>
+          <p>
+            The peg score does not sit alongside the four base dimensions. It
+            multiplies them. After the weighted base score is computed, we
+            apply <span className="not-italic">(pegScore / 100)<sup>0.40</sup></span>
+            {" "}as a power curve. The exponent is deliberate. At 1.0, a
+            ten-point drop in peg score would erase ten points of safety, which
+            punishes mid-quality pegs more than the data supports. At 0.0, the
+            peg would not constrain the grade at all, which would let a
+            structurally fine asset with a chronically wobbly peg coast on
+            collateral quality. Forty splits the difference: a peg score of 90
+            takes about four percent off; a peg score of 10 takes sixty
+            percent off. Strong pegs are nearly untouched, broken pegs are
+            sharply demoted, and the curve does the work without a cliff.
+          </p>
+          <p>
+            Dependency Risk is the dimension that most often surprises issuers.
+            A wrapper that lives entirely inside a parent stablecoin cannot,
+            by construction, be safer than its parent. We enforce that with a
+            variant overall cap, not by averaging the parent in. Averaging
+            would let a well-built wrapper around a weak base settle at some
+            middle grade that no one should rely on; capping says the
+            downstream cannot escape the upstream, which is how the dependency
+            actually behaves under stress. The same logic produces
+            family-specific wrapper ceilings for risk-absorption, strategy
+            vaults, and bond-maturity variants. The cap is honest about what
+            the asset is: a claim on something else.
+          </p>
+          <p>
+            Yield tokens get flagged, not folded. Pharos tracks yield-bearing
+            and NAV tokens through a separate yield-risk pipeline because the
+            failure modes are different in kind, not just degree. A holder of
+            a $1.00 stablecoin and a holder of a $1.04 wrapper are not running
+            the same trade. The wrapper carries source risk, sustainability
+            risk, and benchmark drift that have no analog in the underlying
+            peg. Until those signals are sourced to a standard we will publish
+            against, we surface them on the yield page and leave the safety
+            score honest about what it does and does not measure. Configured
+            NAV wrappers can still inherit peg risk from a referenced base;
+            pure fund-share tokens with no peg reference receive a peg
+            multiplier of 1.0 and are graded on the structural dimensions
+            alone.
+          </p>
+        </div>
+        <p
+          className={cn(
+            digestDisplay.className,
+            "mt-8 text-sm italic text-muted-foreground",
+          )}
+        >
+          &mdash; Pharos, May 2026
+        </p>
+      </section>
 
       <LongformScrollspyNav
         sections={METHODOLOGY_SECTIONS}

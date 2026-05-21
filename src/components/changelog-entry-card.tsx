@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { digestDisplay } from "@/lib/fonts/digest";
 import type { ChangelogEntry, SummaryTag } from "@/data/changelogs/types";
 
 /* ── Summary-item category ──────────────────────────────────────── */
@@ -54,6 +55,15 @@ function isoDate(ymd: string): string {
   return ymd; // already YYYY-MM-DD
 }
 
+/** ISO 8601 week number derived from the closing date of the changelog window. */
+function isoWeekNumber(ymd: string): number {
+  const date = new Date(ymd + "T00:00:00Z");
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
 const COMMIT_PREVIEW_COUNT = 20;
 
 interface ChangelogEntryCardProps {
@@ -62,11 +72,18 @@ interface ChangelogEntryCardProps {
   isLatest?: boolean;
 }
 
+function formatFieldNotesKicker(from: string): string {
+  const fromDate = new Date(from + "T00:00:00");
+  const month = fromDate.toLocaleDateString("en-US", { month: "long" });
+  return `Editor's note · Week of ${month} ${fromDate.getDate()}`;
+}
+
 export function ChangelogEntryCard({
   entry,
   isLatest,
 }: ChangelogEntryCardProps) {
-  const { dateRange, headline, summary, stats, commits } = entry;
+  const { dateRange, headline, fieldNotes, summary, stats, commits } = entry;
+  const weekNumber = isoWeekNumber(dateRange.to);
 
   return (
     <section
@@ -77,9 +94,12 @@ export function ChangelogEntryCard({
           "pharos-card-shell -ml-4 -mr-4 px-4 py-5 sm:-ml-5 sm:-mr-5 sm:px-5 sm:py-6",
       )}
     >
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+        Week #{weekNumber}
+      </p>
       <h2
         className={cn(
-          "group/heading font-semibold tracking-tight",
+          "group/heading mt-1 font-semibold tracking-tight",
           isLatest ? "text-2xl" : "text-xl text-muted-foreground",
         )}
       >
@@ -115,6 +135,22 @@ export function ChangelogEntryCard({
         <p className="mt-2.5 text-base leading-snug text-foreground/80">
           {headline}
         </p>
+      )}
+
+      {fieldNotes && (
+        <aside className="mt-5 border-l-2 border-frost-blue/40 pl-4">
+          <p
+            className={cn(
+              digestDisplay.className,
+              "text-xs font-semibold uppercase tracking-[0.18em] text-frost-blue/80",
+            )}
+          >
+            {formatFieldNotesKicker(dateRange.from)}
+          </p>
+          <p className="mt-2 max-w-[68ch] font-mono text-[0.95rem] leading-relaxed italic text-foreground/85">
+            {fieldNotes}
+          </p>
+        </aside>
       )}
 
       <ul className="mt-5 space-y-4 mb-6">

@@ -4,6 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import AboutPage from "./page";
 
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
+
 vi.mock("next/image", () => ({
   default: ({ alt, ...props }: { alt: string; src: string; width: number; height: number; className?: string }) => (
     <img alt={alt} {...props} />

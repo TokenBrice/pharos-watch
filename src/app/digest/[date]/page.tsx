@@ -3,7 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
+import { EditorialColophon } from "@/components/editorial-colophon";
+import { EditorialMasthead } from "@/components/editorial-masthead";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
+import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
@@ -52,10 +55,10 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
       url: `/digest/${digest.date}/`,
       type: "article",
       publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
-      images: [{ url: "/og-digest.png", width: 1200, height: 628 }],
+      images: [{ url: "/og-editorial-digest.png", width: 1200, height: 628 }],
     },
     twitter: {
-      images: [{ url: "/og-digest.png", width: 1200, height: 628 }],
+      images: [{ url: "/og-editorial-digest.png", width: 1200, height: 628 }],
     },
   };
 }
@@ -93,7 +96,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             "@context": "https://schema.org",
             "@type": "Article",
             headline: `${digest.title} (${formatted})`,
-            image: [`${SITE_URL}/og-digest.png`],
+            image: [`${SITE_URL}/og-editorial-digest.png`],
             datePublished: new Date(digest.generatedAt * 1000).toISOString(),
             dateModified: new Date(digest.generatedAt * 1000).toISOString(),
             description: summarizeText(digest.text, 160),
@@ -111,6 +114,11 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
           }),
         }}
+      />
+      <EditorialMasthead
+        issueNumber={digest.editionNumber ?? (isWeekly ? "Weekly Recap" : "Daily Digest")}
+        date={formatted}
+        methodologyVersion={SAFETY_SCORE_VERSION_LABEL}
       />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb">
@@ -195,6 +203,20 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
           <span />
         )}
       </nav>
+
+      <EditorialColophon
+        productionNote={
+          isWeekly
+            ? "Weekly recap composed from the week's tracked events and DEWS history; scores reflect data available at publication."
+            : "Daily digest composed from the day's tracked events and DEWS history; scores reflect data available at publication."
+        }
+        methodologyVersion={SAFETY_SCORE_VERSION_LABEL}
+        citation={{
+          title: `${digest.title} (${formatted})`,
+          canonicalUrl: `${SITE_URL}/digest/${digest.date}/`,
+          accessedDate: digest.date,
+        }}
+      />
     </div>
   );
 }

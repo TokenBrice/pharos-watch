@@ -61,10 +61,10 @@ export function StabilityIndexMethodologySection() {
                 />
               </div>
               <WorkedExample summary="Worked example (verified against computeStabilityIndex)">
-                <p className="font-mono">
+                <p className="pharos-numeric">
                   Inputs: bps=-120, depegMcap=$2B, totalMcap=$200B, age=10d, trend=+1.2, stressBreadth=1.5
                 </p>
-                <p className="font-mono">severity=1.141, breadth=4.243, score=100-1.141-4.243-1.5+1.2=94.316&rarr;94.3</p>
+                <p className="pharos-numeric">severity=1.141, breadth=4.243, score=100-1.141-4.243-1.5+1.2=94.316&rarr;94.3</p>
                 <p>
                   Result: <span className="text-foreground">PSI 94.3 (BEDROCK)</span>.
                 </p>
@@ -75,7 +75,7 @@ export function StabilityIndexMethodologySection() {
               >
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Scoring Formula</h3>
-                  <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
+                  <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
                     Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
                   </code>
                   <p className="text-xs">The final value is clamped to [0, 100] and rounded to one decimal.</p>
@@ -120,7 +120,7 @@ export function StabilityIndexMethodologySection() {
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="py-2 pr-4 text-foreground">Severity</td>
                           <td className="py-2 pr-4">0&ndash;68</td>
-                          <td className="py-2 pr-4 font-mono text-xs">
+                          <td className="py-2 pr-4 pharos-numeric text-xs">
                             min(68, &Sigma;(abs(bps)/100 &times; share &times; log2(1+mcap/1B) &times; 60 &times; factor))
                           </td>
                           <td className="py-2">
@@ -130,7 +130,7 @@ export function StabilityIndexMethodologySection() {
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="py-2 pr-4 text-foreground">Breadth</td>
                           <td className="py-2 pr-4">0&ndash;17</td>
-                          <td className="py-2 pr-4 font-mono text-xs">
+                          <td className="py-2 pr-4 pharos-numeric text-xs">
                             min(17, &Sigma;(sqrt(mcap/1B) &times; 3 &times; factor))
                           </td>
                           <td className="py-2">How widely depegs are spreading across unique coins</td>
@@ -138,13 +138,13 @@ export function StabilityIndexMethodologySection() {
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="py-2 pr-4 text-foreground">Stress Breadth</td>
                           <td className="py-2 pr-4">0&ndash;5</td>
-                          <td className="py-2 pr-4 font-mono text-xs">min(5, dewsStressBreadth)</td>
+                          <td className="py-2 pr-4 pharos-numeric text-xs">min(5, dewsStressBreadth)</td>
                           <td className="py-2">Early-warning pressure from DEWS stress signals before full depegs</td>
                         </tr>
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="py-2 pr-4 text-foreground">Trend</td>
                           <td className="py-2 pr-4">&minus;5 to +5</td>
-                          <td className="py-2 pr-4 font-mono text-xs">clamp(-5, 5, mcap7dChangePct)</td>
+                          <td className="py-2 pr-4 pharos-numeric text-xs">clamp(-5, 5, mcap7dChangePct)</td>
                           <td className="py-2">7-day stablecoin market-cap momentum (supports or offsets penalties)</td>
                         </tr>
                       </tbody>
@@ -173,7 +173,7 @@ export function StabilityIndexMethodologySection() {
                       weight for 30 days, then decay linearly to a 25% floor over 120 days.
                     </li>
                   </ul>
-                  <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
+                  <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
                     factor = ageDays &le; 30 ? 1.0 : max(0.25, 1.0 &minus; (ageDays &minus; 30)/120)
                   </code>
                 </div>

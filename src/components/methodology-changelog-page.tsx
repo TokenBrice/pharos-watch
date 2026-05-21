@@ -75,7 +75,7 @@ export function MethodologyChangelogPage({
               dateModified: `${entries[0].date}T00:00:00Z`,
               author: { "@id": `${SITE_URL}#person-tokenbrice` },
               publisher: { "@id": `${SITE_URL}#organization` },
-              image: `${SITE_URL}/og-card.png`,
+              image: `${SITE_URL}/og-editorial-methodology.png`,
               mainEntityOfPage: `${SITE_URL}${path}`,
               ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
             }),

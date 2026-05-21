@@ -1,7 +1,7 @@
 .scene {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 1rem;
   border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
   background:
@@ -186,8 +186,9 @@
   padding-bottom: 1.15rem;
 }
 
-.tombRoot:focus-visible {
-  z-index: 40;
+.tombRoot:hover,
+.tombRoot:focus-within {
+  z-index: 80;
 }
 
 .graveMound {
@@ -322,9 +323,9 @@
 .plaque {
   position: absolute;
   left: 50%;
-  bottom: calc(100% - 15.5rem);
-  z-index: 50;
-  width: min(18rem, calc(100vw - 2rem));
+  bottom: calc(100% - 16rem);
+  z-index: 90;
+  width: min(20rem, calc(100vw - 2rem));
   border-radius: 0.8rem;
   border: 1px solid color-mix(in oklch, var(--tomb-accent) 38%, var(--border));
   background:
@@ -333,7 +334,7 @@
     0 24px 55px color-mix(in oklch, black 34%, transparent),
     inset 0 1px 0 color-mix(in oklch, white 7%, transparent);
   opacity: 0;
-  padding: 0.75rem;
+  padding: 0.85rem 0.9rem 0.8rem;
   text-align: left;
   transform: translateX(calc(-50% + var(--plaque-shift, 0px))) scale(0.98);
   transition:
@@ -432,7 +433,7 @@
     max-height: min(62vh, 26rem);
     overflow: auto;
     transform: translateX(-50%) scale(0.98);
-    width: min(18rem, calc(100vw - 2rem));
+    width: min(20rem, calc(100vw - 2rem));
   }
 
   .plaque::before {
@@ -443,6 +444,7 @@
   .tombRoot:focus-visible .plaque {
     transform: translateX(-50%) scale(1);
   }
+
 }
 
 @media (max-width: 360px) {

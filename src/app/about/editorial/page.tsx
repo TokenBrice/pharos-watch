@@ -9,7 +9,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "How Pharos writes, reviews, and labels AI-authored stablecoin summaries — model attribution, human review, corrections process, and the canonical policy anchor.",
   canonical: "/about/editorial/",
-  ogImage: `${SITE_ORIGIN}/og-about.png`,
+  ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
 
 const INLINE_LINK_CLASS =

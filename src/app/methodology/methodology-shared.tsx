@@ -70,7 +70,7 @@ export function MethodologySectionShell({
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle as="h2">{title}</CardTitle>
           {versionLabel && badgeClassName && (
-            <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-mono font-semibold", badgeClassName)}>
+            <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-mono tabular-nums font-semibold", badgeClassName)}>
               {versionLabel}
             </span>
           )}

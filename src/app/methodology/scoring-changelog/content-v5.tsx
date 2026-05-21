@@ -149,7 +149,7 @@ export function ScoringChangelogV5Entries() {
                 now receives a <span className="text-foreground font-medium">10% penalty</span> instead
                 of silently redistributing the weight to other dimensions.
               </p>
-              <div className="rounded-lg border p-3 font-mono text-xs bg-muted">
+              <div className="rounded-lg border p-3 pharos-numeric text-xs bg-muted">
                 final = score &times; 0.9
               </div>
               <p>

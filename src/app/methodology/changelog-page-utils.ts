@@ -31,10 +31,10 @@ export function buildMethodologyChangelogMetadata({
       description,
       url: path,
       type: "website",
-      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+      images: [{ url: "/og-editorial-methodology.png", width: 1200, height: 628 }],
     },
     twitter: {
-      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+      images: [{ url: "/og-editorial-methodology.png", width: 1200, height: 628 }],
     },
   };
 }

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
+import { digestDisplay } from "@/lib/fonts/digest";
 import { getPharosToneClasses, type PharosTone } from "@/lib/tone-classes";
 import {
   COMPANION_FEATURES,
@@ -155,7 +156,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   canonical: "/about/",
-  ogImage: `${SITE_ORIGIN}/og-about.png`,
+  ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
 
 export default function AboutPage() {
@@ -190,6 +191,27 @@ export default function AboutPage() {
       }
     >
       <div className="space-y-8">
+        <section aria-labelledby="about-lede" className="space-y-3 pb-2">
+          <p
+            id="about-lede"
+            className={cn(
+              digestDisplay.className,
+              "w-full max-w-none text-[clamp(1.5rem,2.6vw,2.25rem)] font-normal leading-[1.2] tracking-[-0.012em] text-foreground/95 [text-wrap:balance]",
+            )}
+          >
+            Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
+            at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}tracked tokens and the chains
+            and reserves beneath them so that desks, treasuries, and researchers can read the peg the way
+            navigators read weather.
+          </p>
+          <p className="font-mono text-xs text-muted-foreground/80">
+            Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
+          </p>
+          <p className="font-mono text-3xs uppercase tracking-[0.18em] text-muted-foreground/70">
+            Watching the peg.
+          </p>
+        </section>
+
         <AboutSection
           eyebrow="Why it exists"
           title="Why Pharos?"
@@ -197,29 +219,26 @@ export default function AboutPage() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Stablecoins are the backbone of on-chain finance, yet the data to evaluate them is scattered, inconsistent,
-            or buried behind paywalls. Worse, marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely
-            entirely on centralized collateral. An issuer can freeze balances without warning. A deep liquidity pool on one
-            DEX can evaporate overnight. And when a major stablecoin fails, the collateral chains transmit that stress to
-            dozens of derivatives that looked safe in isolation.
+            The data needed to evaluate stablecoins is scattered, inconsistent, or buried behind paywalls. Worse,
+            marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely entirely on
+            centralized collateral, an issuer can freeze balances without warning, and a major stablecoin&apos;s
+            failure transmits stress to dozens of derivatives that looked safe in isolation.
           </p>
           <p>
-            Pharos was built to make these risks visible. It tracks {ACTIVE_STABLECOIN_COUNT} live stablecoins,{" "}
-            {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the
-            live universe with honest governance classification, transitive dependency scoring, and live reserve
-            composition where available. Real-time depeg detection, freeze monitoring across 35 stablecoins, safety
-            grades that cap scores based on upstream exposure, and a 30-minute ecosystem-wide stability index give you
-            the full picture before a crisis makes the headlines.
+            Pharos tracks {ACTIVE_STABLECOIN_COUNT} live stablecoins, {PRE_LAUNCH_STABLECOIN_COUNT} upcoming
+            launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the live universe with honest
+            governance classification, transitive dependency scoring, and live reserve composition where
+            available. Real-time depeg detection, freeze monitoring across 35 stablecoins, and a 30-minute
+            ecosystem-wide stability index give you the full picture before a crisis makes the headlines.
           </p>
           <p>
-            When a tracked stablecoin effectively dies — issuer abandonment, supply trending to zero, irrecoverable
-            depeg, regulatory shutdown — Pharos freezes it rather than deletes it. Frozen coins keep their detail page
-            and historical data as a read-only archive, drop out of every live aggregate and score recomputation, and
-            surface in the{" "}
+            When a tracked stablecoin effectively dies &mdash; issuer abandonment, supply trending to zero,
+            irrecoverable depeg, regulatory shutdown &mdash; Pharos freezes it rather than deletes it, and
+            surfaces it in the{" "}
             <Link href="/cemetery/" className={INLINE_EXTERNAL_LINK_CLASS}>
               cemetery
             </Link>{" "}
-            with an obituary and an &quot;archived data&quot; link back to the preserved detail page.
+            with an obituary and an archived detail page.
           </p>
           <p>
             Pharos is a public good. The dashboard stays free, the code is open source, and sustainability comes
@@ -294,8 +313,7 @@ export default function AboutPage() {
                 Ike
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>{" "}
-              drives growth and communications, getting Pharos in front of the people who need it. The engineering is
-              AI-native: most of the codebase is written and maintained by{" "}
+              drives growth and communications. Most of the codebase is written and maintained by{" "}
               <a
                 href="https://www.anthropic.com/claude-code"
                 target="_blank"
@@ -329,8 +347,8 @@ export default function AboutPage() {
           <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getPharosToneClasses("brand").icon)} />
           <div className="space-y-3">
             <p>
-              TokenBrice walked through Pharos live on Leviathan News, covering the motivation behind the project, how
-              the data pipeline works, and how the main risk signals should be read in practice.
+              TokenBrice walked through Pharos live on Leviathan News &mdash; the motivation behind the project,
+              the data pipeline, and how the main risk signals should be read in practice.
             </p>
             <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
               <a href="https://x.com/i/broadcasts/1qxvvkeMlyAxB" target="_blank" rel="noopener noreferrer">

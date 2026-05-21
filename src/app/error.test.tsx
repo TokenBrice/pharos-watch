@@ -1,14 +1,29 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
 
 import ErrorPage from "./error";
 
 const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
 
+beforeEach(() => {
+  // The root error boundary probes /api/health on mount. Stub fetch so the
+  // tests don't surface a degraded callout (or an unhandled rejection from a
+  // missing global fetch).
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.reject(new Error("offline"))),
+  );
+});
+
 afterEach(() => {
   process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+  vi.unstubAllGlobals();
   cleanup();
 });
 

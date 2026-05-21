@@ -92,12 +92,12 @@ export function PegScoreDewsOverview() {
         />
       </div>
       <WorkedExample summary="Worked examples (verified against computePegScore and computeDEWS)">
-        <p className="font-mono">PegScore input: 100-day tracking window, 1 event (2 days, 220 bps, inactive)</p>
-        <p className="font-mono">pegPct=98.0, severityScore=99.86, spread=0, activePenalty=0 &rarr; pegScore=99</p>
-        <p className="font-mono">
+        <p className="pharos-numeric">PegScore input: 100-day tracking window, 1 event (2 days, 220 bps, inactive)</p>
+        <p className="pharos-numeric">pegPct=98.0, severityScore=99.86, spread=0, activePenalty=0 &rarr; pegScore=99</p>
+        <p className="pharos-numeric">
           DEWS input signals: supply=40, pool=55, liq=25, price=0, diverg=10 (others unavailable), psiScore=70
         </p>
-        <p className="font-mono">
+        <p className="pharos-numeric">
           base=(0.25*40+0.2*55+0.15*25+0.15*0+0.15*10)/0.9=29.17; PSI amplifier=1.02 &rarr; DEWS=30
         </p>
         <p>

@@ -42,7 +42,7 @@ export function ChainHealthMethodologySection() {
 
               <MethodologyDetails summary="Formula & Weights" primary>
                 <p className="text-foreground font-medium">Composite formula</p>
-                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs font-mono">
+                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
     {`healthScore =
       0.30 × quality
     + 0.20 × chainEnvironment
@@ -115,19 +115,19 @@ export function ChainHealthMethodologySection() {
                     <tbody className="text-foreground">
                       <tr className="border-b border-border/40">
                         <td className="py-2 pr-4 font-medium">Tier 1</td>
-                        <td className="py-2 pr-4 font-mono">100</td>
+                        <td className="py-2 pr-4 pharos-numeric">100</td>
                         <td className="py-2 pr-4">Highly decentralized, battle-tested, censorship-resistant L1</td>
                         <td className="py-2">Ethereum</td>
                       </tr>
                       <tr className="border-b border-border/40">
                         <td className="py-2 pr-4 font-medium">Tier 2</td>
-                        <td className="py-2 pr-4 font-mono">60</td>
+                        <td className="py-2 pr-4 pharos-numeric">60</td>
                         <td className="py-2 pr-4">Established chains with moderate centralization (default for unlisted chains)</td>
                         <td className="py-2">Solana, BSC, Arbitrum, Tron, Base, Polygon</td>
                       </tr>
                       <tr>
                         <td className="py-2 pr-4 font-medium">Tier 3</td>
-                        <td className="py-2 pr-4 font-mono">20</td>
+                        <td className="py-2 pr-4 pharos-numeric">20</td>
                         <td className="py-2 pr-4">Unproven, known centralization issues, or compromised security</td>
                         <td className="py-2">PulseChain, Harmony, BitTorrent</td>
                       </tr>
@@ -147,11 +147,11 @@ export function ChainHealthMethodologySection() {
                       </tr>
                     </thead>
                     <tbody className="text-foreground">
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-emerald-600 dark:text-emerald-400">Robust</td><td className="py-2 pr-4 font-mono">80&ndash;100</td><td className="py-2">Strong, diversified stablecoin ecosystem on quality infrastructure</td></tr>
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-sky-600 dark:text-sky-400">Healthy</td><td className="py-2 pr-4 font-mono">60&ndash;79</td><td className="py-2">Good ecosystem with room for improvement</td></tr>
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-amber-600 dark:text-amber-400">Mixed</td><td className="py-2 pr-4 font-mono">40&ndash;59</td><td className="py-2">Moderate concerns &mdash; concentration, quality gaps, or chain risk</td></tr>
-                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-orange-600 dark:text-orange-400">Fragile</td><td className="py-2 pr-4 font-mono">20&ndash;39</td><td className="py-2">Significant ecosystem weaknesses</td></tr>
-                      <tr><td className="py-2 pr-4 font-medium text-red-600 dark:text-red-400">Concentrated</td><td className="py-2 pr-4 font-mono">0&ndash;19</td><td className="py-2">Minimal diversity or critically weak infrastructure</td></tr>
+                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-emerald-600 dark:text-emerald-400">Robust</td><td className="py-2 pr-4 pharos-numeric">80&ndash;100</td><td className="py-2">Strong, diversified stablecoin ecosystem on quality infrastructure</td></tr>
+                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-sky-600 dark:text-sky-400">Healthy</td><td className="py-2 pr-4 pharos-numeric">60&ndash;79</td><td className="py-2">Good ecosystem with room for improvement</td></tr>
+                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-amber-600 dark:text-amber-400">Mixed</td><td className="py-2 pr-4 pharos-numeric">40&ndash;59</td><td className="py-2">Moderate concerns &mdash; concentration, quality gaps, or chain risk</td></tr>
+                      <tr className="border-b border-border/40"><td className="py-2 pr-4 font-medium text-orange-600 dark:text-orange-400">Fragile</td><td className="py-2 pr-4 pharos-numeric">20&ndash;39</td><td className="py-2">Significant ecosystem weaknesses</td></tr>
+                      <tr><td className="py-2 pr-4 font-medium text-red-600 dark:text-red-400">Concentrated</td><td className="py-2 pr-4 pharos-numeric">0&ndash;19</td><td className="py-2">Minimal diversity or critically weak infrastructure</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -159,7 +159,7 @@ export function ChainHealthMethodologySection() {
 
               <WorkedExample summary="Worked example: Ethereum vs PulseChain">
                 <p className="text-foreground font-medium">Ethereum (Tier 1)</p>
-                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs font-mono">
+                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
     {`quality      = 72  (supply-weighted safety scores across ~190 coins)
     environment  = 100 (tier 1 — gold standard for decentralization)
     concentration= 66  (USDT ~48%, USDC ~33% → HHI ≈ 0.34)
@@ -170,7 +170,7 @@ export function ChainHealthMethodologySection() {
            = 21.6 + 20 + 13.2 + 19.6 + 3.5 = 77.9 → 78 (healthy)`}
                 </pre>
                 <p className="text-foreground font-medium mt-4">PulseChain (Tier 3)</p>
-                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs font-mono">
+                <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
     {`quality      = 72  (DAI + unrated coins defaulting to 40)
     environment  = 20  (tier 3 — unproven, centralized)
     concentration= 67  (DAI ~39%, rest ~12% each)

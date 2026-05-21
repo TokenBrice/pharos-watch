@@ -117,7 +117,7 @@ export function MechanismComparisonMatrix() {
         >
           At a glance
         </h2>
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+        <span className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
           {MECHANISM_ARCHETYPE_VALUES.length} mechanisms
         </span>
       </div>

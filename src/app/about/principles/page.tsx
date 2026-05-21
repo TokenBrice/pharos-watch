@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { SeeAlsoFooter } from "@/components/see-also-footer";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SEE_ALSO_GRAPH } from "@/lib/see-also-graph";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   PRINCIPLES_AI_POLICY,
@@ -15,7 +17,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "The ten axioms that drive what Pharos computes and what it refuses to compute, plus the AI-authoring policy and the corrections process.",
   canonical: "/about/principles/",
-  ogImage: `${SITE_ORIGIN}/og-about.png`,
+  ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
 
 const INLINE_LINK_CLASS =
@@ -91,6 +93,7 @@ export default function AboutPrinciplesPage() {
           for the inbound side of the same accountability.
         </p>
       </section>
+      <SeeAlsoFooter links={SEE_ALSO_GRAPH["/about/principles/"]} />
     </FeaturePageShell>
   );
 }

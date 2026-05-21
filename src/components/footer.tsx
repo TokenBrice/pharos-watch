@@ -2,12 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Rss } from "lucide-react";
 import { CATEGORY_LINKS } from "@/lib/constants";
 import { TrustStrip } from "@/components/trust-strip";
-
-interface FooterLink {
-  href: string;
-  label: string;
-  external?: boolean;
-}
+import { FooterFreshnessPill } from "@/components/footer-freshness-pill";
 
 const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/feed/digest.xml", label: "Digest" },
@@ -16,7 +11,7 @@ const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/feed/cemetery.xml", label: "Cemetery" },
 ];
 
-const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
+const FOOTER_PRIMARY_LINKS: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [
   { href: "/", label: "Dashboard" },
   { href: "/start/", label: "Start Here" },
   { href: "/stablecoins/", label: "Stablecoins" },
@@ -30,43 +25,66 @@ const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
   { href: "/api/", label: "API" },
   { href: "/about/", label: "About" },
   { href: "/about/principles/", label: "Principles" },
+  { href: "/about/style/", label: "Style Guide" },
+  { href: "/about/bluechip/", label: "Bluechip" },
+  { href: "/learn/glossary/", label: "Glossary" },
+  { href: "/sitemap-tree/", label: "All pages" },
   { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },
 ];
 
+const LIGHTHOUSE_BEAM_STYLE = `
+@media (prefers-reduced-motion: no-preference) {
+  .group\\/wordmark:hover .pharos-lighthouse-beam {
+    animation: pharos-lighthouse-sweep 4500ms cubic-bezier(0.45, 0.05, 0.55, 0.95) both;
+  }
+}
+@keyframes pharos-lighthouse-sweep {
+  0% { opacity: 0; stroke-dashoffset: 0.91; }
+  20% { opacity: 0.18; }
+  80% { opacity: 0.18; }
+  100% { opacity: 0; stroke-dashoffset: -0.18; }
+}
+`;
+
 export function Footer() {
   return (
-    <footer className="border-t border-border/70 py-8 sm:py-10">
+    <footer className="border-t border-border/70 py-6 sm:py-8">
+      <style dangerouslySetInnerHTML={{ __html: LIGHTHOUSE_BEAM_STYLE }} />
       <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <TrustStrip />
-          <nav
-            aria-label="Feeds"
-            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ml-auto"
-          >
-            <span className="inline-flex items-center gap-1 text-foreground/80">
-              <Rss className="h-3 w-3" aria-hidden="true" />
-              <span className="pharos-kicker">Subscribe</span>
-            </span>
-            {FEED_LINKS.map((feed) => (
-              <Link
-                key={feed.href}
-                href={feed.href}
-                className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
-              >
-                {feed.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0 space-y-2 lg:pr-6">
-            <p className="pharos-kicker">Watching The Peg</p>
+            <p className="group/wordmark pharos-kicker relative inline-block">
+              <span className="relative z-10">Watching The Peg</span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 220 24"
+                preserveAspectRatio="none"
+                className="pharos-lighthouse-beam pointer-events-none absolute inset-x-0 top-1/2 h-6 w-full -translate-y-1/2 overflow-visible text-foreground opacity-0"
+              >
+                <path
+                  d="M -10 12 Q 110 -6 230 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  pathLength={1}
+                  strokeDasharray="0.18 1"
+                  strokeDashoffset={0.91}
+                />
+              </svg>
+            </p>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Pharos tracks live stablecoin conditions across market cap, peg stability, liquidity, and dependency risk.
             </p>
+            <div className="pt-1">
+              <FooterFreshnessPill />
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground lg:justify-self-end lg:pt-0.5" aria-label="Social links">
+          <div
+            className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground lg:justify-self-end lg:pt-0.5"
+            aria-label="Social links"
+          >
             <a
               href="https://x.com/PharosWatch"
               target="_blank"
@@ -103,7 +121,29 @@ export function Footer() {
           </div>
         </div>
 
-        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border/50 pt-6">
+          <TrustStrip />
+          <nav
+            aria-label="Feeds"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ml-auto"
+          >
+            <span className="inline-flex items-center gap-1 text-foreground/80">
+              <Rss className="h-3 w-3" aria-hidden="true" />
+              <span className="pharos-kicker">Subscribe</span>
+            </span>
+            {FEED_LINKS.map((feed) => (
+              <Link
+                key={feed.href}
+                href={feed.href}
+                className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
+              >
+                {feed.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border/50 pt-6">
           {FOOTER_PRIMARY_LINKS.map((link) =>
             link.external ? (
               <a
@@ -149,15 +189,27 @@ export function Footer() {
         </details>
 
         <div className="flex flex-col gap-4 border-t border-border/50 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <nav aria-label="Browse by category" className="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:flex">
+          <nav
+            aria-label="Browse by category"
+            className="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:flex"
+          >
             {CATEGORY_LINKS.map((cat) => (
-              <Link key={cat.href} href={cat.href} className="pharos-focus-ring hover:text-foreground hover:underline hover:underline-offset-4 transition-colors">
+              <Link
+                key={cat.href}
+                href={cat.href}
+                className="pharos-focus-ring hover:text-foreground hover:underline hover:underline-offset-4 transition-colors"
+              >
                 {cat.label}
               </Link>
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <Link href="/privacy/" className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4">Privacy</Link>
+            <Link
+              href="/privacy/"
+              className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
+            >
+              Privacy
+            </Link>
             <p>Not financial advice. Data is provided as-is for informational purposes only.</p>
           </div>
         </div>

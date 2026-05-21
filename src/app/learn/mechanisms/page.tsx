@@ -25,7 +25,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Six plain-English explainers covering every stablecoin mechanism Pharos tracks: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, and tokenized credit fund designs.",
   canonical: "/learn/mechanisms/",
-  ogImage: `${SITE_URL}/og-learn-mechanisms.png`,
+  ogImage: `${SITE_URL}/og-editorial-learn.png`,
 });
 
 export default function MechanismExplainersHub() {

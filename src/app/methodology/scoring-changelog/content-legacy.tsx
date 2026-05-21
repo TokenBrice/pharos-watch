@@ -32,7 +32,7 @@ export function ScoringChangelogLegacyEntries() {
                 Peg Stability removed from the weighted base dimensions entirely and
                 applied as a post-hoc power-curve multiplier:
               </p>
-              <div className="rounded-lg border p-3 font-mono text-xs bg-muted">
+              <div className="rounded-lg border p-3 pharos-numeric text-xs bg-muted">
                 final = base &times; (pegScore / 100) ^ 0.20
               </div>
               <div className="overflow-x-auto">

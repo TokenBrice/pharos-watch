@@ -144,14 +144,14 @@ export function PricingPipelineMethodologySection() {
           />
         </div>
         <WorkedExample summary="Worked example: USDC price consensus across 7 sources">
-          <p className="font-mono">
+          <p className="pharos-numeric">
             Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Pyth=1.0002 (w2), Binance=1.0001 (w2),
             Kraken=1.0000 (w2), Coinbase=0.9998 (w2), Curve=1.0003 (w3)
           </p>
-          <p className="font-mono">
+          <p className="pharos-numeric">
             Peg ref=1.0, threshold=50 bps. All 7 within 50 bps of each other &rarr; single cluster of 7.
           </p>
-          <p className="font-mono">
+          <p className="pharos-numeric">
             Published price = cluster median = 1.0001. Internal selected source for provenance = Curve (highest-weight member).
           </p>
           <p>
@@ -246,7 +246,7 @@ export function PricingPipelineMethodologySection() {
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
               <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any protocol-level median diverges beyond the peg-type-aware threshold (500 bps for USD pegs, <code className="text-xs">min(2 &times; depeg threshold, 500)</code> for non-USD pegs), downgrade to <code className="text-xs">low</code>, and only replace the price when at least two independent protocol-level medians corroborate that divergence unless severe-downside preservation applies &mdash; on-chain liquidity is a more honest signal when aggregators share upstream data, but a single protocol or a single rogue pool can still be wrong</li>
             </ol>
-            <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
+            <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
               agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps
             </code>
           </div>

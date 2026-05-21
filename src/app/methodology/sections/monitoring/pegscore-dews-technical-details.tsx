@@ -89,7 +89,7 @@ function PegScoreTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">PegScore Formula</h3>
-        <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+        <p className="pharos-numeric text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
           pegScore = 0.5 &times; pegPct + 0.5 &times; severityScore &minus; activeDepegPenalty &minus;
           spreadPenalty
         </p>
@@ -257,7 +257,7 @@ function DewsTechnicalDetails() {
 
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Score Formula</h3>
-        <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+        <p className="pharos-numeric text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
           base = sum(W_i &times; S_i) / sum(W_i); psiAmp = PSI &lt; 75 ? 1 + ((75 - PSI) / 75) &times; 0.3 : 1; contagionAmp = same-peg first-pass bump, clamped to 1.2; DEWS = round(clamp(0, 100, base &times; psiAmp &times; contagionAmp))
         </p>
         <p>

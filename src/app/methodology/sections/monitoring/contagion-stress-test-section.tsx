@@ -44,11 +44,11 @@ export function ContagionStressTestMethodologySection() {
                 />
               </div>
               <WorkedExample summary="Worked example (verified against scoreDependencyRisk path used by stress test)">
-                <p className="font-mono">
+                <p className="pharos-numeric">
                   Override upstream score to 40; dependent coin has 60% exposure and decentralized self-backed score 90
                 </p>
-                <p className="font-mono">blended=0.6*40+0.4*90=60; weak-upstream penalty (score&lt;75) applies -10</p>
-                <p className="font-mono">dependencyRisk score=50</p>
+                <p className="pharos-numeric">blended=0.6*40+0.4*90=60; weak-upstream penalty (score&lt;75) applies -10</p>
+                <p className="pharos-numeric">dependencyRisk score=50</p>
                 <p>
                   Result:{" "}
                   <span className="text-foreground">

@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScoreBadgeWrapper, type ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
+import { MethodologyLinkBadge } from "@/components/methodology-link-badge";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
@@ -11,8 +12,8 @@ type SafetyGradeBadgeSize = "xs" | "sm" | "md" | "lg" | "defunct" | "hero";
 const SIZE_CLASSES: Record<SafetyGradeBadgeSize, string> = {
   xs: "px-2 py-0.5 text-xs font-medium",
   sm: "px-2 py-0.5 text-xs font-semibold",
-  md: "px-2 py-0.5 font-mono text-base font-bold",
-  lg: "px-3 py-1 font-mono text-xl font-bold",
+  md: "px-2 py-0.5 font-mono tabular-nums text-base font-bold",
+  lg: "px-3 py-1 font-mono tabular-nums text-xl font-bold",
   defunct: "px-4 py-2 text-2xl font-bold",
   hero: "px-7 py-3 text-5xl font-extrabold tracking-tight shadow-lg",
 };
@@ -34,6 +35,14 @@ interface SafetyGradeBadgeProps extends Omit<ComponentProps<typeof Badge>, "chil
   versionVariant?: ScoreBadgeWrapperVariant;
   /** Disable the methodology trigger when rendering inside an existing link/control. */
   versionInteractive?: boolean;
+  /**
+   * Appends a small "(method)" deep-link badge next to the grade pill that
+   * jumps to the Safety Score methodology section. Opt-in so dense tables
+   * don't get littered with it.
+   * - `"always"`: visible at low contrast (hero / score cards)
+   * - `"hover"`: visible only when the parent `.group` is hovered/focused
+   */
+  methodologyBadge?: "always" | "hover";
 }
 
 export function SafetyGradeBadge({
@@ -50,6 +59,7 @@ export function SafetyGradeBadge({
   versionTopic,
   versionVariant,
   versionInteractive,
+  methodologyBadge,
   ...props
 }: SafetyGradeBadgeProps) {
   const scoreLabel = showScore && score !== null ? `, score ${score}` : "";
@@ -81,12 +91,21 @@ export function SafetyGradeBadge({
     </Badge>
   );
 
-  if (versionTopic) {
+  const wrapped = versionTopic ? (
+    <ScoreBadgeWrapper topic={versionTopic} variant={versionVariant} interactive={versionInteractive}>
+      {badge}
+    </ScoreBadgeWrapper>
+  ) : (
+    badge
+  );
+
+  if (methodologyBadge) {
     return (
-      <ScoreBadgeWrapper topic={versionTopic} variant={versionVariant} interactive={versionInteractive}>
-        {badge}
-      </ScoreBadgeWrapper>
+      <span className="inline-flex items-center gap-1.5">
+        {wrapped}
+        <MethodologyLinkBadge metric="safety-score" reveal={methodologyBadge} />
+      </span>
     );
   }
-  return badge;
+  return wrapped;
 }

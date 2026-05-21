@@ -148,9 +148,9 @@ export function SafetyScoresScoringDetails() {
           on a best-path model: exit quality equals the best available exit path after redemption is adjusted for
           current executable capacity and route confidence.
         </p>
-        <p className="font-mono">modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)</p>
-        <p className="font-mono">adjustedRedemption = redemption &times; capacityFactor &times; confidenceFactor</p>
-        <p className="font-mono">effectiveExit = round(min(100, max(dex, adjustedRedemption) + independentBonus))</p>
+        <p className="pharos-numeric">modeledExitUsd = min(max(supplyUsd &times; 0.05, 100000), 25000000)</p>
+        <p className="pharos-numeric">adjustedRedemption = redemption &times; capacityFactor &times; confidenceFactor</p>
+        <p className="pharos-numeric">effectiveExit = round(min(100, max(dex, adjustedRedemption) + independentBonus))</p>
         <p>
           <code className="text-xs">capacityFactor</code> is capped at 1.0 from current executable capacity divided by
           the modeled exit size. Confidence factors are 1.0 for high-confidence routes, 0.75 for medium-confidence

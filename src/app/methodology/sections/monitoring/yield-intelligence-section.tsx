@@ -89,12 +89,12 @@ export function YieldIntelligenceMethodologySection() {
                 </p>
               </div>
               <WorkedExample summary="Worked example (verified against computePYS)">
-                <p className="font-mono">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>
-                <p className="font-mono">
+                <p className="pharos-numeric">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>
+                <p className="pharos-numeric">
                   benchmarkSpread=8.4-4.25=4.15; effectiveYield=max(0,8.4+0.25*4.15)=9.44; riskPenalty=max(0.5,(101-72)/20)=1.45;
                   sourceRiskPenalty=1.2; rowUtility=9.44/1.2=7.87; adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=7.87/1.92=4.10; sustainability=1-0.18=0.82
                 </p>
-                <p className="font-mono">PYS=clamp(round(4.10*0.82*8),0,100)=27</p>
+                <p className="pharos-numeric">PYS=clamp(round(4.10*0.82*8),0,100)=27</p>
                 <p>
                   Result: <span className="text-foreground">PYS 27</span>.
                 </p>
@@ -213,7 +213,7 @@ export function YieldIntelligenceMethodologySection() {
                 {/* PYS formula */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
-                  <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+                  <p className="pharos-numeric text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     benchmarkSpread = apy30d &minus; benchmarkRate
                     <br />
                     effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25)

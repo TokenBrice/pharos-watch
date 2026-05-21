@@ -9,8 +9,8 @@
       "title": "Blacklist Tracker Changelog",
       "version": "3.993",
       "urn": "urn:pharos:methodology:blacklist-tracker@v3.993",
-      "textHash": "1317d061aa52d7df51a9b7a3c27e4107c4e147765a724806ee304ae648b1abd1",
-      "textLength": 23045
+      "textHash": "9c63794fb9f869e82fbfe7d7ef15d5e408817c24dd32c4324082c31c410969dd",
+      "textLength": 23116
     },
     {
       "filename": "chain-health-v1.2.pdf",
@@ -19,8 +19,8 @@
       "title": "Chain Health Changelog",
       "version": "1.2",
       "urn": "urn:pharos:methodology:chain-health@v1.2",
-      "textHash": "7b319f1d2df1d46fd41f442e8f4c3c904704f12e0ca4b456f53a7e168f6a9873",
-      "textLength": 3967
+      "textHash": "32390ff8f1cbf2360aef350dc4ca6fa8f9c63400fd68bc7780ba18b6c18cb408",
+      "textLength": 4038
     },
     {
       "filename": "depeg-dews-v6.0.pdf",
@@ -29,8 +29,8 @@
       "title": "Depeg Tracker and DEWS Changelog",
       "version": "6.0",
       "urn": "urn:pharos:methodology:depeg-dews@v6.0",
-      "textHash": "b441cc569195b683b2a38b0bd4627f6ad1f6746e747f14c0d12c8d3eeeede6e5",
-      "textLength": 26675
+      "textHash": "f2282e35d63627a3398eba80a66d1591279daffcb5e7b8382ed33dcf61bd7eca",
+      "textLength": 26746
     },
     {
       "filename": "index.pdf",
@@ -39,8 +39,8 @@
       "title": "Pharos Methodology Index",
       "version": null,
       "urn": "urn:pharos:methodology:index",
-      "textHash": "7302c150b4f61e40bd24e4084840f83f06328bb765b3092db2a87e362575901b",
-      "textLength": 29451
+      "textHash": "69b223e35e77d5a3b12154b1ad7a2a1cc38c66d3a491c8d89349ea6325be176d",
+      "textLength": 32504
     },
     {
       "filename": "liquidity-score-v5.7.pdf",
@@ -49,8 +49,8 @@
       "title": "Liquidity Score Changelog",
       "version": "5.7",
       "urn": "urn:pharos:methodology:liquidity-score@v5.7",
-      "textHash": "b4db0696c31d7382d5a5e85a751795e50c26cce665afb4ed510fd2f6557a221b",
-      "textLength": 21654
+      "textHash": "9dbd51b4dd0676142a0a1e8874f495f7bf18fa69043b1584b201070d2d3808bf",
+      "textLength": 21725
     },
     {
       "filename": "mint-burn-flow-v6.11.pdf",
@@ -59,8 +59,8 @@
       "title": "Mint/Burn Flow Changelog",
       "version": "6.11",
       "urn": "urn:pharos:methodology:mint-burn-flow@v6.11",
-      "textHash": "1e8a1310bcd5dfcd359ed7821693517c6ae0aff3fb596e2f5b57a6faed27e6d9",
-      "textLength": 16033
+      "textHash": "d4c4414bc93695ba8e487ec68afcc489a4e1beddbe9e97c1ee6d525243691d07",
+      "textLength": 16104
     },
     {
       "filename": "pricing-pipeline-v6.04.pdf",
@@ -69,18 +69,18 @@
       "title": "Pricing Pipeline Changelog",
       "version": "6.04",
       "urn": "urn:pharos:methodology:pricing-pipeline@v6.04",
-      "textHash": "65d5474077659be39a9fe7be4ac03f2dcd5e40ec850b66fa505bf52077edb86e",
-      "textLength": 58065
+      "textHash": "8e8c2a20a5c6cdfec9c69fdb1e3633957b4331a2177174e80b1719ec3cf2950a",
+      "textLength": 58136
     },
     {
-      "filename": "scoring-v7.25.pdf",
+      "filename": "scoring-v7.26.pdf",
       "key": "scoring",
       "path": "/methodology/scoring-changelog/",
       "title": "Safety Scores Changelog",
-      "version": "7.25",
-      "urn": "urn:pharos:methodology:scoring@v7.25",
-      "textHash": "7c55709f3ea131c13bbb6bfe953f77ed4a4ba42d244d94a1ba011e10f7826442",
-      "textLength": 41377
+      "version": "7.26",
+      "urn": "urn:pharos:methodology:scoring@v7.26",
+      "textHash": "153bbea6b7feb6fd7989b02d1a9701ad77510f108ce3022c146472cd203e3bc5",
+      "textLength": 42012
     },
     {
       "filename": "stability-index-v3.3.pdf",
@@ -89,18 +89,18 @@
       "title": "Stability Index (PSI) Changelog",
       "version": "3.3",
       "urn": "urn:pharos:methodology:stability-index@v3.3",
-      "textHash": "0748a3bd534ac4afe3dc93534053fe546b418216781f44db26c8fca64a3f255d",
-      "textLength": 6233
+      "textHash": "808921fd0b3d224c01f2b0b743f30102165dee018c743ef1c69141da31102011",
+      "textLength": 6304
     },
     {
-      "filename": "yield-v8.16.pdf",
+      "filename": "yield-v8.17.pdf",
       "key": "yield",
       "path": "/methodology/yield-changelog/",
       "title": "Yield Intelligence Changelog",
-      "version": "8.16",
-      "urn": "urn:pharos:methodology:yield@v8.16",
-      "textHash": "0c3625f0d958678ad8fd5ca26d7db4f55f87fe61c7a7258d3088a4f618ae37d0",
-      "textLength": 49072
+      "version": "8.17",
+      "urn": "urn:pharos:methodology:yield@v8.17",
+      "textHash": "55019d555cf0a46f5124ce68cd8d918d3f44269d4c8b4f1574e66f352becf0cc",
+      "textLength": 50121
     }
   ]
 }

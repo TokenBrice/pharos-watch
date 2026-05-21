@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -15,12 +17,16 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { CURATED_ANNOTATIONS } from "@shared/data/annotations/curated-annotations";
 import type { ChartAnnotation } from "@shared/types/chart-annotation";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { EDITORIAL_BODY_STYLE, splitDigestParagraphs } from "@/lib/digest";
+import { digestDisplay } from "@/lib/fonts/digest";
 import {
   DEPEG_EVENT_ENTRIES,
   INDEXABLE_DEPEG_EVENT_SLUGS,
   eventBySlug,
+  formatIncidentNumber,
   type DepegEventEntry,
 } from "./page-data";
+import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
 
 export function generateStaticParams() {
   return DEPEG_EVENT_ENTRIES.map((event) => ({ event: event.slug }));
@@ -122,7 +128,7 @@ export async function generateMetadata(
     title,
     description,
     canonical: `/depeg/${event.slug}/`,
-    ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${event.stablecoinId}`),
+    ogImage: `${SITE_URL}/og-editorial-depeg.png`,
     robots: INDEXABLE_DEPEG_EVENT_SLUGS.has(event.slug)
       ? undefined
       : { index: false, follow: true },
@@ -212,6 +218,27 @@ export default async function DepegEventPage(
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;
 
+  const authoredEditorial = getDepegEditorial(event.slug);
+  const qualifiesForBriefing = qualifiesForEditorialBriefing({
+    peakDeviationBps: event.peakDeviationBps,
+    startedAt: event.startedAt,
+    endedAt: event.endedAt,
+    hasCuratedAnnotation: curated != null,
+    hasAuthoredEditorial: authoredEditorial != null,
+  });
+  // Only promote to the authored briefing layout when (a) an editorial entry
+  // exists and (b) the event clears the threshold. The qualification gate
+  // prevents an accidentally-authored low-severity event from receiving
+  // briefing treatment; the entry gate prevents qualifying-but-unauthored
+  // events from rendering a half-authored shell.
+  const editorial = qualifiesForBriefing ? authoredEditorial : null;
+  const incidentNumber = formatIncidentNumber(event.slug);
+  const coinDisplayName = coin?.name ?? event.symbol;
+  const incidentKicker = incidentNumber
+    ? `Incident ${incidentNumber} · ${event.symbol} · ${formatLongDate(event.startedAt)}`
+    : null;
+  const timelineParagraphs = editorial ? splitDigestParagraphs(editorial.timeline) : [];
+
   // Find prev/next confirmed events for the same coin (sorted desc by startedAt)
   const sameCoin = DEPEG_EVENT_ENTRIES.filter((e) => e.stablecoinId === event.stablecoinId);
   const sameCoinIdx = sameCoin.findIndex((e) => e.slug === event.slug);
@@ -228,7 +255,7 @@ export default async function DepegEventPage(
     description: heroDescription,
     datePublished: startedIso,
     dateModified: endedIso ?? startedIso,
-    image: [buildApiOgImageUrl(`/api/og/stablecoin/${event.stablecoinId}`)],
+    image: [`${SITE_URL}/og-editorial-depeg.png`],
     author: { "@type": "Organization", name: "Pharos", url: SITE_URL },
     publisher: {
       "@type": "Organization",
@@ -298,17 +325,59 @@ export default async function DepegEventPage(
             </li>
           </ol>
         </nav>
-        <p className="pharos-kicker">Depeg event</p>
+        <p className="pharos-kicker">
+          {editorial && incidentKicker ? incidentKicker : "Depeg event"}
+        </p>
+        {editorial ? (
+          <p
+            className={`${digestDisplay.className} text-[clamp(1.15rem,2.1vw,1.5rem)] font-normal leading-snug text-foreground/92 [text-wrap:balance]`}
+          >
+            {editorial.lede}
+          </p>
+        ) : null}
         <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-tight tracking-tight text-foreground/98 [text-wrap:balance]">
           {heroTitle}
         </h1>
         <ProvenanceLine event={event} />
       </div>
 
+      {editorial && timelineParagraphs.length > 0 ? (
+        <article
+          aria-label={`${coinDisplayName} depeg briefing`}
+          className="mx-auto max-w-[68ch] space-y-4"
+        >
+          {timelineParagraphs.map((para, i) => (
+            <p
+              key={i}
+              className="text-[1.05rem] leading-8 text-foreground/92"
+              style={EDITORIAL_BODY_STYLE}
+            >
+              {para}
+            </p>
+          ))}
+          <div className="space-y-2 border-t border-border/40 pt-4">
+            <p className="pharos-kicker">What to watch next time</p>
+            <p
+              className="text-[1.05rem] leading-8 text-foreground/92"
+              style={EDITORIAL_BODY_STYLE}
+            >
+              {editorial.watchpoints}
+            </p>
+          </div>
+        </article>
+      ) : null}
+
       <section className="pharos-card-shell space-y-4 rounded-[1.25rem] px-5 py-5">
         <p className="pharos-kicker">Event summary</p>
         <RecoveryPanel event={event} />
       </section>
+
+      <RelatedIncidentsRail
+        excludeEventId={event.slug}
+        pegCurrency={event.pegType}
+        riskArchetype={coin ? resolveMechanismArchetype(coin, TRACKED_META_BY_ID) ?? undefined : undefined}
+        startedAt={event.startedAt}
+      />
 
       {coin ? (
         <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">

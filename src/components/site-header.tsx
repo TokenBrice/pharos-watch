@@ -14,7 +14,7 @@ interface SiteHeaderProps {
 }
 
 const METRIC_PILL_CLASS =
-  "inline-flex items-center rounded-full border px-2 py-0.5 font-mono tabular-nums text-muted-foreground sm:px-2.5 sm:py-1" +
+  "inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 font-mono tabular-nums text-muted-foreground sm:px-2.5 sm:py-1" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 interface MetricPill {
@@ -86,20 +86,22 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
         <span className="hidden md:block">
           <PharosLogo size={32} className="rounded-lg shadow-sm" priority />
         </span>
-        <div className="flex min-w-0 items-baseline gap-3">
-          <h1 className="text-sm font-mono font-semibold uppercase tracking-[0.14em] text-foreground md:text-[1.02rem] md:tracking-[0.16em]">
-            Pharos Watch
+        <div className="flex min-w-0 flex-col gap-0.5 md:flex-row md:items-baseline md:gap-3">
+          <h1 className="shrink-0 text-sm font-mono font-semibold uppercase tracking-[0.14em] text-foreground md:text-[1.02rem] md:tracking-[0.16em]">
+            Pharos
           </h1>
-          <p className="hidden truncate text-xs leading-snug tracking-[0.01em] text-muted-foreground/85 md:block md:text-[13px]">
-            Live depeg, freeze, safety, and liquidity signals across every tracked stablecoin.
-          </p>
+          <div className="hidden min-w-0 flex-1 md:flex md:items-baseline md:gap-2">
+            <p className="whitespace-nowrap text-xs leading-snug tracking-[0.01em] text-muted-foreground/85 md:text-[13px]">
+              Every tracked stablecoin: backing, freeze risk, liquidity, and peg stress.
+            </p>
+          </div>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5 text-[11px] md:hidden">
           <MetricPills metrics={headlineMetrics} />
         </div>
       </div>
 
-      <div className="hidden flex-wrap items-center justify-end gap-2 text-[11px] md:flex">
+      <div className="hidden shrink-0 flex-nowrap items-center justify-end gap-2 text-[11px] md:flex">
         <MetricPills metrics={headlineMetrics} />
         {trackedStats.map((stat) => (
           <span key={stat} className={`${METRIC_PILL_CLASS} hidden xl:inline-flex`}>
