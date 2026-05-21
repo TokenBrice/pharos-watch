@@ -69,7 +69,7 @@ export function BluechipActiveList() {
   if (active.length === 0) {
     return (
       <p className="font-mono text-xs uppercase tracking-[0.08em] text-muted-foreground">
-        No coins currently clear every Bluechip floor.
+        No coins currently clear both A-tier filters.
       </p>
     );
   }

@@ -73,6 +73,13 @@ export default function AboutPrinciplesPage() {
           </Link>
           .
         </p>
+        <p>
+          The public voice and terminology rules live in the{" "}
+          <Link href="/about/style/" className={INLINE_LINK_CLASS}>
+            Pharos Style Guide
+          </Link>
+          .
+        </p>
       </section>
 
       <section

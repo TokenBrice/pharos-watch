@@ -12,60 +12,60 @@ export interface BluechipRefusal {
 }
 
 export const BLUECHIP_LEDE: ReactNode =
-  "Pharos Bluechip is the gated designation for stablecoins that simultaneously clear strict floors across safety, liquidity, and resilience. There is no weighted blend, no soft cutoff, and no scoring formula that lets one dimension paper over another — every floor must hold at the same moment, and the label is withdrawn the day a floor breaks.";
+  "Pharos Bluechip is an editorial roster built from external Bluechip reference ratings intersected with Pharos report-card grades. A coin appears here only when Bluechip's synced rating is A-tier and Pharos independently rates the same asset A-tier or better.";
 
 export const BLUECHIP_WHAT_IT_MEANS: readonly string[] = [
-  "Most stablecoin ratings are blends. A weighted average of safety, liquidity, and resilience can produce a confident grade for an asset that is excellent in two dimensions and broken in the third. Pharos Bluechip refuses that trade. The designation is a logical AND across floors, not a weighted sum: an asset is Bluechip only when each dimension clears its threshold simultaneously, and only while it continues to do so.",
-  "The framing is deliberate. Bluechip is the editorial register Pharos uses for stablecoins that have earned the right to be cited as a peer of cash. The label is meant to be cited in the S&P AAA sense, not collected as a marketing badge — which is why Pharos withdraws Bluechip the moment any floor breaks, rather than waiting for a quarterly review cycle.",
+  "The Bluechip grade itself comes from the external Bluechip data sync. Pharos does not recompute that methodology or expose a hidden Bluechip score; it stores the synced grade, date, and reference metadata as a separate input.",
+  "The roster adds a Pharos guardrail on top of that input. If an asset is not A-tier in Pharos report cards, it stays out of this page even when the external Bluechip feed still carries a high grade. That keeps the page from presenting an external rating as if it were a Pharos-owned floor result.",
 ];
 
 export const BLUECHIP_GATES: readonly BluechipGate[] = [
   {
-    id: "safety-floor",
-    title: "Safety floor",
-    body: "An A-tier Pharos Safety Score (A−, A, or A+) — composite grade from exit liquidity, resilience, decentralization, and dependency risk, then adjusted by peg stability. Missing data is penalized rather than redistributed. NR overall scores are disqualifying.",
+    id: "external-bluechip-tier",
+    title: "External Bluechip tier",
+    body: "The synced Bluechip reference rating must be A-tier. Pharos treats that grade as source data, not as a locally recomputed methodology.",
   },
   {
-    id: "liquidity-floor",
-    title: "Liquidity floor",
-    body: "A LiquidityScore clearing the top band of usable exit depth, computed from effective TVL, volume activity, pool quality, durability, and pair diversity. Thin, stale, or identity-poor pools remain visible for diagnostics but receive no scoring weight — Bluechip is a measure of exit capacity, not market presence.",
+    id: "pharos-report-card-tier",
+    title: "Pharos report-card tier",
+    body: "The same asset must also hold an A-tier Pharos report-card grade (A-, A, or A+). This independent filter reflects Pharos's exit liquidity, resilience, decentralization, dependency-risk, and peg-stability view.",
   },
   {
-    id: "resilience-floor",
-    title: "Resilience floor",
-    body: "Top-tier collateral quality, custody model, and blacklist capability. Bluechip refuses to grant resilience credit for novel mechanisms without a multi-cycle track record. Algorithmic, partially uncollateralized, or experimental backing designs are disqualified at the resilience gate regardless of safety or liquidity standing.",
+    id: "tracked-asset-match",
+    title: "Tracked asset match",
+    body: "The Bluechip entry must resolve to a Pharos-tracked stablecoin ID. Unmatched feed rows stay out of the public roster until the mapping is explicit.",
   },
   {
-    id: "peg-floor",
-    title: "Peg-stability floor",
-    body: "PegScore in the top historical band, with no live active depeg and no recent severe-deviation incident within the rolling review window. A coin that has recently traded outside its peg band cannot hold Bluechip even when every other floor clears — the label is a statement about behavior under stress, not theoretical design.",
+    id: "fresh-reference-data",
+    title: "Fresh reference data",
+    body: "The roster is refreshed from the Bluechip sync and Pharos report-card API. Stale or unavailable inputs fail closed rather than inventing a substitute grade.",
   },
   {
-    id: "no-active-flags",
-    title: "No active issuer flags",
-    body: "No live FreezeWatch action that materially restricts holders, no unresolved blacklist tracker incident, no pending regulatory or custodial event that calls reserve access into question. Bluechip is a current-state rating, not a credit assignment.",
+    id: "no-local-score-blend",
+    title: "No local score blend",
+    body: "Pharos does not average the external Bluechip grade with its own score. The roster is an intersection: both systems must currently clear the A-tier threshold.",
   },
 ];
 
 export const BLUECHIP_REFUSALS: readonly BluechipRefusal[] = [
   {
-    title: "No NAV-bearing tokens",
-    body: "Tokens whose price moves with net asset value of an underlying portfolio are not stablecoins in the peg-holding sense Bluechip exists to measure. They may be excellent products; they are not eligible.",
+    title: "No unmapped external rows",
+    body: "A Bluechip feed row without a stable Pharos coin mapping is not shown as an active roster member.",
   },
   {
-    title: "No novel mechanism without a track record",
-    body: "A new collateral or stabilization design can be intellectually superior on paper and still fail under conditions the design has never met. Resilience credit requires history under stress, not just specification.",
+    title: "No Pharos-only promotions",
+    body: "An A-tier Pharos report card alone is not enough. The external Bluechip rating must also be A-tier.",
   },
   {
-    title: "No off-chain backing without verifiable evidence",
-    body: "Self-attested reserves, undisclosed custodians, or attestor tiers below independent CPA review do not meet the safety floor. Bluechip is a rating Pharos issues; it cannot be issued against backing Pharos cannot verify.",
+    title: "No external-only promotions",
+    body: "An A-tier external Bluechip rating alone is not enough. The Pharos report-card grade must also be A-tier.",
   },
   {
-    title: "No averaging across broken dimensions",
-    body: "A weighted-average grading model would let an A+ on safety carry a D on liquidity into a respectable composite. Bluechip refuses that arithmetic by construction. Every floor stands on its own.",
+    title: "No hidden methodology",
+    body: "This page does not claim a separate Pharos Bluechip formula. Methodology details for Pharos grades live in the report-card documentation; Bluechip grade semantics come from the external source.",
   },
   {
-    title: "No grandfathered status",
-    body: "An asset that held Bluechip yesterday and breaks a floor today is not Bluechip today. The label tracks current state. Historical inclusion in the designation does not protect against a fresh failure.",
+    title: "No stale roster carry",
+    body: "If either feed is unavailable or stops clearing the A-tier threshold, the asset is removed from this active roster until both inputs recover.",
   },
 ];

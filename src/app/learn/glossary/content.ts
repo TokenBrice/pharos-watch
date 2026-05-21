@@ -140,7 +140,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "DEX liquidity score, 0–100, combining TVL depth (30%), 24-hour volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Discovery is source-aware: thin, stale, or identity-poor pools remain visible for diagnostics but do not receive scoring weight. LiquidityScore measures exit capacity, not market presence. One word, capital L, capital S.",
     methodologyAnchor: "/methodology/#liquidity-methodology",
-    methodologyVersion: "v7.26",
+    methodologyVersion: "v5.7",
     seeAlso: ["bluechip", "safety-score"],
   },
   {
@@ -220,7 +220,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos's yield-confidence rating for stablecoins and NAV-bearing instruments. The Pharos Yield Score (PYS) combines source-risk-adjusted yield efficiency with sustainability; high APY is not automatically good. Unstable rates, weak safety scores, low TVL, source-risk penalties, or ambiguous exposure reduce the recommendation quality. Withheld where the asset is not meant to hold a fixed price.",
     methodologyAnchor: "/methodology/#yield-intelligence-methodology",
-    methodologyVersion: "v7.26",
+    methodologyVersion: "v8.17",
     seeAlso: ["safety-score"],
   },
 ];

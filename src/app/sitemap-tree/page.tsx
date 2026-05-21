@@ -158,8 +158,8 @@ const MORE_REFERENCE_ROUTES: readonly RouteRow[] = [
     description: "Public documentation for methods and data contracts",
   },
   {
-    href: "/blacklist/",
-    label: "Blacklist tracker",
+    href: "/freezewatch/",
+    label: "FreezeWatch",
     description: "Live address freezes across freezable stablecoins",
   },
   {

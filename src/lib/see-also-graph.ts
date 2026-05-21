@@ -231,9 +231,9 @@ export const SEE_ALSO_GRAPH: Record<string, ReadonlyArray<SeeAlsoLink>> = {
   ],
   "/learn/mechanisms/fiat-cash/": [
     {
-      href: "/stablecoins/governance/fiat-cash/",
-      label: "Fiat-backed coins",
-      description: "Every tracked coin using this design.",
+      href: "/stablecoins/backing/rwa/",
+      label: "RWA-backed coins",
+      description: "Browse tracked stablecoins backed by cash, Treasuries, and other real-world assets.",
     },
     {
       href: "/safety-scores/",

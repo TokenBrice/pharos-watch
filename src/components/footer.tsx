@@ -13,7 +13,6 @@ const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
 
 const FOOTER_PRIMARY_LINKS: ReadonlyArray<{ href: string; label: string; external?: boolean }> = [
   { href: "/", label: "Dashboard" },
-  { href: "/start/", label: "Start Here" },
   { href: "/stablecoins/", label: "Stablecoins" },
   { href: "/compare/", label: "Compare" },
   { href: "/portfolio/", label: "Portfolio" },
@@ -25,8 +24,6 @@ const FOOTER_PRIMARY_LINKS: ReadonlyArray<{ href: string; label: string; externa
   { href: "/api/", label: "API" },
   { href: "/about/", label: "About" },
   { href: "/about/principles/", label: "Principles" },
-  { href: "/about/style/", label: "Style Guide" },
-  { href: "/about/bluechip/", label: "Bluechip" },
   { href: "/learn/glossary/", label: "Glossary" },
   { href: "/sitemap-tree/", label: "All pages" },
   { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },

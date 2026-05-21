@@ -29,6 +29,7 @@ describe("AboutPrinciplesPage", () => {
 
     // Pointers required by the brief
     expect(html).toContain("/about/editorial/");
+    expect(html).toContain("/about/style/");
     expect(html).toContain("/funding/");
   });
 });
