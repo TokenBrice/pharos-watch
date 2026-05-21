@@ -79,8 +79,7 @@
     {
       "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
       "pct": 50,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
+      "risk": "low"
     },
     {
       "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",

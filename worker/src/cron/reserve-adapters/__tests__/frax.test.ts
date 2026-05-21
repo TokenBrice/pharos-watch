@@ -48,10 +48,12 @@ describe("adaptFraxBalanceSheet", () => {
   it("maps coinIds for known tokens", () => {
     const result = adaptFraxBalanceSheet(BALANCE_SHEET_SAMPLE);
     const ustb = result.slices.find((s) => s.name.startsWith("USTB"));
+    const wtgxx = result.slices.find((s) => s.name.startsWith("WTGXX"));
     const buidl = result.slices.find((s) => s.name.startsWith("BUIDL"));
     const usdc = result.slices.find((s) => s.name.startsWith("USDC"));
     const usdb = result.slices.find((s) => s.name.startsWith("USDB"));
     expect(ustb!.coinId).toBe("ustb-superstate");
+    expect(wtgxx!.coinId).toBe("wtgxx-wisdomtree");
     expect(buidl!.coinId).toBe("buidl-blackrock");
     expect(usdc!.coinId).toBe("usdc-circle");
     expect(usdb!.coinId).toBe("usdb-bridge");

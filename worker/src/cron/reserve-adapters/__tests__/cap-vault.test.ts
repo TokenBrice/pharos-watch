@@ -438,6 +438,7 @@ describe("fetchCapVaultReserves", () => {
               address: wtgxxAddress,
               name: "WTGXX",
               risk: "low",
+              coinId: "wtgxx-wisdomtree",
               depType: "collateral",
               priceUsd: 1,
             },
@@ -449,7 +450,7 @@ describe("fetchCapVaultReserves", () => {
 
     expect(result.slices).toEqual([
       { name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
-      { name: "WTGXX", pct: 50, risk: "low", depType: "collateral" },
+      { name: "WTGXX", pct: 50, risk: "low", coinId: "wtgxx-wisdomtree", depType: "collateral" },
     ]);
     expect(result.warnings?.some((warning) => warning.code === "unknown-vault-asset") ?? false).toBe(false);
     expect(result.metadata).toMatchObject({

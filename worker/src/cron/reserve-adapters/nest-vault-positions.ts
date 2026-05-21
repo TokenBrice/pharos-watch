@@ -112,6 +112,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
       value,
       name: "Nest Treasury vault (nTBILL)",
       risk: "low",
+      coinId: "ntbill-nest",
     };
   }
   if (slug === "janus-henderson-fund" || symbol === "JTRSY") {

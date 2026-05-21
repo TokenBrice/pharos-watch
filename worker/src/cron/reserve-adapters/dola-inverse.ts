@@ -85,7 +85,11 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
   } = accumulateBucketedExposure({
     items: payload.markets,
     getValue: (market) => market.totalDebt,
-    getBucket: (market) => bucketForAsset(resolveBaseSymbol(market)),
+    getBucket: (market) => {
+      const symbol = resolveBaseSymbol(market);
+      if (TRACKED_STABLECOIN_ASSETS[symbol]) return "stablecoin";
+      return bucketForAsset(symbol);
+    },
     isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
   });
   const trackedStableValues = new Map<string, number>();

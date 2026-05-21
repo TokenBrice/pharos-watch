@@ -6193,6 +6193,7 @@
             "address": "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c",
             "name": "WTGXX",
             "risk": "low",
+            "coinId": "wtgxx-wisdomtree",
             "depType": "collateral",
             "priceUsd": 1
           }
@@ -23239,8 +23240,7 @@
       {
         "name": "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)",
         "pct": 50,
-        "risk": "low",
-        "coinId": "buidl-blackrock"
+        "risk": "low"
       },
       {
         "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
