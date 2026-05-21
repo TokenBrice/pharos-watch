@@ -132,7 +132,6 @@ function SidebarNavSignalIndicator({ signal }: { signal: SidebarNavSignal }) {
   if (signal.kind === "dot") {
     return (
       <span className="ml-auto inline-flex items-center gap-1" title={signal.title} aria-hidden="true">
-        {ToneIcon ? <ToneIcon className="h-2.5 w-2.5" /> : null}
         <span className={cn("h-2.5 w-2.5 rounded-full border", SIDEBAR_SIGNAL_TONE_CLASS[signal.tone])} />
       </span>
     );
