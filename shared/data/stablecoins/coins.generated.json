@@ -4004,13 +4004,15 @@
         "name": "USDC (via PSM)",
         "pct": 12.5,
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "mechanism"
       },
       {
         "name": "USDT (via PSM)",
         "pct": 12.5,
         "risk": "low",
-        "coinId": "usdt-tether"
+        "coinId": "usdt-tether",
+        "depType": "mechanism"
       },
       {
         "name": "BTC (wrapped, via CDPs)",
@@ -4654,7 +4656,7 @@
         "risk": "very-low"
       },
       {
-        "name": "Tokenized treasuries (BUIDL, USTB)",
+        "name": "Tokenized equivalents of eligible reserve assets",
         "pct": 10,
         "risk": "low"
       }
@@ -5991,7 +5993,7 @@
       {
         "id": "m-m0",
         "weight": 1,
-        "type": "mechanism"
+        "type": "wrapper"
       }
     ],
     "canBeBlacklisted": true,
@@ -7288,7 +7290,7 @@
         "pct": 15,
         "risk": "high",
         "coinId": "susde-ethena",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)",
@@ -7300,7 +7302,8 @@
         "name": "USDC (PSM backstop, 5M cap)",
         "pct": 5,
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "mechanism"
       }
     ]
   },
@@ -7654,7 +7657,7 @@
         "pct": 43.9,
         "risk": "medium",
         "coinId": "susde-ethena",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "WBTC",
@@ -7716,7 +7719,7 @@
             },
             "risk": "medium",
             "coinId": "susde-ethena",
-            "depType": "wrapper"
+            "depType": "collateral"
           },
           {
             "name": "WBTC",
@@ -10431,7 +10434,7 @@
         "pct": 100,
         "risk": "low",
         "coinId": "frax-frax",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -12976,6 +12979,16 @@
           "USDT0": "USDT0 reserves",
           "USDC": "Morpho USDC lending exposure",
           "masterUSD": "masterUSD strategy exposure"
+        },
+        "coinIdMap": {
+          "hoUSDT": "usdt-tether",
+          "USDT0": "usdt-tether",
+          "USDC": "usdc-circle"
+        },
+        "depTypeMap": {
+          "hoUSDT": "wrapper",
+          "USDT0": "wrapper",
+          "USDC": "collateral"
         }
       }
     },
@@ -14519,7 +14532,7 @@
         "pct": 18,
         "risk": "high",
         "coinId": "pyusd-paypal",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "FalconX Institutional (prime broker lending, illiquid)",
@@ -14536,14 +14549,14 @@
         "pct": 12,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Fluid USDC (liquid DeFi lending)",
         "pct": 7,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "AutoUSD (illiquid yield strategy)",
@@ -14555,7 +14568,7 @@
         "pct": 4,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Cap stcUSD (illiquid vault)",
@@ -14567,7 +14580,7 @@
         "pct": 2,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "sGHO (Aave GHO staking)",
@@ -16706,19 +16719,22 @@
         "name": "USDT (via PSM)",
         "pct": 5,
         "risk": "low",
-        "coinId": "usdt-tether"
+        "coinId": "usdt-tether",
+        "depType": "mechanism"
       },
       {
         "name": "USDC (via PSM)",
         "pct": 5,
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "mechanism"
       },
       {
         "name": "FDUSD (via PSM)",
         "pct": 5,
         "risk": "low",
-        "coinId": "fdusd-first-digital"
+        "coinId": "fdusd-first-digital",
+        "depType": "mechanism"
       }
     ],
     "liveReservesConfig": {
@@ -16778,7 +16794,8 @@
               "decimals": 18
             },
             "risk": "low",
-            "coinId": "usdt-tether"
+            "coinId": "usdt-tether",
+            "depType": "mechanism"
           },
           {
             "name": "FDUSD GemJoin",
@@ -16789,7 +16806,8 @@
               "decimals": 18
             },
             "risk": "low",
-            "coinId": "fdusd-first-digital"
+            "coinId": "fdusd-first-digital",
+            "depType": "mechanism"
           }
         ]
       }
@@ -20094,6 +20112,12 @@
           "ETH": "ETH collateral",
           "OTC Aggregate": "OTC aggregate positions",
           "Other": "Other reserve assets"
+        },
+        "coinIdMap": {
+          "Stablecoin": "usdc-circle"
+        },
+        "depTypeMap": {
+          "Stablecoin": "collateral"
         }
       }
     },
@@ -21656,7 +21680,7 @@
         "pct": 100,
         "risk": "high",
         "coinId": "usdt-tether",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -21679,7 +21703,7 @@
         "label": "apcxUSDT custodial wrapper",
         "risk": "high",
         "coinId": "usdt-tether",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     }
   },
@@ -21807,7 +21831,8 @@
         "name": "USDC (via Nucleus BoringVault)",
         "pct": 100,
         "risk": "medium",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -22001,7 +22026,7 @@
         "pct": 100,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "collateral",
+        "depType": "wrapper",
         "blacklistable": true
       }
     ],
@@ -22448,7 +22473,7 @@
         "pct": 25,
         "risk": "high",
         "coinId": "susde-ethena",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Short-duration U.S. Treasury bills",
@@ -29179,7 +29204,7 @@
         "pct": 25,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper",
+        "depType": "collateral",
         "blacklistable": true
       },
       {
@@ -29187,15 +29212,15 @@
         "pct": 25,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper",
+        "depType": "collateral",
         "blacklistable": true
       },
       {
         "name": "Steakhouse USDC strategy",
         "pct": 25,
         "risk": "medium",
-        "coinId": "usdc-circle",
-        "depType": "wrapper",
+        "coinId": "steakusdc-steakhouse",
+        "depType": "collateral",
         "blacklistable": true
       }
     ],
@@ -29229,7 +29254,7 @@
             "name": "Static Aave Ethereum USDC",
             "risk": "medium",
             "coinId": "usdc-circle",
-            "depType": "wrapper",
+            "depType": "collateral",
             "blacklistable": true
           },
           {
@@ -29237,15 +29262,15 @@
             "name": "Wrapped Compound USDCv3",
             "risk": "medium",
             "coinId": "usdc-circle",
-            "depType": "wrapper",
+            "depType": "collateral",
             "blacklistable": true
           },
           {
             "address": "0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
             "name": "Steakhouse USDC strategy",
             "risk": "medium",
-            "coinId": "usdc-circle",
-            "depType": "wrapper",
+            "coinId": "steakusdc-steakhouse",
+            "depType": "collateral",
             "blacklistable": true
           }
         ],
@@ -29571,14 +29596,14 @@
         "pct": 65.4,
         "risk": "medium",
         "coinId": "bold-liquity",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "scrvUSD (Savings crvUSD)",
         "pct": 22.5,
         "risk": "medium",
         "coinId": "scrvusd-curve",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "sUSDS (Sky savings USDS)",
@@ -30497,7 +30522,7 @@
         "pct": 100,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "mechanism"
+        "depType": "wrapper"
       }
     ]
   },
@@ -30934,7 +30959,7 @@
         "pct": 50,
         "risk": "low",
         "coinId": "usdt-tether",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Spot crypto (BTC/ETH, delta-hedged via perp shorts)",
@@ -31048,8 +31073,7 @@
       {
         "name": "Tokenized Treasuries (USTB)",
         "pct": 5,
-        "risk": "low",
-        "coinId": "ustb-superstate"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -32321,7 +32345,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
         "pct": 100,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -35575,6 +35601,12 @@
           "US Treasury Bills": "very-low",
           "Principal Tokens (PTs)": "high",
           "Funding Rate (BTC)": "high"
+        },
+        "coinIdMap": {
+          "CLOs (JAAA)": "jaaa-janus-henderson-anemoy"
+        },
+        "depTypeMap": {
+          "CLOs (JAAA)": "collateral"
         }
       }
     }
@@ -36585,14 +36617,14 @@
         "pct": 55,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "USDT",
         "pct": 45,
         "risk": "low",
         "coinId": "usdt-tether",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -36788,7 +36820,7 @@
         "pct": 30,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Long AVAX spot positions",
@@ -39002,35 +39034,35 @@
         "pct": 56.4,
         "risk": "medium",
         "coinId": "rlusd-ripple",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "PYUSD lending markets",
         "pct": 21.6,
         "risk": "medium",
         "coinId": "pyusd-paypal",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "AUSD lending markets",
         "pct": 10.5,
         "risk": "medium",
         "coinId": "ausd-agora",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "GHO lending markets",
         "pct": 5.7,
         "risk": "medium",
         "coinId": "gho-aave",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "USDC lending/direct liquidity",
         "pct": 5.8,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -39735,7 +39767,7 @@
     "detailProvider": "coingecko",
     "name": "xDAI",
     "symbol": "xDAI",
-    "oneLiner": "xDAI is the native gas token of Gnosis Chain, backed 1:1 by DAI bridged through Gnosis bridge infrastructure and inheriting MakerDAO's collateral mix.",
+    "oneLiner": "xDAI is the native gas token of Gnosis Chain, backed 1:1 by USDS bridged through Gnosis bridge infrastructure and inheriting Sky's collateral mix.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -39744,8 +39776,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "DAI locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
-    "pegMechanism": "Native gas token on Gnosis Chain backed by bridged DAI; users can bridge between DAI and xDAI through official Gnosis bridge routes",
+    "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+    "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
     "mechanismArchetype": "cdp",
     "geckoId": "xdai",
     "protocolSlug": "gnosis-chain",
@@ -39770,21 +39802,31 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": "inherited",
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: xDAI resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Gnosis Chain token docs",
+          "url": "https://docs.gnosischain.com/about/tokens/"
+        },
+        {
+          "label": "Gnosis Chain bridge",
+          "url": "https://bridge.gnosischain.com/"
+        }
+      ],
+      "evidence": "xDAI is a native gas token backed by assets bridged through Gnosis bridge infrastructure; Pharos records possible administrative or bridge-route control uncertainty, but the reviewed sources do not prove a holder-level blacklist path on native xDAI balances.",
+      "reviewer": "Codex dependency audit",
+      "reviewedAt": "2026-05-21"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "reserves": [
       {
-        "name": "DAI backing through Gnosis bridge infrastructure",
+        "name": "USDS backing through Gnosis bridge infrastructure",
         "pct": 100,
         "risk": "low",
-        "coinId": "dai-makerdao",
+        "coinId": "usds-sky",
         "depType": "wrapper"
       }
     ],
@@ -40050,7 +40092,7 @@
       {
         "id": "m-m0",
         "weight": 1,
-        "type": "mechanism"
+        "type": "wrapper"
       }
     ],
     "canBeBlacklisted": true,
@@ -41430,7 +41472,7 @@
         "pct": 10,
         "risk": "low",
         "coinId": "usdt-tether",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -41511,6 +41553,58 @@
           "[Paxos]_USDG": "Paxos USDG",
           "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop",
           "[Yuzu]_yzPRIME": "Yuzu yzPRIME"
+        },
+        "coinIdMap": {
+          "[Fluid]_fUSDT0": "usdt-tether",
+          "Liquidity_Buffer": "usdt-tether",
+          "[Aave]_USDT": "usdt-tether",
+          "[Aave]_GHO": "gho-aave",
+          "[Aave]_Gho_Savings": "sgho-aave",
+          "[Cap]_stcUSD": "stcusd-cap",
+          "[GlobalDollar]_USDG": "usdg-paxos",
+          "[Ripple]_Sentora_RLUSD": "rlusd-ripple",
+          "[Securitize]_VBILL_Loop": "vbill-vaneck",
+          "[Sky]_Sky_Savings_Vault": "susds-sky",
+          "[Superstate]_USTB_Loop": "ustb-superstate",
+          "[Ethena]_USDe_Loop": "usde-ethena",
+          "[Ethena]_USDe": "usde-ethena",
+          "[Maple]_syrupUSDC_Loop": "syrupusdc-maple",
+          "[Morpho]_sky.money_USDT_Savings": "susdt-spark",
+          "[Maple]_syrupUSDC": "syrupusdc-maple",
+          "[Maple]_syrupUSDT_Loop": "syrupusdt-maple",
+          "[Fluid]_syrupUSDT_Loop": "syrupusdt-maple",
+          "[Sky]_sUSDS_Loop": "susds-sky",
+          "[Sky]_SUSDS_Loop": "susds-sky",
+          "[Paypal]_PYUSD_Loop": "pyusd-paypal",
+          "[MegaEth]_USDm": "usdm-mega",
+          "[Paxos]_USDG": "usdg-paxos",
+          "[Ethena]_sUSDe_Loop": "susde-ethena"
+        },
+        "depTypeMap": {
+          "[Fluid]_fUSDT0": "collateral",
+          "Liquidity_Buffer": "collateral",
+          "[Aave]_USDT": "collateral",
+          "[Aave]_GHO": "collateral",
+          "[Aave]_Gho_Savings": "collateral",
+          "[Cap]_stcUSD": "collateral",
+          "[GlobalDollar]_USDG": "collateral",
+          "[Ripple]_Sentora_RLUSD": "collateral",
+          "[Securitize]_VBILL_Loop": "collateral",
+          "[Sky]_Sky_Savings_Vault": "collateral",
+          "[Superstate]_USTB_Loop": "collateral",
+          "[Ethena]_USDe_Loop": "collateral",
+          "[Ethena]_USDe": "collateral",
+          "[Maple]_syrupUSDC_Loop": "collateral",
+          "[Morpho]_sky.money_USDT_Savings": "collateral",
+          "[Maple]_syrupUSDC": "collateral",
+          "[Maple]_syrupUSDT_Loop": "collateral",
+          "[Fluid]_syrupUSDT_Loop": "collateral",
+          "[Sky]_sUSDS_Loop": "collateral",
+          "[Sky]_SUSDS_Loop": "collateral",
+          "[Paypal]_PYUSD_Loop": "collateral",
+          "[MegaEth]_USDm": "collateral",
+          "[Paxos]_USDG": "collateral",
+          "[Ethena]_sUSDe_Loop": "collateral"
         }
       }
     },

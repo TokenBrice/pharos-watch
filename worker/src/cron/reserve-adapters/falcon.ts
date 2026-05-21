@@ -50,6 +50,12 @@ const FALCON_STABLE_ASSETS = new Set([
   "GHO",
 ]);
 const FALCON_RWA_ASSETS = new Set(["USTB", "JTRSY", "JAAA", "XAUT"]);
+const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: string; risk: "medium" | "low" }>> = {
+  USTB: { name: "USTB tokenized Treasury assets", coinId: "ustb-superstate", risk: "medium" },
+  JTRSY: { name: "JTRSY tokenized Treasury assets", coinId: "jtrsy-anemoy", risk: "medium" },
+  JAAA: { name: "JAAA CLO assets", coinId: "jaaa-janus-henderson-anemoy", risk: "medium" },
+  XAUT: { name: "XAUt gold token assets", coinId: "xaut-tether", risk: "medium" },
+};
 
 /** Well-known altcoins that legitimately go to the "other" bucket without warning. */
 const FALCON_OTHER_KNOWN = new Set([
@@ -104,6 +110,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   }
 
   const warnings: LiveReserveWarning[] = [];
+  const trackedRwaValues = new Map<string, number>();
   const {
     bucketTotals,
     totalValue: totalAssetUsd,
@@ -112,7 +119,13 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   } = accumulateBucketedExposure({
     items: assets,
     getValue: sumFalconAssetValue,
-    getBucket: (asset) => bucketForFalconAsset(asset.label),
+    getBucket: (asset) => {
+      const bucket = bucketForFalconAsset(asset.label);
+      if (bucket === "rwa" && FALCON_TRACKED_RWA_ASSETS[asset.label]) {
+        trackedRwaValues.set(asset.label, (trackedRwaValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
+      }
+      return bucket;
+    },
     isUnknown: (asset, bucket) => bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label),
     getUnknownKey: (asset) => asset.label,
   });
@@ -153,9 +166,18 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
         bucket: "eth",
         risk: "medium",
       },
+      ...Array.from(trackedRwaValues, ([label, value]) => {
+        const config = FALCON_TRACKED_RWA_ASSETS[label]!;
+        return {
+          name: config.name,
+          value,
+          risk: config.risk,
+          coinId: config.coinId,
+        };
+      }),
       {
         name: "Tokenized RWA / credit assets",
-        bucket: "rwa",
+        value: Math.max(0, (bucketTotals.get("rwa") ?? 0) - Array.from(trackedRwaValues.values()).reduce((sum, value) => sum + value, 0)),
         risk: "medium",
       },
       {

@@ -54,7 +54,7 @@
       "pct": 50,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "Spot crypto (BTC/ETH, delta-hedged via perp shorts)",

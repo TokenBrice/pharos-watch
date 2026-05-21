@@ -93,7 +93,7 @@ describe("reserve-protocol-dtf adapter", () => {
           name: "Wrapped Compound USDCv3",
           risk: "medium",
           coinId: "usdc-circle",
-          depType: "wrapper",
+          depType: "collateral",
         },
       ],
       "https://api.reserve.org/discover/dtfs",
@@ -101,7 +101,7 @@ describe("reserve-protocol-dtf adapter", () => {
 
     expect(result.slices).toEqual([
       { name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(result.warnings).toEqual([]);
     expect(result.metadata?.freshnessMode).toBe("unverified");
@@ -161,7 +161,7 @@ describe("reserve-protocol-dtf adapter", () => {
             name: "Wrapped Compound USDCv3",
             risk: "medium",
             coinId: "usdc-circle",
-            depType: "wrapper",
+            depType: "collateral",
           },
         ],
       },
@@ -204,7 +204,7 @@ describe("reserve-protocol-dtf adapter", () => {
 
     expect(result.slices).toEqual([
       { name: "Savings USDS", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "Wrapped Compound USDCv3", pct: 50, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({

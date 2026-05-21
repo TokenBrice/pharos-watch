@@ -80,7 +80,7 @@
       "pct": 100,
       "risk": "high",
       "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "depType": "collateral"
     }
   ],
   "liveReservesConfig": {
@@ -103,7 +103,7 @@
       "label": "apcxUSDT custodial wrapper",
       "risk": "high",
       "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "depType": "collateral"
     }
   }
 }

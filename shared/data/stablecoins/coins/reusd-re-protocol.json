@@ -113,7 +113,7 @@
       "pct": 25,
       "risk": "high",
       "coinId": "susde-ethena",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "Short-duration U.S. Treasury bills",

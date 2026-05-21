@@ -59,7 +59,7 @@ describe("adaptInfiniFi", () => {
       pct: 30,
       risk: "low",
       coinId: "usdc-circle",
-      depType: "wrapper",
+      depType: "collateral",
     });
     expect(immediateRedeemableUsd).toBe(0);
     expect(supplyUsd).toBeUndefined();
@@ -167,10 +167,10 @@ describe("adaptInfiniFi", () => {
     };
 
     const { slices } = adaptInfiniFi(response);
-    expect(slices.find((s) => s.name === "Sentora PYUSD")).toMatchObject({ coinId: "pyusd-paypal", depType: "wrapper" });
-    expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "wrapper" });
-    expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "wrapper" });
-    expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "wrapper" });
+    expect(slices.find((s) => s.name === "Sentora PYUSD")).toMatchObject({ coinId: "pyusd-paypal", depType: "collateral" });
+    expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
+    expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });
+    expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     // fasanara has no coinId — should be absent
     expect(slices.find((s) => s.name === "Fasanara mGLOBAL")).not.toHaveProperty("coinId");
   });

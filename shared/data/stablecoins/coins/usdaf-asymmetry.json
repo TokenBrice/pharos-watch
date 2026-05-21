@@ -56,14 +56,14 @@
       "pct": 65.4,
       "risk": "medium",
       "coinId": "bold-liquity",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "scrvUSD (Savings crvUSD)",
       "pct": 22.5,
       "risk": "medium",
       "coinId": "scrvusd-curve",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "sUSDS (Sky savings USDS)",

@@ -68,7 +68,7 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   BOSS: { risk: "very-high" },
   // Stablecoins not in canonical map
   VCHF: { risk: "low" },
-  YSYBOLD: { risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
+  YSYBOLD: { risk: "medium", coinId: "bold-liquity", depType: "collateral" },
   // Wrapped BTC variants
   BBTC: { risk: "medium" },
   // Tokenized equities / RWA

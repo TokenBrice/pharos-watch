@@ -57,14 +57,14 @@
       "pct": 55,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "USDT",
       "pct": 45,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "depType": "collateral"
     }
   ],
   "liveReservesConfig": {

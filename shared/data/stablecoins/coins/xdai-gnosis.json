@@ -2,7 +2,7 @@
   "id": "xdai-gnosis",
   "name": "xDAI",
   "symbol": "xDAI",
-  "oneLiner": "xDAI is the native gas token of Gnosis Chain, backed 1:1 by DAI bridged through Gnosis bridge infrastructure and inheriting MakerDAO's collateral mix.",
+  "oneLiner": "xDAI is the native gas token of Gnosis Chain, backed 1:1 by USDS bridged through Gnosis bridge infrastructure and inheriting Sky's collateral mix.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "DAI locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
-  "pegMechanism": "Native gas token on Gnosis Chain backed by bridged DAI; users can bridge between DAI and xDAI through official Gnosis bridge routes",
+  "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+  "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "xdai",
@@ -38,21 +38,31 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: xDAI resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Gnosis Chain token docs",
+        "url": "https://docs.gnosischain.com/about/tokens/"
+      },
+      {
+        "label": "Gnosis Chain bridge",
+        "url": "https://bridge.gnosischain.com/"
+      }
+    ],
+    "evidence": "xDAI is a native gas token backed by assets bridged through Gnosis bridge infrastructure; Pharos records possible administrative or bridge-route control uncertainty, but the reviewed sources do not prove a holder-level blacklist path on native xDAI balances.",
+    "reviewer": "Codex dependency audit",
+    "reviewedAt": "2026-05-21"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "DAI backing through Gnosis bridge infrastructure",
+      "name": "USDS backing through Gnosis bridge infrastructure",
       "pct": 100,
       "risk": "low",
-      "coinId": "dai-makerdao",
+      "coinId": "usds-sky",
       "depType": "wrapper"
     }
   ],

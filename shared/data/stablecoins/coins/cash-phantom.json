@@ -71,7 +71,7 @@
       "risk": "very-low"
     },
     {
-      "name": "Tokenized treasuries (BUIDL, USTB)",
+      "name": "Tokenized equivalents of eligible reserve assets",
       "pct": 10,
       "risk": "low"
     }

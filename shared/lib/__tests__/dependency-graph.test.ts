@@ -147,6 +147,27 @@ describe("dependency-graph", () => {
     ]);
   });
 
+  it("falls back to curated dependencies when live reserve slices have no tracked upstreams", () => {
+    const dependencies = deriveEffectiveDependencies(
+      makeMeta({
+        id: "dependent",
+        reserves: [
+          { name: "Curated upstream", pct: 100, risk: "low", coinId: "curated-upstream", depType: "wrapper" },
+        ],
+      }),
+      {
+        liveReserveSlices: [
+          { name: "Cash and bills", pct: 80, risk: "very-low" },
+          { name: "Tokenized treasuries", pct: 20, risk: "low" },
+        ],
+      },
+    );
+
+    expect(dependencies).toEqual([
+      { id: "curated-upstream", weight: 1, type: "wrapper" },
+    ]);
+  });
+
   it("uses live reserve slices when building graph edges", () => {
     const edges = buildDependencyGraphEdges(
       [

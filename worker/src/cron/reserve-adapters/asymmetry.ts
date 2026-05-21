@@ -31,8 +31,8 @@ interface BranchRiskConfig {
 }
 
 const BRANCH_RISK_MAP: Record<string, BranchRiskConfig> = {
-  ysybold: { risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
-  scrvusd: { risk: "medium", coinId: "scrvusd-curve", depType: "wrapper" },
+  ysybold: { risk: "medium", coinId: "bold-liquity", depType: "collateral" },
+  scrvusd: { risk: "medium", coinId: "scrvusd-curve", depType: "collateral" },
   susds: { risk: "low", coinId: "susds-sky", depType: "collateral" },
   sfrxusd: { risk: "medium", coinId: "sfrxusd-frax", depType: "collateral" },
   tbtc: { risk: getCanonicalReserveAssetRisk("TBTC") ?? "medium" },

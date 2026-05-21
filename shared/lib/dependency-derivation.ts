@@ -51,8 +51,11 @@ export function deriveEffectiveDependencies(
   meta: Pick<StablecoinMeta, "variantOf" | "reserves" | "dependencies">,
   options?: { liveReserveSlices?: readonly ReserveSlice[] },
 ): DependencyWeight[] {
-  const dependencies = Array.isArray(options?.liveReserveSlices)
+  const liveDependencies = Array.isArray(options?.liveReserveSlices)
     ? aggregateReserveDependencies(options.liveReserveSlices)
+    : null;
+  const dependencies = liveDependencies != null && liveDependencies.length > 0
+    ? liveDependencies
     : deriveDependencies(meta);
 
   return injectVariantParent(dependencies, meta.variantOf);

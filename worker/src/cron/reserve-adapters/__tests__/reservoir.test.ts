@@ -29,12 +29,12 @@ describe("adaptReservoirReserves", () => {
     const { slices, immediateRedeemableUsd, supplyUsd, unknownExposurePct } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
     expect(slices).toEqual([
-      { name: "USD1 lending markets", pct: 30, risk: "medium", coinId: "usd1-world-liberty-financial", depType: "wrapper" },
-      { name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "wrapper" },
-      { name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "wrapper" },
-      { name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "wrapper" },
-      { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "wrapper" },
-      { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "USD1 lending markets", pct: 30, risk: "medium", coinId: "usd1-world-liberty-financial", depType: "collateral" },
+      { name: "PYUSD lending markets", pct: 30, risk: "medium", coinId: "pyusd-paypal", depType: "collateral" },
+      { name: "RLUSD lending markets", pct: 15, risk: "medium", coinId: "rlusd-ripple", depType: "collateral" },
+      { name: "GHO lending markets", pct: 10, risk: "medium", coinId: "gho-aave", depType: "collateral" },
+      { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "collateral" },
+      { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     // All stable buckets count toward immediate redemption capacity, not just USDC.
     expect(immediateRedeemableUsd).toBe(95);
@@ -65,8 +65,8 @@ describe("adaptReservoirReserves", () => {
     });
 
     expect(slices).toEqual([
-      { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "wrapper" },
-      { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "collateral" },
+      { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(immediateRedeemableUsd).toBe(95);
     expect(unknownExposurePct).toBe(0);

@@ -25,7 +25,7 @@ describe("adaptFalconTransparency", () => {
     expect(result.slices).toEqual([
       { name: "Stablecoins / cash equivalents", pct: 30, risk: "low" },
       { name: "BTC collateral", pct: 25, risk: "medium" },
-      { name: "Tokenized RWA / credit assets", pct: 15, risk: "medium" },
+      { name: "USTB tokenized Treasury assets", pct: 15, risk: "medium", coinId: "ustb-superstate" },
       { name: "Other crypto / tokenized assets", pct: 15, risk: "high" },
       { name: "ETH / liquid staking collateral", pct: 10, risk: "medium" },
       { name: "Insurance fund", pct: 5, risk: "medium" },

@@ -138,6 +138,7 @@ const LiveReserveDisplaySchema = z
 
 const stringRecordSchema = z.record(z.string(), z.string());
 const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
+const depTypeRecordSchema = z.record(z.string(), LiveReserveDependencyTypeSchema);
 
 const noParamsSchema = z.object({}).strict();
 
@@ -162,6 +163,8 @@ const accountableParamsSchema = z
       .optional(),
     riskMap: riskRecordSchema.optional(),
     renameMap: stringRecordSchema.optional(),
+    coinIdMap: stringRecordSchema.optional(),
+    depTypeMap: depTypeRecordSchema.optional(),
   })
   .strict();
 

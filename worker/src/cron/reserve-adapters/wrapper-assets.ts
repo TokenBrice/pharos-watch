@@ -14,14 +14,14 @@ const WRAPPER_ASSET_META: Record<WrapperAssetKey, {
   coinId: string;
   depType: ReserveSlice["depType"];
 }> = {
-  ausd: { coinId: "ausd-agora", depType: "wrapper" },
-  gho: { coinId: "gho-aave", depType: "wrapper" },
-  pyusd: { coinId: "pyusd-paypal", depType: "wrapper" },
-  rlusd: { coinId: "rlusd-ripple", depType: "wrapper" },
-  sgho: { coinId: "sgho-aave", depType: "wrapper" },
-  usdc: { coinId: "usdc-circle", depType: "wrapper" },
-  usd1: { coinId: "usd1-world-liberty-financial", depType: "wrapper" },
-  usdt: { coinId: "usdt-tether", depType: "wrapper" },
+  ausd: { coinId: "ausd-agora", depType: "collateral" },
+  gho: { coinId: "gho-aave", depType: "collateral" },
+  pyusd: { coinId: "pyusd-paypal", depType: "collateral" },
+  rlusd: { coinId: "rlusd-ripple", depType: "collateral" },
+  sgho: { coinId: "sgho-aave", depType: "collateral" },
+  usdc: { coinId: "usdc-circle", depType: "collateral" },
+  usd1: { coinId: "usd1-world-liberty-financial", depType: "collateral" },
+  usdt: { coinId: "usdt-tether", depType: "collateral" },
 };
 
 export function wrapperAssetMeta(key: WrapperAssetKey): {

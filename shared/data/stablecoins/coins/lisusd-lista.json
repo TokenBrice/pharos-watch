@@ -76,19 +76,22 @@
       "name": "USDT (via PSM)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "depType": "mechanism"
     },
     {
       "name": "USDC (via PSM)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
     },
     {
       "name": "FDUSD (via PSM)",
       "pct": 5,
       "risk": "low",
-      "coinId": "fdusd-first-digital"
+      "coinId": "fdusd-first-digital",
+      "depType": "mechanism"
     }
   ],
   "liveReservesConfig": {
@@ -148,7 +151,8 @@
             "decimals": 18
           },
           "risk": "low",
-          "coinId": "usdt-tether"
+          "coinId": "usdt-tether",
+          "depType": "mechanism"
         },
         {
           "name": "FDUSD GemJoin",
@@ -159,7 +163,8 @@
             "decimals": 18
           },
           "risk": "low",
-          "coinId": "fdusd-first-digital"
+          "coinId": "fdusd-first-digital",
+          "depType": "mechanism"
         }
       ]
     }

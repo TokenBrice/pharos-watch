@@ -165,7 +165,7 @@ describe("adaptCollateralPositions", () => {
       pct: 0.1,
       risk: "medium",
       coinId: "bold-liquity",
-      depType: "wrapper",
+      depType: "collateral",
     });
   });
 

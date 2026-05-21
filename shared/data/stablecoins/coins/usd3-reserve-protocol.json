@@ -76,7 +76,7 @@
       "pct": 25,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "wrapper",
+      "depType": "collateral",
       "blacklistable": true
     },
     {
@@ -84,15 +84,15 @@
       "pct": 25,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "wrapper",
+      "depType": "collateral",
       "blacklistable": true
     },
     {
       "name": "Steakhouse USDC strategy",
       "pct": 25,
       "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "wrapper",
+      "coinId": "steakusdc-steakhouse",
+      "depType": "collateral",
       "blacklistable": true
     }
   ],
@@ -128,7 +128,7 @@
           "name": "Static Aave Ethereum USDC",
           "risk": "medium",
           "coinId": "usdc-circle",
-          "depType": "wrapper",
+          "depType": "collateral",
           "blacklistable": true
         },
         {
@@ -136,15 +136,15 @@
           "name": "Wrapped Compound USDCv3",
           "risk": "medium",
           "coinId": "usdc-circle",
-          "depType": "wrapper",
+          "depType": "collateral",
           "blacklistable": true
         },
         {
           "address": "0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
           "name": "Steakhouse USDC strategy",
           "risk": "medium",
-          "coinId": "usdc-circle",
-          "depType": "wrapper",
+          "coinId": "steakusdc-steakhouse",
+          "depType": "collateral",
           "blacklistable": true
         }
       ]

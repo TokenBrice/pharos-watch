@@ -93,6 +93,16 @@
         "USDC": "medium",
         "masterUSD": "high"
       },
+      "coinIdMap": {
+        "hoUSDT": "usdt-tether",
+        "USDT0": "usdt-tether",
+        "USDC": "usdc-circle"
+      },
+      "depTypeMap": {
+        "hoUSDT": "wrapper",
+        "USDT0": "wrapper",
+        "USDC": "collateral"
+      },
       "renameMap": {
         "hoUSDT": "hoUSDT strategy exposure",
         "USDT0": "USDT0 reserves",

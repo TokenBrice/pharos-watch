@@ -60,7 +60,8 @@
       "name": "USDC (via Nucleus BoringVault)",
       "pct": 100,
       "risk": "medium",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "wrapper"
     }
   ],
   "liveReservesConfig": {

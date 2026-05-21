@@ -57,7 +57,7 @@
       "pct": 43.9,
       "risk": "medium",
       "coinId": "susde-ethena",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "WBTC",
@@ -123,7 +123,7 @@
           },
           "risk": "medium",
           "coinId": "susde-ethena",
-          "depType": "wrapper"
+          "depType": "collateral"
         },
         {
           "name": "WBTC",

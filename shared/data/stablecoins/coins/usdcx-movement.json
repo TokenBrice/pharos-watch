@@ -58,7 +58,7 @@
       "pct": 100,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "mechanism"
+      "depType": "wrapper"
     }
   ]
 }

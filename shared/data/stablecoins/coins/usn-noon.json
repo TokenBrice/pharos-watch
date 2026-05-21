@@ -133,6 +133,12 @@
         "US Treasury Bills": "very-low",
         "Principal Tokens (PTs)": "high",
         "Funding Rate (BTC)": "high"
+      },
+      "coinIdMap": {
+        "CLOs (JAAA)": "jaaa-janus-henderson-anemoy"
+      },
+      "depTypeMap": {
+        "CLOs (JAAA)": "collateral"
       }
     }
   }

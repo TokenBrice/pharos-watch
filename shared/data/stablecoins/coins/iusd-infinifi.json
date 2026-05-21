@@ -67,7 +67,7 @@
       "pct": 18,
       "risk": "high",
       "coinId": "pyusd-paypal",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "FalconX Institutional (prime broker lending, illiquid)",
@@ -84,14 +84,14 @@
       "pct": 12,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "Fluid USDC (liquid DeFi lending)",
       "pct": 7,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "AutoUSD (illiquid yield strategy)",
@@ -103,7 +103,7 @@
       "pct": 4,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "Cap stcUSD (illiquid vault)",
@@ -115,7 +115,7 @@
       "pct": 2,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "sGHO (Aave GHO staking)",

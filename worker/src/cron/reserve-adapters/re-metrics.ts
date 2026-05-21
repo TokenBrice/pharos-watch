@@ -57,7 +57,7 @@ const SYMBOL_CONFIG: Record<string, {
     name: "sUSDe (delta-neutral ETH basis)",
     risk: "high",
     coinId: "susde-ethena",
-    depType: "wrapper",
+    depType: "collateral",
   },
   usde: {
     name: "USDe (delta-neutral ETH basis)",

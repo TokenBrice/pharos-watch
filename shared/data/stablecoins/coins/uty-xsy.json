@@ -63,7 +63,7 @@
       "pct": 30,
       "risk": "low",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "Long AVAX spot positions",

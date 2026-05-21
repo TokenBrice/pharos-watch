@@ -37,6 +37,8 @@ interface AccountableParams {
   bucket?: "type" | "reserves_split" | "deployment" | "type_split" | "stablecoin_split" | "exposure_split" | "protocol_split";
   riskMap?: Record<string, ReserveSlice["risk"]>;
   renameMap?: Record<string, string>;
+  coinIdMap?: Record<string, string>;
+  depTypeMap?: Record<string, ReserveSlice["depType"]>;
 }
 
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
@@ -112,6 +114,8 @@ function adaptAccountableDashboard(
 
   const riskMap = params.riskMap ?? {};
   const renameMap = params.renameMap ?? {};
+  const coinIdMap = params.coinIdMap ?? {};
+  const depTypeMap = params.depTypeMap ?? {};
   const mapped = breakdown.filter(({ name }) => name in riskMap);
   const unknown = breakdown.filter(({ name }) => !(name in riskMap));
   const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
@@ -124,6 +128,8 @@ function adaptAccountableDashboard(
         name: renameMap[name] ?? name,
         value,
         risk: riskMap[name]!,
+        ...(coinIdMap[name] ? { coinId: coinIdMap[name] } : {}),
+        ...(depTypeMap[name] ? { depType: depTypeMap[name] } : {}),
       })),
       ...(unknownValue > 0
         ? [{
@@ -132,10 +138,12 @@ function adaptAccountableDashboard(
             risk: "high" as const,
           }]
         : []),
-    ].map(({ name, value, risk }) => ({
+    ].map(({ name, value, risk, coinId, depType }) => ({
       name: renameMap[name] ?? name,
       value,
       risk,
+      ...(coinId ? { coinId } : {}),
+      ...(depType ? { depType } : {}),
     })),
   );
 

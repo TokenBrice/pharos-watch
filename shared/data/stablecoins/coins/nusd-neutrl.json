@@ -105,6 +105,12 @@
         "OTC Aggregate": "high",
         "Other": "high"
       },
+      "coinIdMap": {
+        "Stablecoin": "usdc-circle"
+      },
+      "depTypeMap": {
+        "Stablecoin": "collateral"
+      },
       "renameMap": {
         "Stablecoin": "Stablecoin reserves",
         "ETH": "ETH collateral",

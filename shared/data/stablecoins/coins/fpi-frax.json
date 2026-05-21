@@ -69,7 +69,7 @@
       "pct": 100,
       "risk": "low",
       "coinId": "frax-frax",
-      "depType": "wrapper"
+      "depType": "collateral"
     }
   ],
   "yieldConfig": {

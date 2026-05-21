@@ -63,7 +63,7 @@
       "pct": 15,
       "risk": "high",
       "coinId": "susde-ethena",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)",
@@ -75,7 +75,8 @@
       "name": "USDC (PSM backstop, 5M cap)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
     }
   ]
 }
