@@ -57,4 +57,11 @@ describe("setup-workspace tooling cache", () => {
     expect(installStep).toContain("inputs.install-playwright-chromium == 'true'");
     expect(installStep).toContain("npx --no-install playwright install --with-deps chromium");
   });
+
+  it("installs Playwright Firefox only when requested", () => {
+    const installStep = extractStepByNeedle("inputs.install-playwright-firefox == 'true'");
+
+    expect(installStep).toContain("inputs.install-playwright-firefox == 'true'");
+    expect(installStep).toContain("npx --no-install playwright install --with-deps firefox");
+  });
 });

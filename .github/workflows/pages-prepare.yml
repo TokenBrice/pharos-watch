@@ -67,6 +67,7 @@ jobs:
           node-version: 24
           tooling-cache: "true"
           install-playwright-chromium: "true"
+          install-playwright-firefox: "true"
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
       - name: Fetch depeg events from the target API environment
