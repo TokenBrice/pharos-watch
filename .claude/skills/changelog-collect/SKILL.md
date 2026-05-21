@@ -22,7 +22,7 @@ Generate a complete changelog entry for a given period. Default range is "since 
 - **File**: `src/data/changelogs/<YYYY-MM-DD>.ts` (the `to` date).
 - **Barrel**: `src/data/changelogs/index.ts` (chronological imports + entry in `all`; the `.sort()` handles runtime order).
 - **Rendered at**: `/changelog/` via `ChangelogEntryCard` inside a timeline `<ol>`. Each entry's `id` is `dateRange.to`, used by both the card's hash anchor and `ChangelogWeekNav`.
-- **Displayed fields**: date range, "Latest" badge on the newest entry, `stats.totalCommits`, `headline`, summary list (label + tag + description + optional `href`), and a collapsed disclosure of the first 20 commits with an "and N more" tail.
+- **Displayed fields**: date range, "Latest" badge on the newest entry, `stats.totalCommits`, `headline`, `fieldNotes` editor note, summary list (label + tag + description + optional `href`), and a collapsed disclosure of the first 20 commits with an "and N more" tail.
 
 ### Workflow
 
@@ -129,7 +129,23 @@ For each cluster, one `SummaryItem`:
   - Chain Health → `/methodology/chain-health-changelog/`
   - General overview → `/methodology/`
 
-#### 8. Build the commits list
+#### 8. Write Field Notes
+
+Populate `fieldNotes` for every new entry. This is the recurring Editor's note
+slot rendered above the structural summary list, so treat it as part of the
+changelog contract rather than optional decoration.
+
+Requirements:
+- 45-80 words.
+- One paragraph.
+- Editorial synthesis of what the week meant, not a commit summary.
+- No bullets, commit hashes, Markdown, or "this release refactored..." phrasing.
+- Modest claims when the evidence is mostly maintenance or validation work.
+
+Use `headline` for the compact thesis, `fieldNotes` for the human framing, and
+`summary[]` for the commit-derived facts.
+
+#### 9. Build the commits list
 
 Format the surviving commits as `CommitRef[]`:
 - `hash`: 8-char abbreviation.
@@ -137,13 +153,14 @@ Format the surviving commits as `CommitRef[]`:
 
 Order: newest first (matches `git log` default and existing entries).
 
-#### 9. Self-check before writing
+#### 10. Self-check before writing
 
 Hard checks (must pass):
 - `commits.length === stats.totalCommits` (the card renders `stats.totalCommits`; divergence misleads readers).
 - Every `summary[i].tag` is one of the five enum values.
 - Every `summary[i].description.length <= 220`.
 - `headline.length <= 120`.
+- `fieldNotes` is present and 45-80 words.
 - `dateRange.from <= dateRange.to`.
 - No existing changelog file overlaps the date range (re-verify after step 1 in case a parallel push landed).
 
@@ -154,7 +171,7 @@ Soft checks (warn, don't block):
 
 `stats.totalCommits` reflects the **filtered** count (after step 3). This is a deliberate break from older entries, which counted raw commits; do not try to match historical totals.
 
-#### 10. Write the entry file
+#### 11. Write the entry file
 
 Path: `src/data/changelogs/<to>.ts` (e.g., `2026-04-24.ts`).
 
@@ -164,6 +181,7 @@ import type { ChangelogEntry } from "./types";
 export const entry: ChangelogEntry = {
   dateRange: { from: "<from>", to: "<to>" },
   headline: "<one-sentence thesis, ≤120 chars>",
+  fieldNotes: "<45-80 word editor's note>",
   summary: [
     { label: "...", tag: "feature", description: "...", href: "/methodology/..." },
     // 5–8 items
@@ -176,7 +194,7 @@ export const entry: ChangelogEntry = {
 };
 ```
 
-#### 11. Update the barrel
+#### 12. Update the barrel
 
 Edit `src/data/changelogs/index.ts`:
 
@@ -188,7 +206,7 @@ Edit `src/data/changelogs/index.ts`:
 
 The barrel's `.sort()` handles runtime ordering; the chronological layout exists for diff readability.
 
-#### 12. Verify
+#### 13. Verify
 
 Run the relevant gates locally:
 
@@ -203,11 +221,12 @@ Cross-check any cited number (coin count, reserve adapter total, methodology ver
 
 Also confirm every `href` path exists under `src/app/methodology/` before declaring done.
 
-#### 13. Present for review (default) or commit (--commit)
+#### 14. Present for review (default) or commit (--commit)
 
 **Default** (no `--commit`): print to the user:
 - Path of the new entry file
 - Final `headline`
+- `fieldNotes`
 - Each summary `label` (+ `tag`)
 - `stats.totalCommits`
 - Any filter-warning notes from step 3
@@ -227,6 +246,7 @@ Per CLAUDE.md, run `npm run test:merge-gate` before any push.
 ### Quality guidelines
 
 - Summary bullets read like a product update, not a git log. User-facing impact first.
+- Field Notes reads like a short editor's note: interpretive, specific, and grounded in the shipped work.
 - Prefer combining over enumeration: "Telegram delivery hardened (rate-limit handling, HTML repair, retry cap)" beats listing each fix.
 - Labels are noun phrases, parallel in structure.
 - Headlines name shipped features with concrete numbers when available.
