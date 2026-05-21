@@ -7,7 +7,7 @@ import { YieldLeaderboardControls } from "@/components/yield-leaderboard-control
 import { makeYieldProvenance, makeYieldRanking } from "@/app/yield/test-helpers";
 import { buildYieldViewModel } from "@/lib/yield-view-model";
 
-const STORAGE_KEY = "pharos:yield-watchlist:v1";
+const STORAGE_KEY = "pharos-watchlist-v1";
 
 const rows = [
   makeYieldRanking({

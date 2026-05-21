@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 
-const STORAGE_KEY = "pharos:yield-watchlist:v1";
+const STORAGE_KEY = "pharos-watchlist-v1";
 
 beforeEach(() => {
   window.localStorage.clear();
