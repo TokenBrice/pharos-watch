@@ -34735,7 +34735,7 @@
         "pct": 1,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "mechanism"
+        "depType": "collateral"
       }
     ],
     "notices": [
