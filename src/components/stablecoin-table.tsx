@@ -271,17 +271,6 @@ export function StablecoinTable({
     [showPinnedControls, visibleColumns],
   );
 
-  // Keyboard shortcut: focus table
-  useEffect(() => {
-    function handleFocusTable() {
-      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      tableRef.current?.querySelector<HTMLElement>("[data-stablecoin-detail-link='true']")?.focus();
-    }
-
-    window.addEventListener("focus-stablecoin-table", handleFocusTable);
-    return () => window.removeEventListener("focus-stablecoin-table", handleFocusTable);
-  }, []);
-
   const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
 
   const trackedIds = useMemo(() => buildTrackedIdSet(activeFilters, reportCards), [activeFilters, reportCards]);

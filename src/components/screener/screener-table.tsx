@@ -139,6 +139,7 @@ export function ScreenerTable({
     },
     onToggleStar: (row) => watchlist.toggle(row.id),
     onAddToCompare: () => compareLinkRef.current?.click(),
+    scopeRef: tableRef,
   });
   const compareHref = cursorId ? buildLiveCompareUrl([cursorId]) : null;
 

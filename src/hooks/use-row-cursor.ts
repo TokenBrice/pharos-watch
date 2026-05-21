@@ -11,7 +11,7 @@ export interface UseRowCursorOptions<T> {
   onToggleStar?: (row: T) => void;
   onAddToCompare?: (row: T) => void;
   enabled?: boolean;
-  scopeRef?: React.RefObject<HTMLElement>;
+  scopeRef?: React.RefObject<HTMLElement | null>;
 }
 
 export interface UseRowCursorResult {

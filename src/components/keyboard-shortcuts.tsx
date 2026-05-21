@@ -7,7 +7,7 @@ type KeyJoin = "+" | "then" | "or";
 interface Shortcut {
   keys: string[];
   description: string;
-  category: "Navigation" | "Actions" | "Table" | "Tables" | "Global";
+  category: "Navigation" | "Actions" | "Tables" | "Global";
   join?: KeyJoin; // default "+"
 }
 
@@ -20,18 +20,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["↑", "↓"], description: "Navigate items", category: "Navigation", join: "or" },
   { keys: ["←", "→"], description: "Navigate tabs", category: "Navigation", join: "or" },
   { keys: ["Enter"], description: "Select/open item", category: "Navigation" },
-  { keys: ["G", "H"], description: "Go to Home", category: "Navigation", join: "then" },
-  { keys: ["G", "S"], description: "Go to Screener", category: "Navigation", join: "then" },
-  { keys: ["G", "C"], description: "Go to Compare", category: "Navigation", join: "then" },
-  { keys: ["G", "T"], description: "Go to Timeline (Tape)", category: "Navigation", join: "then" },
-  { keys: ["G", "P"], description: "Go to Portfolio", category: "Navigation", join: "then" },
-  { keys: ["G", "D"], description: "Go to Digest", category: "Navigation", join: "then" },
-  { keys: ["G", "Y"], description: "Go to Yield", category: "Navigation", join: "then" },
-  { keys: ["G", "L"], description: "Go to Liquidity", category: "Navigation", join: "then" },
-  { keys: ["G", "F"], description: "Go to Flows", category: "Navigation", join: "then" },
-  { keys: ["G", "V"], description: "Go to FreezeWatch", category: "Navigation", join: "then" },
   { keys: ["T"], description: "Toggle theme", category: "Actions" },
-  { keys: ["S"], description: "Focus stablecoin table", category: "Table" },
   { keys: ["J", "↓"], description: "Next row", category: "Tables", join: "or" },
   { keys: ["K", "↑"], description: "Previous row", category: "Tables", join: "or" },
   { keys: ["O", "Enter"], description: "Open detail", category: "Tables", join: "or" },
