@@ -16,6 +16,10 @@ export function useStablecoins() {
     {
       schema: descriptor.schema,
       metaMaxAgeSec: descriptor.metaMaxAgeSec,
+      // M1: home + screener filter/sort the cached list client-side, so keep the
+      // prior payload visible during the 15-min background refetch instead of
+      // wiping to a skeleton. The RefreshingBar signals the in-flight refresh.
+      keepPreviousData: true,
     },
   );
 }

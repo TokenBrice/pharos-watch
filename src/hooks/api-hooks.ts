@@ -44,6 +44,7 @@ interface QueryControlOverrides {
   enabled?: boolean;
   retry?: number | boolean;
   retryDelay?: (attempt: number) => number;
+  keepPreviousData?: boolean;
 }
 
 function useRegisteredApiQuery<T>(
@@ -169,7 +170,10 @@ export function usePegSummary() {
 export function useReportCards(overrides?: QueryControlOverrides) {
   return useRegisteredApiQueryWithMeta<ReportCardsResponse>(
     FRONTEND_API_QUERY_REGISTRY.reportCards,
-    overrides,
+    // M1: report cards back the safety-grade filters on home + screener.
+    // Keep the prior cards visible across background refetches so toggling a
+    // grade filter doesn't blank the table. Callers can still override.
+    { keepPreviousData: true, ...overrides },
   );
 }
 

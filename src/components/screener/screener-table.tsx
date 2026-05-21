@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   DataTableEmptyRow,
@@ -8,15 +9,40 @@ import {
   type DataTableColumn,
 } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
+import { useWatchlist } from "@/hooks/use-watchlist";
+import { buildLiveCompareUrl } from "@/lib/compare-pages";
+import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
+import { RowSparkline } from "@/components/row-sparkline";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
+import type { QueryKey } from "@tanstack/react-query";
 import type { ReportCardGrade } from "@shared/types";
+
+// M1: keys feeding the screener table's visible data (supply, peg, DEWS,
+// liquidity, safety grade). A background refetch of any of these surfaces the
+// RefreshingBar while the prior rows stay visible (keepPreviousData).
+const SCREENER_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
+  ["stablecoins"],
+  ["peg-summary"],
+  ["report-cards"],
+  ["stress-signals"],
+  ["dex-liquidity"],
+];
+
+function getRowPegDeviationSeries(row: ScreenerRow): ReadonlyArray<number | null> {
+  return row.pegDeviationSeries ?? [];
+}
+
+function getRowSupplySeries(row: ScreenerRow): ReadonlyArray<number | null> {
+  return row.supplySeries ?? [];
+}
 
 const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   { id: "name", label: "Name", sortKey: "name", className: "min-w-[160px]" },
@@ -51,6 +77,18 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },
+  {
+    id: "peg30d",
+    label: "30d Peg",
+    className: "text-right w-[112px] hidden xl:table-cell",
+    title: "30-day peg deviation strip (±bps around the peg)",
+  },
+  {
+    id: "supply30d",
+    label: "30d Supply",
+    className: "text-right w-[112px] hidden xl:table-cell",
+    title: "30-day supply trajectory",
+  },
 ] as const;
 
 const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
@@ -78,6 +116,46 @@ export function ScreenerTable({
   hasActiveFilters,
   sort,
 }: ScreenerTableProps) {
+  const watchlist = useWatchlist();
+  const tableRef = useRef<HTMLDivElement>(null);
+  const compareLinkRef = useRef<HTMLAnchorElement>(null);
+
+  // P6 — j/k row cursor over the desktop table rows. o/Enter opens the dossier,
+  // s toggles the watchlist, c adds to /compare. The hook bails while an input
+  // is focused, so typing in the filter toolbar is unaffected.
+  //
+  // Navigation is performed by clicking real Next <Link> anchors instead of
+  // `useRouter().push`, so the table renders without an App Router context
+  // (e.g. in unit tests) while keeping client-side routing. `onOpen` clicks the
+  // cursor row's own detail link; `onAddToCompare` clicks a hidden per-cursor
+  // compare link rendered below.
+  const { getRowProps, cursorId } = useRowCursor<ScreenerRow>({
+    rows,
+    getRowId: (row) => row.id,
+    onOpen: (row) => {
+      tableRef.current
+        ?.querySelector<HTMLAnchorElement>(`[data-screener-open="${row.id}"]`)
+        ?.click();
+    },
+    onToggleStar: (row) => watchlist.toggle(row.id),
+    onAddToCompare: () => compareLinkRef.current?.click(),
+  });
+  const compareHref = cursorId ? buildLiveCompareUrl([cursorId]) : null;
+
+  // P8 — numeric column sort: providers broadcast the Nth column on keys 1-9.
+  // Map it to the matching desktop column and toggle its sort if sortable.
+  const toggleSort = sort.toggleSort;
+  useEffect(() => {
+    function handleSortColumn(event: Event) {
+      const columnNumber = (event as CustomEvent<SortColumnEventDetail>).detail?.columnNumber;
+      if (!columnNumber) return;
+      const target = COLUMNS[columnNumber - 1];
+      if (target?.sortKey) toggleSort(target.sortKey);
+    }
+    window.addEventListener(SORT_COLUMN_EVENT, handleSortColumn);
+    return () => window.removeEventListener(SORT_COLUMN_EVENT, handleSortColumn);
+  }, [toggleSort]);
+
   return (
     <>
       <div className="space-y-3 md:hidden">
@@ -124,11 +202,26 @@ export function ScreenerTable({
         )}
       </div>
 
-      <div className="hidden md:block">
+      <div ref={tableRef} className="hidden md:block">
+        {/* Hidden target for the cursor's `c` (add-to-compare) shortcut; a real
+            Next <Link> so navigation stays client-side without `useRouter`. */}
+        {compareHref ? (
+          <Link
+            ref={compareLinkRef}
+            href={compareHref}
+            aria-hidden="true"
+            tabIndex={-1}
+            className="sr-only"
+          >
+            Compare cursor row
+          </Link>
+        ) : null}
         <DataTableShell<ScreenerSortKey>
           columns={COLUMNS}
           sort={sort}
           striped
+          refreshingQueryKeys={SCREENER_REFRESH_QUERY_KEYS}
+          isPending={isLoading}
         >
           {isLoading ? (
             <DataTableLoadingRows columns={COLUMNS} rowCount={8} />
@@ -137,7 +230,14 @@ export function ScreenerTable({
               <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} compact />
             </DataTableEmptyRow>
           ) : (
-            rows.map((row) => <ScreenerRow key={row.id} row={row} logo={logos?.[row.id]} />)
+            rows.map((row, index) => (
+              <ScreenerRow
+                key={row.id}
+                row={row}
+                logo={logos?.[row.id]}
+                rowProps={getRowProps(index, row.id)}
+              />
+            ))
           )}
         </DataTableShell>
       </div>
@@ -243,12 +343,24 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
   );
 }
 
-function ScreenerRow({ row, logo }: { row: ScreenerRow; logo?: string }) {
+function ScreenerRow({
+  row,
+  logo,
+  rowProps,
+}: {
+  row: ScreenerRow;
+  logo?: string;
+  rowProps?: ReturnType<UseRowCursorResult["getRowProps"]>;
+}) {
   return (
-    <TableRow className="hover:!transform-none">
+    <TableRow
+      {...rowProps}
+      className="hover:!transform-none data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)]"
+    >
       <TableCell className="min-w-[160px]">
         <Link
           href={buildStablecoinUrl(row.id)}
+          data-screener-open={row.id}
           className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
         >
           <StablecoinIdentity
@@ -298,6 +410,30 @@ function ScreenerRow({ row, logo }: { row: ScreenerRow; logo?: string }) {
       </TableCell>
       <TableCell className="text-left text-muted-foreground">
         {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
+      </TableCell>
+      <TableCell
+        data-column-id="peg30d"
+        className="text-right w-[112px] hidden xl:table-cell"
+      >
+        <RowSparkline
+          data={getRowPegDeviationSeries(row)}
+          signed
+          referenceValue={0}
+          ariaLabel={`30-day peg deviation for ${row.symbol}`}
+          width={96}
+          height={16}
+        />
+      </TableCell>
+      <TableCell
+        data-column-id="supply30d"
+        className="text-right w-[112px] hidden xl:table-cell"
+      >
+        <RowSparkline
+          data={getRowSupplySeries(row)}
+          ariaLabel={`30-day supply trajectory for ${row.symbol}`}
+          width={96}
+          height={16}
+        />
       </TableCell>
     </TableRow>
   );

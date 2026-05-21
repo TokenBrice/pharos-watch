@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
@@ -62,6 +62,15 @@ export function ScreenerToolbar({
     [filters, onChange],
   );
 
+  // M8 — track chip additions per group so newly-active filters spring in
+  // via `pharos-chip-animate-in`. Set clears after the keyframe completes.
+  const justEnteredSafety = useJustEntered(filters.safetyGrades);
+  const justEnteredTypes = useJustEntered(filters.types);
+  const justEnteredMechanisms = useJustEntered(filters.mechanisms);
+  const justEnteredBlacklistable = useJustEntered(filters.blacklistable);
+  const justEnteredLifecycle = useJustEntered(filters.lifecycle);
+  const justEnteredPegs = useJustEntered(filters.pegs);
+
   const active = hasActiveFilters(filters);
   const filterCountLabel = `${activeFilterCount.toLocaleString()} ${activeFilterCount === 1 ? "filter" : "filters"} applied`;
 
@@ -105,7 +114,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={grade}
                 value={grade}
-                className={`min-h-11 font-semibold opacity-80 transition-[opacity,box-shadow,filter] data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:border-current data-[state=on]:opacity-100 data-[state=on]:ring-1 data-[state=on]:ring-current data-[state=on]:ring-inset data-[state=on]:brightness-125 sm:min-h-8 ${getSafetyGradeBadgeClassName(grade)}`}
+                className={`min-h-11 font-semibold opacity-80 transition-[opacity,box-shadow,filter] data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:border-current data-[state=on]:opacity-100 data-[state=on]:ring-1 data-[state=on]:ring-current data-[state=on]:ring-inset data-[state=on]:brightness-125 sm:min-h-8 ${getSafetyGradeBadgeClassName(grade)} ${justEnteredSafety.has(grade) ? "pharos-chip-animate-in" : ""}`}
               >
                 {grade}
               </ToggleGroupItem>
@@ -198,7 +207,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={type}
                 value={type}
-                className={FILTER_PILL_CLASS_NAME}
+                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredTypes.has(type) ? "pharos-chip-animate-in" : ""}`}
               >
                 {GOVERNANCE_LABELS_SHORT[type]}
               </ToggleGroupItem>
@@ -223,7 +232,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={archetype}
                 value={archetype}
-                className={FILTER_PILL_CLASS_NAME}
+                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredMechanisms.has(archetype) ? "pharos-chip-animate-in" : ""}`}
               >
                 {MECHANISM_ARCHETYPE_LABELS[archetype]}
               </ToggleGroupItem>
@@ -248,7 +257,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={bucket}
                 value={bucket}
-                className={FILTER_PILL_CLASS_NAME}
+                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredBlacklistable.has(bucket) ? "pharos-chip-animate-in" : ""}`}
               >
                 {BLACKLISTABLE_LABELS[bucket]}
               </ToggleGroupItem>
@@ -273,7 +282,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={status}
                 value={status}
-                className={FILTER_PILL_CLASS_NAME}
+                className={`${FILTER_PILL_CLASS_NAME} ${justEnteredLifecycle.has(status) ? "pharos-chip-animate-in" : ""}`}
               >
                 {LIFECYCLE_LABELS[status]}
               </ToggleGroupItem>
@@ -299,7 +308,7 @@ export function ScreenerToolbar({
             <ToggleGroupItem
               key={peg}
               value={peg}
-              className={FILTER_PILL_CLASS_NAME}
+              className={`${FILTER_PILL_CLASS_NAME} ${justEnteredPegs.has(peg) ? "pharos-chip-animate-in" : ""}`}
               title={PEG_METADATA[peg].label}
             >
               {PEG_METADATA[peg].filterLabel}
@@ -309,6 +318,34 @@ export function ScreenerToolbar({
       </div>
     </div>
   );
+}
+
+/**
+ * Track which values just entered an array since the last render. Returns a
+ * Set of values that became newly present, briefly so the consumer can apply
+ * an entrance animation class. The set is cleared on a timeout after firing
+ * so the class only renders once per addition.
+ */
+function useJustEntered<T extends string>(current: readonly T[]): Set<T> {
+  const previousRef = useRef<readonly T[]>(current);
+  const [entered, setEntered] = useState<Set<T>>(() => new Set());
+
+  useEffect(() => {
+    const prev = previousRef.current;
+    const next = current;
+    if (prev === next) return;
+    const prevSet = new Set(prev);
+    const additions = next.filter((value) => !prevSet.has(value));
+    previousRef.current = next;
+    if (additions.length === 0) return;
+    setEntered(new Set(additions));
+    // 250ms is just past the 200ms chip-in keyframe — covers the animation
+    // window without leaving the class hanging across later renders.
+    const timer = window.setTimeout(() => setEntered(new Set()), 250);
+    return () => window.clearTimeout(timer);
+  }, [current]);
+
+  return entered;
 }
 
 interface ThresholdFieldProps {

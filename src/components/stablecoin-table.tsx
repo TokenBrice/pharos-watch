@@ -2,7 +2,8 @@
 
 import { useMemo, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
+import type { QueryKey } from "@tanstack/react-query";
 import { TableBody, TableHead, TableCaption, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableToolbar } from "./table-toolbar";
@@ -22,8 +23,13 @@ import {
 } from "@/hooks/use-preferences";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { TablePagination } from "@/components/table-pagination";
+import { TableBackgroundRefreshingBar } from "@/components/data-table-shell";
 import { StablecoinTableEmptyState } from "@/components/stablecoin-table-empty-state";
 import { StablecoinVirtualRow } from "@/components/stablecoin-table-row";
+import { useRowCursor } from "@/hooks/use-row-cursor";
+import { useWatchlist } from "@/hooks/use-watchlist";
+import { buildLiveCompareUrl } from "@/lib/compare-pages";
+import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
@@ -37,6 +43,14 @@ import {
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const OVERSCAN = 12;
 const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
+// M1: keys feeding the home table's columns (market data, peg, grade, liquidity).
+// A background refetch surfaces the RefreshingBar while prior rows stay visible.
+const STABLECOIN_TABLE_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
+  ["stablecoins"],
+  ["peg-summary"],
+  ["report-cards"],
+  ["dex-liquidity"],
+];
 const MOBILE_TABLE_BASE_MIN_WIDTH_PX = 420;
 const PINNED_COLUMN_MIN_WIDTH_PX = 56;
 const MOBILE_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
@@ -59,6 +73,15 @@ const MOBILE_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
 function sameColumnSet(left: readonly ColumnId[], right: readonly ColumnId[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((id, index) => id === right[index]);
+}
+
+// Resolve the detail-link href of the cursor row so the cursor highlight can be
+// matched against the rendered <tr> (see the cursor-paint effect). The shared
+// row component encodes the coin id in `buildStablecoinUrl`, so we match on that
+// href rather than reaching into the non-owned row markup.
+function cursorCoinId(rows: readonly StablecoinData[], index: number): string | null {
+  const coin = rows[index];
+  return coin ? buildStablecoinUrl(coin.id) : null;
 }
 
 function getMobileTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
@@ -328,6 +351,73 @@ export function StablecoinTable({
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
   }, [displayed, pegScores, dexLiquidity, reportCards]);
 
+  // P6 — j/k row cursor over the visible (post-pin) rows, scoped to the table.
+  // o/Enter opens the dossier, s toggles the watchlist, c adds to /compare.
+  // Cursor scroll-into-view is handled inside the hook via the virtualizer, and
+  // the moved cursor row is highlighted by painting a `data-cursor` marker plus
+  // an inline left-accent onto the matching <tr> after each commit. The
+  // virtualized rows are rendered by a shared component this file does not own
+  // (so we can't spread `getRowProps`); each row carries a detail link whose
+  // href encodes the coin id, which we use to locate and mark the active row.
+  const watchlist = useWatchlist();
+  // Only hand the virtualizer to the cursor when it exposes `scrollToIndex`
+  // (the hook calls it to keep the cursor visible). Guards against virtualizer
+  // stand-ins that omit it. The element-type generic mismatch (HTMLDivElement
+  // vs HTMLElement) is benign, so we widen to the hook's type.
+  const cursorVirtualizer =
+    typeof virtualizer.scrollToIndex === "function"
+      ? (virtualizer as unknown as Virtualizer<HTMLElement, Element>)
+      : null;
+  const { cursorIndex } = useRowCursor<StablecoinData>({
+    rows: displayed,
+    virtualizer: cursorVirtualizer,
+    getRowId: (coin) => coin.id,
+    onOpen: (coin) => router.push(buildStablecoinUrl(coin.id)),
+    onToggleStar: (coin) => watchlist.toggle(coin.id),
+    onAddToCompare: (coin) => router.push(buildLiveCompareUrl([coin.id])),
+    scopeRef: tableRef as React.RefObject<HTMLElement>,
+  });
+
+  const cursorHref = cursorCoinId(displayed, cursorIndex);
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const rows = scrollEl.querySelectorAll<HTMLTableRowElement>("tbody tr");
+    for (const row of rows) {
+      const link = row.querySelector<HTMLAnchorElement>('[data-stablecoin-detail-link="true"]');
+      const isCursor = cursorHref !== null && link?.getAttribute("href") === cursorHref;
+      if (isCursor) {
+        row.setAttribute("data-cursor", "true");
+        if (!row.hasAttribute("tabindex")) row.tabIndex = -1;
+        // Left-accent + faint tint, matching the design-token highlight used
+        // elsewhere. Inline because this file does not own the row component
+        // and Tailwind classes can't be attached to the rendered <tr> here.
+        row.style.boxShadow = "inset 3px 0 0 0 var(--brand-accent)";
+        row.style.backgroundColor = "color-mix(in oklab, var(--muted) 40%, transparent)";
+      } else if (row.hasAttribute("data-cursor")) {
+        row.removeAttribute("data-cursor");
+        row.removeAttribute("tabindex");
+        row.style.boxShadow = "";
+        row.style.backgroundColor = "";
+      }
+    }
+  });
+
+  // P8 — numeric column sort: providers broadcast the Nth visible column on
+  // keys 1-9; map it to the matching sortable header and toggle its sort.
+  useEffect(() => {
+    function handleSortColumn(event: Event) {
+      const detail = (event as CustomEvent<SortColumnEventDetail>).detail;
+      const columnNumber = detail?.columnNumber;
+      if (!columnNumber) return;
+      const visibleDefs = STABLECOIN_HEADER_DEFS.filter((column) => visibleSet.has(column.id));
+      const target = visibleDefs[columnNumber - 1];
+      if (target?.sortKey) toggleSort(target.sortKey);
+    }
+    window.addEventListener(SORT_COLUMN_EVENT, handleSortColumn);
+    return () => window.removeEventListener(SORT_COLUMN_EVENT, handleSortColumn);
+  }, [visibleSet, toggleSort]);
+
   if (isLoading) {
     return (
       <div className="pharos-table-shell">
@@ -351,6 +441,10 @@ export function StablecoinTable({
 
   return (
     <div ref={tableRef} className="pharos-table-shell animate-in fade-in duration-300">
+      <TableBackgroundRefreshingBar
+        queryKeys={STABLECOIN_TABLE_REFRESH_QUERY_KEYS}
+        isPending={isLoading}
+      />
       <TableToolbar
         density={density}
         onDensityChange={setDensity}

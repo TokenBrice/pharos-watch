@@ -2,14 +2,42 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { ThemeProvider } from "next-themes";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
+import { RouteProgressBar } from "@/components/route-progress-bar";
 
 // Create a context for toast functionality
 import { createContext, useContext } from "react";
+
+// Vim-style g+x chord routing targets.
+const CHORD_ROUTES: Record<string, string> = {
+  h: "/",
+  s: "/screener",
+  c: "/compare",
+  t: "/timeline",
+  p: "/portfolio",
+  d: "/digest",
+  y: "/yield",
+  l: "/liquidity",
+  f: "/flows",
+  v: "/freezewatch",
+};
+
+const CHORD_TIMEOUT_MS = 1500;
+
+/**
+ * Custom event broadcast when the user presses a numeric key (1-9) to sort
+ * by the Nth visible column. Tables listen and call `toggleSort(visibleColumns[n-1])`.
+ */
+export const SORT_COLUMN_EVENT = "pharos-sort-column" as const;
+
+export interface SortColumnEventDetail {
+  columnNumber: number;
+}
 
 const CommandPalette = dynamic(() => import("./command-palette").then((mod) => mod.CommandPalette), {
   ssr: false,
@@ -39,6 +67,7 @@ export function useToastContext() {
 function AppProviders({ children }: { children: React.ReactNode }) {
   const { toasts, addToast, removeToast } = useToast();
   const { toggleTheme } = useThemeToggle({ toast: addToast });
+  const router = useRouter();
   const [commandPaletteLoaded, setCommandPaletteLoaded] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [keyboardShortcutsLoaded, setKeyboardShortcutsLoaded] = useState(false);
@@ -56,6 +85,18 @@ function AppProviders({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new CustomEvent("focus-stablecoin-table"));
   }, []);
 
+  // Chord state machine: when `g` is pressed, the next key (within 1.5s) is the chord target.
+  const chordPendingRef = useRef(false);
+  const chordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearChord = useCallback(() => {
+    chordPendingRef.current = false;
+    if (chordTimeoutRef.current !== null) {
+      clearTimeout(chordTimeoutRef.current);
+      chordTimeoutRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     function handleOpenCommandPalette() {
       openGlobalCommandPalette();
@@ -69,7 +110,12 @@ function AppProviders({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement ||
+        (event.target instanceof HTMLElement && event.target.isContentEditable)
+      ) {
         return;
       }
 
@@ -86,6 +132,45 @@ function AppProviders({ children }: { children: React.ReactNode }) {
       }
 
       if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      // Resolve chord if pending. The chord consumes the next single-key event,
+      // taking precedence over any other single-key handler below.
+      if (chordPendingRef.current) {
+        const key = event.key.toLowerCase();
+        const target = CHORD_ROUTES[key];
+        clearChord();
+        if (target) {
+          event.preventDefault();
+          router.push(target);
+        }
+        return;
+      }
+
+      // Start chord on `g`.
+      if (event.key === "g") {
+        event.preventDefault();
+        chordPendingRef.current = true;
+        if (chordTimeoutRef.current !== null) {
+          clearTimeout(chordTimeoutRef.current);
+        }
+        chordTimeoutRef.current = setTimeout(() => {
+          chordPendingRef.current = false;
+          chordTimeoutRef.current = null;
+        }, CHORD_TIMEOUT_MS);
+        return;
+      }
+
+      // Numeric column sort (1-9). Broadcast for tables to consume.
+      if (event.key >= "1" && event.key <= "9") {
+        event.preventDefault();
+        const columnNumber = Number(event.key);
+        window.dispatchEvent(
+          new CustomEvent<SortColumnEventDetail>(SORT_COLUMN_EVENT, {
+            detail: { columnNumber },
+          }),
+        );
         return;
       }
 
@@ -110,11 +195,16 @@ function AppProviders({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handleOpenCommandPalette);
       window.removeEventListener("keydown", handleGlobalOverlayKeyDown);
+      if (chordTimeoutRef.current !== null) {
+        clearTimeout(chordTimeoutRef.current);
+        chordTimeoutRef.current = null;
+      }
     };
-  }, [handleFocusSearch, handleFocusTable, openGlobalCommandPalette, toggleTheme]);
+  }, [clearChord, handleFocusSearch, handleFocusTable, openGlobalCommandPalette, router, toggleTheme]);
 
   return (
     <ToastContext.Provider value={{ addToast }}>
+      <RouteProgressBar />
       {children}
       {commandPaletteLoaded && (
         <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />

@@ -3,18 +3,45 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound, X } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  FileText,
+  Coins,
+  Clock,
+  Trash2,
+  Search,
+  Copy,
+  BookOpen,
+  Newspaper,
+  KeyRound,
+  X,
+  GitCompare,
+  Terminal,
+  Network,
+  Globe2,
+  Layers,
+  Activity,
+  PlayCircle,
+} from "lucide-react";
 import { useLogos } from "@/hooks/use-logos";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import {
   buildCommandPaletteResultDescriptors,
   groupCommandPaletteResults,
   type CommandPaletteActionIcon,
   type CommandPaletteActionId,
   type CommandPaletteResultDescriptor,
+  type CommandPaletteSection,
 } from "@/components/command-palette-model";
+import {
+  buildCompareHrefFromCoinIds,
+  parsePaletteInput,
+  type ParsedVerb,
+} from "@/lib/command-palette-verbs";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,8 +49,11 @@ interface SearchResult {
   id: string;
   label: string;
   sublabel?: string;
-  section: "Recent" | "Stablecoins" | "Pages" | "Actions";
+  section: CommandPaletteSection;
   logoUrl?: string;
+  imagePath?: string;
+  imageSquare?: boolean;
+  imageDarkInvert?: boolean;
   icon?: React.ReactNode;
   frozen?: boolean;
   onSelect: () => void;
@@ -51,6 +81,31 @@ function getActionIcon(icon: CommandPaletteActionIcon): React.ReactNode {
       return <BookOpen className="h-4 w-4" />;
     case "api-docs":
       return <KeyRound className="h-4 w-4" />;
+    case "compare-watchlist":
+      return <GitCompare className="h-4 w-4" />;
+    case "verb-hint":
+      return <Terminal className="h-4 w-4" />;
+    case "run-command":
+      return <PlayCircle className="h-4 w-4" />;
+  }
+}
+
+function getKindIcon(kind: CommandPaletteResultDescriptor["kind"]): React.ReactNode {
+  switch (kind) {
+    case "chain":
+      return <Network className="h-4 w-4" />;
+    case "peg":
+      return <Globe2 className="h-4 w-4" />;
+    case "mechanism":
+      return <Layers className="h-4 w-4" />;
+    case "depeg-event":
+      return <Activity className="h-4 w-4" />;
+    case "verb-hint":
+      return <Terminal className="h-4 w-4" />;
+    case "verb-run":
+      return <PlayCircle className="h-4 w-4" />;
+    default:
+      return null;
   }
 }
 
@@ -62,6 +117,8 @@ function buildSearchResult(
     closePalette,
     addToHistory,
     toggleTheme,
+    watchlistIds,
+    setQuery,
   }: {
     logos: Record<string, string>;
     router: ReturnType<typeof useRouter>;
@@ -74,6 +131,8 @@ function buildSearchResult(
       href: string,
     ) => void;
     toggleTheme: () => void;
+    watchlistIds: readonly string[];
+    setQuery: (next: string) => void;
   },
 ): SearchResult {
   const selectAction = (actionId: CommandPaletteActionId) => {
@@ -100,11 +159,22 @@ function buildSearchResult(
         router.push("/about/api/");
         closePalette();
         return;
+      case "compare-watchlist": {
+        if (watchlistIds.length < 2) return;
+        router.push(buildCompareHrefFromCoinIds(watchlistIds));
+        closePalette();
+        return;
+      }
     }
   };
 
   const PageIcon = descriptor.pageIcon;
   const onSelect = () => {
+    // Verb hints prefill the input rather than navigating away.
+    if (descriptor.kind === "verb-hint" && descriptor.prefill) {
+      setQuery(descriptor.prefill);
+      return;
+    }
     if (descriptor.actionId) {
       selectAction(descriptor.actionId);
       return;
@@ -128,19 +198,26 @@ function buildSearchResult(
     closePalette();
   };
 
+  const kindIcon = getKindIcon(descriptor.kind);
+
   return {
     id: descriptor.id,
     label: descriptor.label,
     sublabel: descriptor.sublabel,
     section: descriptor.section,
     logoUrl: descriptor.logoId ? logos[descriptor.logoId] : undefined,
+    imagePath: descriptor.imagePath,
+    imageSquare: descriptor.imageSquare,
+    imageDarkInvert: descriptor.imageDarkInvert,
     icon: descriptor.actionIcon
       ? getActionIcon(descriptor.actionIcon)
       : PageIcon
         ? <PageIcon className="h-4 w-4" />
-        : descriptor.kind === "recent" && !descriptor.logoId
-          ? <FileText className="h-4 w-4" />
-          : undefined,
+        : kindIcon
+          ? kindIcon
+          : descriptor.kind === "recent" && !descriptor.logoId
+            ? <FileText className="h-4 w-4" />
+            : undefined,
     frozen: descriptor.frozen,
     onSelect,
   };
@@ -157,10 +234,169 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { isDark, toggleTheme } = useThemeToggle();
   const { data: logos } = useLogos();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
+  const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
 
   const closePalette = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
+
+  // ── Parse verb from the current input ──────────────────────────────────────
+
+  const parsedVerb: ParsedVerb = useMemo(() => parsePaletteInput(query), [query]);
+
+  /**
+   * Execute the active verb. Returns true if the verb produced a side-effect
+   * (navigation or watchlist mutation). Falsy values mean "no-op", leaving
+   * the user in the palette to refine input.
+   */
+  const runVerb = useCallback((): boolean => {
+    switch (parsedVerb.kind) {
+      case "compare": {
+        if (parsedVerb.resolvedCoinIds.length === 0) return false;
+        router.push(buildCompareHrefFromCoinIds(parsedVerb.resolvedCoinIds));
+        closePalette();
+        return true;
+      }
+      case "screen": {
+        router.push(parsedVerb.href);
+        closePalette();
+        return true;
+      }
+      case "pin": {
+        if (!parsedVerb.resolvedCoinId) return false;
+        addToWatchlist(parsedVerb.resolvedCoinId);
+        closePalette();
+        return true;
+      }
+      case "unpin": {
+        if (parsedVerb.coinSymbol === "all") {
+          clearWatchlist();
+          closePalette();
+          return true;
+        }
+        if (!parsedVerb.resolvedCoinId) return false;
+        removeFromWatchlist(parsedVerb.resolvedCoinId);
+        closePalette();
+        return true;
+      }
+      case "view": {
+        // Saved Views ships in W3-D; for now treat the verb as a no-op until
+        // that store exists. We still close the palette so the user knows
+        // their input was understood.
+        if (!parsedVerb.viewName) return false;
+        return false;
+      }
+      case "tape": {
+        router.push(parsedVerb.href);
+        closePalette();
+        return true;
+      }
+      case "none":
+        return false;
+    }
+  }, [parsedVerb, router, closePalette, addToWatchlist, removeFromWatchlist, clearWatchlist]);
+
+  /** Human-readable preview of the verb result. */
+  const verbPreview = useMemo<
+    { label: string; sublabel: string; runnable: boolean } | null
+  >(() => {
+    switch (parsedVerb.kind) {
+      case "compare": {
+        const ids = parsedVerb.resolvedCoinIds;
+        if (ids.length === 0) {
+          return {
+            label: "Compare —",
+            sublabel: "Type tickers separated by spaces",
+            runnable: false,
+          };
+        }
+        const upperSymbols = parsedVerb.coinSymbols.map((s) => s.toUpperCase()).join(", ");
+        const unresolvedNote = parsedVerb.unresolved.length
+          ? ` · skipped: ${parsedVerb.unresolved.join(", ")}`
+          : "";
+        return {
+          label: `Compare ${upperSymbols}`,
+          sublabel: `Open /compare with ${ids.length} stablecoin${ids.length === 1 ? "" : "s"}${unresolvedNote}`,
+          runnable: true,
+        };
+      }
+      case "screen": {
+        const keys = Object.keys(parsedVerb.filters);
+        if (keys.length === 0) {
+          return {
+            label: "Screen —",
+            sublabel: "e.g. screen safety>=80 dews<20 peg=USD",
+            runnable: false,
+          };
+        }
+        return {
+          label: `Screen ${keys.length} filter${keys.length === 1 ? "" : "s"}`,
+          sublabel: `Open /screener with ${keys.join(", ")}`,
+          runnable: true,
+        };
+      }
+      case "pin": {
+        if (!parsedVerb.coinSymbol) {
+          return { label: "Pin —", sublabel: "Type a ticker to add to your watchlist", runnable: false };
+        }
+        if (!parsedVerb.resolvedCoinId) {
+          return {
+            label: `Pin ${parsedVerb.coinSymbol.toUpperCase()}`,
+            sublabel: "No matching stablecoin",
+            runnable: false,
+          };
+        }
+        return {
+          label: `Pin ${parsedVerb.coinSymbol.toUpperCase()}`,
+          sublabel: "Add to your watchlist",
+          runnable: true,
+        };
+      }
+      case "unpin": {
+        if (parsedVerb.coinSymbol === "all") {
+          return { label: "Unpin all", sublabel: "Clear your watchlist", runnable: true };
+        }
+        if (!parsedVerb.coinSymbol) {
+          return { label: "Unpin —", sublabel: "Type a ticker or 'all'", runnable: false };
+        }
+        if (!parsedVerb.resolvedCoinId) {
+          return {
+            label: `Unpin ${parsedVerb.coinSymbol.toUpperCase()}`,
+            sublabel: "No matching stablecoin",
+            runnable: false,
+          };
+        }
+        return {
+          label: `Unpin ${parsedVerb.coinSymbol.toUpperCase()}`,
+          sublabel: "Remove from your watchlist",
+          runnable: true,
+        };
+      }
+      case "view": {
+        if (!parsedVerb.viewName) {
+          return { label: "View:", sublabel: "Saved views land in a follow-up release", runnable: false };
+        }
+        return {
+          label: `View: ${parsedVerb.viewName}`,
+          sublabel: "Saved views land in a follow-up release",
+          runnable: false,
+        };
+      }
+      case "tape": {
+        const keys = Object.keys(parsedVerb.filters);
+        if (keys.length === 0) {
+          return { label: "Tape:", sublabel: "e.g. tape: severity=warning", runnable: false };
+        }
+        return {
+          label: `Tape: ${keys.length} filter${keys.length === 1 ? "" : "s"}`,
+          sublabel: `Open /timeline with ${keys.join(", ")}`,
+          runnable: true,
+        };
+      }
+      case "none":
+        return null;
+    }
+  }, [parsedVerb]);
 
   // ── Restore focus on close and auto-focus input when open ────────────────────
 
@@ -194,16 +430,53 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // ── Build results ──────────────────────────────────────────────────────
 
   const results = useMemo((): SearchResult[] => {
-    return buildCommandPaletteResultDescriptors({ query, history, isDark }).map((descriptor) =>
+    const built = buildCommandPaletteResultDescriptors({
+      query,
+      history,
+      isDark,
+      watchlistCount,
+    }).map((descriptor) =>
       buildSearchResult(descriptor, {
         logos,
         router,
         closePalette,
         addToHistory,
         toggleTheme,
+        watchlistIds,
+        setQuery,
       }),
     );
-  }, [query, logos, isDark, toggleTheme, router, closePalette, history, addToHistory]);
+
+    // Prepend a "Run command" row when the input parses to a verb. Clicking
+    // it (or pressing Enter while it's selected) runs the side-effect.
+    if (verbPreview) {
+      const verbRow: SearchResult = {
+        id: "verb-run",
+        label: verbPreview.label,
+        sublabel: verbPreview.sublabel,
+        section: "Run command",
+        icon: <PlayCircle className="h-4 w-4" />,
+        onSelect: () => {
+          if (verbPreview.runnable) runVerb();
+        },
+      };
+      return [verbRow, ...built];
+    }
+    return built;
+  }, [
+    query,
+    logos,
+    isDark,
+    toggleTheme,
+    router,
+    closePalette,
+    history,
+    addToHistory,
+    watchlistCount,
+    watchlistIds,
+    verbPreview,
+    runVerb,
+  ]);
 
   // ── Grouped results for rendering ──────────────────────────────────────
 
@@ -271,7 +544,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:mt-[18vh] sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
+        className="pharos-palette-spring-in inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:mt-[18vh] sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -288,7 +561,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search stablecoins, pages..."
+            placeholder="Search or type a verb (compare, screen, pin)…"
             className="h-14 w-full border-b border-border/70 bg-transparent pl-10 pr-14 text-base text-foreground placeholder:text-muted-foreground focus:outline-none sm:h-12 sm:pr-4"
             aria-label="Search"
             role="combobox"
@@ -377,6 +650,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         width={20}
                         height={20}
                         className="w-5 h-5 rounded-full shrink-0"
+                        unoptimized
+                      />
+                    ) : item.imagePath ? (
+                      <Image
+                        src={item.imagePath}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className={`w-5 h-5 ${item.imageSquare ? "rounded" : "rounded-full"} shrink-0 ${item.imageDarkInvert ? "dark:invert" : ""}`}
                         unoptimized
                       />
                     ) : item.icon ? (

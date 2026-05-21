@@ -15,15 +15,40 @@ import { NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
+import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
+import { DEPEG_EVENT_ENTRIES } from "@/app/depeg/[event]/page-data";
 
-export type CommandPaletteSection = "Recent" | "Stablecoins" | "Pages" | "Actions";
+export type CommandPaletteSection =
+  | "Run command"
+  | "Recent"
+  | "Stablecoins"
+  | "Pages"
+  | "Chains"
+  | "Peg currencies"
+  | "Mechanism archetypes"
+  | "Recent depegs"
+  | "Actions"
+  | "Try a command";
 export type CommandPaletteActionId =
   | "theme"
   | "copy-url"
   | "open-digest"
   | "open-methodology"
-  | "open-api-docs";
-export type CommandPaletteActionIcon = "theme-light" | "theme-dark" | "copy" | "digest" | "methodology" | "api-docs";
+  | "open-api-docs"
+  | "compare-watchlist";
+export type CommandPaletteActionIcon =
+  | "theme-light"
+  | "theme-dark"
+  | "copy"
+  | "digest"
+  | "methodology"
+  | "api-docs"
+  | "compare-watchlist"
+  | "verb-hint"
+  | "run-command";
 
 export interface CommandPaletteActionDefinition {
   id: string;
@@ -43,7 +68,7 @@ export interface CommandPaletteSectionedItem {
   section: CommandPaletteSection;
 }
 
-const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
+export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
   {
     href: "/stablecoins",
     label: "Stablecoins",
@@ -141,7 +166,17 @@ export interface CommandPaletteHistoryItem {
   href: string;
 }
 
-export type CommandPaletteResultKind = "recent" | "stablecoin" | "page" | "action";
+export type CommandPaletteResultKind =
+  | "recent"
+  | "stablecoin"
+  | "page"
+  | "action"
+  | "chain"
+  | "peg"
+  | "mechanism"
+  | "depeg-event"
+  | "verb-hint"
+  | "verb-run";
 
 export interface CommandPaletteResultDescriptor {
   id: string;
@@ -150,12 +185,20 @@ export interface CommandPaletteResultDescriptor {
   section: CommandPaletteSection;
   kind: CommandPaletteResultKind;
   logoId?: string;
+  /** Static image path (e.g. chain logo) when not driven by the logos hook. */
+  imagePath?: string;
+  /** Render the static image as a square thumbnail instead of a circle. */
+  imageSquare?: boolean;
+  /** Apply CSS invert in dark mode (used for chain logos with darkInvert). */
+  imageDarkInvert?: boolean;
   frozen?: boolean;
   href?: string;
   external?: boolean;
   pageIcon?: CommandPalettePage["icon"];
   actionIcon?: CommandPaletteActionIcon;
   actionId?: CommandPaletteActionId;
+  /** For verb-hint rows: the literal text the palette input should be set to. */
+  prefill?: string;
   history?: {
     id: string;
     type: "stablecoin" | "page";
@@ -166,11 +209,56 @@ export interface CommandPaletteResultDescriptor {
 }
 
 const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
+  "Run command",
   "Recent",
   "Stablecoins",
   "Pages",
+  "Chains",
+  "Peg currencies",
+  "Mechanism archetypes",
+  "Recent depegs",
   "Actions",
+  "Try a command",
 ] as const;
+
+const NEW_SECTION_RESULT_CAP = 5;
+
+// ── Static palette content sources ──────────────────────────────────────────
+
+interface PaletteChain {
+  id: string;
+  name: string;
+  logoPath: string;
+  darkInvert: boolean;
+}
+
+interface PaletteMechanism {
+  id: string;
+  label: string;
+  oneLiner: string;
+}
+
+const PALETTE_CHAINS: readonly PaletteChain[] = getActiveChainIds().map((id) => {
+  const meta = CHAIN_META[id];
+  return {
+    id,
+    name: meta?.name ?? id,
+    logoPath: meta?.logoPath ?? "",
+    darkInvert: meta?.darkInvert ?? false,
+  };
+});
+
+const PALETTE_MECHANISMS: readonly PaletteMechanism[] = MECHANISM_ARCHETYPE_VALUES.map((id) => ({
+  id,
+  label: MECHANISM_ARCHETYPE_LABELS[id],
+  oneLiner: MECHANISM_ARCHETYPE_ONE_LINERS[id],
+}));
+
+const VERB_HINTS: ReadonlyArray<{ id: string; label: string; prefill: string }> = [
+  { id: "verb-hint-compare", label: "compare USDT USDC USDe", prefill: "compare USDT USDC USDe" },
+  { id: "verb-hint-screen", label: "screen safety>=80 dews<20", prefill: "screen safety>=80 dews<20" },
+  { id: "verb-hint-pin", label: "pin USDS", prefill: "pin USDS" },
+];
 
 export function fuzzyMatch(query: string, target: string): boolean {
   const q = query.toLowerCase();
@@ -209,8 +297,12 @@ export function rankCommandPaletteResults<T extends { score: number; status?: st
   });
 }
 
-export function buildCommandPaletteActionDefinitions(isDark: boolean): CommandPaletteActionDefinition[] {
-  return [
+export function buildCommandPaletteActionDefinitions(
+  isDark: boolean,
+  options?: { watchlistCount?: number },
+): CommandPaletteActionDefinition[] {
+  const watchlistCount = options?.watchlistCount ?? 0;
+  const actions: CommandPaletteActionDefinition[] = [
     {
       id: "action-theme",
       actionId: "theme",
@@ -227,6 +319,20 @@ export function buildCommandPaletteActionDefinitions(isDark: boolean): CommandPa
       keywords: "copy url link share clipboard",
       icon: "copy",
     },
+  ];
+
+  if (watchlistCount >= 2) {
+    actions.push({
+      id: "action-compare-watchlist",
+      actionId: "compare-watchlist",
+      label: `Compare watchlist (${watchlistCount})`,
+      sublabel: "Open /compare with your starred stablecoins",
+      keywords: "compare watchlist pinned starred top coins",
+      icon: "compare-watchlist",
+    });
+  }
+
+  actions.push(
     {
       id: "action-open-digest",
       actionId: "open-digest",
@@ -251,7 +357,9 @@ export function buildCommandPaletteActionDefinitions(isDark: boolean): CommandPa
       keywords: "api docs endpoint reference keys",
       icon: "api-docs",
     },
-  ];
+  );
+
+  return actions;
 }
 
 export function groupCommandPaletteResults<TItem extends CommandPaletteSectionedItem>(
@@ -271,10 +379,12 @@ export function buildCommandPaletteResultDescriptors({
   query,
   history,
   isDark,
+  watchlistCount = 0,
 }: {
   query: string;
   history: readonly CommandPaletteHistoryItem[];
   isDark: boolean;
+  watchlistCount?: number;
 }): CommandPaletteResultDescriptor[] {
   const q = query.trim();
   const items: CommandPaletteResultDescriptor[] = [];
@@ -349,9 +459,143 @@ export function buildCommandPaletteResultDescriptors({
         });
       }
     }
+
+    // Chains
+    const chainMatches: PaletteChain[] = [];
+    for (const chain of PALETTE_CHAINS) {
+      if (chainMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (fuzzyMatch(q, chain.name) || fuzzyMatch(q, chain.id)) {
+        chainMatches.push(chain);
+      }
+    }
+    for (const chain of chainMatches) {
+      const href = `/chains/${chain.id}/`;
+      items.push({
+        id: `chain-${chain.id}`,
+        label: chain.name,
+        sublabel: "Chain profile",
+        section: "Chains",
+        kind: "chain",
+        imagePath: chain.logoPath || undefined,
+        imageSquare: true,
+        imageDarkInvert: chain.darkInvert,
+        href,
+        history: {
+          id: `chain-${chain.id}`,
+          type: "page",
+          label: chain.name,
+          sublabel: "Chain profile",
+          href,
+        },
+      });
+    }
+
+    // Peg currencies
+    const pegMatches: (typeof PEG_TAXONOMY_PAGES)[number][] = [];
+    for (const peg of PEG_TAXONOMY_PAGES) {
+      if (pegMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (
+        fuzzyMatch(q, peg.shortLabel) ||
+        fuzzyMatch(q, peg.value) ||
+        fuzzyMatch(q, peg.slug)
+      ) {
+        pegMatches.push(peg);
+      }
+    }
+    for (const peg of pegMatches) {
+      items.push({
+        id: `peg-${peg.slug}`,
+        label: peg.title,
+        sublabel: `${peg.coins.length} tracked stablecoin${peg.coins.length === 1 ? "" : "s"}`,
+        section: "Peg currencies",
+        kind: "peg",
+        href: peg.href,
+        history: {
+          id: `peg-${peg.slug}`,
+          type: "page",
+          label: peg.title,
+          sublabel: peg.shortLabel,
+          href: peg.href,
+        },
+      });
+    }
+
+    // Mechanism archetypes
+    const mechMatches: PaletteMechanism[] = [];
+    for (const mech of PALETTE_MECHANISMS) {
+      if (mechMatches.length >= NEW_SECTION_RESULT_CAP) break;
+      if (
+        fuzzyMatch(q, mech.label) ||
+        fuzzyMatch(q, mech.id) ||
+        fuzzyMatch(q, mech.oneLiner)
+      ) {
+        mechMatches.push(mech);
+      }
+    }
+    for (const mech of mechMatches) {
+      const href = `/learn/mechanisms/${mech.id}/`;
+      items.push({
+        id: `mechanism-${mech.id}`,
+        label: mech.label,
+        sublabel: "Mechanism archetype explainer",
+        section: "Mechanism archetypes",
+        kind: "mechanism",
+        href,
+        history: {
+          id: `mechanism-${mech.id}`,
+          type: "page",
+          label: mech.label,
+          sublabel: "Mechanism archetype",
+          href,
+        },
+      });
+    }
+
+    // Recent depeg events (top ~10 by startedAt)
+    if (DEPEG_EVENT_ENTRIES.length > 0) {
+      const recentEvents = [...DEPEG_EVENT_ENTRIES]
+        .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))
+        .slice(0, 10);
+      const depegMatches: typeof recentEvents = [];
+      for (const event of recentEvents) {
+        if (depegMatches.length >= NEW_SECTION_RESULT_CAP) break;
+        if (
+          fuzzyMatch(q, event.symbol) ||
+          fuzzyMatch(q, event.stablecoinId) ||
+          fuzzyMatch(q, event.slug)
+        ) {
+          depegMatches.push(event);
+        }
+      }
+      for (const event of depegMatches) {
+        const href = `/depeg/${event.slug}/`;
+        const dateLabel = event.startedAt
+          ? new Date(event.startedAt * 1000).toISOString().slice(0, 10)
+          : "";
+        const directionLabel = event.direction === "below" ? "below" : "above";
+        items.push({
+          id: `depeg-${event.slug}`,
+          label: `${event.symbol} ${directionLabel} ${event.pegType}`,
+          sublabel: dateLabel
+            ? `${dateLabel} · peak ${event.peakDeviationBps}bps`
+            : `peak ${event.peakDeviationBps}bps`,
+          section: "Recent depegs",
+          kind: "depeg-event",
+          logoId: event.stablecoinId,
+          href,
+          history: {
+            id: `depeg-${event.slug}`,
+            type: "page",
+            label: `${event.symbol} ${dateLabel}`.trim(),
+            sublabel: "Depeg event",
+            href,
+          },
+        });
+      }
+    }
   }
 
-  for (const action of buildCommandPaletteActionDefinitions(isDark)) {
+  for (const action of buildCommandPaletteActionDefinitions(isDark, { watchlistCount })) {
     if (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords)) {
       items.push({
         id: action.id,
@@ -361,6 +605,22 @@ export function buildCommandPaletteResultDescriptors({
         kind: "action",
         actionIcon: action.icon,
         actionId: action.actionId,
+      });
+    }
+  }
+
+  // Empty-state verb hints. Surfaced as a quiet "Try a command" block beneath
+  // the recents so the verb grammar is discoverable.
+  if (!q) {
+    for (const hint of VERB_HINTS) {
+      items.push({
+        id: hint.id,
+        label: hint.label,
+        sublabel: "Press Enter to prefill",
+        section: "Try a command",
+        kind: "verb-hint",
+        actionIcon: "verb-hint",
+        prefill: hint.prefill,
       });
     }
   }

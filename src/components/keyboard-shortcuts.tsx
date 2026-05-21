@@ -2,10 +2,13 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+type KeyJoin = "+" | "then" | "or";
+
 interface Shortcut {
   keys: string[];
   description: string;
-  category: "Navigation" | "Actions" | "Table" | "Global";
+  category: "Navigation" | "Actions" | "Table" | "Tables" | "Global";
+  join?: KeyJoin; // default "+"
 }
 
 const SHORTCUTS: Shortcut[] = [
@@ -14,22 +17,39 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["[ / ]"], description: "Toggle sidebar pin", category: "Global" },
   { keys: ["/"], description: "Focus search", category: "Global" },
   { keys: ["Esc"], description: "Close modals/panels", category: "Global" },
-  { keys: ["↑", "↓"], description: "Navigate items", category: "Navigation" },
-  { keys: ["←", "→"], description: "Navigate tabs", category: "Navigation" },
+  { keys: ["↑", "↓"], description: "Navigate items", category: "Navigation", join: "or" },
+  { keys: ["←", "→"], description: "Navigate tabs", category: "Navigation", join: "or" },
   { keys: ["Enter"], description: "Select/open item", category: "Navigation" },
+  { keys: ["G", "H"], description: "Go to Home", category: "Navigation", join: "then" },
+  { keys: ["G", "S"], description: "Go to Screener", category: "Navigation", join: "then" },
+  { keys: ["G", "C"], description: "Go to Compare", category: "Navigation", join: "then" },
+  { keys: ["G", "T"], description: "Go to Timeline (Tape)", category: "Navigation", join: "then" },
+  { keys: ["G", "P"], description: "Go to Portfolio", category: "Navigation", join: "then" },
+  { keys: ["G", "D"], description: "Go to Digest", category: "Navigation", join: "then" },
+  { keys: ["G", "Y"], description: "Go to Yield", category: "Navigation", join: "then" },
+  { keys: ["G", "L"], description: "Go to Liquidity", category: "Navigation", join: "then" },
+  { keys: ["G", "F"], description: "Go to Flows", category: "Navigation", join: "then" },
+  { keys: ["G", "V"], description: "Go to FreezeWatch", category: "Navigation", join: "then" },
   { keys: ["T"], description: "Toggle theme", category: "Actions" },
   { keys: ["S"], description: "Focus stablecoin table", category: "Table" },
+  { keys: ["J", "↓"], description: "Next row", category: "Tables", join: "or" },
+  { keys: ["K", "↑"], description: "Previous row", category: "Tables", join: "or" },
+  { keys: ["O", "Enter"], description: "Open detail", category: "Tables", join: "or" },
+  { keys: ["S"], description: "Toggle star (watchlist)", category: "Tables" },
+  { keys: ["C"], description: "Add to compare", category: "Tables" },
+  { keys: ["1", "9"], description: "Sort by column N (1-9)", category: "Tables", join: "or" },
 ];
 
-function KeyCombo({ keys }: { keys: string[] }) {
+function KeyCombo({ keys, join = "+" }: { keys: string[]; join?: KeyJoin }) {
+  const separator = join === "+" ? "+" : join;
   return (
     <span className="flex items-center gap-0.5">
       {keys.map((key, i) => (
         <span key={i} className="flex items-center">
-          <kbd className="rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs font-mono">
+          <kbd className="rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs font-mono tabular-nums">
             {key}
           </kbd>
-          {i < keys.length - 1 && <span className="mx-0.5 text-muted-foreground">+</span>}
+          {i < keys.length - 1 && <span className="mx-0.5 text-muted-foreground">{separator}</span>}
         </span>
       ))}
     </span>
@@ -64,7 +84,7 @@ export function KeyboardShortcuts({
                     className="flex items-center justify-between rounded-md px-2 py-1.5 hover:bg-muted/50"
                   >
                     <span className="text-sm text-foreground">{shortcut.description}</span>
-                    <KeyCombo keys={shortcut.keys} />
+                    <KeyCombo keys={shortcut.keys} join={shortcut.join} />
                   </div>
                 ))}
               </div>
@@ -72,7 +92,7 @@ export function KeyboardShortcuts({
           ))}
         </div>
         <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          Press <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono">Esc</kbd> to close
+          Press <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">Esc</kbd> to close
         </p>
       </DialogContent>
     </Dialog>

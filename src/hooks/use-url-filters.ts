@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  decodeState,
+  encodeState,
+  type UrlStateSchema,
+} from "@/lib/url-state";
 
 /**
  * Shared hook for managing URL search-param-based filters.
@@ -10,6 +15,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  * - `pushParam(key, value)` / `pushParams(updates)` — create a new history entry
  *
  * This keeps route-local filter state shareable without requiring App Router navigation.
+ *
+ * For typed schema-driven access, prefer {@link useTypedUrlState}. It layers
+ * `decodeState`/`encodeState` over this hook so any surface with a
+ * `UrlStateSchema` gets ergonomic `values` + `setValue` + `resetValues` calls.
  */
 
 const URL_FILTER_HISTORY_CHANGE_EVENT = "pharos:url-filter-history-change";
@@ -186,4 +195,84 @@ export function useUrlFilters() {
   );
 
   return { searchParams, getParam, setParam, pushParam, setParams, pushParams, pushSearchParams, replaceParams };
+}
+
+/**
+ * Typed, schema-driven URL state hook. Wraps {@link useUrlFilters} so the
+ * underlying `popstate` / `pushState` / `replaceState` subscription is shared.
+ *
+ * `values` is decoded from the current URL on each render via
+ * `decodeState(searchParams, schema)`; defaults are applied for missing or
+ * invalid params. Writes go through `replaceParams`, touching only the keys
+ * owned by `schema` — unrelated params on the same URL are preserved.
+ *
+ * The hook does not gate on hydration: server-rendered output starts with
+ * `decodeState("", schema)` (= schema defaults). Consumers that need to avoid
+ * a hydration-mismatch should gate their dependent UI on a `useHasHydrated`
+ * boolean, matching the screener's existing pattern.
+ *
+ * @example
+ * const { values, setValue, resetValues } = useTypedUrlState(LIQUIDITY_URL_SCHEMA);
+ * // values.peg: string
+ * // values.q: string
+ * setValue("peg", "EUR");
+ */
+export function useTypedUrlState<T>(
+  schema: UrlStateSchema<T>,
+): {
+  values: T;
+  setValue: <K extends keyof T>(key: K, value: T[K]) => void;
+  setValues: (next: Partial<T>) => void;
+  resetValues: () => void;
+  asQueryString: () => string;
+} {
+  const { searchParams, replaceParams } = useUrlFilters();
+
+  const values = useMemo<T>(
+    () => decodeState(searchParams, schema),
+    [searchParams, schema],
+  );
+
+  const writeOwnedKeys = useCallback(
+    (next: T) => {
+      const encoded = encodeState(next, schema);
+      const incoming = new URLSearchParams(encoded);
+      replaceParams((params) => {
+        // Clear only schema-owned keys; leave any unrelated params alone so
+        // generalized adoption doesn't stomp on coexisting state.
+        for (const key of Object.keys(schema as Record<string, unknown>)) {
+          params.delete(key);
+        }
+        for (const [key, value] of incoming) {
+          params.set(key, value);
+        }
+      });
+    },
+    [replaceParams, schema],
+  );
+
+  const setValue = useCallback(
+    <K extends keyof T>(key: K, value: T[K]) => {
+      const next = { ...values, [key]: value } as T;
+      writeOwnedKeys(next);
+    },
+    [values, writeOwnedKeys],
+  );
+
+  const setValues = useCallback(
+    (patch: Partial<T>) => {
+      const next = { ...values, ...patch } as T;
+      writeOwnedKeys(next);
+    },
+    [values, writeOwnedKeys],
+  );
+
+  const resetValues = useCallback(() => {
+    const defaults = decodeState(new URLSearchParams(), schema);
+    writeOwnedKeys(defaults);
+  }, [schema, writeOwnedKeys]);
+
+  const asQueryString = useCallback(() => encodeState(values, schema), [schema, values]);
+
+  return { values, setValue, setValues, resetValues, asQueryString };
 }
