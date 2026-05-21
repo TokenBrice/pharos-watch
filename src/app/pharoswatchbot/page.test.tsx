@@ -16,6 +16,7 @@ import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,
 } from "@shared/lib/telegram-mini-app-payloads";
+import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
 vi.mock("next/image", () => ({
   default: ({ alt, ...props }: { alt: string; src: string; width: number; height: number; className?: string }) => (
@@ -98,7 +99,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
     expect(screen.getByText("Command Reference")).toBeTruthy();
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
-    expect(screen.getByText("392")).toBeTruthy();
+    expect(screen.getByText(String(TRACKED_STABLECOIN_COUNT))).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
     expect(screen.getByText(/Opens a Telegram confirmation that preloads DEWS and depeg alerts/i)).toBeTruthy();
     expect(screen.getByText("Control every alert from the Mini App.")).toBeTruthy();
