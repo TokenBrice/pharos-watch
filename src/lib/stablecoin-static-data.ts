@@ -2,20 +2,20 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 392;
-export const ACTIVE_STABLECOIN_COUNT = 362;
+export const TRACKED_STABLECOIN_COUNT = 393;
+export const ACTIVE_STABLECOIN_COUNT = 363;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 26;
 export const FROZEN_STABLECOIN_COUNT = 4;
 export const DEAD_STABLECOIN_COUNT = 91;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
   centralized: 180,
-  "centralized-dependent": 156,
+  "centralized-dependent": 157,
   decentralized: 26,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 260,
+  USD: 261,
   EUR: 21,
   GBP: 6,
   CHF: 5,
@@ -266,6 +266,7 @@ export const TRACKED_STABLECOIN_IDS = [
   "usdr-stablr",
   "usdu-usdu-finance",
   "dusd-dtrinity",
+  "sdusd-dtrinity",
   "dusd-alto",
   "ustb-superstate",
   "ousg-ondo-finance",

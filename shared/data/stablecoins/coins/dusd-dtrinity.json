@@ -83,13 +83,13 @@
     {
       "name": "frxUSD (Fraxtal)",
       "pct": 4,
-      "risk": "medium",
+      "risk": "low",
       "coinId": "frxusd-frax"
     },
     {
       "name": "DAI (Fraxtal)",
       "pct": 5,
-      "risk": "medium",
+      "risk": "low",
       "coinId": "dai-makerdao"
     },
     {

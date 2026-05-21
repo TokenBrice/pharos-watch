@@ -96,7 +96,7 @@ describe("reserve adapter real-registry smoke", () => {
 
     const slices = JSON.parse(String(compositionInsert!.binds[1])) as Array<Record<string, unknown>>;
     expect(slices).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "sUSDS (Sky savings USDS)", pct: 50, coinId: "usds-sky" }),
+      expect.objectContaining({ name: "sUSDS (Sky savings USDS)", pct: 50, coinId: "susds-sky" }),
       expect.objectContaining({ name: "EURC (Circle euro stablecoin)", pct: 15, coinId: "eurc-circle" }),
       expect.objectContaining({ name: "CELO", pct: 15 }),
     ]));

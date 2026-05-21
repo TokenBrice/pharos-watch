@@ -7407,13 +7407,13 @@
       {
         "name": "frxUSD (Fraxtal)",
         "pct": 4,
-        "risk": "medium",
+        "risk": "low",
         "coinId": "frxusd-frax"
       },
       {
         "name": "DAI (Fraxtal)",
         "pct": 5,
-        "risk": "medium",
+        "risk": "low",
         "coinId": "dai-makerdao"
       },
       {
@@ -33011,7 +33011,7 @@
       {
         "name": "frxUSD (Ethereum branch)",
         "pct": 15,
-        "risk": "medium",
+        "risk": "low",
         "coinId": "frxusd-frax",
         "depType": "collateral"
       },
@@ -40952,8 +40952,6 @@
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
-    "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault",
     "reserves": [
       {
         "name": "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)",

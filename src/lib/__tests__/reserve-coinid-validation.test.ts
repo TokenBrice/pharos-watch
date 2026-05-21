@@ -81,6 +81,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
   ],
   [
+    "rwausdi-multipli::Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)::BUIDL",
+    "rwaUSDi reports this as a mixed tokenized Treasury-products bucket, so no single tracked coinId is representative.",
+  ],
+  [
+    "rwausdi-multipli::Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)::OUSG",
+    "rwaUSDi reports this as a mixed tokenized Treasury-products bucket, so no single tracked coinId is representative.",
+  ],
+  [
     "usdf-falcon::Stablecoins (USDC/USDT)::USDT",
     "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
   ],

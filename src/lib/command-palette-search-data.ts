@@ -198,6 +198,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usdr-stablr", "StablR USD", "USDR"],
   ["usdu-usdu-finance", "USDU Finance", "USDU"],
   ["dusd-dtrinity", "dTRINITY dUSD", "dUSD"],
+  ["sdusd-dtrinity", "dTRINITY Staked dUSD", "sdUSD"],
   ["dusd-alto", "Alto DUSD", "DUSD"],
   ["ustb-superstate", "Superstate USTB", "USTB"],
   ["ousg-ondo-finance", "Ondo OUSG", "OUSG"],

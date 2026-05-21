@@ -168,7 +168,7 @@
     {
       "name": "frxUSD (Ethereum branch)",
       "pct": 15,
-      "risk": "medium",
+      "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral"
     },

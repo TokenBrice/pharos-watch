@@ -95,9 +95,9 @@ describe("handleYieldAdapterManifest", () => {
 
     expect(
       body.entries.find((entry) =>
-        entry.stablecoinId === "dusd-dtrinity" &&
+        entry.stablecoinId === "sdusd-dtrinity" &&
         entry.family === "defillama" &&
-        entry.sourceKey === YIELD_WEIGHTED_POOL_GROUPS["dusd-dtrinity"].sourceKey
+        entry.sourceKey === YIELD_WEIGHTED_POOL_GROUPS["sdusd-dtrinity"].sourceKey
       ),
     ).toBeTruthy();
   });

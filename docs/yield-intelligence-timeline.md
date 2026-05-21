@@ -1,6 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.16` (2026-03-01 -> 2026-05-19).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.17` (2026-03-01 -> 2026-05-22).
+
+---
+
+## v8.17 - dTRINITY sdUSD Ownership Handoff (May 22, 2026)
+
+- `sdusd-dtrinity` is now the first-class tracked dTRINITY dStake yield wrapper
+- The existing Ethereum/Fraxtal weighted sdUSD DeFiLlama source publishes under `sdusd-dtrinity`
+- `dusd-dtrinity` no longer owns wrapper yield metadata, so base dUSD is not credited with sdUSD dStake APY
+- Parent-side sdUSD history is suppressed by the ownership-handoff cleanup path instead of being grandfathered into the new wrapper row
+- PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; v8.17 is an ownership and history-routing correction
 
 ---
 
