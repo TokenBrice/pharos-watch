@@ -47,8 +47,7 @@
     {
       "name": "USDC and fiat reserve assets",
       "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     }
   ],
   "notices": [
@@ -56,13 +55,6 @@
       "type": "info",
       "title": "Non-indexed issuance chain",
       "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
-    }
-  ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "type": "collateral",
-      "weight": 1
     }
   ]
 }

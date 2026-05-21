@@ -93,7 +93,6 @@
       "name": "Stablecoins (PSM)",
       "pct": 38,
       "risk": "very-low",
-      "coinId": "usdc-circle",
       "depType": "mechanism"
     },
     {

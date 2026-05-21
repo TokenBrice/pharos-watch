@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -31,6 +31,18 @@ const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crv
 const ETH_LST_ASSETS = new Set(["WETH", "wstETH", "stETH", "rETH", "weETH", "cbETH"]);
 const BTC_ASSETS = new Set(["WBTC", "cbBTC", "tBTC"]);
 const GOVERNANCE_ASSETS = new Set(["INV", "CRV", "CVX", "cvxCRV", "st-yCRV", "cvxFXS"]);
+const TRACKED_STABLECOIN_ASSETS: Partial<Record<string, { coinId: string; risk: ReserveSlice["risk"] }>> = {
+  sUSDe: { coinId: "susde-ethena", risk: "high" },
+  sUSDS: { coinId: "susds-sky", risk: "low" },
+  DAI: { coinId: "dai-makerdao", risk: "low" },
+  USDC: { coinId: "usdc-circle", risk: "low" },
+  USDT: { coinId: "usdt-tether", risk: "low" },
+  crvUSD: { coinId: "crvusd-curve", risk: "medium" },
+  scrvUSD: { coinId: "scrvusd-curve", risk: "medium" },
+  FRAX: { coinId: "frax-frax", risk: "low" },
+  PYUSD: { coinId: "pyusd-paypal", risk: "low" },
+  USR: { coinId: "usr-resolv", risk: "high" },
+};
 
 const KNOWN_ASSETS = new Set([...STABLECOIN_ASSETS, ...ETH_LST_ASSETS, ...BTC_ASSETS, ...GOVERNANCE_ASSETS]);
 
@@ -76,11 +88,30 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
     getBucket: (market) => bucketForAsset(resolveBaseSymbol(market)),
     isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
   });
+  const trackedStableValues = new Map<string, number>();
+  for (const market of payload.markets) {
+    const value = market.totalDebt;
+    if (!Number.isFinite(value) || value <= 0) continue;
+    const symbol = resolveBaseSymbol(market);
+    if (!TRACKED_STABLECOIN_ASSETS[symbol]) continue;
+    trackedStableValues.set(symbol, (trackedStableValues.get(symbol) ?? 0) + value);
+  }
+  const trackedStableTotal = Array.from(trackedStableValues.values()).reduce((sum, value) => sum + value, 0);
 
   const slices = slicesFromValues([
+    ...Array.from(trackedStableValues, ([symbol, value]) => {
+      const config = TRACKED_STABLECOIN_ASSETS[symbol]!;
+      return {
+        name: `${symbol} collateral`,
+        value,
+        risk: config.risk,
+        coinId: config.coinId,
+        depType: "collateral" as const,
+      };
+    }),
     {
-      name: "Stablecoin collateral (sUSDe, sUSDS, crvUSD)",
-      value: bucketTotals.get("stablecoin") ?? 0,
+      name: "Other stablecoin collateral",
+      value: Math.max(0, (bucketTotals.get("stablecoin") ?? 0) - trackedStableTotal),
       risk: getCanonicalReserveAssetRisk("sUSDe") ?? "low",
     },
     {

@@ -6583,7 +6583,6 @@
         "name": "Stablecoins (PSM)",
         "pct": 32,
         "risk": "very-low",
-        "coinId": "usdc-circle",
         "depType": "mechanism"
       },
       {
@@ -7189,9 +7188,18 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "Stablecoin collateral (sUSDe, sUSDS, scrvUSD)",
-        "pct": 97,
-        "risk": "low"
+        "name": "sUSDe collateral",
+        "pct": 88.8,
+        "risk": "high",
+        "coinId": "susde-ethena",
+        "depType": "collateral"
+      },
+      {
+        "name": "sUSDS collateral",
+        "pct": 7.7,
+        "risk": "low",
+        "coinId": "susds-sky",
+        "depType": "collateral"
       },
       {
         "name": "Governance tokens (INV, CRV, CVX)",
@@ -7202,6 +7210,11 @@
         "name": "ETH / liquid staking collateral",
         "pct": 1,
         "risk": "low"
+      },
+      {
+        "name": "BTC collateral",
+        "pct": 0.5,
+        "risk": "medium"
       }
     ],
     "liveReservesConfig": {
@@ -7296,7 +7309,8 @@
         "name": "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)",
         "pct": 5,
         "risk": "medium",
-        "coinId": "usdc-circle"
+        "coinId": "syrupusdc-maple",
+        "depType": "collateral"
       },
       {
         "name": "USDC (PSM backstop, 5M cap)",
@@ -9583,7 +9597,7 @@
             },
             "risk": "low",
             "coinId": "usdc-circle",
-            "depType": "wrapper"
+            "depType": "collateral"
           },
           {
             "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
@@ -9595,7 +9609,7 @@
             },
             "risk": "low",
             "coinId": "usdc-circle",
-            "depType": "wrapper"
+            "depType": "collateral"
           },
           {
             "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
@@ -9607,7 +9621,7 @@
             },
             "risk": "low",
             "coinId": "usdc-circle",
-            "depType": "wrapper"
+            "depType": "collateral"
           },
           {
             "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
@@ -9619,7 +9633,7 @@
             },
             "risk": "low",
             "coinId": "usdc-circle",
-            "depType": "wrapper"
+            "depType": "collateral"
           },
           {
             "name": "Wrapped Compound USDT (wcUSDTv3)",
@@ -9631,7 +9645,7 @@
             },
             "risk": "low",
             "coinId": "usdt-tether",
-            "depType": "wrapper"
+            "depType": "collateral"
           }
         ]
       }
@@ -14578,15 +14592,14 @@
       {
         "name": "Aave Horizon USDC/RLUSD (institutional pools)",
         "pct": 2,
-        "risk": "low",
-        "coinId": "usdc-circle",
-        "depType": "collateral"
+        "risk": "low"
       },
       {
         "name": "sGHO (Aave GHO staking)",
         "pct": 1,
         "risk": "medium",
-        "coinId": "sgho-aave"
+        "coinId": "sgho-aave",
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -20070,8 +20083,7 @@
       {
         "name": "Stablecoin reserves",
         "pct": 93.5,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       },
       {
         "name": "OTC aggregate positions",
@@ -20112,12 +20124,6 @@
           "ETH": "ETH collateral",
           "OTC Aggregate": "OTC aggregate positions",
           "Other": "Other reserve assets"
-        },
-        "coinIdMap": {
-          "Stablecoin": "usdc-circle"
-        },
-        "depTypeMap": {
-          "Stablecoin": "collateral"
         }
       }
     },
@@ -20621,14 +20627,14 @@
         "pct": 65,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "USDC (via Curve AMO LP)",
         "pct": 35,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -24663,8 +24669,7 @@
       {
         "name": "Stablecoin redemption pools (USDC, other stables)",
         "pct": 20,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       },
       {
         "name": "SHD governance token (bounded minting backing)",
@@ -24974,7 +24979,7 @@
         "pct": 100,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -31073,7 +31078,8 @@
       {
         "name": "Tokenized Treasuries (USTB)",
         "pct": 5,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ustb-superstate"
       }
     ],
     "liveReservesConfig": {
@@ -33917,7 +33923,6 @@
         "name": "Stablecoins (PSM)",
         "pct": 38,
         "risk": "very-low",
-        "coinId": "usdc-circle",
         "depType": "mechanism"
       },
       {
@@ -38364,13 +38369,6 @@
     "jurisdiction": {
       "country": "Singapore"
     },
-    "dependencies": [
-      {
-        "id": "usdc-circle",
-        "weight": 1,
-        "type": "collateral"
-      }
-    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -38384,8 +38382,7 @@
       {
         "name": "USDC and fiat reserve assets",
         "pct": 100,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "notices": [
@@ -38633,13 +38630,6 @@
         "chain": "solana",
         "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
         "decimals": 6
-      }
-    ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "wrapper"
       }
     ],
     "canBeBlacklisted": true,
@@ -40969,7 +40959,7 @@
         "pct": 39,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Auto Finance (autoUSD, baseUSD)",
@@ -40998,14 +40988,14 @@
         "pct": 7,
         "risk": "low",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Avantis avUSDC (perpetuals collateral)",
         "pct": 6,
         "risk": "high",
         "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "depType": "collateral"
       },
       {
         "name": "Other DeFi (Fluid, Resolv RLP, Euler, Revert Lend)",
@@ -41034,7 +41024,7 @@
           "name": "USDC-denominated Yield Optimizer strategies",
           "risk": "high",
           "coinId": "usdc-circle",
-          "depType": "wrapper",
+          "depType": "collateral",
           "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
         },
         "rpcUrl": "https://base-rpc.publicnode.com",

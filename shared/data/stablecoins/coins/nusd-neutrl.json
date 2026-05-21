@@ -68,8 +68,7 @@
     {
       "name": "Stablecoin reserves",
       "pct": 93.5,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     },
     {
       "name": "OTC aggregate positions",
@@ -104,12 +103,6 @@
         "ETH": "very-low",
         "OTC Aggregate": "high",
         "Other": "high"
-      },
-      "coinIdMap": {
-        "Stablecoin": "usdc-circle"
-      },
-      "depTypeMap": {
-        "Stablecoin": "collateral"
       },
       "renameMap": {
         "Stablecoin": "Stablecoin reserves",

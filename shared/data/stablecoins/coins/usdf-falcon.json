@@ -98,7 +98,8 @@
     {
       "name": "Tokenized Treasuries (USTB)",
       "pct": 5,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "ustb-superstate"
     }
   ],
   "liveReservesConfig": {

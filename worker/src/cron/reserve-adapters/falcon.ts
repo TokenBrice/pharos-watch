@@ -49,6 +49,19 @@ const FALCON_STABLE_ASSETS = new Set([
   "USDB",
   "GHO",
 ]);
+const FALCON_TRACKED_STABLE_ASSETS: Partial<Record<string, { name: string; coinId: string; risk: "low" }>> = {
+  USDC: { name: "USDC cash-equivalent assets", coinId: "usdc-circle", risk: "low" },
+  USDT: { name: "USDT cash-equivalent assets", coinId: "usdt-tether", risk: "low" },
+  DAI: { name: "DAI cash-equivalent assets", coinId: "dai-makerdao", risk: "low" },
+  FDUSD: { name: "FDUSD cash-equivalent assets", coinId: "fdusd-first-digital", risk: "low" },
+  FRAX: { name: "FRAX cash-equivalent assets", coinId: "frax-frax", risk: "low" },
+  USD1: { name: "USD1 cash-equivalent assets", coinId: "usd1-world-liberty-financial", risk: "low" },
+  USDS: { name: "USDS cash-equivalent assets", coinId: "usds-sky", risk: "low" },
+  TUSD: { name: "TUSD cash-equivalent assets", coinId: "tusd-trueusd", risk: "low" },
+  AUSD: { name: "AUSD cash-equivalent assets", coinId: "ausd-agora", risk: "low" },
+  USDB: { name: "USDB cash-equivalent assets", coinId: "usdb-blast", risk: "low" },
+  GHO: { name: "GHO cash-equivalent assets", coinId: "gho-aave", risk: "low" },
+};
 const FALCON_RWA_ASSETS = new Set(["USTB", "JTRSY", "JAAA", "XAUT"]);
 const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: string; risk: "medium" | "low" }>> = {
   USTB: { name: "USTB tokenized Treasury assets", coinId: "ustb-superstate", risk: "medium" },
@@ -110,6 +123,7 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   }
 
   const warnings: LiveReserveWarning[] = [];
+  const trackedStableValues = new Map<string, number>();
   const trackedRwaValues = new Map<string, number>();
   const {
     bucketTotals,
@@ -121,6 +135,9 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     getValue: sumFalconAssetValue,
     getBucket: (asset) => {
       const bucket = bucketForFalconAsset(asset.label);
+      if (bucket === "stable" && FALCON_TRACKED_STABLE_ASSETS[asset.label]) {
+        trackedStableValues.set(asset.label, (trackedStableValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
+      }
       if (bucket === "rwa" && FALCON_TRACKED_RWA_ASSETS[asset.label]) {
         trackedRwaValues.set(asset.label, (trackedRwaValues.get(asset.label) ?? 0) + sumFalconAssetValue(asset));
       }
@@ -151,9 +168,19 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   const { slices, immediateRedeemableUsd: stableBucketUsd } = buildBucketSlices(
     bucketTotals,
     [
+      ...Array.from(trackedStableValues, ([label, value]) => {
+        const config = FALCON_TRACKED_STABLE_ASSETS[label]!;
+        return {
+          name: config.name,
+          value,
+          risk: config.risk,
+          coinId: config.coinId,
+          depType: "collateral" as const,
+        };
+      }),
       {
         name: "Stablecoins / cash equivalents",
-        bucket: "stable",
+        value: Math.max(0, (bucketTotals.get("stable") ?? 0) - Array.from(trackedStableValues.values()).reduce((sum, value) => sum + value, 0)),
         risk: "low",
       },
       {

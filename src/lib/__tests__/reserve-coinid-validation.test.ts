@@ -25,18 +25,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
   ],
   [
-    "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::USDe",
-    "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
-  ],
-  [
-    "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::USDS",
-    "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
-  ],
-  [
-    "dola-inverse-finance::Stablecoin collateral (sUSDe, sUSDS, scrvUSD)::crvUSD",
-    "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
-  ],
-  [
     "apxusd-apyx::Cash & Equivalents (USDC, U.S. Treasury Bills)::USDC",
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
   ],
@@ -51,10 +39,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::DAI",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
-  ],
-  [
-    "lvusd-leverup::USDC and MON liquidity-layer collateral::USDC",
-    "lvUSD's reserve slice mixes USDC with MON protocol collateral, so no single tracked stablecoin coinId is representative.",
   ],
   [
     "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDC",
@@ -81,8 +65,56 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "USDai's base-token reserve slice intentionally aggregates variable USDC and USDT collateral, so no single fixed coinId is representative.",
   ],
   [
-    "hbusdt-hyperbeat::hoUSDT strategy exposure (Hyperbeat USDT strategy product)::USDT",
-    "hoUSDT is a Hyperbeat strategy wrapper that uses USDT underneath rather than a direct USDT reserve, so coinId inheritance is two layers removed and not representative.",
+    "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDC",
+    "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDT",
+    "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDtb",
+    "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "usdf-falcon::Stablecoins (USDC/USDT)::USDC",
+    "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
+  ],
+  [
+    "usdf-falcon::Stablecoins (USDC/USDT)::USDT",
+    "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
+  ],
+  [
+    "ylds-figure::Digital assets (USDC + USDT, operational)::USDC",
+    "YLDS reports this as a de minimis mixed operational digital-asset bucket without stablecoin-level weights.",
+  ],
+  [
+    "ylds-figure::Digital assets (USDC + USDT, operational)::USDT",
+    "YLDS reports this as a de minimis mixed operational digital-asset bucket without stablecoin-level weights.",
+  ],
+  [
+    "zeusd-zoth::Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)::USYC",
+    "ZeUSD reports this as a mixed tokenized T-bill/MMF bucket; current metadata lacks reliable per-asset weights for a single coinId.",
+  ],
+  [
+    "iusd-infinifi::Aave Horizon USDC/RLUSD (institutional pools)::USDC",
+    "infiniFi's static fallback groups Aave Horizon USDC and RLUSD into one small mixed bucket; live farm data carries exact coinIds when the source separates positions.",
+  ],
+  [
+    "wemix-dollar-wemix::USDC and fiat reserve assets::USDC",
+    "WEMIX$ describes a mixed USDC plus fiat reserve base without a current source split, so a 100% USDC dependency would overstate the relationship.",
+  ],
+  [
+    "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",
+    "SILK reports a mixed stablecoin redemption pool without stable-level weights, so no single tracked stablecoin coinId is representative.",
+  ],
+  [
+    "ntbill-nest::Stablecoin liquidity buffer (USDC / pUSD)::USDC",
+    "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
+  ],
+  [
+    "nwisdom-nest::Stablecoin liquidity buffer (USDC / pUSD)::USDC",
+    "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
   ],
 ]);
 

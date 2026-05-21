@@ -90,10 +90,14 @@ describe("adaptFirmMarkets", () => {
 
     expect(result.slices).toHaveLength(3);
     const ethSlice = result.slices.find((s) => s.name.includes("ETH"));
-    const stableSlice = result.slices.find((s) => s.name.includes("Stablecoin"));
+    const stableSlice = result.slices.find((s) => s.name === "sUSDe collateral");
     const btcSlice = result.slices.find((s) => s.name.includes("BTC"));
     expect(ethSlice?.pct).toBe(50);
-    expect(stableSlice?.pct).toBe(30);
+    expect(stableSlice).toMatchObject({
+      pct: 30,
+      coinId: "susde-ethena",
+      depType: "collateral",
+    });
     expect(btcSlice?.pct).toBe(20);
   });
 
@@ -158,7 +162,7 @@ describe("adaptFirmMarkets", () => {
       const prefix = s.name.split(" (")[0];
       riskByPrefix[prefix] = s.risk;
     }
-    expect(riskByPrefix["Stablecoin collateral"]).toBe("low");
+    expect(riskByPrefix["sUSDe collateral"]).toBe("high");
     expect(riskByPrefix["ETH / Liquid staking"]).toBe("low");
     expect(riskByPrefix["BTC"]).toBe("medium");
     expect(riskByPrefix["Governance tokens"]).toBe("very-high");

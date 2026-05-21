@@ -107,11 +107,11 @@
           "token": {
             "chain": "ethereum",
             "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
-            "decimals": 6
+          "decimals": 6
           },
           "risk": "low",
           "coinId": "usdc-circle",
-          "depType": "wrapper"
+          "depType": "collateral"
         },
         {
           "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
@@ -123,7 +123,7 @@
           },
           "risk": "low",
           "coinId": "usdc-circle",
-          "depType": "wrapper"
+          "depType": "collateral"
         },
         {
           "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
@@ -135,7 +135,7 @@
           },
           "risk": "low",
           "coinId": "usdc-circle",
-          "depType": "wrapper"
+          "depType": "collateral"
         },
         {
           "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
@@ -147,7 +147,7 @@
           },
           "risk": "low",
           "coinId": "usdc-circle",
-          "depType": "wrapper"
+          "depType": "collateral"
         },
         {
           "name": "Wrapped Compound USDT (wcUSDTv3)",
@@ -159,7 +159,7 @@
           },
           "risk": "low",
           "coinId": "usdt-tether",
-          "depType": "wrapper"
+          "depType": "collateral"
         }
       ]
     }

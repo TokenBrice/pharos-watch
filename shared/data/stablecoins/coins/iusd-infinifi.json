@@ -113,15 +113,14 @@
     {
       "name": "Aave Horizon USDC/RLUSD (institutional pools)",
       "pct": 2,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
+      "risk": "low"
     },
     {
       "name": "sGHO (Aave GHO staking)",
       "pct": 1,
       "risk": "medium",
-      "coinId": "sgho-aave"
+      "coinId": "sgho-aave",
+      "depType": "collateral"
     }
   ],
   "liveReservesConfig": {

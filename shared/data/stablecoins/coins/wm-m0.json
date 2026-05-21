@@ -90,13 +90,6 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",
   "deploymentModel": "third-party-bridge",
-  "dependencies": [
-    {
-      "id": "m-m0",
-      "weight": 1,
-      "type": "wrapper"
-    }
-  ],
   "reserves": [
     {
       "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",

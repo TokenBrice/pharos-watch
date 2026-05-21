@@ -57,14 +57,14 @@
       "pct": 65,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     },
     {
       "name": "USDC (via Curve AMO LP)",
       "pct": 35,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "collateral"
     }
   ],
   "liveReservesConfig": {

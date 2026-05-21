@@ -94,9 +94,18 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Stablecoin collateral (sUSDe, sUSDS, scrvUSD)",
-      "pct": 97,
-      "risk": "low"
+      "name": "sUSDe collateral",
+      "pct": 88.8,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "collateral"
+    },
+    {
+      "name": "sUSDS collateral",
+      "pct": 7.7,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral"
     },
     {
       "name": "Governance tokens (INV, CRV, CVX)",
@@ -107,6 +116,11 @@
       "name": "ETH / liquid staking collateral",
       "pct": 1,
       "risk": "low"
+    },
+    {
+      "name": "BTC collateral",
+      "pct": 0.5,
+      "risk": "medium"
     }
   ],
   "yieldConfig": {
