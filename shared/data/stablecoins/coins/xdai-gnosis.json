@@ -53,7 +53,7 @@
       "pct": 100,
       "risk": "low",
       "coinId": "dai-makerdao",
-      "depType": "collateral"
+      "depType": "wrapper"
     }
   ],
   "notices": [

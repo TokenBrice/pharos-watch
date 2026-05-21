@@ -69,13 +69,13 @@
     {
       "name": "Nest Treasury vault (nTBILL)",
       "pct": 3,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "ntbill-nest"
     },
     {
       "name": "Liquid stablecoin balances",
       "pct": 4,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

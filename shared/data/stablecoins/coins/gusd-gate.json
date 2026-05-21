@@ -61,10 +61,16 @@
       "risk": "very-low"
     },
     {
-      "name": "USDT/USDC deposits (minting collateral)",
-      "pct": 25,
+      "name": "USDT deposits (minting collateral)",
+      "pct": 12.5,
       "risk": "low",
       "coinId": "usdt-tether"
+    },
+    {
+      "name": "USDC deposits (minting collateral)",
+      "pct": 12.5,
+      "risk": "low",
+      "coinId": "usdc-circle"
     },
     {
       "name": "Yield strategies (CEX-managed, undisclosed composition)",

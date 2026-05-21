@@ -67,7 +67,7 @@
       "name": "Aave markets (sGHO)",
       "pct": 4.5,
       "risk": "medium",
-      "coinId": "gho-aave"
+      "coinId": "sgho-aave"
     },
     {
       "name": "Aave markets (RLUSD)",

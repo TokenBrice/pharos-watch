@@ -73,10 +73,16 @@
       "risk": "medium"
     },
     {
-      "name": "USDT / USDC (stablecoins)",
-      "pct": 15,
+      "name": "USDT (stablecoins)",
+      "pct": 7.5,
       "risk": "low",
       "coinId": "usdt-tether"
+    },
+    {
+      "name": "USDC (stablecoins)",
+      "pct": 7.5,
+      "risk": "low",
+      "coinId": "usdc-circle"
     },
     {
       "name": "GIGADOT / GIGAETH",

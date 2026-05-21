@@ -461,6 +461,7 @@ const ghoGsmModuleSchema = z
     address: z.string(),
     label: z.string(),
     coinId: z.string().optional(),
+    depType: LiveReserveDependencyTypeSchema.optional(),
     risk: LiveReserveRiskSchema.optional(),
   })
   .strict();

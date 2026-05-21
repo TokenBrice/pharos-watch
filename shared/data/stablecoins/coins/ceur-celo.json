@@ -63,7 +63,7 @@
       "name": "sUSDS (Sky savings USDS)",
       "pct": 56,
       "risk": "low",
-      "coinId": "usds-sky"
+      "coinId": "susds-sky"
     },
     {
       "name": "EURC (Circle euro stablecoin)",
@@ -79,7 +79,8 @@
     {
       "name": "USDGLO (Glo Dollar)",
       "pct": 4,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "usdglo-glo"
     },
     {
       "name": "stETH (Lido staked ETH)",

@@ -5,6 +5,7 @@ type WrapperAssetKey =
   | "gho"
   | "pyusd"
   | "rlusd"
+  | "sgho"
   | "usdc"
   | "usd1"
   | "usdt";
@@ -17,6 +18,7 @@ const WRAPPER_ASSET_META: Record<WrapperAssetKey, {
   gho: { coinId: "gho-aave", depType: "wrapper" },
   pyusd: { coinId: "pyusd-paypal", depType: "wrapper" },
   rlusd: { coinId: "rlusd-ripple", depType: "wrapper" },
+  sgho: { coinId: "sgho-aave", depType: "wrapper" },
   usdc: { coinId: "usdc-circle", depType: "wrapper" },
   usd1: { coinId: "usd1-world-liberty-financial", depType: "wrapper" },
   usdt: { coinId: "usdt-tether", depType: "wrapper" },

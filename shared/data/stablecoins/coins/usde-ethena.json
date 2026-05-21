@@ -213,8 +213,7 @@
     {
       "name": "Liquid Stables (USDtb / USDC / USDT)",
       "pct": 76,
-      "risk": "low",
-      "coinId": "usdtb-ethena"
+      "risk": "low"
     },
     {
       "name": "BTC (delta-neutral)",

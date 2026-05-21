@@ -62,7 +62,7 @@
       "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
       "pct": 43,
       "risk": "low",
-      "coinId": "usds-sky"
+      "coinId": "susds-sky"
     },
     {
       "name": "CELO",
@@ -90,7 +90,8 @@
     {
       "name": "axlEUROC",
       "pct": 5,
-      "risk": "medium"
+      "risk": "medium",
+      "coinId": "eurc-circle"
     },
     {
       "name": "stETH",

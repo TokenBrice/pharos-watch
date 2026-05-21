@@ -121,7 +121,7 @@
       "name": "sGHO (Aave GHO staking)",
       "pct": 1,
       "risk": "medium",
-      "coinId": "gho-aave"
+      "coinId": "sgho-aave"
     }
   ],
   "liveReservesConfig": {

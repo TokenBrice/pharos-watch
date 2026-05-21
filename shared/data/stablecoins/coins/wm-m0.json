@@ -101,7 +101,9 @@
     {
       "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper"
     }
   ],
   "liveReservesConfig": {

@@ -50,9 +50,11 @@ describe("adaptFraxBalanceSheet", () => {
     const ustb = result.slices.find((s) => s.name.startsWith("USTB"));
     const buidl = result.slices.find((s) => s.name.startsWith("BUIDL"));
     const usdc = result.slices.find((s) => s.name.startsWith("USDC"));
+    const usdb = result.slices.find((s) => s.name.startsWith("USDB"));
     expect(ustb!.coinId).toBe("ustb-superstate");
     expect(buidl!.coinId).toBe("buidl-blackrock");
     expect(usdc!.coinId).toBe("usdc-circle");
+    expect(usdb!.coinId).toBe("usdb-bridge");
   });
 
   it("includes verified freshness when asOfTimestamp is present", () => {

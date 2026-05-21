@@ -55,10 +55,16 @@
       "risk": "high"
     },
     {
-      "name": "USDC/USDT (via PSM)",
-      "pct": 25,
+      "name": "USDC (via PSM)",
+      "pct": 12.5,
       "risk": "low",
       "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT (via PSM)",
+      "pct": 12.5,
+      "risk": "low",
+      "coinId": "usdt-tether"
     },
     {
       "name": "BTC (wrapped, via CDPs)",

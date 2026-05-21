@@ -61,16 +61,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "dependencies": [
-    {
-      "id": "usdt-tether",
-      "weight": 0.5
-    },
-    {
-      "id": "usdc-circle",
-      "weight": 0.5
-    }
-  ],
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "cex",

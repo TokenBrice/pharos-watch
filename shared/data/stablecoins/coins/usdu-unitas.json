@@ -71,12 +71,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.8
-    }
-  ],
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",

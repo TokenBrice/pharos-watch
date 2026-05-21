@@ -83,8 +83,7 @@
     {
       "name": "Stablecoins (USDC/USDT)",
       "pct": 30,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     },
     {
       "name": "Altcoins (DOGE, FET, TRX, TON)",

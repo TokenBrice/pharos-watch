@@ -82,8 +82,7 @@
     {
       "name": "Stablecoin liquidity buffer (USDC / pUSD)",
       "pct": 0.5,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

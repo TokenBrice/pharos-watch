@@ -212,14 +212,8 @@
     {
       "name": "USDB (DBS tokenized deposits)",
       "pct": 1,
-      "risk": "low"
-    }
-  ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.01,
-      "type": "collateral"
+      "risk": "low",
+      "coinId": "usdb-bridge"
     }
   ],
   "liveReservesConfig": {

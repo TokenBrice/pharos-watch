@@ -60,10 +60,16 @@
       "coinId": "usdtb-ethena"
     },
     {
-      "name": "Liquid stablecoins (USDC/USDT) for redemptions",
-      "pct": 10,
+      "name": "Liquid stablecoins (USDC) for redemptions",
+      "pct": 5,
       "risk": "low",
       "coinId": "usdc-circle"
+    },
+    {
+      "name": "Liquid stablecoins (USDT) for redemptions",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdt-tether"
     }
   ],
   "liveReservesConfig": {

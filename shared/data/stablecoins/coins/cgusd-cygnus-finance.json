@@ -56,10 +56,16 @@
       "risk": "very-low"
     },
     {
-      "name": "On-chain stablecoins (USDC/USDT)",
-      "pct": 15,
+      "name": "On-chain stablecoins (USDC)",
+      "pct": 7.5,
       "risk": "low",
       "coinId": "usdc-circle"
+    },
+    {
+      "name": "On-chain stablecoins (USDT)",
+      "pct": 7.5,
+      "risk": "low",
+      "coinId": "usdt-tether"
     },
     {
       "name": "Accrued interest",

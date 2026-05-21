@@ -27,6 +27,26 @@ function collectDirectWrapperParentCandidates(meta: StablecoinMeta): string[] {
   return [...candidates];
 }
 
+function hasOtherTrackedLinkedExposure(
+  meta: StablecoinMeta,
+  parentId: string,
+  metaById: ReadonlyMap<string, StablecoinMeta>,
+): boolean {
+  for (const dependency of meta.dependencies ?? []) {
+    if (dependency.id !== parentId && metaById.has(dependency.id)) {
+      return true;
+    }
+  }
+
+  for (const reserve of meta.reserves ?? []) {
+    if (reserve.coinId != null && reserve.coinId !== parentId && metaById.has(reserve.coinId)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function validateVariantRelationships(tracked: StablecoinMeta[]): string[] {
   const errors: string[] = [];
   const metaById = new Map(tracked.map((meta) => [meta.id, meta]));
@@ -49,9 +69,14 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
       });
 
       if (activeNonNavParents.length === 1) {
+        const parentId = activeNonNavParents[0];
+        if (hasOtherTrackedLinkedExposure(meta, parentId, metaById)) {
+          continue;
+        }
+
         errors.push(
-          `${meta.id}: active USD navToken has direct wrapper exposure to ${activeNonNavParents[0]} but does not declare variantOf / variantKind. ` +
-            `Fix: add variantOf "${activeNonNavParents[0]}" with the appropriate variantKind, or remove the direct wrapper parent signal if this is not a tracked parent-child variant.`,
+          `${meta.id}: active USD navToken has direct wrapper exposure to ${parentId} but does not declare variantOf / variantKind. ` +
+            `Fix: add variantOf "${parentId}" with the appropriate variantKind, or remove the direct wrapper parent signal if this is not a tracked parent-child variant.`,
         );
       }
     }

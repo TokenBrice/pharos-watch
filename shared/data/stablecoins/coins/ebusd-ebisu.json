@@ -56,7 +56,7 @@
       "name": "sUSDe (Ethena savings)",
       "pct": 43.9,
       "risk": "medium",
-      "coinId": "usde-ethena",
+      "coinId": "susde-ethena",
       "depType": "wrapper"
     },
     {
@@ -122,7 +122,7 @@
             "decimals": 18
           },
           "risk": "medium",
-          "coinId": "usde-ethena",
+          "coinId": "susde-ethena",
           "depType": "wrapper"
         },
         {

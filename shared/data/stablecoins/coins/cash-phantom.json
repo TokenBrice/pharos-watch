@@ -73,8 +73,7 @@
     {
       "name": "Tokenized treasuries (BUIDL, USTB)",
       "pct": 10,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

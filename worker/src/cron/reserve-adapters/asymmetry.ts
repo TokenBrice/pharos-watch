@@ -32,9 +32,9 @@ interface BranchRiskConfig {
 
 const BRANCH_RISK_MAP: Record<string, BranchRiskConfig> = {
   ysybold: { risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
-  scrvusd: { risk: "medium", coinId: "crvusd-curve", depType: "wrapper" },
-  susds: { risk: "low", coinId: "usds-sky", depType: "wrapper" },
-  sfrxusd: { risk: "medium", coinId: "frax-frax", depType: "wrapper" },
+  scrvusd: { risk: "medium", coinId: "scrvusd-curve", depType: "wrapper" },
+  susds: { risk: "low", coinId: "susds-sky", depType: "collateral" },
+  sfrxusd: { risk: "medium", coinId: "sfrxusd-frax", depType: "collateral" },
   tbtc: { risk: getCanonicalReserveAssetRisk("TBTC") ?? "medium" },
   wbtc: { risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium" },
 };

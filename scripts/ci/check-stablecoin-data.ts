@@ -23,6 +23,7 @@ import {
 } from "../lib/stablecoin-catalog-sources";
 
 const RESERVE_TOTAL_TOLERANCE = 0.5;
+const DEPENDENCY_RESERVE_WEIGHT_TOLERANCE = 0.005;
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
 const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([
   "zsd-zephyr-protocol",
@@ -125,6 +126,53 @@ function getDependencyTotalIssue(coin: StablecoinMeta): string | null {
 
   const total = coin.dependencies.reduce((sum, dependency) => sum + dependency.weight, 0);
   return total > 0 ? null : "dependency weight total must be greater than 0";
+}
+
+function dependencyKey(dependency: { id: string; type?: string }): string {
+  return `${dependency.id}::${dependency.type ?? "collateral"}`;
+}
+
+function getDependencyReserveAlignmentIssues(coin: StablecoinMeta): string[] {
+  const dependencies = coin.dependencies ?? [];
+  const linkedReserves = (coin.reserves ?? []).filter((reserve) => reserve.coinId);
+  if (dependencies.length === 0 || linkedReserves.length === 0) return [];
+
+  const dependencyWeights = new Map<string, number>();
+  for (const dependency of dependencies) {
+    const key = dependencyKey(dependency);
+    dependencyWeights.set(key, (dependencyWeights.get(key) ?? 0) + dependency.weight);
+  }
+
+  const reserveWeights = new Map<string, number>();
+  for (const reserve of linkedReserves) {
+    const key = dependencyKey({ id: reserve.coinId!, type: reserve.depType });
+    reserveWeights.set(key, (reserveWeights.get(key) ?? 0) + reserve.pct / 100);
+  }
+
+  const issues: string[] = [];
+  for (const key of dependencyWeights.keys()) {
+    if (!reserveWeights.has(key)) {
+      issues.push(`dependencies includes ${key} but linked reserves do not`);
+    }
+  }
+  for (const key of reserveWeights.keys()) {
+    if (!dependencyWeights.has(key)) {
+      issues.push(`linked reserves include ${key} but dependencies does not`);
+    }
+  }
+  for (const [key, dependencyWeight] of dependencyWeights) {
+    const reserveWeight = reserveWeights.get(key);
+    if (
+      reserveWeight != null &&
+      Math.abs(dependencyWeight - reserveWeight) > DEPENDENCY_RESERVE_WEIGHT_TOLERANCE
+    ) {
+      issues.push(
+        `${key} weight mismatch: dependencies=${dependencyWeight}, linked reserves=${Number(reserveWeight.toFixed(6))}`,
+      );
+    }
+  }
+
+  return issues;
 }
 
 function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>): string[] {
@@ -252,6 +300,10 @@ if (errorCount === 0) {
     const dependencyTotalIssue = getDependencyTotalIssue(entry.coin);
     if (dependencyTotalIssue) {
       reportError(`${entry.file} (${entry.coin.id}): ${dependencyTotalIssue}`);
+    }
+
+    for (const alignmentIssue of getDependencyReserveAlignmentIssues(entry.coin)) {
+      reportError(`${entry.file} (${entry.coin.id}): ${alignmentIssue}`);
     }
 
     const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);

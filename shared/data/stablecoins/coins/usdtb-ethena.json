@@ -12,7 +12,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in USDC stablecoin reserve for rapid redemptions; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
+  "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash or cash-equivalent redemption reserves; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
   "pegMechanism": "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
   "llamaId": "221",
   "detailProvider": "defillama",
@@ -83,10 +83,9 @@
       "coinId": "buidl-blackrock"
     },
     {
-      "name": "USDC (redemption reserve)",
+      "name": "Cash and cash-equivalent redemption reserve",
       "pct": 10,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

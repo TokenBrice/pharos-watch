@@ -118,7 +118,7 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     key: "sUSDS",
     name: "sUSDS (Sky savings USDS)",
     risk: "low",
-    coinId: "usds-sky",
+    coinId: "susds-sky",
     stableLike: true,
   },
   EURC: {
@@ -140,6 +140,7 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
     key: "USDGLO",
     name: "USDGLO (Glo Dollar)",
     risk: "low",
+    coinId: "usdglo-glo",
     stableLike: true,
   },
   stETH: {

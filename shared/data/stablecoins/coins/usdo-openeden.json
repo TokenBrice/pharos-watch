@@ -73,7 +73,8 @@
     {
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
       "pct": 70,
-      "risk": "very-low"
+      "risk": "very-low",
+      "coinId": "tbill-openeden"
     },
     {
       "name": "BlackRock BUIDL (tokenized money market fund)",
@@ -84,7 +85,8 @@
     {
       "name": "Franklin Templeton BENJI (tokenized govt money fund)",
       "pct": 5,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "benji-franklin-templeton"
     },
     {
       "name": "USDC cash buffer",

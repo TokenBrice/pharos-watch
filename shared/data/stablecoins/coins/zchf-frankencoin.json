@@ -117,10 +117,16 @@
       "risk": "high"
     },
     {
-      "name": "Gold tokens (PAXG, XAUt)",
-      "pct": 4,
+      "name": "PAXG gold token",
+      "pct": 2,
       "risk": "medium",
       "coinId": "paxg-paxos"
+    },
+    {
+      "name": "XAUt gold token",
+      "pct": 2,
+      "risk": "medium",
+      "coinId": "xaut-tether"
     },
     {
       "name": "Other (WETH, GNO, REALU, LENDS)",

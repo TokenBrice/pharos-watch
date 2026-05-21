@@ -68,10 +68,16 @@
       "risk": "high"
     },
     {
-      "name": "Cash stablecoins (USDC/USDT buffer)",
-      "pct": 10,
+      "name": "Cash stablecoins (USDC buffer)",
+      "pct": 5,
       "risk": "low",
       "coinId": "usdc-circle"
+    },
+    {
+      "name": "Cash stablecoins (USDT buffer)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdt-tether"
     }
   ],
   "yieldConfig": {

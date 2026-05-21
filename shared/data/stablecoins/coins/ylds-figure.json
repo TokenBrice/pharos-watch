@@ -80,8 +80,7 @@
     {
       "name": "Digital assets (USDC + USDT, operational)",
       "pct": 1,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

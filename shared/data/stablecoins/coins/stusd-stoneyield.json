@@ -12,6 +12,9 @@
     "rwa": false,
     "navToken": true
   },
+  "pegReferenceId": "usdc-circle",
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
   "collateral": "USDC and yield-bearing USDC positions routed through StoneYield's protocol contracts and Venus-linked strategy layer",
   "pegMechanism": "StoneYield wrapper token designed to maintain one-dollar accounting against deposited stablecoin assets while strategy yield accrues through the protocol's managed vault structure",
   "geckoId": "stoneyield-usd",
@@ -60,7 +63,7 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "collateral"
+      "depType": "wrapper"
     }
   ],
   "yieldConfig": {

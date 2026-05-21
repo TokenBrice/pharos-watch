@@ -103,10 +103,17 @@
   },
   "reserves": [
     {
-      "name": "Delta-neutral ETH basis trade positions (via sUSDe/USDe)",
-      "pct": 50,
+      "name": "Delta-neutral ETH basis trade positions (via USDe)",
+      "pct": 25,
       "risk": "high",
       "coinId": "usde-ethena"
+    },
+    {
+      "name": "Delta-neutral ETH basis trade positions (via sUSDe)",
+      "pct": 25,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "wrapper"
     },
     {
       "name": "Short-duration U.S. Treasury bills",

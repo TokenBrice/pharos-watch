@@ -62,7 +62,8 @@
       "name": "sUSDe (Ethena, mint & borrow markets)",
       "pct": 15,
       "risk": "high",
-      "coinId": "usde-ethena"
+      "coinId": "susde-ethena",
+      "depType": "wrapper"
     },
     {
       "name": "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)",

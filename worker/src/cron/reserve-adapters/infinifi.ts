@@ -64,7 +64,7 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "tokemak-auto-infinifiUSD": { risk: "medium" },
   "gauntlet-alpha-farm":     { risk: "medium" },
   "reservoir-wsrUSD":        { risk: "medium" },
-  "sGHO":                    { risk: "medium", ...wrapperAssetMeta("gho") },
+  "sGHO":                    { risk: "medium", ...wrapperAssetMeta("sgho") },
   "liquid-cap":              { risk: "medium" },
   "cowswap-fxSave":          { risk: "medium" },
 };

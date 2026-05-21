@@ -2,7 +2,7 @@
   "id": "usd0-usual",
   "name": "Usual USD",
   "symbol": "USD0",
-  "oneLiner": "USD0 is Usual's RWA-backed dollar, fully collateralized by tokenized U.S. T-bills (USYC, M, BUIDL, OUSG) plus a small USDC redemption reserve.",
+  "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M, USTBL, and USDC.",
   "mechanismArchetype": "tbill",
   "flags": {
     "backing": "rwa-backed",
@@ -19,7 +19,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
+  "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
   "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
   "llamaId": "195",
   "detailProvider": "defillama",
@@ -80,26 +80,14 @@
       "coinId": "m-m0"
     },
     {
-      "name": "USDtb by Ethena (BUIDL + USDC)",
+      "name": "USTBL by Spiko",
       "pct": 10,
       "risk": "low",
-      "coinId": "usdtb-ethena"
-    },
-    {
-      "name": "BlackRock BUIDL",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
-    },
-    {
-      "name": "OUSG by Ondo (tokenized T-bills)",
-      "pct": 3,
-      "risk": "low",
-      "coinId": "ousg-ondo-finance"
+      "coinId": "ustbl-spiko"
     },
     {
       "name": "USDC (Circle)",
-      "pct": 2,
+      "pct": 10,
       "risk": "low",
       "coinId": "usdc-circle"
     }

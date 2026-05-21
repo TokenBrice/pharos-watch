@@ -137,7 +137,8 @@
             "address": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
             "decimals": 6
           },
-          "risk": "low"
+          "risk": "low",
+          "coinId": "pyusd-paypal"
         }
       ]
     }

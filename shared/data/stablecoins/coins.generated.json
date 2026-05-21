@@ -4001,10 +4001,16 @@
         "risk": "high"
       },
       {
-        "name": "USDC/USDT (via PSM)",
-        "pct": 25,
+        "name": "USDC (via PSM)",
+        "pct": 12.5,
         "risk": "low",
         "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT (via PSM)",
+        "pct": 12.5,
+        "risk": "low",
+        "coinId": "usdt-tether"
       },
       {
         "name": "BTC (wrapped, via CDPs)",
@@ -4650,8 +4656,7 @@
       {
         "name": "Tokenized treasuries (BUIDL, USTB)",
         "pct": 10,
-        "risk": "low",
-        "coinId": "buidl-blackrock"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -5014,7 +5019,7 @@
         "name": "sUSDS (Sky savings USDS)",
         "pct": 56,
         "risk": "low",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       },
       {
         "name": "EURC (Circle euro stablecoin)",
@@ -5030,7 +5035,8 @@
       {
         "name": "USDGLO (Glo Dollar)",
         "pct": 4,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdglo-glo"
       },
       {
         "name": "stETH (Lido staked ETH)",
@@ -5198,10 +5204,16 @@
         "risk": "very-low"
       },
       {
-        "name": "On-chain stablecoins (USDC/USDT)",
-        "pct": 15,
+        "name": "On-chain stablecoins (USDC)",
+        "pct": 7.5,
         "risk": "low",
         "coinId": "usdc-circle"
+      },
+      {
+        "name": "On-chain stablecoins (USDT)",
+        "pct": 7.5,
+        "risk": "low",
+        "coinId": "usdt-tether"
       },
       {
         "name": "Accrued interest",
@@ -5838,6 +5850,28 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 0.25,
+        "type": "mechanism"
+      },
+      {
+        "id": "usdt-tether",
+        "weight": 0.25,
+        "type": "mechanism"
+      },
+      {
+        "id": "pyusd-paypal",
+        "weight": 0.25,
+        "type": "mechanism"
+      },
+      {
+        "id": "tusd-trueusd",
+        "weight": 0.25,
+        "type": "mechanism"
+      }
+    ],
     "canBeBlacklisted": "dilutable",
     "canBeBlacklistedSource": {
       "label": "Etherscan contract source",
@@ -6238,7 +6272,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 56,
         "risk": "low",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       },
       {
         "name": "EURC (Circle euro stablecoin)",
@@ -6254,7 +6288,8 @@
       {
         "name": "USDGLO (Glo Dollar)",
         "pct": 4,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdglo-glo"
       },
       {
         "name": "stETH (Lido staked ETH)",
@@ -7252,7 +7287,8 @@
         "name": "sUSDe (Ethena, mint & borrow markets)",
         "pct": 15,
         "risk": "high",
-        "coinId": "usde-ethena"
+        "coinId": "susde-ethena",
+        "depType": "wrapper"
       },
       {
         "name": "Syrup USDC (yield-bearing USDC wrapper, mint & borrow markets)",
@@ -7326,28 +7362,6 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdc-circle",
-        "weight": 0.3
-      },
-      {
-        "id": "usdt-tether",
-        "weight": 0.25
-      },
-      {
-        "id": "frxusd-frax",
-        "weight": 0.2
-      },
-      {
-        "id": "usds-sky",
-        "weight": 0.15
-      },
-      {
-        "id": "dai-makerdao",
-        "weight": 0.1
-      }
-    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -7363,31 +7377,50 @@
         "name": "sfrxUSD (Staked Frax USD)",
         "pct": 42,
         "risk": "medium",
-        "coinId": "frxusd-frax"
+        "coinId": "sfrxusd-frax"
       },
       {
         "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
         "pct": 35,
         "risk": "high",
-        "coinId": "frxusd-frax"
+        "coinId": "sfrxusd-frax",
+        "depType": "mechanism"
       },
       {
-        "name": "frxUSD / DAI / sDAI (Fraxtal)",
-        "pct": 14,
+        "name": "frxUSD (Fraxtal)",
+        "pct": 4,
         "risk": "medium",
         "coinId": "frxusd-frax"
       },
       {
-        "name": "vbUSDT / vbUSDC (Katana Vault Bridge)",
-        "pct": 6,
+        "name": "DAI (Fraxtal)",
+        "pct": 5,
+        "risk": "medium",
+        "coinId": "dai-makerdao"
+      },
+      {
+        "name": "sDAI (Fraxtal)",
+        "pct": 5,
+        "risk": "medium",
+        "coinId": "sdai-sky"
+      },
+      {
+        "name": "vbUSDT (Katana Vault Bridge)",
+        "pct": 3,
         "risk": "medium",
         "coinId": "usdt-tether"
+      },
+      {
+        "name": "vbUSDC (Katana Vault Bridge)",
+        "pct": 3,
+        "risk": "medium",
+        "coinId": "usdc-circle"
       },
       {
         "name": "sUSDS (Sky Savings Rate)",
         "pct": 3,
         "risk": "medium",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       }
     ],
     "notices": [
@@ -7524,16 +7557,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdt-tether",
-        "weight": 0.5
-      },
-      {
-        "id": "usdc-circle",
-        "weight": 0.5
-      }
-    ],
     "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
       "reviewedStatus": "possible",
@@ -7630,7 +7653,7 @@
         "name": "sUSDe (Ethena savings)",
         "pct": 43.9,
         "risk": "medium",
-        "coinId": "usde-ethena",
+        "coinId": "susde-ethena",
         "depType": "wrapper"
       },
       {
@@ -7692,7 +7715,7 @@
               "decimals": 18
             },
             "risk": "medium",
-            "coinId": "usde-ethena",
+            "coinId": "susde-ethena",
             "depType": "wrapper"
           },
           {
@@ -10765,13 +10788,6 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdc-circle",
-        "weight": 0.01,
-        "type": "collateral"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -10820,7 +10836,8 @@
       {
         "name": "USDB (DBS tokenized deposits)",
         "pct": 1,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdb-bridge"
       }
     ],
     "liveReservesConfig": {
@@ -11728,9 +11745,17 @@
       },
       {
         "name": "stataUSDC GSM",
-        "pct": 19.7,
+        "pct": 9.85,
         "risk": "low",
-        "coinId": "usdc-circle"
+        "coinId": "usdc-circle",
+        "depType": "mechanism"
+      },
+      {
+        "name": "stataUSDT GSM",
+        "pct": 9.85,
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "mechanism"
       },
       {
         "name": "LidoGhoDirectMinter",
@@ -11769,12 +11794,14 @@
             "address": "0x3a3868898305f04bec7fea77becff04c13444112",
             "label": "stataUSDC GSM",
             "coinId": "usdc-circle",
+            "depType": "mechanism",
             "risk": "low"
           },
           {
             "address": "0x882285e62656b9623af136ce3078c6bdcc33f5e3",
             "label": "stataUSDT GSM",
             "coinId": "usdt-tether",
+            "depType": "mechanism",
             "risk": "low"
           }
         ]
@@ -11849,7 +11876,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       },
       {
         "name": "CELO",
@@ -11877,7 +11904,8 @@
       {
         "name": "axlEUROC",
         "pct": 5,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "eurc-circle"
       },
       {
         "name": "stETH",
@@ -12447,10 +12475,16 @@
         "risk": "very-low"
       },
       {
-        "name": "USDT/USDC deposits (minting collateral)",
-        "pct": 25,
+        "name": "USDT deposits (minting collateral)",
+        "pct": 12.5,
         "risk": "low",
         "coinId": "usdt-tether"
+      },
+      {
+        "name": "USDC deposits (minting collateral)",
+        "pct": 12.5,
+        "risk": "low",
+        "coinId": "usdc-circle"
       },
       {
         "name": "Yield strategies (CEX-managed, undisclosed composition)",
@@ -12904,7 +12938,9 @@
       {
         "name": "hoUSDT strategy exposure (Hyperbeat USDT strategy product)",
         "pct": 60.5,
-        "risk": "high"
+        "risk": "high",
+        "coinId": "usdt-tether",
+        "depType": "wrapper"
       },
       {
         "name": "masterUSD strategy exposure (Hyperbeat masterUSD product)",
@@ -13529,10 +13565,16 @@
         "risk": "medium"
       },
       {
-        "name": "USDT / USDC (stablecoins)",
-        "pct": 15,
+        "name": "USDT (stablecoins)",
+        "pct": 7.5,
         "risk": "low",
         "coinId": "usdt-tether"
+      },
+      {
+        "name": "USDC (stablecoins)",
+        "pct": 7.5,
+        "risk": "low",
+        "coinId": "usdc-circle"
       },
       {
         "name": "GIGADOT / GIGAETH",
@@ -13778,7 +13820,8 @@
               "address": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
               "decimals": 6
             },
-            "risk": "low"
+            "risk": "low",
+            "coinId": "pyusd-paypal"
           }
         ]
       }
@@ -14145,13 +14188,13 @@
       {
         "name": "Nest Treasury vault (nTBILL)",
         "pct": 3,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ntbill-nest"
       },
       {
         "name": "Liquid stablecoin balances",
         "pct": 4,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -14530,7 +14573,7 @@
         "name": "sGHO (Aave GHO staking)",
         "pct": 1,
         "risk": "medium",
-        "coinId": "gho-aave"
+        "coinId": "sgho-aave"
       }
     ],
     "liveReservesConfig": {
@@ -15920,7 +15963,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       },
       {
         "name": "CELO",
@@ -15948,7 +15991,8 @@
       {
         "name": "axlEUROC",
         "pct": 5,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "eurc-circle"
       },
       {
         "name": "stETH",
@@ -16659,10 +16703,22 @@
         "risk": "medium"
       },
       {
-        "name": "USDT / USDC / FDUSD (via PSM)",
-        "pct": 15,
+        "name": "USDT (via PSM)",
+        "pct": 5,
         "risk": "low",
         "coinId": "usdt-tether"
+      },
+      {
+        "name": "USDC (via PSM)",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "FDUSD (via PSM)",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "fdusd-first-digital"
       }
     ],
     "liveReservesConfig": {
@@ -16998,8 +17054,14 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "USDC and MON liquidity-layer collateral",
-        "pct": 100,
+        "name": "USDC liquidity-layer collateral",
+        "pct": 50,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "MON liquidity-layer collateral",
+        "pct": 50,
         "risk": "high"
       }
     ],
@@ -19494,16 +19556,6 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdt-tether",
-        "weight": 0.05
-      },
-      {
-        "id": "usdc-circle",
-        "weight": 0.05
-      }
-    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -19770,8 +19822,7 @@
       {
         "name": "Stablecoin liquidity buffer",
         "pct": 2.44,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       },
       {
         "name": "Nest Treasury Vault nTBILL buffer",
@@ -19896,8 +19947,7 @@
       {
         "name": "Stablecoin liquidity buffer (USDC / pUSD)",
         "pct": 0.5,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -20207,8 +20257,7 @@
       {
         "name": "Stablecoin liquidity buffer (USDC / pUSD)",
         "pct": 2,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -21463,7 +21512,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       },
       {
         "name": "CELO",
@@ -21491,7 +21540,8 @@
       {
         "name": "axlEUROC",
         "pct": 5,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "eurc-circle"
       },
       {
         "name": "stETH",
@@ -21677,13 +21727,6 @@
         "chain": "ethereum",
         "address": "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
         "decimals": 18
-      }
-    ],
-    "dependencies": [
-      {
-        "id": "susds-sky",
-        "weight": 0.5,
-        "type": "mechanism"
       }
     ],
     "blacklistabilityReview": {
@@ -22395,10 +22438,17 @@
     "collateralQuality": "exotic",
     "reserves": [
       {
-        "name": "Delta-neutral ETH basis trade positions (via sUSDe/USDe)",
-        "pct": 50,
+        "name": "Delta-neutral ETH basis trade positions (via USDe)",
+        "pct": 25,
         "risk": "high",
         "coinId": "usde-ethena"
+      },
+      {
+        "name": "Delta-neutral ETH basis trade positions (via sUSDe)",
+        "pct": 25,
+        "risk": "high",
+        "coinId": "susde-ethena",
+        "depType": "wrapper"
       },
       {
         "name": "Short-duration U.S. Treasury bills",
@@ -25625,6 +25675,7 @@
       "rwa": false,
       "navToken": true
     },
+    "pegReferenceId": "usdc-circle",
     "collateral": "USDC and yield-bearing USDC positions routed through StoneYield's protocol contracts and Venus-linked strategy layer",
     "pegMechanism": "StoneYield wrapper token designed to maintain one-dollar accounting against deposited stablecoin assets while strategy yield accrues through the protocol's managed vault structure",
     "geckoId": "stoneyield-usd",
@@ -25667,13 +25718,15 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "multisig",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
     "reserves": [
       {
         "name": "USDC and yield-bearing USDC strategy positions",
         "pct": 100,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "collateral"
+        "depType": "wrapper"
       }
     ],
     "notices": [
@@ -27915,18 +27968,6 @@
         "url": "https://app.tori.finance/"
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdc-circle",
-        "weight": 0.5,
-        "type": "collateral"
-      },
-      {
-        "id": "usdt-tether",
-        "weight": 0.5,
-        "type": "collateral"
-      }
-    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -28775,7 +28816,7 @@
     "detailProvider": "defillama",
     "name": "Usual USD",
     "symbol": "USD0",
-    "oneLiner": "USD0 is Usual's RWA-backed dollar, fully collateralized by tokenized U.S. T-bills (USYC, M, BUIDL, OUSG) plus a small USDC redemption reserve.",
+    "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M, USTBL, and USDC.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -28784,7 +28825,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
+    "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
     "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
     "mechanismArchetype": "tbill",
     "geckoId": "usual-usd",
@@ -28851,26 +28892,14 @@
         "coinId": "m-m0"
       },
       {
-        "name": "USDtb by Ethena (BUIDL + USDC)",
+        "name": "USTBL by Spiko",
         "pct": 10,
         "risk": "low",
-        "coinId": "usdtb-ethena"
-      },
-      {
-        "name": "BlackRock BUIDL",
-        "pct": 5,
-        "risk": "low",
-        "coinId": "buidl-blackrock"
-      },
-      {
-        "name": "OUSG by Ondo (tokenized T-bills)",
-        "pct": 3,
-        "risk": "low",
-        "coinId": "ousg-ondo-finance"
+        "coinId": "ustbl-spiko"
       },
       {
         "name": "USDC (Circle)",
-        "pct": 2,
+        "pct": 10,
         "risk": "low",
         "coinId": "usdc-circle"
       }
@@ -29150,7 +29179,7 @@
         "pct": 25,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "collateral",
+        "depType": "wrapper",
         "blacklistable": true
       },
       {
@@ -29158,7 +29187,7 @@
         "pct": 25,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "collateral",
+        "depType": "wrapper",
         "blacklistable": true
       },
       {
@@ -29166,7 +29195,7 @@
         "pct": 25,
         "risk": "medium",
         "coinId": "usdc-circle",
-        "depType": "collateral",
+        "depType": "wrapper",
         "blacklistable": true
       }
     ],
@@ -29200,7 +29229,7 @@
             "name": "Static Aave Ethereum USDC",
             "risk": "medium",
             "coinId": "usdc-circle",
-            "depType": "collateral",
+            "depType": "wrapper",
             "blacklistable": true
           },
           {
@@ -29208,7 +29237,7 @@
             "name": "Wrapped Compound USDCv3",
             "risk": "medium",
             "coinId": "usdc-circle",
-            "depType": "collateral",
+            "depType": "wrapper",
             "blacklistable": true
           },
           {
@@ -29216,7 +29245,7 @@
             "name": "Steakhouse USDC strategy",
             "risk": "medium",
             "coinId": "usdc-circle",
-            "depType": "collateral",
+            "depType": "wrapper",
             "blacklistable": true
           }
         ],
@@ -29548,15 +29577,15 @@
         "name": "scrvUSD (Savings crvUSD)",
         "pct": 22.5,
         "risk": "medium",
-        "coinId": "crvusd-curve",
+        "coinId": "scrvusd-curve",
         "depType": "wrapper"
       },
       {
         "name": "sUSDS (Sky savings USDS)",
         "pct": 7.4,
         "risk": "low",
-        "coinId": "usds-sky",
-        "depType": "wrapper"
+        "coinId": "susds-sky",
+        "depType": "collateral"
       },
       {
         "name": "tBTC",
@@ -29567,8 +29596,8 @@
         "name": "sfrxUSD (Staked Frax USD)",
         "pct": 1.9,
         "risk": "medium",
-        "coinId": "frax-frax",
-        "depType": "wrapper"
+        "coinId": "sfrxusd-frax",
+        "depType": "collateral"
       },
       {
         "name": "WBTC",
@@ -30813,8 +30842,7 @@
       {
         "name": "Liquid Stables (USDtb / USDC / USDT)",
         "pct": 76,
-        "risk": "low",
-        "coinId": "usdtb-ethena"
+        "risk": "low"
       },
       {
         "name": "BTC (delta-neutral)",
@@ -31005,8 +31033,7 @@
       {
         "name": "Stablecoins (USDC/USDT)",
         "pct": 30,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       },
       {
         "name": "Altcoins (DOGE, FET, TRX, TON)",
@@ -31690,10 +31717,16 @@
         "risk": "very-low"
       },
       {
-        "name": "Tokenized treasuries (BUIDL, USTB)",
-        "pct": 20,
+        "name": "Tokenized treasuries (BUIDL)",
+        "pct": 10,
         "risk": "low",
         "coinId": "buidl-blackrock"
+      },
+      {
+        "name": "Tokenized treasuries (USTB)",
+        "pct": 10,
+        "risk": "low",
+        "coinId": "ustb-superstate"
       }
     ],
     "liveReservesConfig": {
@@ -32118,10 +32151,16 @@
         "coinId": "usdtb-ethena"
       },
       {
-        "name": "Liquid stablecoins (USDC/USDT) for redemptions",
-        "pct": 10,
+        "name": "Liquid stablecoins (USDC) for redemptions",
+        "pct": 5,
         "risk": "low",
         "coinId": "usdc-circle"
+      },
+      {
+        "name": "Liquid stablecoins (USDT) for redemptions",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdt-tether"
       }
     ],
     "liveReservesConfig": {
@@ -32612,7 +32651,8 @@
       {
         "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
         "pct": 70,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "tbill-openeden"
       },
       {
         "name": "BlackRock BUIDL (tokenized money market fund)",
@@ -32623,7 +32663,8 @@
       {
         "name": "Franklin Templeton BENJI (tokenized govt money fund)",
         "pct": 5,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "benji-franklin-templeton"
       },
       {
         "name": "USDC cash buffer",
@@ -32935,24 +32976,45 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "frxUSD / sfrxUSD (Ethereum branch)",
-        "pct": 30,
+        "name": "frxUSD (Ethereum branch)",
+        "pct": 15,
         "risk": "medium",
         "coinId": "frxusd-frax",
         "depType": "collateral"
       },
       {
-        "name": "USDe / sUSDe (Ethereum + HyperEVM branches)",
-        "pct": 30,
+        "name": "sfrxUSD (Ethereum branch)",
+        "pct": 15,
+        "risk": "medium",
+        "coinId": "sfrxusd-frax",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDe (Ethereum + HyperEVM branches)",
+        "pct": 15,
         "risk": "medium",
         "coinId": "usde-ethena",
         "depType": "collateral"
       },
       {
-        "name": "USDS / sUSDS (Base branch)",
-        "pct": 25,
+        "name": "sUSDe (Ethereum + HyperEVM branches)",
+        "pct": 15,
+        "risk": "medium",
+        "coinId": "susde-ethena",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDS (Base branch)",
+        "pct": 12.5,
         "risk": "low",
         "coinId": "usds-sky",
+        "depType": "collateral"
+      },
+      {
+        "name": "sUSDS (Base branch)",
+        "pct": 12.5,
+        "risk": "low",
+        "coinId": "susds-sky",
         "depType": "collateral"
       },
       {
@@ -34362,7 +34424,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in USDC stablecoin reserve for rapid redemptions; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
+    "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash or cash-equivalent redemption reserves; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
     "pegMechanism": "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
     "mechanismArchetype": "tbill",
     "geckoId": "usdtb",
@@ -34432,10 +34494,9 @@
         "coinId": "buidl-blackrock"
       },
       {
-        "name": "USDC (redemption reserve)",
+        "name": "Cash and cash-equivalent redemption reserve",
         "pct": 10,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -34510,12 +34571,6 @@
         "chain": "solana",
         "address": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
         "decimals": 6
-      }
-    ],
-    "dependencies": [
-      {
-        "id": "usdc-circle",
-        "weight": 0.8
       }
     ],
     "canBeBlacklisted": "dilutable",
@@ -35248,8 +35303,7 @@
       {
         "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
         "pct": 15,
-        "risk": "medium",
-        "coinId": "ustb-superstate"
+        "risk": "medium"
       },
       {
         "name": "Cash and cash equivalents",
@@ -35807,10 +35861,16 @@
         "risk": "high"
       },
       {
-        "name": "Cash stablecoins (USDC/USDT buffer)",
-        "pct": 10,
+        "name": "Cash stablecoins (USDC buffer)",
+        "pct": 5,
         "risk": "low",
         "coinId": "usdc-circle"
+      },
+      {
+        "name": "Cash stablecoins (USDT buffer)",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdt-tether"
       }
     ],
     "yieldConfig": {
@@ -35936,10 +35996,16 @@
         "risk": "medium"
       },
       {
-        "name": "USD stablecoins (USDC/USDT)",
-        "pct": 10,
+        "name": "USD stablecoins (USDC)",
+        "pct": 5,
         "risk": "low",
         "coinId": "usdc-circle"
+      },
+      {
+        "name": "USD stablecoins (USDT)",
+        "pct": 5,
+        "risk": "low",
+        "coinId": "usdt-tether"
       }
     ],
     "status": "frozen",
@@ -38572,7 +38638,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
         "pct": 100,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -39717,7 +39785,7 @@
         "pct": 100,
         "risk": "low",
         "coinId": "dai-makerdao",
-        "depType": "collateral"
+        "depType": "wrapper"
       }
     ],
     "notices": [
@@ -40778,8 +40846,7 @@
       {
         "name": "Digital assets (USDC + USDT, operational)",
         "pct": 1,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -40871,7 +40938,7 @@
         "name": "Aave markets (sGHO)",
         "pct": 4.5,
         "risk": "medium",
-        "coinId": "gho-aave"
+        "coinId": "sgho-aave"
       },
       {
         "name": "Aave markets (RLUSD)",
@@ -41516,7 +41583,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "usds-sky"
+        "coinId": "susds-sky"
       },
       {
         "name": "CELO",
@@ -41544,7 +41611,8 @@
       {
         "name": "axlEUROC",
         "pct": 5,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "eurc-circle"
       },
       {
         "name": "stETH",
@@ -41799,10 +41867,16 @@
         "risk": "high"
       },
       {
-        "name": "Gold tokens (PAXG, XAUt)",
-        "pct": 4,
+        "name": "PAXG gold token",
+        "pct": 2,
         "risk": "medium",
         "coinId": "paxg-paxos"
+      },
+      {
+        "name": "XAUt gold token",
+        "pct": 2,
+        "risk": "medium",
+        "coinId": "xaut-tether"
       },
       {
         "name": "Other (WETH, GNO, REALU, LENDS)",
@@ -41930,20 +42004,19 @@
       {
         "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
         "pct": 70,
-        "risk": "low",
-        "coinId": "usyc-hashnote"
+        "risk": "low"
       },
       {
         "name": "USD0++ (Usual)",
         "pct": 15,
         "risk": "medium",
-        "coinId": "usd0-usual"
+        "coinId": "busd0-usual"
       },
       {
         "name": "Wrapped M (M0 tokenized T-bills)",
         "pct": 15,
         "risk": "medium",
-        "coinId": "m-m0"
+        "coinId": "wm-m0"
       }
     ],
     "liveReservesConfig": {

@@ -166,24 +166,45 @@
   ],
   "reserves": [
     {
-      "name": "frxUSD / sfrxUSD (Ethereum branch)",
-      "pct": 30,
+      "name": "frxUSD (Ethereum branch)",
+      "pct": 15,
       "risk": "medium",
       "coinId": "frxusd-frax",
       "depType": "collateral"
     },
     {
-      "name": "USDe / sUSDe (Ethereum + HyperEVM branches)",
-      "pct": 30,
+      "name": "sfrxUSD (Ethereum branch)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "sfrxusd-frax",
+      "depType": "collateral"
+    },
+    {
+      "name": "USDe (Ethereum + HyperEVM branches)",
+      "pct": 15,
       "risk": "medium",
       "coinId": "usde-ethena",
       "depType": "collateral"
     },
     {
-      "name": "USDS / sUSDS (Base branch)",
-      "pct": 25,
+      "name": "sUSDe (Ethereum + HyperEVM branches)",
+      "pct": 15,
+      "risk": "medium",
+      "coinId": "susde-ethena",
+      "depType": "collateral"
+    },
+    {
+      "name": "USDS (Base branch)",
+      "pct": 12.5,
       "risk": "low",
       "coinId": "usds-sky",
+      "depType": "collateral"
+    },
+    {
+      "name": "sUSDS (Base branch)",
+      "pct": 12.5,
+      "risk": "low",
+      "coinId": "susds-sky",
       "depType": "collateral"
     },
     {

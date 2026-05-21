@@ -70,6 +70,7 @@ export interface GhoTrackedModuleConfig {
   address: string;
   label: string;
   coinId?: string;
+  depType?: ReserveSlice["depType"];
   risk?: ReserveSlice["risk"];
 }
 
@@ -84,6 +85,7 @@ export interface GhoTrackedModuleSnapshot {
   address: string;
   label: string;
   coinId?: string;
+  depType?: ReserveSlice["depType"];
   risk: ReserveSlice["risk"];
   currentBackingGho: bigint;
   swappable: boolean;
@@ -179,6 +181,7 @@ function readParams(config: LiveReservesConfig): GhoParams {
       address: trackedModule.address,
       label: trackedModule.label,
       coinId: trackedModule.coinId,
+      depType: trackedModule.depType,
       risk: trackedModule.risk,
     })),
   };
@@ -487,6 +490,7 @@ export function buildGhoSlices(
       value: scale18ToUsd(trackedModule.currentBackingGho),
       risk: trackedModule.risk,
       ...(trackedModule.coinId ? { coinId: trackedModule.coinId } : {}),
+      ...(trackedModule.depType ? { depType: trackedModule.depType } : {}),
     });
   }
 

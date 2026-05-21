@@ -127,10 +127,16 @@
       "risk": "medium"
     },
     {
-      "name": "USD stablecoins (USDC/USDT)",
-      "pct": 10,
+      "name": "USD stablecoins (USDC)",
+      "pct": 5,
       "risk": "low",
       "coinId": "usdc-circle"
+    },
+    {
+      "name": "USD stablecoins (USDT)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdt-tether"
     }
   ]
 }

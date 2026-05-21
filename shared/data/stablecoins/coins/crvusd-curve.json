@@ -131,6 +131,28 @@
       "risk": "very-low"
     }
   ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "weight": 0.25,
+      "type": "mechanism"
+    },
+    {
+      "id": "usdt-tether",
+      "weight": 0.25,
+      "type": "mechanism"
+    },
+    {
+      "id": "pyusd-paypal",
+      "weight": 0.25,
+      "type": "mechanism"
+    },
+    {
+      "id": "tusd-trueusd",
+      "weight": 0.25,
+      "type": "mechanism"
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "crvusd",
     "version": 3,

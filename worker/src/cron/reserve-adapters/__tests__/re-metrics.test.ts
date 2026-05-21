@@ -17,7 +17,7 @@ describe("adaptReMetrics", () => {
     expect(result.slices).toEqual([
       { name: "Off-chain insurance / reinsurance capital", pct: 36.9, risk: "medium" },
       { name: "USDC reserves", pct: 34.2, risk: "low", coinId: "usdc-circle" },
-      { name: "sUSDe (delta-neutral ETH basis)", pct: 21.2, risk: "high", coinId: "usde-ethena", depType: "wrapper" },
+      { name: "sUSDe (delta-neutral ETH basis)", pct: 21.2, risk: "high", coinId: "susde-ethena", depType: "wrapper" },
       { name: "USDT reserves", pct: 6.7, risk: "low", coinId: "usdt-tether" },
       { name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
       { name: "USDe (delta-neutral ETH basis)", pct: 0.3, risk: "high", coinId: "usde-ethena" },

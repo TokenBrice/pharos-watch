@@ -62,15 +62,15 @@
       "name": "scrvUSD (Savings crvUSD)",
       "pct": 22.5,
       "risk": "medium",
-      "coinId": "crvusd-curve",
+      "coinId": "scrvusd-curve",
       "depType": "wrapper"
     },
     {
       "name": "sUSDS (Sky savings USDS)",
       "pct": 7.4,
       "risk": "low",
-      "coinId": "usds-sky",
-      "depType": "wrapper"
+      "coinId": "susds-sky",
+      "depType": "collateral"
     },
     {
       "name": "tBTC",
@@ -81,8 +81,8 @@
       "name": "sfrxUSD (Staked Frax USD)",
       "pct": 1.9,
       "risk": "medium",
-      "coinId": "frax-frax",
-      "depType": "wrapper"
+      "coinId": "sfrxusd-frax",
+      "depType": "collateral"
     },
     {
       "name": "WBTC",

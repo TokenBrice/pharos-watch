@@ -169,7 +169,7 @@ describe("adaptInfiniFi", () => {
     const { slices } = adaptInfiniFi(response);
     expect(slices.find((s) => s.name === "Sentora PYUSD")).toMatchObject({ coinId: "pyusd-paypal", depType: "wrapper" });
     expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "wrapper" });
-    expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "gho-aave", depType: "wrapper" });
+    expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "wrapper" });
     expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "wrapper" });
     // fasanara has no coinId — should be absent
     expect(slices.find((s) => s.name === "Fasanara mGLOBAL")).not.toHaveProperty("coinId");

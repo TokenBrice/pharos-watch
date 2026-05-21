@@ -100,9 +100,17 @@
     },
     {
       "name": "stataUSDC GSM",
-      "pct": 19.7,
+      "pct": 9.85,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "mechanism"
+    },
+    {
+      "name": "stataUSDT GSM",
+      "pct": 9.85,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "mechanism"
     },
     {
       "name": "LidoGhoDirectMinter",
@@ -141,12 +149,14 @@
           "address": "0x3a3868898305f04bec7fea77becff04c13444112",
           "label": "stataUSDC GSM",
           "coinId": "usdc-circle",
+          "depType": "mechanism",
           "risk": "low"
         },
         {
           "address": "0x882285e62656b9623af136ce3078c6bdcc33f5e3",
           "label": "stataUSDT GSM",
           "coinId": "usdt-tether",
+          "depType": "mechanism",
           "risk": "low"
         }
       ]

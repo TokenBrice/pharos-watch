@@ -205,4 +205,38 @@ describe("validateVariantRelationships", () => {
 
     expect(validateVariantRelationships([parentA, parentB, child])).toEqual([]);
   });
+
+  it("does not infer a missing variant for basket NAV tokens with one wrapper parent and other tracked collateral", () => {
+    const wrapperParent = makeParent("wrapper-parent", "fiat-cash");
+    const collateralParent = makeChild("collateral-parent", "wrapper-parent");
+    const child = makeCoin({
+      id: "basket-nav-token",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: true,
+        rwa: false,
+        navToken: true,
+      },
+      reserves: [
+        {
+          name: "Wrapper leg",
+          pct: 75,
+          risk: "medium",
+          coinId: "wrapper-parent",
+          depType: "wrapper",
+        },
+        {
+          name: "Other tracked basket leg",
+          pct: 25,
+          risk: "low",
+          coinId: "collateral-parent",
+          depType: "collateral",
+        },
+      ],
+    });
+
+    expect(validateVariantRelationships([wrapperParent, collateralParent, child])).toEqual([]);
+  });
 });

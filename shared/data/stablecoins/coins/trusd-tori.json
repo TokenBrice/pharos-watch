@@ -99,18 +99,6 @@
       "sourceUrl": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.5,
-      "type": "collateral"
-    },
-    {
-      "id": "usdt-tether",
-      "weight": 0.5,
-      "type": "collateral"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Tori staking (strUSD)",
     "yieldType": "fee-sharing"

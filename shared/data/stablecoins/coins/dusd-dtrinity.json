@@ -56,28 +56,6 @@
       "decimals": 18
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdc-circle",
-      "weight": 0.3
-    },
-    {
-      "id": "usdt-tether",
-      "weight": 0.25
-    },
-    {
-      "id": "frxusd-frax",
-      "weight": 0.2
-    },
-    {
-      "id": "usds-sky",
-      "weight": 0.15
-    },
-    {
-      "id": "dai-makerdao",
-      "weight": 0.1
-    }
-  ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -93,31 +71,50 @@
       "name": "sfrxUSD (Staked Frax USD)",
       "pct": 42,
       "risk": "medium",
-      "coinId": "frxusd-frax"
+      "coinId": "sfrxusd-frax"
     },
     {
       "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
       "pct": 35,
       "risk": "high",
-      "coinId": "frxusd-frax"
+      "coinId": "sfrxusd-frax",
+      "depType": "mechanism"
     },
     {
-      "name": "frxUSD / DAI / sDAI (Fraxtal)",
-      "pct": 14,
+      "name": "frxUSD (Fraxtal)",
+      "pct": 4,
       "risk": "medium",
       "coinId": "frxusd-frax"
     },
     {
-      "name": "vbUSDT / vbUSDC (Katana Vault Bridge)",
-      "pct": 6,
+      "name": "DAI (Fraxtal)",
+      "pct": 5,
+      "risk": "medium",
+      "coinId": "dai-makerdao"
+    },
+    {
+      "name": "sDAI (Fraxtal)",
+      "pct": 5,
+      "risk": "medium",
+      "coinId": "sdai-sky"
+    },
+    {
+      "name": "vbUSDT (Katana Vault Bridge)",
+      "pct": 3,
       "risk": "medium",
       "coinId": "usdt-tether"
+    },
+    {
+      "name": "vbUSDC (Katana Vault Bridge)",
+      "pct": 3,
+      "risk": "medium",
+      "coinId": "usdc-circle"
     },
     {
       "name": "sUSDS (Sky Savings Rate)",
       "pct": 3,
       "risk": "medium",
-      "coinId": "usds-sky"
+      "coinId": "susds-sky"
     }
   ],
   "notices": [

@@ -85,8 +85,7 @@
     {
       "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
       "pct": 15,
-      "risk": "medium",
-      "coinId": "ustb-superstate"
+      "risk": "medium"
     },
     {
       "name": "Cash and cash equivalents",

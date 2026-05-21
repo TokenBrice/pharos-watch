@@ -109,10 +109,10 @@ describe("mento adapter", () => {
   it("maps the analytics payload into Pharos reserve slices", () => {
     const result = adaptMentoReserveComposition(SAMPLE_PAYLOAD);
     expect(result.slices).toEqual([
-      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "usds-sky" },
+      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky" },
       { name: "EURC (Circle euro stablecoin)", pct: 15, risk: "low", coinId: "eurc-circle" },
       { name: "CELO", pct: 15, risk: "high" },
-      { name: "USDGLO (Glo Dollar)", pct: 5, risk: "low" },
+      { name: "USDGLO (Glo Dollar)", pct: 5, risk: "low", coinId: "usdglo-glo" },
       { name: "USDT", pct: 4, risk: "low", coinId: "usdt-tether" },
       { name: "AUSD (Agora Dollar)", pct: 4, risk: "low", coinId: "ausd-agora" },
       { name: "stETH (Lido staked ETH)", pct: 3, risk: "low" },

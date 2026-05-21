@@ -52,8 +52,14 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "USDC and MON liquidity-layer collateral",
-      "pct": 100,
+      "name": "USDC liquidity-layer collateral",
+      "pct": 50,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "MON liquidity-layer collateral",
+      "pct": 50,
       "risk": "high"
     }
   ],

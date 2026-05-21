@@ -41,16 +41,6 @@
       "decimals": 18
     }
   ],
-  "dependencies": [
-    {
-      "id": "usdt-tether",
-      "weight": 0.05
-    },
-    {
-      "id": "usdc-circle",
-      "weight": 0.05
-    }
-  ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

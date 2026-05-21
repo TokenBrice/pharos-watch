@@ -4415,6 +4415,8 @@
     },
     "pegMechanism": "StoneYield wrapper token designed to maintain one-dollar accounting against deposited stablecoin assets while strategy yield accrues through the protocol's managed vault structure",
     "geckoId": "stoneyield-usd",
+    "variantOf": "usdc-circle",
+    "variantKind": "strategy-vault",
     "canBeBlacklisted": "possible"
   },
   {
@@ -4933,7 +4935,7 @@
     "id": "usd0-usual",
     "name": "Usual USD",
     "symbol": "USD0",
-    "oneLiner": "USD0 is Usual's RWA-backed dollar, fully collateralized by tokenized U.S. T-bills (USYC, M, BUIDL, OUSG) plus a small USDC redemption reserve.",
+    "oneLiner": "USD0 is Usual's RWA-backed dollar, collateralized by tokenized U.S. T-bills and cash-equivalent products such as USYC, M, USTBL, and USDC.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",

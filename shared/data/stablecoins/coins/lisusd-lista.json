@@ -73,10 +73,22 @@
       "risk": "medium"
     },
     {
-      "name": "USDT / USDC / FDUSD (via PSM)",
-      "pct": 15,
+      "name": "USDT (via PSM)",
+      "pct": 5,
       "risk": "low",
       "coinId": "usdt-tether"
+    },
+    {
+      "name": "USDC (via PSM)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "FDUSD (via PSM)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "fdusd-first-digital"
     }
   ],
   "liveReservesConfig": {

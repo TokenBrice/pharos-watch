@@ -76,20 +76,19 @@
     {
       "name": "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)",
       "pct": 70,
-      "risk": "low",
-      "coinId": "usyc-hashnote"
+      "risk": "low"
     },
     {
       "name": "USD0++ (Usual)",
       "pct": 15,
       "risk": "medium",
-      "coinId": "usd0-usual"
+      "coinId": "busd0-usual"
     },
     {
       "name": "Wrapped M (M0 tokenized T-bills)",
       "pct": 15,
       "risk": "medium",
-      "coinId": "m-m0"
+      "coinId": "wm-m0"
     }
   ],
   "liveReservesConfig": {
