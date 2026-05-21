@@ -276,10 +276,10 @@ describe("YieldDetailSection", () => {
     for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
-    // WHY: driver descriptions render as title= tooltips on compact tag chips,
-    // not as visible text — verify the chip carries the description via its title attribute.
+    // WHY: driver descriptions are exposed on compact tag chips through the
+    // accessible label and tooltip, not as visible text.
     const rewardChip = screen.getAllByText("reward-heavy")[0] as HTMLElement;
-    expect(rewardChip.getAttribute("title")).toMatch(/Most APY comes from incentives/i);
+    expect(rewardChip.getAttribute("aria-label")).toMatch(/Most APY comes from incentives/i);
   });
 
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {

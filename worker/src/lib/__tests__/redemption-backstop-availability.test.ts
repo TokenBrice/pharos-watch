@@ -126,7 +126,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(result.get("usds-sky")?.routeStatus).toBe("degraded");
   });
 
-  it("impairs configured PSM-style routes when their structured output dependency is depegged", async () => {
+  it("impairs configured collateral routes when their structured output dependency is depegged", async () => {
     const db = mockD1([
       {
         match: "FROM depeg_events",
@@ -142,11 +142,11 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
-    const pmusd = result.get("pmusd-precious-metals");
-    expect(pmusd?.routeStatus).toBe("degraded");
-    expect(pmusd?.outputImpairedDependencyId).toBe("susds-sky");
-    expect(pmusd?.outputImpairedShare).toBe(0.5);
-    expect(pmusd?.routeStatusReason).toContain("Output asset impairment");
+    const cusd = result.get("cusd-celo");
+    expect(cusd?.routeStatus).toBe("degraded");
+    expect(cusd?.outputImpairedDependencyId).toBe("susds-sky");
+    expect(cusd?.outputImpairedShare).toBe(0.56);
+    expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
   it("reports weighted output impairment for basket dependencies", async () => {
