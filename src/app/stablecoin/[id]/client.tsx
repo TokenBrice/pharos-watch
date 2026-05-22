@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { BackToSource } from "@/components/back-to-source";
 import { ReportCardDetail } from "@/components/report-card";
-import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { LazySection } from "@/components/lazy-section";
@@ -300,15 +300,12 @@ export default function StablecoinDetailClient({
   return (
     <div>
       <BackToSource className="mb-2" />
-      {viewModel.supplyError != null ? (
-        <QueryErrorNotice
-          error={viewModel.supplyError}
-          hasData={viewModel.supplyHistory.length > 0}
-          onRetry={viewModel.handleRetryAll}
-        />
-      ) : null}
-
-      <StaleDataBanner queries={viewModel.staleQueries} />
+      <QueryFreshnessNotices
+        error={viewModel.supplyError}
+        hasData={viewModel.supplyHistory.length > 0}
+        onRetry={viewModel.handleRetryAll}
+        queries={viewModel.staleQueries}
+      />
 
       {/* ── Identity zone ── */}
       <div ref={heroRef} className="space-y-4">

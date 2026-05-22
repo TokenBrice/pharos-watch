@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -205,31 +206,14 @@ export function BlacklistTable({
               CSV
             </Button>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Sort freeze events">
-            {MOBILE_SORT_OPTIONS.map((option) => {
-              const active = sortKey === option.key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => toggleSort(option.key)}
-                  className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
-                    active
-                      ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
-                      : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {option.label}
-                  {active ? (
-                    <span className="ml-1 font-mono text-[10px]" aria-hidden="true">
-                      {sortDirection === "asc" ? "↑" : "↓"}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+          <MobileSortPills
+            options={MOBILE_SORT_OPTIONS}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={toggleSort}
+            ariaLabel="Sort freeze events"
+            className="mt-3 flex flex-wrap gap-2"
+          />
         </div>
         {events.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground">

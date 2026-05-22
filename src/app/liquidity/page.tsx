@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LiquidityLoadingState } from "@/app/liquidity/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
@@ -85,7 +85,7 @@ const LIQUIDITY_STATIC_SECTION = (
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.LiquidityClient })),
-  loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
+  loading: <LiquidityLoadingState />,
   shell: {
     breadcrumbName: "DEX Liquidity",
     path: "/liquidity/",

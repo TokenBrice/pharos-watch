@@ -5,6 +5,13 @@ import { CopyButton } from "@/components/copy-button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import {
+  PUBLIC_API_ARTIFACTS,
+  PUBLIC_API_HOST,
+  PUBLIC_API_KEY_HEADER,
+  SELF_SERVE_API_KEY_EXPIRY_DAYS,
+  SELF_SERVE_API_KEY_RATE_LIMIT_RPM,
+} from "./public-api-copy";
 
 export const metadata = buildPageMetadata({
   title: "Pharos API Access",
@@ -68,13 +75,13 @@ const QUICK_ENDPOINTS = [
 const CODE_EXAMPLES = [
   {
     label: "curl",
-    code: `curl https://api.pharos.watch/api/stablecoins \\
-  -H "X-API-Key: $PHAROS_API_KEY"`,
+    code: `curl ${PUBLIC_API_HOST}/api/stablecoins \\
+  -H "${PUBLIC_API_KEY_HEADER}: $PHAROS_API_KEY"`,
   },
   {
     label: "JavaScript",
-    code: `const response = await fetch("https://api.pharos.watch/api/stablecoin/usdc-circle", {
-  headers: { "X-API-Key": process.env.PHAROS_API_KEY },
+    code: `const response = await fetch("${PUBLIC_API_HOST}/api/stablecoin/usdc-circle", {
+  headers: { "${PUBLIC_API_KEY_HEADER}": process.env.PHAROS_API_KEY },
 });
 
 if (!response.ok) throw new Error(\`Pharos API returned \${response.status}\`);
@@ -86,9 +93,9 @@ const coin = await response.json();`,
 import requests
 
 response = requests.get(
-    "https://api.pharos.watch/api/depeg-events",
+    "${PUBLIC_API_HOST}/api/depeg-events",
     params={"active": "true"},
-    headers={"X-API-Key": os.environ["PHAROS_API_KEY"]},
+    headers={"${PUBLIC_API_KEY_HEADER}": os.environ["PHAROS_API_KEY"]},
     timeout=10,
 )
 response.raise_for_status()
@@ -146,7 +153,8 @@ export default function ApiAccessPage() {
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.3rem]">Pharos API</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 Request a self-serve key for read-only public stablecoin data. The default key is scoped to external API
-                traffic, limited to 30 requests per minute, and expires after 60 days.
+                traffic, limited to {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute, and expires after{" "}
+                {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 text-sm">
@@ -158,14 +166,14 @@ export default function ApiAccessPage() {
                 API Reference
               </Link>
               <a
-                href="/openapi.json"
+                href={PUBLIC_API_ARTIFACTS.openApi}
                 className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background px-3 py-2 font-medium text-foreground hover:bg-muted/50"
               >
                 OpenAPI
                 <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
-                href="/postman/pharos-api.postman_collection.json"
+                href={PUBLIC_API_ARTIFACTS.postmanCollection}
                 className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-background px-3 py-2 font-medium text-foreground hover:bg-muted/50"
               >
                 Postman
@@ -180,13 +188,13 @@ export default function ApiAccessPage() {
               <p>
                 Base URL:{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
-                  https://api.pharos.watch
+                  {PUBLIC_API_HOST}
                 </code>
               </p>
               <p>
                 Header:{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
-                  X-API-Key
+                  {PUBLIC_API_KEY_HEADER}
                 </code>
               </p>
               <p>Respect 429 responses and add jitter to polling intervals.</p>
@@ -269,10 +277,13 @@ export default function ApiAccessPage() {
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <li>
               Send{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">X-API-Key</code>{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_KEY_HEADER}</code>{" "}
               on protected public routes.
             </li>
-            <li>Self-serve keys start at 30 requests per minute and expire after 60 days.</li>
+            <li>
+              Self-serve keys start at {SELF_SERVE_API_KEY_RATE_LIMIT_RPM} requests per minute and expire after{" "}
+              {SELF_SERVE_API_KEY_EXPIRY_DAYS} days.
+            </li>
             <li>
               Standard keys can have per-key limits; treat 429 as quota pressure and honor Retry-After when present.
             </li>
@@ -292,7 +303,7 @@ export default function ApiAccessPage() {
               Auth reference
             </Link>
             <a
-              href="/postman/pharos-api.postman_environment.json"
+              href={PUBLIC_API_ARTIFACTS.postmanEnvironment}
               className="pharos-focus-ring rounded-xl border border-border/60 bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
               Postman environment

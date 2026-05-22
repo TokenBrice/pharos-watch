@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
@@ -90,7 +89,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
       {...FLOWS_SHELL_PROPS}
       headerSupplement={<FlowsHeaderSupplement syncWarning={syncWarning} />}
     >
-      <QueryErrorNotice
+      <QueryFreshnessNotices
         error={error}
         hasData={hasData}
         onRetry={() => {
@@ -100,31 +99,28 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
             void refetchChart();
           }
         }}
+        queries={[
+          {
+            preset: "mintBurnFlows",
+            dataUpdatedAt: summaryUpdatedAt,
+            error: summaryError,
+            hasData: !!summaryData,
+            meta: summaryMeta,
+          },
+          ...(hours !== 24
+            ? [
+                {
+                  label: "Mint/Burn Flows (Chart)",
+                  dataUpdatedAt: chartUpdatedAt,
+                  error: chartError,
+                  hasData: !!chartData,
+                  meta: chartMeta,
+                },
+              ]
+            : []),
+        ]}
+        showFreshnessBanner={showDataHealthBanner}
       />
-      {showDataHealthBanner ? (
-        <StaleDataBanner
-          queries={[
-            {
-              preset: "mintBurnFlows",
-              dataUpdatedAt: summaryUpdatedAt,
-              error: summaryError,
-              hasData: !!summaryData,
-              meta: summaryMeta,
-            },
-            ...(hours !== 24
-              ? [
-                  {
-                    label: "Mint/Burn Flows (Chart)",
-                    dataUpdatedAt: chartUpdatedAt,
-                    error: chartError,
-                    hasData: !!chartData,
-                    meta: chartMeta,
-                  },
-                ]
-              : []),
-          ]}
-        />
-      ) : null}
 
       <div className="flex flex-col gap-6">
         <section aria-label="Mint/burn overview" className="order-1">

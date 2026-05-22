@@ -4,7 +4,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 // Analytics tier: filter strip + DEX depth chart placeholder + cohort table.
 const LIQUIDITY_SKELETON_ROW_COUNT = 10;
 
-export default function Loading() {
+export function LiquidityLoadingState() {
   return (
     <div className="space-y-6" aria-busy="true" aria-live="polite">
       <div className="space-y-2.5">
@@ -65,4 +65,8 @@ export default function Loading() {
       </div>
     </div>
   );
+}
+
+export default function Loading() {
+  return <LiquidityLoadingState />;
 }

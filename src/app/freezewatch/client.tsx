@@ -2,8 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
@@ -120,15 +119,13 @@ export default function FreezeWatchClient() {
           currentTracker="freezewatch"
         />
       ) : null}
-      <QueryErrorNotice
+      <QueryFreshnessNotices
         error={error}
         hasData={!!summary || events.length > 0}
         onRetry={() => {
           void refetchSummary();
           void refetchPage();
         }}
-      />
-      <StaleDataBanner
         queries={[
           { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta },
         ]}

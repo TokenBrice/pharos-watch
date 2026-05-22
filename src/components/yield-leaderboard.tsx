@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
+import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import {
   DataTableEmptyRow,
@@ -237,31 +238,13 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
       <div className="space-y-3 md:hidden">
         <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
           <p className="pharos-kicker mb-2">Sort Leaderboard</p>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Sort yield leaderboard">
-            {MOBILE_SORT_OPTIONS.map((option) => {
-              const active = sortKey === option.key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => toggleSort(option.key)}
-                  className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
-                    active
-                      ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
-                      : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {option.label}
-                  {active ? (
-                    <span className="ml-1 font-mono text-[10px]" aria-hidden="true">
-                      {sortDirection === "asc" ? "↑" : "↓"}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+          <MobileSortPills
+            options={MOBILE_SORT_OPTIONS}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={toggleSort}
+            ariaLabel="Sort yield leaderboard"
+          />
         </div>
 
         {sorted.length === 0 ? (

@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Analytics tier: KPI strip, heatmap placeholder, then recent depeg rows.
 const DEPEG_SKELETON_ROW_COUNT = 8;
 
-export default function Loading() {
+export function DepegLoadingState() {
   return (
     <div className="space-y-6" aria-busy="true" aria-live="polite">
       <div className="space-y-2.5">
@@ -56,4 +56,8 @@ export default function Loading() {
       </div>
     </div>
   );
+}
+
+export default function Loading() {
+  return <DepegLoadingState />;
 }

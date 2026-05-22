@@ -74,3 +74,66 @@ export function writeJsonStorageValue(
 ): boolean {
   return safeStorageSetItem(storage, key, JSON.stringify(value));
 }
+
+export interface BrowserStorageStore<T> {
+  read: () => T;
+  write: (value: T) => boolean;
+  remove: () => boolean;
+  notify: () => void;
+  subscribe: (listener: () => void) => () => void;
+}
+
+export function createBrowserStorageStore<T>({
+  key,
+  kind = "local",
+  fallback,
+  decode,
+  encode = String,
+}: {
+  key: string;
+  kind?: "local" | "session";
+  fallback: T;
+  decode: (raw: string | null) => T | null;
+  encode?: (value: T) => string;
+}): BrowserStorageStore<T> {
+  const changeEvent = `pharos-storage:${key}`;
+
+  function notify() {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new Event(changeEvent));
+  }
+
+  function read(): T {
+    return decode(safeStorageGetItem(getWindowStorage(kind), key)) ?? fallback;
+  }
+
+  function write(value: T): boolean {
+    const ok = safeStorageSetItem(getWindowStorage(kind), key, encode(value));
+    notify();
+    return ok;
+  }
+
+  function remove(): boolean {
+    const ok = safeStorageRemoveItem(getWindowStorage(kind), key);
+    notify();
+    return ok;
+  }
+
+  function subscribe(listener: () => void) {
+    if (typeof window === "undefined") return () => {};
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === key) listener();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(changeEvent, listener);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(changeEvent, listener);
+    };
+  }
+
+  return { read, write, remove, notify, subscribe };
+}

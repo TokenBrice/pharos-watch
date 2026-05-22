@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { SelectorInput } from "@shared/lib/selector";
+import { cleanupFrontendTest, createNextLinkMock, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
@@ -192,14 +193,7 @@ vi.mock("@/hooks/use-logos", () => ({
 }));
 
 vi.mock("next/link", async () => {
-  const React = await import("react");
-  return {
-    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(
-      function MockLink({ href, children, ...rest }, ref) {
-        return React.createElement("a", { ref, href, ...rest }, children);
-      },
-    ),
-  };
+  return createNextLinkMock();
 });
 
 // Import AFTER mocks
@@ -215,27 +209,13 @@ function setUrlSearch(search: string) {
 }
 
 beforeEach(() => {
-  window.localStorage.clear();
-  window.sessionStorage.clear();
+  resetBrowserStorage();
   setUrlSearch("");
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    configurable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+  installMatchMediaMock();
 });
 
 afterEach(() => {
-  cleanup();
+  cleanupFrontendTest();
 });
 
 // ----------------------------------------------------------------------------

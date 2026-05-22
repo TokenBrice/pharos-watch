@@ -2,7 +2,8 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse, EndpointProbeResult, StatusCause } from "@shared/types";
+import { degraded, makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const { isOpsUiHostMock, useStatusDashboardModelMock } = vi.hoisted(() => ({
   isOpsUiHostMock: vi.fn(),
@@ -132,11 +133,11 @@ vi.mock("@/components/status/transition-timeline", () => ({
 
 const { default: StatusClient } = await import("@/app/admin/client");
 
-const BASE_STATUS: StatusResponse = {
-  timestamp: 1_700_000_000,
-  dbHealthy: true,
+const HEALTHY_STATUS = makeHealthyStatusResponse();
+const HEALTHY_HEALTH = makeHealthyHealthResponse();
+
+const BASE_STATUS = degraded(HEALTHY_STATUS, {
   availabilityStatus: "degraded",
-  dataQualityStatus: "healthy",
   rawOverallStatus: "degraded",
   overallStatus: "degraded",
   confidence: 0.92,
@@ -153,23 +154,14 @@ const BASE_STATUS: StatusResponse = {
     overall: [],
   },
   state: {
-    scope: "global",
+    ...HEALTHY_STATUS.state,
     currentStatus: "degraded",
     rawStatus: "degraded",
-    lastEvaluatedAt: 1_700_000_000,
     lastChangedAt: 1_699_999_700,
-    minDwellSec: 120,
-    staleMinDwellSec: 180,
     consecutiveRaw: {
       healthy: 0,
       degraded: 3,
       stale: 0,
-    },
-    thresholds: {
-      escalateToDegraded: 2,
-      escalateToStale: 1,
-      recoverToDegraded: 2,
-      recoverToHealthy: 3,
     },
   },
   staleness: {
@@ -217,30 +209,8 @@ const BASE_STATUS: StatusResponse = {
       telemetryUnknown: false,
     },
   },
-  dataQuality: {
-    stablecoinsCacheStatus: "ok",
-    stablecoinsCacheReason: null,
-    blacklistGapStatus: "ok",
-    activeDepegStatus: "ok",
-    onchainSupplyQueryStatus: "ok",
-    sourceFailures: [],
-    totalStablecoins: 0,
-    missingPrices: 0,
-    blacklistMissingAmounts: 0,
-    blacklistRecentMissingAmounts: 0,
-    blacklistRecentWindowSec: 86400,
-    blacklistMissingRatio: 0,
-    blacklistTotal: 0,
-    onchainSupplyDivergences: 0,
-    onchainDivergenceRatio: 0,
-    onchainSupplyMonitoring: "active",
-    onchainSupplyLatestAt: null,
-    onchainSupplyTrackedCoins: 0,
-    activeDepegs: 0,
-    staleOnchainSupply: 0,
-    onchainStaleRatio: 0,
-  },
   telegramBot: {
+    ...(HEALTHY_STATUS.telegramBot ?? {}),
     deliverableChats: 4,
     pendingDeliveries: 2,
     failureBacklog: 0,
@@ -273,59 +243,14 @@ const BASE_STATUS: StatusResponse = {
     diagnosticIssueCount: 0,
     worstCacheRatio: 1.2,
   },
-  liquidityHealth: null,
-  yieldHealth: null,
-  priceSourceHealth: null,
-  coingeckoPriceDiff: null,
-  d1Usage: null,
-  discoveryCandidates: null,
-  mintBurnReconciliation: null,
-  reserveComposition: {
-    configuredCoins: 0,
-    freshCoins: 0,
-    staleCoins: 0,
-    missingCoins: 0,
-    degradedCoins: 0,
-    errorCoins: 0,
-    corruptCoins: 0,
-    independentFreshEligible: 0,
-    independentFreshUnverified: 0,
-    staticValidatedFresh: 0,
-    weakProbeFresh: 0,
-    writeTimeoutUncertain: 0,
-    deferredCoins: 0,
-    runBudgetTruncated: false,
-    deferredAt: null,
-    nextCursorStablecoinId: null,
-    lastSuccessAt: null,
-    oldestFreshAgeSec: null,
-    status: "healthy",
-    freshCoverageRatio: 0,
-    authoritativeFreshCoverageRatio: 0,
-  },
-  reserveDrift: [],
-  classificationWarnings: [],
-};
+});
 
-const BASE_HEALTH: HealthResponse = {
-  status: "degraded",
-  timestamp: 1_700_000_000,
-  warnings: [],
-  caches: {},
-  blacklist: {
-    totalEvents: 0,
-    missingAmounts: 0,
-    recentMissingAmounts: 0,
-    recentWindowSec: 86400,
-    missingRatio: 0,
-  },
+const BASE_HEALTH = {
+  ...HEALTHY_HEALTH,
+  status: "degraded" as const,
   mintBurn: {
+    ...HEALTHY_HEALTH.mintBurn,
     totalEvents: 0,
-    latestEventTs: null,
-    latestHourlyTs: null,
-    freshnessAgeSec: null,
-    majorStaleCount: 0,
-    staleMajorSymbols: [],
     sync: {
       lastSuccessfulSyncAt: null,
       freshnessStatus: "warning",
@@ -333,7 +258,6 @@ const BASE_HEALTH: HealthResponse = {
       criticalLaneHealthy: false,
     },
   },
-  circuits: {},
 };
 
 const PROBES: EndpointProbeResult[] = [

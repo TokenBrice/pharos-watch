@@ -1,49 +1,21 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { usePreference } from "@/hooks/use-preferences";
-import {
-  PINNED_STABLECOINS_STORAGE_KEY,
-  normalizePinnedStablecoinIds,
-  removePinnedStablecoinId,
-  togglePinnedStablecoinId,
-} from "@/lib/pinned-stablecoins";
-
-const EMPTY_PINNED_IDS: string[] = [];
+import { useWatchlist } from "@/hooks/use-watchlist";
+import { normalizePinnedStablecoinIds } from "@/lib/pinned-stablecoins";
 
 export function usePinnedStablecoins() {
-  const [pinnedIds, setPinnedIds, resetPinnedIds] = usePreference<string[]>(
-    PINNED_STABLECOINS_STORAGE_KEY,
-    EMPTY_PINNED_IDS,
-    {
-      decode: normalizePinnedStablecoinIds,
-    },
-  );
-
+  const watchlist = useWatchlist();
+  const pinnedIds = useMemo(() => normalizePinnedStablecoinIds(watchlist.ids), [watchlist.ids]);
   const pinnedIdSet = useMemo(() => new Set(pinnedIds), [pinnedIds]);
-
-  const togglePinned = useCallback(
-    (stablecoinId: string) => {
-      setPinnedIds((current) => togglePinnedStablecoinId(current, stablecoinId));
-    },
-    [setPinnedIds],
-  );
-
-  const unpinStablecoin = useCallback(
-    (stablecoinId: string) => {
-      setPinnedIds((current) => removePinnedStablecoinId(current, stablecoinId));
-    },
-    [setPinnedIds],
-  );
-
   const isPinned = useCallback((stablecoinId: string) => pinnedIdSet.has(stablecoinId), [pinnedIdSet]);
 
   return {
     pinnedIds,
     pinnedIdSet,
     isPinned,
-    togglePinned,
-    unpinStablecoin,
-    resetPinnedIds,
+    togglePinned: watchlist.toggle,
+    unpinStablecoin: watchlist.remove,
+    resetPinnedIds: watchlist.clear,
   };
 }

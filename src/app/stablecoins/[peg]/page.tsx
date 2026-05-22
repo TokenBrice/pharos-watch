@@ -1,31 +1,15 @@
-import { notFound } from "next/navigation";
 import { StablecoinTaxonomyShell } from "@/components/stablecoin-taxonomy-shell";
 import { PEG_TAXONOMY_PAGES, PEG_TAXONOMY_PAGE_BY_SLUG } from "@/lib/peg-taxonomy";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
-import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { PegLandingClient } from "./client";
 
-export function generateStaticParams() {
-  return buildSlugStaticParams("peg", PEG_TAXONOMY_PAGES);
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ peg: string }>;
-}) {
-  return buildSlugPageMetadata(params, "peg", PEG_TAXONOMY_PAGE_BY_SLUG, "Peg Currency Not Found");
-}
-
-export default async function PegLandingPage({
-  params,
-}: {
-  params: Promise<{ peg: string }>;
-}) {
-  const page = await resolveSlugPage(params, "peg", PEG_TAXONOMY_PAGE_BY_SLUG);
-  if (!page) notFound();
-
-  return (
+const route = createStaticSlugRoute({
+  paramKey: "peg",
+  pages: PEG_TAXONOMY_PAGES,
+  pageBySlug: PEG_TAXONOMY_PAGE_BY_SLUG,
+  missingTitle: "Peg Currency Not Found",
+  render: (page) => (
     <StablecoinTaxonomyShell
       title={page.title}
       href={page.href}
@@ -45,5 +29,9 @@ export default async function PegLandingPage({
     >
       <PegLandingClient pegCurrency={page.value} />
     </StablecoinTaxonomyShell>
-  );
-}
+  ),
+});
+
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

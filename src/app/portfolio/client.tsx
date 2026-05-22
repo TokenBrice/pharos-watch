@@ -5,8 +5,7 @@ import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { trackEvent } from "@/lib/analytics";
-import { StaleDataBanner } from "@/components/stale-data-banner";
-import { QueryErrorNotice } from "@/components/query-error-notice";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { encodePortfolioHoldings } from "@/lib/portfolio-codec";
 import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
@@ -109,14 +108,12 @@ export function PortfolioClient() {
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice
+      <QueryFreshnessNotices
         error={reportCardsError}
         hasData={!!reportData?.cards?.length}
         onRetry={() => {
           void refetchReportCards();
         }}
-      />
-      <StaleDataBanner
         queries={[
           {
             preset: "reportCards",

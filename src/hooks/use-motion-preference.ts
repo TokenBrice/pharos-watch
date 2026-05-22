@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { createBrowserStorageStore } from "@/lib/browser-storage";
 
 const STORAGE_KEY = "pharos-motion-preference-v1";
 
@@ -13,16 +14,11 @@ function isMotionPreference(value: unknown): value is MotionPreference {
   return value === "system" || value === "reduced" || value === "full";
 }
 
-function loadFromStorage(): MotionPreference {
-  if (typeof window === "undefined") return "system";
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (isMotionPreference(raw)) return raw;
-  } catch {
-    // localStorage may throw in privacy mode; fall through to default
-  }
-  return "system";
-}
+const motionPreferenceStorage = createBrowserStorageStore<MotionPreference>({
+  key: STORAGE_KEY,
+  fallback: "system",
+  decode: (raw) => (isMotionPreference(raw) ? raw : null),
+});
 
 function applyToBody(pref: MotionPreference) {
   if (typeof document === "undefined") return;
@@ -46,7 +42,7 @@ function notify() {
 
 // Hydrate the singleton once on module load (client only).
 if (typeof window !== "undefined") {
-  currentPreference = loadFromStorage();
+  currentPreference = motionPreferenceStorage.read();
   applyToBody(currentPreference);
   // Re-evaluate body attribute when the OS-level preference flips while we're in
   // "system" mode. Components reading the React state stay accurate because they
@@ -94,11 +90,7 @@ export function useMotionPreference(): MotionPreferenceApi {
   const setPreference = useCallback((next: MotionPreference) => {
     currentPreference = next;
     if (typeof window !== "undefined") {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        // localStorage write failures are non-fatal.
-      }
+      motionPreferenceStorage.write(next);
     }
     applyToBody(next);
     notify();

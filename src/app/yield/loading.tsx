@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Analytics tier: filter strip + leaderboard table skeleton ~10 rows.
 const YIELD_SKELETON_ROW_COUNT = 10;
 
-export default function Loading() {
+export function YieldLoadingState() {
   return (
     <div className="space-y-6" aria-busy="true" aria-live="polite">
       <div className="space-y-2.5">
@@ -76,4 +76,8 @@ export default function Loading() {
       </div>
     </div>
   );
+}
+
+export default function Loading() {
+  return <YieldLoadingState />;
 }

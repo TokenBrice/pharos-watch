@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
+import { DepegLoadingState } from "@/app/depeg/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
@@ -44,7 +44,7 @@ const FAQ_ITEMS = [
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
-  loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
+  loading: <DepegLoadingState />,
   shell: {
     breadcrumbName: "Depeg Tracker",
     path: "/depeg/",

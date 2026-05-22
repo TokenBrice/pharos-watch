@@ -14,15 +14,17 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
  * shapes before checking the map.
  */
 export const ROUTE_LABELS: Record<string, string> = {
+  "/": "Dashboard",
   "/screener": "Screener",
   "/compare": "Compare",
-  "/portfolio": "Portfolio",
+  "/portfolio": "Portfolio Audit",
   "/timeline": "Timeline",
   "/depeg": "Depeg",
   "/liquidity": "Liquidity",
-  "/yield": "Yield",
-  "/flows": "Flows",
+  "/yield": "Yield Intelligence",
+  "/flows": "Mint/Burn Flows",
   "/freezewatch": "FreezeWatch",
+  "/pharoswatchbot": "PharosWatchBot",
   "/safety-scores": "Safety Scores",
   "/dependency-map": "Dependency Map",
   "/cemetery": "Cemetery",
@@ -38,12 +40,12 @@ export const ROUTE_LABELS: Record<string, string> = {
   "/learn": "Learn",
   "/learn/mechanisms": "Mechanisms",
   "/learn/glossary": "Glossary",
-  "/start": "Start",
-  "/status": "Status",
-  "/api": "API",
+  "/start": "Start Here",
+  "/status": "Pharos Status",
+  "/api": "API Access",
   "/coverage": "Coverage",
   "/upcoming": "Upcoming",
-  "/alt-pegs": "Alt Pegs",
+  "/alt-pegs": "Alt-Pegs",
   "/chains": "Chains",
   "/stability-index": "Stability Index",
   "/stablecoin": "Stablecoin",
@@ -96,7 +98,7 @@ const DYNAMIC_SEGMENT_RESOLVERS: Record<string, (segment: string) => string | nu
  */
 export function routeLabelFor(path: string): string | null {
   const normalized = normalizeRoutePath(path);
-  if (normalized === "/") return null;
+  if (normalized === "/") return ROUTE_LABELS["/"] ?? null;
   if (ROUTE_LABELS[normalized]) return ROUTE_LABELS[normalized];
 
   // Try one level up + dynamic resolver. e.g. "/stablecoin/usdc-circle"

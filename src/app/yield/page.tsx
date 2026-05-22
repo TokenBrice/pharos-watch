@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
-import { Skeleton } from "@/components/ui/skeleton";
+import { YieldLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -67,7 +67,7 @@ const YIELD_STATIC_SECTION = (
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),
-  loading: <Skeleton className="h-[600px] w-full rounded-xl" />,
+  loading: <YieldLoadingState />,
   shell: {
     breadcrumbName: "Yield Intelligence",
     path: "/yield/",

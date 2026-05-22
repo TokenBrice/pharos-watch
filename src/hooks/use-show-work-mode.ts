@@ -1,16 +1,21 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
+import { createBrowserStorageStore } from "@/lib/browser-storage";
 
 const STORAGE_KEY = "pharos.show-work";
 const URL_PARAM = "show-work";
 
-const listeners = new Set<() => void>();
-
-function notify() {
-  for (const listener of listeners) listener();
-}
+const showWorkStorage = createBrowserStorageStore<boolean | null>({
+  key: STORAGE_KEY,
+  fallback: null,
+  decode: (stored) => {
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return null;
+  },
+  encode: (value) => (value ? "true" : "false"),
+});
 
 function readUrlEnable(): boolean {
   if (typeof window === "undefined") return false;
@@ -22,10 +27,7 @@ function readUrlEnable(): boolean {
 }
 
 function readStorageOverride(): boolean | null {
-  const stored = safeStorageGetItem(getWindowStorage("local"), STORAGE_KEY);
-  if (stored === "true") return true;
-  if (stored === "false") return false;
-  return null;
+  return showWorkStorage.read();
 }
 
 function readClient(): boolean {
@@ -35,7 +37,7 @@ function readClient(): boolean {
 }
 
 function writeStored(value: boolean) {
-  safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, value ? "true" : "false");
+  showWorkStorage.write(value);
 }
 
 function removeUrlParam() {
@@ -51,13 +53,6 @@ function removeUrlParam() {
   }
 }
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
 export interface ShowWorkMode {
   enabled: boolean;
   toggle: () => void;
@@ -71,7 +66,7 @@ export interface ShowWorkMode {
  */
 export function useShowWorkMode(): ShowWorkMode {
   const enabled = useSyncExternalStore(
-    subscribe,
+    showWorkStorage.subscribe,
     readClient,
     () => false,
   );
@@ -80,12 +75,10 @@ export function useShowWorkMode(): ShowWorkMode {
     const next = !readClient();
     writeStored(next);
     if (!next) removeUrlParam();
-    notify();
   }, []);
 
   const enable = useCallback(() => {
     writeStored(true);
-    notify();
   }, []);
 
   return { enabled, toggle, enable };

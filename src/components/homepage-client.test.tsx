@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomepageClient } from "@/components/homepage-client";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 
 const refetchMock = vi.fn();
 const handleGroupChangeMock = vi.fn();
@@ -104,8 +105,7 @@ describe("HomepageClient", () => {
   });
 
   afterEach(() => {
-    cleanup();
-    vi.useRealTimers();
+    cleanupFrontendTest();
   });
 
   it("defers optional homepage queries until after the critical render", async () => {

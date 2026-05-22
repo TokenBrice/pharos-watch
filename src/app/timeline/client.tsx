@@ -5,8 +5,7 @@ import { Radar, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
-import { QueryErrorNotice } from "@/components/query-error-notice";
-import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
@@ -698,7 +697,10 @@ export function TimelineClient() {
         onClearCoin={filters.coin ? () => setParam("coin", "") : undefined}
       />
 
-      <StaleDataBanner
+      <QueryFreshnessNotices
+        error={error}
+        hasData={rawEvents.length > 0}
+        onRetry={() => void refetch()}
         queries={[
           {
             label: "Timeline",
@@ -709,10 +711,6 @@ export function TimelineClient() {
           },
         ]}
       />
-
-      {error ? (
-        <QueryErrorNotice error={error} hasData={rawEvents.length > 0} onRetry={() => void refetch()} />
-      ) : null}
 
       {permalinkId && !permalinkBuffer.isLoading && !bufferEvent && !rawEvents.some((e) => e.id === permalinkId) ? (
         <div

@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
+import type { ComponentProps } from "react";
 import Link from "next/link";
 import { BookOpen, Globe, KeyRound, ShieldCheck } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
@@ -11,6 +13,12 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import {
+  PUBLIC_API_ARTIFACTS,
+  PUBLIC_API_HOST,
+  PUBLIC_API_KEY_HEADER,
+  SELF_SERVE_API_KEY_SUMMARY,
+} from "@/app/api/public-api-copy";
 import {
   getConciseApiReferenceSections,
   getPublicApiEndpointSummaries,
@@ -34,7 +42,7 @@ const HERO_LANES = [
     icon: KeyRound,
     eyebrow: "For integrations",
     description:
-      "Call `https://api.pharos.watch` directly. Non-exempt `/api/*` requests require a valid `X-API-Key`; missing or invalid keys return `401`. Self-serve access starts at [/api/](/api/).",
+      `Call \`${PUBLIC_API_HOST}\` directly. Non-exempt \`/api/*\` requests require a valid \`${PUBLIC_API_KEY_HEADER}\`; missing or invalid keys return \`401\`. Self-serve access starts at [/api/](/api/).`,
   },
   {
     title: "Website lane",
@@ -61,12 +69,12 @@ const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "Do I need an API key for every endpoint?",
     answer:
-      "Almost every public data endpoint on https://api.pharos.watch requires X-API-Key. The no-key exceptions are health checks, OG images, feedback submission, the Telegram webhook, Telegram Mini App session/mutation, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret or signed Mini App initData. Admin routes use Cloudflare Access instead of public API keys.",
+      `Almost every public data endpoint on ${PUBLIC_API_HOST} requires ${PUBLIC_API_KEY_HEADER}. The no-key exceptions are health checks, OG images, feedback submission, the Telegram webhook, Telegram Mini App session/mutation, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret or signed Mini App initData. Admin routes use Cloudflare Access instead of public API keys.`,
   },
   {
     question: "What is the difference between the public API lane and the website lane?",
     answer:
-      "The public lane is https://api.pharos.watch and requires a valid X-API-Key. The website lane is same-origin /_site-data/* for browsers on pharos.watch, ops.pharos.watch, and Pages previews; the Pages function rejects requests without an allowed Origin or Referer, so external integrations should use the public API lane.",
+      `The public lane is ${PUBLIC_API_HOST} and requires a valid ${PUBLIC_API_KEY_HEADER}. The website lane is same-origin /_site-data/* for browsers on pharos.watch, ops.pharos.watch, and Pages previews; the Pages function rejects requests without an allowed Origin or Referer, so external integrations should use the public API lane.`,
   },
   {
     question: "How is admin auth handled?",
@@ -79,72 +87,52 @@ function stripMarkdownHeadingFormatting(text: string) {
   return text.replaceAll("`", "");
 }
 
-function renderInlineMarkdown(text: string) {
-  const parts: ReactNode[] = [];
-  const pattern = /(\[[^\]]+\]\((?:https?:\/\/|\/)[^)]+\)|`[^`]+`|\*\*[^*]+\*\*)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null = null;
-  let key = 0;
-
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-
-    const token = match[0];
-    if (token.startsWith("`") && token.endsWith("`")) {
-      parts.push(
-        <code key={`code-${key++}`} className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
-          {token.slice(1, -1)}
-        </code>,
+const inlineMarkdownComponents = {
+  p: ({ children }: ComponentProps<"p">) => <>{children}</>,
+  a: ({ href, children }: ComponentProps<"a">) => {
+    if (!href) return <span>{children}</span>;
+    if (href.startsWith("/")) {
+      return (
+        <Link href={href} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
+          {children}
+        </Link>
       );
-    } else if (token.startsWith("**") && token.endsWith("**")) {
-      parts.push(
-        <strong key={`strong-${key++}`} className="font-semibold text-foreground">
-          {token.slice(2, -2)}
-        </strong>,
-      );
-    } else {
-      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-      if (!linkMatch) {
-        parts.push(token);
-      } else {
-        const [, label, href] = linkMatch;
-        if (href.startsWith("/")) {
-          parts.push(
-            <Link key={`link-${key++}`} href={href} className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground">
-              {label}
-            </Link>,
-          );
-        } else {
-          parts.push(
-            <a
-              key={`link-${key++}`}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-            >
-              {label}
-            </a>,
-          );
-        }
-      }
     }
+    if (!href.startsWith("http://") && !href.startsWith("https://")) {
+      return <span>{children}</span>;
+    }
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+      >
+        {children}
+      </a>
+    );
+  },
+  code: ({ children }: ComponentProps<"code">) => (
+    <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+      {children}
+    </code>
+  ),
+  strong: ({ children }: ComponentProps<"strong">) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+};
 
-    lastIndex = match.index + token.length;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return parts;
+function InlineMarkdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown components={inlineMarkdownComponents} remarkPlugins={[remarkGfm]}>
+      {text}
+    </ReactMarkdown>
+  );
 }
 
 function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
   if (block.type === "paragraph") {
-    return <p className="text-sm leading-relaxed text-muted-foreground">{renderInlineMarkdown(block.text)}</p>;
+    return <p className="text-sm leading-relaxed text-muted-foreground"><InlineMarkdown text={block.text} /></p>;
   }
 
   if (block.type === "list") {
@@ -153,7 +141,7 @@ function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
     return (
       <ListTag className={`space-y-2 pl-5 text-sm leading-relaxed text-muted-foreground ${block.ordered ? "list-decimal" : "list-disc"}`}>
         {block.items.map((item, index) => (
-          <li key={`${index}-${item}`}>{renderInlineMarkdown(item)}</li>
+          <li key={`${index}-${item}`}><InlineMarkdown text={item} /></li>
         ))}
       </ListTag>
     );
@@ -167,7 +155,7 @@ function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
             <tr>
               {block.headers.map((header, index) => (
                 <th key={`${index}-${header}`} className="border-b border-border/60 px-3 py-2 font-semibold text-foreground">
-                  {renderInlineMarkdown(header)}
+                  <InlineMarkdown text={header} />
                 </th>
               ))}
             </tr>
@@ -177,7 +165,7 @@ function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
               <tr key={`${rowIndex}-${row.join("|")}`} className="align-top">
                 {row.map((cell, cellIndex) => (
                   <td key={`${rowIndex}-${cellIndex}`} className="border-t border-border/50 px-3 py-2 text-muted-foreground">
-                    {renderInlineMarkdown(cell)}
+                    <InlineMarkdown text={cell} />
                   </td>
                 ))}
               </tr>
@@ -216,7 +204,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
     <section id={section.id} className="space-y-5 rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
       <div className="space-y-2">
         <p className="pharos-kicker">Reference Section</p>
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{renderInlineMarkdown(section.title)}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground"><InlineMarkdown text={section.title} /></h2>
       </div>
 
       {section.blocks.length > 0 ? (
@@ -375,8 +363,8 @@ export default async function AboutApiPage() {
               <p className="pharos-kicker">External Integrations</p>
               <h1 className="text-4xl font-extrabold tracking-tighter sm:text-[3.3rem]">API Reference</h1>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                The public integration lane is <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">https://api.pharos.watch</code>.
-                In production, protected public routes require <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">X-API-Key</code>.
+                The public integration lane is <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_HOST}</code>.
+                In production, protected public routes require <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_KEY_HEADER}</code>.
                 The website itself does not use that lane directly; it talks to the internal site-data proxy instead.
               </p>
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
@@ -393,21 +381,21 @@ export default async function AboutApiPage() {
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 Prefer machine-readable tooling? Download the{" "}
                 <a
-                  href="/openapi.json"
+                  href={PUBLIC_API_ARTIFACTS.openApi}
                   className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
                 >
                   OpenAPI spec
                 </a>
                 , or import the{" "}
                 <a
-                  href="/postman/pharos-api.postman_collection.json"
+                  href={PUBLIC_API_ARTIFACTS.postmanCollection}
                   className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
                 >
                   Pharos API collection
                 </a>{" "}
                 with the{" "}
                 <a
-                  href="/postman/pharos-api.postman_environment.json"
+                  href={PUBLIC_API_ARTIFACTS.postmanEnvironment}
                   className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
                 >
                   production environment template
@@ -421,7 +409,7 @@ export default async function AboutApiPage() {
             <p className="pharos-kicker">Quick Facts</p>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <li>
-                <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">X-API-Key</code>
+                <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">{PUBLIC_API_KEY_HEADER}</code>
               </li>
               <li>
                 <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, self-serve key request, Telegram webhook (Telegram secret)
@@ -448,7 +436,7 @@ export default async function AboutApiPage() {
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{renderInlineMarkdown(lane.description)}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground"><InlineMarkdown text={lane.description} /></p>
             </section>
           );
         })}
@@ -471,7 +459,7 @@ export default async function AboutApiPage() {
             .
           </p>
           <p>
-            The default self-serve key is email-verified, limited to 30 requests per minute, scoped to the public external API lane, and expires after 60 days.
+            The default self-serve key is {SELF_SERVE_API_KEY_SUMMARY}, scoped to the public external API lane.
           </p>
         </div>
       </section>

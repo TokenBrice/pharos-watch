@@ -5,6 +5,7 @@ import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import FlowsClient from "./client";
+import { FlowsLoadingState } from "./loading";
 
 const FLOWS_DESCRIPTION =
   "Configured issuance-chain minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.";
@@ -43,13 +44,7 @@ export default function FlowsPage() {
           __html: safeJsonLd(buildFaqJsonLd(FLOW_FAQ_ITEMS)),
         }}
       />
-      <Suspense
-        fallback={
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
-          </div>
-        }
-      >
+      <Suspense fallback={<FlowsLoadingState />}>
         <FlowsClient faqItems={FLOW_FAQ_ITEMS} />
       </Suspense>
     </>

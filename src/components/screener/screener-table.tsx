@@ -8,6 +8,7 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
+import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -162,31 +163,13 @@ export function ScreenerTable({
       <div className="space-y-3 md:hidden">
         <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
           <p className="pharos-kicker mb-2">Sort Results</p>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Sort screener results">
-            {MOBILE_SORT_OPTIONS.map((option) => {
-              const active = sort.sortKey === option.key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => sort.toggleSort(option.key)}
-                  className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
-                    active
-                      ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
-                      : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {option.label}
-                  {active ? (
-                    <span className="ml-1 font-mono text-[10px]" aria-hidden="true">
-                      {sort.sortDirection === "asc" ? "↑" : "↓"}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+          <MobileSortPills
+            options={MOBILE_SORT_OPTIONS}
+            sortKey={sort.sortKey}
+            sortDirection={sort.sortDirection}
+            onSort={sort.toggleSort}
+            ariaLabel="Sort screener results"
+          />
         </div>
         {isLoading ? (
           <div className="space-y-3">

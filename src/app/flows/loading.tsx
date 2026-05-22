@@ -4,7 +4,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 // Analytics tier: bank-run gauge + mint/burn area chart + flow table.
 const FLOWS_SKELETON_ROW_COUNT = 10;
 
-export default function Loading() {
+export function FlowsLoadingState() {
   return (
     <div className="space-y-6" aria-busy="true" aria-live="polite">
       <div className="space-y-2.5">
@@ -57,4 +57,8 @@ export default function Loading() {
       </div>
     </div>
   );
+}
+
+export default function Loading() {
+  return <FlowsLoadingState />;
 }

@@ -10,8 +10,8 @@ import { TableCell } from "@/components/ui/table";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChainCohortLattice } from "@/components/chains/chain-cohort-lattice";
 import { cn } from "@/lib/utils";
@@ -254,14 +254,12 @@ export function ChainsLeaderboardClient() {
   return (
     <SectionErrorBoundary name="Chains">
       <div className="space-y-4">
-        <QueryErrorNotice
+        <QueryFreshnessNotices
           error={error}
           hasData={!!data?.chains?.length}
           onRetry={() => {
             void refetch();
           }}
-        />
-        <StaleDataBanner
           queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length, meta }]}
         />
 
