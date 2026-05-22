@@ -87,6 +87,7 @@ describe("site-data proxy", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("rejects requests without Origin or Referer", async () => {
@@ -153,10 +154,12 @@ describe("site-data proxy", () => {
   });
 
   it("returns a cached response and records a Pages cache-hit request", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    cacheMatch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ cached: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestDb();
@@ -173,27 +176,39 @@ describe("site-data proxy", () => {
     await expect(response.json()).resolves.toEqual({ cached: true });
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
-      && entry.binds[1] === "stablecoins"
-      && entry.binds[2] === "/api/stablecoins"
-      && entry.binds[3] === "pages-cache-hit"
-      && entry.binds[4] === "")).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO site_data_request_stats") &&
+            entry.binds[1] === "stablecoins" &&
+            entry.binds[2] === "/api/stablecoins" &&
+            entry.binds[3] === "pages-cache-hit" &&
+            entry.binds[4] === "",
+        ),
+    ).toBe(true);
   });
 
   it("bypasses the Pages cache for conditional requests", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
-    const fetchSpy = vi.fn(async () => new Response(null, {
-      status: 304,
-      headers: { ETag: "\"stablecoins-v1\"" },
-    }));
+    cacheMatch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ cached: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 304,
+          headers: { ETag: '"stablecoins-v1"' },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { "If-None-Match": "\"stablecoins-v1\"", Origin: "https://pharos.watch" },
+        headers: { "If-None-Match": '"stablecoins-v1"', Origin: "https://pharos.watch" },
       }),
       env: makeEnv(),
       params: { path: "stablecoins" },
@@ -206,15 +221,18 @@ describe("site-data proxy", () => {
   });
 
   it("proxies allowlisted requests to the site API with the shared secret and records an upstream fetch", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60",
-        "Content-Type": "application/json",
-        Warning: '199 - "advisory"',
-        "X-Data-Age": "12",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+            Warning: '199 - "advisory"',
+            "X-Data-Age": "12",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestDb();
 
@@ -243,22 +261,32 @@ describe("site-data proxy", () => {
     expect(response.headers.get("Warning")).toContain("advisory");
     expect(response.headers.get("X-Data-Age")).toBe("12");
     expect(cachePut).toHaveBeenCalledTimes(1);
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
-      && entry.binds[1] === "stablecoin-summary"
-      && entry.binds[2] === "/api/stablecoin-summary/:id"
-      && entry.binds[3] === "pages-upstream-fetch"
-      && entry.binds[4] === "site-api"
-      && entry.binds[5] === 1)).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO site_data_request_stats") &&
+            entry.binds[1] === "stablecoin-summary" &&
+            entry.binds[2] === "/api/stablecoin-summary/:id" &&
+            entry.binds[3] === "pages-upstream-fetch" &&
+            entry.binds[4] === "site-api" &&
+            entry.binds[5] === 1,
+        ),
+    ).toBe(true);
   });
 
   it("proxies the homepage tape events path with its query string", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ events: [] }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60",
-        "Content-Type": "application/json",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ events: [] }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -285,13 +313,16 @@ describe("site-data proxy", () => {
   });
 
   it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60",
-        "Content-Type": "application/json",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestDb();
     const ctx = makeWaitUntil();
@@ -309,22 +340,32 @@ describe("site-data proxy", () => {
     expect(ctx.waitUntil).toHaveBeenCalled();
 
     await ctx.flush();
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
-      && entry.binds[1] === "stablecoin-detail"
-      && entry.binds[2] === "/api/stablecoin/:id"
-      && entry.binds[3] === "pages-upstream-fetch"
-      && entry.binds[4] === "site-api"
-      && entry.binds[5] === 1)).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO site_data_request_stats") &&
+            entry.binds[1] === "stablecoin-detail" &&
+            entry.binds[2] === "/api/stablecoin/:id" &&
+            entry.binds[3] === "pages-upstream-fetch" &&
+            entry.binds[4] === "site-api" &&
+            entry.binds[5] === 1,
+        ),
+    ).toBe(true);
   });
 
   it("honors the route/source attribution kill switch for Pages site-data requests", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60",
-        "Content-Type": "application/json",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestDb();
 
@@ -343,13 +384,16 @@ describe("site-data proxy", () => {
   it("returns the upstream response when the background Pages cache write fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     cachePut.mockRejectedValueOnce(new Error("cache unavailable"));
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60",
-        "Content-Type": "application/json",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
     const ctx = makeWaitUntil();
 
@@ -372,13 +416,16 @@ describe("site-data proxy", () => {
   });
 
   it("does not cache upstream responses marked no-store", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "no-store",
-        "Content-Type": "application/json",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "no-store",
+            "Content-Type": "application/json",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -395,14 +442,17 @@ describe("site-data proxy", () => {
   });
 
   it("does not cache stale upstream responses with Warning 110", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, max-age=60",
-        "Content-Type": "application/json",
-        Warning: '110 - "Response is stale"',
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, max-age=60",
+            "Content-Type": "application/json",
+            Warning: '110 - "Response is stale"',
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -419,13 +469,16 @@ describe("site-data proxy", () => {
   });
 
   it("preserves upstream Retry-After headers on site-data rate limits", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: {
-        "Content-Type": "application/json",
-        "Retry-After": "45",
-      },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "45",
+          },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
@@ -443,10 +496,13 @@ describe("site-data proxy", () => {
   });
 
   it("proxies public-status-history through the site-data lane", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestDb();
 
@@ -466,18 +522,28 @@ describe("site-data proxy", () => {
         headers: expect.any(Headers),
       }),
     );
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
-      && entry.binds[1] === "public-status-history"
-      && entry.binds[2] === "/api/public-status-history"
-      && entry.binds[3] === "pages-upstream-fetch"
-      && entry.binds[4] === "site-api")).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO site_data_request_stats") &&
+            entry.binds[1] === "public-status-history" &&
+            entry.binds[2] === "/api/public-status-history" &&
+            entry.binds[3] === "pages-upstream-fetch" &&
+            entry.binds[4] === "site-api",
+        ),
+    ).toBe(true);
   });
 
   it("proxies telegram-pulse through the site-data lane", async () => {
-    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestDb();
 
@@ -497,11 +563,18 @@ describe("site-data proxy", () => {
         headers: expect.any(Headers),
       }),
     );
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats")
-      && entry.binds[1] === "telegram-pulse"
-      && entry.binds[2] === "/api/telegram-pulse"
-      && entry.binds[3] === "pages-upstream-fetch"
-      && entry.binds[4] === "site-api")).toBe(true);
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO site_data_request_stats") &&
+            entry.binds[1] === "telegram-pulse" &&
+            entry.binds[2] === "/api/telegram-pulse" &&
+            entry.binds[3] === "pages-upstream-fetch" &&
+            entry.binds[4] === "site-api",
+        ),
+    ).toBe(true);
   });
 
   it("fails closed on production site hosts when SITE_API_ORIGIN is unset", async () => {
@@ -522,11 +595,65 @@ describe("site-data proxy", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("fails closed when SITE_API_ORIGIN is malformed", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(makeTestDb(), { SITE_API_ORIGIN: "not a url" }),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("records upstream fetch errors through site-data attribution", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSpy = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    const db = makeTestDb();
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(db),
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ error: "Site API upstream fetch failed" });
+    expect(
+      db
+        .getHistory()
+        .some(
+          (entry) =>
+            entry.sql.includes("INSERT INTO site_data_request_stats") &&
+            entry.binds[1] === "stablecoins" &&
+            entry.binds[2] === "/api/stablecoins" &&
+            entry.binds[3] === "pages-upstream-error" &&
+            entry.binds[4] === "site-api" &&
+            entry.binds[5] === 1,
+        ),
+    ).toBe(true);
+    expect(warn).toHaveBeenCalledWith("[site-data-proxy] upstream fetch failed (Error): network down");
+  });
+
   it("returns 500 when the site-proxy secret is missing", async () => {
-    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }));
+    cacheMatch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ cached: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
