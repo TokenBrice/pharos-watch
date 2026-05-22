@@ -7,7 +7,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
-import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -40,7 +40,7 @@ export function YieldClient() {
   const router = useRouter();
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
-  const watchlist = useYieldWatchlist();
+  const watchlist = useWatchlist();
   const urlParams = useMemo(
     () => ({
       peg: searchParams.get("peg"),
@@ -63,9 +63,9 @@ export function YieldClient() {
     () => buildYieldViewModel(rankings, urlParams, {
       benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
       fallbackBenchmark: data?.provenance?.benchmark ?? null,
-      watchlistIds: watchlist.ids,
+      watchlistIds: watchlist.idSet,
     }),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.ids],
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
   );
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => {

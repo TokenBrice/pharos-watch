@@ -2,25 +2,24 @@
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { useYieldWatchlist } from "../use-yield-watchlist";
+import { useWatchlist, WATCHLIST_STORAGE_KEY } from "@/hooks/use-watchlist";
 
-const CANONICAL_STORAGE_KEY = "pharos-watchlist-v1";
-const LEGACY_STORAGE_KEY = "pharos:yield-watchlist:v1";
+const LEGACY_YIELD_STORAGE_KEY = "pharos:yield-watchlist:v1";
 
-describe("useYieldWatchlist", () => {
+describe("useWatchlist", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it("hydrates with an empty set and flips isHydrated", async () => {
-    const { result } = renderHook(() => useYieldWatchlist());
+  it("hydrates with an empty list and flips isHydrated", async () => {
+    const { result } = renderHook(() => useWatchlist());
 
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
-    expect(Array.from(result.current.ids)).toEqual([]);
+    await waitFor(() => expect(result.current.ids).toEqual([]));
   });
 
   it("adds, checks, removes, and toggles ids", async () => {
-    const { result } = renderHook(() => useYieldWatchlist());
+    const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
 
     act(() => result.current.add("usdc-circle"));
@@ -36,8 +35,8 @@ describe("useYieldWatchlist", () => {
     expect(result.current.has("usdt-tether")).toBe(false);
   });
 
-  it("persists changes to localStorage", async () => {
-    const { result } = renderHook(() => useYieldWatchlist());
+  it("persists changes to localStorage and the legacy yield mirror", async () => {
+    const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
 
     act(() => {
@@ -46,42 +45,45 @@ describe("useYieldWatchlist", () => {
     });
 
     await waitFor(() => {
-      const stored = JSON.parse(window.localStorage.getItem(CANONICAL_STORAGE_KEY) ?? "null");
+      const stored = JSON.parse(window.localStorage.getItem(WATCHLIST_STORAGE_KEY) ?? "null");
       expect(Array.isArray(stored)).toBe(true);
       expect(stored).toContain("usdc-circle");
       expect(stored).toContain("dai-mkr");
-      expect(JSON.parse(window.localStorage.getItem(LEGACY_STORAGE_KEY) ?? "null")).toEqual(stored);
+      expect(JSON.parse(window.localStorage.getItem(LEGACY_YIELD_STORAGE_KEY) ?? "null")).toEqual(stored);
     });
   });
 
   it("reads existing legacy yield watchlist from storage and dedupes", async () => {
-    window.localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(["usdc-circle", "usdc-circle", "dai-mkr"]));
+    window.localStorage.setItem(
+      LEGACY_YIELD_STORAGE_KEY,
+      JSON.stringify(["usdc-circle", "usdc-circle", "dai-mkr"]),
+    );
 
-    const { result } = renderHook(() => useYieldWatchlist());
+    const { result } = renderHook(() => useWatchlist());
 
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
-    await waitFor(() => expect(Array.from(result.current.ids).sort()).toEqual(["dai-mkr", "usdc-circle"]));
+    await waitFor(() => expect([...result.current.idSet].sort()).toEqual(["dai-mkr", "usdc-circle"]));
   });
 
   it("ignores malformed stored values", async () => {
-    window.localStorage.setItem(LEGACY_STORAGE_KEY, '{"not":"an array"}');
+    window.localStorage.setItem(LEGACY_YIELD_STORAGE_KEY, '{"not":"an array"}');
 
-    const { result } = renderHook(() => useYieldWatchlist());
+    const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
-    await waitFor(() => expect(Array.from(result.current.ids)).toEqual([]));
+    await waitFor(() => expect(result.current.ids).toEqual([]));
   });
 
-  it("clears the set", async () => {
-    const { result } = renderHook(() => useYieldWatchlist());
+  it("clears the list", async () => {
+    const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.isHydrated).toBe(true));
 
     act(() => {
       result.current.add("a");
       result.current.add("b");
     });
-    expect(result.current.ids.size).toBe(2);
+    expect(result.current.count).toBe(2);
 
     act(() => result.current.clear());
-    expect(result.current.ids.size).toBe(0);
+    expect(result.current.count).toBe(0);
   });
 });

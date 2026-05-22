@@ -1,5 +1,11 @@
 import type { SelectorOutput } from "@shared/lib/selector";
 import {
+  getWindowStorage,
+  readJsonStorageValue,
+  safeStorageRemoveItem,
+  writeJsonStorageValue,
+} from "@/lib/browser-storage";
+import {
   highestValidStep,
   SELECTOR_STATE_DEFAULTS,
   type SelectorStep,
@@ -15,48 +21,40 @@ export interface StoredSelectorRun {
   savedAt: number;
 }
 
+function decodeStoredSelectorRun(value: unknown): StoredSelectorRun | null {
+  const parsed = value as Partial<StoredSelectorRun>;
+  if (!parsed.state || !parsed.output || typeof parsed.savedAt !== "number") return null;
+  const state = parsed.state;
+  if (state.step !== "result" || highestValidStep(state) !== "result") return null;
+  return {
+    state: { ...state, sid: null, ev: null },
+    output: parsed.output,
+    savedAt: parsed.savedAt,
+  };
+}
+
 export function writeStoredSelectorRun(state: SelectorWizardState, output: SelectorOutput): void {
-  if (typeof sessionStorage === "undefined") return;
-  try {
-    const storedState = { ...state, step: "result" as const, sid: null, ev: null };
-    const payload: StoredSelectorRun = {
-      state: storedState,
-      output,
-      savedAt: Date.now(),
-    };
-    sessionStorage.setItem(SESSION_RESULT_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Best-effort tab-scoped recovery.
-  }
+  const storedState = { ...state, step: "result" as const, sid: null, ev: null };
+  const payload: StoredSelectorRun = {
+    state: storedState,
+    output,
+    savedAt: Date.now(),
+  };
+  writeJsonStorageValue(getWindowStorage("session"), SESSION_RESULT_STORAGE_KEY, payload);
 }
 
 export function readStoredSelectorRun(): StoredSelectorRun | null {
-  if (typeof sessionStorage === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(SESSION_RESULT_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<StoredSelectorRun>;
-    if (!parsed.state || !parsed.output || typeof parsed.savedAt !== "number") return null;
-    const state = parsed.state;
-    if (state.step !== "result" || highestValidStep(state) !== "result") return null;
-    return {
-      state: { ...state, sid: null, ev: null },
-      output: parsed.output,
-      savedAt: parsed.savedAt,
-    };
-  } catch {
-    clearStoredSelectorRun();
-    return null;
-  }
+  return readJsonStorageValue(
+    getWindowStorage("session"),
+    SESSION_RESULT_STORAGE_KEY,
+    decodeStoredSelectorRun,
+    null,
+    clearStoredSelectorRun,
+  );
 }
 
 export function clearStoredSelectorRun(): void {
-  if (typeof sessionStorage === "undefined") return;
-  try {
-    sessionStorage.removeItem(SESSION_RESULT_STORAGE_KEY);
-  } catch {
-    // Ignore storage access failures.
-  }
+  safeStorageRemoveItem(getWindowStorage("session"), SESSION_RESULT_STORAGE_KEY);
 }
 
 export function wizardStateFromOutput(

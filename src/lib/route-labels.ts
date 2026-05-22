@@ -2,57 +2,43 @@
  * Route label registry for the sitewide chrome breadcrumb (W6-A / I1).
  *
  * Used to auto-generate breadcrumb crumbs from `pathname` segments. Static
- * routes resolve via the `ROUTE_LABELS` map; dynamic segments are resolved
+ * routes resolve via navigation metadata plus the `ROUTE_LABEL_OVERRIDES`
+ * map; dynamic segments are resolved
  * by per-prefix functions in `DYNAMIC_SEGMENT_RESOLVERS`.
  */
+import { NAV_ITEMS } from "@/lib/nav-config";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 /**
- * Canonical labels for every public top-level (and select sub-) route.
- *
- * Keys are slash-prefixed, trailing-slash-stripped. Lookups normalize both
- * shapes before checking the map.
+ * Canonical labels for every public top-level route visible in navigation.
+ * Keys are slash-prefixed, trailing-slash-stripped.
  */
-export const ROUTE_LABELS: Record<string, string> = {
-  "/": "Dashboard",
-  "/screener": "Screener",
-  "/compare": "Compare",
-  "/portfolio": "Portfolio Audit",
-  "/timeline": "Timeline",
-  "/depeg": "Depeg",
-  "/liquidity": "Liquidity",
-  "/yield": "Yield Intelligence",
-  "/flows": "Mint/Burn Flows",
-  "/freezewatch": "FreezeWatch",
-  "/pharoswatchbot": "PharosWatchBot",
-  "/safety-scores": "Safety Scores",
-  "/dependency-map": "Dependency Map",
-  "/cemetery": "Cemetery",
-  "/digest": "Digest",
-  "/changelog": "Changelog",
-  "/methodology": "Methodology",
-  "/about": "About",
+const NAV_ROUTE_LABELS: Record<string, string> = Object.fromEntries(
+  NAV_ITEMS
+    .filter((item) => !item.external && item.href.startsWith("/"))
+    .map((item) => [normalizeRoutePath(item.href), item.label]),
+);
+
+/**
+ * Hidden/static subroutes and legacy aliases that are not part of NAV_ITEMS.
+ */
+const ROUTE_LABEL_OVERRIDES: Record<string, string> = {
   "/about/style": "Style Guide",
   "/about/principles": "Principles",
   "/about/bluechip": "Bluechip",
   "/about/editorial": "Editorial",
   "/about/api": "API",
   "/learn": "Learn",
-  "/learn/mechanisms": "Mechanisms",
   "/learn/glossary": "Glossary",
-  "/start": "Start Here",
-  "/status": "Pharos Status",
-  "/api": "API Access",
-  "/coverage": "Coverage",
-  "/upcoming": "Upcoming",
-  "/alt-pegs": "Alt-Pegs",
-  "/chains": "Chains",
-  "/stability-index": "Stability Index",
   "/stablecoin": "Stablecoin",
   "/stablecoins": "Stablecoins",
   "/blacklist": "Blacklist",
-  "/funding": "Funding",
   "/privacy": "Privacy",
+};
+
+export const ROUTE_LABELS: Record<string, string> = {
+  ...NAV_ROUTE_LABELS,
+  ...ROUTE_LABEL_OVERRIDES,
 };
 
 /**

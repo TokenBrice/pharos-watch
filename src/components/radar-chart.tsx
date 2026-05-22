@@ -1,7 +1,7 @@
 "use client";
 
 import { Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis } from "recharts";
-import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-primitives";
+import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { DimensionKey, ReportCard } from "@shared/types";

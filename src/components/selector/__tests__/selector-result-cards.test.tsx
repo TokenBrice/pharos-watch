@@ -1,21 +1,16 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { SelectorLowerRanked, SelectorRecommendation } from "@shared/lib/selector";
 
 import { SelectorLowerRankedRow } from "@/components/selector/selector-lower-ranked-row";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 
 vi.mock("next/link", async () => {
-  const React = await import("react");
-  return {
-    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(
-      function MockLink({ href, children, ...rest }, ref) {
-        return React.createElement("a", { ref, href, ...rest }, children);
-      },
-    ),
-  };
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
 });
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -29,7 +24,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 afterEach(() => {
-  cleanup();
+  cleanupFrontendTest();
 });
 
 const baseRecommendation: SelectorRecommendation = {

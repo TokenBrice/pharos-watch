@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives";
+import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives/axes";
 import type { BlacklistQuarterlyEventTypePoint } from "@shared/types";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[260px]";

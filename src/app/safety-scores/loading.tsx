@@ -1,30 +1,24 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  PageLoadingHeader,
+  PageLoadingShell,
+  PageLoadingStatGrid,
+} from "@/components/page-loading-skeleton";
 
 // Analytics tier: headline stats strip, distribution band, then ~12 graded rows.
 const SAFETY_SKELETON_ROW_COUNT = 12;
 
 export default function Loading() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-1.5">
-          <Skeleton className="h-4 w-20 rounded-sm" />
-          <span className="text-xs text-muted-foreground">/</span>
-          <Skeleton className="h-4 w-28 rounded-sm" />
-        </div>
-        <Skeleton className="h-9 w-64 rounded-md sm:h-11 sm:w-80" />
-        <Skeleton className="h-3.5 w-48 rounded-sm" />
-        <Skeleton className="h-4 w-full max-w-2xl rounded-sm" />
-      </div>
+    <PageLoadingShell>
+      <PageLoadingHeader sectionWidth="w-28" titleWidth="w-64 sm:w-80" />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="pharos-card-shell space-y-2 p-4">
-            <Skeleton className="h-3 w-24 rounded-sm" />
-            <Skeleton className="h-8 w-20 rounded-md" />
-          </div>
-        ))}
-      </div>
+      <PageLoadingStatGrid
+        count={4}
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        labelWidth="w-24"
+        valueWidth="w-20"
+      />
 
       <div className="pharos-card-shell space-y-3 p-4">
         <Skeleton className="h-3.5 w-32 rounded-sm" />
@@ -51,6 +45,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </div>
+    </PageLoadingShell>
   );
 }

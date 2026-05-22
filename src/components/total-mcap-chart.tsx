@@ -12,7 +12,14 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
 import { formatCurrency } from "@shared/lib/format";
-import { ChartLegendChip, ChartScaleToggle, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import {
+  ChartLegendChip,
+  DateTooltip,
+  MonoYAxis,
+  TimeGrid,
+  TimeXAxis,
+} from "@/components/chart-primitives/axes";
+import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";

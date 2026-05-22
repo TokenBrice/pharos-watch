@@ -80,7 +80,7 @@ interface StaticTimeXAxisProps extends StaticChartGeometry {
  * Static SVG x-axis tick row. Geometry-matched to the live `<TimeXAxis>` so
  * the swap is a paint-only change.
  */
-export function StaticTimeXAxis({
+function StaticTimeXAxis({
   width,
   height,
   margin,
@@ -131,7 +131,7 @@ interface StaticMonoYAxisProps extends StaticChartGeometry {
 /**
  * Static SVG y-axis tick column. Right-aligned to the plot edge, matching Recharts.
  */
-export function StaticMonoYAxis({
+function StaticMonoYAxis({
   width,
   height,
   margin,
@@ -179,7 +179,7 @@ interface StaticTimeGridProps extends StaticChartGeometry {
 /**
  * Horizontal dashed grid lines matching `<TimeGrid>`'s `strokeDasharray="2 6"` style.
  */
-export function StaticTimeGrid({ width, height, margin, yAxisWidth, xAxisHeight, lineCount = 5 }: StaticTimeGridProps) {
+function StaticTimeGrid({ width, height, margin, yAxisWidth, xAxisHeight, lineCount = 5 }: StaticTimeGridProps) {
   if (width <= 0 || height <= 0) return null;
   const { x0, x1, y0, y1 } = computePlotRect({ width, height, margin, yAxisWidth, xAxisHeight });
   return (

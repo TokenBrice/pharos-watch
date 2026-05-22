@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-export { ChartShellSkeleton } from "@/components/chart-primitives";
+export { ChartShellSkeleton } from "@/components/chart-primitives/skeleton";
 
 interface ChartSkeletonProps {
   className?: string;

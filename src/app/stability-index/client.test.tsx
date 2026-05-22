@@ -47,7 +47,7 @@ vi.mock("@/hooks/use-logos", () => ({
   useLogos: () => ({ data: { "usdc-circle": "/usdc.svg" } }),
 }));
 
-vi.mock("@/components/chart-primitives", () => ({
+vi.mock("@/components/chart-primitives/axes", () => ({
   DateTooltip: () => null,
   MonoYAxis: () => null,
   TimeGrid: () => null,

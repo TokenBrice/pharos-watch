@@ -3,7 +3,7 @@
 import { type ReactNode, useId, useState } from "react";
 import { ChevronDown, Search, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import {
   getActiveFilterSummaries,
   labelYieldFilterOption,
@@ -225,7 +225,7 @@ export function YieldLeaderboardControls({
   const yieldTypeTabsId = useId();
   const [showFilters, setShowFilters] = useState(false);
   const yieldTypeTabs = options.yieldType.filter((option) => option.count > 0);
-  const { ids: watchlistIds } = useYieldWatchlist();
+  const { idSet: watchlistIds } = useWatchlist();
   const watchlistActive = filters.watchlist === "only";
   const showWatching = watchlistIds.size > 0;
 

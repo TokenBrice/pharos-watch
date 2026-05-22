@@ -12,20 +12,15 @@ import { cn } from "@/lib/utils";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
+import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
+import { ChartCrosshairOverlay, useMarketDataChartSync } from "@/components/chart-primitives/sync";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import {
-  ChartAnnotationLegend,
-  ChartAnnotationLines,
-  ChartCrosshairOverlay,
   ChartDataTable,
-  ChartScaleToggle,
-  DateTooltip,
-  MonoYAxis,
-  TimeGrid,
-  TimeXAxis,
   capDataForTable,
-  useMarketDataChartSync,
   type ChartDataTableColumn,
-} from "@/components/chart-primitives";
+} from "@/components/chart-primitives/data-table";
 import { buildAdaptiveMonthlyTicks, computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";

@@ -2,11 +2,10 @@
 
 import { useCallback } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/csv-export";
@@ -50,8 +49,6 @@ const AMOUNT_SOURCE_TOOLTIPS: Record<string, string> = {
   legacy_migration: "Legacy migration amount retained for audit compatibility.",
   unavailable: "No amount source is available for this row.",
 };
-
-const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 
 interface BlacklistTableProps {
   events: BlacklistEvent[];
@@ -140,49 +137,15 @@ export function BlacklistTable({
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border overflow-x-auto">
-        <table className="w-full caption-bottom text-sm">
-          <thead>
-            <tr className="bg-muted/80 h-10">
-              {BLACKLIST_COLUMNS.map((col) => (
-                <th key={col.id} className={col.className}>
-                  <Skeleton className="h-3 w-12 inline-block" />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {SKELETON_ROWS.map((i) => (
-              <tr key={i} className="border-t">
-                <td className="px-4 py-2 text-right">
-                  <Skeleton className="h-4 w-6" />
-                </td>
-                <td className="px-4 py-2">
-                  <Skeleton className="h-4 w-24" />
-                </td>
-                <td className="px-4 py-2">
-                  <Skeleton className="h-4 w-14" />
-                </td>
-                <td className="px-4 py-2">
-                  <Skeleton className="h-4 w-16" />
-                </td>
-                <td className="px-4 py-2">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </td>
-                <td className="hidden md:table-cell px-4 py-2">
-                  <Skeleton className="h-4 w-28" />
-                </td>
-                <td className="hidden sm:table-cell px-4 py-2 text-right">
-                  <Skeleton className="h-4 w-16" />
-                </td>
-                <td className="hidden sm:table-cell px-4 py-2 text-center">
-                  <Skeleton className="h-4 w-4" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTableShell
+        columns={BLACKLIST_COLUMNS}
+        striped
+        containerClassName="rounded-xl border"
+        headerClassName="bg-muted"
+        mobileScrollHint={false}
+      >
+        <DataTableLoadingRows columns={BLACKLIST_COLUMNS} rowCount={10} />
+      </DataTableShell>
     );
   }
 

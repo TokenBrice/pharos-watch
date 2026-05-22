@@ -10,7 +10,7 @@ import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ScoreChart } from "@/components/psi-history-chart";
 import { StaleDataBanner } from "@/components/stale-data-banner";

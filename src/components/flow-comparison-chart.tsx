@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
-import { MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
+import { MonoYAxis, TimeXAxis } from "@/components/chart-primitives/axes";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
 export interface FlowSeries {

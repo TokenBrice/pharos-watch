@@ -23,6 +23,7 @@ import {
 import { digestPage, mergeDigestedPages, type DigestedDay } from "@/lib/tape-digest";
 import { deriveTicker, utcDayKey } from "@/lib/tape-derive";
 import { eventClassSlug } from "@/lib/tape-collapse";
+import { getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem } from "@/lib/browser-storage";
 import { timeAgo } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import {
@@ -34,6 +35,7 @@ import {
 const HIGHLIGHT_DURATION_MS = 2000;
 const DAY_MS = 86_400_000;
 const TAPE_FRESH_WINDOW_MS = 10 * 60 * 1000;
+const PHOSPHOR_STORAGE_KEY = "pharos:timeline-phosphor";
 
 const WINDOW_LABEL: Record<TapeWindowKey, string> = {
   "24h": "last 24h",
@@ -632,28 +634,24 @@ export function TimelineClient() {
   // applied only while the site is in dark mode — the green-on-black palette is
   // illegible against a light background.
   const { mounted: themeMounted, isDark } = useThemeToggle();
-  const phosphorStorageKey = "pharos:timeline-phosphor";
   const [phosphorStorageVersion, setPhosphorStorageVersion] = useState(0);
 
-  const persistedPhosphor =
-    typeof window !== "undefined" && window.localStorage.getItem(phosphorStorageKey) === "1";
+  const persistedPhosphor = safeStorageGetItem(getWindowStorage("local"), PHOSPHOR_STORAGE_KEY) === "1";
 
   useEffect(() => {
-    if (typeof window === "undefined" || !themeMounted || isDark) return;
-    window.localStorage.removeItem(phosphorStorageKey);
+    if (!themeMounted || isDark) return;
+    safeStorageRemoveItem(getWindowStorage("local"), PHOSPHOR_STORAGE_KEY);
   }, [themeMounted, isDark, phosphorStorageVersion]);
 
   const togglePhosphor = useCallback(() => {
     const next = !persistedPhosphor;
-    if (typeof window !== "undefined") {
-      if (next) {
-        window.localStorage.setItem(phosphorStorageKey, "1");
-      } else {
-        window.localStorage.removeItem(phosphorStorageKey);
-      }
-      setPhosphorStorageVersion((value) => value + 1);
+    if (next) {
+      safeStorageSetItem(getWindowStorage("local"), PHOSPHOR_STORAGE_KEY, "1");
+    } else {
+      safeStorageRemoveItem(getWindowStorage("local"), PHOSPHOR_STORAGE_KEY);
     }
-  }, [persistedPhosphor, phosphorStorageKey]);
+    setPhosphorStorageVersion((value) => value + 1);
+  }, [persistedPhosphor]);
 
   const phosphorActive = persistedPhosphor && isDark;
   const phosphorToggleVisible = themeMounted && isDark;

@@ -2,7 +2,7 @@
 
 import { Area, AreaChart } from "recharts";
 import { ChevronDown } from "lucide-react";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Skeleton } from "@/components/ui/skeleton";

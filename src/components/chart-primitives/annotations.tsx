@@ -9,7 +9,7 @@ import type { ChartAnnotation, ChartAnnotationKind } from "@shared/types/chart-a
  * Hex literals — Recharts SVG `fill` / `stroke` cannot resolve CSS variables,
  * so the annotation palette is kept here as the canonical source.
  */
-export const ANNOTATION_HEX_COLORS: Record<ChartAnnotationKind, string> = {
+const ANNOTATION_HEX_COLORS: Record<ChartAnnotationKind, string> = {
   depeg: "#ef4444", // red-500
   "mint-burn-spike": "#3b82f6", // blue-500
   "blacklist-surge": "#f59e0b", // amber-500
@@ -159,7 +159,7 @@ export function ChartAnnotationLegend({
  * `ChartAnnotationKind` so the strip's bar can be colored by the
  * `ANNOTATION_HEX_COLORS` palette.
  */
-export function bucketAnnotationsByQuarter(
+function bucketAnnotationsByQuarter(
   annotations: readonly ChartAnnotation[],
 ): Array<{ startMs: number; endMs: number; count: number; dominantKind: ChartAnnotationKind }> {
   if (annotations.length === 0) return [];

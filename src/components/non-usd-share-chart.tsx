@@ -12,7 +12,7 @@ import { formatCurrency, formatChartDate, formatPercent } from "@shared/lib/form
 import { useNonUsdShare } from "@/hooks/api-hooks";
 import { CHART_GREEN, CHART_AMBER, CHART_HEIGHT } from "@/lib/chart-colors";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { computeChartYDomain } from "@/lib/chart-utils";
 
 const COMMODITY_COLOR = CHART_AMBER;

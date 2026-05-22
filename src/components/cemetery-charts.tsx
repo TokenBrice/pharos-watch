@@ -17,7 +17,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
-import { ChartLegendChip } from "@/components/chart-primitives";
+import { ChartLegendChip } from "@/components/chart-primitives/axes";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";

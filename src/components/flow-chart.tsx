@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives";
+import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives/axes";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";

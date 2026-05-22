@@ -8,7 +8,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, ChartLegendChip, TimeGrid, MonoYAxis } from "@/components/chart-primitives";
+import { CategoricalXAxis, ChartLegendChip, TimeGrid, MonoYAxis } from "@/components/chart-primitives/axes";
 import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 

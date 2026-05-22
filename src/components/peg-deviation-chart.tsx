@@ -14,13 +14,9 @@ import {
   AnnotationDensityStrip,
   ChartAnnotationLegend,
   ChartAnnotationLines,
-  ChartCrosshairOverlay,
-  DateTooltip,
-  MonoYAxis,
-  TimeGrid,
-  TimeXAxis,
-  useMarketDataChartSync,
-} from "@/components/chart-primitives";
+} from "@/components/chart-primitives/annotations";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartCrosshairOverlay, useMarketDataChartSync } from "@/components/chart-primitives/sync";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";

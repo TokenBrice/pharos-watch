@@ -2,12 +2,12 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { ChartAnnotationLegend } from "@/components/chart-primitives/annotations";
 import {
-  ChartAnnotationLegend,
   ChartBrush,
   MarketDataChartSyncProvider,
   useMarketDataChartSync,
-} from "@/components/chart-primitives";
+} from "@/components/chart-primitives/sync";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { LazySection } from "@/components/lazy-section";

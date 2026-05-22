@@ -1,35 +1,25 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { SelectorCallout } from "@/components/selector/selector-callout";
+import {
+  cleanupFrontendTest,
+  installMatchMediaMock,
+  resetBrowserStorage,
+} from "@/test-utils/frontend";
 
 const CALLOUT_KEY = "pharos.selector.callout.v1";
 const LEGACY_CALLOUT_KEY = "pharos-selector-callout-v1";
 
 beforeEach(() => {
-  // jsdom: each test starts with a clean localStorage and viewport.
-  window.localStorage.clear();
-  // Default matchMedia: desktop unless overridden.
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    configurable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+  resetBrowserStorage();
+  installMatchMediaMock(false);
 });
 
 afterEach(() => {
-  cleanup();
+  cleanupFrontendTest();
 });
 
 describe("SelectorCallout", () => {

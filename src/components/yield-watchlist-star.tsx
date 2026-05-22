@@ -1,7 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
-import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import { cn } from "@/lib/utils";
 
 interface YieldWatchlistStarProps {
@@ -11,7 +11,7 @@ interface YieldWatchlistStarProps {
 }
 
 export function YieldWatchlistStar({ stablecoinId, symbol, className }: YieldWatchlistStarProps) {
-  const { has, toggle } = useYieldWatchlist();
+  const { has, toggle } = useWatchlist();
   const active = has(stablecoinId);
 
   return (

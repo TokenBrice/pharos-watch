@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { ALL_COLUMNS } from "@/lib/column-visibility";
+import {
+  cleanupFrontendTest,
+  installMatchMediaMock,
+  resetBrowserStorage,
+} from "@/test-utils/frontend";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 const push = vi.fn();
@@ -14,24 +19,11 @@ const { virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
 }));
 
 function setMobileMedia(matches: boolean) {
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+  installMatchMediaMock(matches);
 }
 
 afterEach(() => {
-  cleanup();
+  cleanupFrontendTest();
 });
 
 vi.mock("@/components/table-toolbar", () => ({
@@ -137,7 +129,7 @@ const reportCard = {
 
 describe("StablecoinTable", () => {
   beforeEach(() => {
-    localStorage.clear();
+    resetBrowserStorage();
     push.mockReset();
     setMobileMedia(false);
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 0, start: 0, end: 40 });

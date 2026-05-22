@@ -1,19 +1,11 @@
 // @vitest-environment jsdom
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import { useCountUp } from "../use-count-up";
 
-// Mock matchMedia for reduced-motion tests
 function mockReducedMotion(prefers: boolean) {
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: query === "(prefers-reduced-motion: reduce)" ? prefers : false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  });
+  installMatchMediaMock(prefers);
 }
 
 describe("useCountUp", () => {
@@ -23,7 +15,7 @@ describe("useCountUp", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    cleanupFrontendTest();
   });
 
   it("returns the target value after animation completes", () => {

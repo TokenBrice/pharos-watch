@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Area, AreaChart } from "recharts";
 import { ChartShellSkeleton, ChartSkeleton } from "@/components/chart-skeleton";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { useStablecoins, useSupplyHistory } from "@/hooks/use-stablecoins";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
