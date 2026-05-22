@@ -1,4 +1,4 @@
-import { requireAdmin, withAdmin } from "./auth";
+import { withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-utils";
 import type { JsonResponseOptions } from "./api-response";
@@ -148,19 +148,4 @@ export async function runTrustedAdminMutation(handler: () => Promise<Response>):
       { status: 503, noStore: true },
     );
   }
-}
-
-/**
- * Compatibility wrapper for direct admin mutation entrypoints that are invoked
- * outside the route registry and therefore still need local auth gating.
- */
-export async function withAdminMutation(
-  request: Request | undefined,
-  trustedAdmin: boolean | undefined,
-  handler: () => Promise<Response>,
-): Promise<Response> {
-  const authError = await requireAdmin(request, trustedAdmin);
-  if (authError) return authError;
-
-  return runTrustedAdminMutation(handler);
 }

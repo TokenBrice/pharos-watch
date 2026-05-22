@@ -2,8 +2,8 @@ import type { HealthResponse, StatusResponse } from "@shared/types";
 
 /**
  * Healthy baseline `StatusResponse` fixture used by admin section tests.
- * Mutate via the {@link degraded} / {@link stale} helpers instead of editing
- * inline so each test describes its intent via a minimal patch.
+ * Mutate via the {@link degraded} helper instead of editing inline so each
+ * test describes its intent via a minimal patch.
  */
 export function makeHealthyStatusResponse(): StatusResponse {
   return {
@@ -196,13 +196,6 @@ export function makeHealthyStatusResponse(): StatusResponse {
  * repeating the healthy baseline.
  */
 export function degraded(base: StatusResponse, mutations: Partial<StatusResponse>): StatusResponse {
-  return { ...base, ...mutations };
-}
-
-/**
- * Alias for {@link degraded} with semantic naming for stale-state tests.
- */
-export function stale(base: StatusResponse, mutations: Partial<StatusResponse>): StatusResponse {
   return { ...base, ...mutations };
 }
 

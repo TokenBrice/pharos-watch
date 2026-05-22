@@ -1,9 +1,9 @@
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { vi } from "vitest";
 
 type MatchMediaMock = ReturnType<typeof vi.fn>;
 
-export function createMatchMediaMock(matches = false): MatchMediaMock {
+function createMatchMediaMock(matches = false): MatchMediaMock {
   return vi.fn().mockImplementation((query: string) => ({
     matches,
     media: query,
@@ -35,12 +35,6 @@ export function cleanupFrontendTest(): void {
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
-}
-
-export function installFrontendCleanup(): void {
-  afterEach(() => {
-    cleanupFrontendTest();
-  });
 }
 
 export async function createNextLinkMock() {

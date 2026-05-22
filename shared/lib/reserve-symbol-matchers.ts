@@ -4,7 +4,7 @@ export interface SymbolPatternOptions {
   flags?: string;
 }
 
-export function escapeRegExp(text: string): string {
+function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
