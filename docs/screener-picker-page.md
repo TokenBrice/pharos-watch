@@ -13,6 +13,7 @@ The Picker flips the Screener relationship: instead of filtering the full univer
 - **URL state codec:** `src/app/screener/picker/selector-state.ts` (frontend agent)
 - **Scoring engine:** `shared/lib/selector/engine.ts` + `shared/lib/selector/version.ts` (engine agent)
 - **Snapshot canonicalization:** `shared/lib/selector/canonicalize.ts` (engine + integration co-owned)
+- **Snapshot contract/schema:** `shared/lib/selector/snapshot.ts` (engine + integration co-owned)
 - **Snapshot Pages Function:** `functions/selector-snapshot/[[path]].ts` (integration)
 - **Wizard components:** `src/components/selector/*` (frontend agent)
 - **Editorial templates:** `shared/lib/selector/what-to-watch-templates.ts`, `shared/lib/selector/why-keys.ts` (engine agent; banned-phrase lint applies)
@@ -101,7 +102,7 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 **Tamper evidence:** the server recomputes the sid via SHA-256 over a canonicalized JSON payload (lexicographically sorted keys, debug/freshness-derived fields stripped, NFC-normalized strings). Clients cannot persist a snapshot under a sid that does not match its content. GET also recomputes the sid from the stored payload and returns a clean `502` if the stored value no longer matches the requested sid.
 
-**Validation:** the Pages Function does not import frontend code, but it rejects snapshots that are missing the frontend replay fields: `input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, coverage warning counts (`skippedForCoverageCount`, `newListingCount`, `redistributionCount`), and authored shortlist/lower-ranked prose. Semantic validation covers known enum values, finite score/component ranges, profile-valid `venuePreferences`, known `whyKeys`, malformed confidence/rank diagnostics, known lower-ranked reason keys, `recommendedSource` shape, per-input staleness shape, and impossible rank/slot values.
+**Validation:** shared selector snapshot code owns the runtime-neutral replay contract. The Pages Function does not import frontend code, but it rejects snapshots that are missing the frontend replay fields: `input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, coverage warning counts (`skippedForCoverageCount`, `newListingCount`, `redistributionCount`), and authored shortlist/lower-ranked prose. Semantic validation covers known enum values, finite score/component ranges, profile-valid `venuePreferences`, known `whyKeys`, malformed confidence/rank diagnostics, known lower-ranked reason keys, `recommendedSource` shape, per-input staleness shape, and impossible rank/slot values.
 
 **Canonicalization:** the strip rule covers `timestamp`, `debug`, `perInputStaleness`, plus any field whose name matches the suffixes `ageSeconds`, `capturedAt`, `stalenessMs`, `updatedAt`, `fetchedAt`. `coverageWarnings.newListingCount` is **not** stripped; the implemented engine derives it from content-level recent-listing flags, so it contributes to the sid. Cross-client sid consistency depends on this denylist; engine and integration agreed on the same strip-list in plan §0. POST strips `debug` before storage even if a debug build sends it.
 
@@ -187,6 +188,7 @@ The Picker engine is deterministic and client-only. It does not call the Worker.
 | `src/components/selector/*` | Wizard/result components (frontend agent) |
 | `shared/lib/selector/engine.ts` | `runSelector(input, data) → SelectorOutput` (engine agent) |
 | `shared/lib/selector/canonicalize.ts` | Snapshot canonicalization (engine + integration co-owned) |
+| `shared/lib/selector/snapshot.ts` | Snapshot replay contract, validation, and sid helpers (engine + integration co-owned) |
 | `functions/selector-snapshot/[[path]].ts` | POST + GET snapshot endpoint (integration) |
 | `functions/__tests__/selector-snapshot.test.ts` | Snapshot endpoint tests (integration) |
 | `scripts/ci/check-selector-banned-phrases.mjs` | Banned-phrase lint (integration) |

@@ -63,3 +63,15 @@ export {
   canonicalizeForSid,
 } from "./canonicalize";
 export { sha256Hex } from "./hash";
+export {
+  SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES,
+  SELECTOR_SNAPSHOT_SID_PATTERN,
+  SELECTOR_SNAPSHOT_TTL_SECONDS,
+  computeSelectorSnapshotSid,
+  isSelectorSnapshotSid,
+  isSelectorSnapshotStructurallySafe,
+  stripDebugFromSelectorSnapshot,
+  validateSelectorSnapshot,
+  type SelectorSnapshotValidationError,
+  type SelectorSnapshotValidationResult,
+} from "./snapshot";
