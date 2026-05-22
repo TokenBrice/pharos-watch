@@ -713,11 +713,11 @@
     "pegMechanism": "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
     "geckoId": "apxusd",
     "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-      "provider": "Apyx transparency documentation",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "type": "real-time",
+      "url": "https://accountable.apyx.fi/",
+      "provider": "Accountable",
+      "attestorTier": "niche",
+      "cadence": "real-time"
     },
     "links": [
       {
@@ -731,6 +731,14 @@
       {
         "label": "Docs",
         "url": "https://docs.apyx.fi"
+      },
+      {
+        "label": "Accountable Dashboard",
+        "url": "https://accountable.apyx.fi/"
+      },
+      {
+        "label": "Wolf & Company Attestations",
+        "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
       }
     ],
     "jurisdiction": {
@@ -812,11 +820,11 @@
     "pegMechanism": "Users deposit apxUSD to mint apyUSD; cash dividends and preferred-equity yield accrue inside the vault, increasing apyUSD's exchange rate against apxUSD over time",
     "geckoId": "apyusd",
     "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-      "provider": "Apyx transparency documentation",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "type": "real-time",
+      "url": "https://accountable.apyx.fi/",
+      "provider": "Accountable",
+      "attestorTier": "niche",
+      "cadence": "real-time"
     },
     "links": [
       {
@@ -830,6 +838,14 @@
       {
         "label": "Docs",
         "url": "https://docs.apyx.fi"
+      },
+      {
+        "label": "Accountable Dashboard",
+        "url": "https://accountable.apyx.fi/"
+      },
+      {
+        "label": "Wolf & Company Attestations",
+        "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
       },
       {
         "label": "GitHub",

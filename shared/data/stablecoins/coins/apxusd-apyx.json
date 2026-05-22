@@ -28,6 +28,14 @@
     {
       "label": "Docs",
       "url": "https://docs.apyx.fi"
+    },
+    {
+      "label": "Accountable Dashboard",
+      "url": "https://accountable.apyx.fi/"
+    },
+    {
+      "label": "Wolf & Company Attestations",
+      "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
     }
   ],
   "jurisdiction": {
@@ -90,10 +98,10 @@
     }
   },
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
-    "provider": "Apyx transparency documentation",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "type": "real-time",
+    "url": "https://accountable.apyx.fi/",
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   }
 }
