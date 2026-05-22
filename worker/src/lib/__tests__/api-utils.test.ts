@@ -1,13 +1,19 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import {
+  encodeJsonCursor,
   errorResponse,
   fetchPaginatedEvents,
   handleStablecoinHistoryRequest,
+  methodNotAllowedResponse,
+  noStoreResponse,
+  parseBooleanInput,
+  parseBooleanParam,
   parseClampedIntegerParam,
   parseDayStartParam,
   parseFloatParam,
   parseIntParam,
+  parseJsonCursorParam,
   parseOptionalNonNegativeIntegerParam,
   parseOptionalEnumParam,
   parseOptionalPositiveIntegerParam,
@@ -18,6 +24,9 @@ import {
   parseQueryParams,
   parseStablecoinHistoryQuery,
   parseTimestampSecondsParam,
+  readBodyOrQueryParam,
+  readBodyOrQueryStringParam,
+  respondWithFreshSnapshot,
   jsonResponse,
   jsonFreshResponse,
   validatePayloadWithSchema,
@@ -26,6 +35,7 @@ import {
   readCachedJson,
   resetCacheJsonParseFailureCountersForTests,
   safeJsonParse,
+  withResponseHeaders,
 } from "../api-utils";
 
 describe("errorResponse", () => {
@@ -86,6 +96,92 @@ describe("readCachedJson", () => {
       expect.any(String),
     );
     expect(getCacheJsonParseFailureCountersForTests()["daily-digest:input"]?.count).toBe(1);
+  });
+});
+
+describe("boolean and mixed-source query helpers", () => {
+  it("parses boolean query params with defaults", async () => {
+    expect(parseBooleanParam(null, "dryRun", true)).toBe(true);
+    expect(parseBooleanParam("", "dryRun", false)).toBe(false);
+    expect(parseBooleanParam("true", "dryRun", false)).toBe(true);
+    expect(parseBooleanParam("1", "dryRun", false)).toBe(true);
+    expect(parseBooleanParam("false", "dryRun", true)).toBe(false);
+    expect(parseBooleanParam("0", "dryRun", true)).toBe(false);
+
+    const invalid = parseBooleanParam("yes", "dryRun", false);
+    expect(invalid).toBeInstanceOf(Response);
+    if (invalid instanceof Response) {
+      expect(invalid.status).toBe(400);
+      await expect(invalid.json()).resolves.toEqual({ error: "Invalid dryRun: must be true or false" });
+    }
+  });
+
+  it("normalizes loose boolean inputs with fallback values", () => {
+    expect(parseBooleanInput(true, false)).toBe(true);
+    expect(parseBooleanInput(false, true)).toBe(false);
+    expect(parseBooleanInput(" TRUE ", false)).toBe(true);
+    expect(parseBooleanInput("false", true)).toBe(false);
+    expect(parseBooleanInput("yes", true)).toBe(true);
+    expect(parseBooleanInput(1, false)).toBe(false);
+  });
+
+  it("reads params from body first and query fallback second", () => {
+    const params = new URLSearchParams("limit=20&mode=query&blank=   ");
+    expect(readBodyOrQueryParam({ limit: 10 }, params, "limit")).toBe(10);
+    expect(readBodyOrQueryParam({}, params, "limit")).toBe("20");
+    expect(readBodyOrQueryStringParam({ mode: " body " }, params, "mode")).toBe("body");
+    expect(readBodyOrQueryStringParam({ mode: 42 }, params, "mode")).toBe("query");
+    expect(readBodyOrQueryStringParam({}, params, "blank")).toBeNull();
+  });
+});
+
+describe("JSON cursor helpers", () => {
+  it("round-trips unicode cursor payloads through URL-safe base64", () => {
+    const cursor = encodeJsonCursor({ stablecoin: "eurc-circle", marker: "é", offset: 2 });
+
+    expect(cursor).not.toMatch(/[+/=]/);
+    expect(parseJsonCursorParam(cursor, (payload) => {
+      if (
+        typeof payload === "object" &&
+        payload !== null &&
+        "stablecoin" in payload &&
+        "marker" in payload &&
+        "offset" in payload
+      ) {
+        return payload as { stablecoin: string; marker: string; offset: number };
+      }
+      return null;
+    })).toEqual({ stablecoin: "eurc-circle", marker: "é", offset: 2 });
+  });
+
+  it("returns null for missing cursors", () => {
+    expect(parseJsonCursorParam(null, () => "unused")).toBeNull();
+    expect(parseJsonCursorParam("", () => "unused")).toBeNull();
+  });
+
+  it("rejects malformed, invalid, and throwing cursor validators", async () => {
+    const malformed = parseJsonCursorParam("not-base64", () => "unused", "Bad cursor");
+    expect(malformed).toBeInstanceOf(Response);
+    if (malformed instanceof Response) {
+      expect(malformed.status).toBe(400);
+      await expect(malformed.json()).resolves.toEqual({ error: "Bad cursor" });
+    }
+
+    const invalidShape = parseJsonCursorParam(encodeJsonCursor({ ok: false }), () => null, "Bad cursor");
+    expect(invalidShape).toBeInstanceOf(Response);
+    if (invalidShape instanceof Response) {
+      expect(invalidShape.status).toBe(400);
+      await expect(invalidShape.json()).resolves.toEqual({ error: "Bad cursor" });
+    }
+
+    const throwingValidator = parseJsonCursorParam(encodeJsonCursor({ ok: true }), () => {
+      throw new Error("validator failed");
+    }, "Bad cursor");
+    expect(throwingValidator).toBeInstanceOf(Response);
+    if (throwingValidator instanceof Response) {
+      expect(throwingValidator.status).toBe(400);
+      await expect(throwingValidator.json()).resolves.toEqual({ error: "Bad cursor" });
+    }
   });
 });
 
@@ -703,6 +799,36 @@ describe("jsonResponse", () => {
   });
 });
 
+describe("response header helpers", () => {
+  it("adds or replaces response headers without changing status", async () => {
+    const res = withResponseHeaders(jsonResponse({ ok: true }, { status: 202, headers: { "X-Test": "old" } }), {
+      "X-Test": "new",
+      "X-Extra": "1",
+    });
+
+    expect(res.status).toBe(202);
+    expect(res.headers.get("X-Test")).toBe("new");
+    expect(res.headers.get("X-Extra")).toBe("1");
+    await expect(res.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("adds no-store only when it is missing", () => {
+    const cached = jsonResponse({ ok: true });
+    expect(noStoreResponse(cached).headers.get("Cache-Control")).toBe("no-store");
+
+    const alreadyNoStore = jsonResponse({ ok: true }, { "Cache-Control": "no-store" });
+    expect(noStoreResponse(alreadyNoStore)).toBe(alreadyNoStore);
+  });
+
+  it("returns 405 responses with an Allow header", async () => {
+    const res = methodNotAllowedResponse("Use GET", ["GET", "HEAD"]);
+
+    expect(res.status).toBe(405);
+    expect(res.headers.get("Allow")).toBe("GET, HEAD");
+    await expect(res.json()).resolves.toEqual({ error: "Use GET" });
+  });
+});
+
 describe("jsonFreshResponse", () => {
   it("returns plain JSON when freshness metadata is not provided", async () => {
     const res = jsonFreshResponse({ ok: true }, {
@@ -715,6 +841,66 @@ describe("jsonFreshResponse", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(res.headers.get("X-Test")).toBe("1");
     expect(res.headers.get("X-Data-Age")).toBeNull();
+  });
+});
+
+describe("respondWithFreshSnapshot", () => {
+  class SnapshotUnavailableError extends Error {}
+
+  it("returns a freshness-decorated snapshot response", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const res = await respondWithFreshSnapshot({
+      load: async () => ({ updatedAt: nowSec - 5, value: 1 }),
+      cacheControl: "public, max-age=60",
+      maxAgeSec: 60,
+      unavailableError: SnapshotUnavailableError,
+      unavailableMessage: "Snapshot unavailable",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(0);
+    await expect(res.json()).resolves.toEqual({ updatedAt: nowSec - 5, value: 1 });
+  });
+
+  it("returns configured 503 responses for unavailable snapshots", async () => {
+    const res = await respondWithFreshSnapshot({
+      load: async () => {
+        throw new SnapshotUnavailableError("missing");
+      },
+      cacheControl: "public, max-age=60",
+      maxAgeSec: 60,
+      unavailableError: SnapshotUnavailableError,
+      unavailableMessage: "Snapshot unavailable",
+    });
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({ error: "Snapshot unavailable" });
+  });
+
+  it("returns 503 when a snapshot has not been populated", async () => {
+    const res = await respondWithFreshSnapshot({
+      load: async () => ({ updatedAt: 0 }),
+      cacheControl: "public, max-age=60",
+      maxAgeSec: 60,
+      unavailableError: SnapshotUnavailableError,
+      unavailableMessage: "Snapshot unavailable",
+    });
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({ error: "Data not yet available" });
+  });
+
+  it("rethrows unexpected snapshot loading errors", async () => {
+    await expect(respondWithFreshSnapshot({
+      load: async () => {
+        throw new Error("boom");
+      },
+      cacheControl: "public, max-age=60",
+      maxAgeSec: 60,
+      unavailableError: SnapshotUnavailableError,
+      unavailableMessage: "Snapshot unavailable",
+    })).rejects.toThrow("boom");
   });
 });
 
