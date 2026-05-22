@@ -110,6 +110,7 @@ describe("hasWorkerPromotionImpact", () => {
     expect(hasWorkerPromotionImpact(["package.json", "package-lock.json"])).toBe(false);
     expect(hasWorkerPromotionImpact(["scripts/lib/validate-contract.mjs"])).toBe(false);
     expect(hasWorkerPromotionImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
     expect(hasWorkerPromotionImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/public-docs.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);

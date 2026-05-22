@@ -9,6 +9,7 @@ const FULL_DEPLOY_GUARDRAIL_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.fullDep
 const PAGES_ONLY_INFRA_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.workflowOnlyExactPaths);
 const PAGES_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.exactPaths);
 const WORKER_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.exactPaths);
+const WORKER_PROMOTION_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.excludedPaths ?? []);
 const WORKER_PROMOTION_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.exactPaths);
 const WORKER_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPaths ?? []);
 const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPaths);
@@ -53,7 +54,7 @@ function isWorkerSharedDeployPath(file) {
 }
 
 function isWorkerPromotionPath(file) {
-  if (isTestPath(file)) {
+  if (WORKER_PROMOTION_EXCLUDED_PATHS.has(file) || isTestPath(file)) {
     return false;
   }
   return WORKER_PROMOTION_EXACT_PATHS.has(file)

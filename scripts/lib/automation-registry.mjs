@@ -320,6 +320,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
     ],
   },
   workerPromotion: {
+    excludedPaths: ["worker/migrations/MANIFEST.md"],
     exactPaths: ["worker/package.json", "worker/tsconfig.json", "worker/wrangler.toml"],
     prefixes: ["worker/assets/", "worker/migrations/", "worker/src/"],
     sharedExcludedPaths: [
@@ -343,6 +344,7 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
     ["pages.workflowOnlyExactPaths", registry.pages.workflowOnlyExactPaths],
     ["worker", registry.worker.exactPaths],
     ["worker.sharedExcludedPaths", registry.worker.sharedExcludedPaths],
+    ["workerPromotion.excludedPaths", registry.workerPromotion.excludedPaths],
     ["workerPromotion", registry.workerPromotion.exactPaths],
     ["workerPromotion.sharedExcludedPaths", registry.workerPromotion.sharedExcludedPaths],
   ];
