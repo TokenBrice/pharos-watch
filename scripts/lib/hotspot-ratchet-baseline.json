@@ -300,9 +300,9 @@
     "notes": "Admin list/mutation support is isolated from the public issuance route. Keep rejection, claim-release, audit, and row mapping helpers here rather than leaking them back into the route shell."
   },
   "worker/src/api/reclassify-atomic-roundtrips.ts": {
-    "fileLines": 159,
+    "fileLines": 162,
     "maxFunctionLines": 91,
-    "branchCount": 7,
+    "branchCount": 6,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 150,

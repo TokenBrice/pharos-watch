@@ -1,8 +1,4 @@
 {
-  "src/components/chart-primitives.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Design Council Wave 4/6 added the shared brush+crosshair sync context, annotation glyph differentiation, the annotation-density strip, and the sr-only ChartDataTable/Disclosure primitives (A2) on top of the existing axis/legend/annotation toolkit. Intentionally a shared chart-primitive hub; a follow-up pass should split the static-axis/skeleton primitives, the sync-context brush, and the data-table accessibility layer into sibling modules."
-  },
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
     "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes."
@@ -35,10 +31,6 @@
     "disposition": "queued-p4",
     "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests."
   },
-  "src/app/screener/picker/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Selector client still coordinates wizard history, query hydration, data loading, snapshot fetch/post, and result rendering. This remediation extracted dataset adaptation, but the route shell remains a hotspot; split snapshot lifecycle and wizard orchestration hooks before adding more selector UI modes."
-  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
@@ -58,6 +50,10 @@
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Phase 2 added the evaluateOffchainConfirmer discriminated union to flatten the 9-level branch tree. Residual height is in the main loop's structural orchestration (primary/native/DEX/CEX/pool collection). Next /simplify pass should extract buildConfirmationPlan and evaluatePromotionDecision."
+  },
+  "worker/src/cron/blacklist/amount-recovery.ts": {
+    "disposition": "queued-p4",
+    "notes": "Amount recovery remains the shared EVM/TRON replay and remediation helper for blacklist gaps, with provider dispatch, event decoding, D1 batch planning, and telemetry in one module. Keep it explicitly queued for a blacklist recovery decomposition pass rather than widening this code-health tranche."
   },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
