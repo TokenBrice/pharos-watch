@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { MetadataRoute } from "next";
 import { PUBLIC_DATASET_TOPICS } from "@shared/lib/api-endpoints/datasets";
 import { getActiveChainIds } from "@shared/lib/chains";
@@ -10,7 +12,6 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import digests from "../../data/digests.json";
-import depegEvents from "../../data/depeg-events.json";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
@@ -37,7 +38,13 @@ interface DepegEventSitemapEntry {
   endedAt: number | null;
   peakDeviationBps: number;
 }
-const depegEventEntries = (depegEvents as readonly DepegEventSitemapEntry[]).filter(hasDedicatedDepegEventPage);
+
+function readDepegEventEntries(): readonly DepegEventSitemapEntry[] {
+  const filePath = join(process.cwd(), "data/depeg-events.json");
+  return JSON.parse(readFileSync(filePath, "utf8")) as DepegEventSitemapEntry[];
+}
+
+const depegEventEntries = readDepegEventEntries().filter(hasDedicatedDepegEventPage);
 const indexableDepegEventEntries = selectIndexableDepegEvents(depegEventEntries);
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */

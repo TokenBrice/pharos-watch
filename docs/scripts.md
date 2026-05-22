@@ -102,7 +102,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-public-datasets.ts` in the same Pages prebuild paths so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
 - `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `generate-docs-metadata.ts` via the same `prebuild` hook, immediately after `generate-sitemap-dates.ts`
-- `generate-depeg-event-search-data.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`, so client command-palette search uses a compact recent-event index instead of bundling the full synced depeg archive
+- `generate-depeg-event-search-data.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`, so client command-palette search and related-incident rails use compact depeg indexes instead of bundling the full synced depeg archive
 - `generate-cemetery-dataset.ts` via the same `prebuild` hook, immediately after `generate-depeg-event-search-data.ts`
 - `generate-public-datasets.ts` via the same `prebuild` hook, immediately after `generate-cemetery-dataset.ts`
 - `generate-postman-collection.ts` via the same `prebuild` hook, immediately after `generate-public-datasets.ts`

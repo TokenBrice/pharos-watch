@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import {
-  DEPEG_EVENT_ENTRIES,
-  type DepegEventEntry,
-} from "@/app/depeg/[event]/page-data";
+import depegEventRelatedData from "@/generated/depeg-event-related-data.json";
 
 const ARCHETYPE_BY_COIN = new Map(
   CLIENT_TRACKED_STABLECOINS.map((coin) => [coin.id, coin.mechanismArchetype] as const),
@@ -33,12 +30,19 @@ interface RelatedItem {
   direction: "above" | "below";
 }
 
+interface RelatedEventEntry extends RelatedItem {
+  stablecoinId: string;
+  pegType: string;
+}
+
 interface RelatedGroup {
   label: string;
   items: RelatedItem[];
 }
 
-function toRelatedItem(event: DepegEventEntry): RelatedItem {
+const RELATED_DEPEG_EVENTS = depegEventRelatedData as readonly RelatedEventEntry[];
+
+function toRelatedItem(event: RelatedEventEntry): RelatedItem {
   return {
     slug: event.slug,
     symbol: event.symbol,
@@ -72,7 +76,7 @@ function selectGroups({
   RelatedIncidentsRailProps,
   "excludeEventId" | "pegCurrency" | "riskArchetype" | "startedAt"
 >): RelatedGroup[] {
-  const pool = DEPEG_EVENT_ENTRIES.filter((event) => event.slug !== excludeEventId);
+  const pool = RELATED_DEPEG_EVENTS.filter((event) => event.slug !== excludeEventId);
   const used = new Set<string>();
   const groups: RelatedGroup[] = [];
 

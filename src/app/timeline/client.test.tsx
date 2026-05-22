@@ -46,6 +46,7 @@ import { TimelineClient } from "@/app/timeline/client";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -278,6 +279,8 @@ describe("TimelineClient", () => {
   });
 
   it("collapses a dense yesterday class into a digest row", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-22T12:00:00.000Z"));
     const yesterday = Date.now() - 86_400_000;
     const events: TapeEvent[] = [];
     for (let i = 0; i < 5; i++) {

@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { DepegEvent } from "@shared/types/market";
-import depegEvents from "../../../../data/depeg-events.json";
 import {
   MIN_DEPEG_PAGE_DEVIATION_BPS,
   hasDedicatedDepegEventPage,
@@ -16,7 +17,12 @@ export interface DepegEventEntry extends DepegEvent {
 
 export { MIN_DEPEG_PAGE_DEVIATION_BPS };
 
-const ALL_ENTRIES = depegEvents as readonly DepegEventEntry[];
+function readDepegEventEntries(): readonly DepegEventEntry[] {
+  const filePath = join(process.cwd(), "data/depeg-events.json");
+  return JSON.parse(readFileSync(filePath, "utf8")) as DepegEventEntry[];
+}
+
+const ALL_ENTRIES = readDepegEventEntries();
 
 export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = ALL_ENTRIES.filter(hasDedicatedDepegEventPage);
 

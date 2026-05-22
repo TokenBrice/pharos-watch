@@ -24,6 +24,7 @@
 # generated build artifacts (keep .d.ts declarations for typecheck)
 /src/generated/*
 !/src/generated/*.d.ts
+!/src/generated/depeg-event-related-data.json
 !/src/generated/depeg-event-search-data.json
 !/src/generated/docs-metadata.json
 !/src/generated/sitemap-dates.json
