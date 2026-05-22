@@ -413,6 +413,17 @@ describe("fetchTbillRate", () => {
     });
   });
 
+  it("rethrows abort errors instead of writing fallback benchmarks", async () => {
+    vi.mocked(fetchWithRetry).mockRejectedValue(new DOMException("aborted", "AbortError"));
+
+    await expect(fetchTbillRate(db, new AbortController().signal, BANXICO_TEST_ENV)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+
+    expect(setCache).not.toHaveBeenCalled();
+    expect(recordOutcome).not.toHaveBeenCalled();
+  });
+
   it("retains last known good rate when both sources fail", async () => {
     mockByUrl({
       "data-api.ecb.europa.eu": null,

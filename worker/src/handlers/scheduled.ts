@@ -25,7 +25,7 @@ import { runMonthlyYieldAuditSlot } from "./scheduled/monthly-yield-audit";
 
 type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
 
-const SLOT_RUNNER_BY_KEY = {
+export const SLOT_RUNNER_BY_KEY = {
   quarterHourly: runQuarterHourlySlot,
   statusSelfCheckOffset: runStatusSelfCheckSlot,
   sixHourlyBlacklist: runSixHourlyBlacklistSlot,

@@ -9,6 +9,7 @@ import {
 import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl } from "../../lib/evm-rpc";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import {
   normalizeTronAddress,
   tronBase58ToHex,
@@ -66,6 +67,7 @@ async function fetchEvmBalanceAtTag(
 
     return bigIntToDecimal(BigInt(result), decimals);
   } catch (e) {
+    rethrowIfAborted(e, signal);
     console.warn("[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
     return null;
   }
@@ -105,6 +107,7 @@ async function fetchBalanceViaDrpc(
     if (!result) return null;
     return bigIntToDecimal(BigInt(result), decimals);
   } catch (e) {
+    rethrowIfAborted(e, signal);
     console.warn("[sync-blacklist] fetchBalanceViaDrpc failed:", e);
     return null;
   }
@@ -146,6 +149,7 @@ async function fetchBalanceViaChainRpc(
       if (!result) continue;
       return bigIntToDecimal(BigInt(result), decimals);
     } catch (e) {
+      rethrowIfAborted(e, signal);
       console.warn("[sync-blacklist] fetchBalanceViaChainRpc failed:", e);
     }
   }
@@ -165,6 +169,7 @@ export async function fetchEvmTokenBalance(
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
   // All EVM chains share the same fallback chain: dRPC -> chain-RPC -> Etherscan.
+  throwIfAborted(signal);
   if (drpcApiKey) {
     const drpcAmount = await fetchBalanceViaDrpc(
       config.chain.chainId,
@@ -176,6 +181,7 @@ export async function fetchEvmTokenBalance(
       budget,
       signal,
     );
+    throwIfAborted(signal);
     if (drpcAmount != null) return drpcAmount;
   }
 
@@ -189,6 +195,7 @@ export async function fetchEvmTokenBalance(
     signal,
     chainRpcs,
   );
+  throwIfAborted(signal);
   if (rpcAmount != null) return rpcAmount;
 
   // Etherscan is the last-resort fallback for all chains.
@@ -293,6 +300,7 @@ async function fetchTronTokenCurrentBalanceViaJsonRpc(
     if (!json?.result || !json.result.startsWith("0x")) return null;
     return bigIntToDecimal(BigInt(json.result), config.decimals);
   } catch (error) {
+    rethrowIfAborted(error, signal);
     console.warn("[sync-blacklist] fetchTronTokenCurrentBalanceViaJsonRpc failed:", error);
     return null;
   }
@@ -317,6 +325,7 @@ export async function fetchTronTokenCurrentBalance(
     budget,
     signal,
   );
+  throwIfAborted(signal);
   if (rpcAmount != null) return rpcAmount;
 
   const accountAddress = (await tronHexAddressToBase58(address)) ?? address;
@@ -344,6 +353,7 @@ export async function fetchTronTokenCurrentBalance(
 
     return bigIntToDecimal(BigInt(rawAmount), config.decimals);
   } catch (error) {
+    rethrowIfAborted(error, signal);
     console.warn("[sync-blacklist] fetchTronTokenCurrentBalance failed:", error);
     return null;
   }

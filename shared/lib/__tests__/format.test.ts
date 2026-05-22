@@ -4,8 +4,10 @@ import {
   abbreviateNumberParts,
   formatScore,
   formatChartDate,
+  formatChartPercent,
   formatPercent,
   formatPercentFromRatio,
+  formatPrice,
   formatSignedCurrency,
   formatSignedPercent,
   formatElapsedSeconds,
@@ -14,6 +16,7 @@ import {
   formatCompactUsd,
   formatBps,
   formatDeathDate,
+  formatEventDate,
   formatPegDeviation,
   formatNativePrice,
   formatPercentChange,
@@ -33,6 +36,10 @@ describe("formatScore", () => {
   it("handles 100", () => expect(formatScore(100)).toBe("100.0"));
   it("returns dash for null", () => expect(formatScore(null)).toBe("-"));
   it("returns dash for undefined", () => expect(formatScore(undefined)).toBe("-"));
+  it("returns dash for non-finite values", () => {
+    expect(formatScore(Infinity)).toBe("-");
+    expect(formatScore(NaN)).toBe("-");
+  });
 });
 
 describe("formatPercent", () => {
@@ -52,6 +59,10 @@ describe("formatPercent", () => {
     expect(formatPercent(null)).toBe("-");
     expect(formatPercent(undefined)).toBe("-");
   });
+  it("returns dash for non-finite values", () => {
+    expect(formatPercent(Infinity)).toBe("-");
+    expect(formatPercent(NaN)).toBe("-");
+  });
 });
 
 describe("formatSignedPercent", () => {
@@ -66,6 +77,10 @@ describe("formatSignedPercent", () => {
   });
   it("returns dash for nullish", () => {
     expect(formatSignedPercent(null)).toBe("-");
+  });
+  it("returns fallback for non-finite values", () => {
+    expect(formatSignedPercent(Infinity)).toBe("-");
+    expect(formatSignedPercent(NaN, 2, "N/A")).toBe("N/A");
   });
 });
 
@@ -133,6 +148,11 @@ describe("formatSignedCurrency", () => {
   it("does not add a sign for zero", () => {
     expect(formatSignedCurrency(0)).toBe("$0.00");
   });
+
+  it("returns N/A for non-finite values", () => {
+    expect(formatSignedCurrency(Infinity)).toBe("N/A");
+    expect(formatSignedCurrency(NaN)).toBe("N/A");
+  });
 });
 
 describe("formatCompactUsd", () => {
@@ -172,6 +192,10 @@ describe("formatBps", () => {
   it("formats negative bps with - sign", () => expect(formatBps(-5)).toBe("-5 bps"));
   it("formats zero with + sign", () => expect(formatBps(0)).toBe("+0 bps"));
   it("passes through non-integer values as-is", () => expect(formatBps(3.7)).toBe("+3.7 bps"));
+  it("returns N/A for non-finite values", () => {
+    expect(formatBps(Infinity)).toBe("N/A");
+    expect(formatBps(NaN)).toBe("N/A");
+  });
 });
 
 describe("formatPegDeviation", () => {
@@ -199,6 +223,10 @@ describe("formatPegDeviation", () => {
   it("returns N/A for undefined price", () => expect(formatPegDeviation(undefined)).toBe("N/A"));
   it("returns N/A for NaN price", () => expect(formatPegDeviation(NaN)).toBe("N/A"));
   it("returns N/A for zero pegValue", () => expect(formatPegDeviation(1.0, 0)).toBe("N/A"));
+  it("returns N/A for non-finite inputs", () => {
+    expect(formatPegDeviation(Infinity)).toBe("N/A");
+    expect(formatPegDeviation(1.0, Infinity)).toBe("N/A");
+  });
 });
 
 describe("formatPercentChange", () => {
@@ -291,6 +319,10 @@ describe("formatDuration", () => {
   it("returns 'N/A' for negative duration", () => {
     expect(formatDuration(100, 50)).toBe("N/A");
   });
+  it("returns 'N/A' for non-finite durations", () => {
+    expect(formatDuration(Infinity, 50)).toBe("N/A");
+    expect(formatDuration(0, Infinity)).toBe("N/A");
+  });
   it("handles non-zero start", () => {
     expect(formatDuration(1000, 1000 + 3600)).toBe("1h");
   });
@@ -338,6 +370,10 @@ describe("formatPercentFromRatio", () => {
     expect(formatPercentFromRatio(null)).toBe("-");
     expect(formatPercentFromRatio(undefined)).toBe("-");
   });
+  it("returns dash for non-finite values", () => {
+    expect(formatPercentFromRatio(Infinity)).toBe("-");
+    expect(formatPercentFromRatio(NaN)).toBe("-");
+  });
 });
 
 describe("formatAddress", () => {
@@ -369,11 +405,21 @@ describe("formatTrackingSpanDays", () => {
     expect(formatTrackingSpanDays(820)).toBe("2y 2mo");
     expect(formatTrackingSpanDays(731)).toBe("2y");
   });
+
+  it("returns N/A for non-finite spans", () => {
+    expect(formatTrackingSpanDays(Infinity)).toBe("N/A");
+    expect(formatTrackingSpanDays(NaN)).toBe("N/A");
+  });
 });
 
 describe("formatTrackingSpanSeconds", () => {
   it("delegates to the shared day formatter", () => {
     expect(formatTrackingSpanSeconds(90 * 86400)).toBe("2mo");
+  });
+
+  it("returns N/A for non-finite seconds", () => {
+    expect(formatTrackingSpanSeconds(Infinity)).toBe("N/A");
+    expect(formatTrackingSpanSeconds(NaN)).toBe("N/A");
   });
 });
 
@@ -392,11 +438,13 @@ describe("formatNativePrice", () => {
     expect(formatNativePrice(null, "USD", 1)).toBe("N/A");
     expect(formatNativePrice(undefined, "EUR", 1.10)).toBe("N/A");
     expect(formatNativePrice(NaN, "USD", 1)).toBe("N/A");
+    expect(formatNativePrice(Infinity, "USD", 1)).toBe("N/A");
   });
 
   it("falls back to USD formatting when pegRef is not positive", () => {
     expect(formatNativePrice(1.0001, "EUR", 0)).toBe("$1.0001");
     expect(formatNativePrice(1.0001, "EUR", -1)).toBe("$1.0001");
+    expect(formatNativePrice(1.0001, "EUR", Infinity)).toBe("$1.0001");
   });
 
   it("formats non-fiat peg families as USD", () => {
@@ -404,6 +452,22 @@ describe("formatNativePrice", () => {
     expect(formatNativePrice(25, "SILVER", 25)).toBe("$25.0000");
     expect(formatNativePrice(1.0, "VAR", 1)).toBe("$1.0000");
     expect(formatNativePrice(1.0, "OTHER", 1)).toBe("$1.0000");
+  });
+});
+
+describe("non-finite formatter fallbacks", () => {
+  it("does not leak Infinity or NaN from direct number formatters", () => {
+    const outputs = [
+      formatPrice(Infinity),
+      formatChartPercent(Infinity),
+      formatChartDate(Infinity),
+      formatEventDate(Infinity),
+      formatElapsedSeconds(Infinity),
+    ];
+
+    expect(outputs).not.toContain("Infinity");
+    expect(outputs).not.toContain("NaN");
+    expect(outputs).toEqual(["N/A", "N/A", "N/A", "N/A", "N/A"]);
   });
 });
 

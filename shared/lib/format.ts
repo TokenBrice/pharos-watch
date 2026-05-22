@@ -2,6 +2,10 @@ import { DAY_SECONDS } from "./time-constants";
 
 const BPS_PER_UNIT = 10_000;
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
 function abbreviateNumber(value: number, decimals: number, prefix = ""): string {
   if (!Number.isFinite(value)) return "N/A";
@@ -62,7 +66,7 @@ export function pegCurrencySymbol(pegCurrency: string): string {
 }
 
 export function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
-  if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
+  if (!isFiniteNumber(price)) return "N/A";
   return `${symbol}${price.toFixed(decimals)}`;
 }
 
@@ -72,17 +76,18 @@ export function formatNativePrice(
   pegRef: number,
   decimals = 4,
 ): string {
-  if (usdPrice == null || typeof usdPrice !== "number" || isNaN(usdPrice)) return "N/A";
+  if (!isFiniteNumber(usdPrice)) return "N/A";
   const symbol = PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
   if (pegCurrency === "USD" || pegCurrency === "GOLD" || pegCurrency === "SILVER" || pegCurrency === "VAR" || pegCurrency === "OTHER") {
     return formatPrice(usdPrice, "$", decimals);
   }
-  if (!pegRef || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
+  if (!Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
   return formatPrice(usdPrice / pegRef, symbol, decimals);
 }
 
 /** Format a basis-point value with a sign prefix, e.g. "+12 bps" or "-5 bps". */
 export function formatBps(bps: number): string {
+  if (!Number.isFinite(bps)) return "N/A";
   const sign = bps >= 0 ? "+" : "";
   return `${sign}${bps} bps`;
 }
@@ -93,8 +98,8 @@ export function formatBps(bps: number): string {
  * (e.g. ~1.19 for EUR, ~1.30 for CHF, ~3200 for gold oz, 1 for USD).
  */
 export function formatPegDeviation(price: number | null | undefined, pegValue = 1): string {
-  if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
-  if (pegValue === 0) return "N/A";
+  if (!isFiniteNumber(price)) return "N/A";
+  if (!Number.isFinite(pegValue) || pegValue === 0) return "N/A";
   // Deviation as basis points relative to peg: ((price / pegValue) - 1) * BPS_PER_UNIT
   const ratio = price / pegValue;
   const bps = Math.round((ratio - 1) * BPS_PER_UNIT);
@@ -131,6 +136,7 @@ export function formatAddress(address: string): string {
 }
 
 export function formatTrackingSpanDays(days: number): string {
+  if (!Number.isFinite(days)) return "N/A";
   if (days < 30) return `${days}d`;
   const months = Math.floor(days / 30.44);
   if (months < 12) return `${months}mo`;
@@ -144,7 +150,10 @@ export function formatTrackingSpanSeconds(seconds: number): string {
 }
 
 export function formatEventDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+  if (!Number.isFinite(timestamp)) return "N/A";
+  const date = new Date(timestamp * 1000);
+  if (!Number.isFinite(date.getTime())) return "N/A";
+  return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -158,6 +167,7 @@ export function formatEventDate(timestamp: number): string {
  */
 export function formatDuration(startSec: number, endSec: number | null): string {
   if (endSec === null) return "Ongoing";
+  if (!Number.isFinite(startSec) || !Number.isFinite(endSec)) return "N/A";
   const totalSeconds = endSec - startSec;
   if (totalSeconds < 0) return "N/A";
   if (totalSeconds < 60) return "< 1m";
@@ -188,6 +198,7 @@ export function formatDeathDate(d: string): string {
 
 /** Convert seconds to a compact human-readable duration: "45s", "5m", "1h 30m", "2d". */
 export function formatElapsedSeconds(seconds: number): string {
+  if (!Number.isFinite(seconds)) return "N/A";
   if (seconds < 60) return `${Math.floor(seconds)}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
   if (seconds < DAY_SECONDS) {
@@ -236,17 +247,18 @@ export function getNetPrefix(value: number): string {
 }
 
 export function formatSignedCurrency(value: number, decimals = 2): string {
+  if (!Number.isFinite(value)) return "N/A";
   return `${getNetPrefix(value)}${formatCurrency(value, decimals)}`;
 }
 
 /** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */
 export function formatPercent(value: number | null | undefined, decimals = 2): string {
-  return value != null ? `${value.toFixed(decimals)}%` : "-";
+  return isFiniteNumber(value) ? `${value.toFixed(decimals)}%` : "-";
 }
 
 /** Format a signed percentage with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
 export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
-  if (value == null) return nullFallback;
+  if (!isFiniteNumber(value)) return nullFallback;
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(decimals)}%`;
 }
@@ -259,20 +271,21 @@ export function formatPercentFromRatio(
   ratio: number | null | undefined,
   decimals = 2,
 ): string {
-  if (ratio == null) return "-";
+  if (!isFiniteNumber(ratio)) return "-";
   return `${(ratio * 100).toFixed(decimals)}%`;
 }
 
 /** Format a number as a percentage string for chart axes.
  *  Includes sign prefix for non-zero values. */
 export function formatChartPercent(value: number, decimals = 1): string {
+  if (!Number.isFinite(value)) return "N/A";
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${value.toFixed(decimals)}%`;
 }
 
 /** Format a 0-100 score to one decimal. Returns "-" for nullish values. */
 export function formatScore(value: number | null | undefined): string {
-  return value != null ? value.toFixed(1) : "-";
+  return isFiniteNumber(value) ? value.toFixed(1) : "-";
 }
 
 type ChartDateFormat = "short" | "month-year" | "compact" | "with-time" | "long" | "full";
@@ -282,6 +295,7 @@ export function formatChartDate(
   timestamp: number | string,
   format: ChartDateFormat = "short",
 ): string {
+  if (typeof timestamp === "number" && !Number.isFinite(timestamp)) return "N/A";
   const d = new Date(timestamp);
   if (isNaN(d.getTime())) return String(timestamp);
   switch (format) {

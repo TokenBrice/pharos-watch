@@ -34,6 +34,7 @@ import {
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
   ETHERFUSE_CETES_BENCHMARK_SOURCE,
   fetchEtherfuseCetesIssuance,
@@ -319,6 +320,7 @@ async function tryFredCsv(
 
     return parseFredLatest(await res.text());
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] FRED CSV failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -337,6 +339,7 @@ async function tryEcbCompoundedEstrCsv(signal?: AbortSignal): Promise<{ rate: nu
 
     return parseEcbCompoundedEstrCsv(await res.text());
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] ECB 3M compounded €STR CSV failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -355,6 +358,7 @@ async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: number; rec
 
     return parseTreasuryYieldXml(await res.text());
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] Treasury XML failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -389,6 +393,7 @@ async function trySixGuestToken(signal?: AbortSignal): Promise<string | null> {
 
     return parseSixOauthToken(await res.text());
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] SIX guest token fetch failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -421,6 +426,7 @@ async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: number; re
 
     return parseSixSar3mcCsv(body);
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] SIX SAR3MC fetch failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -520,6 +526,7 @@ async function tryBanxicoCetes(
     if (!res?.ok) return null;
     return parseBanxicoSeries(await res.text());
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] Banxico CETES failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -534,6 +541,7 @@ async function tryBcbSelic(signal?: AbortSignal): Promise<{ rate: number; record
     if (!res?.ok) return null;
     return parseBcbSelicSeries(await res.text());
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] BCB SELIC failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -548,6 +556,7 @@ async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; record
     if (!res?.ok) return null;
     return parseBocValetSeries(await res.text(), "V122530");
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[fetch-tbill-rate] BoC Valet CORRA failed: ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -721,8 +730,10 @@ export async function fetchTbillRate(
   env?: Pick<Env, "BANXICO_TOKEN">,
 ): Promise<CronResult> {
   const previous = await loadRiskFreeRateRegistry(db);
+  throwIfAborted(signal);
 
   if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
+    throwIfAborted(signal);
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
     const retainedByKey: Record<Exclude<YieldBenchmarkKey, "USD">, ParsedYieldBenchmarkMeta | null> = {
       EUR: buildRetainedBenchmark(previous.EUR, "circuit-open"),
@@ -757,6 +768,7 @@ export async function fetchTbillRate(
   }
 
   const fetchedAt = Math.floor(Date.now() / 1000);
+  throwIfAborted(signal);
 
   const usdFred = await tryFredCsv(FRED_TBILL_CSV_URL, signal);
   const usdParsed = usdFred ?? await tryTreasuryXml(signal);

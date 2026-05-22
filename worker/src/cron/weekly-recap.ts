@@ -805,9 +805,18 @@ export async function generateWeeklyRecap(
   const cutoff = Math.floor(Date.now() / 1000) - 15 * SECONDS.ONE_DAY;
   const dailyRows = await db
     .prepare(
-      `SELECT generated_at, digest_title, digest_text, digest_extended, input_data
-       FROM daily_digest
-       WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
+      `WITH latest_daily AS (
+         SELECT generated_at, digest_title, digest_text, digest_extended, input_data,
+                ROW_NUMBER() OVER (
+                  PARTITION BY strftime('%Y-%m-%d', generated_at, 'unixepoch')
+                  ORDER BY generated_at DESC
+                ) AS row_rank
+         FROM daily_digest
+         WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
+       )
+       SELECT generated_at, digest_title, digest_text, digest_extended, input_data
+       FROM latest_daily
+       WHERE row_rank = 1
        ORDER BY generated_at ASC
        LIMIT 15`,
     )

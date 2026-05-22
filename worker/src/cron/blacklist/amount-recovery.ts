@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/blacklist";
 import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
 import { shouldSuppressAsMirrorZero } from "./shared";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
@@ -157,11 +157,12 @@ export async function enrichRowBalances(opts: {
             runBudget.subrequestBudget,
             signal,
           );
+          throwIfAborted(signal);
           if (amount != null) source = "event";
         }
 
         if (amount == null) {
-          markRecoveryAttempt(row, "drpc", null);
+          markRecoveryAttempt(row, inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs), null);
           amount = await fetchEvmTokenBalance(
             config,
             row.address,
@@ -173,6 +174,7 @@ export async function enrichRowBalances(opts: {
             signal,
             chainRpcs,
           );
+          throwIfAborted(signal);
         }
 
         row.amount_native = amount;
@@ -186,6 +188,7 @@ export async function enrichRowBalances(opts: {
           counters.failed++;
         }
       } catch (error) {
+        rethrowIfAborted(error, signal);
         row.amount_status = "provider_failed";
         row.amount_last_error_class = inferErrorClass(error);
         counters.failed++;
@@ -332,6 +335,7 @@ async function fetchDestroyAmountFromLog(
     if (!json?.result?.logs) return null;
     return extractDestroyAmountFromReceiptLogs(config, json.result.logs, affectedAddress);
   } catch (error) {
+    rethrowIfAborted(error, signal);
     console.warn("[sync-blacklist] fetchDestroyAmountFromLog failed:", error);
     return null;
   }
@@ -412,6 +416,7 @@ export async function recoverBlacklistAmountForRow(
       options.runBudget.subrequestBudget,
       options.signal,
     );
+    throwIfAborted(options.signal);
     if (amount != null) {
       amountSource = "event";
       lastErrorClass = null;
@@ -435,6 +440,7 @@ export async function recoverBlacklistAmountForRow(
       options.signal,
       options.chainRpcs,
     );
+    throwIfAborted(options.signal);
     if (amount != null) {
       amountSource = "historical_balance";
       lastErrorClass = null;
@@ -552,7 +558,7 @@ export async function backfillAmounts(
     let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";
     let amountStatus: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous" = "provider_failed";
     let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
-    let lastProvider: BlacklistRecoveryProvider = "drpc";
+    let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
     const attemptAt = Math.floor(Date.now() / 1000);
 
     if (row.event_type === "destroy" && config.chain.type === "evm" && config.chain.evmChainId != null) {
@@ -568,12 +574,13 @@ export async function backfillAmounts(
         runBudget.subrequestBudget,
         signal,
       );
+      throwIfAborted(signal);
       if (amount != null) {
         amountSource = "event";
         lastErrorClass = null;
       }
       if (amount == null) {
-        lastProvider = "drpc";
+        lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
         amount = await fetchEvmTokenBalance(
           config,
           row.address,
@@ -585,6 +592,7 @@ export async function backfillAmounts(
           signal,
           chainRpcs,
         );
+        throwIfAborted(signal);
         if (amount != null) {
           amountSource = "historical_balance";
           lastErrorClass = null;
@@ -594,7 +602,7 @@ export async function backfillAmounts(
       // Tron rows are resolved by backfillTronFromLedger; skip in per-row backfill.
       continue;
     } else if (config.chain.evmChainId != null) {
-      lastProvider = "drpc";
+      lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
       amount = await fetchEvmTokenBalance(
         config,
         row.address,
@@ -606,6 +614,7 @@ export async function backfillAmounts(
         signal,
         chainRpcs,
       );
+      throwIfAborted(signal);
       if (amount != null) {
         amountSource = "historical_balance";
         lastErrorClass = null;

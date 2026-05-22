@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../balance-providers", () => ({
+  fetchEvmTokenBalance: vi.fn(),
+}));
+
 import {
   backfillAmounts,
   enrichRowBalances,
   extractDestroyAmountFromReceiptLogs,
 } from "../amount-recovery";
+import { fetchEvmTokenBalance } from "../balance-providers";
 import { shouldSuppressAsMirrorZero } from "../shared";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import type { BlacklistRow } from "../shared";
@@ -76,6 +82,10 @@ function makeRunBudget(overrides: Partial<BlacklistRunBudget> = {}): BlacklistRu
 }
 
 describe("enrichRowBalances", () => {
+  beforeEach(() => {
+    vi.mocked(fetchEvmTokenBalance).mockReset().mockResolvedValue(null);
+  });
+
   it("keeps EURC mirror-zero suppression explicit", () => {
     expect(shouldSuppressAsMirrorZero("EURC", "blacklist", 0)).toBe(true);
     expect(shouldSuppressAsMirrorZero("EURC", "destroy", 0)).toBe(false);
@@ -132,6 +142,57 @@ describe("enrichRowBalances", () => {
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
     expect(rows[0].amount_last_error_class).toBe("runtime_budget");
     expect(rows[0].amount_last_provider).toBe("none");
+  });
+
+  it("rethrows provider aborts instead of marking amount recovery as failed", async () => {
+    vi.mocked(fetchEvmTokenBalance).mockRejectedValue(new DOMException("aborted", "AbortError"));
+
+    await expect(enrichRowBalances({
+      rows: [makeRow()],
+      config: makeConfig(),
+      etherscanApiKey: null,
+      drpcApiKey: "drpc-key",
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
+    })).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("records inferred provider telemetry instead of a hard-coded dRPC label", async () => {
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [{
+          id: "row-1",
+          chain_id: "ethereum",
+          event_type: "blacklist",
+          address: "0x1111111111111111111111111111111111111111",
+          block_number: 100,
+          stablecoin: "USDC",
+          tx_hash: "0xabc",
+          config_key: null,
+          contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          amount_source: "event",
+        }],
+      },
+    ]);
+
+    await backfillAmounts(
+      db,
+      "etherscan-key",
+      null,
+      async <T>(fn: () => Promise<T>) => fn(),
+      makeRunBudget({ subrequestBudget: { count: 0, limit: 10 } }),
+    );
+
+    const update = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE blacklist_events") && entry.sql.includes("amount_last_provider"),
+    );
+    expect(update?.binds).toContain("etherscan");
+    expect(update?.binds).not.toContain("drpc");
   });
 
   it("selects destroy receipt amounts for the intended affected address", () => {

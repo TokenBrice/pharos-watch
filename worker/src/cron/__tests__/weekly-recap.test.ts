@@ -281,6 +281,19 @@ describe("generateWeeklyRecap", () => {
     expect(body.messages[0].content).toMatch(/PSI midpoint: current .+ prior .+/i);
   });
 
+  it("selects the latest daily row per UTC date before limiting the weekly input window", async () => {
+    const db = mockD1(makeTables(), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    await generateWeeklyRecap(db, "anthropic-key", null);
+
+    const dailySelection = db.getHistory().find((entry) => entry.sql.includes("latest_daily"));
+    expect(dailySelection?.sql).toContain("ROW_NUMBER() OVER");
+    expect(dailySelection?.sql).toContain("PARTITION BY strftime('%Y-%m-%d', generated_at, 'unixepoch')");
+    expect(dailySelection?.sql).toContain("WHERE row_rank = 1");
+    expect(dailySelection?.sql).toContain("LIMIT 15");
+  });
+
   it("surfaces critical weekly depegs in the risk leaderboard and spike metrics", async () => {
     const rows = buildDailyRows();
     const criticalRowIndex = 2;
