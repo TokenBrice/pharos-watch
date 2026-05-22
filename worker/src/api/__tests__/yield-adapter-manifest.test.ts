@@ -126,7 +126,7 @@ describe("handleYieldAdapterManifest", () => {
     });
 
     const variantRow = body.entries.find((entry) =>
-      entry.stablecoinId === "dola-inverse-finance" &&
+      entry.stablecoinId === "reusd-re-protocol" &&
       entry.family === "defillama" &&
       entry.sourceKeyPattern === "defillama:<runtime-pool-uuid>"
     );
@@ -134,6 +134,16 @@ describe("handleYieldAdapterManifest", () => {
       sourceKey: null,
       lifecycle: "active",
     });
+
+    for (const baseAssetId of ["dola-inverse-finance", "gho-aave"]) {
+      expect(
+        body.entries.some((entry) =>
+          entry.stablecoinId === baseAssetId &&
+          entry.family === "defillama" &&
+          entry.sourceKeyPattern === "defillama:<runtime-pool-uuid>"
+        ),
+      ).toBe(false);
+    }
   });
 
   it("registers /api/yield-adapter-manifest as a public GET route", () => {
