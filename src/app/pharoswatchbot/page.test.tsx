@@ -110,6 +110,9 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("Bot sync")).toBeTruthy();
     expect(screen.getByText("Deep links")).toBeTruthy();
     expect(screen.getByText("Launch alerts")).toBeTruthy();
+    expect(screen.getByAltText(/home screen with watcher state/i).getAttribute("src")).toBe(
+      "/featured/telegram-mini-app/home.png",
+    );
     expect(screen.getByAltText(/watchlist screen with per-coin alert toggles/i).getAttribute("src")).toBe(
       "/featured/telegram-mini-app/watchlist.png",
     );

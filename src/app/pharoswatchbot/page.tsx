@@ -76,25 +76,32 @@ const MINI_APP_FEATURES = [
 
 const MINI_APP_SCREENSHOTS = [
   {
+    title: "Home",
+    src: "/featured/telegram-mini-app/home.png",
+    alt: "PharosWatchBot Mini App home screen with watcher state, snooze controls, quiet hours, and last delivery",
+    width: 583,
+    height: 1280,
+  },
+  {
     title: "Watchlist",
     src: "/featured/telegram-mini-app/watchlist.png",
     alt: "PharosWatchBot Mini App watchlist screen with per-coin alert toggles",
-    width: 380,
-    height: 691,
+    width: 583,
+    height: 1280,
   },
   {
     title: "Presets",
     src: "/featured/telegram-mini-app/presets.png",
     alt: "PharosWatchBot Mini App presets screen with followed and available preset watchlists",
-    width: 380,
-    height: 682,
+    width: 583,
+    height: 1280,
   },
   {
     title: "Settings",
     src: "/featured/telegram-mini-app/settings.png",
     alt: "PharosWatchBot Mini App settings screen with global alerts, depeg step, and quiet hours",
-    width: 377,
-    height: 686,
+    width: 583,
+    height: 1280,
   },
 ] as const satisfies readonly { title: string; src: string; alt: string; width: number; height: number }[];
 
@@ -595,7 +602,7 @@ export default function PharosWatchBotPage() {
                               alt={screenshot.alt}
                               width={screenshot.width}
                               height={screenshot.height}
-                              loading={screenshot.title === "Watchlist" ? "eager" : "lazy"}
+                              loading={screenshot.title === "Home" ? "eager" : "lazy"}
                               sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
                               className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain"
                             />
@@ -614,25 +621,28 @@ export default function PharosWatchBotPage() {
                     <span className="telegram-mini-app-dot telegram-mini-app-dot-1 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
                     <span className="telegram-mini-app-dot telegram-mini-app-dot-2 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
                     <span className="telegram-mini-app-dot telegram-mini-app-dot-3 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
+                    <span className="telegram-mini-app-dot telegram-mini-app-dot-4 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
                   </div>
                 </div>
                 <style>
                   {`
                     @keyframes telegramMiniAppCarousel {
-                      0%, 27% { transform: translateX(0); }
-                      33%, 60% { transform: translateX(-100%); }
-                      66%, 93% { transform: translateX(-200%); }
+                      0%, 19% { transform: translateX(0); }
+                      25%, 44% { transform: translateX(-100%); }
+                      50%, 69% { transform: translateX(-200%); }
+                      75%, 94% { transform: translateX(-300%); }
                       100% { transform: translateX(0); }
                     }
-                    @keyframes telegramMiniAppDotA { 0%, 27% { opacity: 1; } 33%, 93% { opacity: 0.32; } 100% { opacity: 1; } }
-                    @keyframes telegramMiniAppDotB { 0%, 27% { opacity: 0.32; } 33%, 60% { opacity: 1; } 66%, 100% { opacity: 0.32; } }
-                    @keyframes telegramMiniAppDotC { 0%, 60% { opacity: 0.32; } 66%, 93% { opacity: 1; } 100% { opacity: 0.32; } }
+                    @keyframes telegramMiniAppDotA { 0%, 19% { opacity: 1; } 25%, 94% { opacity: 0.32; } 100% { opacity: 1; } }
+                    @keyframes telegramMiniAppDotB { 0%, 19% { opacity: 0.32; } 25%, 44% { opacity: 1; } 50%, 100% { opacity: 0.32; } }
+                    @keyframes telegramMiniAppDotC { 0%, 44% { opacity: 0.32; } 50%, 69% { opacity: 1; } 75%, 100% { opacity: 0.32; } }
+                    @keyframes telegramMiniAppDotD { 0%, 69% { opacity: 0.32; } 75%, 94% { opacity: 1; } 100% { opacity: 0.32; } }
 
                     .telegram-mini-app-carousel-track {
-                      animation: telegramMiniAppCarousel 15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+                      animation: telegramMiniAppCarousel 20s cubic-bezier(0.65, 0, 0.35, 1) infinite;
                     }
                     .telegram-mini-app-dot {
-                      animation-duration: 15s;
+                      animation-duration: 20s;
                       animation-iteration-count: infinite;
                       animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
                       opacity: 0.32;
@@ -640,6 +650,7 @@ export default function PharosWatchBotPage() {
                     .telegram-mini-app-dot-1 { animation-name: telegramMiniAppDotA; background: oklch(0.72 0.14 248 / 0.85); }
                     .telegram-mini-app-dot-2 { animation-name: telegramMiniAppDotB; background: oklch(0.72 0.14 248 / 0.85); }
                     .telegram-mini-app-dot-3 { animation-name: telegramMiniAppDotC; background: oklch(0.72 0.14 248 / 0.85); }
+                    .telegram-mini-app-dot-4 { animation-name: telegramMiniAppDotD; background: oklch(0.72 0.14 248 / 0.85); }
 
                     .telegram-mini-app-stage:hover .telegram-mini-app-carousel-track,
                     .telegram-mini-app-stage:hover .telegram-mini-app-dot {
