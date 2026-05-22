@@ -16,6 +16,7 @@
   "variantKind": "strategy-vault",
   "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
   "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "yieldfi-ytoken",
   "links": [

@@ -13,6 +13,7 @@
   },
   "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
   "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
+  "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "186",
   "detailProvider": "defillama",
   "geckoId": "international-stable-currency",
@@ -37,6 +38,7 @@
       "decimals": 6
     }
   ],
+  "deploymentModel": "single-chain",
   "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,

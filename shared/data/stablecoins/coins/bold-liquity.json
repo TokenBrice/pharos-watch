@@ -70,7 +70,10 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
+  "collateralQuality": "eth-lst",
+  "custodyModel": "onchain",
   "governanceQuality": "immutable-code",
   "infrastructures": [
     "liquity-v2"

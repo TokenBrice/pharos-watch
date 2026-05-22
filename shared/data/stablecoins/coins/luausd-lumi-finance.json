@@ -13,6 +13,7 @@
   },
   "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
   "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
+  "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "lumi-finance-luausd",
   "cmcSlug": "lumi-finance-luausd",
@@ -63,7 +64,7 @@
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
-    "semantics": "collateral-mix",
+    "semantics": "single-asset",
     "breakerScope": "luausd-lumi-finance",
     "display": {
       "url": "https://lumi.finance/",

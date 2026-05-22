@@ -219,6 +219,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["ustbl-spiko", "Spiko US T-Bills Money Market Fund", "USTBL"],
   ["bib01-backed", "Backed IB01 Treasury Bond 0-1yr", "bIB01"],
   ["thbill-theo", "Theo thBILL", "thBILL"],
+  ["rusd-reservoir", "Reservoir rUSD", "rUSD"],
   ["wsrusd-reservoir", "Wrapped Savings rUSD", "wsrUSD"],
   ["srusd-reservoir", "Savings rUSD", "srUSD"],
   ["usdp-parallel", "Parallel USDp", "USDp"],

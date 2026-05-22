@@ -106,5 +106,6 @@
     "yieldSource": "Mu Digital Asian Dollar credit fund",
     "yieldType": "nav-appreciation"
   },
-  "chainTier": "unproven"
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain"
 }

@@ -62,6 +62,11 @@
       "type": "warning",
       "title": "Protocol haircut mechanism",
       "message": "HBD redemptions depend on Hive protocol conversion rules and can be haircut when system debt is above configured thresholds."
+    },
+    {
+      "type": "info",
+      "title": "Hive-native asset",
+      "message": "HBD is issued by the Hive protocol rather than an EVM-style token contract. Pharos does not list a contract address until Hive is supported in the chain metadata registry."
     }
   ]
 }

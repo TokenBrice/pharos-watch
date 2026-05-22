@@ -40,6 +40,7 @@
       "decimals": 18
     }
   ],
+  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions)",
@@ -54,6 +55,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "canBeBlacklisted": false,
   "status": "active",
   "announcedDate": "2026-03",
   "launchPhase": "beta",

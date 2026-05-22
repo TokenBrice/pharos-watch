@@ -13,6 +13,7 @@
   },
   "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
   "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "dephaser-jpy",
   "links": [

@@ -13,6 +13,7 @@
   },
   "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
   "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "jusd",
   "protocolSlug": "jusd",

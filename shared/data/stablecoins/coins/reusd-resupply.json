@@ -43,6 +43,7 @@
       "decimals": 18
     }
   ],
+  "deploymentModel": "single-chain",
   "canBeBlacklisted": "dilutable",
   "canBeBlacklistedSource": {
     "label": "Etherscan contract source",

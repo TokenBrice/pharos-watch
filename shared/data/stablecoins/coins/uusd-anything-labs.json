@@ -13,6 +13,7 @@
   },
   "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
   "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "unity-usd",
   "protocolSlug": "uusd",

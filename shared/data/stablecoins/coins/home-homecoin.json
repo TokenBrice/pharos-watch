@@ -9,7 +9,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": true,
     "navToken": false
   },
@@ -55,6 +55,7 @@
       "decimals": 6
     }
   ],
+  "deploymentModel": "single-chain",
   "chainTier": "ethereum",
   "custodyModel": "institutional-unregulated",
   "proofOfReserves": {
@@ -63,6 +64,10 @@
     "provider": "HomeCoin",
     "attestorTier": "self",
     "cadence": "ad-hoc"
+  },
+  "yieldConfig": {
+    "yieldSource": "HomeCoin home-loan payment distributions",
+    "yieldType": "fee-sharing"
   },
   "reserves": [
     {

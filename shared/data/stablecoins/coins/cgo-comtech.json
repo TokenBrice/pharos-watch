@@ -60,5 +60,6 @@
       "decimals": 18
     }
   ],
+  "deploymentModel": "single-chain",
   "chainTier": "established-alt-l1"
 }

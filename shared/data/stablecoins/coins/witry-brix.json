@@ -13,6 +13,7 @@
   },
   "collateral": "iTRY deposited into the Brix staking wrapper, backed by a BVI-regulated Turkish-lira money-market fund and related TRY cash/liquidity instruments",
   "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "wrapped-itry",
   "links": [

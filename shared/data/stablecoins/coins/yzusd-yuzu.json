@@ -13,6 +13,7 @@
   },
   "collateral": "Overcollateralized by diversified on-chain DeFi yield strategies (leveraged loops, Pendle liquidity, Euler lending markets) deployed on Plasma chain; backed by >$1 in on-chain assets per yzUSD",
   "pegMechanism": "Eligible investors (accredited/institutional, KYC/AML required) mint/redeem at 1:1 with USDT0; peg maintained by overcollateralization and risk tranching via yzPP junior tranche absorbing first losses",
+  "mechanismArchetype": "cdp",
   "llamaId": "344",
   "detailProvider": "defillama",
   "geckoId": "yuzu-usd",
@@ -48,6 +49,7 @@
       "decimals": 18
     }
   ],
+  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

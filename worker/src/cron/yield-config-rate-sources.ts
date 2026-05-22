@@ -219,6 +219,11 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-05-19",
     note: "pre-launch stability-pool yield with no reliable runtime APY source yet",
   },
+  "home-homecoin": {
+    code: "issuer-distributed-yield",
+    since: "2026-05-22",
+    note: "home-loan payment yield is issuer-distributed; no reliable runtime APY source is wired yet",
+  },
   "gusd-gate": {
     code: "off-chain-account-product",
     since: "2026-04-14",

@@ -770,6 +770,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
@@ -2157,7 +2158,8 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "chainTier": "unproven",
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -2327,7 +2329,7 @@
       {
         "type": "info",
         "title": "Multi-chain Backed product",
-        "message": "bC3M is also listed across Arbitrum, Avalanche, Base, BNB Chain, Polygon, and Gnosis. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+        "message": "bC3M is listed across Ethereum, Arbitrum, Avalanche, Base, BNB Chain, Polygon, and Gnosis with the same token address. Pharos keeps those verified Backed deployments grouped under the native multichain product."
       },
       {
         "type": "info",
@@ -2957,7 +2959,10 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "ethereum",
     "deploymentModel": "third-party-bridge",
+    "collateralQuality": "eth-lst",
+    "custodyModel": "onchain",
     "governanceQuality": "immutable-code",
     "infrastructures": [
       "liquity-v2"
@@ -4022,6 +4027,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -4662,6 +4668,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -5044,6 +5051,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -5167,6 +5175,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -5227,6 +5236,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -5337,6 +5347,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -5917,7 +5928,10 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "ethereum",
     "deploymentModel": "canonical-bridge",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
@@ -6019,7 +6033,7 @@
       {
         "id": "m-m0",
         "weight": 1,
-        "type": "wrapper"
+        "type": "mechanism"
       }
     ],
     "canBeBlacklisted": true,
@@ -7307,6 +7321,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
@@ -7360,6 +7375,7 @@
     },
     "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-usd",
     "cmcSlug": "dtrinity-dusd",
     "links": [
@@ -7846,6 +7862,7 @@
       "reviewedAt": "2026-05-14"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -8032,6 +8049,7 @@
       "reviewer": "Codex Worker B metadata pass",
       "reviewedAt": "2026-05-14"
     },
+    "deploymentModel": "single-chain",
     "reserves": [
       {
         "name": "Spiko EUTBL tokenized Eurozone Treasury-bill fund shares",
@@ -8181,7 +8199,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
+    "collateral": "Euro-denominated fiat reserves held separately from Circle operating funds at regulated financial institutions in the EEA",
     "pegMechanism": "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "euro-coin",
@@ -10255,6 +10273,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-top",
     "reserves": [
       {
@@ -11649,6 +11668,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -12498,6 +12518,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "cex",
     "reserves": [
       {
@@ -12904,6 +12925,11 @@
         "type": "warning",
         "title": "Protocol haircut mechanism",
         "message": "HBD redemptions depend on Hive protocol conversion rules and can be haircut when system debt is above configured thresholds."
+      },
+      {
+        "type": "info",
+        "title": "Hive-native asset",
+        "message": "HBD is issued by the Hive protocol rather than an EVM-style token contract. Pharos does not list a contract address until Hive is supported in the chain metadata registry."
       }
     ]
   },
@@ -13583,6 +13609,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -13635,7 +13662,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": true,
       "navToken": false
     },
@@ -13689,6 +13716,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -13720,7 +13748,11 @@
         "title": "Illiquid RWA collateral",
         "message": "HomeCoin collateral is property-backed receivables, so the fallback is not comparable to liquid fiat or Treasury redemption capacity."
       }
-    ]
+    ],
+    "yieldConfig": {
+      "yieldSource": "HomeCoin home-loan payment distributions",
+      "yieldType": "fee-sharing"
+    }
   },
   {
     "id": "honey-berachain",
@@ -13775,6 +13807,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -13917,6 +13950,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -14289,6 +14323,7 @@
     },
     "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
     "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "international-stable-currency",
     "links": [
       {
@@ -14321,6 +14356,7 @@
       "upstreamSuppressionRationale": "Suppresses a resolver text false-positive where the generic reserve phrase \"Cash reserves\" matches the tracked CASH symbol. ISC metadata does not identify CASH token exposure or another upstream freezable asset."
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -14483,6 +14519,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
@@ -14509,6 +14546,7 @@
     },
     "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
     "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "infinifi-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -14549,6 +14587,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-unregulated",
     "reserves": [
@@ -15275,6 +15314,7 @@
     },
     "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
     "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dephaser-jpy",
     "links": [
       {
@@ -15558,6 +15598,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -15687,6 +15728,7 @@
     },
     "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
     "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+    "mechanismArchetype": "cdp",
     "geckoId": "jusd",
     "protocolSlug": "jusd",
     "links": [
@@ -15823,6 +15865,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -15909,6 +15952,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -16722,6 +16766,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -16858,6 +16903,7 @@
     },
     "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
     "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "lumi-finance-luausd",
     "cmcSlug": "lumi-finance-luausd",
     "protocolSlug": "lumi-finance",
@@ -16906,7 +16952,7 @@
     ],
     "liveReservesConfig": {
       "version": 1,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "luausd-lumi-finance",
       "display": {
         "url": "https://lumi.finance/",
@@ -18422,6 +18468,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -18959,7 +19006,7 @@
     },
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
-    "custodyModel": "cex",
+    "custodyModel": "onchain",
     "governanceQuality": "wrapper",
     "variantOf": "msusd-main-street",
     "variantKind": "strategy-vault",
@@ -19671,6 +19718,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "infrastructures": [
       "liquity-v2"
@@ -20163,6 +20211,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -21052,6 +21101,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-top",
     "reserves": [
       {
@@ -21393,6 +21443,13 @@
     "commodityOunces": 1,
     "geckoId": "pleasing-gold",
     "protocolSlug": "pleasing-gold",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.pleasinggold.com/",
+      "provider": "Pleasing Gold issuer disclosure",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
+    },
     "links": [
       {
         "label": "Website",
@@ -21856,6 +21913,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -22673,6 +22731,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "reserves": [
       {
@@ -23058,6 +23117,216 @@
         "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
       }
     ]
+  },
+  {
+    "id": "rusd-reservoir",
+    "llamaId": "217",
+    "detailProvider": "defillama",
+    "name": "Reservoir rUSD",
+    "symbol": "rUSD",
+    "oneLiner": "rUSD is Reservoir's mintable dollar stablecoin, redeemable 1:1 for USDC, USDT, or USD1 and backed by a mixed RWA and digital-asset balance sheet.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
+    "pegMechanism": "Users can mint and redeem rUSD 1:1 against USDC, USDT, or USD1 through Reservoir's Peg Stability Module, while Credit Enforcer contracts constrain liquidity, solvency, and capital ratios before protocol asset reallocations.",
+    "mechanismArchetype": "fiat-cash",
+    "geckoId": "reservoir-rusd",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://app.reservoir.xyz/reserves",
+      "provider": "Reservoir Protocol",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://reservoir.xyz"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/reservoir_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.reservoir.xyz"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://app.reservoir.xyz/reserves"
+      },
+      {
+        "label": "Contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "berachain",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "plume",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "sei",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "unichain",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x866d66f64fb81461903e1e38d998e747ecf35e78",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "Ejqkht2dyN1BaaEtK92zBKY6S8HbVH8APB5sDK9Rmokt",
+        "decimals": 9
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Reservoir's stablecoin collateral and PSM exposure to tracked freezable stablecoins such as USDC, USDT, USD1, PYUSD, RLUSD, GHO, and AUSD.",
+      "evidence": "rUSD inherits upstream freeze risk because the Reservoir balance sheet and PSM are built around tracked stablecoins with issuer or governance control surfaces.",
+      "reviewer": "Codex metadata review",
+      "reviewedAt": "2026-05-22"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "RLUSD lending markets",
+        "pct": 60.3,
+        "risk": "medium",
+        "coinId": "rlusd-ripple",
+        "depType": "collateral"
+      },
+      {
+        "name": "GHO lending and savings markets",
+        "pct": 20.7,
+        "risk": "medium",
+        "coinId": "gho-aave",
+        "depType": "collateral"
+      },
+      {
+        "name": "USDC lending/direct liquidity",
+        "pct": 6.5,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      },
+      {
+        "name": "AUSD lending markets",
+        "pct": 5.9,
+        "risk": "medium",
+        "coinId": "ausd-agora",
+        "depType": "collateral"
+      },
+      {
+        "name": "USD1 lending markets",
+        "pct": 4.6,
+        "risk": "medium",
+        "coinId": "usd1-world-liberty-financial",
+        "depType": "collateral"
+      },
+      {
+        "name": "PYUSD lending/direct liquidity",
+        "pct": 2,
+        "risk": "medium",
+        "coinId": "pyusd-paypal",
+        "depType": "collateral"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "reservoir",
+      "display": {
+        "url": "https://app.reservoir.xyz/reserves",
+        "label": "Proof of Reserves"
+      },
+      "scoring": {
+        "maxSourceAgeSec": 4000000,
+        "allowedDegradedWarningCodes": [
+          "unknown-position",
+          "source-total-gap"
+        ]
+      },
+      "adapter": "reservoir",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://app.reservoir.xyz/api/reserves/raw"
+        }
+      }
+    }
   },
   {
     "id": "rusd-revolut",
@@ -24393,6 +24662,7 @@
     "pegReferenceId": "dusd-dtrinity",
     "collateral": "dUSD deposited into dTRINITY dSTAKE vaults and supplied into dLEND; deployments are chain-isolated and non-fungible across networks.",
     "pegMechanism": "Stake dUSD to mint sdUSD vault receipts and unstake back into dUSD when dLEND liquidity is available; dSTAKE charges no staking fee, unstaking can incur up to 10 bps retained by the vault, and NAV appreciates as dLEND supply APY accrues.",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-staked-dusd",
     "links": [
       {
@@ -24847,6 +25117,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -25134,6 +25405,7 @@
       "rwa": true,
       "navToken": true
     },
+    "pegReferenceId": "rusd-reservoir",
     "collateral": "Yield-bearing Reservoir savings token backed by the Reservoir balance sheet: stablecoin PSM liquidity, RWA allocations, Morpho/Euler lending vaults, and governance-approved credit strategies monitored through Reservoir's on-chain proof-of-reserves endpoint",
     "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
     "geckoId": "reservoir-srusd",
@@ -25196,11 +25468,14 @@
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "multisig",
+    "variantOf": "rusd-reservoir",
+    "variantKind": "savings-passthrough",
     "reserves": [
       {
         "name": "Reservoir rUSD protocol balance sheet",
         "pct": 100,
         "risk": "medium",
+        "coinId": "rusd-reservoir",
         "depType": "wrapper"
       }
     ],
@@ -28706,6 +28981,7 @@
       "reviewer": "Accuratis swarm review",
       "reviewedAt": "2026-05-13"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -29538,6 +29814,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -29708,6 +29985,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "infrastructures": [
@@ -30032,6 +30310,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -31075,6 +31354,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "reserves": [
@@ -31598,6 +31878,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -32062,6 +32343,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "infrastructures": [
@@ -32398,6 +32680,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -32470,6 +32753,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "infrastructures": [
       "m0"
@@ -33613,6 +33897,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "infrastructures": [
@@ -33853,6 +34138,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -34530,8 +34816,11 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "ethereum",
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
     "reserves": [
       {
         "name": "U.S. Treasury bill exposure",
@@ -34849,6 +35138,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "reserves": [
       {
@@ -35534,6 +35824,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
       "reviewedStatus": false,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
@@ -35541,6 +35832,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "reserves": [
       {
         "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions)",
@@ -36016,6 +36308,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -36746,6 +37039,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "wrapper",
     "reserves": [
@@ -36956,6 +37250,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "reserves": [
@@ -37033,6 +37328,7 @@
     },
     "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
     "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+    "mechanismArchetype": "cdp",
     "geckoId": "unity-usd",
     "protocolSlug": "uusd",
     "links": [
@@ -37138,6 +37434,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
@@ -37456,6 +37753,7 @@
     },
     "collateral": "Hemi-based credit and crypto collateral backing vCRED",
     "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
+    "mechanismArchetype": "cdp",
     "geckoId": "vcred",
     "protocolSlug": "vcred",
     "links": [
@@ -37494,6 +37792,9 @@
     },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "multisig",
     "reserves": [
       {
         "name": "Hemi credit and crypto collateral",
@@ -38657,6 +38958,7 @@
     },
     "collateral": "iTRY deposited into the Brix staking wrapper, backed by a BVI-regulated Turkish-lira money-market fund and related TRY cash/liquidity instruments",
     "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
+    "mechanismArchetype": "tbill",
     "geckoId": "wrapped-itry",
     "links": [
       {
@@ -40062,6 +40364,7 @@
     },
     "collateral": "Reserve basket of dollar stablecoins used by Metal Dollar, including USDC, PYUSD, and Paxos-dollar components such as USDP / XPAX",
     "pegMechanism": "Basket-backed stablecoin index on XPR Network, with mint and redeem flows intended to keep XMD near one U.S. dollar against the underlying stablecoin basket",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "metal-dollar",
     "links": [
       {
@@ -41140,6 +41443,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
     "pegMechanism": "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "yield-optimizer-usd",
     "links": [
       {
@@ -41170,6 +41474,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
@@ -41397,6 +41702,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
     "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "yieldfi-ytoken",
     "links": [
       {
@@ -41619,6 +41925,7 @@
     },
     "collateral": "Overcollateralized by diversified on-chain DeFi yield strategies (leveraged loops, Pendle liquidity, Euler lending markets) deployed on Plasma chain; backed by >$1 in on-chain assets per yzUSD",
     "pegMechanism": "Eligible investors (accredited/institutional, KYC/AML required) mint/redeem at 1:1 with USDT0; peg maintained by overcollateralization and risk tranching via yzPP junior tranche absorbing first losses",
+    "mechanismArchetype": "cdp",
     "geckoId": "yuzu-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -41660,6 +41967,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "unproven",
+    "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
     "reserves": [
       {
@@ -42358,6 +42666,7 @@
     },
     "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
     "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
+    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "X",

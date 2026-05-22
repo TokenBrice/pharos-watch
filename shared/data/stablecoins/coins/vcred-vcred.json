@@ -13,6 +13,7 @@
   },
   "collateral": "Hemi-based credit and crypto collateral backing vCRED",
   "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "vcred",
   "protocolSlug": "vcred",
@@ -52,6 +53,9 @@
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Hemi credit and crypto collateral",

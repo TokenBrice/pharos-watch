@@ -221,7 +221,7 @@ describe("adapter registry completeness", () => {
   it("documents safe source-invariant flip candidates without relying on coin-specific parser params", () => {
     const expectedDuplicateGroups: Record<string, string[][]> = {
       "frax-balance-sheet": [],
-      reservoir: [["srusd-reservoir", "wsrusd-reservoir"]],
+      reservoir: [["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]],
     };
 
     for (const adapterKey of Object.keys(expectedDuplicateGroups)) {

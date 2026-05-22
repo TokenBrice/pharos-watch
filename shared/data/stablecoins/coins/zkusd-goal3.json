@@ -13,6 +13,7 @@
   },
   "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
   "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
+  "mechanismArchetype": "cdp",
   "llamaId": "151",
   "detailProvider": "defillama",
   "links": [

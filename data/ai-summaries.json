@@ -1489,6 +1489,16 @@
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
   },
+  "rusd-reservoir": {
+    "title": "Reservoir's Base Dollar",
+    "text": "rUSD is the non-yielding base asset under Reservoir's savings tokens: mintable and redeemable 1:1 for USDC, USDT, or USD1, but backed by a protocol balance sheet that also routes capital into lending markets and credit strategies. The live reserve feed makes the dependency stack visible, with current exposure concentrated in RLUSD and GHO lending markets plus smaller USDC, AUSD, USD1, and PYUSD slices. That gives rUSD more transparency than a black-box credit book, but it also means the {{term:redemption}}redemption{{/term}} promise depends on multiple upstream stablecoin issuers, DeFi venues, and Reservoir governance rather than a simple cash account.",
+    "updatedAt": "2026-05-22",
+    "authoredBy": "ai",
+    "model": "gpt-5-codex",
+    "reviewedBy": "Codex",
+    "reviewedAt": "2026-05-22",
+    "factsAsOf": "2026-05-22"
+  },
   "wsrusd-reservoir": {
     "title": "Ashes to APY",
     "text": "Reservoir's ERC-4626 NAV vault survived a $285M bank run, then reincarnated as a seven-stablecoin reserve managed by named curators with enforced solvency floors.\n\nReservoir's rUSD processed $285M in redemptions 'without failure' in November 2025, then flatlined — the protocol's precise way of surviving a bank run while losing the patient. The reincarnation as wsrUSD is an ERC-4626 NAV vault backed by an unusually varied diet: 30% USDC, 25% USDT, 10% PYUSD, 5% GHO, 5% RLUSD, 5% USD1, plus strategy vaults and lending markets — seven upstream stablecoin dependencies curated by Steakhouse, Gauntlet, and other named managers. Credit Enforcer smart contracts enforce minimum 105% liquidity, solvency, and capital ratios before any leverage-increasing action, which is the kind of on-chain risk management that most {{term:yield-bearing}}yield-bearing{{/term}} protocols skip. Deployed across 15 chains with exotic collateral quality and multisig governance, wsrUSD's flexibility is genuine — but the seven-dependency architecture means the protocol's safety is a derivative of Circle, Tether, PayPal, Aave, Ripple, and World Liberty Financial simultaneously.",

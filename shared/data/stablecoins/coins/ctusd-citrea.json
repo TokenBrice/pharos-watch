@@ -93,7 +93,7 @@
     {
       "id": "m-m0",
       "weight": 1,
-      "type": "wrapper"
+      "type": "mechanism"
     }
   ],
   "liveReservesConfig": {

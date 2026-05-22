@@ -22,6 +22,9 @@
     "attestorTier": "self",
     "cadence": "real-time"
   },
+  "variantOf": "rusd-reservoir",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "rusd-reservoir",
   "links": [
     {
       "label": "Website",
@@ -79,6 +82,7 @@
       "name": "Reservoir rUSD protocol balance sheet",
       "pct": 100,
       "risk": "medium",
+      "coinId": "rusd-reservoir",
       "depType": "wrapper"
     }
   ],

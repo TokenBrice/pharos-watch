@@ -1,0 +1,210 @@
+{
+  "id": "rusd-reservoir",
+  "name": "Reservoir rUSD",
+  "symbol": "rUSD",
+  "oneLiner": "rUSD is Reservoir's mintable dollar stablecoin, redeemable 1:1 for USDC, USDT, or USD1 and backed by a mixed RWA and digital-asset balance sheet.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
+  "pegMechanism": "Users can mint and redeem rUSD 1:1 against USDC, USDT, or USD1 through Reservoir's Peg Stability Module, while Credit Enforcer contracts constrain liquidity, solvency, and capital ratios before protocol asset reallocations.",
+  "mechanismArchetype": "fiat-cash",
+  "llamaId": "217",
+  "detailProvider": "defillama",
+  "geckoId": "reservoir-rusd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.reservoir.xyz/reserves",
+    "provider": "Reservoir Protocol",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://reservoir.xyz"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/reservoir_xyz"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.reservoir.xyz"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://app.reservoir.xyz/reserves"
+    },
+    {
+      "label": "Contract addresses",
+      "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x866d66f64fb81461903e1e38d998e747ecf35e78",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "Ejqkht2dyN1BaaEtK92zBKY6S8HbVH8APB5sDK9Rmokt",
+      "decimals": 9
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Reservoir's stablecoin collateral and PSM exposure to tracked freezable stablecoins such as USDC, USDT, USD1, PYUSD, RLUSD, GHO, and AUSD.",
+    "evidence": "rUSD inherits upstream freeze risk because the Reservoir balance sheet and PSM are built around tracked stablecoins with issuer or governance control surfaces.",
+    "reviewer": "Codex metadata review",
+    "reviewedAt": "2026-05-22"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "RLUSD lending markets",
+      "pct": 60.3,
+      "risk": "medium",
+      "coinId": "rlusd-ripple",
+      "depType": "collateral"
+    },
+    {
+      "name": "GHO lending and savings markets",
+      "pct": 20.7,
+      "risk": "medium",
+      "coinId": "gho-aave",
+      "depType": "collateral"
+    },
+    {
+      "name": "USDC lending/direct liquidity",
+      "pct": 6.5,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    },
+    {
+      "name": "AUSD lending markets",
+      "pct": 5.9,
+      "risk": "medium",
+      "coinId": "ausd-agora",
+      "depType": "collateral"
+    },
+    {
+      "name": "USD1 lending markets",
+      "pct": 4.6,
+      "risk": "medium",
+      "coinId": "usd1-world-liberty-financial",
+      "depType": "collateral"
+    },
+    {
+      "name": "PYUSD lending/direct liquidity",
+      "pct": 2,
+      "risk": "medium",
+      "coinId": "pyusd-paypal",
+      "depType": "collateral"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "reservoir",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "scoring": {
+      "maxSourceAgeSec": 4000000,
+      "allowedDegradedWarningCodes": [
+        "unknown-position",
+        "source-total-gap"
+      ]
+    },
+    "breakerScope": "reservoir",
+    "display": {
+      "url": "https://app.reservoir.xyz/reserves",
+      "label": "Proof of Reserves"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      }
+    }
+  }
+}

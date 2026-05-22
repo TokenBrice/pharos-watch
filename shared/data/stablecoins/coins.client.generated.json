@@ -1251,6 +1251,7 @@
       "navToken": false
     },
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-usd"
   },
   {
@@ -2309,7 +2310,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": true,
       "navToken": false
     },
@@ -2420,6 +2421,7 @@
       "navToken": true
     },
     "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "international-stable-currency",
     "canBeBlacklisted": false
   },
@@ -2472,6 +2474,7 @@
       "navToken": false
     },
     "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "infinifi-usd"
   },
   {
@@ -2595,6 +2598,7 @@
       "navToken": false
     },
     "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dephaser-jpy",
     "canBeBlacklisted": "dilutable",
     "canBeBlacklistedSource": {
@@ -2671,6 +2675,7 @@
       "navToken": false
     },
     "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+    "mechanismArchetype": "cdp",
     "geckoId": "jusd",
     "protocolSlug": "jusd",
     "canBeBlacklisted": true
@@ -2873,6 +2878,7 @@
       "navToken": true
     },
     "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "lumi-finance-luausd",
     "protocolSlug": "lumi-finance",
     "canBeBlacklisted": "dilutable",
@@ -3919,6 +3925,23 @@
     "launchPhase": "beta"
   },
   {
+    "id": "rusd-reservoir",
+    "name": "Reservoir rUSD",
+    "symbol": "rUSD",
+    "oneLiner": "rUSD is Reservoir's mintable dollar stablecoin, redeemable 1:1 for USDC, USDT, or USD1 and backed by a mixed RWA and digital-asset balance sheet.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "pegMechanism": "Users can mint and redeem rUSD 1:1 against USDC, USDT, or USD1 through Reservoir's Peg Stability Module, while Credit Enforcer contracts constrain liquidity, solvency, and capital ratios before protocol asset reallocations.",
+    "mechanismArchetype": "fiat-cash",
+    "geckoId": "reservoir-rusd"
+  },
+  {
     "id": "rusd-revolut",
     "name": "Revolut USD Stablecoin",
     "symbol": "RUSD",
@@ -4156,6 +4179,7 @@
       "navToken": true
     },
     "pegMechanism": "Stake dUSD to mint sdUSD vault receipts and unstake back into dUSD when dLEND liquidity is available; dSTAKE charges no staking fee, unstaking can incur up to 10 bps retained by the vault, and NAV appreciates as dLEND supply APY accrues.",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-staked-dusd",
     "variantOf": "dusd-dtrinity",
     "variantKind": "strategy-vault"
@@ -4287,6 +4311,8 @@
     },
     "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
     "geckoId": "reservoir-srusd",
+    "variantOf": "rusd-reservoir",
+    "variantKind": "savings-passthrough",
     "canBeBlacklisted": "dilutable",
     "canBeBlacklistedSource": {
       "label": "Etherscan contract source",
@@ -5961,7 +5987,8 @@
     "pegMechanism": "USG has no collateral redemption path. Tangent targets the peg with Peg Keeper contracts, price-dependent reward deductions, and dynamic interest: HEC borrowers can be interest-free while USG stays above each market's threshold but lose more collateral rewards as USG falls, while LEC borrowers pay price-dependent interest immediately.",
     "mechanismArchetype": "cdp",
     "status": "active",
-    "launchPhase": "beta"
+    "launchPhase": "beta",
+    "canBeBlacklisted": false
   },
   {
     "id": "usn-noon",
@@ -6191,6 +6218,7 @@
       "navToken": false
     },
     "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+    "mechanismArchetype": "cdp",
     "geckoId": "unity-usd",
     "protocolSlug": "uusd"
   },
@@ -6260,6 +6288,7 @@
       "navToken": false
     },
     "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
+    "mechanismArchetype": "cdp",
     "geckoId": "vcred",
     "protocolSlug": "vcred",
     "canBeBlacklisted": "dilutable",
@@ -6477,6 +6506,7 @@
       "navToken": true
     },
     "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
+    "mechanismArchetype": "tbill",
     "geckoId": "wrapped-itry"
   },
   {
@@ -6694,6 +6724,7 @@
       "navToken": false
     },
     "pegMechanism": "Basket-backed stablecoin index on XPR Network, with mint and redeem flows intended to keep XMD near one U.S. dollar against the underlying stablecoin basket",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "metal-dollar",
     "canBeBlacklisted": "possible"
   },
@@ -6874,6 +6905,7 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "yield-optimizer-usd",
     "canBeBlacklisted": true
   },
@@ -6908,6 +6940,7 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "yieldfi-ytoken",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
@@ -6946,6 +6979,7 @@
       "navToken": false
     },
     "pegMechanism": "Eligible investors (accredited/institutional, KYC/AML required) mint/redeem at 1:1 with USDT0; peg maintained by overcollateralization and risk tranching via yzPP junior tranche absorbing first losses",
+    "mechanismArchetype": "cdp",
     "geckoId": "yuzu-usd"
   },
   {
@@ -7029,7 +7063,8 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era."
+    "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
+    "mechanismArchetype": "cdp"
   },
   {
     "id": "zsd-zephyr-protocol",

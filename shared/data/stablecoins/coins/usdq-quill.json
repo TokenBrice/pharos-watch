@@ -54,6 +54,7 @@
       "decimals": 18
     }
   ],
+  "deploymentModel": "single-chain",
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",

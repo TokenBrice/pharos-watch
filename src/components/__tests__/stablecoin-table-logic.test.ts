@@ -158,8 +158,9 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("susdai-usd-ai")).toBe(true);
     expect(allVariants.has("stusds-sky")).toBe(true);
     expect(allVariants.has("busd0-usual")).toBe(true);
+    expect(allVariants.has("srusd-reservoir")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(41);
+    expect(allVariants.size).toBe(42);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(new Set([

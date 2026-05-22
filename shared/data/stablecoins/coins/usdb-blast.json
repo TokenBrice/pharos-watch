@@ -39,6 +39,7 @@
       "decimals": 18
     }
   ],
+  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

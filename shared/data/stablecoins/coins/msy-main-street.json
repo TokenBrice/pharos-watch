@@ -52,7 +52,7 @@
   ],
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
-  "custodyModel": "cex",
+  "custodyModel": "onchain",
   "governanceQuality": "wrapper",
   "reserves": [
     {
