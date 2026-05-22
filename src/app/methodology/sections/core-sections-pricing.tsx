@@ -116,8 +116,8 @@ export function PricingPipelineMethodologySection() {
           preserves trusted continuity from fresh replay-safe{" "}
           <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
           <code className="mx-1 text-xs">N/A</code>. DefiLlama contract fallbacks must now pass the same peg-aware
-          plausibility gates before they can resolve an asset, and DexScreener symbol search is reserved for addressless
-          assets rather than downgrading exact-token candidates to symbol-only identity. DefiLlama{" "}
+          plausibility gates before they can resolve an asset, and DexScreener symbol search is retired so addressless
+          assets are not probed through noisy symbol-only identity. DefiLlama{" "}
           <code className="mx-1 text-xs">/coins</code> contract-price fallback and DexScreener dex-liquidity and
           dex-discovery paths now record against their own dedicated circuit breakers instead of reusing unrelated
           breaker state, and the same provider diagnostics and GeckoTerminal probe statistics collected during each run
@@ -275,7 +275,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing; same validation gate as pass 1)</li>
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, and peg-aware)</li>
-              <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first; unique-symbol search is reserved for addressless assets and stays filtered by &gt;$50K liquidity, capped at 10 actual requests per run while the pass walks the full prioritized missing set so skipped non-unique rows do not crowd out later valid candidates</li>
+              <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools only; the older unique-symbol search fallback is retired, and the pass remains capped at 10 actual exact-address requests per run</li>
               <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery for selected DefiLlama-listed assets that still have no price, published only with fallback confidence</li>
             </ol>
           </div>

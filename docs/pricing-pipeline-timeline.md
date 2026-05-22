@@ -1,10 +1,18 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.05` (2026-02-01 -> 2026-05-20). The runtime current methodology remains `v6.04` until `shared/lib/methodology-versions/pricing-pipeline.ts` is advanced; `v6.05` is recorded here as a staged changelog entry.
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.06` (2026-02-01 -> 2026-05-22).
 
 ---
 
-## v6.05 - DexScreener address breaker hardening (May 20, 2026; staged, not current)
+## v6.06 - DexScreener symbol-search retirement (May 22, 2026)
+
+- The last-resort DexScreener symbol-search fallback no longer calls `/latest/dex/search`
+- Production probes showed Worker-side upstream refusals while the lane resolved zero prices in recent stablecoin sync runs
+- DexScreener exact-address fallback remains available through `dexscreener-prices`; addressless assets without another usable fallback remain explicitly missing
+
+---
+
+## v6.05 - DexScreener address breaker hardening (May 20, 2026)
 
 - DexScreener exact-address primary augmentation is now explicit opt-in through `ADDRESS_PRICE_PROVIDERS_ENABLED`
 - Unset address-provider configuration defaults to DexPaprika plus configured key-backed providers, avoiding quarter-hourly calls to DexScreener's Cloudflare/WAF-protected public token endpoint

@@ -66,7 +66,7 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   "moralis-address": direct(CIRCUIT_SOURCE.MORALIS_PRICES, "Moralis token-price exact token-address primary augmentation."),
   "birdeye-address": direct(CIRCUIT_SOURCE.BIRDEYE_PRICES, "Birdeye exact token-address primary augmentation."),
   "coingecko-onchain-address": direct(CIRCUIT_SOURCE.CG_ONCHAIN, "CoinGecko Pro onchain tokens/multi exact-address augmentation."),
-  "dexscreener-search": direct(CIRCUIT_SOURCE.DEXSCREENER_SEARCH, "DexScreener symbol-search fallback."),
+  "dexscreener-search": direct(CIRCUIT_SOURCE.DEXSCREENER_SEARCH, "Legacy DexScreener symbol-search fallback."),
   // market-feeds
   "cg-ticker": direct(CIRCUIT_SOURCE.CG_TICKER, "CoinGecko ticker fetch is directly circuit-gated."),
   geckoterminal: direct(CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE, "GeckoTerminal probe fetch is directly circuit-gated."),

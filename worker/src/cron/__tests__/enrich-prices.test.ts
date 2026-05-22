@@ -713,7 +713,7 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
-  it("does not retry failing DexScreener fallback searches", async () => {
+  it("does not call retired DexScreener fallback search", async () => {
     const assets: PeggedAsset[] = [
       {
         id: "mystery-usd",
@@ -738,8 +738,7 @@ describe("enrichMissingPrices", () => {
 
     expect(stats.passDex).toBe(0);
     expect(stats.finalMissing).toBe(1);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("uses tracked contract metadata for addressless DexScreener exact fallback targets", async () => {
@@ -824,7 +823,7 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].price).toBe(0);
   });
 
-  it("records DexScreener search breaker state independently from exact token lookups", async () => {
+  it("keeps retired DexScreener search independent from exact token lookups", async () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
@@ -897,22 +896,29 @@ describe("enrichMissingPrices", () => {
       .map((entry) => String(entry.binds[0]));
 
     expect(circuitWrites).toContain(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
-    expect(circuitWrites).toContain(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`);
+    expect(circuitWrites).not.toContain(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
-  it("records DexScreener search failure when a 200 response contains malformed pairs", async () => {
+  it("recovers an open DexScreener search breaker without probing retired search", async () => {
+    const openedAt = Math.floor(Date.now() / 1000) - 3600;
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
-        rows: [],
-        first: null,
-      },
-      {
-        match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
-        rows: [],
-        first: null,
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`,
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: openedAt,
+              lastSuccessAt: null,
+              openedAt,
+            }),
+            updated_at: openedAt,
+          },
+        ],
       },
     ]);
 
@@ -928,13 +934,12 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ pairs: [{ pairAddress: "0xbroken" }] }), { status: 200 }),
-    ));
+    const fetchSpy = mockFetch();
 
     const result = await runDexScreenerPass(assets, undefined, db);
 
     expect(result.resolved).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
     const searchWrite = db
       .getHistory()
       .find((entry) =>
@@ -944,7 +949,7 @@ describe("enrichMissingPrices", () => {
     expect(searchWrite).toBeDefined();
     expect(JSON.parse(String(searchWrite?.binds[1]))).toMatchObject({
       state: "closed",
-      consecutiveFailures: 1,
+      consecutiveFailures: 0,
     });
   });
 
@@ -1070,7 +1075,7 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
-  it("continues past skipped high-rank assets until it spends the DexScreener request budget", { timeout: 15_000 }, async () => {
+  it("does not spend DexScreener request budget on retired symbol-search candidates", { timeout: 15_000 }, async () => {
     const assets: PeggedAsset[] = [
       { id: "deusd-1", name: "DEUSD 1", symbol: "DEUSD", price: 0, pegType: "peggedUSD", circulating: { total: 100 } },
       { id: "bean-1", name: "Bean 1", symbol: "BEAN", price: 0, pegType: "peggedUSD", circulating: { total: 90 } },
@@ -1110,11 +1115,10 @@ describe("enrichMissingPrices", () => {
 
     const result = await runDexScreenerPass(assets, { peggedCHF: 1.12 }, undefined);
 
-    expect(result.resolved).toBe(1);
-    expect(assets[10].price).toBe(1.126);
-    expect(assets[10].priceSource).toBe("dexscreener-search");
-    expect(fetchSpy).toHaveBeenCalledTimes(5);
-    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("q=CHFAU"))).toBe(true);
+    expect(result.resolved).toBe(0);
+    expect(assets[10].price).toBe(0);
+    expect(assets[10].priceSource).toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {

@@ -38,6 +38,7 @@ const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
 const DEXSCREENER_SEARCH_MIN_VOLUME_24H_USD = 10_000;
 const DEXSCREENER_SEARCH_MIN_PAIR_AGE_MS = 24 * 60 * 60 * 1000;
+const DEXSCREENER_SYMBOL_SEARCH_ENABLED = false;
 const DEXSCREENER_SEARCH_QUOTE_SYMBOLS = new Set([
   "USDC",
   "USDT",
@@ -198,6 +199,11 @@ function resolveDexScreenerAddressPrice(
 }
 
 function shouldAllowDexScreenerSymbolSearch(asset: PeggedAsset, exactTargets: DexScreenerTarget[]): boolean {
+  // DexScreener search is a Cloudflare/WAF-sensitive public lane and has not
+  // resolved live prices in production; keep the exact-address path only.
+  if (!DEXSCREENER_SYMBOL_SEARCH_ENABLED) {
+    return false;
+  }
   if (exactTargets.length > 0) {
     return false;
   }

@@ -120,7 +120,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "Pharos's editorial daily, published at /digest/. The Digest reads the previous day's stablecoin movements as a single briefing — mint/burn pressure, PSI shifts, confirmed depegs, FreezeWatch entries — not as a feed dump. Capitalized when referring to the publication ritual; “daily digest” is the descriptive phrase. The Digest carries the editorial signature for the platform.",
     methodologyAnchor: "/methodology/#pricing-pipeline-methodology",
-    methodologyVersion: "v6.04",
+    methodologyVersion: "v6.06",
     seeAlso: ["tape", "cemetery"],
   },
   {
@@ -210,7 +210,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     definition:
       "The wire-service stream at /timeline/. The Tape is set in Courier and reads like a newsroom feed: PressureShifts, confirmed depegs, FreezeWatch entries, blacklist actions, and PSI band changes, time-stamped in UTC and source-attributed. Capitalized when referring to the surface; lowercase when referring to the underlying stream (“on tape”).",
     methodologyAnchor: "/methodology/#pricing-pipeline-methodology",
-    methodologyVersion: "v6.04",
+    methodologyVersion: "v6.06",
     seeAlso: ["digest", "pressureshift"],
   },
   {

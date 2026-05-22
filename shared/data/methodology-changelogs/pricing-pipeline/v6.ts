@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.06",
+      title: "DexScreener symbol-search retirement",
+      date: "2026-05-22",
+      effectiveAt: 1779438171,
+      summary:
+        "The last-resort DexScreener symbol-search fallback is retired after production probes showed Worker-side upstream refusals and no live price recoveries.",
+      impact: [
+        "`dexscreener-search` remains visible as a legacy circuit key, but new stablecoin sync runs no longer call `/latest/dex/search`",
+        "DexScreener exact-address fallback remains available through the separate `dexscreener-prices` lane",
+        "Addressless assets that cannot resolve through DefiLlama, CoinMarketCap, Jupiter, CoinGecko low-volume recovery, or an exact tracked deployment now remain explicitly missing instead of probing noisy symbol search",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.05",
       title: "DexScreener address breaker hardening",
       date: "2026-05-20",
