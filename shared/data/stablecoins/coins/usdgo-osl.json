@@ -13,6 +13,14 @@
   },
   "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",
   "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+    "provider": "Big Four accounting firm via Anchorage Digital Bank",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
+  },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "347",
   "detailProvider": "defillama",

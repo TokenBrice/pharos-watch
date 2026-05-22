@@ -20,10 +20,10 @@
   "detailProvider": "coingecko",
   "geckoId": "saturn-dollar",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "real-time",
     "url": "https://app.saturn.credit/insights/saturn-protocol",
     "provider": "Saturn Protocol (on-chain reserve, with Accountable + Chainlink NAV oracle integration in progress)",
-    "attestorTier": "self",
+    "attestorTier": "niche",
     "cadence": "real-time"
   },
   "links": [

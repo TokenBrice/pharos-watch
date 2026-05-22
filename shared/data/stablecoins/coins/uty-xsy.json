@@ -13,6 +13,13 @@
   },
   "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
   "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://accountable.xsy.fi/",
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
+  },
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "305",
   "detailProvider": "defillama",

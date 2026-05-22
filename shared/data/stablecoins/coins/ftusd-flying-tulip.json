@@ -19,7 +19,8 @@
     "type": "self-reported",
     "url": "https://flyingtulip.com/ftusd/dashboard/",
     "attestorTier": "self",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "provider": "Flying Tulip dashboard"
   },
   "links": [
     {

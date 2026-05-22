@@ -22,9 +22,8 @@
     "url": "https://www.stablr.com/proof-of-reserve",
     "provider": "Grant Thornton",
     "attestorTier": "regional",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Malta",
-    "attestorLicense": "MFSA EMI (MiCA)"
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Malta"
   },
   "links": [
     {

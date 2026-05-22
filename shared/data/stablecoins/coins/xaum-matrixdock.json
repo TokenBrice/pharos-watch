@@ -21,8 +21,8 @@
     "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold",
     "provider": "Bureau Veritas",
     "attestorTier": "niche",
-    "cadence": "ad-hoc",
-    "attestorJurisdiction": "France/Singapore",
+    "cadence": "semi-annual",
+    "attestorJurisdiction": "Singapore",
     "attestorLicense": "Bullion vault inspection and assurance"
   },
   "links": [

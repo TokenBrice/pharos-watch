@@ -17,11 +17,11 @@
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.spiko.io/spiko-cash-and-carry",
-    "provider": "Spiko fund NAV and holdings disclosures",
-    "attestorTier": "self",
-    "cadence": "daily-nav",
+    "provider": "PwC",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
     "attestorJurisdiction": "France"
   },
   "links": [

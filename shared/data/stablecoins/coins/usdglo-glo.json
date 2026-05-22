@@ -19,13 +19,13 @@
   "geckoId": "glo-dollar",
   "cmcSlug": "glo-dollar",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://brale.xyz/stablecoins/USDGLO",
-    "provider": "Brale",
-    "attestorTier": "self",
-    "cadence": "real-time",
+    "provider": "Michael Coglianese, CPA, P.C.",
+    "attestorTier": "niche",
+    "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "Money Services Business / Money Transmitter (NMLS #2376957)"
+    "attestorLicense": "AICPA attestation standards"
   },
   "links": [
     {

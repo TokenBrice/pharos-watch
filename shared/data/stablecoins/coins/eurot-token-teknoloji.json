@@ -21,7 +21,8 @@
     "url": "https://www.token.com.tr/en/proof-of-reserves/",
     "provider": "Token Teknoloji reserve proof page",
     "cadence": "ad-hoc",
-    "attestorJurisdiction": "Turkey"
+    "attestorJurisdiction": "Turkey",
+    "attestorTier": "self"
   },
   "links": [
     {

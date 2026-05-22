@@ -109,7 +109,7 @@ Top-tier classification surfaced on the homepage Bluechip rail and on per-coin d
 
 ### Proof of Reserves
 
-`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` — paired with a `cadence` field of `daily-nav` / `real-time` / `monthly` / `quarterly` / `ad-hoc` / `none`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
+`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` — paired with a `cadence` field of `daily-nav` / `real-time` / `daily` / `weekly` / `monthly` / `quarterly` / `semi-annual` / `annual` / `ad-hoc` / `none`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
 
 - `big4` — emerald. Independent attestation from a Big-4 firm (Deloitte, EY, KPMG, PwC).
 - `regional` — blue. Licensed regional CPA or auditor with a recognized practice.

@@ -17,12 +17,6 @@
   "llamaId": "15",
   "detailProvider": "defillama",
   "geckoId": "dola-usd",
-  "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://www.inverse.finance/transparency",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
-  },
   "links": [
     {
       "label": "Website",

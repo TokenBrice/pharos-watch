@@ -13,6 +13,13 @@
   },
   "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
   "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://u.tech/",
+    "provider": "United Stables transparency dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "336",
   "detailProvider": "defillama",

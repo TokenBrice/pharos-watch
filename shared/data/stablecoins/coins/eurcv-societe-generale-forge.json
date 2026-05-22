@@ -24,7 +24,8 @@
     "provider": "SG-FORGE",
     "cadence": "daily-nav",
     "attestorJurisdiction": "France",
-    "attestorLicense": "EMI (MiCA)"
+    "attestorLicense": "EMI (MiCA)",
+    "attestorTier": "self"
   },
   "links": [
     {

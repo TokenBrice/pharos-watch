@@ -22,7 +22,7 @@
     "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf",
     "provider": "Transfero",
     "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "cadence": "daily"
   },
   "launchDate": "2019-07-19",
   "links": [

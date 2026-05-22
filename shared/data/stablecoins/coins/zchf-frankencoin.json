@@ -17,13 +17,6 @@
   "llamaId": "226",
   "detailProvider": "defillama",
   "geckoId": "frankencoin",
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://app.frankencoin.com/",
-    "provider": "Frankencoin protocol (live collateral positions API)",
-    "attestorTier": "niche",
-    "cadence": "real-time"
-  },
   "links": [
     {
       "label": "Website",

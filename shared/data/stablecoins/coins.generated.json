@@ -18,6 +18,14 @@
     "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "a7a5",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://docs.a7a5.io/legal/transparency",
+      "provider": "A7A5 independent reserve auditors",
+      "attestorTier": "niche",
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Kyrgyzstan"
+    },
     "links": [
       {
         "label": "Website",
@@ -1302,11 +1310,11 @@
     "geckoId": "macropod",
     "cmcSlug": "macropod",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.macropod.com/transparency/reserves",
-      "provider": "Macropod",
-      "attestorTier": "self",
-      "cadence": "real-time",
+      "provider": "Macropod independent quarterly reconciliation",
+      "attestorTier": "niche",
+      "cadence": "quarterly",
       "attestorJurisdiction": "Australia"
     },
     "links": [
@@ -3548,7 +3556,7 @@
       "url": "https://crown-brlv.com/en/transparency/",
       "provider": "Fact Finance",
       "attestorTier": "niche",
-      "cadence": "real-time",
+      "cadence": "daily",
       "attestorJurisdiction": "Brazil"
     },
     "links": [
@@ -3669,7 +3677,7 @@
       "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf",
       "provider": "Transfero",
       "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "cadence": "daily"
     },
     "links": [
       {
@@ -4064,8 +4072,8 @@
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://securitize.io/blackrock/buidl",
-      "provider": "Bank of New York Mellon",
-      "attestorTier": "niche",
+      "provider": "BlackRock / Securitize",
+      "attestorTier": "self",
       "cadence": "daily-nav",
       "attestorJurisdiction": "United States"
     },
@@ -4528,7 +4536,7 @@
       "type": "real-time",
       "url": "https://reserve.mento.org/",
       "provider": "Mento Reserve dashboard",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -4875,8 +4883,9 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://app.etherfuse.com/legal/proof-of-reserves",
+      "provider": "Etherfuse third-party attestations",
       "attestorTier": "niche",
-      "cadence": "daily-nav"
+      "cadence": "weekly"
     },
     "links": [
       {
@@ -4994,8 +5003,8 @@
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://reserve.mento.org/",
-      "provider": "Mento Reserve (on-chain, publicly verifiable)",
-      "attestorTier": "niche",
+      "provider": "Mento Reserve dashboard",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -5384,7 +5393,7 @@
       "type": "real-time",
       "url": "https://reserve.mento.org/",
       "provider": "Mento Reserve dashboard",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -5699,7 +5708,7 @@
       "type": "real-time",
       "url": "https://reserve.mento.org/",
       "provider": "Mento Reserve dashboard",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -6088,6 +6097,7 @@
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://cap.app/vault/reserves/cUSD",
+      "provider": "Cap reserves dashboard",
       "attestorTier": "niche",
       "cadence": "real-time"
     },
@@ -6237,9 +6247,10 @@
     "geckoId": "celo-dollar",
     "cmcSlug": "celo-dollar",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://reserve.mento.org/",
-      "attestorTier": "niche",
+      "provider": "Mento Reserve dashboard",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -7128,12 +7139,6 @@
     "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
     "mechanismArchetype": "cdp",
     "geckoId": "dola-usd",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.inverse.finance/transparency",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
-    },
     "links": [
       {
         "label": "Website",
@@ -8186,8 +8191,8 @@
       "provider": "Deloitte",
       "attestorTier": "big4",
       "cadence": "monthly",
-      "attestorJurisdiction": "European Union",
-      "attestorLicense": "EMI (MiCA)"
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "PCAOB-registered"
     },
     "links": [
       {
@@ -8305,6 +8310,7 @@
       "type": "self-reported",
       "url": "https://www.sgforge.com/product/coinvertible/",
       "provider": "SG-FORGE",
+      "attestorTier": "self",
       "cadence": "daily-nav",
       "attestorJurisdiction": "France",
       "attestorLicense": "EMI (MiCA)"
@@ -8404,10 +8410,10 @@
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://monerium.com/financial-information/",
+      "provider": "Monerium annual financial information",
       "attestorTier": "self",
-      "cadence": "ad-hoc",
-      "attestorJurisdiction": "Iceland",
-      "attestorLicense": "EMI (Central Bank of Iceland)"
+      "cadence": "annual",
+      "attestorJurisdiction": "Iceland"
     },
     "links": [
       {
@@ -8807,9 +8813,8 @@
       "url": "https://schuman.io/reserve-audits/",
       "provider": "KPMG",
       "attestorTier": "big4",
-      "cadence": "monthly",
-      "attestorJurisdiction": "France",
-      "attestorLicense": "EMI (MiCA)"
+      "cadence": "quarterly",
+      "attestorJurisdiction": "France"
     },
     "links": [
       {
@@ -8918,6 +8923,7 @@
       "type": "self-reported",
       "url": "https://www.token.com.tr/en/proof-of-reserves/",
       "provider": "Token Teknoloji reserve proof page",
+      "attestorTier": "self",
       "cadence": "ad-hoc",
       "attestorJurisdiction": "Turkey"
     },
@@ -9095,9 +9101,8 @@
       "url": "https://www.stablr.com/proof-of-reserve",
       "provider": "Grant Thornton",
       "attestorTier": "regional",
-      "cadence": "monthly",
-      "attestorJurisdiction": "Malta",
-      "attestorLicense": "EMI (MiCA)"
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Malta"
     },
     "links": [
       {
@@ -9187,9 +9192,8 @@
       "url": "https://stasis.net/transparency",
       "provider": "BDO Malta",
       "attestorTier": "regional",
-      "cadence": "monthly",
-      "attestorJurisdiction": "Malta",
-      "attestorLicense": "MiCA"
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Malta"
     },
     "links": [
       {
@@ -9284,11 +9288,11 @@
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-eur",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.spiko.io/spiko-euro",
-      "provider": "Spiko fund NAV and holdings disclosures",
-      "attestorTier": "niche",
-      "cadence": "daily-nav",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF UCITS SICAV sub-fund"
     },
@@ -9400,11 +9404,11 @@
     "pegMechanism": "EUR-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
     "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.spiko.io/spiko-cash-and-carry",
-      "provider": "Spiko fund NAV and holdings disclosures",
-      "attestorTier": "niche",
-      "cadence": "daily-nav",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF FPS / Alternative Investment Fund"
     },
@@ -9520,12 +9524,6 @@
     "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
     "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
-      "attestorTier": "self",
-      "cadence": "real-time"
-    },
     "links": [
       {
         "label": "Website",
@@ -9792,11 +9790,11 @@
     "mechanismArchetype": "tbill",
     "geckoId": "eutbl",
     "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.spiko.io/",
-      "provider": "Spiko (daily NAV and fund holdings disclosures)",
-      "attestorTier": "niche",
-      "cadence": "daily-nav",
+      "type": "independent-audit",
+      "url": "https://www.spiko.io/spiko-treasury-bills-euro",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
     },
@@ -10220,7 +10218,7 @@
       "attestorTier": "big4",
       "cadence": "monthly",
       "attestorJurisdiction": "United States",
-      "attestorLicense": "OCC National Trust Bank Charter"
+      "attestorLicense": "PCAOB-registered"
     },
     "links": [
       {
@@ -10911,6 +10909,7 @@
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://flyingtulip.com/ftusd/dashboard/",
+      "provider": "Flying Tulip dashboard",
       "attestorTier": "self",
       "cadence": "real-time"
     },
@@ -11508,11 +11507,11 @@
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.spiko.io/spiko-pound",
-      "provider": "Spiko fund NAV and holdings disclosures",
-      "attestorTier": "niche",
-      "cadence": "daily-nav",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF UCITS SICAV sub-fund"
     },
@@ -12576,7 +12575,7 @@
       "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "United States",
-      "attestorLicense": "NYDFS Trust Charter"
+      "attestorLicense": "PCAOB-registered"
     },
     "links": [
       {
@@ -12677,7 +12676,7 @@
       "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "United States",
-      "attestorLicense": "NYDFS Trust Charter"
+      "attestorLicense": "AICPA attestation standards"
     },
     "links": [
       {
@@ -15789,7 +15788,7 @@
       "url": "https://kinesis.money/trust-security/",
       "provider": "Bureau Veritas (Inspectorate International)",
       "attestorTier": "niche",
-      "cadence": "ad-hoc"
+      "cadence": "semi-annual"
     },
     "links": [
       {
@@ -15879,7 +15878,7 @@
       "url": "https://kinesis.money/audits/",
       "provider": "Bureau Veritas (Inspectorate International)",
       "attestorTier": "niche",
-      "cadence": "ad-hoc"
+      "cadence": "semi-annual"
     },
     "links": [
       {
@@ -15965,7 +15964,7 @@
       "type": "real-time",
       "url": "https://reserve.mento.org/",
       "provider": "Mento Reserve dashboard",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -17423,7 +17422,7 @@
       "type": "self-reported",
       "url": "https://midas.app/transparency",
       "provider": "Midas transparency dashboard and issuer disclosures",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "daily-nav"
     },
     "links": [
@@ -17631,7 +17630,7 @@
       "type": "self-reported",
       "url": "https://midas.app/transparency",
       "provider": "Midas transparency dashboard and issuer disclosures",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "daily-nav"
     },
     "links": [
@@ -17740,7 +17739,7 @@
       "type": "self-reported",
       "url": "https://midas.app/transparency",
       "provider": "Midas transparency dashboard and issuer disclosures",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "daily-nav"
     },
     "links": [
@@ -17831,7 +17830,7 @@
       "type": "self-reported",
       "url": "https://midas.app/transparency",
       "provider": "Midas transparency dashboard and issuer disclosures",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "daily-nav"
     },
     "links": [
@@ -18117,7 +18116,7 @@
       "type": "self-reported",
       "url": "https://midas.app/transparency",
       "provider": "Midas transparency dashboard and issuer disclosures",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "daily-nav"
     },
     "links": [
@@ -19357,7 +19356,10 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.blox.my/myrc/transparency",
-      "attestorTier": "niche"
+      "provider": "Tommy Ung & Partners PLT",
+      "attestorTier": "niche",
+      "cadence": "monthly",
+      "attestorJurisdiction": "Malaysia"
     },
     "links": [
       {
@@ -20841,11 +20843,12 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "pathusd",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-      "provider": "Bridge reserve disclosures",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "provider": "Bridge / independent third-party audits",
+      "attestorTier": "niche",
+      "cadence": "quarterly",
+      "attestorJurisdiction": "United States"
     },
     "links": [
       {
@@ -22325,6 +22328,13 @@
     "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "royal-euro",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://rib.digital/transparency",
+      "provider": "RIB Digital signed PoR snapshots",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -22807,11 +22817,11 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://ripple.com/solutions/stablecoin/transparency/",
-      "provider": "BPM LLP",
-      "attestorTier": "regional",
+      "provider": "Deloitte & Touche LLP",
+      "attestorTier": "big4",
       "cadence": "monthly",
       "attestorJurisdiction": "United States",
-      "attestorLicense": "PCAOB-registered"
+      "attestorLicense": "AICPA attestation standards"
     },
     "links": [
       {
@@ -23094,13 +23104,6 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "royal-dollar",
     "protocolSlug": "rcoins",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
-      "provider": "Royal Coin / RUSD Whitepaper",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
-    },
     "links": [
       {
         "label": "Website",
@@ -23197,13 +23200,6 @@
     "collateral": "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
     "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     "mechanismArchetype": "tbill",
-    "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
-      "provider": "Multipli",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
-    },
     "links": [
       {
         "label": "Website",
@@ -23316,11 +23312,11 @@
     "mechanismArchetype": "tbill",
     "geckoId": "safo",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.spiko.io/spiko-dollar",
-      "provider": "Spiko fund NAV and holdings disclosures",
-      "attestorTier": "self",
-      "cadence": "daily-nav",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF UCITS SICAV sub-fund"
     },
@@ -23802,10 +23798,11 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://brale.xyz/stablecoins/SBC",
-      "provider": "Abdo",
+      "provider": "Michael Coglianese, CPA, P.C.",
       "attestorTier": "niche",
       "cadence": "monthly",
-      "attestorJurisdiction": "United States"
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "AICPA attestation standards"
     },
     "links": [
       {
@@ -24845,11 +24842,11 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "spiko-digital-assets-cash-carry-fund",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.spiko.io/spiko-cash-and-carry",
-      "provider": "Spiko fund NAV and holdings disclosures",
-      "attestorTier": "self",
-      "cadence": "daily-nav",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France"
     },
     "links": [
@@ -26661,13 +26658,6 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-staked-usde",
     "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://app.ethena.fi/dashboards/transparency",
-      "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
-      "attestorTier": "niche",
-      "cadence": "real-time"
-    },
     "links": [
       {
         "label": "Website",
@@ -28101,6 +28091,14 @@
     "pegMechanism": "Direct 1:1 issuance and redemption through BiLira; issuer-managed native deployments extend TRYB across multiple chains",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "bilira",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.bilira.co/en/audit-reports",
+      "provider": "BiLira independent audit reports",
+      "attestorTier": "niche",
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Turkey"
+    },
     "links": [
       {
         "label": "Website",
@@ -28353,6 +28351,13 @@
     "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "united-stables",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://u.tech/",
+      "provider": "United Stables transparency dashboard",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -28436,11 +28441,11 @@
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-uk-t-bills-money-market-fund",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.spiko.io/spiko-treasury-bills-pound",
-      "provider": "Spiko fund NAV and holdings disclosures",
-      "attestorTier": "self",
-      "cadence": "daily-nav",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
     },
@@ -29791,10 +29796,10 @@
     "mechanismArchetype": "tbill",
     "geckoId": "saturn-dollar",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://app.saturn.credit/insights/saturn-protocol",
       "provider": "Saturn Protocol (on-chain reserve, with Accountable + Chainlink NAV oracle integration in progress)",
-      "attestorTier": "self",
+      "attestorTier": "niche",
       "cadence": "real-time"
     },
     "links": [
@@ -31212,11 +31217,11 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.paxos.com/usdg-transparency",
-      "provider": "Enrome LLP",
-      "attestorTier": "niche",
+      "provider": "KPMG LLP",
+      "attestorTier": "big4",
       "cadence": "monthly",
       "attestorJurisdiction": "Singapore",
-      "attestorLicense": "ACRA-registered Public Accountants"
+      "attestorLicense": "ACRA-registered Public Accounting Corporation"
     },
     "links": [
       {
@@ -31320,13 +31325,13 @@
     "geckoId": "glo-dollar",
     "cmcSlug": "glo-dollar",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://brale.xyz/stablecoins/USDGLO",
-      "provider": "Brale",
-      "attestorTier": "self",
-      "cadence": "real-time",
+      "provider": "Michael Coglianese, CPA, P.C.",
+      "attestorTier": "niche",
+      "cadence": "monthly",
       "attestorJurisdiction": "United States",
-      "attestorLicense": "Money Services Business / Money Transmitter (NMLS #2376957)"
+      "attestorLicense": "AICPA attestation standards"
     },
     "links": [
       {
@@ -31463,6 +31468,14 @@
     "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdgo",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+      "provider": "Big Four accounting firm via Anchorage Digital Bank",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States"
+    },
     "links": [
       {
         "label": "Website",
@@ -31818,10 +31831,10 @@
     "pegMechanism": "1:1 wrapper around M (M0) on Solana — KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
     "mechanismArchetype": "tbill",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://dashboard.m0.org/",
       "provider": "M0 Protocol (on-chain Validator attestations)",
-      "attestorTier": "self",
+      "attestorTier": "niche",
       "cadence": "real-time"
     },
     "links": [
@@ -32082,7 +32095,7 @@
       "url": "https://www.usdkg.com/transparency",
       "provider": "Kreston Global",
       "attestorTier": "regional",
-      "cadence": "ad-hoc"
+      "cadence": "quarterly"
     },
     "links": [
       {
@@ -32329,8 +32342,8 @@
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://dashboard.m0.org/",
-      "provider": "M0 Protocol",
-      "attestorTier": "self",
+      "provider": "M0 Protocol (on-chain Validator attestations)",
+      "attestorTier": "niche",
       "cadence": "real-time"
     },
     "links": [
@@ -32530,8 +32543,8 @@
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://dashboard.m0.org/stablecoins/usdnr",
-      "provider": "M0 Protocol",
-      "attestorTier": "self",
+      "provider": "M0 Protocol (on-chain Validator attestations)",
+      "attestorTier": "niche",
       "cadence": "real-time"
     },
     "links": [
@@ -33357,6 +33370,7 @@
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.quantoz.com/transparency",
+      "provider": "Quantoz transparency dashboard",
       "attestorTier": "self",
       "cadence": "real-time",
       "attestorJurisdiction": "Netherlands",
@@ -33714,9 +33728,8 @@
       "url": "https://www.stablr.com/proof-of-reserve",
       "provider": "Grant Thornton",
       "attestorTier": "regional",
-      "cadence": "monthly",
-      "attestorJurisdiction": "Malta",
-      "attestorLicense": "MFSA EMI (MiCA)"
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Malta"
     },
     "links": [
       {
@@ -34013,7 +34026,7 @@
     "mechanismArchetype": "tbill",
     "geckoId": "startale-usd",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://dashboard.m0.org/",
       "provider": "M0 Protocol (on-chain Validator attestations)",
       "attestorTier": "niche",
@@ -34122,6 +34135,14 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdsui",
     "pythFeedId": "0xd510fcdb3a63f35d3bb118d5db3afc5815a3f13bc55d48abb893b63f0315902a",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+      "provider": "Bridge / independent third-party audits",
+      "attestorTier": "niche",
+      "cadence": "quarterly",
+      "attestorJurisdiction": "United States"
+    },
     "links": [
       {
         "label": "Sui Launch",
@@ -34486,7 +34507,7 @@
       "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
       "provider": "Big Four accounting firm via Anchorage Digital Bank",
       "attestorTier": "big4",
-      "cadence": "daily-nav"
+      "cadence": "monthly"
     },
     "links": [
       {
@@ -35124,7 +35145,7 @@
     "geckoId": "ondo-us-dollar-yield",
     "pythFeedId": "0xe393449f6aff8a4b6d3e1165a7c9ebec103685f3b41e60db4277b5b6d10e7326",
     "proofOfReserves": {
-      "type": "real-time",
+      "type": "independent-audit",
       "url": "https://ondo.finance/usdy",
       "provider": "Ankura Trust",
       "attestorTier": "niche",
@@ -35289,8 +35310,8 @@
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://rwa.anzen.finance/transparency",
-      "provider": "on-chain SPCT collateralization",
-      "attestorTier": "niche",
+      "provider": "Anzen transparency dashboard",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -36341,11 +36362,11 @@
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-us-t-bills-money-market-fund",
     "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://www.spiko.io/",
-      "provider": "Spiko (daily NAV and fund holdings disclosures)",
-      "attestorTier": "self",
-      "cadence": "daily-nav",
+      "type": "independent-audit",
+      "url": "https://www.spiko.io/spiko-treasury-bills-dollar",
+      "provider": "PwC",
+      "attestorTier": "big4",
+      "cadence": "quarterly",
       "attestorJurisdiction": "France",
       "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
     },
@@ -36799,6 +36820,13 @@
     "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
     "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
     "mechanismArchetype": "synthetic-delta-neutral",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://accountable.xsy.fi/",
+      "provider": "Accountable",
+      "attestorTier": "niche",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -37196,11 +37224,13 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-swiss-franc",
     "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
-      "provider": "VNX proof-of-reserves disclosures",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "type": "independent-audit",
+      "url": "https://vnx.li/transparency/",
+      "provider": "AREVA General Auditing and Trust Company Limited",
+      "attestorTier": "niche",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Liechtenstein",
+      "attestorLicense": "FMA TVTG (Blockchain Act)"
     },
     "links": [
       {
@@ -37565,11 +37595,13 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-british-pound",
     "proofOfReserves": {
-      "type": "self-reported",
-      "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
-      "provider": "VNX proof-of-reserves disclosures",
-      "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "type": "independent-audit",
+      "url": "https://vnx.li/transparency/",
+      "provider": "AREVA General Auditing and Trust Company Limited",
+      "attestorTier": "niche",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Liechtenstein",
+      "attestorLicense": "FMA TVTG (Blockchain Act)"
     },
     "links": [
       {
@@ -38075,6 +38107,14 @@
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "brazilian-real",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+      "provider": "Local public accountants",
+      "attestorTier": "niche",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Brazil"
+    },
     "links": [
       {
         "label": "Website",
@@ -38272,6 +38312,14 @@
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "colombian-peso",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+      "provider": "Local public accountants",
+      "attestorTier": "niche",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Colombia"
+    },
     "links": [
       {
         "label": "Website",
@@ -38604,10 +38652,10 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "wrappedm-by-m0",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://dashboard.m0.org/",
       "provider": "M0 Protocol (on-chain Validator attestations)",
-      "attestorTier": "self",
+      "attestorTier": "niche",
       "cadence": "real-time"
     },
     "links": [
@@ -38722,6 +38770,14 @@
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mexican-peso",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+      "provider": "Local public accountants",
+      "attestorTier": "niche",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Mexico"
+    },
     "links": [
       {
         "label": "Website",
@@ -39378,12 +39434,13 @@
     "commodityOunces": 1,
     "geckoId": "matrixdock-silver",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "independent-audit",
       "url": "https://www.matrixdock.com/xagm",
-      "provider": "Matrixdock transparency page and audit links",
-      "attestorTier": "self",
-      "cadence": "ad-hoc",
-      "attestorJurisdiction": "Singapore"
+      "provider": "Bureau Veritas",
+      "attestorTier": "niche",
+      "cadence": "semi-annual",
+      "attestorJurisdiction": "Singapore",
+      "attestorLicense": "Bullion vault inspection and assurance"
     },
     "links": [
       {
@@ -39582,8 +39639,8 @@
       "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold",
       "provider": "Bureau Veritas",
       "attestorTier": "niche",
-      "cadence": "ad-hoc",
-      "attestorJurisdiction": "France/Singapore",
+      "cadence": "semi-annual",
+      "attestorJurisdiction": "Singapore",
       "attestorLicense": "Bullion vault inspection and assurance"
     },
     "links": [
@@ -41645,7 +41702,7 @@
       "type": "real-time",
       "url": "https://reserve.mento.org/",
       "provider": "Mento Reserve dashboard",
-      "attestorTier": "niche",
+      "attestorTier": "self",
       "cadence": "real-time"
     },
     "links": [
@@ -41877,13 +41934,6 @@
     "pegMechanism": "Auction-based collateral valuation with veto governance; no price oracle dependency",
     "mechanismArchetype": "cdp",
     "geckoId": "frankencoin",
-    "proofOfReserves": {
-      "type": "real-time",
-      "url": "https://app.frankencoin.com/",
-      "provider": "Frankencoin protocol (live collateral positions API)",
-      "attestorTier": "niche",
-      "cadence": "real-time"
-    },
     "links": [
       {
         "label": "Website",

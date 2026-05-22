@@ -21,11 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/usdg-transparency",
-    "provider": "Enrome LLP",
-    "attestorTier": "niche",
+    "provider": "KPMG LLP",
+    "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "Singapore",
-    "attestorLicense": "ACRA-registered Public Accountants"
+    "attestorLicense": "ACRA-registered Public Accounting Corporation"
   },
   "links": [
     {

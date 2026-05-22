@@ -21,9 +21,9 @@
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/",
     "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "cadence": "annual",
     "attestorJurisdiction": "Iceland",
-    "attestorLicense": "EMI (Central Bank of Iceland)"
+    "provider": "Monerium annual financial information"
   },
   "links": [
     {

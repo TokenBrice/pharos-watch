@@ -13,6 +13,14 @@
   },
   "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
   "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://docs.a7a5.io/legal/transparency",
+    "provider": "A7A5 independent reserve auditors",
+    "attestorTier": "niche",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Kyrgyzstan"
+  },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "258",
   "detailProvider": "defillama",

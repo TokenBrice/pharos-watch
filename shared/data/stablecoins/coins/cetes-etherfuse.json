@@ -20,7 +20,8 @@
     "type": "independent-audit",
     "url": "https://app.etherfuse.com/legal/proof-of-reserves",
     "attestorTier": "niche",
-    "cadence": "daily-nav"
+    "cadence": "weekly",
+    "provider": "Etherfuse third-party attestations"
   },
   "links": [
     {

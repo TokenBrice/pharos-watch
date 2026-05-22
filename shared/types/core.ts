@@ -72,8 +72,12 @@ export type AttestorTier = (typeof ATTESTOR_TIER_VALUES)[number];
 export const PROOF_OF_RESERVES_CADENCE_VALUES = [
   "daily-nav",
   "real-time",
+  "daily",
+  "weekly",
   "monthly",
   "quarterly",
+  "semi-annual",
+  "annual",
   "ad-hoc",
   "none",
 ] as const;

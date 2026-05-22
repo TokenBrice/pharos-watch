@@ -21,7 +21,7 @@
     "url": "https://crown-brlv.com/en/transparency/",
     "provider": "Fact Finance",
     "attestorTier": "niche",
-    "cadence": "real-time",
+    "cadence": "daily",
     "attestorJurisdiction": "Brazil"
   },
   "links": [

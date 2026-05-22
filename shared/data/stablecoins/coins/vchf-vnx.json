@@ -135,10 +135,12 @@
     }
   },
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
-    "provider": "VNX proof-of-reserves disclosures",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "type": "independent-audit",
+    "url": "https://vnx.li/transparency/",
+    "provider": "AREVA General Auditing and Trust Company Limited",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Liechtenstein",
+    "attestorLicense": "FMA TVTG (Blockchain Act)"
   }
 }

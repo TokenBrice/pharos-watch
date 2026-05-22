@@ -451,7 +451,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "Issuer-published evidence — independent audit, real-time on-chain feed, or self-reported attestation — that circulating supply is matched by reserve assets.",
     detail:
-      "Tier reflects attestor quality (Big-4 / regional CPA / niche / self / none) and cadence (daily-NAV / real-time / monthly / quarterly / ad-hoc).",
+      "Tier reflects attestor quality (Big-4 / regional CPA / niche / self / none) and cadence (daily-NAV / real-time / daily / weekly / monthly / quarterly / semi-annual / annual / ad-hoc).",
     methodologyPath: "/methodology/#proof-of-reserves",
   },
 };

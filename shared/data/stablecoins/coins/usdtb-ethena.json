@@ -23,7 +23,7 @@
     "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
     "provider": "Big Four accounting firm via Anchorage Digital Bank",
     "attestorTier": "big4",
-    "cadence": "daily-nav"
+    "cadence": "monthly"
   },
   "links": [
     {

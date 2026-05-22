@@ -21,11 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://ripple.com/solutions/stablecoin/transparency/",
-    "provider": "BPM LLP",
-    "attestorTier": "regional",
+    "provider": "Deloitte & Touche LLP",
+    "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "AICPA attestation standards"
   },
   "links": [
     {

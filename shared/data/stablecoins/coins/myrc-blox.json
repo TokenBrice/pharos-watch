@@ -19,7 +19,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.blox.my/myrc/transparency",
-    "attestorTier": "niche"
+    "attestorTier": "niche",
+    "provider": "Tommy Ung & Partners PLT",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Malaysia"
   },
   "links": [
     {

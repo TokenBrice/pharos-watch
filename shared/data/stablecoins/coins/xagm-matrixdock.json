@@ -17,12 +17,13 @@
   "detailProvider": "commodity",
   "geckoId": "matrixdock-silver",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.matrixdock.com/xagm",
-    "provider": "Matrixdock transparency page and audit links",
-    "attestorTier": "self",
-    "cadence": "ad-hoc",
-    "attestorJurisdiction": "Singapore"
+    "provider": "Bureau Veritas",
+    "attestorTier": "niche",
+    "cadence": "semi-annual",
+    "attestorJurisdiction": "Singapore",
+    "attestorLicense": "Bullion vault inspection and assurance"
   },
   "links": [
     {

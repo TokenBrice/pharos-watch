@@ -18,11 +18,12 @@
   "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
   "mechanismArchetype": "fiat-cash",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge reserve disclosures",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "provider": "Bridge / independent third-party audits",
+    "attestorTier": "niche",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

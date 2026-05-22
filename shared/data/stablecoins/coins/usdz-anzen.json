@@ -19,8 +19,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://rwa.anzen.finance/transparency",
-    "provider": "on-chain SPCT collateralization",
-    "attestorTier": "niche",
+    "provider": "Anzen transparency dashboard",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "links": [

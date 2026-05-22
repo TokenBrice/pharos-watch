@@ -13,6 +13,14 @@
   },
   "collateral": "Turkish lira cash reserves held 1:1 by BiLira; issuer materials describe full fiat backing for minted TRYB across supported chains",
   "pegMechanism": "Direct 1:1 issuance and redemption through BiLira; issuer-managed native deployments extend TRYB across multiple chains",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.bilira.co/en/audit-reports",
+    "provider": "BiLira independent audit reports",
+    "attestorTier": "niche",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Turkey"
+  },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "300",
   "detailProvider": "defillama",

@@ -18,10 +18,11 @@
   "geckoId": "celo-dollar",
   "cmcSlug": "celo-dollar",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "attestorTier": "niche",
-    "cadence": "real-time"
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "provider": "Mento Reserve dashboard"
   },
   "links": [
     {

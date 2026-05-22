@@ -17,11 +17,11 @@
   "detailProvider": "coingecko",
   "geckoId": "spiko-us-t-bills-money-market-fund",
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://www.spiko.io/",
-    "provider": "Spiko (daily NAV and fund holdings disclosures)",
-    "attestorTier": "self",
-    "cadence": "daily-nav",
+    "type": "independent-audit",
+    "url": "https://www.spiko.io/spiko-treasury-bills-dollar",
+    "provider": "PwC",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
     "attestorJurisdiction": "France",
     "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
   },

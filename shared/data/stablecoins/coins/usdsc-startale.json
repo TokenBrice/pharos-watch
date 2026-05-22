@@ -20,7 +20,7 @@
   "detailProvider": "coingecko",
   "geckoId": "startale-usd",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "real-time",
     "url": "https://dashboard.m0.org/",
     "provider": "M0 Protocol (on-chain Validator attestations)",
     "attestorTier": "niche",

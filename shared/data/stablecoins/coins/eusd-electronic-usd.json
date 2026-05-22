@@ -17,12 +17,6 @@
   "llamaId": "106",
   "detailProvider": "defillama",
   "geckoId": "electronic-usd",
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
-    "attestorTier": "self",
-    "cadence": "real-time"
-  },
   "links": [
     {
       "label": "Website",
@@ -107,7 +101,7 @@
           "token": {
             "chain": "ethereum",
             "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
-          "decimals": 6
+            "decimals": 6
           },
           "risk": "low",
           "coinId": "usdc-circle",

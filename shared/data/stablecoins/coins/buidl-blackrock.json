@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://securitize.io/blackrock/buidl",
-    "provider": "Bank of New York Mellon",
-    "attestorTier": "niche",
+    "provider": "BlackRock / Securitize",
+    "attestorTier": "self",
     "cadence": "daily-nav",
     "attestorJurisdiction": "United States"
   },

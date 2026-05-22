@@ -19,11 +19,11 @@
   "geckoId": "macropod",
   "cmcSlug": "macropod",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.macropod.com/transparency/reserves",
-    "provider": "Macropod",
-    "attestorTier": "self",
-    "cadence": "real-time",
+    "provider": "Macropod independent quarterly reconciliation",
+    "attestorTier": "niche",
+    "cadence": "quarterly",
     "attestorJurisdiction": "Australia"
   },
   "links": [

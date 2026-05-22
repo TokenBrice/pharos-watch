@@ -31,8 +31,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://dashboard.m0.org/",
-    "provider": "M0 Protocol",
-    "attestorTier": "self",
+    "provider": "M0 Protocol (on-chain Validator attestations)",
+    "attestorTier": "niche",
     "cadence": "real-time"
   },
   "links": [

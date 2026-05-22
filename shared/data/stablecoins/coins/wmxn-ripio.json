@@ -15,6 +15,14 @@
   },
   "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+    "provider": "Local public accountants",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Mexico"
+  },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "mexican-peso",
   "links": [

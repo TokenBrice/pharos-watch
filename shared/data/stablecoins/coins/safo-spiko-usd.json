@@ -17,11 +17,11 @@
   "detailProvider": "coingecko",
   "geckoId": "safo",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.spiko.io/spiko-dollar",
-    "provider": "Spiko fund NAV and holdings disclosures",
-    "attestorTier": "self",
-    "cadence": "daily-nav",
+    "provider": "PwC",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
     "attestorJurisdiction": "France",
     "attestorLicense": "AMF UCITS SICAV sub-fund"
   },

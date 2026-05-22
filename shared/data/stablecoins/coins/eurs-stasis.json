@@ -22,9 +22,8 @@
     "url": "https://stasis.net/transparency",
     "provider": "BDO Malta",
     "attestorTier": "regional",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Malta",
-    "attestorLicense": "MiCA"
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Malta"
   },
   "links": [
     {

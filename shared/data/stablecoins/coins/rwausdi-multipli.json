@@ -16,13 +16,6 @@
   "mechanismArchetype": "tbill",
   "llamaId": "340",
   "detailProvider": "defillama",
-  "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
-    "provider": "Multipli",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
-  },
   "links": [
     {
       "label": "Website",

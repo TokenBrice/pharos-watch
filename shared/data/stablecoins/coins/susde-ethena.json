@@ -20,13 +20,6 @@
   "detailProvider": "coingecko",
   "geckoId": "ethena-staked-usde",
   "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
-  "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://app.ethena.fi/dashboards/transparency",
-    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
-    "attestorTier": "niche",
-    "cadence": "real-time"
-  },
   "links": [
     {
       "label": "Website",

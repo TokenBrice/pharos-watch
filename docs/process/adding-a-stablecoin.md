@@ -238,7 +238,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
 | `mechanismArchetype` | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund` |
 | `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none` |
-| `proofOfReserves.cadence` | `daily-nav` \| `real-time` \| `monthly` \| `quarterly` \| `ad-hoc` \| `none` |
+| `proofOfReserves.cadence` | `daily-nav` \| `real-time` \| `daily` \| `weekly` \| `monthly` \| `quarterly` \| `semi-annual` \| `annual` \| `ad-hoc` \| `none` |
 | `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |
 
 ### Classification rules that are easy to get wrong
@@ -308,7 +308,7 @@ Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit o
 **`proofOfReserves` extensions** — four additive fields inside the existing `proofOfReserves` object, used for the attestor-tier badge.
 
 - `attestorTier`: `"big4"` (Deloitte, EY, KPMG, PwC), `"regional"` (BDO, RSM, Grant Thornton, Crowe, Mazars, Moore Stephens, Baker Tilly, Withum), `"niche"` (smaller / jurisdictionally-thin firms; single-purpose attestors), `"self"` (self-reported, no third-party signoff), or `"none"` (PoR block exists but is unhelpful — usually omit the whole block instead).
-- `cadence`: `"daily-nav"` (daily NAV publications, T-Bill funds, BUIDL-style), `"real-time"` (live on-chain feeds, Chainlink PoR, on-chain dashboards), `"monthly"` (standard monthly attestations), `"quarterly"`, `"ad-hoc"` (irregular or one-off), or `"none"` (not actually published).
+- `cadence`: `"daily-nav"` (daily NAV publications, T-Bill funds, BUIDL-style), `"real-time"` (live on-chain feeds, Chainlink PoR, on-chain dashboards), `"daily"` (daily non-NAV reports or account checks), `"weekly"`, `"monthly"` (standard monthly attestations), `"quarterly"`, `"semi-annual"`, `"annual"`, `"ad-hoc"` (irregular or one-off), or `"none"` (not actually published).
 - `attestorJurisdiction`: free-text country/region (e.g. `"United States"`).
 - `attestorLicense`: free-text license/registration (e.g. `"PCAOB-registered"`).
 
@@ -760,8 +760,12 @@ Do not hardcode direct pushes to `main` into the process. Follow the repo's norm
 
 - `daily-nav`
 - `real-time`
+- `daily`
+- `weekly`
 - `monthly`
 - `quarterly`
+- `semi-annual`
+- `annual`
 - `ad-hoc`
 - `none`
 

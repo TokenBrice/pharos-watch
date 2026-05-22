@@ -20,7 +20,7 @@
     "type": "self-reported",
     "url": "https://midas.app/transparency",
     "provider": "Midas transparency dashboard and issuer disclosures",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "daily-nav"
   },
   "links": [

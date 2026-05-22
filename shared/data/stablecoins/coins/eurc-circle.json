@@ -24,8 +24,8 @@
     "provider": "Deloitte",
     "attestorTier": "big4",
     "cadence": "monthly",
-    "attestorJurisdiction": "European Union",
-    "attestorLicense": "EMI (MiCA)"
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
   },
   "links": [
     {

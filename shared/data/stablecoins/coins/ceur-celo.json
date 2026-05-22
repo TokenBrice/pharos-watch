@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve (on-chain, publicly verifiable)",
-    "attestorTier": "niche",
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "links": [

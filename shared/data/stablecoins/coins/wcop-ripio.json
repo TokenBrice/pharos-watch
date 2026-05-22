@@ -15,6 +15,14 @@
   },
   "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+    "provider": "Local public accountants",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Colombia"
+  },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "colombian-peso",
   "links": [

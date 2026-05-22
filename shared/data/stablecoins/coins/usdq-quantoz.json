@@ -23,7 +23,8 @@
     "attestorTier": "self",
     "cadence": "real-time",
     "attestorJurisdiction": "Netherlands",
-    "attestorLicense": "DNB EMI (MiCAR)"
+    "attestorLicense": "DNB EMI (MiCAR)",
+    "provider": "Quantoz transparency dashboard"
   },
   "links": [
     {

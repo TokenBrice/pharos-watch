@@ -16,11 +16,11 @@
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.spiko.io/spiko-pound",
-    "provider": "Spiko fund NAV and holdings disclosures",
-    "attestorTier": "niche",
-    "cadence": "daily-nav",
+    "provider": "PwC",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
     "attestorJurisdiction": "France",
     "attestorLicense": "AMF UCITS SICAV sub-fund"
   },
