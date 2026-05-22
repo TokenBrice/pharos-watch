@@ -19674,6 +19674,10 @@
               "address": "0x4c0c5ae255A1dcBeC206a1CD40a03c60C387dCdD",
               "decimals": 18
             },
+            "priceToken": {
+              "chain": "coingecko",
+              "address": "solv-btc"
+            },
             "risk": "high"
           },
           {

@@ -423,6 +423,13 @@ const evmBranchBalanceBranchSchema = z
         decimals: z.number().int().nonnegative(),
       })
       .strict(),
+    priceToken: z
+      .object({
+        chain: z.string(),
+        address: z.string(),
+      })
+      .strict()
+      .optional(),
     risk: LiveReserveRiskSchema,
     coinId: z.string().optional(),
     depType: LiveReserveDependencyTypeSchema.optional(),

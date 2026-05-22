@@ -29,6 +29,10 @@ export interface BranchConfig {
     address: string;
     decimals: number;
   };
+  priceToken?: {
+    chain: string;
+    address: string;
+  };
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
@@ -188,8 +192,8 @@ export async function fetchBranchPriceMap(
   const wrapperPriceMap = await fetchDefiLlamaPrices(
     branchesNeedingPrices.map(({ branch }) => ({
       key: branch.name,
-      chain: branch.token.chain,
-      address: branch.token.address,
+      chain: branch.priceToken?.chain ?? branch.token.chain,
+      address: branch.priceToken?.address ?? branch.token.address,
     })),
     signal,
     ctx,

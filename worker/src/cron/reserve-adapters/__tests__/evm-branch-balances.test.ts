@@ -86,6 +86,50 @@ describe("fetchEvmBranchBalancesReserves", () => {
     });
   });
 
+  it("uses an explicit branch price token for DefiLlama price lookup", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000_000_000_000_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
+      new Map([["Receipt token", 75_000]]),
+    );
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "berachain", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "Receipt token",
+            holder: "0xAAA",
+            token: { chain: "berachain", address: "0xWRAPPER", decimals: 18 },
+            priceToken: { chain: "berachain", address: "0xUNDERLYING" },
+            risk: "high",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "Receipt token", pct: 100, risk: "high" },
+    ]);
+    expect(fetchDefiLlamaPrices).toHaveBeenCalledWith(
+      [
+        {
+          key: "Receipt token",
+          chain: "berachain",
+          address: "0xUNDERLYING",
+        },
+      ],
+      signal,
+      undefined,
+    );
+  });
+
   it("includes live redemption fee metadata when a probe is configured", async () => {
     vi.mocked(fetchErc20Balance).mockResolvedValue(1_000_000_000_000_000_000n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(

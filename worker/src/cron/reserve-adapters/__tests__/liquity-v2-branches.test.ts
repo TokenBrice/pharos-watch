@@ -169,6 +169,7 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
   const branches = (config.params as { branches: typeof branch[] }).branches;
   const wberaBranch = branches.find((entry) => entry.name === "WBERA")!;
   const pumpBtcBranch = branches.find((entry) => entry.name === "pumpBTC")!;
+  const solvBtcBranch = branches.find((entry) => entry.name === "solvBTC")!;
   const wberaAsset = "0x6969696969696969696969696969696969696969";
   const pumpBtcAsset = "0x1fCca65fb6Ae3b2758b9b2B394CB227eAE404e1E";
 
@@ -199,6 +200,12 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
       "WETH-HONEY Kodiak Island",
       "WETH-WBTC Kodiak Island",
     ]);
+    expect(solvBtcBranch).toMatchObject({
+      priceToken: {
+        chain: "coingecko",
+        address: "solv-btc",
+      },
+    });
   });
 
   it("reads ERC4626 vault shares, DenManager debt, sunsetting status, and branch fee telemetry", async () => {

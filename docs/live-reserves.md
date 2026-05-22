@@ -86,6 +86,8 @@ The shared live-reserve config schema enforces adapter-specific primary and fall
 
 `onchain-solana` now tries three public RPCs in order before failing the adapter: `https://api.mainnet-beta.solana.com`, `https://api.mainnet.solana.com`, and `https://solana-rpc.publicnode.com`. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
 
+Branch-balance adapters (`evm-branch-balances`, `liquity-v2-branches`, and `lista`) can set a per-branch `priceToken` when the measured collateral balance is a protocol receipt token whose live price should be sourced from a separate underlying token address. The balance still comes from the configured branch token; only the DefiLlama price lookup address changes.
+
 Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena and Reservoir now do this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients.
 
 USDe's Ethena reserve config also keeps Ethena's main-domain collateral API as a same-provider JSON fallback for cases where the `app.ethena.fi` API route returns the dashboard HTML shell to Worker-origin requests.
