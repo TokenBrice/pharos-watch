@@ -216,7 +216,7 @@ export function HeroTertiaryMetrics({
       </div>
 
       {activeDepeg && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
+        <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
           Active depeg detected — view details in Depeg History
         </div>
       )}

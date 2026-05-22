@@ -39,26 +39,10 @@ function gradeBandLabel(score: number, metric?: string): string {
 // Dimension Row Component
 // ---------------------------------------------------------------------------
 
-function DimensionLabel({ dimKey }: { dimKey: DimensionKey }) {
-  if (dimKey === "resilience") {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <span>{DIMENSION_LABELS[dimKey]}</span>
-        <MethodologyHint topic="resilience" className="pointer-events-auto" />
-      </span>
-    );
-  }
-
-  if (dimKey === "dependencyRisk") {
-    return (
-      <span className="inline-flex items-center gap-1.5">
-        <span>{DIMENSION_LABELS[dimKey]}</span>
-        <MethodologyHint topic="dependencyRisk" className="pointer-events-auto" />
-      </span>
-    );
-  }
-
-  return DIMENSION_LABELS[dimKey];
+function dimensionHintTopic(dimKey: DimensionKey): "resilience" | "dependencyRisk" | null {
+  if (dimKey === "resilience") return "resilience";
+  if (dimKey === "dependencyRisk") return "dependencyRisk";
+  return null;
 }
 
 interface DimensionRowProps {
@@ -77,6 +61,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
       dimKey === "liquidity") &&
     dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
+  const hintTopic = dimensionHintTopic(dimKey);
 
   return (
     <div className="group">
@@ -103,9 +88,8 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
           className={cn("relative z-10 flex items-center justify-between gap-2", hasDetails && "pointer-events-none")}
         >
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-sm font-medium">
-              <DimensionLabel dimKey={dimKey} />
-            </span>
+            <span className="truncate text-sm font-medium">{DIMENSION_LABELS[dimKey]}</span>
+            {hintTopic && <MethodologyHint topic={hintTopic} className="pointer-events-auto" />}
             <ChevronDown
               aria-hidden="true"
               className={cn(
