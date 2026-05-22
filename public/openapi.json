@@ -502,6 +502,15 @@
             }
           },
           {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive free-text search filter (trimmed and lowercased).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "severityFloor",
             "in": "query",
             "required": false,

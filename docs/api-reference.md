@@ -134,6 +134,8 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 
 These profiles apply while the dataset is within its generic freshness runway. Once a cache-backed response exceeds `8x` its endpoint max age, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
 
+All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/lib/api-cache-profiles.ts`) except `immutable-snapshot`, which is a route-local constant (`IMMUTABLE_CACHE_CONTROL` in `worker/src/api/snapshot.ts`) reused for the immutable public-snapshot routes.
+
 | Profile            | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | realtime           | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                                          |
@@ -312,7 +314,7 @@ Total documented public operations: **36**.
 | GET | `/api/dex-liquidity-history` | DEX liquidity history | Liquidity, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-archive` | Digest archive | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-snapshot` | Digest snapshot | Digest | X-API-Key | `date` | 200, 400, 401, 429, 503 |
-| GET | `/api/events` | Tape events | Risk | X-API-Key | `type?`, `class?`, `coin?`, `pegCurrency?`, `chain?`, `severityFloor?`, `since?`, `until?`, `cursor?`, `limit?`, `includeTotal?` | 200, 400, 401, 429, 503 |
+| GET | `/api/events` | Tape events | Risk | X-API-Key | `type?`, `class?`, `coin?`, `pegCurrency?`, `chain?`, `q?`, `severityFloor?`, `since?`, `until?`, `cursor?`, `limit?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/health` | Health check | Health | none | — | 200, 400, 503 |
 | GET | `/api/mint-burn-events` | Mint and burn events | Flows | X-API-Key | `stablecoin`, `direction?`, `chain?`, `burnType?`, `scope?`, `minAmount?`, `limit?`, `offset?`, `cursor?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/mint-burn-flows` | Mint and burn flows | Flows | X-API-Key | `stablecoin?`, `hours?` | 200, 400, 401, 429, 503 |
@@ -343,7 +345,7 @@ Total documented public operations: **36**.
 
 ### `GET /api/events`
 
-Tape events surface, backed by `worker/src/api/events.ts`. The handler already accepts `type`, `class`, `coin` (multi-value), `pegCurrency`, `chain`, `severityFloor`, `since` / `until` (epoch ms), `cursor`, `limit`, and `includeTotal` per the quick-reference table above.
+Tape events surface, backed by `worker/src/api/events.ts`. The handler already accepts `type`, `class`, `coin` (multi-value), `pegCurrency`, `chain`, `q` (case-insensitive free-text search), `severityFloor`, `since` / `until` (epoch ms), `cursor`, `limit`, and `includeTotal` per the quick-reference table above. The response envelope is `{ events[], nextCursor, total, totalExact, _meta }`: `nextCursor` is a keyset cursor string (null when there are no more rows), `total` is the exact count only when `includeTotal=true` (otherwise null), and `totalExact` mirrors that boolean.
 
 As of the May 2026 detail-page pass, the frontend hook `useChartAnnotations` (`src/hooks/use-chart-annotations.ts`) consumes this endpoint to drive per-coin chart annotations on the stablecoin detail route. The hook is gated by `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` — see [process/feature-flags.md](process/feature-flags.md).
 

@@ -371,6 +371,12 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         description: "Filter to events on a specific chain.",
       },
       {
+        name: "q",
+        in: "query",
+        schema: { type: "string" },
+        description: "Case-insensitive free-text search filter (trimmed and lowercased).",
+      },
+      {
         name: "severityFloor",
         in: "query",
         schema: { type: "string", enum: ["info", "notice", "warning", "severe", "critical"] },
