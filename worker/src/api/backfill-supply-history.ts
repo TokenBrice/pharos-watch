@@ -6,12 +6,13 @@ import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../l
 import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { batchExecute } from "../lib/db";
-import { jsonResponse } from "../lib/api-utils";
+import { encodeJsonCursor, jsonResponse, parseIntParam, parseJsonCursorParam } from "../lib/api-utils";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
   fetchEvmUint256AtBlock,
   resolveClosestBlockAtOrBeforeTimestamp,
@@ -36,6 +37,8 @@ import {
 } from "./backfill-fx";
 
 const DEFAULT_BATCH_SIZE = 10;
+const DEFAULT_BACKFILL_WINDOW_DAYS = 30;
+const MAX_BACKFILL_WINDOW_DAYS = 90;
 
 interface TokenEntry {
   date: number; // unix seconds
@@ -50,6 +53,47 @@ interface StablecoinDetail {
 interface SupplyBackfillWindow {
   startDay: number | null;
   endDay: number | null;
+}
+
+interface SupplyBackfillContinuationCursor {
+  nextStartDay: number;
+  requestedStartDay: number | null;
+  requestedEndDay: number;
+  windowDays: number;
+}
+
+interface ResolvedSupplyBackfillWindow extends SupplyBackfillWindow {
+  requestedStartDay: number | null;
+  requestedEndDay: number;
+  windowDays: number;
+  continuationCursor: string | null;
+  done: boolean;
+}
+
+function validateSupplyBackfillCursor(payload: unknown): SupplyBackfillContinuationCursor | null {
+  if (payload == null || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const record = payload as Record<string, unknown>;
+  const nextStartDay = record.nextStartDay;
+  const requestedStartDay = record.requestedStartDay;
+  const requestedEndDay = record.requestedEndDay;
+  const windowDays = record.windowDays;
+  if (typeof nextStartDay !== "number" || !Number.isSafeInteger(nextStartDay) || nextStartDay <= 0) return null;
+  if (!(requestedStartDay === null || (typeof requestedStartDay === "number" && Number.isSafeInteger(requestedStartDay)))) return null;
+  if (typeof requestedEndDay !== "number" || !Number.isSafeInteger(requestedEndDay) || requestedEndDay <= 0) return null;
+  if (
+    typeof windowDays !== "number" ||
+    !Number.isSafeInteger(windowDays) ||
+    windowDays <= 0 ||
+    windowDays > MAX_BACKFILL_WINDOW_DAYS
+  ) {
+    return null;
+  }
+  return {
+    nextStartDay,
+    requestedStartDay,
+    requestedEndDay,
+    windowDays,
+  };
 }
 
 function tokenHistoryDateRange(tokens: TokenEntry[]): { startDate: string; endDate: string } | null {
@@ -68,6 +112,7 @@ async function fetchHistoricalPegFxPrices(
   db: D1Database,
   meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
   tokens: TokenEntry[],
+  signal?: AbortSignal,
 ): Promise<TimestampedRatePoint[]> {
   const range = tokenHistoryDateRange(tokens);
   if (!range) return [];
@@ -75,13 +120,13 @@ async function fetchHistoricalPegFxPrices(
   const peg = meta.flags.pegCurrency;
   const primaryFx = PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
   if (primaryFx) {
-    const series = await fetchHistoricalFxRates([primaryFx], range.startDate, range.endDate);
+    const series = await fetchHistoricalFxRates([primaryFx], range.startDate, range.endDate, signal);
     return series[primaryFx] ?? [];
   }
 
   const secondaryFx = SECONDARY_PEG_TO_FX[peg];
   if (secondaryFx) {
-    const series = await fetchHistoricalSecondaryFxRates(db, [secondaryFx], range.startDate, range.endDate);
+    const series = await fetchHistoricalSecondaryFxRates(db, [secondaryFx], range.startDate, range.endDate, signal);
     return series[secondaryFx] ?? [];
   }
 
@@ -102,14 +147,86 @@ function isWithinBackfillWindow(snapshotDate: number, window?: SupplyBackfillWin
   return true;
 }
 
+function backfillWindowToFetchRange(window: SupplyBackfillWindow): { startSec?: number | null; endSec?: number | null } {
+  return {
+    startSec: window.startDay,
+    endSec: window.endDay != null ? window.endDay + DAY_SECONDS - 1 : null,
+  };
+}
+
 function getLastCompletedUtcDay(nowSec = Math.floor(Date.now() / 1000)): number {
   return Math.floor((nowSec - DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+}
+
+function buildSupplyBackfillCursor(cursor: SupplyBackfillContinuationCursor): string {
+  return encodeJsonCursor(cursor);
+}
+
+function resolveSupplyBackfillWindow(
+  url: URL,
+  dayWindow: SupplyBackfillWindow,
+): ResolvedSupplyBackfillWindow | Response {
+  const parsedWindowDays = parseIntParam(
+    url.searchParams.get("windowDays"),
+    DEFAULT_BACKFILL_WINDOW_DAYS,
+    1,
+    MAX_BACKFILL_WINDOW_DAYS,
+    "windowDays",
+    { rangePolicy: "reject" },
+  );
+  if (parsedWindowDays instanceof Response) return parsedWindowDays;
+
+  const parsedCursor = parseJsonCursorParam(
+    url.searchParams.get("cursor"),
+    validateSupplyBackfillCursor,
+    "Invalid cursor: malformed supply backfill cursor",
+  );
+  if (parsedCursor instanceof Response) return parsedCursor;
+
+  const lastCompletedDay = getLastCompletedUtcDay();
+  const requestedStartDay = dayWindow.startDay ?? parsedCursor?.requestedStartDay ?? null;
+  const requestedEndDay = Math.min(
+    dayWindow.endDay ?? parsedCursor?.requestedEndDay ?? lastCompletedDay,
+    lastCompletedDay,
+  );
+  const windowDays = parsedWindowDays;
+
+  if (requestedStartDay != null && requestedStartDay > requestedEndDay) {
+    return jsonResponse({ error: "Invalid cursor: requested range is exhausted" }, { status: 400 });
+  }
+
+  const cursorStart = parsedCursor?.nextStartDay ?? null;
+  const defaultStartDay = Math.max(0, requestedEndDay - (windowDays - 1) * DAY_SECONDS);
+  const unclampedStartDay = cursorStart ?? requestedStartDay ?? defaultStartDay;
+  const startDay = requestedStartDay != null
+    ? Math.max(unclampedStartDay, requestedStartDay)
+    : unclampedStartDay;
+  const endDay = Math.min(requestedEndDay, startDay + (windowDays - 1) * DAY_SECONDS);
+  const nextStartDay = endDay + DAY_SECONDS <= requestedEndDay ? endDay + DAY_SECONDS : null;
+
+  return {
+    startDay,
+    endDay,
+    requestedStartDay,
+    requestedEndDay,
+    windowDays,
+    continuationCursor: nextStartDay == null
+      ? null
+      : buildSupplyBackfillCursor({
+          nextStartDay,
+          requestedStartDay,
+          requestedEndDay,
+          windowDays,
+        }),
+    done: nextStartDay == null,
+  };
 }
 
 async function fetchOnChainTotalSupply(
   contracts: ContractDeployment[] | undefined,
   chainRpcs: Map<string, ChainRpcConfig> | undefined,
   logLabel: string,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   const contract = firstEvmContract(contracts);
   if (!contract || !chainRpcs) return null;
@@ -118,6 +235,7 @@ async function fetchOnChainTotalSupply(
     const raw = await fetchEvmUint256AtBlock(contract.chain, contract.address, TOTAL_SUPPLY_SELECTOR, "latest", {
       chainRpcs,
       timeoutMs: 10_000,
+      signal,
     });
     if (raw == null || raw <= 0n) return null;
     const supply = Number(raw) / 10 ** (contract.decimals ?? 18);
@@ -125,6 +243,7 @@ async function fetchOnChainTotalSupply(
     console.log(`[backfill-commodity] ${logLabel}: on-chain totalSupply fallback = ${supply.toFixed(2)} units`);
     return supply;
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[backfill-commodity] ${logLabel}: on-chain totalSupply probe failed — ${String(err).slice(0, 200)}`);
     return null;
   }
@@ -147,11 +266,13 @@ async function fetchHistoricalAdjustedSupplyRaw(input: {
   holderAddresses: readonly string[];
   blockNumber: number;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
 }): Promise<bigint | null> {
   const rpcOptions = {
     chainRpcs: input.chainRpcs,
     extraRpcUrls: getArchiveFallbackRpcUrls(input.contract.chain),
     timeoutMs: 15_000,
+    signal: input.signal,
   };
   const totalSupplyRaw = await fetchEvmUint256AtBlock(
     input.contract.chain,
@@ -184,6 +305,7 @@ async function backfillHistoricalOnChainSupply(
   options: {
     chainRpcs?: Map<string, ChainRpcConfig>;
     window?: SupplyBackfillWindow;
+    signal?: AbortSignal;
   },
 ): Promise<{ rows: number; error?: string } | null> {
   const exclusionConfig = getOnChainSupplyExclusionConfig(meta.id);
@@ -209,6 +331,7 @@ async function backfillHistoricalOnChainSupply(
   let supplyMisses = 0;
 
   for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
+    throwIfAborted(options.signal);
     if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
 
     const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
@@ -220,6 +343,7 @@ async function backfillHistoricalOnChainSupply(
         chainRpcs: options.chainRpcs,
         extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
         timeoutMs: 15_000,
+        signal: options.signal,
       },
     );
     if (blockNumber == null) {
@@ -232,6 +356,7 @@ async function backfillHistoricalOnChainSupply(
       holderAddresses: exclusionConfig.holderAddresses,
       blockNumber,
       chainRpcs: options.chainRpcs,
+      signal: options.signal,
     });
     if (adjustedRaw == null) {
       supplyMisses += 1;
@@ -279,10 +404,13 @@ async function backfillCommodity(
     contracts?: ContractDeployment[];
     chainRpcs?: Map<string, ChainRpcConfig>;
     window?: SupplyBackfillWindow;
+    signal?: AbortSignal;
   },
 ): Promise<{ rows: number; error?: string }> {
   const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
     apiKey: config.cgApiKey ?? null,
+    signal: config.signal,
+    range: config.window ? backfillWindowToFetchRange(config.window) : undefined,
     onCoinDetailFailure: (status) => {
       console.warn(
         `[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${status}), sanity check skipped`,
@@ -308,7 +436,12 @@ async function backfillCommodity(
     // supply × price when the CG market_cap series is all zeros.
     let effectiveSupply = marketHistory.circulatingSupply;
     if (!effectiveSupply || effectiveSupply <= 0) {
-      const onChain = await fetchOnChainTotalSupply(config.contracts, config.chainRpcs, `${id} (${config.geckoId})`);
+      const onChain = await fetchOnChainTotalSupply(
+        config.contracts,
+        config.chainRpcs,
+        `${id} (${config.geckoId})`,
+        config.signal,
+      );
       if (onChain != null) effectiveSupply = onChain;
     }
 
@@ -347,12 +480,19 @@ async function backfillCommodity(
     return { rows: 0, error: `${fallthroughReason}; no protocolSlug for TVL fallback` };
   }
 
+  const priceRange = config.window ? backfillWindowToFetchRange(config.window) : null;
+  const priceStart = priceRange?.startSec ?? 0;
+  const priceSpan = priceRange?.endSec != null
+    ? Math.max(1, Math.ceil((priceRange.endSec - priceStart) / DAY_SECONDS) + 1)
+    : 500;
   const [protocolRes, priceRes] = await Promise.all([
     fetchWithRetry(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
       headers: { "User-Agent": USER_AGENT },
+      signal: config.signal,
     }),
-    fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=0&span=500`, {
+    fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${priceStart}&span=${Math.min(500, priceSpan)}`, {
       headers: { "User-Agent": USER_AGENT },
+      signal: config.signal,
     }),
   ]);
 
@@ -413,6 +553,7 @@ async function backfillCommodity(
 export interface BackfillSupplyHistoryRouteContext {
   db: D1Database;
   url: URL;
+  request: Request;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
@@ -422,17 +563,21 @@ async function executeBackfillSupplyHistory(
   url: URL,
   cgApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
 ): Promise<Response> {
+  throwIfAborted(signal);
   const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
   const dayWindow = parseOptionalDayWindow(url, {
     maxEndDay: getLastCompletedUtcDay(),
     invalidDayMessage: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
   });
   if (dayWindow instanceof Response) return dayWindow;
-  const supplyBackfillWindow: SupplyBackfillWindow = {
+  const resolvedWindow = resolveSupplyBackfillWindow(url, {
     startDay: dayWindow.startDay,
     endDay: dayWindow.endDay,
-  };
+  });
+  if (resolvedWindow instanceof Response) return resolvedWindow;
+  const supplyBackfillWindow: ResolvedSupplyBackfillWindow = resolvedWindow;
 
   const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
     defaultBatchSize: DEFAULT_BATCH_SIZE,
@@ -454,6 +599,7 @@ async function executeBackfillSupplyHistory(
     const historicalOnChainResult = await backfillHistoricalOnChainSupply(db, meta, {
       chainRpcs,
       window: supplyBackfillWindow,
+      signal,
     });
     if (historicalOnChainResult) {
       if (historicalOnChainResult.error) {
@@ -477,6 +623,7 @@ async function executeBackfillSupplyHistory(
         contracts: meta.contracts,
         chainRpcs,
         window: supplyBackfillWindow,
+        signal,
       });
       if (result.error) {
         errors.push(`${meta.symbol}: ${result.error}`);
@@ -484,11 +631,13 @@ async function executeBackfillSupplyHistory(
         totalRows += result.rows;
       }
     } catch (err) {
+      rethrowIfAborted(err, signal);
       errors.push(`${meta.symbol}: ${failureLabel} — ${err}`);
     }
   };
 
   for (const meta of coins) {
+    throwIfAborted(signal);
     // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
     const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
     if (isCommodity && meta.geckoId) {
@@ -515,11 +664,14 @@ async function executeBackfillSupplyHistory(
       const [detailRes, priceSeries] = await Promise.all([
         fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
           headers: { "User-Agent": USER_AGENT },
+          signal,
         }),
         geckoId
           ? fetchMarketBackfillPriceSeries(meta, geckoId, {
               granularity: "daily",
               coingeckoApiKey: cgApiKey ?? null,
+              range: backfillWindowToFetchRange(supplyBackfillWindow),
+              signal,
             })
           : Promise.resolve(null),
       ]);
@@ -531,6 +683,7 @@ async function executeBackfillSupplyHistory(
 
       historicalPrices = priceSeries?.prices ?? [];
     } catch (err) {
+      rethrowIfAborted(err, signal);
       errors.push(`${meta.symbol}: fetch failed — ${err}`);
       continue;
     }
@@ -542,7 +695,10 @@ async function executeBackfillSupplyHistory(
     }
 
     if (needsConversion && historicalPrices.length === 0) {
-      const fxPrices = await fetchHistoricalPegFxPrices(db, meta, tokens);
+      const windowedTokens = tokens.filter((entry) =>
+        isWithinBackfillWindow(Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS, supplyBackfillWindow),
+      );
+      const fxPrices = await fetchHistoricalPegFxPrices(db, meta, windowedTokens, signal);
       historicalPrices = fxPrices.map((point) => ({
         timestamp: point.timestamp,
         price: point.rate,
@@ -593,6 +749,7 @@ async function executeBackfillSupplyHistory(
 
     const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * DAY_SECONDS;
     for (const entry of tokens) {
+      throwIfAborted(signal);
       const circ = entry.circulating;
       if (!circ) continue;
 
@@ -639,6 +796,15 @@ async function executeBackfillSupplyHistory(
       rowsInserted: totalRows,
       skipped,
       errors,
+      window: {
+        startDay: supplyBackfillWindow.startDay,
+        endDay: supplyBackfillWindow.endDay,
+        requestedStartDay: supplyBackfillWindow.requestedStartDay,
+        requestedEndDay: supplyBackfillWindow.requestedEndDay,
+        windowDays: supplyBackfillWindow.windowDays,
+      },
+      done: supplyBackfillWindow.done,
+      continuationCursor: supplyBackfillWindow.continuationCursor,
     }),
   );
 }
@@ -648,8 +814,9 @@ export function handleBackfillSupplyHistoryTrusted({
   url,
   coingeckoApiKey,
   chainRpcs,
+  request,
 }: BackfillSupplyHistoryRouteContext): Promise<Response> {
-  return executeBackfillSupplyHistory(db, url, coingeckoApiKey, chainRpcs);
+  return executeBackfillSupplyHistory(db, url, coingeckoApiKey, chainRpcs, request.signal);
 }
 
 export async function handleBackfillSupplyHistory(
@@ -660,5 +827,7 @@ export async function handleBackfillSupplyHistory(
   cgApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Response> {
-  return runAdminJob({ request, trustedAdmin, url }, () => executeBackfillSupplyHistory(db, url, cgApiKey, chainRpcs));
+  return runAdminJob({ request, trustedAdmin, url }, () =>
+    executeBackfillSupplyHistory(db, url, cgApiKey, chainRpcs, request?.signal)
+  );
 }

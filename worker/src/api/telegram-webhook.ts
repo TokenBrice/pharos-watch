@@ -127,6 +127,12 @@ type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
   my_chat_member?: TelegramChatMemberUpdated;
 };
 
+type ParsedTelegramCommand = NonNullable<ReturnType<typeof parseCommand>>;
+type PendingDisambiguationRow = Awaited<ReturnType<typeof loadPendingDisambiguation>>;
+type FinishOk = (errorClass?: string | null) => Promise<Response>;
+type ReplyFn = (message: string) => Promise<void>;
+type ReplyWithMarkupFn = (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
+
 /**
  * Cache TTL for the per-chat welcome-on-add idempotency marker. Telegram can
  * deliver `my_chat_member` repeatedly for the same chat (e.g. on re-promote
@@ -296,222 +302,7 @@ export const handleTelegramWebhook = withErrorHandler(
         return finishOk(migrationErrorClass);
       }
 
-      const chatId = update.message?.chat?.id?.toString();
-      const text = update.message?.text?.trim();
-      const username = update.message?.chat?.username ?? null;
-      const actorUserId = update.message?.from?.id != null ? String(update.message.from.id) : null;
-      const chatType = update.message?.chat?.type ?? "private";
-    if (!chatId || !text) return finishOk();
-
-    const reply = async (message: string) => {
-      await replyToChat(db, chatId, message, botToken);
-    };
-    const replyWithMarkup = async (
-      message: string,
-      options: { replyMarkup?: unknown },
-    ) => {
-      await replyToChat(db, chatId, message, botToken, options);
-    };
-    const commandContext: WebhookCommandContext = {
-      db,
-      chatId,
-      chatType,
-      username,
-      actorUserId,
-      botToken,
-      replyToChat: reply,
-      replyToChatWithMarkup: replyWithMarkup,
-    };
-
-    try {
-      const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
-      if (parsedCommand && isGroupChat(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
-        return finishOk();
-      }
-
-      const pendingRow = await loadPendingDisambiguation(db, chatId);
-
-      const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
-      const isSetupPending =
-        Boolean(pendingRow && pendingNotExpired && pendingRow.action_type === SETUP_PENDING_ACTION_TYPE);
-
-      if (isSetupPending && pendingRow) {
-        const setupState = parseSetupState(pendingRow.action_payload, pendingRow.initiator_user_id ?? null);
-        if (setupState && setupState.step === "awaiting-ticker" && !parsedCommand) {
-          await handleSetupTickerInput(
-            { db, botToken, chatId, actorUserId, username },
-            text,
-            setupState,
-          );
-          return finishOk();
-        }
-        // Plain text at a non-ticker wizard step (e.g. typing "recommended" instead of tapping a button)
-        // would otherwise fall through silently — nudge the owner toward the inline keyboard.
-        if (!parsedCommand && canActOnPendingOwner(setupState?.initiatorUserId ?? null, actorUserId)) {
-          await reply("Tap one of the buttons above, or send /cancel to abort.");
-          return finishOk();
-        }
-        // A new slash command in setup state clears the wizard before running the command.
-        if (parsedCommand) {
-          if (!setupState || canActOnPendingOwner(setupState.initiatorUserId, actorUserId)) {
-            // `/cancel` mid-wizard should confirm the cancellation rather than fall through to
-            // the global cancel handler, which would lie with "No pending selection to cancel."
-            if (parsedCommand.command === "/cancel") {
-              await clearPendingDisambiguation(db, chatId);
-              await reply("Setup cancelled. Send /start to begin again or /list to view subscriptions.");
-              return finishOk();
-            }
-            await clearPendingDisambiguation(db, chatId);
-          } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
-            await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
-            return finishOk();
-          }
-        }
-      }
-
-      const pendingAction = !isSetupPending && pendingRow ? parsePendingDisambiguation(pendingRow) : null;
-      const pendingActive = Boolean(!isSetupPending && pendingRow && pendingAction && pendingNotExpired);
-
-      if (!isSetupPending && pendingRow && !pendingAction && pendingNotExpired) {
-        await clearPendingDisambiguation(db, chatId);
-        if (!parsedCommand) {
-          await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");
-          return finishOk();
-        }
-      }
-
-      if (!isSetupPending && pendingRow && !pendingActive) {
-        await clearPendingDisambiguation(db, chatId);
-      }
-
-      if (pendingActive && pendingAction) {
-        if (!parsedCommand) {
-          if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
-            // Bulk-confirm and forget-confirm pendings wait for an inline button tap, not a text reply.
-            // In groups, only the initiating user gets the nudge so unrelated chatter stays quiet.
-            if (isGroupChat(chatType) && !canActOnPending(pendingAction, actorUserId)) return finishOk();
-            await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
-            return finishOk();
-          }
-          if (!canActOnPending(pendingAction, actorUserId)) {
-            if (isGroupChat(chatType) && !looksLikeDisambiguationSelection(text)) {
-              return finishOk();
-            }
-            await reply("Only the user who started this pending selection can complete it.");
-            return finishOk();
-          }
-          await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username);
-          return finishOk();
-        }
-
-        const command = parsedCommand.command;
-        if (command === "/cancel") {
-          if (!canActOnPending(pendingAction, actorUserId)) {
-            await reply("Only the user who started this pending selection can cancel it.");
-            return finishOk();
-          }
-          await clearPendingDisambiguation(db, chatId);
-          await reply("Pending selection cancelled.");
-          return finishOk();
-        }
-
-        if (PENDING_PASSTHROUGH_COMMANDS.has(command)) {
-          // Read-only commands run without disturbing the pending state.
-          // Falls through to the gating + dispatch below.
-        } else if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {
-          if (!canActOnPending(pendingAction, actorUserId)) {
-            await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
-            return finishOk();
-          }
-          await clearPendingDisambiguation(db, chatId);
-          // Falls through to the gating + dispatch below.
-        } else {
-          if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
-            await reply("You have a pending confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
-            return finishOk();
-          }
-          await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
-
-${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.candidates))}`);
-          return finishOk();
-        }
-      }
-
-      if (!parsedCommand) return finishOk();
-      const commandStartedAtMs = Date.now();
-
-      if (
-        isGroupChat(chatType) &&
-        commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
-      ) {
-        const proceed = await maybeGateNonAdminGroupActor(
-          db,
-          botToken,
-          chatId,
-          actorUserId,
-          parsedCommand.command,
-          reply,
-        );
-        if (!proceed) {
-          await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied");
-          return finishOk();
-        }
-      }
-
-      const handler = COMMAND_HANDLERS[parsedCommand.command];
-      if (handler) {
-        const cooldown = await enforceCommandCooldown(
-          db,
-          chatId,
-          parsedCommand.command,
-          parsedCommand.args,
-          reply,
-        );
-        if (!cooldown.allowed) {
-          await recordCommandUsage(
-            db,
-            parsedCommand.command,
-            commandStartedAtMs,
-            cooldown.outcome,
-            cooldown.failureClass,
-          );
-          return finishOk();
-        }
-        await handler(commandContext, parsedCommand.args);
-        await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
-      } else {
-        await replyWithMarkup("Unknown command. Try /help", {
-          replyMarkup: { inline_keyboard: [[{ text: "/help", callback_data: "help:commands" }]] },
-        });
-        await recordTelegramUsageEvent(db, {
-          eventType: "unknown_command",
-          actionDetail: parsedCommand.command,
-          outcome: "unknown",
-        });
-        await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "unknown_command");
-      }
-      return finishOk();
-    } catch (err) {
-      const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
-      if (parsedCommand) {
-        await recordCommandUsage(
-          db,
-          parsedCommand.command,
-          Date.now(),
-          "error",
-          err instanceof Error ? err.name : "unknown",
-        );
-      }
-      logTelegramEvent({
-        message: "command handler failed",
-        chatId,
-        userId: actorUserId,
-        action: "command-dispatch",
-        err: err instanceof Error ? err.message : String(err),
-      });
-      await reply("Something went wrong, please try again.");
-      return finishOk("command-dispatch");
-    }
+      return await handleTelegramMessageUpdate({ db, update, botToken, finishOk });
     } catch (err) {
       if (claimedUpdateId != null) {
         await markTelegramProcessedUpdateFailed(db, {
@@ -523,6 +314,330 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
     }
   },
 );
+
+type PendingFlowResult = "continue" | "finished";
+
+async function handleTelegramMessageUpdate(args: {
+  db: D1Database;
+  update: TelegramWebhookUpdateWithChatMember;
+  botToken: string;
+  finishOk: FinishOk;
+}): Promise<Response> {
+  const { db, update, botToken, finishOk } = args;
+  const chatId = update.message?.chat?.id?.toString();
+  const text = update.message?.text?.trim();
+  const username = update.message?.chat?.username ?? null;
+  const actorUserId = update.message?.from?.id != null ? String(update.message.from.id) : null;
+  const chatType = update.message?.chat?.type ?? "private";
+  if (!chatId || !text) return finishOk();
+
+  const reply: ReplyFn = async (message) => {
+    await replyToChat(db, chatId, message, botToken);
+  };
+  const replyWithMarkup: ReplyWithMarkupFn = async (message, options) => {
+    await replyToChat(db, chatId, message, botToken, options);
+  };
+  const commandContext: WebhookCommandContext = {
+    db,
+    chatId,
+    chatType,
+    username,
+    actorUserId,
+    botToken,
+    replyToChat: reply,
+    replyToChatWithMarkup: replyWithMarkup,
+  };
+
+  try {
+    const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
+    if (parsedCommand && isGroupChat(chatType) && !isAddressedToPharosBot(parsedCommand.botMention)) {
+      return finishOk();
+    }
+
+    const pendingRow = await loadPendingDisambiguation(db, chatId);
+    const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
+    const isSetupPending =
+      Boolean(pendingRow && pendingNotExpired && pendingRow.action_type === SETUP_PENDING_ACTION_TYPE);
+
+    if (isSetupPending && pendingRow) {
+      const setupResult = await handleSetupPendingBeforeDispatch({
+        db,
+        botToken,
+        chatId,
+        actorUserId,
+        username,
+        text,
+        pendingRow,
+        parsedCommand,
+        reply,
+      });
+      if (setupResult === "finished") return finishOk();
+    }
+
+    if (!isSetupPending) {
+      const pendingResult = await handlePendingActionBeforeDispatch({
+        db,
+        botToken,
+        chatId,
+        chatType,
+        actorUserId,
+        username,
+        text,
+        pendingRow,
+        pendingNotExpired,
+        parsedCommand,
+        reply,
+      });
+      if (pendingResult === "finished") return finishOk();
+    }
+
+    if (!parsedCommand) return finishOk();
+    await dispatchParsedTelegramCommand({
+      db,
+      botToken,
+      chatId,
+      chatType,
+      actorUserId,
+      parsedCommand,
+      commandContext,
+      reply,
+      replyWithMarkup,
+    });
+    return finishOk();
+  } catch (err) {
+    const parsedCommand = text.startsWith("/") ? parseCommand(text) : null;
+    if (parsedCommand) {
+      await recordCommandUsage(
+        db,
+        parsedCommand.command,
+        Date.now(),
+        "error",
+        err instanceof Error ? err.name : "unknown",
+      );
+    }
+    logTelegramEvent({
+      message: "command handler failed",
+      chatId,
+      userId: actorUserId,
+      action: "command-dispatch",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await reply("Something went wrong, please try again.");
+    return finishOk("command-dispatch");
+  }
+}
+
+async function handleSetupPendingBeforeDispatch(args: {
+  db: D1Database;
+  botToken: string;
+  chatId: string;
+  actorUserId: string | null;
+  username: string | null;
+  text: string;
+  pendingRow: NonNullable<PendingDisambiguationRow>;
+  parsedCommand: ParsedTelegramCommand | null;
+  reply: ReplyFn;
+}): Promise<PendingFlowResult> {
+  const { db, botToken, chatId, actorUserId, username, text, pendingRow, parsedCommand, reply } = args;
+  const setupState = parseSetupState(pendingRow.action_payload, pendingRow.initiator_user_id ?? null);
+  if (setupState && setupState.step === "awaiting-ticker" && !parsedCommand) {
+    await handleSetupTickerInput(
+      { db, botToken, chatId, actorUserId, username },
+      text,
+      setupState,
+    );
+    return "finished";
+  }
+  if (!parsedCommand && canActOnPendingOwner(setupState?.initiatorUserId ?? null, actorUserId)) {
+    await reply("Tap one of the buttons above, or send /cancel to abort.");
+    return "finished";
+  }
+  if (parsedCommand) {
+    if (!setupState || canActOnPendingOwner(setupState.initiatorUserId, actorUserId)) {
+      if (parsedCommand.command === "/cancel") {
+        await clearPendingDisambiguation(db, chatId);
+        await reply("Setup cancelled. Send /start to begin again or /list to view subscriptions.");
+        return "finished";
+      }
+      await clearPendingDisambiguation(db, chatId);
+    } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
+      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+      return "finished";
+    }
+  }
+  return "continue";
+}
+
+async function handlePendingActionBeforeDispatch(args: {
+  db: D1Database;
+  botToken: string;
+  chatId: string;
+  chatType: string;
+  actorUserId: string | null;
+  username: string | null;
+  text: string;
+  pendingRow: PendingDisambiguationRow;
+  pendingNotExpired: boolean;
+  parsedCommand: ParsedTelegramCommand | null;
+  reply: ReplyFn;
+}): Promise<PendingFlowResult> {
+  const {
+    db,
+    botToken,
+    chatId,
+    chatType,
+    actorUserId,
+    username,
+    text,
+    pendingRow,
+    pendingNotExpired,
+    parsedCommand,
+    reply,
+  } = args;
+  const pendingAction = pendingRow ? parsePendingDisambiguation(pendingRow) : null;
+  const pendingActive = Boolean(pendingRow && pendingAction && pendingNotExpired);
+
+  if (pendingRow && !pendingAction && pendingNotExpired) {
+    await clearPendingDisambiguation(db, chatId);
+    if (!parsedCommand) {
+      await reply("That pending selection could not be restored. Please rerun the command, or use /help for examples.");
+      return "finished";
+    }
+  }
+
+  if (pendingRow && !pendingActive) {
+    await clearPendingDisambiguation(db, chatId);
+  }
+
+  if (!pendingActive || !pendingAction) {
+    return "continue";
+  }
+
+  if (!parsedCommand) {
+    if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
+      if (isGroupChat(chatType) && !canActOnPending(pendingAction, actorUserId)) return "finished";
+      await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
+      return "finished";
+    }
+    if (!canActOnPending(pendingAction, actorUserId)) {
+      if (isGroupChat(chatType) && !looksLikeDisambiguationSelection(text)) {
+        return "finished";
+      }
+      await reply("Only the user who started this pending selection can complete it.");
+      return "finished";
+    }
+    await handleDisambiguationReply(db, chatId, text, pendingAction, botToken, username);
+    return "finished";
+  }
+
+  const command = parsedCommand.command;
+  if (command === "/cancel") {
+    if (!canActOnPending(pendingAction, actorUserId)) {
+      await reply("Only the user who started this pending selection can cancel it.");
+      return "finished";
+    }
+    await clearPendingDisambiguation(db, chatId);
+    await reply("Pending selection cancelled.");
+    return "finished";
+  }
+
+  if (PENDING_PASSTHROUGH_COMMANDS.has(command)) {
+    return "continue";
+  }
+  if (PENDING_CLEAR_AND_RUN_COMMANDS.has(command)) {
+    if (!canActOnPending(pendingAction, actorUserId)) {
+      await reply("Another user has a pending ticker selection in this chat. Ask them to finish or /cancel it first.");
+      return "finished";
+    }
+    await clearPendingDisambiguation(db, chatId);
+    return "continue";
+  }
+  if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
+    await reply("You have a pending confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
+    return "finished";
+  }
+  await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
+
+${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.candidates))}`);
+  return "finished";
+}
+
+async function dispatchParsedTelegramCommand(args: {
+  db: D1Database;
+  botToken: string;
+  chatId: string;
+  chatType: string;
+  actorUserId: string | null;
+  parsedCommand: ParsedTelegramCommand;
+  commandContext: WebhookCommandContext;
+  reply: ReplyFn;
+  replyWithMarkup: ReplyWithMarkupFn;
+}): Promise<void> {
+  const {
+    db,
+    botToken,
+    chatId,
+    chatType,
+    actorUserId,
+    parsedCommand,
+    commandContext,
+    reply,
+    replyWithMarkup,
+  } = args;
+  const commandStartedAtMs = Date.now();
+
+  if (
+    isGroupChat(chatType) &&
+    commandRequiresGroupAdmin(parsedCommand.command, parsedCommand.args)
+  ) {
+    const proceed = await maybeGateNonAdminGroupActor(
+      db,
+      botToken,
+      chatId,
+      actorUserId,
+      parsedCommand.command,
+      reply,
+    );
+    if (!proceed) {
+      await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "denied");
+      return;
+    }
+  }
+
+  const handler = COMMAND_HANDLERS[parsedCommand.command];
+  if (handler) {
+    const cooldown = await enforceCommandCooldown(
+      db,
+      chatId,
+      parsedCommand.command,
+      parsedCommand.args,
+      reply,
+    );
+    if (!cooldown.allowed) {
+      await recordCommandUsage(
+        db,
+        parsedCommand.command,
+        commandStartedAtMs,
+        cooldown.outcome,
+        cooldown.failureClass,
+      );
+      return;
+    }
+    await handler(commandContext, parsedCommand.args);
+    await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
+    return;
+  }
+
+  await replyWithMarkup("Unknown command. Try /help", {
+    replyMarkup: { inline_keyboard: [[{ text: "/help", callback_data: "help:commands" }]] },
+  });
+  await recordTelegramUsageEvent(db, {
+    eventType: "unknown_command",
+    actionDetail: parsedCommand.command,
+    outcome: "unknown",
+  });
+  await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "unknown_command");
+}
 
 function isGroupChat(chatType: string): boolean {
   return isGroupChatType(chatType);

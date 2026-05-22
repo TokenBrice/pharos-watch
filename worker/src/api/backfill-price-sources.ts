@@ -6,6 +6,7 @@ import { CoinGeckoMarketChartSchema } from "../lib/external-api-schemas";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getNativePegQueryCurrencies } from "../lib/native-peg-quotes";
 import { RATE_LIMITS } from "../lib/rate-limit";
+import { rethrowIfAborted, sleepWithSignal } from "../lib/abort";
 
 export interface PricePoint {
   timestamp: number;
@@ -201,6 +202,7 @@ async function fetchCgPriceHistoryDaily(
   range?: HistoricalMarketBackfillRange,
   vsCurrency = "usd",
   coingeckoApiKey: string | null = null,
+  signal?: AbortSignal,
 ): Promise<PricePoint[]> {
   try {
     const startSec = range?.startSec ?? null;
@@ -211,7 +213,7 @@ async function fetchCgPriceHistoryDaily(
         : `/coins/${geckoId}/market_chart?vs_currency=${vsCurrency}&days=max`;
     const res = await fetchWithRetry(
       cgUrl(path, coingeckoApiKey),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey) },
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
       2,
       { timeoutMs: 30_000 },
     );
@@ -225,6 +227,7 @@ async function fetchCgPriceHistoryDaily(
       .filter(([, price]) => price > 0)
       .map(([timestampMs, price]) => ({ timestamp: Math.floor(timestampMs / 1000), price }));
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.error(`[backfill-pricing] Failed to fetch CG daily price history for ${geckoId}/${vsCurrency}:`, err);
     return [];
   }
@@ -235,6 +238,7 @@ export async function fetchCgPriceHistoryHourly(
   range?: HistoricalMarketBackfillRange,
   vsCurrency = "usd",
   coingeckoApiKey: string | null = null,
+  signal?: AbortSignal,
 ): Promise<PricePoint[]> {
   const seen = new Map<number, number>();
   const HOURLY_EPOCH = Math.floor(new Date("2018-01-30T00:00:00Z").getTime() / 1000);
@@ -249,13 +253,13 @@ export async function fetchCgPriceHistoryHourly(
 
   try {
     if (startSec < HOURLY_EPOCH) {
-      await new Promise((resolve) => setTimeout(resolve, RATE_LIMITS.COINGECKO_BACKFILL_MS));
+      await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
       const phaseOne = await fetchWithRetry(
         cgUrl(
           `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
           coingeckoApiKey,
         ),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey) },
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
         2,
         { timeoutMs: 30_000 },
       );
@@ -271,19 +275,20 @@ export async function fetchCgPriceHistoryHourly(
       }
     }
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.error(`[backfill-pricing] CG hourly phase-1 failed for ${geckoId}:`, err);
   }
 
   for (let chunkFrom = Math.max(HOURLY_EPOCH, startSec); chunkFrom < endSec; chunkFrom += CHUNK_SEC) {
     const chunkTo = Math.min(chunkFrom + CHUNK_SEC, endSec);
     try {
-      await new Promise((resolve) => setTimeout(resolve, RATE_LIMITS.COINGECKO_BACKFILL_MS));
+      await sleepWithSignal(RATE_LIMITS.COINGECKO_BACKFILL_MS, signal);
       const res = await fetchWithRetry(
         cgUrl(
           `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${chunkFrom}&to=${chunkTo}&precision=full`,
           coingeckoApiKey,
         ),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey) },
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey), signal },
         2,
         { timeoutMs: 30_000 },
       );
@@ -296,12 +301,13 @@ export async function fetchCgPriceHistoryHourly(
         }
       }
     } catch (err) {
+      rethrowIfAborted(err, signal);
       console.error(`[backfill-pricing] CG hourly chunk failed for ${geckoId}/${vsCurrency} (${chunkFrom}-${chunkTo}):`, err);
     }
   }
 
   if (seen.size === 0) {
-    return fetchCgPriceHistoryDaily(geckoId, range, vsCurrency);
+    return fetchCgPriceHistoryDaily(geckoId, range, vsCurrency, coingeckoApiKey, signal);
   }
 
   return dedupeAndSortPrices(
@@ -313,13 +319,14 @@ async function fetchDlPriceChart(
   coinId: string,
   start: number,
   end?: number | null,
+  signal?: AbortSignal,
 ): Promise<PricePoint[]> {
   try {
     const normalizedEnd = end ?? Math.floor(Date.now() / 1000);
     const spanDays = Math.max(1, Math.min(800, Math.ceil((normalizedEnd - start) / DAY_SECONDS) + 1));
     const res = await fetchWithRetry(
       `${DEFILLAMA_COINS}/chart/${coinId}?start=${start}&span=${spanDays}&period=1d`,
-      { headers: { "User-Agent": USER_AGENT } },
+      { headers: { "User-Agent": USER_AGENT }, signal },
       1,
       { timeoutMs: 20_000 },
     );
@@ -329,6 +336,7 @@ async function fetchDlPriceChart(
     };
     return dedupeAndSortPrices(data.coins?.[coinId]?.prices ?? []);
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.error(`[backfill-pricing] DL fallback failed for ${coinId}:`, err);
     return [];
   }
@@ -343,6 +351,7 @@ export async function fetchMarketBackfillPriceSeries(
     range?: HistoricalMarketBackfillRange;
     quote?: HistoricalMarketQuoteOptions;
     coingeckoApiKey?: string | null;
+    signal?: AbortSignal;
   },
 ): Promise<HistoricalMarketPriceSeriesResult> {
   const granularity = options?.granularity ?? "hourly";
@@ -369,8 +378,8 @@ export async function fetchMarketBackfillPriceSeries(
     for (let index = 0; index < quoteCurrencyCandidates.length; index++) {
       const candidateCurrency = quoteCurrencyCandidates[index]!;
       const candidatePrices = granularity === "daily"
-        ? await fetchCgPriceHistoryDaily(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null)
-        : await fetchCgPriceHistoryHourly(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null);
+        ? await fetchCgPriceHistoryDaily(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null, options?.signal)
+        : await fetchCgPriceHistoryHourly(geckoId, options?.range, candidateCurrency, options?.coingeckoApiKey ?? null, options?.signal);
       if (candidatePrices.length > 0 || index === quoteCurrencyCandidates.length - 1) {
         rawCgPrices = candidatePrices;
         quoteCurrency = candidateCurrency;
@@ -412,11 +421,11 @@ export async function fetchMarketBackfillPriceSeries(
     const rangeEnd = options?.range?.endSec ?? null;
     const dlPrices = dedupeAndSortPrices([
       ...(rangeStart != null || rangeEnd != null
-        ? await fetchDlPriceChart(coinId, rangeStart ?? fourYearsAgo, rangeEnd)
-        : await fetchDlPriceChart(coinId, fourYearsAgo)),
+        ? await fetchDlPriceChart(coinId, rangeStart ?? fourYearsAgo, rangeEnd, options?.signal)
+        : await fetchDlPriceChart(coinId, fourYearsAgo, null, options?.signal)),
       ...(rangeStart != null || rangeEnd != null
         ? []
-        : await fetchDlPriceChart(coinId, twoYearsAgo)),
+        : await fetchDlPriceChart(coinId, twoYearsAgo, null, options?.signal)),
     ]);
     diagnostics.perSourceStats.push(buildSeriesStats("defillama", dlPrices));
     if (dlPrices.length > 0) {

@@ -13,6 +13,11 @@ interface FetchCoinGeckoMarketHistoryOptions {
   apiKey?: string | null;
   retries?: number;
   timeoutMs?: number;
+  signal?: AbortSignal;
+  range?: {
+    startSec?: number | null;
+    endSec?: number | null;
+  };
   onCoinDetailFailure?: (status: number | "no-response") => void;
 }
 
@@ -23,11 +28,16 @@ export async function fetchCoinGeckoMarketHistory(
   const apiKey = options.apiKey ?? null;
   const retryCount = options.retries;
   const retryOptions = options.timeoutMs != null ? { timeoutMs: options.timeoutMs } : undefined;
+  const rangeStart = options.range?.startSec ?? null;
+  const rangeEnd = options.range?.endSec ?? Math.floor(Date.now() / 1000);
+  const marketChartPath = rangeStart != null || options.range?.endSec != null
+    ? `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${rangeStart ?? 0}&to=${rangeEnd}`
+    : `/coins/${geckoId}/market_chart?vs_currency=usd&days=max`;
 
   const [marketChartRes, coinRes] = await Promise.all([
     fetchWithRetry(
-      cgUrl(`/coins/${geckoId}/market_chart?vs_currency=usd&days=max`, apiKey),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
+      cgUrl(marketChartPath, apiKey),
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey), signal: options.signal },
       retryCount,
       retryOptions,
     ),
@@ -36,7 +46,7 @@ export async function fetchCoinGeckoMarketHistory(
         `/coins/${geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`,
         apiKey,
       ),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey), signal: options.signal },
       retryCount,
       retryOptions,
     ),

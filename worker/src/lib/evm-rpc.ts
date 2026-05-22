@@ -1,6 +1,7 @@
 import { getChainRpc, type ChainRpcConfig } from "./chain-registry";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
+import { rethrowIfAborted } from "./abort";
 
 interface JsonRpcEnvelope<T> {
   result?: T;
@@ -271,6 +272,7 @@ async function fetchJsonRpcResult<T>(
 
       return body.result as T;
     } catch (err) {
+      rethrowIfAborted(err, options?.signal);
       failures.push(`${rpcUrl}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }

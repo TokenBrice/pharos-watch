@@ -12,6 +12,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { getCache, setCache } from "../lib/db-cache";
 import { FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
+import { rethrowIfAborted } from "../lib/abort";
 import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./backfill-price-sources";
 
@@ -79,13 +80,14 @@ export async function fetchHistoricalFxRates(
   currencies: string[],
   startDate: string,
   endDate: string,
+  signal?: AbortSignal,
 ): Promise<Record<string, FxTimeSeries[]>> {
   if (currencies.length === 0) return {};
   try {
     const url = `https://api.frankfurter.dev/v1/${startDate}..${endDate}?base=USD&symbols=${currencies.join(",")}`;
     const res = await fetchWithRetry(
       url,
-      { headers: { "User-Agent": USER_AGENT } },
+      { headers: { "User-Agent": USER_AGENT }, signal },
       2,
       { timeoutMs: 30_000 },
     );
@@ -123,18 +125,19 @@ export async function fetchHistoricalFxRates(
 
     return result;
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.error(`[backfill-depegs] FX fetch failed:`, err);
     return {};
   }
 }
 
-async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<string, number> | null> {
+async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal): Promise<Record<string, number> | null> {
   const primaryUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.min.json`;
   const fallbackUrl = `https://${date}.currency-api.pages.dev/v1/currencies/usd.min.json`;
 
   let res = await fetchWithRetry(
     primaryUrl,
-    { headers: { "User-Agent": USER_AGENT } },
+    { headers: { "User-Agent": USER_AGENT }, signal },
     2,
     { passthrough404: true, timeoutMs: 20_000 },
   );
@@ -142,7 +145,7 @@ async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<strin
     await cancelResponseBodyQuietly(res);
     res = await fetchWithRetry(
       fallbackUrl,
-      { headers: { "User-Agent": USER_AGENT } },
+      { headers: { "User-Agent": USER_AGENT }, signal },
       2,
       { passthrough404: true, timeoutMs: 20_000 },
     );
@@ -162,6 +165,7 @@ export async function fetchHistoricalSecondaryFxRates(
   currencies: string[],
   startDate: string,
   endDate: string,
+  signal?: AbortSignal,
 ): Promise<Record<string, FxTimeSeries[]>> {
   if (currencies.length === 0) return {};
 
@@ -195,7 +199,7 @@ export async function fetchHistoricalSecondaryFxRates(
     for (let i = 0; i < missingDates.length; i += SECONDARY_FX_FETCH_CONCURRENCY) {
       const chunk = missingDates.slice(i, i + SECONDARY_FX_FETCH_CONCURRENCY);
       const fetched = await Promise.all(
-        chunk.map(async (date) => [date, await fetchHistoricalSecondaryFxDay(date)] as const),
+        chunk.map(async (date) => [date, await fetchHistoricalSecondaryFxDay(date, signal)] as const),
       );
       for (const [date, dailyRates] of fetched) {
         mergeDateRates(yearCache, date, dailyRates);

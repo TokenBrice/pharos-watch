@@ -77,6 +77,40 @@ interface PendingOutcomeEvidence {
   circuitOpenSources?: string[];
 }
 
+interface PoolConfirmation {
+  key: string;
+  pool: {
+    price: number;
+    tvlUsd: number;
+    protocol: string;
+    sourceFamily?: string;
+    chain?: string;
+  };
+  signal: DepegSignal;
+}
+
+interface CollectedConfirmationEvidence {
+  confirmingSources: string[];
+  opposingSources: string[];
+  unavailableSources: string[];
+  circuitOpenSources: string[];
+  hardOpposingSources: string[];
+  offchainStatus: DirectionalSignalStatus;
+  offchainSourceKey: string | null;
+  offchainPeakCandidate: PeakCandidate | null;
+  dexStatus: DirectionalSignalStatus;
+  dexPeakCandidates: PeakCandidate[];
+  dexConfirmationKeys: string[];
+  cexStatus: DirectionalSignalStatus;
+  cexPeakCandidate: PeakCandidate | null;
+  poolStatus: DirectionalSignalStatus;
+  poolConfirmations: PoolConfirmation[];
+}
+
+type DexPriceRowsByCoin = Awaited<ReturnType<typeof loadDexPriceRows>>;
+type DexPriceSourcesByCoin = Awaited<ReturnType<typeof loadDexPriceSources>>;
+type DexPoolChallengersByCoin = Awaited<ReturnType<typeof loadDexPoolChallengers>>;
+
 function classifyConfirmationTimestamp(timestamp: number | null | undefined, nowSec: number): ConfirmationTimestampStatus {
   if (timestamp == null) return "missing";
   if (!Number.isFinite(timestamp) || timestamp <= 0) return "invalid";
@@ -377,18 +411,431 @@ async function evaluateOffchainConfirmer(args: {
   }
 }
 
+async function collectDepegConfirmationEvidence(args: {
+  db: D1Database;
+  row: PendingDepegRow;
+  pendingState: PendingDepegState;
+  asset: PegAssetBase | undefined;
+  meta: ReturnType<typeof ACTIVE_META_BY_ID.get>;
+  pegReference: number;
+  secondaryBar: number;
+  nativeSignal: DepegSignal | null;
+  nativePegQuote: { price: number; pegCurrency: string } | undefined;
+  nativeSourceKey: string;
+  dexPriceRows: DexPriceRowsByCoin;
+  dexPriceSources: DexPriceSourcesByCoin;
+  poolChallengers: DexPoolChallengersByCoin;
+  cexAllowed: boolean;
+  cexPrices: Map<string, number> | null;
+  coingeckoAllowed: boolean;
+  defillamaAllowed: boolean;
+  coingeckoApiKey: string | null | undefined;
+  signal: AbortSignal | undefined;
+  now: number;
+  evidence: CollectedConfirmationEvidence;
+}): Promise<CollectedConfirmationEvidence> {
+  const {
+    db,
+    row,
+    pendingState,
+    asset,
+    meta,
+    pegReference,
+    secondaryBar,
+    nativeSignal,
+    nativePegQuote,
+    nativeSourceKey,
+    dexPriceRows,
+    dexPriceSources,
+    poolChallengers,
+    cexAllowed,
+    cexPrices,
+    coingeckoAllowed,
+    defillamaAllowed,
+    coingeckoApiKey,
+    signal,
+    now,
+    evidence,
+  } = args;
+
+  const geckoId = meta?.geckoId;
+  if (nativeSignal != null) {
+    evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
+    evidence.offchainSourceKey = nativeSourceKey;
+    if (evidence.offchainStatus === "confirm") {
+      evidence.offchainPeakCandidate = { bps: nativeSignal.bps, price: nativePegQuote?.price ?? null };
+      addSource(evidence.confirmingSources, nativeSourceKey);
+    } else if (isOpposingConfirmationStatus(evidence.offchainStatus)) {
+      addSource(evidence.opposingSources, nativeSourceKey);
+      addSource(evidence.hardOpposingSources, nativeSourceKey);
+    }
+    console.log(
+      `[depeg-confirm] ${row.symbol} direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
+      `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
+      `bar=${secondaryBar}bps, status=${evidence.offchainStatus}`,
+    );
+  } else if (geckoId) {
+    const result = await evaluateOffchainConfirmer({
+      db,
+      symbol: row.symbol,
+      geckoId,
+      pegReference,
+      secondaryBar,
+      direction: pendingState.direction,
+      agreeSources: asset?.agreeSources,
+      priceSource: asset?.priceSource,
+      defillamaAllowed,
+      coingeckoAllowed,
+      coingeckoApiKey,
+      signal,
+      now,
+    });
+    switch (result.kind) {
+      case "no-confirmer":
+        break;
+      case "circuit-open":
+        addSource(evidence.circuitOpenSources, result.sourceKey);
+        break;
+      case "unavailable":
+        addSource(evidence.unavailableSources, `${result.sourceKey}:${result.reason}`);
+        break;
+      case "classified":
+        evidence.offchainStatus = result.status;
+        evidence.offchainSourceKey = result.sourceKey;
+        if (result.status === "confirm") {
+          evidence.offchainPeakCandidate = { bps: result.signal?.bps, price: result.price };
+          addSource(evidence.confirmingSources, result.sourceKey);
+        } else if (isOpposingConfirmationStatus(result.status)) {
+          addSource(evidence.opposingSources, result.sourceKey);
+        }
+        break;
+    }
+  }
+
+  const dexRow = dexPriceRows.get(row.stablecoin_id);
+  if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
+    const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
+    const aggregateDexStatus = classifyDirectionalSignal(dexSignal, secondaryBar, pendingState.direction);
+    const protocolSources = dexPriceSources.get(row.stablecoin_id);
+    const confirmGroups = collectDexProtocolCorroborations(
+      protocolSources,
+      pegReference,
+      secondaryBar,
+      pendingState.direction,
+      "confirm",
+    );
+    const recoverGroups = collectDexProtocolCorroborations(
+      protocolSources,
+      pegReference,
+      secondaryBar,
+      pendingState.direction,
+      "recover",
+    );
+    const contradictGroups = collectDexProtocolCorroborations(
+      protocolSources,
+      pegReference,
+      secondaryBar,
+      pendingState.direction,
+      "contradict",
+    );
+    if (aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexStatus = "confirm";
+      evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
+      addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
+      evidence.dexPeakCandidates = [
+        { bps: dexSignal?.bps, price: dexRow.dex_price_usd },
+        ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price })),
+      ];
+    } else if (aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexStatus = "recover";
+      const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, keys);
+    } else if (aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      evidence.dexStatus = "contradict";
+      const keys = buildDexConfirmationKeys(contradictGroups.map((group) => group.key));
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, keys);
+    }
+    console.log(
+      `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexSignal?.absBps ?? "n/a"}bps, ` +
+      `bar=${secondaryBar}bps, aggregate=${aggregateDexStatus}, ` +
+      `confirmGroups=${confirmGroups.length}, recoverGroups=${recoverGroups.length}, ` +
+      `contradictGroups=${contradictGroups.length}, status=${evidence.dexStatus}`
+    );
+  } else if (dexRow != null) {
+    addSource(evidence.unavailableSources, "dex:aggregate-untrusted");
+  } else {
+    addSource(evidence.unavailableSources, "dex:aggregate");
+  }
+
+  if (!cexAllowed) {
+    addSource(evidence.circuitOpenSources, "cex:binance");
+  } else if (cexPrices == null) {
+    addSource(evidence.unavailableSources, "cex:binance");
+  } else {
+    const cexPrice = cexPrices.get(row.symbol.toUpperCase());
+    if (cexPrice && cexPrice > 0) {
+      const cexSignal = deriveDepegSignal(cexPrice, pegReference);
+      evidence.cexStatus = classifyDirectionalSignal(cexSignal, secondaryBar, pendingState.direction);
+      if (evidence.cexStatus === "confirm") {
+        evidence.cexPeakCandidate = { bps: cexSignal?.bps, price: cexPrice };
+        addSource(evidence.confirmingSources, "cex:binance");
+      } else if (isOpposingConfirmationStatus(evidence.cexStatus)) {
+        addSource(evidence.opposingSources, "cex:binance");
+        addSource(evidence.hardOpposingSources, "cex:binance");
+      }
+      console.log(
+        `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexSignal?.absBps ?? "n/a"}bps, ` +
+        `bar=${secondaryBar}bps, status=${evidence.cexStatus}`,
+      );
+    }
+  }
+
+  const poolConfirmGroups = new Map<string, PoolConfirmation>();
+  const poolContradictGroups = new Set<string>();
+  const poolRecoverGroups = new Set<string>();
+  let poolHighTvlConfirm: PoolConfirmation | null = null;
+  const pools = poolChallengers.get(row.stablecoin_id);
+  if (pools?.length) {
+    for (const pool of pools) {
+      const poolSignal = deriveDepegSignal(pool.price, pegReference);
+      if (poolSignal == null) continue;
+      const poolGroupKey = dexPoolIndependentGroupKey(pool);
+      const currentPoolStatus = classifyDirectionalSignal(poolSignal, secondaryBar, pendingState.direction);
+      if (currentPoolStatus === "confirm") {
+        const existing = poolConfirmGroups.get(poolGroupKey);
+        const candidate = { key: poolGroupKey, pool, signal: poolSignal };
+        if (existing == null || poolSignal.absBps > existing.signal.absBps) {
+          poolConfirmGroups.set(poolGroupKey, candidate);
+        }
+        if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
+          if (poolHighTvlConfirm == null || pool.tvlUsd > poolHighTvlConfirm.pool.tvlUsd) {
+            poolHighTvlConfirm = candidate;
+          }
+        }
+        console.log(
+          `[depeg-confirm] ${row.symbol} pool confirm: price=$${pool.price} (${pool.protocol}/${pool.chain}, ` +
+          `$${(pool.tvlUsd / 1e6).toFixed(1)}M TVL), deviation=${poolSignal?.absBps ?? "n/a"}bps`,
+        );
+      } else if (currentPoolStatus === "contradict") {
+        poolContradictGroups.add(poolGroupKey);
+      } else if (currentPoolStatus === "recover") {
+        poolRecoverGroups.add(poolGroupKey);
+      }
+    }
+    if (poolHighTvlConfirm != null || poolConfirmGroups.size >= POOL_CHALLENGE_CONFIRM_MIN) {
+      evidence.poolStatus = "confirm";
+      addSources(
+        evidence.confirmingSources,
+        (poolHighTvlConfirm != null ? [poolHighTvlConfirm] : [...poolConfirmGroups.values()])
+          .map((confirmation) => buildPoolConfirmationKey(confirmation.pool)),
+      );
+    } else if (poolContradictGroups.size > 0 && poolConfirmGroups.size === 0) {
+      evidence.poolStatus = "contradict";
+      const keys = [...poolContradictGroups].map(buildPoolGroupKey);
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, keys);
+    } else if (poolRecoverGroups.size > 0 && poolConfirmGroups.size === 0 && poolContradictGroups.size === 0) {
+      evidence.poolStatus = "recover";
+      const keys = [...poolRecoverGroups].map(buildPoolGroupKey);
+      addSources(evidence.opposingSources, keys);
+      addSources(evidence.hardOpposingSources, keys);
+    }
+    console.log(
+      `[depeg-confirm] ${row.symbol} pool summary: ${pools.length} pools checked, ` +
+      `confirmGroups=${poolConfirmGroups.size} (highTvl=${poolHighTvlConfirm != null}), ` +
+      `contradictGroups=${poolContradictGroups.size}, recoverGroups=${poolRecoverGroups.size}, ` +
+      `bar=${secondaryBar}bps, status=${evidence.poolStatus}`,
+    );
+  } else {
+    addSource(evidence.unavailableSources, "pool:challenger");
+  }
+
+  evidence.poolConfirmations =
+    evidence.dexStatus === "confirm"
+      ? []
+      : poolHighTvlConfirm != null
+        ? [poolHighTvlConfirm]
+        : [...poolConfirmGroups.values()];
+
+  return evidence;
+}
+
+function decidePendingOutcome(args: {
+  db: D1Database;
+  row: PendingDepegRow;
+  pendingState: PendingDepegState;
+  outcomeState: PendingDepegState;
+  pegReference: number;
+  authoritativePrice: number | null;
+  threshold: number;
+  age: number;
+  primarySameDirectionDepegged: boolean;
+  now: number;
+  evidence: CollectedConfirmationEvidence;
+}): D1PreparedStatement[] {
+  const {
+    db,
+    row,
+    pendingState,
+    outcomeState,
+    pegReference,
+    authoritativePrice,
+    threshold,
+    age,
+    primarySameDirectionDepegged,
+    now,
+    evidence,
+  } = args;
+  const hasHardConfirmation =
+    evidence.dexStatus === "confirm" ||
+    evidence.cexStatus === "confirm" ||
+    evidence.poolStatus === "confirm";
+  if (hasHardConfirmation || (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"))) {
+    const currentSignal =
+      authoritativePrice != null
+        ? deriveDepegSignal(authoritativePrice, pegReference)
+        : null;
+    const currentDirectionalSignal =
+      classifyDirectionalSignal(currentSignal, threshold, pendingState.direction) === "confirm"
+        ? currentSignal
+        : null;
+    const peak = pickPeakCandidate(
+      [
+        { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
+        { bps: currentDirectionalSignal?.bps, price: authoritativePrice },
+        ...(evidence.offchainPeakCandidate ? [evidence.offchainPeakCandidate] : []),
+        ...(evidence.cexPeakCandidate ? [evidence.cexPeakCandidate] : []),
+        ...evidence.dexPeakCandidates,
+        ...evidence.poolConfirmations.map((confirmation) => ({
+          bps: confirmation.signal.bps,
+          price: confirmation.pool.price,
+        })),
+      ],
+      { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
+    );
+    const confirmedBy = confirmationSourceList(
+      evidence.offchainStatus === "confirm" ? evidence.offchainSourceKey : null,
+      evidence.dexStatus === "confirm" ? evidence.dexConfirmationKeys : [],
+      evidence.cexStatus === "confirm" ? "cex:binance" : null,
+      evidence.poolStatus === "confirm"
+        ? evidence.poolConfirmations.map((confirmation) => buildPoolConfirmationKey(confirmation.pool))
+        : [],
+    );
+    const event: DepegEvent = {
+      id: 0,
+      stablecoinId: row.stablecoin_id,
+      symbol: row.symbol,
+      pegType: row.peg_type,
+      direction: pendingState.direction,
+      peakDeviationBps: peak.bps,
+      startedAt: pendingState.firstSeenAt,
+      endedAt: null,
+      startPrice: pendingState.firstPrice,
+      peakPrice: peak.price,
+      recoveryPrice: null,
+      pegReference,
+      source: "live",
+      confirmationSources: confirmedBy || null,
+      pendingReason: pendingState.reason,
+    };
+
+    console.log(
+      `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy || "(none)"}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
+    );
+    return [
+      buildInsertDepegEventStmt(db, event),
+      buildPendingOutcomeStmt(
+        db,
+        row,
+        outcomeState,
+        "promoted",
+        now,
+        evidence,
+        `confirmed-by:${confirmedBy || "unknown"}`,
+      ),
+      buildDeletePendingStmt(db, row),
+    ];
+  }
+
+  const statuses = [evidence.offchainStatus, evidence.dexStatus, evidence.cexStatus, evidence.poolStatus];
+  const hasSameDirectionConfirmation = statuses.includes("confirm");
+  const hasOpposingEvidence = statuses.some(isOpposingConfirmationStatus);
+  const canRejectOpposingEvidence =
+    hasOpposingEvidence &&
+    !hasSameDirectionConfirmation &&
+    (!primarySameDirectionDepegged || evidence.hardOpposingSources.length >= 2);
+  const isExpired = age > DEPEG_PENDING_EXPIRY_SEC;
+  const expiryLimitSec = getPendingExpiryLimitSec({
+    primarySameDirectionDepegged,
+    isExtremeMove: isExtremeMovePending(pendingState.reason),
+    unavailableSources: evidence.unavailableSources,
+    circuitOpenSources: evidence.circuitOpenSources,
+  });
+  const finalExpiryExceeded = age > expiryLimitSec;
+
+  if (canRejectOpposingEvidence) {
+    const reason = primarySameDirectionDepegged
+      ? `two-hard-opposing-sources:${confirmationSourceList(evidence.hardOpposingSources)}`
+      : "secondary-evidence-opposes";
+    console.log(
+      `[depeg-confirm] Rejected ${row.symbol}: secondary evidence opposes pending direction ` +
+      `(offchain=${evidence.offchainStatus}, dex=${evidence.dexStatus}, cex=${evidence.cexStatus}, pool=${evidence.poolStatus})`,
+    );
+    return buildOutcomeAndDeleteStmts(
+      db,
+      row,
+      outcomeState,
+      "rejected",
+      now,
+      evidence,
+      reason,
+    );
+  }
+
+  if (isExpired && finalExpiryExceeded) {
+    const severe = isExtremeMovePending(pendingState.reason);
+    console.log(
+      `[depeg-confirm] Expired pending for ${row.symbol}: ${Math.round(age / 60)}min without confirmation ` +
+      `(limit ${Math.round(expiryLimitSec / 60)}min)`,
+    );
+    return buildOutcomeAndDeleteStmts(
+      db,
+      row,
+      outcomeState,
+      severe ? "unconfirmed-severe" : "expired",
+      now,
+      evidence,
+      `expired-after:${age}s;limit:${expiryLimitSec}s`,
+    );
+  }
+
+  if (isExpired) {
+    console.log(
+      `[depeg-confirm] Kept pending for ${row.symbol} past base expiry: ` +
+      `age=${Math.round(age / 60)}min, limit=${Math.round(expiryLimitSec / 60)}min, ` +
+      `primarySameDirection=${primarySameDirectionDepegged}, unavailable=${confirmationSourceList(evidence.unavailableSources) || "none"}, ` +
+      `circuitOpen=${confirmationSourceList(evidence.circuitOpenSources) || "none"}`,
+    );
+  }
+
+  return [];
+}
+
 /**
  * Process pending depeg records that require secondary confirmation.
  * Called after detectDepegEvents() in each sync cycle.
  *
  * For each pending record:
- * 1. If primary price no longer exceeds threshold -> delete (transient noise)
- * 2. If too young (same cycle) -> skip (wait for next cycle)
- * 3. Fetch CoinGecko spot price and read DEX median
- * 4. If primary + secondary agree -> promote to real event
- * 5. If primary above but both secondary disagree -> delete (false positive)
- * 6. If no secondary data available -> keep (retry next cycle)
- * 7. If pending > 45 min without promotion -> delete (expired)
+ * 1. Refresh peg/native/primary context and remove recovered, invalid, or
+ *    superseded rows.
+ * 2. Wait until the pending age clears the same-cycle minimum.
+ * 3. Collect independent confirmation evidence from native peg quotes,
+ *    CoinGecko/DefiLlama, DEX aggregate rows, CEX prices, and challenger pools.
+ * 4. Apply the decision policy: promote when independent confirmation is
+ *    strong enough, reject opposing evidence, expire rows past their dynamic
+ *    limit, or leave mixed/insufficient evidence pending for the next cycle.
  */
 export async function confirmPendingDepegs(
   db: D1Database,
@@ -602,363 +1049,61 @@ export async function confirmPendingDepegs(
       continue; // Wait for next cycle
     }
 
-    // 3. Fetch independent off-chain spot price
-    let offchainStatus: DirectionalSignalStatus = "insufficient";
-    let offchainSourceKey: string | null = null;
-    let offchainPeakCandidate: PeakCandidate | null = null;
-    const geckoId = meta?.geckoId;
-    if (nativeSignal != null) {
-      offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
-      offchainSourceKey = nativeSourceKey;
-      if (offchainStatus === "confirm") {
-        offchainPeakCandidate = { bps: nativeSignal.bps, price: nativePegQuote?.price ?? null };
-        addSource(confirmingSources, offchainSourceKey);
-      } else if (isOpposingConfirmationStatus(offchainStatus)) {
-        addSource(opposingSources, offchainSourceKey);
-        addSource(hardOpposingSources, offchainSourceKey);
-      }
-      console.log(
-        `[depeg-confirm] ${row.symbol} direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
-        `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
-        `bar=${secondaryBar}bps, status=${offchainStatus}`,
-      );
-    } else if (geckoId) {
-      const result = await evaluateOffchainConfirmer({
-        db,
-        symbol: row.symbol,
-        geckoId,
-        pegReference,
-        secondaryBar,
-        direction: pendingState.direction,
-        agreeSources: asset?.agreeSources,
-        priceSource: asset?.priceSource,
-        defillamaAllowed,
-        coingeckoAllowed,
-        coingeckoApiKey,
-        signal,
-        now,
-      });
-      switch (result.kind) {
-        case "no-confirmer":
-          break;
-        case "circuit-open":
-          addSource(circuitOpenSources, result.sourceKey);
-          break;
-        case "unavailable":
-          addSource(unavailableSources, `${result.sourceKey}:${result.reason}`);
-          break;
-        case "classified":
-          offchainStatus = result.status;
-          offchainSourceKey = result.sourceKey;
-          if (result.status === "confirm") {
-            offchainPeakCandidate = { bps: result.signal?.bps, price: result.price };
-            addSource(confirmingSources, result.sourceKey);
-          } else if (isOpposingConfirmationStatus(result.status)) {
-            addSource(opposingSources, result.sourceKey);
-          }
-          break;
-      }
-    }
-
-    // 4. Read DEX median
-    let dexStatus: DirectionalSignalStatus = "insufficient";
-    let dexPeakCandidates: PeakCandidate[] = [];
-    let dexConfirmationKeys: string[] = [];
-    const dexRow = dexPriceRows.get(row.stablecoin_id);
-    if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
-      const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
-      const aggregateDexStatus = classifyDirectionalSignal(dexSignal, secondaryBar, pendingState.direction);
-      const protocolSources = dexPriceSources.get(row.stablecoin_id);
-      const confirmGroups = collectDexProtocolCorroborations(
-        protocolSources,
-        pegReference,
-        secondaryBar,
-        pendingState.direction,
-        "confirm",
-      );
-      const recoverGroups = collectDexProtocolCorroborations(
-        protocolSources,
-        pegReference,
-        secondaryBar,
-        pendingState.direction,
-        "recover",
-      );
-      const contradictGroups = collectDexProtocolCorroborations(
-        protocolSources,
-        pegReference,
-        secondaryBar,
-        pendingState.direction,
-        "contradict",
-      );
-      if (aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
-        dexStatus = "confirm";
-        dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
-        addSources(confirmingSources, dexConfirmationKeys);
-        dexPeakCandidates = [
-          { bps: dexSignal?.bps, price: dexRow.dex_price_usd },
-          ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price })),
-        ];
-      } else if (aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
-        dexStatus = "recover";
-        const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
-        addSources(opposingSources, keys);
-        addSources(hardOpposingSources, keys);
-      } else if (aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
-        dexStatus = "contradict";
-        const keys = buildDexConfirmationKeys(contradictGroups.map((group) => group.key));
-        addSources(opposingSources, keys);
-        addSources(hardOpposingSources, keys);
-      }
-      console.log(
-        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexSignal?.absBps ?? "n/a"}bps, ` +
-        `bar=${secondaryBar}bps, aggregate=${aggregateDexStatus}, ` +
-        `confirmGroups=${confirmGroups.length}, recoverGroups=${recoverGroups.length}, ` +
-        `contradictGroups=${contradictGroups.length}, status=${dexStatus}`
-      );
-    } else if (dexRow != null) {
-      addSource(unavailableSources, "dex:aggregate-untrusted");
-    } else {
-      addSource(unavailableSources, "dex:aggregate");
-    }
-
-    // 4b. CEX ticker check
-    let cexStatus: DirectionalSignalStatus = "insufficient";
-    let cexPeakCandidate: PeakCandidate | null = null;
-    if (!cexAllowed) {
-      addSource(circuitOpenSources, "cex:binance");
-    } else if (cexPrices == null) {
-      addSource(unavailableSources, "cex:binance");
-    } else {
-      const cexPrice = cexPrices.get(row.symbol.toUpperCase());
-      if (cexPrice && cexPrice > 0) {
-        const cexSignal = deriveDepegSignal(cexPrice, pegReference);
-        cexStatus = classifyDirectionalSignal(cexSignal, secondaryBar, pendingState.direction);
-        if (cexStatus === "confirm") {
-          cexPeakCandidate = { bps: cexSignal?.bps, price: cexPrice };
-          addSource(confirmingSources, "cex:binance");
-        } else if (isOpposingConfirmationStatus(cexStatus)) {
-          addSource(opposingSources, "cex:binance");
-          addSource(hardOpposingSources, "cex:binance");
-        }
-        console.log(
-          `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexSignal?.absBps ?? "n/a"}bps, ` +
-          `bar=${secondaryBar}bps, status=${cexStatus}`,
-        );
-      }
-    }
-
-    // 4c. Individual DEX pool check
-    let poolStatus: DirectionalSignalStatus = "insufficient";
-    const poolConfirmGroups = new Map<string, { key: string; pool: { price: number; tvlUsd: number; protocol: string; sourceFamily?: string }; signal: DepegSignal }>();
-    const poolContradictGroups = new Set<string>();
-    const poolRecoverGroups = new Set<string>();
-    let poolHighTvlConfirm: { key: string; pool: { price: number; tvlUsd: number; protocol: string; sourceFamily?: string }; signal: DepegSignal } | null = null;
-    const pools = poolChallengers.get(row.stablecoin_id);
-    if (pools?.length) {
-      for (const pool of pools) {
-        const poolSignal = deriveDepegSignal(pool.price, pegReference);
-        if (poolSignal == null) continue;
-        const poolGroupKey = dexPoolIndependentGroupKey(pool);
-        const currentPoolStatus = classifyDirectionalSignal(poolSignal, secondaryBar, pendingState.direction);
-        if (currentPoolStatus === "confirm") {
-          const existing = poolConfirmGroups.get(poolGroupKey);
-          const candidate = { key: poolGroupKey, pool, signal: poolSignal };
-          if (existing == null || poolSignal.absBps > existing.signal.absBps) {
-            poolConfirmGroups.set(poolGroupKey, candidate);
-          }
-          if (pool.tvlUsd >= POOL_CHALLENGE_HIGH_TVL_USD) {
-            if (poolHighTvlConfirm == null || pool.tvlUsd > poolHighTvlConfirm.pool.tvlUsd) {
-              poolHighTvlConfirm = candidate;
-            }
-          }
-          console.log(
-            `[depeg-confirm] ${row.symbol} pool confirm: price=$${pool.price} (${pool.protocol}/${pool.chain}, ` +
-            `$${(pool.tvlUsd / 1e6).toFixed(1)}M TVL), deviation=${poolSignal?.absBps ?? "n/a"}bps`,
-          );
-        } else if (currentPoolStatus === "contradict") {
-          poolContradictGroups.add(poolGroupKey);
-        } else if (currentPoolStatus === "recover") {
-          poolRecoverGroups.add(poolGroupKey);
-        }
-      }
-      // Priority ladder: confirm > contradict > recover > insufficient.
-      // Tie-break: any confirm below the promotion bar cancels both contradict
-      // and recover (treated as mixed evidence -> insufficient).
-      if (poolHighTvlConfirm != null || poolConfirmGroups.size >= POOL_CHALLENGE_CONFIRM_MIN) {
-        poolStatus = "confirm";
-        addSources(
-          confirmingSources,
-          (poolHighTvlConfirm != null ? [poolHighTvlConfirm] : [...poolConfirmGroups.values()])
-            .map((confirmation) => buildPoolConfirmationKey(confirmation.pool)),
-        );
-      } else if (poolContradictGroups.size > 0 && poolConfirmGroups.size === 0) {
-        poolStatus = "contradict";
-        const keys = [...poolContradictGroups].map(buildPoolGroupKey);
-        addSources(opposingSources, keys);
-        addSources(hardOpposingSources, keys);
-      } else if (poolRecoverGroups.size > 0 && poolConfirmGroups.size === 0 && poolContradictGroups.size === 0) {
-        poolStatus = "recover";
-        const keys = [...poolRecoverGroups].map(buildPoolGroupKey);
-        addSources(opposingSources, keys);
-        addSources(hardOpposingSources, keys);
-      }
-      console.log(
-        `[depeg-confirm] ${row.symbol} pool summary: ${pools.length} pools checked, ` +
-        `confirmGroups=${poolConfirmGroups.size} (highTvl=${poolHighTvlConfirm != null}), ` +
-        `contradictGroups=${poolContradictGroups.size}, recoverGroups=${poolRecoverGroups.size}, ` +
-        `bar=${secondaryBar}bps, status=${poolStatus}`,
-      );
-    } else {
-      addSource(unavailableSources, "pool:challenger");
-    }
-
-    // 5. Decision
-    // For "low-confidence" pending events, the off-chain check alone is not
-    // sufficient for promotion because the primary (CG/DL) and secondary
-    // (DL→CG or CG) sources often share the same underlying data, making the
-    // confirmation circular rather than independent.  Require at least one
-    // hard secondary source (DEX, CEX, or individual pool) to promote.
-    const hasHardConfirmation =
-      dexStatus === "confirm" ||
-      cexStatus === "confirm" ||
-      poolStatus === "confirm";
-    if (hasHardConfirmation || (offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"))) {
-      // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
-      const currentSignal =
-        authoritativePrice != null
-          ? deriveDepegSignal(authoritativePrice, pegReference)
-          : null;
-      const currentDirectionalSignal =
-        classifyDirectionalSignal(currentSignal, threshold, pendingState.direction) === "confirm"
-          ? currentSignal
-          : null;
-      const poolConfirmations =
-        dexStatus === "confirm"
-          ? []
-          : poolHighTvlConfirm != null
-            ? [poolHighTvlConfirm]
-            : [...poolConfirmGroups.values()];
-      const peak = pickPeakCandidate(
-        [
-          { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
-          { bps: currentDirectionalSignal?.bps, price: authoritativePrice },
-          ...(offchainPeakCandidate ? [offchainPeakCandidate] : []),
-          ...(cexPeakCandidate ? [cexPeakCandidate] : []),
-          ...dexPeakCandidates,
-          ...poolConfirmations.map((confirmation) => ({
-            bps: confirmation.signal.bps,
-            price: confirmation.pool.price,
-          })),
-        ],
-        { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
-      );
-      const confirmedBy = confirmationSourceList(
-        offchainStatus === "confirm" ? offchainSourceKey : null,
-        dexStatus === "confirm" ? dexConfirmationKeys : [],
-        cexStatus === "confirm" ? "cex:binance" : null,
-        poolStatus === "confirm"
-          ? poolConfirmations.map((confirmation) => buildPoolConfirmationKey(confirmation.pool))
-          : [],
-      );
-      const event: DepegEvent = {
-        id: 0,
-        stablecoinId: row.stablecoin_id,
-        symbol: row.symbol,
-        pegType: row.peg_type,
-        direction: pendingState.direction,
-        peakDeviationBps: peak.bps,
-        startedAt: pendingState.firstSeenAt,
-        endedAt: null,
-        startPrice: pendingState.firstPrice,
-        peakPrice: peak.price,
-        recoveryPrice: null,
-        pegReference,
-        source: "live",
-        confirmationSources: confirmedBy || null,
-        pendingReason: pendingState.reason,
-      };
-
-      stmts.push(
-        buildInsertDepegEventStmt(db, event),
-        buildPendingOutcomeStmt(
-          db,
-          row,
-          outcomeState,
-          "promoted",
-          now,
-          { confirmingSources, opposingSources, unavailableSources, circuitOpenSources },
-          `confirmed-by:${confirmedBy || "unknown"}`,
-        ),
-        buildDeletePendingStmt(db, row),
-      );
-
-      console.log(
-        `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy || "(none)"}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
-      );
-    } else {
-      const statuses = [offchainStatus, dexStatus, cexStatus, poolStatus];
-      const hasSameDirectionConfirmation = statuses.includes("confirm");
-      const hasOpposingEvidence = statuses.some(isOpposingConfirmationStatus);
-      const canRejectOpposingEvidence =
-        hasOpposingEvidence &&
-        !hasSameDirectionConfirmation &&
-        (!primarySameDirectionDepegged || hardOpposingSources.length >= 2);
-      const isExpired = age > DEPEG_PENDING_EXPIRY_SEC;
-      const expiryLimitSec = getPendingExpiryLimitSec({
-        primarySameDirectionDepegged,
-        isExtremeMove: isExtremeMovePending(pendingState.reason),
+    const evidence = await collectDepegConfirmationEvidence({
+      db,
+      row,
+      pendingState,
+      asset,
+      meta,
+      pegReference,
+      secondaryBar,
+      nativeSignal,
+      nativePegQuote,
+      nativeSourceKey,
+      dexPriceRows,
+      dexPriceSources,
+      poolChallengers,
+      cexAllowed,
+      cexPrices,
+      coingeckoAllowed,
+      defillamaAllowed,
+      coingeckoApiKey,
+      signal,
+      now,
+      evidence: {
+        confirmingSources,
+        opposingSources,
         unavailableSources,
         circuitOpenSources,
-      });
-      const finalExpiryExceeded = age > expiryLimitSec;
+        hardOpposingSources,
+        offchainStatus: "insufficient",
+        offchainSourceKey: null,
+        offchainPeakCandidate: null,
+        dexStatus: "insufficient",
+        dexPeakCandidates: [],
+        dexConfirmationKeys: [],
+        cexStatus: "insufficient",
+        cexPeakCandidate: null,
+        poolStatus: "insufficient",
+        poolConfirmations: [],
+      },
+    });
 
-      // Available secondary evidence points away from the pending direction and
-      // no same-direction source rescues it.
-      if (canRejectOpposingEvidence) {
-        const reason = primarySameDirectionDepegged
-          ? `two-hard-opposing-sources:${confirmationSourceList(hardOpposingSources)}`
-          : "secondary-evidence-opposes";
-        stmts.push(
-          ...buildOutcomeAndDeleteStmts(
-            db,
-            row,
-            outcomeState,
-            "rejected",
-            now,
-            { confirmingSources, opposingSources, unavailableSources, circuitOpenSources },
-            reason,
-          ),
-        );
-        console.log(
-          `[depeg-confirm] Rejected ${row.symbol}: secondary evidence opposes pending direction ` +
-          `(offchain=${offchainStatus}, dex=${dexStatus}, cex=${cexStatus}, pool=${poolStatus})`,
-        );
-      } else if (isExpired && finalExpiryExceeded) {
-        const severe = isExtremeMovePending(pendingState.reason);
-        stmts.push(
-          ...buildOutcomeAndDeleteStmts(
-            db,
-            row,
-            outcomeState,
-            severe ? "unconfirmed-severe" : "expired",
-            now,
-            { confirmingSources, opposingSources, unavailableSources, circuitOpenSources },
-            `expired-after:${age}s;limit:${expiryLimitSec}s`,
-          ),
-        );
-        console.log(
-          `[depeg-confirm] Expired pending for ${row.symbol}: ${Math.round(age / 60)}min without confirmation ` +
-          `(limit ${Math.round(expiryLimitSec / 60)}min)`,
-        );
-      } else if (isExpired) {
-        console.log(
-          `[depeg-confirm] Kept pending for ${row.symbol} past base expiry: ` +
-          `age=${Math.round(age / 60)}min, limit=${Math.round(expiryLimitSec / 60)}min, ` +
-          `primarySameDirection=${primarySameDirectionDepegged}, unavailable=${confirmationSourceList(unavailableSources) || "none"}, ` +
-          `circuitOpen=${confirmationSourceList(circuitOpenSources) || "none"}`,
-        );
-      }
-    }
+    stmts.push(
+      ...decidePendingOutcome({
+        db,
+        row,
+        pendingState,
+        outcomeState,
+        pegReference,
+        authoritativePrice,
+        threshold,
+        age,
+        primarySameDirectionDepegged,
+        now,
+        evidence,
+      }),
+    );
     // else: insufficient secondary data or mixed evidence -- keep pending and retry next cycle
   }
 

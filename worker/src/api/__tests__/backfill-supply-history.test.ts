@@ -35,6 +35,7 @@ vi.mock("../backfill-price-sources", () => ({
 }));
 
 import { handleBackfillSupplyHistory } from "../backfill-supply-history";
+import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
 
 vi.mock("../backfill-fx", async () => {
   const actual = await vi.importActual<typeof import("../backfill-fx")>("../backfill-fx");
@@ -74,6 +75,19 @@ describe("handleBackfillSupplyHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockReset();
+    vi.mocked(fetchMarketBackfillPriceSeries).mockClear().mockResolvedValue({
+      prices: [{ timestamp: 1_700_000_000, price: 1.001 }],
+      diagnostics: {
+        granularity: "daily",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 1,
+      },
+    });
   });
 
   it("requires admin auth", async () => {
@@ -130,9 +144,11 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15", {
+        adminKey: "secret",
+      }),
     );
 
     expect(res.status).toBe(200);
@@ -155,6 +171,102 @@ describe("handleBackfillSupplyHistory", () => {
       expect.stringContaining("/stablecoin/1"),
       expect.objectContaining({
         headers: expect.objectContaining({ "User-Agent": expect.any(String) }),
+      }),
+    );
+  });
+
+  it("bounds explicit historical windows and returns a continuation cursor", async () => {
+    const day1 = Math.floor(Date.UTC(2026, 0, 1) / 1000);
+    const day2 = day1 + 86_400;
+    const day3 = day2 + 86_400;
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          price: 1,
+          tokens: [day1, day2, day3].map((date, index) => ({
+            date,
+            circulating: { peggedUSD: 100_000_000 + index },
+          })),
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const firstStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const firstUrl = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-01-01&endDay=2026-01-03&windowDays=2";
+    const firstRes = await handleBackfillSupplyHistory(
+      makeDb(firstStatements),
+      makeApiUrl(firstUrl),
+      true,
+      makeApiRequest(firstUrl, { adminKey: "secret" }),
+    );
+    const firstBody = (await firstRes.json()) as {
+      rowsInserted: number;
+      done: boolean;
+      continuationCursor: string | null;
+      window: { startDay: number; endDay: number; windowDays: number };
+    };
+
+    expect(firstBody.rowsInserted).toBe(2);
+    expect(firstBody.done).toBe(false);
+    expect(firstBody.continuationCursor).toBeTypeOf("string");
+    expect(firstBody.window).toMatchObject({ startDay: day1, endDay: day2, windowDays: 2 });
+
+    const secondStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const secondUrl = `/api/backfill-supply-history?stablecoin=usdt-tether&cursor=${encodeURIComponent(firstBody.continuationCursor!)}`;
+    const secondRes = await handleBackfillSupplyHistory(
+      makeDb(secondStatements),
+      makeApiUrl(secondUrl),
+      true,
+      makeApiRequest(secondUrl, { adminKey: "secret" }),
+    );
+    const secondBody = (await secondRes.json()) as {
+      rowsInserted: number;
+      done: boolean;
+      continuationCursor: string | null;
+      window: { startDay: number; endDay: number };
+    };
+
+    expect(secondBody.rowsInserted).toBe(1);
+    expect(secondBody.done).toBe(true);
+    expect(secondBody.continuationCursor).toBeNull();
+    expect(secondBody.window).toMatchObject({ startDay: day3, endDay: day3 });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("threads the request AbortSignal into supply backfill upstream helpers", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          price: 1,
+          tokens: [{ date: 1_700_000_000, circulating: { peggedUSD: 125_000_000 } }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const request = makeApiRequest(
+      "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15",
+      { adminKey: "secret" },
+    );
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2023-11-14&endDay=2023-11-15"),
+      true,
+      request,
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchMarketBackfillPriceSeries).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "usdt-tether" }),
+      expect.any(String),
+      expect.objectContaining({
+        signal: request.signal,
+        range: {
+          startSec: Math.floor(Date.UTC(2023, 10, 14) / 1000),
+          endSec: Math.floor(Date.UTC(2023, 10, 16) / 1000) - 1,
+        },
       }),
     );
   });
@@ -191,9 +303,11 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=euro3-3a-dao"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2023-11-14&endDay=2023-11-16"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=euro3-3a-dao", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-supply-history?stablecoin=euro3-3a-dao&startDay=2023-11-14&endDay=2023-11-16", {
+        adminKey: "secret",
+      }),
     );
 
     expect(res.status).toBe(200);
@@ -226,6 +340,7 @@ describe("handleBackfillSupplyHistory", () => {
       ["EUR"],
       new Date(day1 * 1000).toISOString().slice(0, 10),
       new Date(day2 * 1000).toISOString().slice(0, 10),
+      expect.any(AbortSignal),
     );
   });
 
@@ -282,9 +397,11 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-10"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-10", {
+        adminKey: "secret",
+      }),
       null,
       chainRpcs,
     );
@@ -432,9 +549,11 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-09"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-09", {
+        adminKey: "secret",
+      }),
       null,
       undefined, // no chainRpcs → no on-chain fallback
     );
