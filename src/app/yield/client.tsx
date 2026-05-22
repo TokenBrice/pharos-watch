@@ -27,11 +27,45 @@ import {
   type YieldPresetKey,
   type YieldRiskBudgetKey,
   type YieldViewModel,
+  type YieldViewModelRow,
 } from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
+
+export interface YieldStoryCallouts {
+  topYield: YieldViewModelRow | null;
+  mostStable: YieldViewModelRow | null;
+  largestMarket: YieldViewModelRow | null;
+}
+
+export function buildYieldStoryCallouts(
+  visibleRows: readonly YieldViewModelRow[],
+): YieldStoryCallouts | null {
+  if (visibleRows.length === 0) return null;
+
+  const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+
+  const topYield = [...visibleRows].sort(
+    (a, b) => b.apy30d - a.apy30d || byId(a, b),
+  )[0] ?? null;
+
+  const stableAplusRows = visibleRows
+    .filter((r) => (r.safetyGrade === "A+" || r.safetyGrade === "A") && r.apy30d > 0)
+    .sort((a, b) => {
+      const sa = a.yieldStability ?? -1;
+      const sb = b.yieldStability ?? -1;
+      return sb - sa || b.apy30d - a.apy30d || byId(a, b);
+    });
+  const mostStable = stableAplusRows[0] ?? null;
+
+  const largestMarket = [...visibleRows]
+    .filter((r) => (r.sourceTvlUsd ?? 0) > 0)
+    .sort((a, b) => (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0) || byId(a, b))[0] ?? null;
+
+  return { topYield, mostStable, largestMarket };
+}
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
@@ -68,30 +102,7 @@ export function YieldClient() {
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.idSet],
   );
   const visibleRows = viewModel.visibleRows;
-  const storyCallouts = useMemo(() => {
-    if (visibleRows.length === 0) return null;
-
-    const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
-
-    const topYield = [...visibleRows].sort(
-      (a, b) => b.apy30d - a.apy30d || byId(a, b),
-    )[0] ?? null;
-
-    const stableAplusRows = visibleRows
-      .filter((r) => (r.safetyGrade === "A+" || r.safetyGrade === "A") && r.apy30d > 0)
-      .sort((a, b) => {
-        const sa = a.yieldStability ?? -1;
-        const sb = b.yieldStability ?? -1;
-        return sb - sa || b.apy30d - a.apy30d || byId(a, b);
-      });
-    const mostStable = stableAplusRows[0] ?? null;
-
-    const largestMarket = [...visibleRows]
-      .filter((r) => (r.sourceTvlUsd ?? 0) > 0)
-      .sort((a, b) => (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0) || byId(a, b))[0] ?? null;
-
-    return { topYield, mostStable, largestMarket };
-  }, [visibleRows]);
+  const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
 
   const handleScrollToRow = useCallback((id: string) => {
     const el = document.getElementById(`yield-row-${id}`);

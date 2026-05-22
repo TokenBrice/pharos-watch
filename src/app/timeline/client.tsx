@@ -18,6 +18,7 @@ import {
   readTapeFilterState,
   tapeWindowSince,
   TAPE_DEFAULT_SEVERITY,
+  type TapeFilterState,
   type TapeWindowKey,
 } from "@/components/tape/tape-filters";
 import { digestPage, mergeDigestedPages, type DigestedDay } from "@/lib/tape-digest";
@@ -53,6 +54,80 @@ const WINDOW_SHORT: Record<TapeWindowKey, string> = {
   "90d": "90D",
   all: "ALL",
 };
+
+export interface TimelineEventQueryParams {
+  type?: string[];
+  coin?: string;
+  pegCurrency?: string;
+  chain?: string;
+  severityFloor: TapeEventSeverity;
+  since?: number;
+  q?: string;
+}
+
+export interface TimelineFeedController {
+  queryParams: TimelineEventQueryParams;
+  filterSignature: string;
+  hasActiveFilters: boolean;
+  severityLabel: string;
+  windowLabel: string;
+  windowShort: string;
+}
+
+export function buildTimelineFilterSignature(filters: TapeFilterState): string {
+  return [
+    filters.type.join(","),
+    filters.severity,
+    filters.coin,
+    filters.peg,
+    filters.chain,
+    filters.window,
+    filters.q,
+  ].join("|");
+}
+
+export function buildTimelineFeedController(
+  filters: TapeFilterState,
+  since: number | undefined,
+): TimelineFeedController {
+  const hasActiveFilters =
+    filters.type.length > 0 ||
+    filters.severity !== TAPE_DEFAULT_SEVERITY ||
+    filters.coin !== "" ||
+    filters.peg !== "all" ||
+    filters.chain !== "all" ||
+    filters.q !== "" ||
+    filters.window !== "7d";
+
+  return {
+    queryParams: {
+      type: filters.type.length > 0 ? filters.type : undefined,
+      coin: filters.coin || undefined,
+      pegCurrency: filters.peg !== "all" ? filters.peg : undefined,
+      chain: filters.chain !== "all" ? filters.chain : undefined,
+      severityFloor: filters.severity,
+      since,
+      q: filters.q || undefined,
+    },
+    filterSignature: buildTimelineFilterSignature(filters),
+    hasActiveFilters,
+    severityLabel: `${SEVERITY_LABEL[filters.severity]} severity`,
+    windowLabel: WINDOW_LABEL[filters.window],
+    windowShort: WINDOW_SHORT[filters.window],
+  };
+}
+
+export function buildTimelineResetParams(): Record<string, string> {
+  return {
+    type: "",
+    severity: "",
+    coin: "",
+    peg: "all",
+    chain: "all",
+    window: "7d",
+    q: "",
+  };
+}
 
 function EventSkeleton() {
   return (
@@ -415,17 +490,13 @@ export function TimelineClient() {
   // renders — otherwise `tapeWindowSince` calls Date.now() each render and
   // the infinite query restarts every tick.
   const since = tapeWindowSince(filters.window, nowMs);
+  const feedController = useMemo(
+    () => buildTimelineFeedController(filters, since),
+    [filters, since],
+  );
 
   const events = useEvents(
-    {
-      type: filters.type.length > 0 ? filters.type : undefined,
-      coin: filters.coin || undefined,
-      pegCurrency: filters.peg !== "all" ? filters.peg : undefined,
-      chain: filters.chain !== "all" ? filters.chain : undefined,
-      severityFloor: filters.severity,
-      since,
-      q: filters.q || undefined,
-    },
+    feedController.queryParams,
     { maxAutoPages: 10 },
   );
 
@@ -458,14 +529,22 @@ export function TimelineClient() {
   const digestedDays = useMemo(() => mergeDigestedPages(perPageDigests), [perPageDigests]);
 
   const permalinkId = getParam("event", "");
-  const [autoLoadEnabled, setAutoLoadEnabled] = useState(false);
+  const [autoLoadState, setAutoLoadState] = useState<{ filterSignature: string; enabled: boolean } | null>(null);
+  const autoLoadEnabled =
+    autoLoadState?.filterSignature === feedController.filterSignature
+      ? autoLoadState.enabled
+      : false;
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   // Sr-only announcer for Load More results. We don't `aria-live` the whole
   // feed wrapper because every paginated page would re-flood the queue.
   // Instead, surface a concise summary that only updates when the visible
   // count actually changes.
-  const [loadAnnouncement, setLoadAnnouncement] = useState("");
-  const prevVisibleCountRef = useRef<number | null>(null);
+  const [loadAnnouncementState, setLoadAnnouncementState] = useState<{ filterSignature: string; message: string } | null>(null);
+  const loadAnnouncement =
+    loadAnnouncementState?.filterSignature === feedController.filterSignature
+      ? loadAnnouncementState.message
+      : "";
+  const prevVisibleCountRef = useRef<{ filterSignature: string; count: number } | null>(null);
 
   // Common case: an internal-link permalink follows from a tracker page and
   // the event is already in the loaded window. Gate the 200-row buffer on
@@ -553,32 +632,13 @@ export function TimelineClient() {
   }, [autoLoadEnabled, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const handleLoadMore = useCallback(() => {
-    setAutoLoadEnabled(true);
+    setAutoLoadState({ filterSignature: feedController.filterSignature, enabled: true });
     void fetchNextPage();
-  }, [fetchNextPage]);
+  }, [feedController.filterSignature, fetchNextPage]);
 
   const handleClearFilters = useCallback(() => {
-    setParams({
-      type: "",
-      severity: "",
-      coin: "",
-      peg: "all",
-      chain: "all",
-      window: "7d",
-      q: "",
-    });
+    setParams(buildTimelineResetParams());
   }, [setParams]);
-
-  const hasActiveFilters =
-    filters.type.length > 0 ||
-    filters.severity !== TAPE_DEFAULT_SEVERITY ||
-    filters.coin !== "" ||
-    filters.peg !== "all" ||
-    filters.chain !== "all" ||
-    filters.q !== "" ||
-    filters.window !== "7d";
-
-  const severityLabel = `${SEVERITY_LABEL[filters.severity]} severity`;
 
   const emptyStateChips: ActiveFilterChip[] = useMemo(() => {
     const chips: ActiveFilterChip[] = [];
@@ -609,7 +669,7 @@ export function TimelineClient() {
   // Empty-state fallback prefers the smallest step that widens the view:
   // clear active filters → drop severity floor → widen window. `alltime` URL
   // token bypasses the "all" sentinel in useUrlFilters.
-  const fallback: { label: string; apply: () => void } = hasActiveFilters
+  const fallback: { label: string; apply: () => void } = feedController.hasActiveFilters
     ? { label: "Reset all filters", apply: handleClearFilters }
     : filters.severity !== "info"
     ? { label: "Show info-tier too", apply: () => setParam("severity", "info") }
@@ -617,14 +677,21 @@ export function TimelineClient() {
 
   const loadedCount = visibleEvents.length;
   useEffect(() => {
-    const prev = prevVisibleCountRef.current;
+    const prev =
+      prevVisibleCountRef.current?.filterSignature === feedController.filterSignature
+        ? prevVisibleCountRef.current.count
+        : null;
     if (prev != null && loadedCount > prev) {
       const delta = loadedCount - prev;
       const ofTotal = total != null ? ` ${loadedCount} of ${total} shown.` : "";
-      setLoadAnnouncement(`Loaded ${delta} more event${delta === 1 ? "" : "s"}.${ofTotal}`);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the aria-live text is derived from the committed page count delta.
+      setLoadAnnouncementState({
+        filterSignature: feedController.filterSignature,
+        message: `Loaded ${delta} more event${delta === 1 ? "" : "s"}.${ofTotal}`,
+      });
     }
-    prevVisibleCountRef.current = loadedCount;
-  }, [loadedCount, total]);
+    prevVisibleCountRef.current = { filterSignature: feedController.filterSignature, count: loadedCount };
+  }, [feedController.filterSignature, loadedCount, total]);
 
   // `per-day` open-incident counts feed the day-separator `N OPEN` enrichment.
   const openCountByDay = useMemo(() => bucketByDay(openIncidents), [openIncidents]);
@@ -678,8 +745,8 @@ export function TimelineClient() {
         loadedCount={visibleEvents.length}
         totalCount={total}
         openCount={openIncidents.length}
-        windowLabel={WINDOW_LABEL[filters.window]}
-        severityLabel={severityLabel}
+        windowLabel={feedController.windowLabel}
+        severityLabel={feedController.severityLabel}
         dataUpdatedAt={dataUpdatedAt}
         nowMs={nowMs}
         lastEventTs={lastEventTs}
@@ -794,7 +861,7 @@ export function TimelineClient() {
                   {" · "}
                   {(total ?? rawEvents.length).toLocaleString()} EVT
                   {" · WINDOW "}
-                  {WINDOW_SHORT[filters.window]}
+                  {feedController.windowShort}
                   {" · "}
                   {SEVERITY_LABEL_BARE[filters.severity].toUpperCase()}
                   {filters.severity === "critical" ? "" : "+"}

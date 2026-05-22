@@ -40,8 +40,12 @@ import {
 import {
   buildCompareHrefFromCoinIds,
   parsePaletteInput,
-  type ParsedVerb,
 } from "@/lib/command-palette-verbs";
+import {
+  buildVerbPreview,
+  clampCommandPaletteSelectedIndex,
+  executeParsedVerb,
+} from "@/components/command-palette-actions";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -242,7 +246,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   // ── Parse verb from the current input ──────────────────────────────────────
 
-  const parsedVerb: ParsedVerb = useMemo(() => parsePaletteInput(query), [query]);
+  const parsedVerb = useMemo(() => parsePaletteInput(query), [query]);
 
   /**
    * Execute the active verb. Returns true if the verb produced a side-effect
@@ -250,153 +254,19 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
    * the user in the palette to refine input.
    */
   const runVerb = useCallback((): boolean => {
-    switch (parsedVerb.kind) {
-      case "compare": {
-        if (parsedVerb.resolvedCoinIds.length === 0) return false;
-        router.push(buildCompareHrefFromCoinIds(parsedVerb.resolvedCoinIds));
-        closePalette();
-        return true;
-      }
-      case "screen": {
-        router.push(parsedVerb.href);
-        closePalette();
-        return true;
-      }
-      case "pin": {
-        if (!parsedVerb.resolvedCoinId) return false;
-        addToWatchlist(parsedVerb.resolvedCoinId);
-        closePalette();
-        return true;
-      }
-      case "unpin": {
-        if (parsedVerb.coinSymbol === "all") {
-          clearWatchlist();
-          closePalette();
-          return true;
-        }
-        if (!parsedVerb.resolvedCoinId) return false;
-        removeFromWatchlist(parsedVerb.resolvedCoinId);
-        closePalette();
-        return true;
-      }
-      case "view": {
-        // Saved Views ships in W3-D; for now treat the verb as a no-op until
-        // that store exists. We still close the palette so the user knows
-        // their input was understood.
-        if (!parsedVerb.viewName) return false;
-        return false;
-      }
-      case "tape": {
-        router.push(parsedVerb.href);
-        closePalette();
-        return true;
-      }
-      case "none":
-        return false;
-    }
+    return executeParsedVerb(parsedVerb, {
+      push: router.push,
+      closePalette,
+      addToWatchlist,
+      removeFromWatchlist,
+      clearWatchlist,
+    });
   }, [parsedVerb, router, closePalette, addToWatchlist, removeFromWatchlist, clearWatchlist]);
 
   /** Human-readable preview of the verb result. */
   const verbPreview = useMemo<
     { label: string; sublabel: string; runnable: boolean } | null
-  >(() => {
-    switch (parsedVerb.kind) {
-      case "compare": {
-        const ids = parsedVerb.resolvedCoinIds;
-        if (ids.length === 0) {
-          return {
-            label: "Compare —",
-            sublabel: "Type tickers separated by spaces",
-            runnable: false,
-          };
-        }
-        const upperSymbols = parsedVerb.coinSymbols.map((s) => s.toUpperCase()).join(", ");
-        const unresolvedNote = parsedVerb.unresolved.length
-          ? ` · skipped: ${parsedVerb.unresolved.join(", ")}`
-          : "";
-        return {
-          label: `Compare ${upperSymbols}`,
-          sublabel: `Open /compare with ${ids.length} stablecoin${ids.length === 1 ? "" : "s"}${unresolvedNote}`,
-          runnable: true,
-        };
-      }
-      case "screen": {
-        const keys = Object.keys(parsedVerb.filters);
-        if (keys.length === 0) {
-          return {
-            label: "Screen —",
-            sublabel: "e.g. screen safety>=80 dews<20 peg=USD",
-            runnable: false,
-          };
-        }
-        return {
-          label: `Screen ${keys.length} filter${keys.length === 1 ? "" : "s"}`,
-          sublabel: `Open /screener with ${keys.join(", ")}`,
-          runnable: true,
-        };
-      }
-      case "pin": {
-        if (!parsedVerb.coinSymbol) {
-          return { label: "Pin —", sublabel: "Type a ticker to add to your watchlist", runnable: false };
-        }
-        if (!parsedVerb.resolvedCoinId) {
-          return {
-            label: `Pin ${parsedVerb.coinSymbol.toUpperCase()}`,
-            sublabel: "No matching stablecoin",
-            runnable: false,
-          };
-        }
-        return {
-          label: `Pin ${parsedVerb.coinSymbol.toUpperCase()}`,
-          sublabel: "Add to your watchlist",
-          runnable: true,
-        };
-      }
-      case "unpin": {
-        if (parsedVerb.coinSymbol === "all") {
-          return { label: "Unpin all", sublabel: "Clear your watchlist", runnable: true };
-        }
-        if (!parsedVerb.coinSymbol) {
-          return { label: "Unpin —", sublabel: "Type a ticker or 'all'", runnable: false };
-        }
-        if (!parsedVerb.resolvedCoinId) {
-          return {
-            label: `Unpin ${parsedVerb.coinSymbol.toUpperCase()}`,
-            sublabel: "No matching stablecoin",
-            runnable: false,
-          };
-        }
-        return {
-          label: `Unpin ${parsedVerb.coinSymbol.toUpperCase()}`,
-          sublabel: "Remove from your watchlist",
-          runnable: true,
-        };
-      }
-      case "view": {
-        if (!parsedVerb.viewName) {
-          return { label: "View:", sublabel: "Saved views land in a follow-up release", runnable: false };
-        }
-        return {
-          label: `View: ${parsedVerb.viewName}`,
-          sublabel: "Saved views land in a follow-up release",
-          runnable: false,
-        };
-      }
-      case "tape": {
-        const keys = Object.keys(parsedVerb.filters);
-        if (keys.length === 0) {
-          return { label: "Tape:", sublabel: "e.g. tape: severity=warning", runnable: false };
-        }
-        return {
-          label: `Tape: ${keys.length} filter${keys.length === 1 ? "" : "s"}`,
-          sublabel: `Open /timeline with ${keys.join(", ")}`,
-          runnable: true,
-        };
-      }
-      case "none":
-        return null;
-    }
-  }, [parsedVerb]);
+  >(() => buildVerbPreview(parsedVerb), [parsedVerb]);
 
   // ── Restore focus on close and auto-focus input when open ────────────────────
 
@@ -497,6 +367,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     setSelectedIndex(0);
   }, [query]);
 
+  useEffect(() => {
+    setSelectedIndex((current) => clampCommandPaletteSelectedIndex(current, flatResults.length));
+  }, [flatResults.length]);
+
   // ── Scroll selected item into view ─────────────────────────────────────
 
   useEffect(() => {
@@ -514,11 +388,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      if (flatResults.length === 0) return;
       setSelectedIndex((prev) =>
         prev < flatResults.length - 1 ? prev + 1 : 0
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      if (flatResults.length === 0) return;
       setSelectedIndex((prev) =>
         prev > 0 ? prev - 1 : flatResults.length - 1
       );

@@ -564,14 +564,17 @@ describe("buildYieldViewModel", () => {
   });
 
   it("registers a descriptor for every YieldViewModelFilters key (no drift)", () => {
-    // Guards the invariant in yield-view-model.ts:1021-1024 — every filter key
-    // must have a registry entry, or the active-summary chip list and empty-
-    // state suggestion ranker silently miss it (watchlist drift, line 482-484).
+    // Guards the invariant that every filter key has a registry entry, or the
+    // row predicates, active-summary chips, and empty-state suggestion ranker
+    // can drift silently.
     const defaultFilterKeys = Object.keys(buildYieldViewModel([], {}).filters).sort();
     const registryKeys = YIELD_FILTER_AXIS_REGISTRY.map((axis) => axis.key as string).sort();
 
     expect(registryKeys).toEqual(defaultFilterKeys);
     expect(YIELD_FILTER_AXIS_REGISTRY.length).toBe(defaultFilterKeys.length);
     expect(new Set(registryKeys).size).toBe(registryKeys.length);
+    expect(
+      YIELD_FILTER_AXIS_REGISTRY.every((axis) => typeof (axis as { matches?: unknown }).matches === "function"),
+    ).toBe(true);
   });
 });

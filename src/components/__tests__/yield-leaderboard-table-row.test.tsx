@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-row";
+import { YieldMobileCard } from "@/components/yield-leaderboard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Table, TableBody } from "@/components/ui/table";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -102,6 +103,32 @@ function renderRow(
   );
 }
 
+function renderMobileCard(
+  row: YieldViewModelRow,
+  expanded: boolean = false,
+  overrides: {
+    isCompared?: boolean;
+    compareDisabled?: boolean;
+    onToggleCompare?: (id: string) => void;
+  } = {},
+) {
+  return render(
+    <TooltipProvider>
+      <YieldMobileCard
+        row={row}
+        riskFreeRate={3.5}
+        medianApy={4}
+        expanded={expanded}
+        isCompared={overrides.isCompared ?? false}
+        compareDisabled={overrides.compareDisabled ?? false}
+        onToggleExpanded={vi.fn()}
+        onOpenSourceSheet={vi.fn()}
+        onToggleCompare={overrides.onToggleCompare ?? vi.fn()}
+      />
+    </TooltipProvider>,
+  );
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -166,6 +193,31 @@ describe("YieldLeaderboardTableRow", () => {
     fireEvent.click(screen.getByLabelText("Add USDT to compare"));
 
     expect(onToggleCompare).toHaveBeenCalledWith("usdt-tether");
+  });
+
+  it("keeps core desktop table and mobile card row affordances in parity", () => {
+    const desktop = renderRow(baseRow);
+    expect(screen.getAllByLabelText("30-day APY: 4.3 percent").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText("Pharos Yield Score 76.0 out of 100").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText("Safety grade: B+, score 82 out of 100").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open full yield analysis for USDT" }).getAttribute("href")).toBe(
+      "/stablecoin/usdt-tether/yield",
+    );
+    expect(desktop.container.textContent).toContain("Aave");
+    expect(desktop.container.textContent).toContain("No warnings");
+    desktop.unmount();
+
+    const mobile = renderMobileCard(baseRow);
+    expect(screen.getByText("4.30%")).toBeTruthy();
+    expect(screen.getByText("PYS 76.0")).toBeTruthy();
+    expect(screen.getByText("B+")).toBeTruthy();
+    expect(screen.getByLabelText("Add USDT to compare")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open full yield analysis for USDT" }).getAttribute("href")).toBe(
+      "/stablecoin/usdt-tether/yield",
+    );
+    expect(mobile.container.textContent).toContain("Aave");
+    expect(mobile.container.textContent).toContain("No warnings");
   });
 });
 

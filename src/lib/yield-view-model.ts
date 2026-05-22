@@ -706,26 +706,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
 }
 
 function rowMatchesFilters(facet: YieldRowFacet, filters: YieldViewModelFilters): boolean {
-  const row = facet.row;
-
-  if (!matchesPeg(facet.peg, filters.peg)) return false;
-  if (filters.yieldType !== "all" && row.yieldType !== filters.yieldType) return false;
-  if (!matchesSearch(row, filters.q)) return false;
-  if (filters.warnings === "hide" && facet.hasWarning) return false;
-  if (filters.warnings === "only" && !facet.hasWarning) return false;
-  if (filters.minSafety !== null && (row.safetyScore === null || row.safetyScore < filters.minSafety)) return false;
-  if (filters.minTvl !== null && (row.sourceTvlUsd === null || row.sourceTvlUsd < filters.minTvl)) return false;
-  if (filters.sourceConfidence !== "all" && facet.confidenceTier !== filters.sourceConfidence) return false;
-  if (filters.benchmark !== "all" && facet.benchmarkKey !== filters.benchmark) return false;
-  if (filters.opportunity !== "all" && facet.opportunity !== filters.opportunity) return false;
-  if (filters.depth === "hide-thin" && facet.sourceDepthLens === "thin") return false;
-  if (filters.depth !== "all" && filters.depth !== "hide-thin" && facet.sourceDepthLens !== filters.depth) return false;
-  if (filters.sourceChanged === "only" && !facet.sourceChanged) return false;
-  if (filters.sourceChanged === "none" && facet.sourceChanged) return false;
-  if (filters.trending === "rising" && !facet.isRising) return false;
-  if (filters.watchlist === "only" && !facet.inWatchlist) return false;
-
-  return true;
+  return YIELD_FILTER_AXIS_REGISTRY.every((axis) => axis.matches(facet, filters));
 }
 
 function getComparisonLabel(filters: YieldViewModelFilters): string {
@@ -1011,6 +992,7 @@ function describeOption<T extends string>(
 interface YieldFilterAxisDescriptor {
   key: keyof YieldViewModelFilters;
   isActive: (filters: YieldViewModelFilters) => boolean;
+  matches: (facet: YieldRowFacet, filters: YieldViewModelFilters) => boolean;
   // Empty-state chip label ("Drop type filter (Lending Opp.)") + URL reset target.
   describeRelax: (filters: YieldViewModelFilters, options: YieldViewModelOptions) => string;
   relaxTargetValue: string | null;
@@ -1027,6 +1009,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "yieldType",
     isActive: (f) => f.yieldType !== DEFAULT_FILTERS.yieldType,
+    matches: (facet, f) => f.yieldType === "all" || facet.row.yieldType === f.yieldType,
     describeRelax: (f, o) => `Drop type filter (${describeOption(o.yieldType, f.yieldType)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => `Type: ${describeOption(o.yieldType, f.yieldType)}`,
@@ -1034,6 +1017,11 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "warnings",
     isActive: (f) => f.warnings !== DEFAULT_FILTERS.warnings,
+    matches: (facet, f) => {
+      if (f.warnings === "hide") return !facet.hasWarning;
+      if (f.warnings === "only") return facet.hasWarning;
+      return true;
+    },
     describeRelax: (f, o) => `Drop warnings filter (${describeOption(o.warnings, f.warnings)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => describeOption(o.warnings, f.warnings),
@@ -1041,6 +1029,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "watchlist",
     isActive: (f) => f.watchlist !== DEFAULT_FILTERS.watchlist,
+    matches: (facet, f) => f.watchlist !== "only" || facet.inWatchlist,
     describeRelax: () => `Drop watchlist-only filter`,
     relaxTargetValue: null,
     describeActive: () => "Watching only",
@@ -1048,6 +1037,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "minSafety",
     isActive: (f) => f.minSafety !== DEFAULT_FILTERS.minSafety,
+    matches: (facet, f) => f.minSafety === null || (facet.row.safetyScore !== null && facet.row.safetyScore >= f.minSafety),
     describeRelax: (f) => `Drop ${f.minSafety}+ safety floor`,
     relaxTargetValue: null,
     describeActive: (f, o) => describeOption(o.minSafety, String(f.minSafety)),
@@ -1055,6 +1045,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "minTvl",
     isActive: (f) => f.minTvl !== DEFAULT_FILTERS.minTvl,
+    matches: (facet, f) => f.minTvl === null || (facet.row.sourceTvlUsd !== null && facet.row.sourceTvlUsd >= f.minTvl),
     describeRelax: (f) => `Drop ${formatTvlOption(f.minTvl!)} TVL floor`,
     relaxTargetValue: null,
     describeActive: (f, o) => describeOption(o.minTvl, String(f.minTvl)),
@@ -1062,6 +1053,11 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "depth",
     isActive: (f) => f.depth !== DEFAULT_FILTERS.depth,
+    matches: (facet, f) => {
+      if (f.depth === "all") return true;
+      if (f.depth === "hide-thin") return facet.sourceDepthLens !== "thin";
+      return facet.sourceDepthLens === f.depth;
+    },
     describeRelax: (f, o) => `Drop depth filter (${describeOption(o.depth, f.depth)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => `Depth: ${describeOption(o.depth, f.depth)}`,
@@ -1069,6 +1065,11 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "sourceChanged",
     isActive: (f) => f.sourceChanged !== DEFAULT_FILTERS.sourceChanged,
+    matches: (facet, f) => {
+      if (f.sourceChanged === "only") return facet.sourceChanged;
+      if (f.sourceChanged === "none") return !facet.sourceChanged;
+      return true;
+    },
     describeRelax: (f, o) => `Drop source-changed filter (${describeOption(o.sourceChanged, f.sourceChanged)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => describeOption(o.sourceChanged, f.sourceChanged),
@@ -1076,6 +1077,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "sourceConfidence",
     isActive: (f) => f.sourceConfidence !== DEFAULT_FILTERS.sourceConfidence,
+    matches: (facet, f) => f.sourceConfidence === "all" || facet.confidenceTier === f.sourceConfidence,
     describeRelax: (f, o) => `Drop confidence filter (${describeOption(o.sourceConfidence, f.sourceConfidence)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => `Confidence: ${describeOption(o.sourceConfidence, f.sourceConfidence)}`,
@@ -1083,6 +1085,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "benchmark",
     isActive: (f) => f.benchmark !== DEFAULT_FILTERS.benchmark,
+    matches: (facet, f) => f.benchmark === "all" || facet.benchmarkKey === f.benchmark,
     describeRelax: (f, o) => `Drop benchmark filter (${describeOption(o.benchmark, f.benchmark)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => `Benchmark: ${describeOption(o.benchmark, f.benchmark)}`,
@@ -1090,6 +1093,7 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "opportunity",
     isActive: (f) => f.opportunity !== DEFAULT_FILTERS.opportunity,
+    matches: (facet, f) => f.opportunity === "all" || facet.opportunity === f.opportunity,
     describeRelax: (f, o) => `Drop opportunity filter (${describeOption(o.opportunity, f.opportunity)})`,
     relaxTargetValue: null,
     describeActive: (f, o) => describeOption(o.opportunity, f.opportunity),
@@ -1100,18 +1104,21 @@ export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = 
   {
     key: "peg",
     isActive: (f) => f.peg !== DEFAULT_FILTERS.peg,
+    matches: (facet, f) => matchesPeg(facet.peg, f.peg),
     describeRelax: (f, o) => `Drop peg filter (${describeOption(o.peg, f.peg)})`,
     relaxTargetValue: null,
   },
   {
     key: "q",
     isActive: (f) => f.q !== DEFAULT_FILTERS.q,
+    matches: (facet, f) => matchesSearch(facet.row, f.q),
     describeRelax: (f) => `Clear search "${f.q}"`,
     relaxTargetValue: null,
   },
   {
     key: "trending",
     isActive: (f) => f.trending !== DEFAULT_FILTERS.trending,
+    matches: (facet, f) => f.trending !== "rising" || facet.isRising,
     describeRelax: () => `Drop trending filter`,
     relaxTargetValue: null,
   },

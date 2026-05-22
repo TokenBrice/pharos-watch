@@ -41,7 +41,12 @@ vi.mock("@/hooks/use-logos", () => ({
   useLogos: () => ({ data: {} }),
 }));
 
-import { TimelineClient } from "@/app/timeline/client";
+import {
+  TimelineClient,
+  buildTimelineFeedController,
+  buildTimelineFilterSignature,
+  buildTimelineResetParams,
+} from "@/app/timeline/client";
 
 afterEach(() => {
   cleanup();
@@ -418,5 +423,64 @@ describe("TimelineClient", () => {
     const button = screen.getByRole("button", { name: /Clear filter:/i });
     expect(button).toBeTruthy();
     window.history.replaceState(null, "", "/timeline");
+  });
+});
+
+describe("timeline feed controller", () => {
+  it("builds a new pagination reset signature when filters change", () => {
+    const base = {
+      typeRaw: "",
+      type: [] as string[],
+      severity: "notice",
+      coin: "",
+      peg: "all",
+      chain: "all",
+      window: "7d",
+      q: "",
+    } as const;
+
+    expect(buildTimelineFilterSignature(base)).not.toBe(
+      buildTimelineFilterSignature({ ...base, window: "24h" }),
+    );
+    expect(buildTimelineFilterSignature(base)).not.toBe(
+      buildTimelineFilterSignature({ ...base, typeRaw: "depeg.*", type: ["depeg.*"] }),
+    );
+  });
+
+  it("normalizes event query params and reset params for filter changes", () => {
+    const controller = buildTimelineFeedController(
+      {
+        typeRaw: "depeg.*",
+        type: ["depeg.*"],
+        severity: "warning",
+        coin: "usdc-circle",
+        peg: "USD",
+        chain: "ethereum",
+        window: "24h",
+        q: "basis",
+      },
+      123,
+    );
+
+    expect(controller.queryParams).toEqual({
+      type: ["depeg.*"],
+      coin: "usdc-circle",
+      pegCurrency: "USD",
+      chain: "ethereum",
+      severityFloor: "warning",
+      since: 123,
+      q: "basis",
+    });
+    expect(controller.hasActiveFilters).toBe(true);
+    expect(controller.windowShort).toBe("24H");
+    expect(buildTimelineResetParams()).toEqual({
+      type: "",
+      severity: "",
+      coin: "",
+      peg: "all",
+      chain: "all",
+      window: "7d",
+      q: "",
+    });
   });
 });

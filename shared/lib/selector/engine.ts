@@ -1150,22 +1150,46 @@ function buildRelaxableConstraints(
 const SELECTOR_DEBUG =
   typeof process !== "undefined" && process.env?.SELECTOR_DEBUG === "true";
 
-export function runSelector(
+interface EligibilityPhase {
+  excluded: ExclusionRecord[];
+  skippedForCoverage: SkippedCoin[];
+  survivors: MergedRow[];
+}
+
+interface ScoringPhase {
+  excluded: ExclusionRecord[];
+  skippedForCoverage: SkippedCoin[];
+  scored: ScoredEntry[];
+}
+
+interface CoverageState {
+  sparse: boolean;
+  uneven: boolean;
+}
+
+interface RecommendationPhase {
+  excluded: ExclusionRecord[];
+  recommended: SelectorRecommendation[];
+  relaxedReasons: Set<ExclusionReason>;
+}
+
+function selectUniverse(
   input: SelectorInput,
   data: SelectorData,
-  dataset: DatasetMetadata,
-): SelectorOutput {
-  // 1+2. Universe (selected peg + Howey pre-exclusion)
+): MergedRow[] {
   const universe: MergedRow[] = [];
   for (const row of data.rows.values()) {
     if (row.pegCurrency !== input.pegCurrency) continue;
     if (HOWEY_UNCERTAIN_ASSETS.has(row.id)) continue;
     universe.push(row);
   }
+  return universe;
+}
 
-  // 3. Merge (already done — `MergedRow` is what we iterate)
-
-  // 4. Layer 1 — hard exclusions + coverage-too-thin
+function runEligibilityPhase(
+  universe: readonly MergedRow[],
+  input: SelectorInput,
+): EligibilityPhase {
   const excluded: ExclusionRecord[] = [];
   const skippedForCoverage: SkippedCoin[] = [];
   const survivors: MergedRow[] = [];
@@ -1187,11 +1211,16 @@ export function runSelector(
     }
     survivors.push(row);
   }
+  return { excluded, skippedForCoverage, survivors };
+}
 
-  const universeLen = universe.length;
-
-  // 6. Layer 2 — scoring
-  let scored: ScoredEntry[] = [];
+function runScoringPhase(
+  survivors: readonly MergedRow[],
+  input: SelectorInput,
+): ScoringPhase {
+  const excluded: ExclusionRecord[] = [];
+  const skippedForCoverage: SkippedCoin[] = [];
+  const scored: ScoredEntry[] = [];
   for (const row of survivors) {
     const result = scoreRow(row, input.profile, input);
     if (result == null || result.degenerate) {
@@ -1215,49 +1244,73 @@ export function runSelector(
       relaxedReason: null,
     });
   }
+  return { excluded, skippedForCoverage, scored };
+}
 
-  // 7. Yield-only: select recommendedSource per coin.
-  if (input.profile === "yield") {
-    for (const entry of scored) {
-      entry.recommendedSource = selectYieldSource(entry.row, input);
+function runYieldSourcePhase(
+  scored: readonly ScoredEntry[],
+  input: SelectorInput,
+): ScoringPhase {
+  if (input.profile !== "yield") {
+    return { excluded: [], skippedForCoverage: [], scored: [...scored] };
+  }
+
+  const excluded: ExclusionRecord[] = [];
+  const skippedForCoverage: SkippedCoin[] = [];
+  const withSources = scored.map((entry) => ({
+    ...entry,
+    recommendedSource: selectYieldSource(entry.row, input),
+  }));
+  const retained: ScoredEntry[] = [];
+  for (const entry of withSources) {
+    if (entry.recommendedSource != null) {
+      retained.push(entry);
+      continue;
     }
-    scored = scored.filter((entry) => {
-      if (entry.recommendedSource != null) return true;
-      excluded.push({
-        id: entry.row.id,
-        reason: "coverage-too-thin",
-        severity: "info",
-        detail: "missing-recommended-source",
-      });
-      skippedForCoverage.push({
-        id: entry.row.id,
-        symbol: entry.row.symbol,
-        missingSignals: ["recommendedSource"],
-      });
-      return false;
+    excluded.push({
+      id: entry.row.id,
+      reason: "coverage-too-thin",
+      severity: "info",
+      detail: "missing-recommended-source",
+    });
+    skippedForCoverage.push({
+      id: entry.row.id,
+      symbol: entry.row.symbol,
+      missingSignals: ["recommendedSource"],
     });
   }
+  return { excluded, skippedForCoverage, scored: retained };
+}
 
-  // 8. Circuit-breakers
-  const skippedFrac = universeLen > 0 ? skippedForCoverage.length / universeLen : 0;
+function runTradingStalenessPhase(
+  scored: readonly ScoredEntry[],
+  input: SelectorInput,
+): ScoredEntry[] {
+  if (input.profile !== "trading") return [...scored];
+  return scored.map((entry) => ({
+    ...entry,
+    perInputStaleness: tradingPerInputStaleness(entry.row),
+  }));
+}
+
+function computeCoverageState(
+  universeLength: number,
+  skippedForCoverage: readonly SkippedCoin[],
+): CoverageState {
+  const skippedFrac = universeLength > 0 ? skippedForCoverage.length / universeLength : 0;
   const sparse = skippedFrac > 0.25;
   const uneven = !sparse && skippedFrac > 0.15;
+  return { sparse, uneven };
+}
 
-  // 9. Trading-only: per-input staleness.
-  if (input.profile === "trading") {
-    for (const entry of scored) {
-      entry.perInputStaleness = tradingPerInputStaleness(entry.row);
-    }
-  }
-
-  // 10. Variant dedup
-  const deduped = dedupVariants(scored, input.profile);
-
-  // 11. Rank with tie-breakers
+function rankScoredEntries(
+  scored: readonly ScoredEntry[],
+  input: SelectorInput,
+): ScoredEntry[] {
+  const deduped = dedupVariants([...scored], input.profile);
   deduped.sort(compareScored);
   const ranked = applyConcentrationSafeguard(deduped);
 
-  // 12. Confidence demotion (Trading skips per R2 Active Trader P2)
   if (input.profile !== "trading" && ranked.length >= 2) {
     if (ranked[0]!.confidence < 40) {
       const tmp = ranked[0]!;
@@ -1265,9 +1318,17 @@ export function runSelector(
       ranked[1] = tmp;
     }
   }
+  return ranked;
+}
 
-  // 13. Build top-3 recommendations
+function buildRecommendationPhase(
+  ranked: readonly ScoredEntry[],
+  universe: readonly MergedRow[],
+  input: SelectorInput,
+  excluded: readonly ExclusionRecord[],
+): RecommendationPhase {
   const recommended: SelectorRecommendation[] = [];
+  const nextExcluded = [...excluded];
   for (let i = 0; i < ranked.length; i += 1) {
     const entry = ranked[i]!;
     if (recommended.length >= 3) {
@@ -1284,7 +1345,7 @@ export function runSelector(
     );
     if (rec == null) {
       // template-coverage gap — Yield rows without a source were removed before ranking.
-      excluded.push({
+      nextExcluded.push({
         id: entry.row.id,
         reason: "template-coverage-gap",
         severity: "info",
@@ -1316,15 +1377,62 @@ export function runSelector(
       if (entry.relaxedReason != null) relaxedReasons.add(entry.relaxedReason);
     }
   }
-  const usedRelaxedFallback = relaxedReasons.size > 0;
+  return { excluded: nextExcluded, recommended, relaxedReasons };
+}
 
-  // 14. Lower-ranked-list
+function appendSelectorDebug(
+  output: SelectorOutput,
+  ranked: readonly ScoredEntry[],
+  input: SelectorInput,
+): void {
+  if (!SELECTOR_DEBUG) return;
+  const allSurvivors: SelectorRecommendation[] = [];
+  ranked.forEach((entry, index) => {
+    const rank = Math.min(index + 1, 3) as 1 | 2 | 3;
+    const rec = buildRecommendation(
+      entry,
+      rank,
+      input.profile,
+      input,
+      () => [],
+      rankRobustnessFor(ranked, index),
+    );
+    if (rec != null) allSurvivors.push(rec);
+  });
+  output.debug = { allSurvivors };
+}
+
+export function runSelector(
+  input: SelectorInput,
+  data: SelectorData,
+  dataset: DatasetMetadata,
+): SelectorOutput {
+  const universe = selectUniverse(input, data);
+  const eligibility = runEligibilityPhase(universe, input);
+  const scoring = runScoringPhase(eligibility.survivors, input);
+  const yieldSources = runYieldSourcePhase(scoring.scored, input);
+  const scored = runTradingStalenessPhase(yieldSources.scored, input);
+  let excluded = [
+    ...eligibility.excluded,
+    ...scoring.excluded,
+    ...yieldSources.excluded,
+  ];
+  const skippedForCoverage = [
+    ...eligibility.skippedForCoverage,
+    ...scoring.skippedForCoverage,
+    ...yieldSources.skippedForCoverage,
+  ];
+  const coverageState = computeCoverageState(universe.length, skippedForCoverage);
+  const ranked = rankScoredEntries(scored, input);
+  const recommendations = buildRecommendationPhase(ranked, universe, input, excluded);
+  excluded = recommendations.excluded;
+  const usedRelaxedFallback = recommendations.relaxedReasons.size > 0;
   const lowerRanked = selectLowerRanked(
     ranked,
     excluded,
     input,
     universe,
-    new Set(recommended.map((r) => r.id)),
+    new Set(recommendations.recommended.map((r) => r.id)),
     scoreIgnoringExclusion,
   );
 
@@ -1337,27 +1445,27 @@ export function runSelector(
 
   const lowConfidence =
     usedRelaxedFallback ||
-    sparse ||
-    recommended.length === 0 ||
-    (recommended[0]?.confidence ?? 100) < 70;
+    coverageState.sparse ||
+    recommendations.recommended.length === 0 ||
+    (recommendations.recommended[0]?.confidence ?? 100) < 70;
 
   const output: SelectorOutput = {
     profile: input.profile,
     input,
-    universe: { active: universeLen, surviving: survivors.length },
-    recommended,
+    universe: { active: universe.length, surviving: eligibility.survivors.length },
+    recommended: recommendations.recommended,
     lowerRanked,
     coverageWarnings: {
       skippedForCoverageCount: skippedForCoverage.length,
       skippedForCoverage,
-      sparse,
-      uneven,
+      sparse: coverageState.sparse,
+      uneven: coverageState.uneven,
       newListingCount,
       redistributionCount,
     },
     lowConfidence,
     usedRelaxedFallback,
-    relaxedReasons: Array.from(relaxedReasons).sort(),
+    relaxedReasons: Array.from(recommendations.relaxedReasons).sort(),
     exclusionSummary: buildExclusionSummary(excluded),
     closestSurvivors: buildClosestSurvivors(excluded, universe, input),
     relaxableConstraints: buildRelaxableConstraints(input, excluded),
@@ -1367,22 +1475,7 @@ export function runSelector(
     datasetHash: dataset.datasetHash,
   };
 
-  if (SELECTOR_DEBUG) {
-    const allSurvivors: SelectorRecommendation[] = [];
-    ranked.forEach((entry, index) => {
-      const rank = Math.min(index + 1, 3) as 1 | 2 | 3;
-      const rec = buildRecommendation(
-        entry,
-        rank,
-        input.profile,
-        input,
-        () => [],
-        rankRobustnessFor(ranked, index),
-      );
-      if (rec != null) allSurvivors.push(rec);
-    });
-    output.debug = { allSurvivors };
-  }
+  appendSelectorDebug(output, ranked, input);
 
   return output;
 }
