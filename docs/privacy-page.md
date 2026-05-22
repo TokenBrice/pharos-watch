@@ -46,7 +46,7 @@ The current policy copy covers:
 7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
 8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state and no Telegram activity for 180 days are automatically purged on a weekly cleanup
 9. the full enumeration of Telegram-owned D1 tables and their retention windows (see below)
-10. the Mini App auth note: `initData` is never persisted; only its hash is recorded for one-shot replay protection within the 5-minute mutation window, alongside a 24-hour read-only session window
+10. the Mini App auth note: `initData` is never persisted — it is only validated (HMAC signature + freshness window); mutations use a 5-minute auth window plus a per-user mutation cooldown, and session reads use a 24-hour read-only window
 11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
 12. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
 
@@ -83,7 +83,7 @@ The visible policy must enumerate every Telegram-owned D1 table, its purpose, an
 
 ### Mini App `initData`
 
-The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` endpoints validate signed Telegram `initData` but never persist its body. Only the `initData` hash is recorded once per mutation in the shared `cache` table under prefix `telegram-mini-app:mutation-init:` for one-shot replay protection, and is swept by the same write that performs the mutation claim. The mutation freshness window is 5 minutes (`TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC`); session reads accept `auth_date` within the last 24 hours (`TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC`).
+The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` endpoints validate signed Telegram `initData` but never persist it — neither the raw `initData` nor its hash is written to the `cache` table or any other store. Mutation requests are bounded by a short freshness window plus a per-user mutation cooldown rather than a one-shot replay claim: Telegram exposes a single `initData` value per launch, so reusing it across several edits inside the window is expected. The mutation freshness window is 5 minutes (`TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC`); session reads accept `auth_date` within the last 24 hours (`TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC`).
 
 ### Telemetry Contract
 
