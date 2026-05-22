@@ -240,7 +240,7 @@
     "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "src/components/api-key-request-form.tsx": {
-    "fileLines": 446,
+    "fileLines": 447,
     "maxFunctionLines": 413,
     "branchCount": 27,
     "disposition": "queued-p4",
