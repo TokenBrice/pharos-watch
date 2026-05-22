@@ -410,6 +410,10 @@
     opacity: 0.34;
   }
 
+  .scene::after {
+    inset-inline: 0;
+  }
+
   .yearSection {
     grid-template-columns: 1fr;
     gap: 0.75rem;
