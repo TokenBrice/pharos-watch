@@ -67,15 +67,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "dola-inverse-finance",
-    chain: "ethereum",
-    contract: "0xb45ad160634c528cc3d2926d9807104fa3157305",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
     stablecoinId: "bold-liquity",
     chain: "ethereum",
     contract: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
@@ -198,6 +189,11 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+  "a7a5-old-vector": {
+    code: "issuer-distributed-yield",
+    since: "2026-05-22",
+    note: "RUB issuer-distributed reserve income uses the Russian central-bank rate minus 1pp, but no reliable RUB benchmark or issuer APY source is wired yet",
+  },
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",

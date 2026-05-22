@@ -50,7 +50,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - read-time `data-stale` warnings now follow source cadence: hourly families use the shared three-cycle publish threshold, supplemental families wait 6 hours so they do not false-positive inside their 4-hour refresh window, and `price-derived` rows wait 36 hours because they are backed by daily `supply_history` snapshots
 - published `lending-opportunity` suggestions now require observable venue TVL and a size floor of `max(existing absolute floor, 0.1% of the tracked stablecoin supply)`, so tiny markets do not surface as the live recommendation for large base assets
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
-- yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes account-product assets such as `bfusd-binance` and `gusd-gate`, `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and the Tradable private-credit notes
+- yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes issuer/account-product assets such as `a7a5-old-vector`, `bfusd-binance`, and `gusd-gate`, `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and the Tradable private-credit notes
 - `usg-tangent` is not marked `yieldBearing`: USG is the borrowable stablecoin, while sUSG is the separate savings wrapper that accrues protocol revenue
 - Zephyr yield is attributed to `zys-zephyr-protocol`, the tracked ZYS yield-share NAV wrapper. Base `zsd-zephyr-protocol` stays non-yield-bearing.
 - explicit and deterministic lending candidates are ignored unless the target asset is in the active stablecoin universe, so pre-launch metadata cannot surface on the live yield leaderboard before launch
@@ -104,7 +104,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 11 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
@@ -114,7 +114,6 @@ Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `c
 | `stusds-sky` | stUSDS | `0x99cd...eB9` | Ethereum |
 | `sdai-sky` | sDAI | `0x83F2...BEeA` | Ethereum |
 | `sfrxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
-| `dola-inverse-finance` | sDOLA | `0xb45a...7305` | Ethereum |
 | `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
 | `usdf-falcon` | sUSDf | `0xc8cf...4b0` | Ethereum |
 | `usn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
@@ -187,6 +186,8 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 **Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source. If a mapped UUID is missing from the DL payload, the sync logs `[yield-sync] Pool UUID ... not found in DL response, falling through` and continues to Layer 2/3 fallback matching.
 
+2026-05-22 source corrections: `usdn-smardex` now uses the exact SMARDEX USDN DeFiLlama single-exposure pool after its `navToken` flag was corrected to false, while `a7a5-old-vector` is represented as an intentional yield gap until a reliable RUB benchmark or issuer APY source is wired.
+
 **Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol and can also pin the wrapper chain, address, and preferred DeFiLlama project. Resolution prefers `(chain, address, project)` when configured, then `(chain, address)`, and only falls back to symbol on an unambiguous chain-scoped match. Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama).
 
 **Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Resolution first tries underlying-token address matches and only uses chain-scoped `.includes()` symbol fallback when the remaining candidate set is unambiguous. Symbols shorter than 4 characters are excluded from `.includes()` matching to prevent false positives (e.g., "USD" matching everything). Filters for `exposure === "single"` and `stablecoin === true`. Ambiguous fallback candidates are dropped instead of guessed.
@@ -199,8 +200,6 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 | Base Coin             | Wrapper | Purpose                     |
 | --------------------- | ------- | --------------------------- |
-| GHO (118)             | sGHO    | Aave staked GHO             |
-| DOLA (15)             | sDOLA   | Inverse Finance staked DOLA |
 | BOLD (269)            | yBOLD   | Liquity Stability Pool wrapper |
 | USBD (253)            | sUSBD   | BIMA savings wrapper        |
 | reUSD (339)           | stUSR   | Resolv staking wrapper      |
@@ -218,7 +217,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
 
-`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD, and yvUSDC (Yearn) now own their own native pool sources. AA_FalconXUSDC remains NAV/price-derived until a usable single-exposure nonzero APY source is available.
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD, and yvUSDC (Yearn) now own their own native pool sources. Added 2026-05-22: base `gho-aave` no longer inherits the tracked sGHO source, and base `dola-inverse-finance` no longer publishes the untracked sDOLA wrapper source. AA_FalconXUSDC remains NAV/price-derived until a usable single-exposure nonzero APY source is available.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 

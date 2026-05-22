@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.17` (2026-03-01 -> 2026-05-22).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.18` (2026-03-01 -> 2026-05-22).
+
+---
+
+## v8.18 - Base Asset Yield Source Corrections (May 22, 2026)
+
+- `gho-aave` no longer carries parent-side yield metadata or static runtime mappings for sGHO; the tracked `sgho-aave` asset owns the Aave Savings GHO source directly
+- `dola-inverse-finance` no longer carries yield-bearing metadata or static runtime mappings for the untracked sDOLA wrapper
+- The generic on-chain exchange-rate reader drops the DOLA/sDOLA parent mapping, reducing the generic vault set from 12 to 11
+- `usdn-smardex` now uses its exact SMARDEX USDN DeFiLlama single-exposure pool after the asset was corrected from NAV-token to rebase semantics
+- `a7a5-old-vector` is explicitly yield-bearing but remains an intentional runtime gap until a reliable RUB benchmark or issuer APY source is wired
+- PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; v8.18 is a source-ownership and metadata correction
 
 ---
 

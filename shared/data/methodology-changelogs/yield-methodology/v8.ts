@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.18",
+    title: "Base Asset Yield Source Corrections",
+    date: "2026-05-22",
+    effectiveAt: 1779481256,
+    summary:
+      "GHO and DOLA no longer publish savings-wrapper APY through their base stablecoin rows; tracked wrappers own their own rows when present, and untracked wrappers stay out of the runtime source roster.",
+    impact: [
+      "`gho-aave` no longer carries parent-side yield metadata, `YIELD_POOL_MAP`, or `YIELD_VARIANT_MAP` entries for sGHO",
+      "`sgho-aave` remains the tracked Aave Savings GHO yield asset and keeps the curated Aave V3 DeFiLlama pool mapping",
+      "`dola-inverse-finance` no longer carries yield-bearing metadata, `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, or generic on-chain exchange-rate coverage for the untracked sDOLA wrapper",
+      "The generic on-chain vault set drops the DOLA/sDOLA parent mapping, reducing the documented `ON_CHAIN_RATE_CONFIGS` count from 12 to 11",
+      "`usdn-smardex` now uses its exact SMARDEX USDN DeFiLlama single-exposure pool after the asset was corrected from NAV-token to rebase semantics",
+      "`a7a5-old-vector` is explicitly yield-bearing but remains an intentional runtime gap until a reliable RUB benchmark or issuer APY source is wired",
+      "PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; the bump records source ownership and tracked-universe routing",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.17",
     title: "sdUSD Direct Yield Ownership",
     date: "2026-05-21",

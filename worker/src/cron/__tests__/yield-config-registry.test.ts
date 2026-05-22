@@ -133,7 +133,16 @@ describe("yield config registry", () => {
   });
 
   it("moves tracked savings-wrapper runtime ownership from the parent ids to the child ids", () => {
-    for (const stablecoinId of ["usde-ethena", "usds-sky", "dai-makerdao", "frxusd-frax", "crvusd-curve", "avusd-avant"]) {
+    for (const stablecoinId of [
+      "usde-ethena",
+      "usds-sky",
+      "dai-makerdao",
+      "frxusd-frax",
+      "crvusd-curve",
+      "avusd-avant",
+      "gho-aave",
+      "dola-inverse-finance",
+    ]) {
       expect(YIELD_POOL_MAP[stablecoinId], stablecoinId).toBeUndefined();
       expect(YIELD_VARIANT_MAP[stablecoinId], stablecoinId).toBeUndefined();
     }
