@@ -39,8 +39,8 @@
       "title": "Pharos Methodology Index",
       "version": null,
       "urn": "urn:pharos:methodology:index",
-      "textHash": "272bb6f800bc32dcb94189fbba1a174382bbed07903d254f6e59f6e7b4410b68",
-      "textLength": 32472
+      "textHash": "8657030e0f18b613cfaaaec85d0dc5310973989f398a58a745ca14dbdc9d7f45",
+      "textLength": 32449
     },
     {
       "filename": "liquidity-score-v5.7.pdf",
@@ -63,14 +63,14 @@
       "textLength": 16072
     },
     {
-      "filename": "pricing-pipeline-v6.04.pdf",
+      "filename": "pricing-pipeline-v6.06.pdf",
       "key": "pricing-pipeline",
       "path": "/methodology/pricing-pipeline-changelog/",
       "title": "Pricing Pipeline Changelog",
-      "version": "6.04",
-      "urn": "urn:pharos:methodology:pricing-pipeline@v6.04",
-      "textHash": "325c29e0c9b476ceaf8a76db1e8879cefd53c5851f5a9a640b97516b53760955",
-      "textLength": 58104
+      "version": "6.06",
+      "urn": "urn:pharos:methodology:pricing-pipeline@v6.06",
+      "textHash": "9be003fde26271e1320c28b207b87908a81612185652de2e226d8330114a58e1",
+      "textLength": 58621
     },
     {
       "filename": "scoring-v7.26.pdf",
