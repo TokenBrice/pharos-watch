@@ -18,7 +18,7 @@ import {
   PUBLIC_API_HOST,
   PUBLIC_API_KEY_HEADER,
   SELF_SERVE_API_KEY_SUMMARY,
-} from "@/app/api/public-api-copy";
+} from "@shared/lib/public-api-contract";
 import {
   getConciseApiReferenceSections,
   getPublicApiEndpointSummaries,

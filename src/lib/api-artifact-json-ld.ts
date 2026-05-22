@@ -1,7 +1,6 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
-
-const API_BASE_URL = "https://api.pharos.watch";
 
 export function buildApiArtifactCatalogJsonLd(options: { siteUrl?: string } = {}) {
   const siteUrl = options.siteUrl ?? SITE_URL;
@@ -38,7 +37,7 @@ export function buildApiArtifactCatalogJsonLd(options: { siteUrl?: string } = {}
         "Read-only public integration API for stablecoin market, peg, liquidity, risk, blacklist, yield, chain, and flow data.",
       url: `${siteUrl}/about/api/`,
       documentation: `${siteUrl}/about/api/`,
-      endpointUrl: API_BASE_URL,
+      endpointUrl: PUBLIC_API_HOST,
       provider: organization,
       isPartOf: { "@id": catalogId },
     },

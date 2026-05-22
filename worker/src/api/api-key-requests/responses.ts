@@ -6,10 +6,13 @@ import {
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
   SELF_SERVE_DEPENDENCY_RETRY_AFTER_SEC,
 } from "@shared/lib/ops-limits";
+import {
+  PUBLIC_API_HOST,
+  PUBLIC_API_KEY_HEADER,
+  PUBLIC_API_RETRY_GUIDANCE,
+} from "@shared/lib/public-api-contract";
 import { errorResponse, jsonResponse } from "../../lib/api-utils";
 
-const SELF_SERVE_BASE_URL = "https://api.pharos.watch" as const;
-const SELF_SERVE_RETRY_GUIDANCE = "Respect Retry-After on 429 responses and add jitter to polling intervals.";
 const SELF_SERVE_PENDING_MESSAGE = "If this address can receive verification email, check your inbox to continue.";
 
 export interface SelfServeKeyNameSource {
@@ -42,9 +45,9 @@ export function issuedPublicResponse(issuedKey: IssuedSelfServeKeySummary, token
     },
     token,
     usage: {
-      baseUrl: SELF_SERVE_BASE_URL,
-      headerName: "X-API-Key",
-      retryGuidance: SELF_SERVE_RETRY_GUIDANCE,
+      baseUrl: PUBLIC_API_HOST,
+      headerName: PUBLIC_API_KEY_HEADER,
+      retryGuidance: PUBLIC_API_RETRY_GUIDANCE,
     },
   };
   return jsonResponse(responseBody, { status: 201, noStore: true });

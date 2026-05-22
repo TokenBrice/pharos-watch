@@ -48,8 +48,8 @@ export interface ApiKeySelfServeIssueResponse {
   };
   token: string;
   usage: {
-    baseUrl: "https://api.pharos.watch";
-    headerName: "X-API-Key";
+    baseUrl: string;
+    headerName: string;
     retryGuidance: string;
   };
 }

@@ -11,7 +11,8 @@ import {
   PUBLIC_API_KEY_HEADER,
   SELF_SERVE_API_KEY_EXPIRY_DAYS,
   SELF_SERVE_API_KEY_RATE_LIMIT_RPM,
-} from "./public-api-copy";
+  buildPublicApiCurlCommand,
+} from "@shared/lib/public-api-contract";
 
 export const metadata = buildPageMetadata({
   title: "Pharos API Access",
@@ -75,8 +76,7 @@ const QUICK_ENDPOINTS = [
 const CODE_EXAMPLES = [
   {
     label: "curl",
-    code: `curl ${PUBLIC_API_HOST}/api/stablecoins \\
-  -H "${PUBLIC_API_KEY_HEADER}: $PHAROS_API_KEY"`,
+    code: buildPublicApiCurlCommand(),
   },
   {
     label: "JavaScript",

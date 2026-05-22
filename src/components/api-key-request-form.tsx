@@ -5,6 +5,7 @@ import {
   SELF_SERVE_USE_CASE_MAX_LENGTH,
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
+import { PUBLIC_API_HOST, PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
 import type { ApiKeySelfServeCadence } from "@shared/types";
 import { AlertCircle, CheckCircle2, Copy, KeyRound, Loader2, MailCheck, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -432,11 +433,11 @@ export function ApiKeyRequestForm() {
             </div>
             <div>
               <dt className="text-xs uppercase text-muted-foreground">Base URL</dt>
-              <dd className="font-mono text-xs text-foreground">https://api.pharos.watch</dd>
+              <dd className="font-mono text-xs text-foreground">{PUBLIC_API_HOST}</dd>
             </div>
           </dl>
           <p className="mt-4">
-            Use <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code> on protected public routes such as <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">{API_KEY_REQUEST_SAMPLE_PATH}</code>.
+            Use <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">{PUBLIC_API_KEY_HEADER}</code> on protected public routes such as <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">{API_KEY_REQUEST_SAMPLE_PATH}</code>.
           </p>
         </section>
       </aside>

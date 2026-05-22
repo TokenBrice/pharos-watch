@@ -1,9 +1,12 @@
 import {
-  SELF_SERVE_API_KEY_EXPIRY_SEC,
   SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL,
   SELF_SERVE_USE_CASE_MAX_LENGTH,
   SELF_SERVE_USE_CASE_MIN_LENGTH,
 } from "@shared/lib/ops-limits";
+import {
+  SELF_SERVE_API_KEY_EXPIRY_DAYS,
+  buildPublicApiCurlCommand,
+} from "@shared/lib/public-api-contract";
 import type {
   ApiKeySelfServeCadence,
   ApiKeySelfServeIssueResponse,
@@ -37,7 +40,7 @@ export const API_KEY_REQUEST_CADENCE_OPTIONS: readonly { value: ApiKeySelfServeC
   { value: "other", label: "Other" },
 ];
 
-export const API_KEY_REQUEST_EXPIRY_DAYS = Math.round(SELF_SERVE_API_KEY_EXPIRY_SEC / 86_400);
+export const API_KEY_REQUEST_EXPIRY_DAYS = SELF_SERVE_API_KEY_EXPIRY_DAYS;
 export const API_KEY_REQUEST_SAMPLE_PATH = "/api/stablecoins";
 export const API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL = SELF_SERVE_MAX_ACTIVE_KEYS_PER_EMAIL === 1
   ? "One active key per email"
@@ -167,11 +170,7 @@ export function formatSelfServeExpiry(epochSeconds: number | null): string {
 }
 
 export function buildCurlCommand(token: string): string {
-  return [
-    "curl https://api.pharos.watch/api/stablecoins \\",
-    `  -H "X-API-Key: ${token}" \\`,
-    "  -H \"Accept: application/json\"",
-  ].join("\n");
+  return buildPublicApiCurlCommand({ tokenReference: token, includeAcceptHeader: true });
 }
 
 export function isProjectUrlValid(projectUrlValue: string): boolean {
