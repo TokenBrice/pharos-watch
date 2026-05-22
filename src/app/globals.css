@@ -390,6 +390,30 @@
     font-variant-numeric: tabular-nums slashed-zero;
   }
 
+  /* Telegram Mini App scope: native-feeling system font for chrome, plus a single
+     selection accent derived from the live Telegram theme with a Pharos fallback.
+     Telegram theme vars are injected at runtime by telegram-sdk.ts; the fallback
+     chain ends at --brand-accent for browser preview / SSR / pre-8.0 clients. */
+  .pharos-mini-app {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mini-accent: var(--telegram-accent-text, var(--telegram-button, var(--brand-accent)));
+    --mini-accent-fill: color-mix(in oklab, var(--mini-accent) 12%, transparent);
+    --mini-accent-border: color-mix(in oklab, var(--mini-accent) 34%, transparent);
+  }
+  .pharos-mini-app .mini-selected {
+    border-color: var(--mini-accent-border);
+    background-color: var(--mini-accent-fill);
+    color: var(--mini-accent);
+  }
+  .pharos-mini-app .mini-dot-on {
+    background-color: var(--mini-accent);
+  }
+  .pharos-mini-app .mini-highlight {
+    border-color: var(--mini-accent);
+    box-shadow: 0 0 0 2px var(--mini-accent-fill);
+  }
+
   .pharos-kicker {
     @apply text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-[11px];
     line-height: 1.2;
