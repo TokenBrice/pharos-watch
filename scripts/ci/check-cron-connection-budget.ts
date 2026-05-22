@@ -1,35 +1,38 @@
+import { pathToFileURL } from "url";
 import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
 
-// Group jobs by their schedule key (which maps to a cron trigger).
-const jobsByTrigger = new Map<
-  string,
-  { job: string; maxConnections: number; connectionGroup: string; statusTracked: boolean }[]
->();
-
-for (const def of CRON_CONNECTION_BUDGET_ENTRIES) {
-  const key = def.scheduleKey;
-  if (!jobsByTrigger.has(key)) jobsByTrigger.set(key, []);
-  jobsByTrigger.get(key)!.push({
-    job: def.job,
-    maxConnections: def.maxConnections,
-    connectionGroup: def.connectionGroup ?? def.job,
-    statusTracked: def.statusTracked,
-  });
+interface CronConnectionBudgetEntryForCheck {
+  job: string;
+  maxConnections: number;
+  connectionGroup?: string;
+  scheduleKey: string;
+  statusTracked: boolean;
 }
 
-let failed = false;
-const headroomFullTriggers: {
-  groups: Map<string, { peak: number; jobs: string[] }>;
+interface CronConnectionBudgetConfigForCheck {
+  maxPerTrigger: number;
+  failAt: number;
+  fullForNewFetchHeavyWorkAt: number;
+}
+
+export interface CronConnectionGroupReport {
+  peak: number;
+  jobs: string[];
+}
+
+export interface CronConnectionTriggerReport {
+  groups: Map<string, CronConnectionGroupReport>;
+  jobs: CronConnectionBudgetEntryForCheck[];
   scheduleKey: string;
   totalConnections: number;
-}[] = [];
+}
 
-const missingBudgetScheduleKeys = Object.keys(CRON_SCHEDULES).filter((scheduleKey) => !jobsByTrigger.has(scheduleKey));
-if (missingBudgetScheduleKeys.length > 0) {
-  console.error(
-    `FAIL: ${pluralize(missingBudgetScheduleKeys.length, "cron schedule")} missing from CRON_CONNECTION_BUDGET_ENTRIES: ${missingBudgetScheduleKeys.join(", ")}`,
-  );
-  failed = true;
+export interface CronConnectionBudgetReport {
+  budgetOnlyCount: number;
+  failed: boolean;
+  headroomFullTriggers: CronConnectionTriggerReport[];
+  missingBudgetScheduleKeys: string[];
+  triggerReports: CronConnectionTriggerReport[];
 }
 
 function pluralize(count: number, singular: string): string {
@@ -42,52 +45,117 @@ function formatJob(job: { job: string; statusTracked: boolean }): string {
   return job.statusTracked ? job.job : `${job.job} [budget-only]`;
 }
 
-for (const [scheduleKey, jobs] of jobsByTrigger) {
-  const groups = new Map<string, { peak: number; jobs: string[] }>();
-  for (const job of jobs) {
-    const group = groups.get(job.connectionGroup) ?? { peak: 0, jobs: [] };
-    group.peak = Math.max(group.peak, job.maxConnections);
-    group.jobs.push(formatJob(job));
-    groups.set(job.connectionGroup, group);
-  }
-  const totalConnections = Array.from(groups.values()).reduce((sum, group) => sum + group.peak, 0);
+export function evaluateCronConnectionBudget(input: {
+  budget?: CronConnectionBudgetConfigForCheck;
+  entries?: readonly CronConnectionBudgetEntryForCheck[];
+  schedules?: Record<string, string>;
+} = {}): CronConnectionBudgetReport {
+  const budget = input.budget ?? CRON_CONNECTION_BUDGET;
+  const entries = input.entries ?? CRON_CONNECTION_BUDGET_ENTRIES;
+  const schedules = input.schedules ?? CRON_SCHEDULES;
 
-  if (totalConnections >= CRON_CONNECTION_BUDGET.failAt) {
-    console.error(
-      `FAIL: Trigger "${scheduleKey}" uses ${totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections:`,
-    );
-    for (const [groupKey, group] of groups) {
-      console.error(`  - ${groupKey}: ${group.peak} connections (${group.jobs.join(" -> ")})`);
-    }
-    failed = true;
-  } else {
-    const headroomFull = totalConnections >= CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt;
-    if (headroomFull) {
-      headroomFullTriggers.push({ scheduleKey, totalConnections, groups });
-    }
-    console.log(
-      `${headroomFull ? "HEADROOM FULL" : "OK"}: "${scheduleKey}" — ${totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections (${pluralize(groups.size, "group")}, ${pluralize(jobs.length, "budget entry")})`,
-    );
+  const jobsByTrigger = new Map<string, CronConnectionBudgetEntryForCheck[]>();
+  for (const def of entries) {
+    const key = def.scheduleKey;
+    if (!jobsByTrigger.has(key)) jobsByTrigger.set(key, []);
+    jobsByTrigger.get(key)!.push({
+      job: def.job,
+      maxConnections: def.maxConnections,
+      connectionGroup: def.connectionGroup ?? def.job,
+      scheduleKey: def.scheduleKey,
+      statusTracked: def.statusTracked,
+    });
   }
+
+  const missingBudgetScheduleKeys = Object.keys(schedules).filter((scheduleKey) => !jobsByTrigger.has(scheduleKey));
+  const triggerReports: CronConnectionTriggerReport[] = [];
+  const headroomFullTriggers: CronConnectionTriggerReport[] = [];
+  let failed = missingBudgetScheduleKeys.length > 0;
+
+  for (const [scheduleKey, jobs] of jobsByTrigger) {
+    const groups = new Map<string, CronConnectionGroupReport>();
+    for (const job of jobs) {
+      const groupKey = job.connectionGroup ?? job.job;
+      const group = groups.get(groupKey) ?? { peak: 0, jobs: [] };
+      group.peak = Math.max(group.peak, job.maxConnections);
+      group.jobs.push(formatJob(job));
+      groups.set(groupKey, group);
+    }
+    const totalConnections = Array.from(groups.values()).reduce((sum, group) => sum + group.peak, 0);
+    const triggerReport = { scheduleKey, jobs, groups, totalConnections };
+    triggerReports.push(triggerReport);
+
+    if (totalConnections >= budget.failAt) {
+      failed = true;
+    } else if (totalConnections >= budget.fullForNewFetchHeavyWorkAt) {
+      headroomFullTriggers.push(triggerReport);
+    }
+  }
+
+  return {
+    budgetOnlyCount: entries.filter((entry) => !entry.statusTracked).length,
+    failed,
+    headroomFullTriggers,
+    missingBudgetScheduleKeys,
+    triggerReports,
+  };
 }
 
-if (failed) {
-  console.error("\nConnection budget exceeded. Rebalance jobs across triggers.");
-  process.exit(1);
-} else {
-  if (headroomFullTriggers.length > 0) {
+function printReport(report: CronConnectionBudgetReport): void {
+  if (report.missingBudgetScheduleKeys.length > 0) {
+    console.error(
+      `FAIL: ${pluralize(report.missingBudgetScheduleKeys.length, "cron schedule")} missing from CRON_CONNECTION_BUDGET_ENTRIES: ${report.missingBudgetScheduleKeys.join(", ")}`,
+    );
+  }
+
+  for (const trigger of report.triggerReports) {
+    if (trigger.totalConnections >= CRON_CONNECTION_BUDGET.failAt) {
+      console.error(
+        `FAIL: Trigger "${trigger.scheduleKey}" uses ${trigger.totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections:`,
+      );
+      for (const [groupKey, group] of trigger.groups) {
+        console.error(`  - ${groupKey}: ${group.peak} connections (${group.jobs.join(" -> ")})`);
+      }
+      continue;
+    }
+
+    const headroomFull = trigger.totalConnections >= CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt;
+    console.log(
+      `${headroomFull ? "HEADROOM FULL" : "OK"}: "${trigger.scheduleKey}" — ${trigger.totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections (${pluralize(trigger.groups.size, "group")}, ${pluralize(trigger.jobs.length, "budget entry")})`,
+    );
+  }
+
+  if (report.failed) {
+    console.error("\nConnection budget exceeded. Rebalance jobs across triggers.");
+    return;
+  }
+
+  if (report.headroomFullTriggers.length > 0) {
     console.log(
       `\nConnection headroom policy: ${CRON_CONNECTION_BUDGET.fullForNewFetchHeavyWorkAt}/${CRON_CONNECTION_BUDGET.maxPerTrigger} connections is full for new fetch-heavy work.`,
     );
-    for (const trigger of headroomFullTriggers) {
+    for (const trigger of report.headroomFullTriggers) {
       console.log(`  - ${trigger.scheduleKey}: ${trigger.totalConnections}/${CRON_CONNECTION_BUDGET.maxPerTrigger}`);
       for (const [groupKey, group] of trigger.groups) {
         console.log(`    * ${groupKey}: ${pluralize(group.peak, "connection")} (${group.jobs.join(" -> ")})`);
       }
     }
   }
-  const budgetOnlyCount = CRON_CONNECTION_BUDGET_ENTRIES.filter((entry) => !entry.statusTracked).length;
+
   console.log(
-    `\nAll ${jobsByTrigger.size} triggers within connection budget (${pluralize(budgetOnlyCount, "budget-only entry")} included).`,
+    `\nAll ${report.triggerReports.length} triggers within connection budget (${pluralize(report.budgetOnlyCount, "budget-only entry")} included).`,
   );
+}
+
+function isMainModule(): boolean {
+  const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";
+  return import.meta.url === entry;
+}
+
+if (isMainModule()) {
+  const report = evaluateCronConnectionBudget();
+  printReport(report);
+  if (report.failed) {
+    process.exit(1);
+  }
 }

@@ -8,6 +8,7 @@ import {
   type SupplementalOnChainSupplySource,
 } from "../../../lib/onchain-supply-exclusions";
 import { fetchOnchainUint256, probeTrackedTokenSupply } from "../../reserve-adapters/helpers";
+import { runBoundedQueue } from "../../shared/bounded-queue";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
@@ -16,6 +17,7 @@ export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; r
   // vault supply plus the guarded protocol-redeem price keeps the asset visible.
   "susdc-spark": { chain: "ethereum" },
 };
+const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
 
 function isSupportedOnChainSupplyContract(contract: NonNullable<StablecoinMeta["contracts"]>[number]): boolean {
   return contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron");
@@ -57,8 +59,11 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
     );
   }
 
-  const balances = await Promise.all(
-    exclusionConfig.holderAddresses.map((holderAddress) =>
+  const balances = await runBoundedQueue({
+    items: exclusionConfig.holderAddresses,
+    concurrency: EXCLUDED_BALANCE_READ_CONCURRENCY,
+    signal: input.signal,
+    worker: (holderAddress) =>
       fetchOnchainUint256({
         contract: input.supplyContract.address,
         data: encodeBalanceOfCallData(holderAddress),
@@ -68,8 +73,7 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
         rpcMode: "public-rpc",
         chain: input.supplyContract.chain,
       }),
-    ),
-  );
+  });
 
   if (balances.some((balance): balance is null => balance == null)) {
     throw new Error("configured excluded-balance read returned null");

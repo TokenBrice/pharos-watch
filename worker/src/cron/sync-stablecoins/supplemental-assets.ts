@@ -84,14 +84,11 @@ export async function fetchSupplementalTrackedTokens(
   fiatCgTokens: PeggedAsset[];
 }> {
   throwIfAborted(signal);
-  // Two-phase fan-out so gold's own batched protocol fetches plus silver's
-  // CG calls don't pile on top of fiat-cg simultaneously and exhaust the
-  // Cloudflare 6-connection pool. Sockets opened in the first phase are
-  // reclaimed before fiat-cg starts.
-  const [goldTokens, silverTokens] = await Promise.all([
-    fetchGoldTokens(cgData, signal),
-    fetchSilverTokens(cgData, signal, coingeckoApiKey),
-  ]);
+  // Keep supplemental families serial. This path overlaps with the main
+  // DefiLlama stablecoins fetch, so gold's batched protocol reads, silver's CG
+  // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
+  const goldTokens = await fetchGoldTokens(cgData, signal);
+  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey);
   const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates);
 
   return { goldTokens, silverTokens, fiatCgTokens };

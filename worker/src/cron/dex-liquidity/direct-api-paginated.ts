@@ -15,8 +15,15 @@ export interface PaginatedFetchOptions<TRow> {
   maxPages?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
-  parsePage: (body: unknown) => unknown[] | null;
-  mapRow: (raw: unknown) => TRow | null;
+  parsePage: (body: unknown, page: number) => unknown[] | { rows: unknown[] } | { error: string } | null;
+  mapRow: (raw: unknown, context: { page: number }) => TRow | null;
+  afterPage?: (context: {
+    errors: string[];
+    mappedRows: TRow[];
+    page: number;
+    rawRows: unknown[];
+    successfulPages: number;
+  }) => "stop" | void;
   extraHeaders?: Record<string, string>;
 }
 
@@ -41,6 +48,7 @@ export async function runPaginatedDirectApiFetch<TRow>(
     signal,
     parsePage,
     mapRow,
+    afterPage,
     extraHeaders,
   } = opts;
 
@@ -79,11 +87,16 @@ export async function runPaginatedDirectApiFetch<TRow>(
       break;
     }
 
-    const pageRows = parsePage(parsed.data);
-    if (pageRows === null) {
+    const parsedPage = parsePage(parsed.data, page);
+    if (parsedPage === null) {
       errors.push(`${source} page ${page} invalid root shape`);
       break;
     }
+    if (!Array.isArray(parsedPage) && "error" in parsedPage) {
+      errors.push(parsedPage.error);
+      break;
+    }
+    const pageRows = Array.isArray(parsedPage) ? parsedPage : parsedPage.rows;
 
     successfulPages++;
     if (pageRows.length === 0) {
@@ -92,9 +105,25 @@ export async function runPaginatedDirectApiFetch<TRow>(
       break;
     }
 
+    const mappedRows: TRow[] = [];
     for (const raw of pageRows) {
-      const mapped = mapRow(raw);
-      if (mapped !== null) rows.push(mapped);
+      const mapped = mapRow(raw, { page });
+      if (mapped !== null) {
+        rows.push(mapped);
+        mappedRows.push(mapped);
+      }
+    }
+
+    const afterPageResult = afterPage?.({
+      errors,
+      mappedRows,
+      page,
+      rawRows: pageRows,
+      successfulPages,
+    });
+    if (afterPageResult === "stop") {
+      nextPage = page + 1;
+      break;
     }
 
     if (pageRows.length < pageSize) {

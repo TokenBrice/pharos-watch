@@ -17,6 +17,9 @@ vi.mock("../../../lib/circuit-breaker", () => ({
     return "neutral";
   }),
 }));
+vi.mock("../preflight-skip", () => ({
+  logSkippedCronRun: vi.fn(async () => undefined),
+}));
 
 describe("runCircuitGatedLeasedScheduledJob", () => {
   let runLeasedCron: ReturnType<typeof vi.fn>;
@@ -68,6 +71,15 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
     expect(runLeasedCron).not.toHaveBeenCalled();
     expect(recordOutcomeDecision).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith("DEX circuit open");
+    const { logSkippedCronRun } = await import("../preflight-skip");
+    expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), {
+      job: "sync-dex-liquidity",
+      reason: "circuit-open",
+      message: "DEX circuit open",
+      metadata: {
+        circuitSource: "dex-liquidity",
+      },
+    });
   });
 
   it("records the mapped circuit outcome after a settled cron run", async () => {

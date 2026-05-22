@@ -18,7 +18,12 @@ import {
   reconcileTelegramWebhookRegistration,
 } from "../../lib/telegram-webhook-registration";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+import { logSkippedCronRun } from "./preflight-skip";
+import {
+  flattenScheduledSlotGroupTasks,
+  runScheduledSlotGroups,
+  type ScheduledSlotGroup,
+} from "./slot-groups";
 
 function logReconciliationSuccess(
   action: string,
@@ -66,6 +71,15 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
+    const message = "TELEGRAM_BOT_TOKEN missing; skipping Telegram scheduled lane";
+    const groups = buildTelegramSlotGroups(runtime);
+    for (const task of flattenScheduledSlotGroupTasks(groups)) {
+      await logSkippedCronRun(runtime, {
+        job: task.job,
+        reason: "missing-telegram-bot-token",
+        message,
+      });
+    }
     return;
   }
 

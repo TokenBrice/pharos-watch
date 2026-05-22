@@ -1,6 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import { runBoundedQueue } from "../../shared/bounded-queue";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   buildZephyrProtocolPeggedAsset,
@@ -18,6 +19,7 @@ import {
 } from "./shared";
 
 const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
+const FIAT_CG_TOKEN_CONCURRENCY = 2;
 
 export async function fetchFiatCoinGeckoTokens(
   cgData: CoinGeckoMcapData,
@@ -41,8 +43,11 @@ export async function fetchFiatCoinGeckoTokens(
       if (mcap && mcap > 0) mcapMap[token.id] = mcap;
     }
 
-    const results = await Promise.all(
-      FIAT_CG_METAS.map(async (meta) => {
+    const results = await runBoundedQueue({
+      items: FIAT_CG_METAS,
+      concurrency: FIAT_CG_TOKEN_CONCURRENCY,
+      signal,
+      worker: async (meta) => {
         const nowSec = Math.floor(Date.now() / 1000);
         const pKey = pegTypeKey(meta);
         // Strict path first (15-min freshness gate). If that rejects but CG returned
@@ -123,8 +128,8 @@ export async function fetchFiatCoinGeckoTokens(
           chainCirculating: {},
           chains: getSupplementalChainLabels(meta),
         } as PeggedAsset;
-      }),
-    );
+      },
+    });
 
     return results.filter((token): token is PeggedAsset => token !== null);
   } catch (err) {

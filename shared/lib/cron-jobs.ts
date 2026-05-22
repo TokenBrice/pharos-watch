@@ -9,26 +9,30 @@ export type CronGroupKey =
   | "daily"
   | "other";
 
-export const CRON_SCHEDULES = {
-  quarterHourly: "*/15 * * * *",
-  statusSelfCheckOffset: "9,24,39,54 * * * *",
-  sixHourlyBlacklist: "3 */6 * * *",
-  halfHourlyMintBurnCritical: "4,34 * * * *",
-  twoHourlyDexDiscovery: "6 */2 * * *",
-  halfHourlyMintBurnExtended: "13,43 * * * *",
-  halfHourlyOffset: "10,40 * * * *",
-  halfHourlyChartsOffset: "16,46 * * * *",
-  dewsPsiOffset: "26,56 * * * *",
-  fourHourlyReserveSync: "11 */4 * * *",
-  hourlyYieldSync: "20 * * * *",
-  fourHourlyYieldSupplemental: "25 */4 * * *",
-  fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
-  digestTriggerPoll: "*/5 * * * *",
-  daily0300Utc: "0 3 * * *",
-  daily0800Utc: "0 8 * * *",
-  daily0805Utc: "5 8 * * *",
-  daily0810Utc: "10 8 * * *",
-  monthlyYieldAudit: "0 6 1 * *",
+const CRON_SCHEDULE_DEFINITIONS = {
+  quarterHourly: { schedule: "*/15 * * * *", intervalSec: 900, offsetSec: 0 },
+  statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", intervalSec: 900, offsetSec: 9 * 60 },
+  sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
+  halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
+  twoHourlyDexDiscovery: { schedule: "6 */2 * * *", intervalSec: 2 * 3600, offsetSec: 6 * 60 },
+  halfHourlyMintBurnExtended: { schedule: "13,43 * * * *", intervalSec: 1800, offsetSec: 13 * 60 },
+  halfHourlyOffset: { schedule: "10,40 * * * *", intervalSec: 1800, offsetSec: 10 * 60 },
+  halfHourlyChartsOffset: { schedule: "16,46 * * * *", intervalSec: 1800, offsetSec: 16 * 60 },
+  dewsPsiOffset: { schedule: "26,56 * * * *", intervalSec: 1800, offsetSec: 26 * 60 },
+  fourHourlyReserveSync: { schedule: "11 */4 * * *", intervalSec: 4 * 3600, offsetSec: 11 * 60 },
+  hourlyYieldSync: { schedule: "20 * * * *", intervalSec: 3600, offsetSec: 20 * 60 },
+  fourHourlyYieldSupplemental: { schedule: "25 */4 * * *", intervalSec: 4 * 3600, offsetSec: 25 * 60 },
+  fiveMinuteTelegramAlerts: {
+    schedule: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
+    intervalSec: 300,
+    offsetSec: 2 * 60,
+  },
+  digestTriggerPoll: { schedule: "*/5 * * * *", intervalSec: 300, offsetSec: 0 },
+  daily0300Utc: { schedule: "0 3 * * *", intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
+  daily0800Utc: { schedule: "0 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
+  daily0805Utc: { schedule: "5 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
+  daily0810Utc: { schedule: "10 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 10 * 60 },
+  monthlyYieldAudit: { schedule: "0 6 1 * *", intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const;
 
 export const CRON_CONNECTION_BUDGET = {
@@ -37,42 +41,35 @@ export const CRON_CONNECTION_BUDGET = {
   fullForNewFetchHeavyWorkAt: 5,
 } as const;
 
-export type CronScheduleKey = keyof typeof CRON_SCHEDULES;
-export type CronScheduleExpression = (typeof CRON_SCHEDULES)[CronScheduleKey];
+export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
+export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
 export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
 
-const CRON_SCHEDULE_BUCKETS = {
-  quarterHourly: { intervalSec: 900, offsetSec: 0 },
-  statusSelfCheckOffset: { intervalSec: 900, offsetSec: 9 * 60 },
-  sixHourlyBlacklist: { intervalSec: 6 * 3600, offsetSec: 3 * 60 },
-  halfHourlyMintBurnCritical: { intervalSec: 1800, offsetSec: 4 * 60 },
-  twoHourlyDexDiscovery: { intervalSec: 2 * 3600, offsetSec: 6 * 60 },
-  halfHourlyMintBurnExtended: { intervalSec: 1800, offsetSec: 13 * 60 },
-  halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
-  halfHourlyChartsOffset: { intervalSec: 1800, offsetSec: 16 * 60 },
-  dewsPsiOffset: { intervalSec: 1800, offsetSec: 26 * 60 },
-  fourHourlyReserveSync: { intervalSec: 4 * 3600, offsetSec: 11 * 60 },
-  hourlyYieldSync: { intervalSec: 3600, offsetSec: 20 * 60 },
-  fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
-  fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
-  digestTriggerPoll: { intervalSec: 300, offsetSec: 0 },
-  daily0300Utc: { intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
-  daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
-  daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
-  daily0810Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 10 * 60 },
-  monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
-} as const satisfies Record<CronScheduleKey, { intervalSec: number; offsetSec: number }>;
+export const CRON_SCHEDULES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(CRON_SCHEDULE_DEFINITIONS).map(([scheduleKey, definition]) => [
+      scheduleKey,
+      definition.schedule,
+    ]),
+  ) as Record<CronScheduleKey, CronScheduleExpression>,
+);
 
 const CRON_SCHEDULE_INTERVALS = Object.freeze(
   Object.fromEntries(
-    Object.entries(CRON_SCHEDULE_BUCKETS).map(([scheduleKey, bucket]) => [scheduleKey, bucket.intervalSec]),
+    Object.entries(CRON_SCHEDULE_DEFINITIONS).map(([scheduleKey, definition]) => [
+      scheduleKey,
+      definition.intervalSec,
+    ]),
   ) as Record<CronScheduleKey, number>,
 );
 
 const CRON_SCHEDULE_BUCKET_OFFSETS = Object.freeze(
   Object.fromEntries(
-    Object.entries(CRON_SCHEDULE_BUCKETS).map(([scheduleKey, bucket]) => [scheduleKey, bucket.offsetSec]),
+    Object.entries(CRON_SCHEDULE_DEFINITIONS).map(([scheduleKey, definition]) => [
+      scheduleKey,
+      definition.offsetSec,
+    ]),
   ) as Record<CronScheduleKey, number>,
 );
 
@@ -177,7 +174,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 3, // DL stablecoins + supplemental tokens (DL coins + CG parallel) + enrich-prices
+    maxConnections: 4, // Intake overlaps one DL fetch with serialized supplemental families; primary price providers are capped at 4.
     connectionGroup: "quarter-hourly-chain",
   },
   {

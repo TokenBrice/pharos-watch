@@ -4,13 +4,8 @@ import {
   type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
-import { USER_AGENT } from "../../lib/constants";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
-import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
-import {
-  DIRECT_API_DEFAULT_MAX_PAGES,
-  buildDirectApiRequestSignal,
-} from "./direct-api-policy";
+import { isDexApiRecord } from "./direct-api-json";
+import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 
 const RAYDIUM_API = "https://api-v3.raydium.io/pools/info/list";
 const PAGE_SIZE = 1000;
@@ -56,68 +51,39 @@ async function fetchPoolType(
   poolType: "concentrated" | "standard",
   signal?: AbortSignal,
 ): Promise<DexApiFetchResult> {
-  const results: DexApiPool[] = [];
-  const errors: string[] = [];
-  let successfulPages = 0;
   let consecutiveFullPagesWithoutEligiblePools = 0;
+  const pageHasEligiblePool = new Map<number, boolean>();
+  const malformedRowsByPage = new Map<number, number>();
 
-  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
-    const url = `${RAYDIUM_API}?poolType=${poolType}&poolSortField=liquidity&sortType=desc&pageSize=${PAGE_SIZE}&page=${page}`;
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT },
-        signal: buildDirectApiRequestSignal(signal),
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      errors.push(`${poolType} page ${page} request failed: ${message}`);
-      break;
-    }
+  const result = await runPaginatedDirectApiFetch<DexApiPool>({
+    source: poolType,
+    buildUrl: (page) =>
+      `${RAYDIUM_API}?poolType=${poolType}&poolSortField=liquidity&sortType=desc&pageSize=${PAGE_SIZE}&page=${page}`,
+    pageSize: PAGE_SIZE,
+    signal,
+    parsePage: (body, page) => {
+      const json = body as RaydiumResponse;
+      if (json.success === false) {
+        return { error: `${poolType} page ${page} API error: ${json.msg ?? "unsuccessful response"}` };
+      }
 
-    if (!res.ok) {
-      errors.push(`${poolType} page ${page} returned ${res.status}`);
-      await cancelResponseBodyQuietly(res);
-      break;
-    }
-
-    const parsed = await readDexApiJson<RaydiumResponse>(res, `${poolType} page ${page}`);
-    if (!parsed.ok) {
-      errors.push(parsed.error);
-      break;
-    }
-
-    const json = parsed.data;
-    if (json.success === false) {
-      errors.push(`${poolType} page ${page} API error: ${json.msg ?? "unsuccessful response"}`);
-      break;
-    }
-
-    const pools = json.data?.data;
-    if (!Array.isArray(pools)) {
-      errors.push(`${poolType} page ${page} returned malformed body`);
-      break;
-    }
-
-    successfulPages++;
-    if (pools.length === 0) break;
-
-    let pageHasEligiblePool = false;
-    let malformedRows = 0;
-    for (const rawPool of pools) {
+      const pools = json.data?.data;
+      return Array.isArray(pools) ? pools : { error: `${poolType} page ${page} returned malformed body` };
+    },
+    mapRow: (rawPool, { page }) => {
       if (!isRaydiumPool(rawPool)) {
-        malformedRows++;
-        continue;
+        malformedRowsByPage.set(page, (malformedRowsByPage.get(page) ?? 0) + 1);
+        return null;
       }
 
       const pool = rawPool;
       if (!Number.isFinite(pool.tvl) || pool.tvl < DIRECT_API_POOL_MIN_TVL_USD) {
-        continue;
+        return null;
       }
-      pageHasEligiblePool = true;
+      pageHasEligiblePool.set(page, true);
 
       const isConcentrated = poolType === "concentrated";
-      results.push({
+      return {
         source: "raydium",
         chain: "solana",
         poolAddress: pool.id,
@@ -133,38 +99,39 @@ async function fetchPoolType(
         balances: [pool.mintAmountA, pool.mintAmountB].every(Number.isFinite)
           ? [pool.mintAmountA, pool.mintAmountB]
           : null,
-      });
-    }
-    if (malformedRows > 0) {
-      errors.push(`${poolType} page ${page} skipped ${malformedRows} malformed pool rows`);
-    }
-
-    if (pools.length < PAGE_SIZE) break;
-    if (!pageHasEligiblePool) {
-      consecutiveFullPagesWithoutEligiblePools++;
-      if (consecutiveFullPagesWithoutEligiblePools >= 2) {
-        console.log(
-          `[fetch-raydium] ${poolType} stopped after ${consecutiveFullPagesWithoutEligiblePools} ` +
-            `full page(s) below TVL threshold; resumeFromPage=${page + 1}`,
-        );
-        break;
+      };
+    },
+    afterPage: ({ errors, page, rawRows }) => {
+      const malformedRows = malformedRowsByPage.get(page) ?? 0;
+      if (malformedRows > 0) {
+        errors.push(`${poolType} page ${page} skipped ${malformedRows} malformed pool rows`);
       }
-    } else {
-      consecutiveFullPagesWithoutEligiblePools = 0;
-    }
-    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
-      errors.push(`${poolType} pagination cap reached at page ${page}; resumeFromPage=${page + 1}`);
-      break;
-    }
-  }
 
-  for (const error of errors) {
+      if (rawRows.length < PAGE_SIZE) {
+        return;
+      }
+      if (!pageHasEligiblePool.get(page)) {
+        consecutiveFullPagesWithoutEligiblePools++;
+        if (consecutiveFullPagesWithoutEligiblePools >= 2) {
+          console.log(
+            `[fetch-raydium] ${poolType} stopped after ${consecutiveFullPagesWithoutEligiblePools} ` +
+              `full page(s) below TVL threshold; resumeFromPage=${page + 1}`,
+          );
+          return "stop";
+        }
+      } else {
+        consecutiveFullPagesWithoutEligiblePools = 0;
+      }
+    },
+  });
+
+  for (const error of result.errors) {
     console.warn("[fetch-raydium]", error);
   }
-  return makeDexApiFetchResult(results, {
-    ok: successfulPages > 0,
-    degraded: errors.length > 0,
-    errors,
+  return makeDexApiFetchResult(result.rows, {
+    ok: result.successfulPages > 0,
+    degraded: result.errors.length > 0,
+    errors: result.errors,
   });
 }
 

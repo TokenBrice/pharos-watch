@@ -1,5 +1,5 @@
-import { getCronScheduleKey, getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
-import { SCHEDULED_RUNNER_KEYS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
+import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
 import type { Env } from "../lib/env";
 import { runScheduledSlotWithFence } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
@@ -48,10 +48,7 @@ const SLOT_RUNNER_BY_KEY = {
 } satisfies Record<ScheduledRunnerKey, SlotRunner>;
 
 export const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = Object.fromEntries(
-  Object.entries(SCHEDULED_RUNNER_KEYS_BY_SCHEDULE).map(([schedule, runnerKey]) => [
-    schedule,
-    SLOT_RUNNER_BY_KEY[runnerKey],
-  ]),
+  Object.values(SCHEDULED_SLOT_PLANS_BY_SCHEDULE).map((plan) => [plan.schedule, SLOT_RUNNER_BY_KEY[plan.runnerKey]]),
 ) as Record<string, SlotRunner>;
 
 function buildUnknownScheduleError(cron: string): Error {
@@ -63,15 +60,16 @@ export async function handleScheduledEvent(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<void> {
-  const runner = SLOT_RUNNER_BY_SCHEDULE[event.cron];
-  const scheduleKey = getCronScheduleKey(event.cron);
-  if (!runner || !scheduleKey) {
+  const slotPlan = SCHEDULED_SLOT_PLANS_BY_SCHEDULE[event.cron];
+  const runner = slotPlan ? SLOT_RUNNER_BY_KEY[slotPlan.runnerKey] : undefined;
+  if (!runner || !slotPlan) {
     const error = buildUnknownScheduleError(event.cron);
     console.error(error.message);
     throw error;
   }
 
   const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;
+  const scheduleKey = slotPlan.scheduleKey;
   const slotStartedAt = getCronSlotStartedAtForSchedule(scheduleKey, scheduledTimeMs);
   const runtime = createScheduledRuntimeContext(env, ctx, {
     cron: event.cron,

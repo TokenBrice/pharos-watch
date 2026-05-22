@@ -4,13 +4,8 @@ import {
   type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
-import { USER_AGENT } from "../../lib/constants";
-import { cancelResponseBodyQuietly } from "../../lib/response-body";
-import { isDexApiRecord, readDexApiJson } from "./direct-api-json";
-import {
-  DIRECT_API_DEFAULT_MAX_PAGES,
-  buildDirectApiRequestSignal,
-} from "./direct-api-policy";
+import { isDexApiRecord } from "./direct-api-json";
+import { runPaginatedDirectApiFetch } from "./direct-api-paginated";
 
 const METEORA_API = "https://dlmm.datapi.meteora.ag/pools";
 const PAGE_SIZE = 500;
@@ -61,55 +56,27 @@ function isMeteoraPool(value: unknown): value is MeteoraPool {
 }
 
 export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
-  const pools: DexApiPool[] = [];
-  const errors: string[] = [];
-  let successfulPages = 0;
-
-  for (let page = 1; page <= DIRECT_API_DEFAULT_MAX_PAGES; page++) {
-    let res: Response;
-    try {
-      res = await fetch(`${METEORA_API}?page=${page}&limit=${PAGE_SIZE}`, {
-        headers: { "User-Agent": USER_AGENT },
-        signal: buildDirectApiRequestSignal(signal),
-      });
-    } catch (error) {
-      errors.push(`page ${page} request failed: ${error instanceof Error ? error.message : String(error)}`);
-      break;
-    }
-
-    if (!res.ok) {
-      errors.push(`page ${page} returned ${res.status}`);
-      await cancelResponseBodyQuietly(res);
-      break;
-    }
-
-    const parsed = await readDexApiJson<MeteoraResponse>(res, `page ${page}`);
-    if (!parsed.ok) {
-      errors.push(parsed.error);
-      break;
-    }
-
-    const json = parsed.data;
-    const rows = json.data;
-    if (!Array.isArray(rows)) {
-      errors.push(`page ${page} returned malformed body`);
-      break;
-    }
-
-    successfulPages++;
-    if (rows.length === 0) break;
-
-    let malformedRows = 0;
-    for (const rawRow of rows) {
+  const malformedRowsByPage = new Map<number, number>();
+  const result = await runPaginatedDirectApiFetch<DexApiPool>({
+    source: "meteora",
+    buildUrl: (page) => `${METEORA_API}?page=${page}&limit=${PAGE_SIZE}`,
+    pageSize: PAGE_SIZE,
+    signal,
+    parsePage: (body, page) => {
+      const json = body as MeteoraResponse;
+      const rows = json.data;
+      return Array.isArray(rows) ? rows : { error: `page ${page} returned malformed body` };
+    },
+    mapRow: (rawRow, { page }) => {
       if (!isMeteoraPool(rawRow)) {
-        malformedRows++;
-        continue;
+        malformedRowsByPage.set(page, (malformedRowsByPage.get(page) ?? 0) + 1);
+        return null;
       }
 
       const row = rawRow;
       const tvlUsd = row.tvl ?? null;
-      if (!Number.isFinite(tvlUsd) || tvlUsd == null || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) continue;
-      if (row.is_blacklisted) continue;
+      if (!Number.isFinite(tvlUsd) || tvlUsd == null || tvlUsd < DIRECT_API_POOL_MIN_TVL_USD) return null;
+      if (row.is_blacklisted) return null;
 
       const volume24hUsd = row.volume?.["24h"];
       const baseFeePct = row.pool_config?.base_fee_pct;
@@ -128,7 +95,7 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
           ? row.current_price
           : null;
 
-      pools.push({
+      return {
         source: "meteora",
         chain: "solana",
         poolAddress: row.address,
@@ -152,29 +119,26 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
         volume24hUsd: volume24hUsd != null && Number.isFinite(volume24hUsd) ? volume24hUsd : 0,
         feeRate: feePct > 0 ? feePct / 100 : null,
         balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
-      });
-    }
-    if (malformedRows > 0) {
-      errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
-    }
+      };
+    },
+    afterPage: ({ errors, page }) => {
+      const malformedRows = malformedRowsByPage.get(page) ?? 0;
+      if (malformedRows > 0) {
+        errors.push(`page ${page} skipped ${malformedRows} malformed pool rows`);
+      }
+    },
+  });
 
-    if (rows.length < PAGE_SIZE) break;
-    if (page === DIRECT_API_DEFAULT_MAX_PAGES) {
-      errors.push(`pagination cap reached at page ${page}; resumeFromPage=${page + 1}`);
-      break;
-    }
+  if (result.rows.length > 0) {
+    console.log(`[fetch-meteora] Fetched ${result.rows.length} pools`);
   }
-
-  if (pools.length > 0) {
-    console.log(`[fetch-meteora] Fetched ${pools.length} pools`);
-  }
-  for (const error of errors) {
+  for (const error of result.errors) {
     console.warn("[fetch-meteora]", error);
   }
 
-  return makeDexApiFetchResult(pools, {
-    ok: successfulPages > 0,
-    degraded: errors.length > 0,
-    errors,
+  return makeDexApiFetchResult(result.rows, {
+    ok: result.successfulPages > 0,
+    degraded: result.errors.length > 0,
+    errors: result.errors,
   });
 }

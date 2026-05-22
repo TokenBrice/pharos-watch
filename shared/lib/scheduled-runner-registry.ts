@@ -1,9 +1,135 @@
-import { CRON_SCHEDULES, type CronScheduleKey } from "./cron-jobs";
+import { CRON_SCHEDULES, type CronScheduleExpression, type CronScheduleKey } from "./cron-jobs";
 
-export const SCHEDULED_RUNNER_KEYS_BY_SCHEDULE: Readonly<Record<string, CronScheduleKey>> = Object.freeze(
+export type ScheduledRunnerKey = CronScheduleKey;
+export type ScheduledSlotJobChain = readonly string[];
+
+interface ScheduledSlotPlanInput {
+  jobChains: readonly ScheduledSlotJobChain[];
+  budgetOnlyJobs?: readonly string[];
+}
+
+export interface ScheduledSlotPlan extends ScheduledSlotPlanInput {
+  scheduleKey: CronScheduleKey;
+  schedule: CronScheduleExpression;
+  runnerKey: ScheduledRunnerKey;
+}
+
+const SCHEDULED_SLOT_PLAN_INPUTS = {
+  quarterHourly: {
+    jobChains: [[
+      "sync-fx-rates",
+      "sync-stablecoins",
+      "snapshot-supply",
+      "snapshot-chain-supply",
+      "publish-report-card-cache",
+    ]],
+  },
+  statusSelfCheckOffset: {
+    jobChains: [["status-self-check"]],
+  },
+  sixHourlyBlacklist: {
+    jobChains: [["sync-blacklist"]],
+  },
+  halfHourlyMintBurnCritical: {
+    jobChains: [["sync-mint-burn"]],
+  },
+  twoHourlyDexDiscovery: {
+    jobChains: [["sync-dex-discovery"]],
+  },
+  halfHourlyMintBurnExtended: {
+    jobChains: [["sync-mint-burn-extended"]],
+  },
+  halfHourlyOffset: {
+    jobChains: [["sync-dex-liquidity"]],
+  },
+  halfHourlyChartsOffset: {
+    jobChains: [["sync-stablecoin-charts"]],
+  },
+  dewsPsiOffset: {
+    jobChains: [["compute-dews", "stability-index", "project-tape"]],
+  },
+  fourHourlyReserveSync: {
+    jobChains: [["sync-live-reserves", "sync-redemption-backstops", "sync-kinesis-supply"]],
+  },
+  hourlyYieldSync: {
+    jobChains: [["sync-yield-data"]],
+  },
+  fourHourlyYieldSupplemental: {
+    jobChains: [["sync-yield-supplemental"]],
+  },
+  fiveMinuteTelegramAlerts: {
+    jobChains: [[
+      "dispatch-telegram-alerts",
+      "telegram-degradation-watchdog",
+      "telegram-disambiguation-cleanup",
+      "telegram-pulse-snapshot",
+    ]],
+    budgetOnlyJobs: ["telegram-registration-reconciliation"],
+  },
+  digestTriggerPoll: {
+    jobChains: [["daily-digest"]],
+    budgetOnlyJobs: ["digest-trigger-poll"],
+  },
+  daily0300Utc: {
+    jobChains: [[
+      "prune-status-probe-runs",
+      "prune-cron-history",
+      "telegram-inactive-cleanup",
+      "telegram-retention-cleanup",
+    ]],
+  },
+  daily0800Utc: {
+    jobChains: [
+      ["snapshot-supply"],
+      ["snapshot-safety-grade-history", "snapshot-psi", "snapshot-public-dataset"],
+      ["fetch-tbill-rate", "sync-usds-status"],
+    ],
+  },
+  daily0805Utc: {
+    jobChains: [
+      ["sync-bluechip"],
+      ["daily-digest", "weekly-recap"],
+    ],
+  },
+  daily0810Utc: {
+    jobChains: [["discovery-scan"]],
+  },
+  monthlyYieldAudit: {
+    jobChains: [["yield-coverage-audit"]],
+  },
+} as const satisfies Record<CronScheduleKey, ScheduledSlotPlanInput>;
+
+export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlotPlan>> = Object.freeze(
   Object.fromEntries(
-    Object.entries(CRON_SCHEDULES).map(([runnerKey, schedule]) => [schedule, runnerKey as CronScheduleKey]),
+    Object.entries(SCHEDULED_SLOT_PLAN_INPUTS).map(([scheduleKey, input]) => {
+      const planInput = input as ScheduledSlotPlanInput;
+      return [
+        scheduleKey,
+        {
+          scheduleKey: scheduleKey as CronScheduleKey,
+          runnerKey: scheduleKey as ScheduledRunnerKey,
+          schedule: CRON_SCHEDULES[scheduleKey as CronScheduleKey],
+          jobChains: planInput.jobChains,
+          budgetOnlyJobs: planInput.budgetOnlyJobs ?? [],
+        },
+      ];
+    }),
+  ) as Record<CronScheduleKey, ScheduledSlotPlan>,
+);
+
+export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, ScheduledSlotPlan>> = Object.freeze(
+  Object.fromEntries(
+    Object.values(SCHEDULED_SLOT_PLANS).map((plan) => [plan.schedule, plan]),
   ),
 );
 
-export type ScheduledRunnerKey = CronScheduleKey;
+export function flattenScheduledSlotPlanJobs(plan: ScheduledSlotPlan): string[] {
+  return plan.jobChains.flatMap((chain) => [...chain]);
+}
+
+export function getScheduledSlotPlanBudgetEntries(plan: ScheduledSlotPlan): string[] {
+  return [
+    ...flattenScheduledSlotPlanJobs(plan),
+    ...(plan.budgetOnlyJobs ?? []),
+  ];
+}

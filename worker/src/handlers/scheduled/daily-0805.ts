@@ -12,52 +12,51 @@ import { generateDailyDigest } from "../../cron/daily-digest";
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+import { runScheduledSlotGroups, type ScheduledSlotGroupDefinition } from "./slot-groups";
 
 const SLOT_LABEL = "daily 08:05 slot";
 
-function buildBluechipGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+function buildDaily0805SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroupDefinition[] {
   return [
     {
-      mode: "serial",
-      label: "sync-bluechip",
-      tasks: [
+      mode: "parallel-serial",
+      label: "daily-0805-chains",
+      chains: [
         {
-          job: "sync-bluechip",
-          run: (signal) => syncBluechip(runtime.db, signal),
-        },
-      ],
-    },
-  ];
-}
-
-function buildDigestChainGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
-    {
-      mode: "serial",
-      label: "digest-chain",
-      tasks: [
-        {
-          job: "daily-digest",
-          run: (signal) =>
-            generateDailyDigest(
-              runtime.db,
-              runtime.env.ANTHROPIC_API_KEY ?? null,
-              buildTwitterCreds(runtime.env),
-              false,
-              buildTelegramCreds(runtime.env),
-              signal,
-            ),
+          label: "sync-bluechip",
+          tasks: [
+            {
+              job: "sync-bluechip",
+              run: (signal) => syncBluechip(runtime.db, signal),
+            },
+          ],
         },
         {
-          job: "weekly-recap",
-          run: (signal) =>
-            generateWeeklyRecap(
-              runtime.db,
-              runtime.env.ANTHROPIC_API_KEY ?? null,
-              buildTelegramCreds(runtime.env),
-              signal,
-            ),
+          label: "digest-chain",
+          tasks: [
+            {
+              job: "daily-digest",
+              run: (signal) =>
+                generateDailyDigest(
+                  runtime.db,
+                  runtime.env.ANTHROPIC_API_KEY ?? null,
+                  buildTwitterCreds(runtime.env),
+                  false,
+                  buildTelegramCreds(runtime.env),
+                  signal,
+                ),
+            },
+            {
+              job: "weekly-recap",
+              run: (signal) =>
+                generateWeeklyRecap(
+                  runtime.db,
+                  runtime.env.ANTHROPIC_API_KEY ?? null,
+                  buildTelegramCreds(runtime.env),
+                  signal,
+                ),
+            },
+          ],
         },
       ],
     },
@@ -65,8 +64,5 @@ function buildDigestChainGroups(runtime: ScheduledRuntimeContext): ScheduledSlot
 }
 
 export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await Promise.all([
-    runScheduledSlotGroups(runtime, SLOT_LABEL, buildBluechipGroups(runtime)),
-    runScheduledSlotGroups(runtime, SLOT_LABEL, buildDigestChainGroups(runtime)),
-  ]);
+  await runScheduledSlotGroups(runtime, SLOT_LABEL, buildDaily0805SlotGroups(runtime));
 }

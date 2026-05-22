@@ -5,6 +5,7 @@ import {
 } from "../../lib/circuit-breaker";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
+import { logSkippedCronRun } from "./preflight-skip";
 
 interface CircuitGatedScheduledJobOptions {
   circuitSource: string;
@@ -25,6 +26,14 @@ export async function runCircuitGatedLeasedScheduledJob(
   const allowed = await shouldAttemptFetch(runtime.db, options.circuitSource);
   if (!allowed) {
     console.warn(options.skipMessage);
+    await logSkippedCronRun(runtime, {
+      job: options.job,
+      reason: "circuit-open",
+      message: options.skipMessage,
+      metadata: {
+        circuitSource: options.circuitSource,
+      },
+    });
     return null;
   }
 
