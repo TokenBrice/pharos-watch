@@ -31,7 +31,7 @@ vi.mock("@/components/status/telegram-bot-stats", () => ({
 
 import { ControlSection } from "@/app/admin/sections/control-section";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
-import { degraded, makeHealthyStatusResponse } from "@/app/admin/__tests__/fixtures/status-response";
+import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 function makeRecommendation(path: string, label: string): StatusActionRecommendation {
   return {

@@ -35,7 +35,7 @@ vi.mock("@/components/status/request-source-attribution-card", () => ({
 }));
 
 import { ReliabilitySection } from "@/app/admin/sections/reliability-section";
-import { degraded, makeHealthyStatusResponse } from "@/app/admin/__tests__/fixtures/status-response";
+import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const HEALTHY_HEALTH: HealthResponse = {
   status: "healthy",

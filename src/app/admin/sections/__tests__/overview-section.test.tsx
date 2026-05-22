@@ -21,7 +21,7 @@ vi.mock("@/components/status/system-diagnostics", () => ({
 
 import { OverviewSection } from "@/app/admin/sections/overview-section";
 import { getStatusTone, type DashboardQuerySync } from "@/lib/status-dashboard-model";
-import { degraded, makeHealthyStatusResponse } from "@/app/admin/__tests__/fixtures/status-response";
+import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 function makeQuerySyncs(): DashboardQuerySync[] {
   return [

@@ -13,7 +13,7 @@ vi.mock("@/components/status/cron-card", () => ({
 }));
 
 import { CronsSection, type CronGroup } from "@/app/admin/sections/crons-section";
-import { degraded, makeHealthyStatusResponse } from "@/app/admin/__tests__/fixtures/status-response";
+import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 function makeCronStatus(overrides: Partial<StatusResponse["crons"][string]> = {}): StatusResponse["crons"][string] {
   return {
