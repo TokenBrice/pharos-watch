@@ -25,7 +25,7 @@ Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/dige
 
 ### Masthead tagline
 
-The `SiteHeader` tagline reads `Chart your route through the stablecoin market — depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals for every tracked coin.` It is exposed from `md` upward (not `lg+`-only as before), with `line-clamp-2` at `md`–`lg` widths and `line-clamp-none` at `lg+`. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
+The `SiteHeader` tagline reads `Every tracked stablecoin: backing, freeze risk, liquidity, and peg stress.` It is exposed from `md` upward (not `lg+`-only as before) as a single `whitespace-nowrap` line — there is no line-clamp. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
 
 ### Hero signals rail (stablecoin detail)
 
@@ -456,7 +456,7 @@ When adding a new freshness stamp:
 - Toolbar becomes a vertical stack on mobile instead of a cramped inline row
 - `Columns` and `Export CSV` keep large tap targets on mobile; density and range controls also stay pill-based instead of collapsing into tiny tabs
 - Density controls now include a true `List` mode for ticker-first scanning; in that mode the stablecoin table suppresses the expanded coin name and keeps only the ticker lockup
-- Table keeps a deliberate horizontal-scroll affordance via helper copy and `min-w-[820px]`
+- Table keeps a deliberate horizontal-scroll affordance via helper copy and `min-w-[420px] xl:min-w-[820px]` (compact 420px floor below `xl`, 820px from `xl`); the mobile/desktop column boundary is `xl` (1280px)
 - Bottom spacing is preserved so the mobile utility dock never sits on the last visible rows
 
 ### Sortable Head Pattern
