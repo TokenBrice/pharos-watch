@@ -59,16 +59,17 @@ jobs:
           path: out
       - name: Deploy Pages with retry
         run: |
-          for attempt in 1 2 3; do
-            echo "[deploy-pages] Attempt ${attempt}/3"
+          max_attempts=6
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "[deploy-pages] Attempt ${attempt}/${max_attempts}"
             if npx --no-install wrangler pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
               exit 0
             fi
-            if [ "$attempt" -eq 3 ]; then
+            if [ "$attempt" -eq "$max_attempts" ]; then
               echo "[deploy-pages] Exhausted retries"
               exit 1
             fi
-            sleep $((attempt * 15))
+            sleep $((attempt * 45))
           done
 
   smoke-ui-live:
