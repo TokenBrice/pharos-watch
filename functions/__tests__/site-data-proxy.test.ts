@@ -1,49 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import { makeTestD1Database } from "../../scripts/test-utils/d1";
 import { onRequest } from "../_site-data/[[path]].ts";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
 
-interface TestD1Database extends D1Database {
-  getHistory(): Array<{ sql: string; binds: unknown[] }>;
-}
-
-function makeTestDb(): TestD1Database {
-  const history: Array<{ sql: string; binds: unknown[] }> = [];
-
-  function buildStatement(sql: string, binds: unknown[] = []): D1PreparedStatement {
-    return {
-      bind: (...nextBinds: unknown[]) => buildStatement(sql, nextBinds),
-      run: async () => {
-        history.push({ sql, binds: [...binds] });
-        return { success: true, meta: { changes: sql.includes("DELETE") ? 0 : 1 } };
-      },
-      first: async () => {
-        history.push({ sql, binds: [...binds] });
-        return null;
-      },
-      all: async () => {
-        history.push({ sql, binds: [...binds] });
-        return { results: [], success: true, meta: {} };
-      },
-    } as D1PreparedStatement;
-  }
-
-  return {
-    prepare: (sql: string) => buildStatement(sql),
-    batch: async (statements: D1PreparedStatement[]) => {
-      const results: unknown[] = [];
-      for (const statement of statements) {
-        results.push(await statement.run());
-      }
-      return results as Awaited<ReturnType<D1Database["batch"]>>;
-    },
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-    getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
-  } as unknown as TestD1Database;
-}
-
-function makeEnv(db = makeTestDb(), overrides: Record<string, unknown> = {}) {
+function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> = {}) {
   return {
     DB: db,
     SITE_ORIGIN: "https://pharos.watch",
@@ -162,7 +122,7 @@ describe("site-data proxy", () => {
     );
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
 
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
@@ -234,7 +194,7 @@ describe("site-data proxy", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
 
     const response = await onRequest({
       request: new Request("https://ops.pharos.watch/_site-data/stablecoin-summary/usdt-tether", {
@@ -324,7 +284,7 @@ describe("site-data proxy", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
     const ctx = makeWaitUntil();
 
     const response = await onRequest({
@@ -367,7 +327,7 @@ describe("site-data proxy", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
 
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
@@ -504,7 +464,7 @@ describe("site-data proxy", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
 
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/public-status-history", {
@@ -545,7 +505,7 @@ describe("site-data proxy", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
 
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/telegram-pulse", {
@@ -585,7 +545,7 @@ describe("site-data proxy", () => {
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
       }),
-      env: makeEnv(makeTestDb(), { SITE_API_ORIGIN: undefined }),
+      env: makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: undefined }),
       params: { path: "stablecoins" },
     });
 
@@ -603,7 +563,7 @@ describe("site-data proxy", () => {
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
       }),
-      env: makeEnv(makeTestDb(), { SITE_API_ORIGIN: "not a url" }),
+      env: makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: "not a url" }),
       params: { path: "stablecoins" },
     });
 
@@ -619,7 +579,7 @@ describe("site-data proxy", () => {
       throw new Error("network down");
     });
     vi.stubGlobal("fetch", fetchSpy);
-    const db = makeTestDb();
+    const db = makeTestD1Database();
 
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
@@ -661,7 +621,7 @@ describe("site-data proxy", () => {
       request: new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
       }),
-      env: makeEnv(makeTestDb(), { SITE_API_SHARED_SECRET: " " }),
+      env: makeEnv(makeTestD1Database(), { SITE_API_SHARED_SECRET: " " }),
       params: { path: "stablecoins" },
     });
 

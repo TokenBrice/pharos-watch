@@ -11,9 +11,9 @@ describe("parseDestructiveOperationMode", () => {
   });
 
   it("requires execute and script confirmation for live mode", () => {
-    expect(() =>
-      parseDestructiveOperationMode({ argv: ["--execute"], scriptName: "repair" }),
-    ).toThrow("live mutation requires --execute --confirm repair");
+    expect(() => parseDestructiveOperationMode({ argv: ["--execute"], scriptName: "repair" })).toThrow(
+      "live mutation requires --execute --confirm repair",
+    );
 
     expect(
       parseDestructiveOperationMode({
@@ -25,6 +25,52 @@ describe("parseDestructiveOperationMode", () => {
       remote: false,
       targetFlag: "--local",
     });
+  });
+
+  it("supports compatibility execute aliases without skipping confirmation", () => {
+    expect(() =>
+      parseDestructiveOperationMode({
+        argv: ["--apply"],
+        executeAliases: ["--apply"],
+        scriptName: "repair",
+      }),
+    ).toThrow("live mutation requires --execute (or --apply) --confirm repair");
+
+    expect(
+      parseDestructiveOperationMode({
+        argv: ["--apply", "--confirm", "repair"],
+        executeAliases: ["--apply"],
+        scriptName: "repair",
+      }),
+    ).toEqual({
+      dryRun: false,
+      remote: false,
+      targetFlag: "--local",
+    });
+  });
+
+  it("supports remote-only operations with remote as the default target", () => {
+    expect(
+      parseDestructiveOperationMode({
+        argv: [],
+        defaultTarget: "--remote",
+        localAllowed: false,
+        scriptName: "repair",
+      }),
+    ).toEqual({
+      dryRun: true,
+      remote: true,
+      targetFlag: "--remote",
+    });
+
+    expect(() =>
+      parseDestructiveOperationMode({
+        argv: ["--local"],
+        defaultTarget: "--remote",
+        localAllowed: false,
+        scriptName: "repair",
+      }),
+    ).toThrow("--local is not supported");
   });
 
   it("allows explicit remote targeting without changing dry-run default", () => {
@@ -43,8 +89,8 @@ describe("parseDestructiveOperationMode", () => {
       }),
     ).toThrow("--execute and --dry-run are mutually exclusive");
 
-    expect(() =>
-      parseDestructiveOperationMode({ argv: ["--local", "--remote"], scriptName: "repair" }),
-    ).toThrow("--local and --remote are mutually exclusive");
+    expect(() => parseDestructiveOperationMode({ argv: ["--local", "--remote"], scriptName: "repair" })).toThrow(
+      "--local and --remote are mutually exclusive",
+    );
   });
 });

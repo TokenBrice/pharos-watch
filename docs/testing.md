@@ -59,7 +59,7 @@ npm run audit:pricing-providers # Verify pricing provider configs are consistent
 npm run coverage:critical:update-baseline # Update the critical-coverage baseline snapshot
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
-npm run test:critical-contracts # Critical endpoint contract suite
+npm run test:critical-contracts # Targeted critical endpoint contract runner
 npm run test:invariants # Critical numerical/schema invariant suite
 npm run test:noncritical # Deploy/merge-gate Vitest lane excluding tests owned by coverage:critical
 npm run coverage:critical # Critical-suite coverage run + critical-path line-coverage gate
@@ -100,7 +100,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
    - runs `npm run typecheck:worker` only when `worker_changed=true`
    - runs `npm run build` + `npm run check:feature-flag-inlining` + `npm run seo:check` + Safe Browsing classifier guardrails (`check:phishing-signatures`, `check:classifier-sensitive-copy`) and built-artifact budget/drift checks in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
-   - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow performs the Pages data sync, build, SEO, build-size/build-attribution guards, local artifact smoke, publish, and live smokes in the production `pages-release` job so it avoids a second runner setup and artifact transfer
+   - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow calls the reusable `pages-release` workflow in `direct_publish` mode for Pages data sync, build, SEO, build-size/build-attribution guards, local artifact smoke, publish, and live smokes so it avoids a second runner setup and artifact transfer
 3. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, and `pages_ui_changed`
@@ -111,7 +111,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Skips the heavy deploy workflow entirely when neither Pages nor worker deploy surfaces changed
    - Forces the full path on `workflow_dispatch`
 4. `upload-worker-version` (needs `detect-changes`):
-   - Uses `setup-workspace` with `install-deps: "false"` and installs only production dependencies for the root + `worker` workspace before upload packaging
+   - Uses `setup-workspace` with `install-deps: "false"` and installs only production dependencies for the root + `worker` workspace before upload packaging; this non-mutating prep lane intentionally uses pinned registry-fetched Wrangler for speed, while the later mutating deploy lane uses the lockfile-installed CLI
    - Capture the currently live production Worker version ID with `wrangler deployments status --json`
    - Upload a candidate Worker version with `wrangler versions upload` before validation completes; this is non-mutating preparation for the promotion lane and keeps preview URL smoke available before production traffic shifts
    - Skipped on Pages-only, validation-only, or non-deploy `push` events where `worker_promotion_required=false`
@@ -125,7 +125,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - On worker-only deploys, runs live public UI, ops, and transport smokes in parallel inside the same job
    - Skipped on Pages-only, validation-only, or non-deploy `push` events
 6. `pages-release`:
-   - production deploy job in `.github/workflows/deploy-cloudflare.yml`
+   - production deploy job in `.github/workflows/deploy-cloudflare.yml` that calls `.github/workflows/pages-release.yml` with `direct_publish=true`
    - runs only when `pages_changed=true`
    - starts as soon as Pages changes are detected, in parallel with Worker candidate upload/promotion work when both surfaces changed
    - fetches `/api/digest-archive` into `data/digests.json`, fetches confirmed depeg events into `data/depeg-events.json`, regenerates public dataset mirrors from the selected API environment, forwards `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_PHAROS_*` repo variables into `npm run build`, clears the public-dataset fetch env for the build prehook so it preserves the synced mirrors instead of re-fetching, builds with `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so local static-export smoke uses the production `/_site-data/*` browser lane, then runs `npm run check:feature-flag-inlining`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size` (including the Cloudflare Pages 20,000-file cap), and `npm run check:build-attribution`
@@ -358,6 +358,10 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 
 ## Test Infrastructure
 
+### Frontend Test Setup Helpers (`src/test-utils/frontend.ts`)
+
+Frontend jsdom tests should use `installMatchMediaMock()`, `cleanupFrontendTest()`, `resetBrowserStorage()`, and `createNextLinkMock()` from `src/test-utils/frontend.ts` instead of hand-rolling `matchMedia`, browser-storage cleanup, or `next/link` mocks. Keep test-local mocks only when the test needs behavior that differs from the shared helper.
+
 ### Mock D1 (`worker/src/test-helpers/__shared/mock-d1.ts`)
 
 Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.
@@ -379,6 +383,8 @@ const db = mockD1([
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
 - `mockD1(tables, { strict: true })` — shorthand for `requireMatch` + exact normalized SQL matching
 - `db.assertAllMatchesUsed()` — optional assertion that every configured match was exercised during the test
+
+Cross-runtime tests outside `worker/src` should use `scripts/test-utils/d1.ts` for minimal D1 and RemoteD1 mocks. `makeTestD1Database()` covers Pages Functions that need `prepare()`, `batch()`, and `getHistory()`, while `createRemoteD1Mock()` covers worker maintenance scripts that accept a `RemoteD1Client` dependency.
 
 ### Mock Fetch (`worker/src/test-helpers/__shared/mock-fetch.ts`)
 
@@ -483,11 +489,11 @@ Keep this section focused on how the suite is organized and which surfaces are g
 
 Critical gate coverage is intentionally smaller than the full suite:
 
-- `npm run test:critical-contracts` covers strict endpoint registry, router mapping, cache passthrough, and high-impact API handlers.
 - `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
 - `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`.
+- `npm run test:critical-contracts` is a targeted local runner for strict endpoint registry, router mapping, cache passthrough, and high-impact API handler checks. It is not a separate validate/merge-gate lane; those gates rely on `coverage:critical` plus the four-shard `test:noncritical` complement.
 
-Lane ownership is script-owned, not prose-owned. Put critical test membership, including `test:critical-contracts`, in `scripts/lib/critical-test-files.mjs`; put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; and keep `test:noncritical` as the complement generated from that critical coverage test list. Do not duplicate either file list in this document; use the scripts when you need the live membership.
+Lane ownership is script-owned, not prose-owned. Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep `test:noncritical` as the complement generated from that critical coverage test list; and keep targeted contract-runner membership in `scripts/lib/critical-test-files.mjs`. Do not duplicate either file list in this document; use the scripts when you need the live membership.
 
 When adding tests, prefer colocating them near the module under test unless an existing `__tests__/` directory is already the local pattern. If the new test protects a production gate, add it to the relevant npm script rather than only documenting it here.
 
@@ -567,7 +573,7 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 
 ### Critical Test Suites
 
-- `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites owned by `scripts/lib/critical-test-files.mjs`; keep the npm script as a runner only instead of duplicating suite membership in prose or `package.json`.
+- `npm run test:critical-contracts` is a targeted local runner for the explicitly enumerated contract suites owned by `scripts/lib/critical-test-files.mjs`; keep the npm script as a runner only instead of duplicating suite membership in prose or `package.json`.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It skips cleanly when no deploy surfaces changed, runs the shared validate core for deploy-impacting diffs, always adds the common postbuild `test:noncritical` (four shards locally to match CI) and `coverage:critical` phase for deploy-impacting diffs, adds `build` + `check:feature-flag-inlining` + `seo:check` + `check:phishing-signatures` + `check:classifier-sensitive-copy` plus Pages built-artifact guardrails for Pages-impacting changes, and adds Worker runtime typecheck for worker-impacting changes. It also runs an advisory `scripts/ci/check-node-modules-fresh.mjs` first; that check is fatal only when `node_modules/` is missing entirely. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, `MERGE_GATE_PARALLEL=1` (opt into the parallel post-validate matrix; default is serial to avoid local CPU contention; CI always runs the matrix via separate runners), `MERGE_GATE_PAGES_SMOKE=0` (skip the default Pages serve smoke after build; desktop/local `smoke-ui` otherwise runs with deploy-aligned canary routes/worker count and strict mobile smoke only runs for UI-surface diffs with deploy-aligned canary defaults), `MERGE_GATE_WORKER_SMOKE=1` (opt-in wrangler dev + smoke-api, ~1-2 min; defaults to canary API scope unless `SMOKE_API_SCOPE` is explicitly set), `MERGE_GATE_NO_FETCH=1` (skip the best-effort `git fetch origin main` that keeps the diff base honest), and `MERGE_GATE_NATIVE_ENV=1` (skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection).
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus either every strict contract path (`SMOKE_API_SCOPE=full`, default) mirrored from `shared/lib/api-endpoints/` or a deploy canary subset (`SMOKE_API_SCOPE=canary`). Strict contract drift is guarded by `src/lib/__tests__/api-endpoints.test.ts`, with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.

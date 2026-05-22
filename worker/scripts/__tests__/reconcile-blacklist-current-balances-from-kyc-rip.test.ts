@@ -3,27 +3,13 @@ import {
   parseCurrentBalanceArgs,
   runCurrentBalanceReconciliation,
 } from "../reconcile-blacklist-current-balances-from-kyc-rip";
-import { sqlString, type RemoteD1Client } from "../lib/remote-d1";
+import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
+import { sqlString } from "../lib/remote-d1";
 
-type D1Mock = RemoteD1Client & {
-  queryMock: ReturnType<typeof vi.fn>;
-  executeStatementsMock: ReturnType<typeof vi.fn>;
-};
+const SCRIPT_NAME = "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts";
 
 function okPayload(data: unknown[]): Response {
   return new Response(JSON.stringify({ data }), { status: 200 });
-}
-
-function createD1Mock(): D1Mock {
-  const queryMock = vi.fn(() => [{ count: 3 }]);
-  const executeStatementsMock = vi.fn();
-  return {
-    query: queryMock as RemoteD1Client["query"],
-    queryRaw: vi.fn() as RemoteD1Client["queryRaw"],
-    executeStatements: executeStatementsMock as RemoteD1Client["executeStatements"],
-    queryMock,
-    executeStatementsMock,
-  };
 }
 
 const currentRows = [
@@ -50,13 +36,17 @@ describe("current-balance kyc.rip reconciliation", () => {
       timeoutMs: 15_000,
       minRows: 100,
     });
-    expect(parseCurrentBalanceArgs(["--apply", "--timeout-ms", "1000", "--min-rows", "2"]).apply).toBe(true);
+    expect(
+      parseCurrentBalanceArgs(["--execute", "--confirm", SCRIPT_NAME, "--timeout-ms", "1000", "--min-rows", "2"]).apply,
+    ).toBe(true);
+    expect(parseCurrentBalanceArgs(["--apply", "--confirm", SCRIPT_NAME]).apply).toBe(true);
+    expect(() => parseCurrentBalanceArgs(["--apply"])).toThrow(/live mutation requires/);
     expect(() => parseCurrentBalanceArgs(["--bogus"])).toThrow(/Unknown argument/);
   });
 
   it("does not query or execute D1 in dry-run mode", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(currentRows));
-    const d1 = createD1Mock();
+    const d1 = createRemoteD1Mock([{ count: 3 }]);
 
     const summary = await runCurrentBalanceReconciliation(
       { apply: false, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
@@ -71,7 +61,7 @@ describe("current-balance kyc.rip reconciliation", () => {
 
   it("executes one guarded replacement file in apply mode", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(currentRows));
-    const d1 = createD1Mock();
+    const d1 = createRemoteD1Mock([{ count: 3 }]);
 
     const summary = await runCurrentBalanceReconciliation(
       { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
@@ -91,7 +81,7 @@ describe("current-balance kyc.rip reconciliation", () => {
 
   it("blocks destructive replacement when normalized rows are below the minimum", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload([currentRows[0]]));
-    const d1 = createD1Mock();
+    const d1 = createRemoteD1Mock([{ count: 3 }]);
 
     await expect(
       runCurrentBalanceReconciliation(

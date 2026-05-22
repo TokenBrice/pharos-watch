@@ -13,7 +13,10 @@ import {
 import {
   GENERATED_ARTIFACT_REGISTRY,
   buildGeneratedArtifactCommands,
+  deriveWorkerRuntimePackageClosure,
+  findDuplicateDeployImpactExactPaths,
   getNoncriticalTestGeneratedPrerequisites,
+  DEPLOY_IMPACT_REGISTRY,
 } from "../lib/automation-registry.mjs";
 import {
   buildCriticalCoverageArgs,
@@ -137,7 +140,9 @@ describe("validate-ci parity", () => {
     );
 
     expect(extractJobBlock(workflow, "validate-prebuild", "pages-build")).toContain("node-version: 24.x");
-    expect(workflow).toContain("runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}");
+    expect(workflow).toContain(
+      "runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
+    );
     expect(setupWorkspaceAction).toContain('default: "24"');
     expect(workflow).not.toContain("node-version: 25");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
@@ -150,7 +155,9 @@ describe("validate-ci parity", () => {
 
     expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/maintenance/run-validate-prebuild.mjs");
     expect(packageJson.scripts.prebuild).toBe("node scripts/maintenance/run-generated-artifacts.mjs");
-    expect(packageJson.scripts["check:generated-artifacts"]).toBe("node scripts/maintenance/run-generated-artifacts.mjs --check");
+    expect(packageJson.scripts["check:generated-artifacts"]).toBe(
+      "node scripts/maintenance/run-generated-artifacts.mjs --check",
+    );
     expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/maintenance/run-noncritical-tests.mjs");
     expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/maintenance/run-critical-coverage.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
@@ -289,6 +296,34 @@ describe("validate-ci parity", () => {
     ]);
   });
 
+  it("documents test:critical-contracts as a targeted runner instead of a separate CI lane", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const scriptsDoc = readFileSync(resolve(process.cwd(), "docs/scripts.md"), "utf8");
+    const testingDoc = readFileSync(resolve(process.cwd(), "docs/testing.md"), "utf8");
+    const ciCriticalSection = scriptsDoc.slice(
+      scriptsDoc.indexOf("## CI-Critical Scripts"),
+      scriptsDoc.indexOf("## Operational Notes"),
+    );
+
+    expect(workflow).not.toContain("npm run test:critical-contracts");
+    expect(buildCiValidateStepPlan().map((entry) => entry.cmd)).not.toContain("npm run test:critical-contracts");
+    expect(ciCriticalSection).not.toContain("run-critical-contracts.mjs");
+    expect(testingDoc).toContain("`npm run test:critical-contracts` is a targeted local runner");
+  });
+
+  it("keeps deploy-impact exact path registries duplicate-free", () => {
+    expect(findDuplicateDeployImpactExactPaths()).toEqual([]);
+  });
+
+  it("derives the Worker root runtime package set from the lockfile", () => {
+    const packageLock = JSON.parse(readFileSync(resolve(process.cwd(), "package-lock.json"), "utf8"));
+
+    expect(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages).toEqual(deriveWorkerRuntimePackageClosure(packageLock));
+    expect(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages).toEqual(
+      expect.arrayContaining(["@cf-wasm/resvg", "react", "satori", "viem", "zod"]),
+    );
+  });
+
   it("requires all non-critical Vitest shards in the reusable validate workflow", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
@@ -348,6 +383,7 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
     expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
     expect(uploadWorkerJob).toContain('install-deps: "false"');
+    expect(uploadWorkerJob).toContain("Upload prep is intentionally optimized");
     expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 deployments status --json");
     expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 versions upload");
 
@@ -369,30 +405,48 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("needs:");
     expect(pagesReleaseJob).toContain("- detect-changes");
     expect(pagesReleaseJob).not.toContain("- upload-worker-version");
-    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
-    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
-    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
-    expect(pagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
-    expect(pagesReleaseJob).toContain("Fetch digests from the target API environment");
-    expect(pagesReleaseJob).toContain("Fetch depeg events from the target API environment");
-    expect(pagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
+    expect(pagesReleaseJob).toContain("uses: ./.github/workflows/pages-release.yml");
+    expect(pagesReleaseJob).toContain("direct_publish: true");
+    expect(pagesReleaseJob).toContain(
+      "pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}",
+    );
+    expect(pagesReleaseJob).toContain("wait_for_validate_job: true");
+    expect(pagesReleaseJob).toContain(
+      "wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}",
+    );
+    expect(pagesReleaseJob).not.toContain("Fetch digests from the target API environment");
     expect(pagesReleaseJob).not.toContain("needs.upload-worker-version.outputs.preview_url");
-    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
-    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
-    expect(pagesReleaseJob).toContain("Start local export smoke server");
-    expect(pagesReleaseJob).toContain("Run local pre-publish checks in parallel");
-    expect(pagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ needs.detect-changes.outputs.pages_ui_changed }}");
-    expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
-    expect(pagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
-    expect(pagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
-    expect(pagesReleaseJob).toContain("Wait for validation gate");
-    expect(pagesReleaseJob).toContain("Deploy Pages with retry");
-    expect(pagesReleaseJob).toContain("Capture Pages release metrics");
-    expect(pagesReleaseJob).toContain("Run post-publish smokes in parallel");
-    expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
-    expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
-    expect(pagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
-    expectTextInOrder(pagesReleaseJob, [
+
+    const pagesReleaseWorkflow = readFileSync(resolve(process.cwd(), ".github/workflows/pages-release.yml"), "utf8");
+    const directPagesReleaseJob = extractJobBlock(pagesReleaseWorkflow, "pages-release-direct");
+    expect(pagesReleaseWorkflow).toContain("direct_publish:");
+    expect(directPagesReleaseJob).toContain("if: ${{ inputs.direct_publish }}");
+    expect(directPagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
+    expect(directPagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
+    expect(directPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(directPagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
+    expect(directPagesReleaseJob).toContain("Fetch digests from the target API environment");
+    expect(directPagesReleaseJob).toContain("Fetch depeg events from the target API environment");
+    expect(directPagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
+    expect(directPagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
+    expect(directPagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
+    expect(directPagesReleaseJob).toContain("Start local export smoke server");
+    expect(directPagesReleaseJob).toContain("Run local pre-publish checks in parallel");
+    expect(directPagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}");
+    expect(directPagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
+    expect(directPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
+    expect(directPagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
+    expect(directPagesReleaseJob).toContain("Wait for validation gate");
+    expect(directPagesReleaseJob).toContain("if: ${{ inputs.wait_for_validate_job }}");
+    expect(directPagesReleaseJob).toContain("Wait for worker promotion gate");
+    expect(directPagesReleaseJob).toContain("if: ${{ inputs.wait_for_worker_promotion }}");
+    expect(directPagesReleaseJob).toContain("Deploy Pages with retry");
+    expect(directPagesReleaseJob).toContain("Capture Pages release metrics");
+    expect(directPagesReleaseJob).toContain("Run post-publish smokes in parallel");
+    expect(directPagesReleaseJob).toContain("--mode live --skip-overflow");
+    expect(directPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
+    expect(directPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
+    expectTextInOrder(directPagesReleaseJob, [
       "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
       "npm run generate:public-datasets",
@@ -407,7 +461,7 @@ describe("validate-ci parity", () => {
       "Run local pre-publish checks in parallel",
       "npm run seo:check",
     ]);
-    expect(pagesReleaseJob).not.toContain("npm run check:methodology-pdfs");
+    expect(directPagesReleaseJob).not.toContain("npm run check:methodology-pdfs");
 
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");
@@ -461,5 +515,4 @@ describe("validate-ci parity", () => {
 
     expect(Object.keys(baseline.files)).toEqual(CRITICAL_FILES);
   });
-
 });

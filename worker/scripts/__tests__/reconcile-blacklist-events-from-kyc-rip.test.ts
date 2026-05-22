@@ -1,32 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-events-from-kyc-rip";
-import type { RemoteD1Client } from "../lib/remote-d1";
+import { createRemoteD1Mock } from "../../../scripts/test-utils/d1";
 
-type D1Mock = RemoteD1Client & {
-  queryMock: ReturnType<typeof vi.fn>;
-  executeStatementsMock: ReturnType<typeof vi.fn>;
-};
+const SCRIPT_NAME = "worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts";
 
 function okPayload(data: unknown[]): Response {
   return new Response(JSON.stringify({ data }), { status: 200 });
-}
-
-function createD1Mock(): D1Mock {
-  const queryMock = vi.fn(() => [
-    {
-      stablecoin: "USDT",
-      chain_id: "ethereum",
-      address: "0x0000000000000000000000000000000000000001",
-    },
-  ]);
-  const executeStatementsMock = vi.fn();
-  return {
-    query: queryMock as RemoteD1Client["query"],
-    queryRaw: vi.fn() as RemoteD1Client["queryRaw"],
-    executeStatements: executeStatementsMock as RemoteD1Client["executeStatements"],
-    queryMock,
-    executeStatementsMock,
-  };
 }
 
 const eventRows = [
@@ -47,13 +26,21 @@ describe("event kyc.rip reconciliation", () => {
       timeoutMs: 15_000,
       minRows: 100,
     });
-    expect(parseEventArgs(["--apply"]).apply).toBe(true);
+    expect(parseEventArgs(["--execute", "--confirm", SCRIPT_NAME]).apply).toBe(true);
+    expect(parseEventArgs(["--apply", "--confirm", SCRIPT_NAME]).apply).toBe(true);
+    expect(() => parseEventArgs(["--apply"])).toThrow(/live mutation requires/);
     expect(parseEventArgs(["--remote"]).remote).toBe(true);
   });
 
   it("does not query or execute D1 in dry-run mode", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
-    const d1 = createD1Mock();
+    const d1 = createRemoteD1Mock([
+      {
+        stablecoin: "USDT",
+        chain_id: "ethereum",
+        address: "0x0000000000000000000000000000000000000001",
+      },
+    ]);
 
     const summary = await runEventReconciliation(
       { apply: false, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },
@@ -69,7 +56,13 @@ describe("event kyc.rip reconciliation", () => {
 
   it("queries D1 in apply mode and skips inserts for already-known addresses", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload(eventRows));
-    const d1 = createD1Mock();
+    const d1 = createRemoteD1Mock([
+      {
+        stablecoin: "USDT",
+        chain_id: "ethereum",
+        address: "0x0000000000000000000000000000000000000001",
+      },
+    ]);
 
     const summary = await runEventReconciliation(
       { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 1 },

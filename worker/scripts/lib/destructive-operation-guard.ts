@@ -6,6 +6,9 @@ export interface DestructiveOperationMode {
 
 interface DestructiveOperationOptions {
   argv: string[];
+  defaultTarget?: "--local" | "--remote";
+  executeAliases?: string[];
+  localAllowed?: boolean;
   scriptName: string;
 }
 
@@ -25,12 +28,17 @@ function readValue(argv: string[], flag: string): string | null {
 
 export function parseDestructiveOperationMode({
   argv,
+  defaultTarget = "--local",
+  executeAliases = [],
+  localAllowed = true,
   scriptName,
 }: DestructiveOperationOptions): DestructiveOperationMode {
-  const execute = hasFlag(argv, "--execute");
+  const executeFlags = ["--execute", ...executeAliases];
+  const execute = executeFlags.some((flag) => hasFlag(argv, flag));
   const explicitDryRun = hasFlag(argv, "--dry-run");
   const local = hasFlag(argv, "--local");
-  const remote = hasFlag(argv, "--remote");
+  const explicitRemote = hasFlag(argv, "--remote");
+  const remote = explicitRemote || (!local && defaultTarget === "--remote");
 
   if (execute && explicitDryRun) {
     throw new Error(`Refusing ${scriptName}: --execute and --dry-run are mutually exclusive`);
@@ -38,11 +46,15 @@ export function parseDestructiveOperationMode({
   if (local && remote) {
     throw new Error(`Refusing ${scriptName}: --local and --remote are mutually exclusive`);
   }
+  if (local && !localAllowed) {
+    throw new Error(`Refusing ${scriptName}: --local is not supported for this operation`);
+  }
 
   if (execute) {
     const confirmation = readValue(argv, "--confirm");
     if (confirmation !== scriptName) {
-      throw new Error(`Refusing ${scriptName}: live mutation requires --execute --confirm ${scriptName}`);
+      const executeUsage = executeAliases.length > 0 ? `--execute (or ${executeAliases.join(" / ")})` : "--execute";
+      throw new Error(`Refusing ${scriptName}: live mutation requires ${executeUsage} --confirm ${scriptName}`);
     }
   }
 

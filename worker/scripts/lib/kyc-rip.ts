@@ -1,3 +1,5 @@
+import { parseDestructiveOperationMode } from "./destructive-operation-guard";
+
 const DEFAULT_PROVIDER_URL = "https://api.kyc.rip/v1/tools/ban-list";
 const DEFAULT_LIMIT = 1000;
 const DEFAULT_MAX_MALFORMED_ROWS = 10;
@@ -85,10 +87,13 @@ function parsePositiveInteger(value: string, flag: string): number {
 function printKycRipCliHelp(help: KycRipCliHelpOptions): void {
   console.log(`Usage: tsx ${help.scriptName} [options]
 
-Default mode is dry-run. Remote D1 writes require --apply.
+Default mode is dry-run. Remote D1 writes require --execute --confirm ${help.scriptName}.
 
 Options:
-  --apply                ${help.applyDescription}
+  --execute              ${help.applyDescription}
+  --apply                Compatibility alias for --execute; still requires --confirm
+  --confirm <script>     Required for live mutation; value must be ${help.scriptName}
+  --dry-run              Force dry-run mode
   --remote               Target remote D1 (default and only supported D1 target)
   --timeout-ms <ms>      kyc.rip request timeout (default: ${KYC_RIP_DEFAULT_TIMEOUT_MS})
   --min-rows <count>     ${help.minRowsDescription} (default: ${KYC_RIP_DEFAULT_MIN_ROWS})
@@ -98,8 +103,20 @@ Options:
 }
 
 export function parseKycRipCliArgs(argv: string[], help: KycRipCliHelpOptions): KycRipCliOptions {
+  if (argv.includes("--help")) {
+    printKycRipCliHelp(help);
+    process.exit(0);
+  }
+
+  const mode = parseDestructiveOperationMode({
+    argv,
+    defaultTarget: "--remote",
+    executeAliases: ["--apply"],
+    localAllowed: false,
+    scriptName: help.scriptName,
+  });
   const options: KycRipCliOptions = {
-    apply: false,
+    apply: !mode.dryRun,
     remote: true,
     database: KYC_RIP_DEFAULT_DATABASE,
     timeoutMs: KYC_RIP_DEFAULT_TIMEOUT_MS,
@@ -108,15 +125,20 @@ export function parseKycRipCliArgs(argv: string[], help: KycRipCliHelpOptions): 
 
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
-    if (arg === "--help") {
-      printKycRipCliHelp(help);
-      process.exit(0);
-    }
-    if (arg === "--apply") {
-      options.apply = true;
+    if (
+      arg === "--apply" ||
+      arg === "--execute" ||
+      arg === "--dry-run" ||
+      arg === "--remote" ||
+      arg === "--local" ||
+      arg.startsWith("--confirm=")
+    ) {
       continue;
     }
-    if (arg === "--remote") {
+    if (arg === "--confirm") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
+      index++;
       continue;
     }
     if (arg === "--timeout-ms" || arg === "--min-rows" || arg === "--database" || arg === "--provider-url") {
@@ -174,7 +196,7 @@ async function fetchJsonWithTimeout(fetchImpl: typeof fetch, url: string, timeou
     if (!response.ok) {
       throw new Error(`kyc.rip returned HTTP ${response.status}`);
     }
-    return await response.json() as unknown;
+    return (await response.json()) as unknown;
   } finally {
     clearTimeout(timeout);
   }
@@ -202,13 +224,20 @@ async function fetchJsonWithRetry(
 
 function isSupportedPair(mode: KycRipValidationMode, asset: KycRipAsset, chain: KycRipChain): boolean {
   if (mode === "events") return chain === "ETH" && (asset === "USDT" || asset === "USDC");
-  return (asset === "USDT" && chain === "ETH") || (asset === "USDC" && chain === "ETH") || (asset === "USDT" && chain === "TRON");
+  return (
+    (asset === "USDT" && chain === "ETH") ||
+    (asset === "USDC" && chain === "ETH") ||
+    (asset === "USDT" && chain === "TRON")
+  );
 }
 
 function validateRow(
   raw: unknown,
   mode: KycRipValidationMode,
-): { type: "accepted"; row: KycRipCurrentBalanceRow | KycRipEventRow } | { type: "skipped" } | { type: "malformed"; reason: string } {
+):
+  | { type: "accepted"; row: KycRipCurrentBalanceRow | KycRipEventRow }
+  | { type: "skipped" }
+  | { type: "malformed"; reason: string } {
   if (!isRecord(raw)) {
     return { type: "malformed", reason: "row is not an object" };
   }
@@ -285,7 +314,9 @@ export async function fetchKycRipRows<T extends KycRipCurrentBalanceRow | KycRip
     }
 
     if (stats.malformedRows > maxMalformedRows) {
-      throw new Error(`kyc.rip payload had ${stats.malformedRows} malformed rows; maximum allowed is ${maxMalformedRows}`);
+      throw new Error(
+        `kyc.rip payload had ${stats.malformedRows} malformed rows; maximum allowed is ${maxMalformedRows}`,
+      );
     }
 
     if (batch.length < DEFAULT_LIMIT) break;

@@ -1,64 +1,127 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 
-function readArg(name, fallback = null) {
-  const index = process.argv.indexOf(name);
+const TERMINAL_FAILURE_STATUSES = new Set(["failure", "cancelled", "timed_out", "action_required", "skipped"]);
+
+export function readArg(argv, name, fallback = null) {
+  const index = argv.indexOf(name);
   if (index === -1) return fallback;
-  return process.argv[index + 1] ?? fallback;
+  return argv[index + 1] ?? fallback;
 }
 
-const jobName = readArg("--job");
-const attempts = Number(readArg("--attempts", "120"));
-const sleepSec = Number(readArg("--sleep-sec", "5"));
-const stopMessage = readArg("--stop-message", `${jobName} did not succeed; stopping.`);
-const timeoutMessage = readArg("--timeout-message", `Timed out waiting for ${jobName} to finish.`);
-
-if (!jobName || !Number.isInteger(attempts) || attempts <= 0 || !Number.isFinite(sleepSec) || sleepSec < 0) {
-  console.error("Usage: wait-for-workflow-job.mjs --job <name> [--attempts N] [--sleep-sec N]");
-  process.exit(2);
+function normalizeApiUrl(apiUrl) {
+  return apiUrl.replace(/\/+$/g, "");
 }
 
-function readJobStatus() {
-  const result = spawnSync(
-    "gh",
-    ["run", "view", process.env.GITHUB_RUN_ID ?? "", "--repo", process.env.GITHUB_REPOSITORY ?? "", "--json", "jobs"],
-    {
-      encoding: "utf8",
-    },
-  );
-
-  if (result.status !== 0) {
-    return { status: null, stderr: result.stderr };
+export async function fetchWorkflowJobs({
+  apiUrl = "https://api.github.com",
+  fetchImpl = fetch,
+  repository,
+  runId,
+  token,
+} = {}) {
+  if (!repository || !runId || !token) {
+    throw new Error("GITHUB_REPOSITORY, GITHUB_RUN_ID, and GITHUB_TOKEN/GH_TOKEN are required");
   }
 
-  const parsed = JSON.parse(result.stdout);
-  const job = parsed.jobs?.find((candidate) => candidate.name === jobName);
-  return { status: job ? (job.conclusion ?? job.status ?? null) : null, stderr: result.stderr };
+  const jobs = [];
+  for (let page = 1; page <= 10; page += 1) {
+    const url = `${normalizeApiUrl(apiUrl)}/repos/${repository}/actions/runs/${runId}/jobs?per_page=100&page=${page}`;
+    const response = await fetchImpl(url, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`GitHub jobs API returned HTTP ${response.status}${body ? `: ${body}` : ""}`);
+    }
+
+    const payload = await response.json();
+    if (!Array.isArray(payload.jobs)) {
+      throw new Error("GitHub jobs API response did not include a jobs array");
+    }
+
+    jobs.push(...payload.jobs);
+    if (jobs.length >= (payload.total_count ?? jobs.length) || payload.jobs.length === 0) {
+      break;
+    }
+  }
+  return jobs;
 }
 
-let lastStderr = "";
-for (let attempt = 1; attempt <= attempts; attempt += 1) {
-  const { status, stderr } = readJobStatus();
-  lastStderr = stderr || lastStderr;
+export async function readJobStatus({ env = process.env, fetchImpl = fetch, jobName }) {
+  try {
+    const jobs = await fetchWorkflowJobs({
+      apiUrl: env.GITHUB_API_URL ?? "https://api.github.com",
+      fetchImpl,
+      repository: env.GITHUB_REPOSITORY,
+      runId: env.GITHUB_RUN_ID,
+      token: env.GITHUB_TOKEN ?? env.GH_TOKEN,
+    });
+    const job = jobs.find((candidate) => candidate.name === jobName);
+    return { status: job ? (job.conclusion ?? job.status ?? null) : null, error: "" };
+  } catch (error) {
+    return { status: null, error: error instanceof Error ? error.message : String(error) };
+  }
+}
 
-  if (status === "success") {
-    process.exit(0);
+export async function waitForWorkflowJob({
+  attempts = 120,
+  env = process.env,
+  fetchImpl = fetch,
+  jobName,
+  sleepImpl = sleep,
+  sleepSec = 5,
+  stopMessage = `${jobName} did not succeed; stopping.`,
+  timeoutMessage = `Timed out waiting for ${jobName} to finish.`,
+} = {}) {
+  if (!jobName || !Number.isInteger(attempts) || attempts <= 0 || !Number.isFinite(sleepSec) || sleepSec < 0) {
+    throw new Error("Usage: wait-for-workflow-job.mjs --job <name> [--attempts N] [--sleep-sec N]");
   }
 
-  if (["failure", "cancelled", "timed_out", "action_required", "skipped"].includes(status)) {
-    console.error(`${jobName} result was ${status}; ${stopMessage}`);
+  let lastError = "";
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const { status, error } = await readJobStatus({ env, fetchImpl, jobName });
+    lastError = error || lastError;
+
+    if (status === "success") {
+      return;
+    }
+
+    if (TERMINAL_FAILURE_STATUSES.has(status)) {
+      throw new Error(`${jobName} result was ${status}; ${stopMessage}`);
+    }
+
+    if (attempt < attempts && sleepSec > 0) {
+      await sleepImpl(sleepSec * 1000);
+    }
+  }
+
+  throw new Error(lastError ? `${timeoutMessage}\n${lastError}` : timeoutMessage);
+}
+
+export async function runCli(argv = process.argv.slice(2), env = process.env) {
+  const jobName = readArg(argv, "--job");
+  await waitForWorkflowJob({
+    attempts: Number(readArg(argv, "--attempts", "120")),
+    env,
+    jobName,
+    sleepSec: Number(readArg(argv, "--sleep-sec", "5")),
+    stopMessage: readArg(argv, "--stop-message", `${jobName} did not succeed; stopping.`),
+    timeoutMessage: readArg(argv, "--timeout-message", `Timed out waiting for ${jobName} to finish.`),
+  });
+}
+
+const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCliEntrypoint) {
+  runCli().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
-  }
-
-  if (attempt < attempts && sleepSec > 0) {
-    await sleep(sleepSec * 1000);
-  }
+  });
 }
-
-if (lastStderr) {
-  console.error(lastStderr);
-}
-console.error(timeoutMessage);
-process.exit(1);

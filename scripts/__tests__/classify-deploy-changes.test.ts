@@ -146,6 +146,7 @@ describe("hasDeployImpact", () => {
     const deploySupportFiles = [
       "scripts/lib/deploy-impact.mjs",
       "scripts/lib/validate-contract.mjs",
+      ".github/scripts/wait-for-workflow-job.mjs",
       ".github/actions/setup-workspace/action.yml",
       "scripts/ci/check-cron-abort-contract.mjs",
       "scripts/ci/check-cron-connection-budget.ts",

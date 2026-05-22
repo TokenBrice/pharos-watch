@@ -151,6 +151,10 @@ const EXPORT_ALLOWLIST = new Set([
   // Consumed by scripts/ci/check-cron-connection-budget.ts (out-of-scan-scope).
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET",
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET_ENTRIES",
+  // Consumed by scripts/ci/check-cron-schedule-sync.ts (out-of-scan-scope).
+  "shared/lib/scheduled-runner-registry.ts::SCHEDULED_SLOT_PLANS",
+  "shared/lib/scheduled-runner-registry.ts::flattenScheduledSlotPlanJobs",
+  "shared/lib/scheduled-runner-registry.ts::getScheduledSlotPlanBudgetEntries",
   "src/lib/coverage.ts::resolveSafetyCoverage",
   "src/lib/coverage.ts::resolveYieldCoverage",
   "src/lib/coverage.ts::resolveBlacklistCoverage",

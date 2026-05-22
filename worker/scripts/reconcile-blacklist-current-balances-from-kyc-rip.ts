@@ -8,11 +8,7 @@ import {
   type KycRipCurrentBalanceRow,
   type KycRipValidationStats,
 } from "./lib/kyc-rip";
-import {
-  createRemoteD1Client,
-  sqlString,
-  type RemoteD1Client,
-} from "./lib/remote-d1";
+import { createRemoteD1Client, sqlString, type RemoteD1Client } from "./lib/remote-d1";
 
 type SnapshotRow = {
   id: string;
@@ -106,8 +102,9 @@ function buildReplacementStatements(rows: SnapshotRow[], observedAt: number): st
       last_attempted_at INTEGER NOT NULL,
       last_error_class TEXT
     );`,
-    ...rows.map((row) =>
-      `INSERT INTO kyc_rip_current_balance_stage (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
+    ...rows.map(
+      (row) =>
+        `INSERT INTO kyc_rip_current_balance_stage (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
        VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chainId)}, ${sqlString(row.address)}, ${row.amountUsd}, ${row.amountUsd}, 'kyc_rip_bootstrap', 'resolved', ${observedAt}, 1, ${observedAt}, NULL);`,
     ),
     "DELETE FROM blacklist_current_balances WHERE (stablecoin = 'USDT' AND chain_id = 'ethereum') OR (stablecoin = 'USDC' AND chain_id = 'ethereum') OR (stablecoin = 'USDT' AND chain_id = 'tron');",
@@ -159,7 +156,10 @@ function buildSummary(
     malformedExamples: stats.malformedExamples,
     affectedAssetsChains: summarizeByScope(snapshots),
     targetRowsToDelete: existingTargetRows,
-    targetRowsToDeleteNote: existingTargetRows == null ? "not queried in dry-run; all target-scope rows are replaced only with --apply" : undefined,
+    targetRowsToDeleteNote:
+      existingTargetRows == null
+        ? "not queried in dry-run; all target-scope rows are replaced only in live mode"
+        : undefined,
     rowsToInsert: snapshots.length,
   };
 }

@@ -19,7 +19,8 @@ import {
 } from "../lib/validate-contract.mjs";
 
 const ZERO_SHA = /^0+$/;
-const LOCAL_PAGES_CANARY_ROUTES = "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
+const LOCAL_PAGES_CANARY_ROUTES =
+  "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
 const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES;
 const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 
@@ -153,9 +154,7 @@ export function getChangedFiles({
 }
 
 export function getCommandEnv(cmd, changedFiles, env = process.env) {
-  const baseEnv = env.MERGE_GATE_NATIVE_ENV === "1"
-    ? {}
-    : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
+  const baseEnv = env.MERGE_GATE_NATIVE_ENV === "1" ? {} : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
 
   if (cmd === "npm run build") {
     return {
@@ -263,7 +262,7 @@ export async function runExecutionBatches(
   { runCommandImpl = runShellCommand, exit = process.exit } = {},
 ) {
   // Default to serial execution to avoid local CPU contention from the
-  // 3-shard parallel matrix (which is intended for CI runners with one shard
+  // noncritical test shard matrix (which is intended for CI runners with one shard
   // per machine). Opt back in with MERGE_GATE_PARALLEL=1.
   const parallelMode = env.MERGE_GATE_PARALLEL === "1";
   const batches = parallelMode ? buildExecutionBatches(plan) : plan.map((item) => [createExecutionUnit([item])]);
@@ -305,14 +304,9 @@ export async function runMergeGate({
   const workerSmoke = env.MERGE_GATE_WORKER_SMOKE === "1";
   const skipFetch = env.MERGE_GATE_NO_FETCH === "1";
 
-  const nodeModulesResult = await runCommandImpl(
-    "node scripts/ci/check-node-modules-fresh.mjs",
-    {},
-    {},
-  );
-  const nodeModulesStatus = typeof nodeModulesResult === "number"
-    ? nodeModulesResult
-    : (nodeModulesResult?.status ?? 1);
+  const nodeModulesResult = await runCommandImpl("node scripts/ci/check-node-modules-fresh.mjs", {}, {});
+  const nodeModulesStatus =
+    typeof nodeModulesResult === "number" ? nodeModulesResult : (nodeModulesResult?.status ?? 1);
   if (nodeModulesStatus !== 0) {
     console.error("[merge-gate] FAILED: node_modules drift check is fatal (node_modules/ missing).");
     process.exit(nodeModulesStatus);
