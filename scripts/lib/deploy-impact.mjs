@@ -10,6 +10,7 @@ const PAGES_ONLY_INFRA_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.workflowOnly
 const PAGES_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.pages.exactPaths);
 const WORKER_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.exactPaths);
 const WORKER_PROMOTION_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.exactPaths);
+const WORKER_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPaths ?? []);
 const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPaths);
 const WORKER_ROOT_RUNTIME_PACKAGES = new Set(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages);
 const PAGES_UI_EXACT_PATHS = new Set([
@@ -29,6 +30,8 @@ const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefix
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
 const WORKER_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.prefixes;
 const WORKER_PROMOTION_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerPromotion.prefixes;
+const WORKER_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.worker.sharedExcludedPrefixes ?? [];
+const WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES = DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPrefixes ?? [];
 
 function isTestPath(file) {
   return /(^|\/)__tests__\/.*\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
@@ -38,6 +41,14 @@ function isTestPath(file) {
 function isWorkerPromotionSharedPath(file) {
   return file.startsWith("shared/")
     && !WORKER_PROMOTION_SHARED_EXCLUDED_PATHS.has(file)
+    && !WORKER_PROMOTION_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix))
+    && !isTestPath(file);
+}
+
+function isWorkerSharedDeployPath(file) {
+  return file.startsWith("shared/")
+    && !WORKER_SHARED_EXCLUDED_PATHS.has(file)
+    && !WORKER_SHARED_EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix))
     && !isTestPath(file);
 }
 
@@ -108,7 +119,8 @@ export function hasWorkerDeployImpact(files) {
     || FULL_DEPLOY_GUARDRAIL_EXACT_PATHS.has(file)
     || WORKER_CHANGE_EXACT_PATHS.has(file)
     || FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix))
-    || WORKER_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
+    || WORKER_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix))
+    || isWorkerSharedDeployPath(file),
   );
 }
 

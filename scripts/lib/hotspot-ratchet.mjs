@@ -61,6 +61,7 @@ const HOTSPOT_WAIVER_DISPOSITIONS = new Set(["queued-p4", "deferred"]);
 const HOTSPOT_CANDIDATE_TOP_N = 12;
 const HOTSPOT_FILELINE_MIN_FUNCTION_LINES = 40;
 const HOTSPOT_FILELINE_MIN_BRANCH_COUNT = 8;
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalizeRelPath(relPath) {
   return relPath.replaceAll("\\", "/");
@@ -306,9 +307,32 @@ export function validateHotspotWaiverMetadata(waivers, candidateFiles) {
     if (typeof waiver.notes !== "string" || waiver.notes.trim().length === 0) {
       errors.push(`${file}: missing waiver notes`);
     }
+    if (typeof waiver.owner !== "string" || waiver.owner.trim().length === 0) {
+      errors.push(`${file}: missing waiver owner`);
+    }
+    if (!isValidDateOnly(waiver.createdAt)) {
+      errors.push(`${file}: missing or invalid waiver createdAt`);
+    }
+    if (!isValidDateOnly(waiver.reviewAfter)) {
+      errors.push(`${file}: missing or invalid waiver reviewAfter`);
+    }
+    if (isValidDateOnly(waiver.createdAt) && isValidDateOnly(waiver.reviewAfter) && waiver.reviewAfter < waiver.createdAt) {
+      errors.push(`${file}: waiver reviewAfter must be on or after createdAt`);
+    }
+    if (typeof waiver.nextAction !== "string" || waiver.nextAction.trim().length === 0) {
+      errors.push(`${file}: missing waiver nextAction`);
+    }
   }
 
   return errors;
+}
+
+function isValidDateOnly(value) {
+  if (typeof value !== "string" || !DATE_ONLY_RE.test(value)) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
 function isFunctionLike(node) {

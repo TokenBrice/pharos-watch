@@ -55,6 +55,14 @@ describe("buildCommandPlan", () => {
     ]);
   });
 
+  it("runs the Pages path only for known Pages-only shared helpers", () => {
+    expect(buildCommandPlan(["shared/lib/public-docs.ts"]).map((item) => item.cmd)).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...PAGES_VALIDATE_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+    ]);
+  });
+
   it("can force the full deploy validate path when the push base is unavailable", () => {
     expect(buildFullCommandPlan().map((item) => item.cmd)).toEqual([
       ...COMMON_VALIDATE_PREBUILD_COMMANDS,

@@ -2,6 +2,189 @@
   "version": 1,
   "status": "advisory",
   "purpose": "Map source areas to documentation that agents should consider when behavior changes. This manifest is a navigation aid; existing CI checks and human review remain authoritative.",
+  "baseDocs": [
+    "docs/agent-task-router.md",
+    "docs/architecture.md",
+    "docs/testing.md"
+  ],
+  "coreRules": [
+    "Prefer the smallest root-cause fix; avoid unrelated refactors.",
+    "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.",
+    "Do not add manual/on-chain/CMC/DEX supply overrides; primary supply remains DefiLlama with the existing fallback path.",
+    "Keep Tailwind classes as static strings.",
+    "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."
+  ],
+  "taskFamilies": [
+    {
+      "id": "stablecoin-registry",
+      "label": "Stablecoin metadata or registry",
+      "risk": "high",
+      "docsToRead": ["docs/stablecoin-data.md", "docs/classification.md", "docs/shadow-stablecoins.md", "shared/data/stablecoins/AGENTS.md"],
+      "docsLikelyRequired": ["docs/about-page.md", "docs/classification.md", "feature methodology docs when behavior changes"],
+      "checks": ["npm run check:stablecoin-data", "vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
+      "hardRules": ["Keep canonical order, generated data, and schemas aligned.", "Do not add manual supply overrides."],
+      "prefixes": ["shared/data/stablecoins/", "shared/lib/stablecoins/"],
+      "exactPaths": ["shared/lib/stablecoin-id-registry.ts", "shared/lib/classification.ts"]
+    },
+    {
+      "id": "pricing-pipeline",
+      "label": "Pricing pipeline or source roster",
+      "risk": "high",
+      "docsToRead": ["docs/pricing-pipeline.md", "docs/data-pipeline.md", "docs/pricing-pipeline-timeline.md"],
+      "docsLikelyRequired": ["docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/data-pipeline.md", "docs/about-page.md when adding a data source"],
+      "checks": ["npm run audit:pricing-providers", "focused pricing/depeg tests"],
+      "hardRules": ["Consume or cancel failed fetch bodies before opening more Worker fetches.", "Do not multiply DefiLlama list-endpoint supply by price."],
+      "prefixes": ["worker/src/cron/sync-stablecoins/", "worker/src/lib/price", "worker/src/lib/address-price-providers/"],
+      "exactPaths": ["shared/lib/pricing-provider-config.ts", "worker/src/lib/authoritative-price-sources.ts", "worker/src/lib/price-consensus.ts", "worker/src/lib/price-validation.ts"]
+    },
+    {
+      "id": "api-endpoint",
+      "label": "Public or admin API endpoint",
+      "risk": "medium",
+      "docsToRead": ["docs/api-endpoint-authoring.md", "docs/api-reference.md", "docs/worker-infrastructure.md"],
+      "docsLikelyRequired": ["docs/api-reference.md", "route/page contract doc", "docs/data-flow-map.md when pipeline-facing"],
+      "checks": ["npm run test:critical-contracts when endpoint is critical", "focused handler/router tests"],
+      "hardRules": ["Route flags, auth lane behavior, cache metadata, and site-data allowlists are centralized."],
+      "prefixes": ["shared/lib/api-endpoints/", "worker/src/routes/", "worker/src/api/"],
+      "exactPaths": ["worker/src/router.ts", "src/hooks/api-hooks.ts"]
+    },
+    {
+      "id": "worker-cron",
+      "label": "Worker cron or scheduled pipeline",
+      "risk": "high",
+      "docsToRead": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "docs/data-flow-map.md"],
+      "docsLikelyRequired": ["docs/worker-infrastructure.md", "docs/worker-and-api-limits.md", "feature methodology docs when behavior changes"],
+      "checks": ["npm run check:cron-sync", "npm run check:cron-connections", "focused cron tests"],
+      "hardRules": ["Pick the trigger slot before adding fetch-heavy work.", "Cron jobs share Cloudflare's per-trigger 6-connection pool."],
+      "prefixes": ["worker/src/handlers/scheduled/", "worker/src/cron/"],
+      "exactPaths": ["shared/lib/cron-jobs.ts", "shared/lib/scheduled-runner-registry.ts", "scripts/ci/check-cron-schedule-sync.ts", "scripts/ci/check-cron-connection-budget.ts"]
+    },
+    {
+      "id": "d1-migration",
+      "label": "D1 schema or migration",
+      "risk": "high",
+      "docsToRead": ["docs/deployment-process.md", "docs/worker-infrastructure.md", "worker/migrations/MANIFEST.md"],
+      "docsLikelyRequired": ["docs/worker-infrastructure.md", "docs/api-reference.md when response shape changes"],
+      "checks": ["npm run check:migrations", "focused API/cron tests for affected stores"],
+      "hardRules": ["Migrations must be backward-compatible because CI applies D1 migrations before the new Worker is live.", "Destructive cleanup requires a separate coordinated rollout."],
+      "prefixes": ["worker/migrations/"],
+      "regexes": ["^worker/src/lib/db"]
+    },
+    {
+      "id": "frontend-route",
+      "label": "Frontend page or route behavior",
+      "risk": "medium",
+      "docsToRead": ["route-specific doc from docs/README.md", "docs/architecture.md", "src/AGENTS.md"],
+      "docsLikelyRequired": ["route contract doc", "docs/architecture.md", "docs/design-language.md when UI patterns change"],
+      "checks": ["npm run build", "npm run seo:check for Pages-impacting route work", "relevant component/page tests"],
+      "hardRules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
+      "prefixes": ["src/app/", "src/components/", "src/hooks/", "src/lib/"],
+      "exactPaths": ["src/app/globals.css"]
+    },
+    {
+      "id": "design-ui",
+      "label": "Design or UI polish",
+      "risk": "medium",
+      "docsToRead": ["docs/design-context.md", "docs/design-language.md", "docs/design-tokens.md"],
+      "docsLikelyRequired": ["design docs when deployed token/class/component patterns change"],
+      "checks": ["relevant component/page tests", "browser smoke or screenshot check when layout risk is meaningful"],
+      "hardRules": ["Preserve the existing Pharos design language.", "Do not edit src/components/ui/ shadcn primitives unless explicitly required."],
+      "prefixes": ["src/styles/", "src/components/ui/"],
+      "exactPaths": ["docs/design-context.md", "docs/design-language.md", "docs/design-tokens.md", "src/app/globals.css"]
+    },
+    {
+      "id": "methodology-scoring",
+      "label": "Methodology or scoring change",
+      "risk": "high",
+      "docsToRead": ["docs/methodology-page.md", "specific methodology doc", "matching timeline doc"],
+      "docsLikelyRequired": ["runtime methodology doc", "timeline doc", "src/app/methodology/sections/* when methodology UI changes"],
+      "checks": ["focused scoring tests", "npm run check:doc-sync"],
+      "hardRules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."],
+      "prefixes": ["src/app/methodology/", "src/components/methodology/"],
+      "regexes": ["^docs/.*methodology", "^docs/.*timeline\\.md$", "^shared/lib/.*(score|scoring|dews|report-card|stability-index|liquidity|resilience|peg)", "^worker/src/.*(dews|report-card|stability-index|liquidity|mint-burn|yield|blacklist|reserve)"]
+    },
+    {
+      "id": "pages-functions-host",
+      "label": "Pages Functions or host split",
+      "risk": "medium",
+      "docsToRead": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/operator-origin-access.md", "functions/AGENTS.md"],
+      "docsLikelyRequired": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md"],
+      "checks": ["Pages Functions tests", "npm run test:smoke-transport when host routing changes"],
+      "hardRules": ["Browser reads should use same-origin /_site-data/* unless explicitly exempt."],
+      "prefixes": ["functions/"],
+      "exactPaths": ["shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts"]
+    },
+    {
+      "id": "validation-ci-policy",
+      "label": "Validation, CI, or repo policy",
+      "risk": "medium",
+      "docsToRead": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
+      "docsLikelyRequired": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
+      "checks": ["changed script's focused test", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when deploy classification changes"],
+      "hardRules": ["Keep deploy-surface classification and local merge-gate behavior aligned."],
+      "prefixes": [".github/", ".githooks/", "scripts/"],
+      "exactPaths": ["package.json", "package-lock.json", ".gitignore"]
+    },
+    {
+      "id": "agent-hooks-process",
+      "label": "Agent guidance or Codex hook process",
+      "risk": "medium",
+      "docsToRead": ["AGENTS.md", "CLAUDE.md", "docs/process/agent-artifacts.md", "docs/agent-task-router.md"],
+      "docsLikelyRequired": ["docs/process/agent-artifacts.md for durable process rules", "AGENTS.md and CLAUDE.md together when top-level guidance changes"],
+      "checks": ["npm run check:agent-doc-sync when AGENTS.md or CLAUDE.md changes", "focused hook/script tests"],
+      "hardRules": ["Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync.", "Temporary agent output belongs in ignored scratch locations, not committed docs."],
+      "prefixes": [".codex/", "docs/process/"],
+      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "scripts/ci/pharos-change-contract.mjs"]
+    },
+    {
+      "id": "documentation",
+      "label": "Documentation-only change",
+      "risk": "low",
+      "docsToRead": ["docs/README.md", "docs/doc-ownership.json"],
+      "docsLikelyRequired": ["nearest owning doc only"],
+      "checks": ["npm run check:verified-doc-links", "npm run check:doc-source-paths", "npm run check:doc-sync when methodology or generated doc metadata is affected"],
+      "hardRules": ["Treat docs/ and README.md as the verified documentation corpus."],
+      "prefixes": ["docs/"],
+      "exactPaths": ["README.md"]
+    }
+  ],
+  "promptRoutes": [
+    {
+      "label": "stablecoin addition or metadata",
+      "familyIds": ["stablecoin-registry"],
+      "patterns": ["\\b(add|create|onboard|promote|launch|track)\\b[\\s\\S]{0,80}\\bstablecoin\\b", "\\b(stablecoin|asset)\\b[\\s\\S]{0,80}\\b(contract|gecko|coingecko|reserve|proof of reserves|pre-?launch)\\b"]
+    },
+    {
+      "label": "pricing pipeline or provider",
+      "familyIds": ["pricing-pipeline"],
+      "patterns": ["\\b(pricing|price|depeg|peg price|market cap|supply)\\b[\\s\\S]{0,80}\\b(pipeline|provider|source|fallback|defillama|coingecko|pyth|dia)\\b", "\\b(pricing pipeline|price provider|authoritative price|price consensus)\\b"]
+    },
+    {
+      "label": "D1 schema or migration",
+      "familyIds": ["d1-migration"],
+      "patterns": ["\\b(d1|database|sqlite|sql|migration|schema)\\b", "\\b(table|index)\\b[\\s\\S]{0,80}\\b(database|d1|sql|migration|schema)\\b", "\\b(database|d1|sql|migration|schema)\\b[\\s\\S]{0,80}\\b(table|index)\\b"]
+    },
+    {
+      "label": "Worker cron or scheduled pipeline",
+      "familyIds": ["worker-cron"],
+      "patterns": ["\\b(cron|scheduled|schedule|worker cron|waitUntil|trigger slot|connection pool)\\b", "\\b(sync|backfill|snapshot)\\b[\\s\\S]{0,80}\\b(cron|job|worker|pipeline)\\b"]
+    },
+    {
+      "label": "methodology or scoring",
+      "familyIds": ["methodology-scoring"],
+      "patterns": ["\\b(methodology|score|scoring|pegscore|dews|psi|liquidityscore|stability index|report card|resilience|chain health|mint/?burn|blacklist|yield intelligence)\\b"]
+    },
+    {
+      "label": "frontend design or UI",
+      "familyIds": ["frontend-route", "design-ui"],
+      "patterns": ["\\b(design|ui|ux|layout|component|page|route|responsive|style|visual|animation|frontend)\\b"]
+    },
+    {
+      "label": "API endpoint or route",
+      "familyIds": ["api-endpoint"],
+      "patterns": ["\\b(api|endpoint|route|handler|admin api|public api|response shape|request contract)\\b"]
+    }
+  ],
   "mappings": [
     {
       "name": "stablecoin-metadata",

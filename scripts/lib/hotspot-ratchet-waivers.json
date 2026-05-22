@@ -1,90 +1,186 @@
 {
   "src/components/command-palette.tsx": {
     "disposition": "queued-p4",
-    "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes."
-  },
-  "src/app/compare/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Design Council Wave 4 added the radar cohort-median baseline toggle and the filter-context breadcrumb registration alongside the existing multi-coin selector, range control, and chart orchestration. Split cohort-baseline derivation and selection orchestration into hooks in a follow-up compare cleanup pass."
+    "notes": "Design Council Wave 3/9 wired the verb parser (compare/screen/pin/unpin/tape), the synthetic Run-command row, empty-state verb hints, and the expanded content sections (chains/pegs/mechanisms/recent depegs) into the cmdk shell. Split verb execution and result assembly into focused hooks before adding more palette modes.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/components/stablecoin-table.tsx": {
     "disposition": "queued-p4",
-    "notes": "Design Council Wave 2/9 added the geometry-matched skeleton, View-Transition sort wrapping, the j/k row cursor + numeric-sort listener, and the background RefreshingBar to the virtualized home table. Split the skeleton, cursor, and refresh-indicator concerns out of the table shell in a follow-up power-user-table cleanup."
+    "notes": "Design Council Wave 2/9 added the geometry-matched skeleton, View-Transition sort wrapping, the j/k row cursor + numeric-sort listener, and the background RefreshingBar to the virtualized home table. Split the skeleton, cursor, and refresh-indicator concerns out of the table shell in a follow-up power-user-table cleanup.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
-    "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
+    "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only."
+    "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes."
+    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/app/yield/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass."
+    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "shared/lib/selector/engine.ts": {
     "disposition": "queued-p4",
-    "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests."
+    "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
-    "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
+    "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Reassess after the owning surface stabilizes."
   },
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
-    "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
+    "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "worker/src/api/telegram-webhook.ts": {
     "disposition": "queued-p4",
-    "notes": "Webhook ingress still coordinates transport validation, pending-state dispatch, command routing, and update lifecycle marking. Keep explicitly waived for this remediation branch; the next Telegram decomposition pass should move the pending-owner command clearing branch into a narrower dispatcher helper."
+    "notes": "Webhook ingress still coordinates transport validation, pending-state dispatch, command routing, and update lifecycle marking. Keep explicitly waived for this remediation branch; the next Telegram decomposition pass should move the pending-owner command clearing branch into a narrower dispatcher helper.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
-    "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass."
+    "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
-    "notes": "Phase 2 added the evaluateOffchainConfirmer discriminated union to flatten the 9-level branch tree. Residual height is in the main loop's structural orchestration (primary/native/DEX/CEX/pool collection). Next /simplify pass should extract buildConfirmationPlan and evaluatePromotionDecision."
+    "notes": "Phase 2 added the evaluateOffchainConfirmer discriminated union to flatten the 9-level branch tree. Residual height is in the main loop's structural orchestration (primary/native/DEX/CEX/pool collection). Next /simplify pass should extract buildConfirmationPlan and evaluatePromotionDecision.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
-    "notes": "Amount recovery remains the shared EVM/TRON replay and remediation helper for blacklist gaps, with provider dispatch, event decoding, D1 batch planning, and telemetry in one module. Keep it explicitly queued for a blacklist recovery decomposition pass rather than widening this code-health tranche."
+    "notes": "Amount recovery remains the shared EVM/TRON replay and remediation helper for blacklist gaps, with provider dispatch, event decoding, D1 batch planning, and telemetry in one module. Keep it explicitly queued for a blacklist recovery decomposition pass rather than widening this code-health tranche.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
-    "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass."
+    "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/components/homepage-client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface."
+    "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/app/pharoswatchbot/app/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Phase 4 Wave 3 extracted useTelegramBridge + 5 small components + the unified error formatter (-238 LOC). Remaining height needs the deferred priorities: hoist StatusPanel/WatchlistPanel/CoinCard and carve out useMiniAppMutations. Next Mini App pass."
+    "notes": "Phase 4 Wave 3 extracted useTelegramBridge + 5 small components + the unified error formatter (-238 LOC). Remaining height needs the deferred priorities: hoist StatusPanel/WatchlistPanel/CoinCard and carve out useMiniAppMutations. Next Mini App pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/app/timeline/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Timeline client combines URL filters, pagination, feed hydration, summary-band controls, and tape render plumbing in one shell. A follow-up refactor should split control orchestration from data orchestration before adding another feature tranche."
+    "notes": "Timeline client combines URL filters, pagination, feed hydration, summary-band controls, and tape render plumbing in one shell. A follow-up refactor should split control orchestration from data orchestration before adding another feature tranche.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
-    "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass."
-  },
-  "worker/src/cron/yield-sync/publication.ts": {
-    "disposition": "queued-p4",
-    "notes": "Yield publication now owns source arbitration output shaping, decision evidence persistence, atomic publication metadata, and alternative-source projection for v8 decision ledgers. Keep waived for this rollout; split decision persistence and ranking row projection into narrower modules in the next yield-sync cleanup."
+    "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/components/key-info-card.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass."
+    "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/app/sitemap.ts": {
     "disposition": "deferred",
-    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern."
+    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Reassess after the owning surface stabilizes."
+  },
+  "worker/src/api/backfill-supply-history.ts": {
+    "disposition": "queued-p4",
+    "notes": "Backfill supply history combines request validation, historical source selection, D1 repair planning, and mutation orchestration in one admin handler. Keep explicitly waived until a focused supply-history admin cleanup can split validation/source planning from write execution.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/components/peg-deviation-chart.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Peg deviation chart owns chart domain shaping, annotations, tooltip branches, and responsive rendering in one visualization module. Split data shaping from chart rendering in the next chart-component cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+  },
+  "src/components/yield-history-chart.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Yield history chart carries source-aware history normalization, warning states, tooltip details, and chart rendering together. Split history projection and chart presentation after the current yield UI work stabilizes.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-22",
+    "reviewAfter": "2026-08-22",
+    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   }
 }

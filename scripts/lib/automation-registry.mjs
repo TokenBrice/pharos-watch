@@ -308,7 +308,16 @@ export const DEPLOY_IMPACT_REGISTRY = {
   },
   worker: {
     exactPaths: uniqueSorted([...getValidationCommandDeployImpactPaths("worker"), ...WORKER_EXTRA_EXACT_PATHS]),
-    prefixes: ["shared/", "worker/"],
+    prefixes: ["worker/"],
+    sharedExcludedPaths: [
+      "shared/lib/pharosville-api-contract.ts",
+      "shared/lib/public-docs.ts",
+      "shared/types/pharosville.ts",
+    ],
+    sharedExcludedPrefixes: [
+      "shared/data/funding/",
+      "shared/lib/selector/",
+    ],
   },
   workerPromotion: {
     exactPaths: ["worker/package.json", "worker/tsconfig.json", "worker/wrangler.toml"],
@@ -317,6 +326,10 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "shared/lib/pharosville-api-contract.ts",
       "shared/lib/public-docs.ts",
       "shared/types/pharosville.ts",
+    ],
+    sharedExcludedPrefixes: [
+      "shared/data/funding/",
+      "shared/lib/selector/",
     ],
   },
   workerRootRuntimePackages: deriveWorkerRuntimePackageClosure(),
@@ -329,6 +342,7 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
     ["pages", registry.pages.exactPaths],
     ["pages.workflowOnlyExactPaths", registry.pages.workflowOnlyExactPaths],
     ["worker", registry.worker.exactPaths],
+    ["worker.sharedExcludedPaths", registry.worker.sharedExcludedPaths],
     ["workerPromotion", registry.workerPromotion.exactPaths],
     ["workerPromotion.sharedExcludedPaths", registry.workerPromotion.sharedExcludedPaths],
   ];

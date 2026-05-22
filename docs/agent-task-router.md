@@ -2,6 +2,8 @@
 
 Primary pre-edit routing guide for agents to identify the smallest useful context set before editing. This complements, but does not replace, the verified docs index in [README.md](./README.md).
 
+The machine-readable source of truth for task-family routing and change ownership is [doc-ownership.json](./doc-ownership.json). Keep this page as the human quick-reference view; scripts such as `scripts/ci/pharos-change-contract.mjs` consume the registry directly.
+
 Use this order:
 
 1. Match the user request to the closest task family below.

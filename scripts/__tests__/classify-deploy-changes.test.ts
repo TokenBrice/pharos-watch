@@ -31,6 +31,22 @@ describe("hasWorkerDeployImpact", () => {
     expect(hasWorkerDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
     expect(hasWorkerDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
   });
+
+  it("does not run worker checks for known Pages-only shared helpers", () => {
+    const pagesOnlySharedFiles = [
+      "shared/lib/public-docs.ts",
+      "shared/lib/pharosville-api-contract.ts",
+      "shared/types/pharosville.ts",
+      "shared/lib/selector/engine.ts",
+      "shared/data/funding/donations.json",
+    ];
+
+    for (const file of pagesOnlySharedFiles) {
+      expect(hasWorkerDeployImpact([file]), file).toBe(false);
+      expect(hasWorkerPromotionImpact([file]), file).toBe(false);
+      expect(hasPagesDeployImpact([file]), file).toBe(true);
+    }
+  });
 });
 
 describe("hasPagesDeployImpact", () => {
@@ -99,6 +115,8 @@ describe("hasWorkerPromotionImpact", () => {
     expect(hasWorkerPromotionImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/pharosville-api-contract.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/types/pharosville.ts"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["shared/lib/selector/engine.ts"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["shared/data/funding/donations.json"])).toBe(false);
   });
 });
 
