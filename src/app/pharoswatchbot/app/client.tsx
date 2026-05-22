@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, ExternalLink, Info, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { ExternalLink, Info, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
@@ -109,57 +109,35 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
     <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
       <h2 className="text-sm font-semibold text-foreground">Quiet hours</h2>
       <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
-      <div className="mt-4 space-y-4">
-        <fieldset>
-          <legend className="pharos-kicker">Start (UTC)</legend>
-          <div className="mt-2 grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Quiet hours start hour">
-            {hours.map((hour) => {
-              const selected = hour === draftStart;
-              return (
-                <button
-                  key={`start-${hour}`}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  aria-label={`Start at ${formatHour(hour)} UTC`}
-                  disabled={!canMutate || isMutating}
-                  onClick={() => setDraftStart(hour)}
-                  className={cn(
-                    "pharos-focus-ring min-h-11 rounded-md border px-1 py-1.5 text-[12px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    selected ? "border-sky-500/35 bg-sky-500/10 text-sky-800 dark:text-sky-200" : "border-border/55 bg-background/55 text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  {formatHour(hour)}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend className="pharos-kicker">End (UTC)</legend>
-          <div className="mt-2 grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Quiet hours end hour">
-            {hours.map((hour) => {
-              const selected = hour === draftEnd;
-              return (
-                <button
-                  key={`end-${hour}`}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  aria-label={`End at ${formatHour(hour)} UTC`}
-                  disabled={!canMutate || isMutating}
-                  onClick={() => setDraftEnd(hour)}
-                  className={cn(
-                    "pharos-focus-ring min-h-11 rounded-md border px-1 py-1.5 text-[12px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    selected ? "border-sky-500/35 bg-sky-500/10 text-sky-800 dark:text-sky-200" : "border-border/55 bg-background/55 text-muted-foreground hover:bg-muted/40",
-                  )}
-                >
-                  {formatHour(hour)}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor="mini-quiet-start" className="pharos-kicker">Start (UTC)</label>
+          <select
+            id="mini-quiet-start"
+            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            value={draftStart}
+            disabled={!canMutate || isMutating}
+            onChange={(event) => setDraftStart(Number(event.target.value))}
+          >
+            {hours.map((hour) => (
+              <option key={`start-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="mini-quiet-end" className="pharos-kicker">End (UTC)</label>
+          <select
+            id="mini-quiet-end"
+            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            value={draftEnd}
+            disabled={!canMutate || isMutating}
+            onChange={(event) => setDraftEnd(Number(event.target.value))}
+          >
+            {hours.map((hour) => (
+              <option key={`end-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <MiniButton
@@ -283,10 +261,10 @@ function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGloba
     <div className="space-y-4">
       <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden="true" />
+          <SlidersHorizontal className="h-4 w-4 text-[color:var(--mini-accent)]" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-foreground">Global alerts</h2>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2" role="group" aria-label="Global alert types">
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Global alert types">
           {(Object.keys(ALERT_LABELS) as TelegramAlertType[]).map((type) => (
             <TogglePill
               key={type}
@@ -303,7 +281,7 @@ function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGloba
               <h3 className="text-sm font-semibold text-foreground">Depeg step</h3>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Applies to all-stablecoin depeg alerts.</p>
             </div>
-            <span className="shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+            <span className="pharos-numeric shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
               {currentDepegStep == null ? "Any" : `${currentDepegStep} bps`}
             </span>
           </div>
@@ -320,7 +298,7 @@ function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGloba
                   onClick={() => onMutate({ kind: "set-global-depeg-step", depegStepBps: option.value })}
                   className={cn(
                     "pharos-focus-ring min-h-12 rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    selected ? "border-sky-500/35 bg-sky-500/10 text-sky-800 dark:text-sky-200" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
+                    selected ? "mini-selected" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
                   )}
                 >
                   <span className="block text-sm font-semibold">{option.label}</span>
@@ -380,7 +358,7 @@ function CoinInsightPanel({ state, target, webApp, onClose }: {
   const alertSummary = subscription ? formatAlertList(subscription.alertTypes) : "Not in your explicit watchlist";
 
   return (
-    <section className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-4">
+    <section className="rounded-2xl border border-[color:var(--mini-accent-border)] bg-[color:var(--mini-accent-fill)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="pharos-kicker">In-app {target.kind}</p>
@@ -471,7 +449,7 @@ function FollowedPresetCard({ preset, canMutate, isMutating, onMutate, onUnfollo
           Unfollow
         </MiniButton>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label={`${preset.label} alert types`}>
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={`${preset.label} alert types`}>
         {PRESET_ALERT_TYPES.map((type) => (
           <TogglePill
             key={type}
@@ -518,7 +496,7 @@ function AvailablePresetCard({ preset, canMutate, isMutating, onMutate }: {
       {picking ? (
         <div className="mt-3 space-y-3">
           <p className="text-xs text-muted-foreground">Choose alert families to follow.</p>
-          <div className="grid grid-cols-3 gap-2" role="group" aria-label={`${preset.label} alert types`}>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={`${preset.label} alert types`}>
             {PRESET_ALERT_TYPES.map((type) => (
               <TogglePill
                 key={type}
@@ -824,43 +802,23 @@ export function PharosWatchBotMiniAppClient() {
   };
 
   return (
-    <section className="min-h-[max(var(--telegram-viewport-height,100svh),100svh)] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
-      <div className="mx-auto flex max-w-2xl flex-col px-3 pt-[calc(env(safe-area-inset-top)+var(--telegram-safe-area-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
-        <header className="rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="pharos-kicker">Telegram Mini App</p>
-              <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground">{heading}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Manage stablecoin alerts without sending commands.</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                aria-label="Refresh session"
-                disabled={!initData || status === "loading" || isMutating}
-                onClick={triggerRefresh}
-                className="pharos-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border/65 bg-background/60 text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <RefreshCw className={cn("h-4 w-4", status === "loading" && "animate-spin")} aria-hidden="true" />
-              </button>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-                <Bell className="h-5 w-5" aria-hidden="true" />
-              </span>
-            </div>
-          </div>
-          {startParam ? <p className="mt-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground">Launch intent: <span className="font-mono tabular-nums text-foreground">{startParam}</span></p> : null}
-        </header>
-
-        <span className="sr-only" aria-live="polite">{announcement}</span>
-
-        {status === "loading" && !optimisticState ? <HomeSkeleton /> : null}
-        {status === "loading" && optimisticState ? <p className="sr-only" aria-live="polite">Refreshing settings</p> : null}
-        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData)}>Retry</MiniButton></div></section> : null}
-        {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
-
-        {optimisticState ? (
-          <>
-            <nav className="my-4 grid grid-cols-4 gap-1 rounded-xl border border-border/65 bg-background/60 p-1" role="tablist" aria-label="Mini App sections">
+    <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
+      <div className="mx-auto flex max-w-2xl flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
+        <div className="sticky top-0 z-20 -mx-3 border-b border-border/60 bg-[var(--telegram-bg,var(--background))] px-3 pb-3 pt-[calc(env(safe-area-inset-top)+var(--telegram-safe-area-top,0px)+0.5rem)] sm:-mx-4 sm:px-4">
+          <header className="flex items-center justify-between gap-3 pb-2">
+            <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight text-foreground">{heading}</h1>
+            <button
+              type="button"
+              aria-label="Refresh session"
+              disabled={!initData || status === "loading" || isMutating}
+              onClick={triggerRefresh}
+              className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/65 bg-background/60 text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-4 w-4", status === "loading" && "animate-spin")} aria-hidden="true" />
+            </button>
+          </header>
+          {optimisticState ? (
+            <nav className="grid grid-cols-4 gap-1 rounded-xl border border-border/65 bg-background/60 p-1" role="tablist" aria-label="Mini App sections">
               {ORDERED_VIEWS.map((key) => (
                 <button
                   key={key}
@@ -884,6 +842,20 @@ export function PharosWatchBotMiniAppClient() {
                 </button>
               ))}
             </nav>
+          ) : null}
+        </div>
+        {startParam ? <p className="mt-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground">Launch intent: <span className="pharos-numeric text-foreground">{startParam}</span></p> : null}
+
+        <span className="sr-only" aria-live="polite">{announcement}</span>
+
+        {status === "loading" && !optimisticState ? <HomeSkeleton /> : null}
+        {status === "loading" && optimisticState ? <p className="sr-only" aria-live="polite">Refreshing settings</p> : null}
+        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData)}>Retry</MiniButton></div></section> : null}
+        {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
+
+        {optimisticState ? (
+          <>
+            <div className="mt-4">
             {view === "home" ? (
               <section role="tabpanel" id="pharos-mini-app-panel-home" aria-labelledby="pharos-mini-app-tab-home">
                 <StatusPanel
@@ -950,6 +922,7 @@ export function PharosWatchBotMiniAppClient() {
                 />
               </section>
             ) : null}
+            </div>
 
             <p className="pharos-meta mt-6 text-center">
               Pharos stores your Telegram user ID and chat ID to deliver alerts.
