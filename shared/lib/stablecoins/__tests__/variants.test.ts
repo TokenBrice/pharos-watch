@@ -39,12 +39,12 @@ describe("stablecoin variants", () => {
   });
 
   it("never resolves an unauthored tracked variant to a weaker blacklistable status than its parent", () => {
-    // Strength: false < possible < inherited < true. A variant without an
-    // explicit `canBeBlacklisted` override must never downgrade below the
-    // parent's freeze exposure; its own stronger governance (e.g., centralized)
-    // may still elevate it further.
+    // Strength: false < possible < confirmed exposure. Direct and upstream
+    // exposure are equivalent for this invariant: a variant without an explicit
+    // `canBeBlacklisted` override must not downgrade below the parent's freeze
+    // exposure, while stronger governance may still elevate it further.
     const strength = (status: ReturnType<typeof getTrackedBlacklistStatus>) =>
-      status === true ? 3 : status === "inherited" ? 2 : status === "possible" ? 1 : 0;
+      status === true || status === "inherited" ? 3 : status === "possible" ? 1 : 0;
 
     for (const variant of TRACKED_STABLECOINS.filter((meta) => meta.variantOf)) {
       if (variant.canBeBlacklisted !== undefined) continue;

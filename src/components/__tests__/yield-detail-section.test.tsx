@@ -73,9 +73,9 @@ vi.mock("@/components/methodology-hint", () => ({
 
 function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
   return {
-    id: "dola-inverse-finance",
-    symbol: "DOLA",
-    name: "Dola",
+    id: "usdn-smardex",
+    symbol: "USDN",
+    name: "SmarDex USDN",
     currentApy: 0.053,
     apy7d: 0.051,
     apy30d: 0.05,
@@ -155,7 +155,7 @@ describe("YieldDetailSection", () => {
       isLoading: true,
     });
 
-    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByRole("heading", { name: "Yield Intelligence" })).toBeTruthy();
     expect(container.querySelectorAll("[data-slot='skeleton']").length).toBeGreaterThanOrEqual(6);
@@ -169,7 +169,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(
       screen.getByText("Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."),
@@ -185,7 +185,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
@@ -199,7 +199,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     const nav = screen.getByRole("navigation", { name: "More yield analysis" });
     const warningLink = screen.getByRole("link", { name: "Warning timeline" });
@@ -209,13 +209,13 @@ describe("YieldDetailSection", () => {
     expect(nav).toBeTruthy();
     // Next.js Link normalizes /foo/#bar → /foo#bar; the deep-link page is still served at /foo/.
     expect(warningLink.getAttribute("href")).toBe(
-      "/stablecoin/dola-inverse-finance/yield#warning-signals",
+      "/stablecoin/usdn-smardex/yield#warning-signals",
     );
     expect(switchesLink.getAttribute("href")).toBe(
-      "/stablecoin/dola-inverse-finance/yield#source-switches",
+      "/stablecoin/usdn-smardex/yield#source-switches",
     );
     expect(comparisonLink.getAttribute("href")).toBe(
-      "/stablecoin/dola-inverse-finance/yield#source-comparison",
+      "/stablecoin/usdn-smardex/yield#source-comparison",
     );
   });
 
@@ -231,7 +231,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText(/source-risk penalty/i)).toBeTruthy();
     expect(container.textContent ?? "").toContain("2.00×");
@@ -271,7 +271,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
@@ -315,7 +315,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    const { rerender } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Retained alternates")).toBeTruthy();
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-available-sources")).toBe(
@@ -328,7 +328,7 @@ describe("YieldDetailSection", () => {
     expect(replaceParamsMock).toHaveBeenCalledTimes(1);
     expect(sourcesParam).toBe("alt-source");
 
-    rerender(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
 
     fireEvent.click(screen.getByRole("button", { name: "Remove Alt Source on chart" }));
@@ -360,7 +360,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
   });
@@ -374,7 +374,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("");
   });
@@ -442,12 +442,12 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    const { rerender } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     const sourceNames = ["Alt Source 1", "Alt Source 2", "Alt Source 3", "Alt Source 4", "Alt Source 5"];
     for (const [index, sourceName] of sourceNames.entries()) {
       fireEvent.click(screen.getByRole("button", { name: `Show ${sourceName} on chart` }));
-      rerender(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+      rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
       const params = sourcesParam.split(",").filter(Boolean);
       expect(params.length).toBe(Math.min(index + 1, 4));
@@ -464,7 +464,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText(/Why this APY changed/i)).toBeTruthy();
     // No history points → insufficient-data path
@@ -511,7 +511,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Curated source preferred")).toBeTruthy();
     expect(screen.getByText("Alternates: Alt Source: lower confidence.")).toBeTruthy();
@@ -526,7 +526,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
     expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
@@ -560,7 +560,7 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { container } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
 
     expect(screen.getByText("Movement vs last publication")).toBeTruthy();
     // Arrow + signed delta together: "▲ +3"
