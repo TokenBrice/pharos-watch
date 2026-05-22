@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",

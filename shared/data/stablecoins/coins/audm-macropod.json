@@ -8,7 +8,7 @@
     "pegCurrency": "AUD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",

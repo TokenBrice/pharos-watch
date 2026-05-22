@@ -10,7 +10,7 @@
     "pegCurrency": "OTHER",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",

@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "RUB",
     "governance": "centralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": false
   },
@@ -71,6 +71,10 @@
       "risk": "very-high"
     }
   ],
+  "yieldConfig": {
+    "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
+    "yieldType": "governance-set"
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

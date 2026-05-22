@@ -8,7 +8,7 @@
     "pegCurrency": "BRL",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",

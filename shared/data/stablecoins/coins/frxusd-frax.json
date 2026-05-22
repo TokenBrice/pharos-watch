@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",

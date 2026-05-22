@@ -10,7 +10,7 @@
     "pegCurrency": "OTHER",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",

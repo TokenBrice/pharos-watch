@@ -10,7 +10,7 @@
     "pegCurrency": "BRL",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",

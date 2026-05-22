@@ -161,9 +161,5 @@
         }
       ]
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Aave Safety Module (sGHO)",
-    "yieldType": "lending-vault"
   }
 }

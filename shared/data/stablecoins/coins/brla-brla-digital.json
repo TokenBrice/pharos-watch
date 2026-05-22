@@ -8,7 +8,7 @@
     "pegCurrency": "BRL",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",

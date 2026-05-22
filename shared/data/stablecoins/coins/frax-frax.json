@@ -13,7 +13,6 @@
   },
   "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures.",
   "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
-  "mechanismArchetype": "tbill",
   "llamaId": "6",
   "detailProvider": "defillama",
   "geckoId": "frax",

@@ -110,7 +110,7 @@
     {
       "type": "warning",
       "title": "Soft depeg",
-      "message": "USP has been trading near $0.91 (~9% discount to USD); investigate before relying on peg parity."
+      "message": "USP has shown secondary-market soft-depeg episodes, including daily lows near $0.916 in November 2025; investigate current redemption and DEX liquidity before relying on peg parity."
     }
   ]
 }

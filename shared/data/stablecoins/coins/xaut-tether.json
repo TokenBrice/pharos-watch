@@ -55,6 +55,56 @@
       "chain": "ethereum",
       "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
       "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x40461291347e1ecbb09499f3371d3f17f10d7159",
+      "decimals": 6
+    },
+    {
+      "chain": "ton",
+      "address": "EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0xf4d9235269a96aadafc9adae454a0618ebe37949",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0xf1815bd50389c46847f0bda824ec8da914045d14",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x1b64b9025eebb9a6239575df9ea4b9ac46d4d193",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0xf50258d3c1dd88946c567920b986a12e65b50dac",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x2775d5105276781b4b85ba6ea6a6653beed1dd32",
+      "decimals": 6
+    },
+    {
+      "chain": "celo",
+      "address": "0xaf37e8b6c9ed7f6318979f56fc287d76c30847ff",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x01bff41798a0bcf287b996046ca68b395dbc1071",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

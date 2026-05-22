@@ -4,7 +4,7 @@
   "symbol": "USDai",
   "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,

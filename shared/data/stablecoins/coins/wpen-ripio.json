@@ -10,7 +10,7 @@
     "pegCurrency": "OTHER",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Peruvian-sol cash and liquid local-currency instruments backing Ripio wPEN at a one Peruvian sol target",

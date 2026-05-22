@@ -10,7 +10,7 @@
     "pegCurrency": "MXN",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",

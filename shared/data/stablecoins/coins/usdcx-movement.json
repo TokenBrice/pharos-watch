@@ -4,7 +4,7 @@
   "symbol": "USDCx",
   "oneLiner": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve smart contract, with CCTP/Gateway transfers to and from USDC on other chains.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,

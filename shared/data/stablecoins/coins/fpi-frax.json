@@ -4,7 +4,7 @@
   "symbol": "FPI",
   "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "VAR",
     "governance": "centralized-dependent",
     "yieldBearing": true,

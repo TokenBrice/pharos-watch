@@ -10,7 +10,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "RUB",
       "governance": "centralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },
@@ -93,6 +93,10 @@
         "label": "Russian ruble bank deposits",
         "risk": "very-high"
       }
+    },
+    "yieldConfig": {
+      "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
+      "yieldType": "governance-set"
     }
   },
   {
@@ -1301,7 +1305,7 @@
       "pegCurrency": "AUD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
@@ -2055,7 +2059,7 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "native-multichain",
-    "custodyModel": "institutional-unregulated",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "CNH cash reserves at regulated financial institutions",
@@ -2154,7 +2158,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "unproven",
-    "custodyModel": "institutional-unregulated",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Short Term Cash",
@@ -3258,7 +3262,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",
@@ -3356,7 +3360,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",
@@ -3545,7 +3549,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
@@ -4620,7 +4624,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",
@@ -6551,6 +6555,16 @@
         "decimals": 18
       },
       {
+        "chain": "gnosis",
+        "address": "0x44fa8e6f47987339850636f88629646662444217",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o",
+        "decimals": 8
+      },
+      {
         "chain": "klaytn",
         "address": "0x5c74070fdea071359b86082bd9f9b3deaafbe32b",
         "decimals": 18
@@ -7122,7 +7136,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -7245,10 +7259,6 @@
           "url": "https://www.inverse.finance/api/f2/fixed-markets"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Inverse Finance Savings (sDOLA)",
-      "yieldType": "governance-set"
     }
   },
   {
@@ -9393,6 +9403,7 @@
     },
     "collateral": "Euro share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
     "pegMechanism": "EUR-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -10390,7 +10401,7 @@
     "symbol": "FPI",
     "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -10495,7 +10506,6 @@
     },
     "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures.",
     "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
-    "mechanismArchetype": "tbill",
     "geckoId": "frax",
     "pythFeedId": "0x735f591e4fed988cd38df74d8fcedecf2fe8d9111664e0fd500db9aa78b316b1",
     "links": [
@@ -10657,7 +10667,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
@@ -10993,6 +11003,7 @@
     },
     "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited",
     "pegMechanism": "Freedom Dollar targets $1 inside the Zano ecosystem through private-chain issuance and redemption mechanics",
+    "mechanismArchetype": "cdp",
     "geckoId": "freedom-dollar",
     "protocolSlug": "freedom-dollar",
     "links": [
@@ -11496,6 +11507,7 @@
     },
     "collateral": "GBP share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -11830,10 +11842,6 @@
           }
         ]
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Aave Safety Module (sGHO)",
-      "yieldType": "lending-vault"
     }
   },
   {
@@ -12490,7 +12498,6 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "collateralQuality": "exotic",
     "custodyModel": "cex",
     "reserves": [
       {
@@ -12563,7 +12570,7 @@
       "type": "independent-audit",
       "url": "https://www.gemini.com/dollar",
       "provider": "BPM LLP",
-      "attestorTier": "niche",
+      "attestorTier": "regional",
       "cadence": "monthly",
       "attestorJurisdiction": "United States",
       "attestorLicense": "PCAOB-registered"
@@ -13634,6 +13641,7 @@
     },
     "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
     "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
+    "mechanismArchetype": "rwa-credit-fund",
     "protocolSlug": "homecoin",
     "proofOfReserves": {
       "type": "self-reported",
@@ -14167,6 +14175,7 @@
     },
     "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
     "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-alpha-vault-lp",
     "protocolSlug": "nest-credit",
     "links": [
@@ -14275,7 +14284,7 @@
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
@@ -17326,8 +17335,38 @@
         "decimals": 18
       },
       {
+        "chain": "fantom",
+        "address": "0xfb98b335551a418cd0737375a2ea0ded62ea213b",
+        "decimals": 18
+      },
+      {
         "chain": "gnosis",
         "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+        "decimals": 18
+      },
+      {
+        "chain": "metis",
+        "address": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+        "decimals": 18
+      },
+      {
+        "chain": "moonbeam",
+        "address": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+        "decimals": 18
+      },
+      {
+        "chain": "kava",
+        "address": "0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon-zkevm",
+        "address": "0x615b25500403eb688be49221b303084d9cf0e5b4",
+        "decimals": 18
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
         "decimals": 18
       },
       {
@@ -18438,6 +18477,10 @@
     "geckoId": "defi-money",
     "protocolSlug": "defi-money",
     "links": [
+      {
+        "label": "Website",
+        "url": "https://defi.money/"
+      },
       {
         "label": "Twitter",
         "url": "https://x.com/defidotmoney"
@@ -23213,7 +23256,7 @@
     "symbol": "rwaUSDi",
     "oneLiner": "rwaUSDi is Multipli's KYB-gated RWA wrapper of Treasury-backed stablecoins, tokenized gold, and market-neutral fund units with Lloyd's depeg insurance.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -23680,7 +23723,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized",
+      "governance": "centralized-dependent",
       "yieldBearing": true,
       "rwa": false,
       "navToken": true
@@ -23744,9 +23787,9 @@
       }
     ],
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: savUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+      "evidence": "Inferred review retained: savUSD resolves to Upstream because the strategy vault wraps avUSD and inherits Avant issuer controls through its backing asset.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -23909,7 +23952,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -24467,6 +24510,36 @@
       {
         "chain": "fraxtal",
         "address": "0xfc00000000000000000000000000000000000008",
+        "decimals": 18
+      },
+      {
+        "chain": "sei",
+        "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "decimals": 18
+      },
+      {
+        "chain": "mode",
+        "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "decimals": 18
+      },
+      {
+        "chain": "xlayer",
+        "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "decimals": 18
       }
     ],
@@ -25451,7 +25524,7 @@
     "symbol": "steakUSDC",
     "oneLiner": "steakUSDC is Steakhouse's curated Morpho ERC-4626 lending vault over USDC; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -25546,7 +25619,7 @@
     "symbol": "steakUSDT",
     "oneLiner": "steakUSDT is Steakhouse's curated Morpho ERC-4626 lending vault over USDT; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -28309,7 +28382,7 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "native-multichain",
-    "custodyModel": "institutional-regulated",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "First Digital Trust fund investments (at cost, opaque)",
@@ -29705,7 +29778,7 @@
     "symbol": "USDai",
     "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -30519,7 +30592,7 @@
     "symbol": "USDCx",
     "oneLiner": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve smart contract, with CCTP/Gateway transfers to and from USDC on other chains.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -32444,7 +32517,7 @@
       "governance": "centralized-dependent",
       "yieldBearing": true,
       "rwa": false,
-      "navToken": true
+      "navToken": false
     },
     "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
     "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
@@ -35883,7 +35956,7 @@
       {
         "type": "warning",
         "title": "Soft depeg",
-        "message": "USP has been trading near $0.91 (~9% discount to USD); investigate before relying on peg parity."
+        "message": "USP has shown secondary-market soft-depeg episodes, including daily lows near $0.916 in November 2025; investigate current redemption and DEX liquidity before relying on peg parity."
       }
     ]
   },
@@ -37704,7 +37777,7 @@
       "pegCurrency": "VND",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
@@ -38117,7 +38190,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
@@ -38221,7 +38294,7 @@
       "pegCurrency": "OTHER",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",
@@ -38322,7 +38395,7 @@
       "pegCurrency": "OTHER",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
@@ -38548,8 +38621,8 @@
     },
     "chainTier": "unproven",
     "deploymentModel": "native-multichain",
-    "collateralQuality": "exotic",
-    "custodyModel": "institutional-unregulated",
+    "collateralQuality": "rwa",
+    "custodyModel": "onchain",
     "governanceQuality": "multisig",
     "reserves": [
       {
@@ -38780,7 +38853,7 @@
       "pegCurrency": "MXN",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
@@ -38888,7 +38961,7 @@
       "pegCurrency": "OTHER",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Peruvian-sol cash and liquid local-currency instruments backing Ripio wPEN at a one Peruvian sol target",
@@ -39808,6 +39881,56 @@
         "chain": "ethereum",
         "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
         "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x40461291347e1ecbb09499f3371d3f17f10d7159",
+        "decimals": 6
+      },
+      {
+        "chain": "ton",
+        "address": "EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k",
+        "decimals": 6
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0xf4d9235269a96aadafc9adae454a0618ebe37949",
+        "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0xf1815bd50389c46847f0bda824ec8da914045d14",
+        "decimals": 6
+      },
+      {
+        "chain": "plasma",
+        "address": "0x1b64b9025eebb9a6239575df9ea4b9ac46d4d193",
+        "decimals": 6
+      },
+      {
+        "chain": "ink",
+        "address": "0xf50258d3c1dd88946c567920b986a12e65b50dac",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x2775d5105276781b4b85ba6ea6a6653beed1dd32",
+        "decimals": 6
+      },
+      {
+        "chain": "celo",
+        "address": "0xaf37e8b6c9ed7f6318979f56fc287d76c30847ff",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P",
+        "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0x01bff41798a0bcf287b996046ca68b395dbc1071",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -39863,7 +39986,7 @@
     },
     "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
     "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "xdai",
     "protocolSlug": "gnosis-chain",
     "links": [
@@ -42147,8 +42270,8 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0xb16eb11db006230d13fc0d9679e50a5a4d389809",
-        "decimals": 18
+        "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "decimals": 6
       },
       {
         "chain": "manta",
@@ -42209,7 +42332,14 @@
           "rpcMode": "public-rpc"
         }
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "March 2025 exploit history",
+        "message": "Zoth suffered March 2025 exploits affecting ZeUSD platform risk, including a collateral-accounting bug and a later admin-key compromise. Review current redemption and reserve evidence before assuming normal peg liquidity. https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025"
+      }
+    ]
   },
   {
     "id": "zkusd-goal3",

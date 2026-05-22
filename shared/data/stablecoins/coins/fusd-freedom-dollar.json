@@ -13,6 +13,7 @@
   },
   "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited",
   "pegMechanism": "Freedom Dollar targets $1 inside the Zano ecosystem through private-chain issuance and redemption mechanics",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "freedom-dollar",
   "protocolSlug": "freedom-dollar",

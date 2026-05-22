@@ -47,6 +47,36 @@
       "chain": "fraxtal",
       "address": "0xfc00000000000000000000000000000000000008",
       "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "mode",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,

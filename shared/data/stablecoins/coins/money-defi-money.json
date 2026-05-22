@@ -19,6 +19,10 @@
   "protocolSlug": "defi-money",
   "links": [
     {
+      "label": "Website",
+      "url": "https://defi.money/"
+    },
+    {
       "label": "Twitter",
       "url": "https://x.com/defidotmoney"
     },

@@ -8,7 +8,7 @@
     "pegCurrency": "VAR",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
   "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",

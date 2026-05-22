@@ -67,8 +67,8 @@
   },
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",
-  "collateralQuality": "exotic",
-  "custodyModel": "institutional-unregulated",
+  "collateralQuality": "rwa",
+  "custodyModel": "onchain",
   "governanceQuality": "multisig",
   "reserves": [
     {

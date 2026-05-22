@@ -8,7 +8,7 @@
     "pegCurrency": "BRL",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",

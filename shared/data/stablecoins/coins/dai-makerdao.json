@@ -74,6 +74,16 @@
       "decimals": 18
     },
     {
+      "chain": "gnosis",
+      "address": "0x44fa8e6f47987339850636f88629646662444217",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o",
+      "decimals": 8
+    },
+    {
       "chain": "klaytn",
       "address": "0x5c74070fdea071359b86082bd9f9b3deaafbe32b",
       "decimals": 18

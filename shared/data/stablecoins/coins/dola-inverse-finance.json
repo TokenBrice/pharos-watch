@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -117,10 +117,6 @@
       "risk": "medium"
     }
   ],
-  "yieldConfig": {
-    "yieldSource": "Inverse Finance Savings (sDOLA)",
-    "yieldType": "governance-set"
-  },
   "liveReservesConfig": {
     "adapter": "dola-inverse",
     "version": 1,

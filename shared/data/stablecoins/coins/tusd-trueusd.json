@@ -90,7 +90,7 @@
     "reviewedAt": "2026-05-12"
   },
   "deploymentModel": "native-multichain",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "institutional-unregulated",
   "reserves": [
     {
       "name": "First Digital Trust fund investments (at cost, opaque)",

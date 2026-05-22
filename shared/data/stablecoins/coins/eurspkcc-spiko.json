@@ -13,6 +13,7 @@
   },
   "collateral": "Euro share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
   "pegMechanism": "EUR-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
   "proofOfReserves": {

@@ -8,7 +8,7 @@
     "pegCurrency": "VND",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",

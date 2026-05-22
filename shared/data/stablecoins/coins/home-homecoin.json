@@ -32,6 +32,7 @@
   },
   "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
   "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
+  "mechanismArchetype": "rwa-credit-fund",
   "protocolSlug": "homecoin",
   "links": [
     {

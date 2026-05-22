@@ -8,7 +8,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "RUB",
       "governance": "centralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },
@@ -237,7 +237,7 @@
       "pegCurrency": "AUD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
@@ -555,7 +555,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
@@ -573,7 +573,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
@@ -608,7 +608,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",
@@ -791,7 +791,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Direct 1:1 redemption via Bridge Building Inc. (BBI) with reserves held in bankruptcy-remote custodial accounts",
@@ -1207,7 +1207,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -1597,6 +1597,7 @@
       "navToken": true
     },
     "pegMechanism": "EUR-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
     "canBeBlacklisted": true
   },
@@ -1733,7 +1734,7 @@
     "symbol": "FPI",
     "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -1763,7 +1764,6 @@
       "navToken": false
     },
     "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
-    "mechanismArchetype": "tbill",
     "geckoId": "frax"
   },
   {
@@ -1776,7 +1776,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
@@ -1815,6 +1815,7 @@
       "navToken": false
     },
     "pegMechanism": "Freedom Dollar targets $1 inside the Zano ecosystem through private-chain issuance and redemption mechanics",
+    "mechanismArchetype": "cdp",
     "geckoId": "freedom-dollar",
     "protocolSlug": "freedom-dollar"
   },
@@ -1919,6 +1920,7 @@
       "navToken": true
     },
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
     "canBeBlacklisted": true
   },
@@ -2312,6 +2314,7 @@
       "navToken": false
     },
     "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
+    "mechanismArchetype": "rwa-credit-fund",
     "protocolSlug": "homecoin",
     "canBeBlacklisted": "possible"
   },
@@ -2398,6 +2401,7 @@
       "navToken": true
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-alpha-vault-lp",
     "protocolSlug": "nest-credit",
     "canBeBlacklisted": true
@@ -2412,7 +2416,7 @@
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
@@ -3957,7 +3961,7 @@
     "symbol": "rwaUSDi",
     "oneLiner": "rwaUSDi is Multipli's KYB-gated RWA wrapper of Treasury-backed stablecoins, tokenized gold, and market-neutral fund units with Lloyd's depeg insurance.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -4032,7 +4036,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized",
+      "governance": "centralized-dependent",
       "yieldBearing": true,
       "rwa": false,
       "navToken": true
@@ -4350,7 +4354,7 @@
     "symbol": "steakUSDC",
     "oneLiner": "steakUSDC is Steakhouse's curated Morpho ERC-4626 lending vault over USDC; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -4369,7 +4373,7 @@
     "symbol": "steakUSDT",
     "oneLiner": "steakUSDT is Steakhouse's curated Morpho ERC-4626 lending vault over USDT; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -5061,7 +5065,7 @@
     "symbol": "USDai",
     "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -5168,7 +5172,7 @@
     "symbol": "USDCx",
     "oneLiner": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve smart contract, with CCTP/Gateway transfers to and from USDC on other chains.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -5501,7 +5505,7 @@
       "governance": "centralized-dependent",
       "yieldBearing": true,
       "rwa": false,
-      "navToken": true
+      "navToken": false
     },
     "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
     "mechanismArchetype": "synthetic-delta-neutral",
@@ -6308,7 +6312,7 @@
       "pegCurrency": "VND",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms with VND on/off-ramps via Vietnamese banking partners; reserve backing is self-reported by Jade Labs with no third-party attestation, audit cadence, or proof-of-reserves feed currently published",
@@ -6380,7 +6384,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
@@ -6398,7 +6402,7 @@
       "pegCurrency": "OTHER",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCLP = 1 CLP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
@@ -6416,7 +6420,7 @@
       "pegCurrency": "OTHER",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
@@ -6506,7 +6510,7 @@
       "pegCurrency": "MXN",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
@@ -6524,7 +6528,7 @@
       "pegCurrency": "OTHER",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WPEN = 1 PEN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
@@ -6671,7 +6675,7 @@
       "navToken": false
     },
     "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "xdai",
     "protocolSlug": "gnosis-chain",
     "canBeBlacklisted": "possible"

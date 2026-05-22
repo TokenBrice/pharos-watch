@@ -64,8 +64,38 @@
       "decimals": 18
     },
     {
+      "chain": "fantom",
+      "address": "0xfb98b335551a418cd0737375a2ea0ded62ea213b",
+      "decimals": 18
+    },
+    {
       "chain": "gnosis",
       "address": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
+      "decimals": 18
+    },
+    {
+      "chain": "metis",
+      "address": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+      "decimals": 18
+    },
+    {
+      "chain": "moonbeam",
+      "address": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
+      "decimals": 18
+    },
+    {
+      "chain": "kava",
+      "address": "0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon-zkevm",
+      "address": "0x615b25500403eb688be49221b303084d9cf0e5b4",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
       "decimals": 18
     },
     {

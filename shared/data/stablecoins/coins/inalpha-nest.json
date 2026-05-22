@@ -13,6 +13,7 @@
   },
   "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
   "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "nest-alpha-vault-lp",
   "protocolSlug": "nest-credit",

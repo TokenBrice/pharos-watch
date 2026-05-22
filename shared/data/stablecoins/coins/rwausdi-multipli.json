@@ -4,7 +4,7 @@
   "symbol": "rwaUSDi",
   "oneLiner": "rwaUSDi is Multipli's KYB-gated RWA wrapper of Treasury-backed stablecoins, tokenized gold, and market-neutral fund units with Lloyd's depeg insurance.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,
