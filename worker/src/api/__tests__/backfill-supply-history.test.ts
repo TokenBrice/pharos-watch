@@ -175,6 +175,63 @@ describe("handleBackfillSupplyHistory", () => {
     );
   });
 
+  it("preserves unbounded history for bare backfill calls", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const oldDay = Math.floor(Date.UTC(2020, 0, 1) / 1000);
+    const recentDay = Math.floor(Date.UTC(2026, 0, 1) / 1000);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          price: 1,
+          tokens: [
+            { date: oldDay, circulating: { peggedUSD: 10_000_000 } },
+            { date: recentDay, circulating: { peggedUSD: 20_000_000 } },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether", {
+        adminKey: "secret",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      rowsInserted: number;
+      done: boolean;
+      continuationCursor: string | null;
+      window: {
+        startDay: number | null;
+        endDay: number | null;
+        requestedStartDay: number | null;
+        requestedEndDay: number | null;
+        windowDays: number | null;
+      };
+    };
+    expect(body.rowsInserted).toBe(2);
+    expect(body.done).toBe(true);
+    expect(body.continuationCursor).toBeNull();
+    expect(body.window).toEqual({
+      startDay: null,
+      endDay: null,
+      requestedStartDay: null,
+      requestedEndDay: null,
+      windowDays: null,
+    });
+
+    const inserts = capturedStatements.filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(inserts.map((stmt) => stmt.args[1])).toEqual([oldDay, recentDay]);
+    expect(vi.mocked(fetchMarketBackfillPriceSeries).mock.calls[0]?.[2]?.range).toBeUndefined();
+  });
+
   it("bounds explicit historical windows and returns a continuation cursor", async () => {
     const day1 = Math.floor(Date.UTC(2026, 0, 1) / 1000);
     const day2 = day1 + 86_400;

@@ -64,8 +64,8 @@ interface SupplyBackfillContinuationCursor {
 
 interface ResolvedSupplyBackfillWindow extends SupplyBackfillWindow {
   requestedStartDay: number | null;
-  requestedEndDay: number;
-  windowDays: number;
+  requestedEndDay: number | null;
+  windowDays: number | null;
   continuationCursor: string | null;
   done: boolean;
 }
@@ -147,7 +147,10 @@ function isWithinBackfillWindow(snapshotDate: number, window?: SupplyBackfillWin
   return true;
 }
 
-function backfillWindowToFetchRange(window: SupplyBackfillWindow): { startSec?: number | null; endSec?: number | null } {
+function backfillWindowToFetchRange(
+  window: SupplyBackfillWindow,
+): { startSec?: number | null; endSec?: number | null } | undefined {
+  if (window.startDay == null && window.endDay == null) return undefined;
   return {
     startSec: window.startDay,
     endSec: window.endDay != null ? window.endDay + DAY_SECONDS - 1 : null,
@@ -184,6 +187,23 @@ function resolveSupplyBackfillWindow(
   if (parsedCursor instanceof Response) return parsedCursor;
 
   const lastCompletedDay = getLastCompletedUtcDay();
+  const hasWindowingParam = parsedCursor != null ||
+    url.searchParams.has("windowDays") ||
+    dayWindow.startDay != null ||
+    dayWindow.endDay != null;
+
+  if (!hasWindowingParam) {
+    return {
+      startDay: null,
+      endDay: null,
+      requestedStartDay: null,
+      requestedEndDay: null,
+      windowDays: null,
+      continuationCursor: null,
+      done: true,
+    };
+  }
+
   const requestedStartDay = dayWindow.startDay ?? parsedCursor?.requestedStartDay ?? null;
   const requestedEndDay = Math.min(
     dayWindow.endDay ?? parsedCursor?.requestedEndDay ?? lastCompletedDay,

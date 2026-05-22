@@ -564,7 +564,7 @@ The current pattern is a titled trust banner with dataset-specific copy, for exa
   - Compacts/expands table columns
   - Converts details/nav patterns
 - `md`:
-  - Masthead tagline becomes visible (`md:block` with `line-clamp-2`)
+  - Masthead tagline becomes visible as a single `whitespace-nowrap` line.
   - Snapshot KPI grid expands; other dense-data grids transition between mobile and desktop layouts
 - `lg`:
   - Sidebar becomes active (`lg:flex`); mobile header / drawer hides (`lg:hidden`)
