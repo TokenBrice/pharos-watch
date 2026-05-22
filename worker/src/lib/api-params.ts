@@ -24,6 +24,8 @@ interface OptionalPositiveIntegerParamOptions {
   max?: number;
 }
 
+type JsonCursorValidator<T> = (payload: unknown) => T | null;
+
 function rejectOutOfRange(name: string, min: number, max: number): Response {
   return errorResponse(400, `Invalid ${name}: must be between ${min} and ${max}`);
 }
@@ -47,6 +49,82 @@ export function resolveOrReject(id: string): { canonicalId: string } | Response 
     return errorResponse(404, "Unknown stablecoin");
   }
   return { canonicalId: resolved.canonicalId };
+}
+
+export function parseBooleanParam(
+  value: string | null | undefined,
+  name: string,
+  defaultValue: boolean,
+): boolean | Response {
+  if (value == null || value === "") return defaultValue;
+  if (value === "true" || value === "1") return true;
+  if (value === "false" || value === "0") return false;
+  return errorResponse(400, `Invalid ${name}: must be true or false`);
+}
+
+export function parseBooleanInput(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return fallback;
+}
+
+export function readBodyOrQueryParam(
+  body: Record<string, unknown>,
+  searchParams: URLSearchParams,
+  key: string,
+): unknown {
+  return body[key] ?? searchParams.get(key);
+}
+
+export function readBodyOrQueryStringParam(
+  body: Record<string, unknown>,
+  searchParams: URLSearchParams,
+  key: string,
+): string | null {
+  const bodyValue = body[key];
+  const value = typeof bodyValue === "string" ? bodyValue : searchParams.get(key);
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function encodeJsonCursor(payload: unknown): string {
+  const json = JSON.stringify(payload);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeJsonCursorPayload(value: string): unknown | null {
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export function parseJsonCursorParam<T>(
+  value: string | null | undefined,
+  validate: JsonCursorValidator<T>,
+  message = "Invalid cursor: malformed cursor",
+): T | null | Response {
+  if (!value) return null;
+  const payload = decodeJsonCursorPayload(value);
+  if (payload == null) return errorResponse(400, message);
+  try {
+    return validate(payload) ?? errorResponse(400, message);
+  } catch {
+    return errorResponse(400, message);
+  }
 }
 
 export function parseIntParam(
@@ -77,9 +155,8 @@ export function parseClampedIntegerParam(
   options?: ClampedIntegerParamOptions,
 ): number {
   const parsed = value == null ? defaultVal : Number(value);
-  const normalized = !Number.isFinite(parsed) || (options?.zeroAsDefault === true && parsed === 0)
-    ? defaultVal
-    : Math.floor(parsed);
+  const normalized =
+    !Number.isFinite(parsed) || (options?.zeroAsDefault === true && parsed === 0) ? defaultVal : Math.floor(parsed);
   return Math.max(min, Math.min(max, normalized));
 }
 
@@ -144,14 +221,9 @@ export function parseQueryParams<T extends Record<string, ParamSpec>>(
   const result = {} as { [K in keyof T]: number };
   for (const [key, spec] of Object.entries(specs) as [keyof T & string, ParamSpec][]) {
     const parser = spec.type === "int" ? parseIntParam : parseFloatParam;
-    const value = parser(
-      searchParams.get(key),
-      spec.default,
-      spec.min,
-      spec.max,
-      spec.name ?? key,
-      { rangePolicy: spec.rangePolicy },
-    );
+    const value = parser(searchParams.get(key), spec.default, spec.min, spec.max, spec.name ?? key, {
+      rangePolicy: spec.rangePolicy,
+    });
     if (value instanceof Response) return value;
     result[key] = value;
   }
@@ -185,10 +257,7 @@ export function parseEnumParam<T extends string>(
   return parsed ?? defaultValue;
 }
 
-export function parseRequiredStablecoinIdParam(
-  searchParams: URLSearchParams,
-  name = "stablecoin",
-): string | Response {
+export function parseRequiredStablecoinIdParam(searchParams: URLSearchParams, name = "stablecoin"): string | Response {
   const stablecoinId = searchParams.get(name);
   if (!stablecoinId) {
     return errorResponse(400, `Missing required parameter: ${name}`);
@@ -210,9 +279,7 @@ export function parseTimestampSecondsParam(value: string | null | undefined): nu
   if (/^\d+$/.test(trimmed)) {
     const numeric = Number(trimmed);
     if (!Number.isFinite(numeric)) return null;
-    return numeric >= 1_000_000_000_000
-      ? Math.floor(numeric / 1000)
-      : Math.floor(numeric);
+    return numeric >= 1_000_000_000_000 ? Math.floor(numeric / 1000) : Math.floor(numeric);
   }
 
   const parsedMs = Date.parse(trimmed);

@@ -3,10 +3,7 @@ import { jsonResponse } from "../lib/api-utils";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
-import {
-  parseOptionalDayWindow,
-  type BackfillReplayWindow,
-} from "./backfill-depegs-window";
+import { parseOptionalDayWindow, type BackfillReplayWindow } from "./backfill-depegs-window";
 import { buildBackfillDeleteStmt } from "./backfill-depegs-window";
 import type { BackfillReplayPreview } from "./backfill-depegs-preview";
 import { buildBackfillPlan } from "./backfill-depegs/planning";
@@ -124,6 +121,125 @@ export async function applyBackfillEvents(
   }
 }
 
+export interface BackfillDepegsRouteContext {
+  db: D1Database;
+  url: URL;
+  coingeckoApiKey?: string | null;
+}
+
+async function executeBackfillDepegs(
+  db: D1Database,
+  url: URL,
+  dryRun: boolean,
+  coingeckoApiKey?: string | null,
+): Promise<Response> {
+  const window = parseOptionalDayWindow(url, {
+    includeContextDays: true,
+    includeReplayWindow: true,
+  });
+  if (window instanceof Response) return window;
+  const replayWindow = window.replayWindow;
+
+  const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
+    defaultBatchSize: BATCH_SIZE,
+    allowBatchSizeOverride: false,
+  });
+  if ("response" in selection) {
+    return selection.response;
+  }
+  const coins = selection.coins;
+
+  if (coins.length === 0) {
+    return noAdminTargetsResponse();
+  }
+
+  const plan = await buildBackfillPlan({
+    db,
+    coins,
+    replayWindow,
+    coingeckoApiKey: coingeckoApiKey ?? null,
+  });
+
+  let totalEvents = 0;
+  const errors: string[] = [];
+  const skipped: string[] = [];
+  const previews: BackfillReplayPreview[] = [];
+
+  // Process coins sequentially. Each still needs CG price history fetch, so
+  // serializing avoids memory pressure from parsing multiple large JSON bodies.
+  for (const prepared of plan.preparedCoins) {
+    const outcome = await executeBackfillForCoin({
+      db,
+      prepared,
+      pegRates: plan.pegRates,
+      fxRates: plan.fxRates,
+      fxSeries: plan.fxSeries,
+      commoditySeries: plan.commoditySeries,
+      replayWindow,
+      coingeckoApiKey: coingeckoApiKey ?? null,
+      dryRun,
+      applyBackfillEvents: (meta, events, window, run) => applyBackfillEvents(db, meta, events, window, run),
+    });
+    if (outcome.status === "skipped") {
+      skipped.push(prepared.meta.symbol);
+    } else if (outcome.status === "error") {
+      errors.push(outcome.errorMessage ?? `${prepared.meta.symbol}: unknown error`);
+      continue;
+    }
+    if (dryRun && outcome.preview) {
+      previews.push(outcome.preview);
+    }
+    totalEvents += outcome.eventCount;
+  }
+
+  if (dryRun) {
+    return jsonResponse(
+      buildAdminJobSummary({
+        dryRun: true,
+        coinsProcessed: coins.length,
+        recomputedBackfillEvents: totalEvents,
+        startDay: replayWindow?.startDay ?? null,
+        endDay: replayWindow?.endDay ?? null,
+        contextDays: replayWindow?.contextDays ?? null,
+        previews,
+        skipped,
+        errors,
+        commodities:
+          plan.commodityPegs.length > 0
+            ? {
+                goldDataPoints: plan.commoditySeries["GOLD"]?.length ?? 0,
+                silverDataPoints: plan.commoditySeries["SILVER"]?.length ?? 0,
+              }
+            : undefined,
+      }),
+    );
+  }
+
+  return jsonResponse(
+    buildAdminJobSummary({
+      coinsProcessed: coins.length,
+      eventsCreated: totalEvents,
+      skipped,
+      errors,
+      commodities:
+        plan.commodityPegs.length > 0
+          ? {
+              goldDataPoints: plan.commoditySeries["GOLD"]?.length ?? 0,
+              silverDataPoints: plan.commoditySeries["SILVER"]?.length ?? 0,
+            }
+          : undefined,
+    }),
+  );
+}
+
+export function handleBackfillDepegsTrusted({
+  db,
+  url,
+  coingeckoApiKey,
+}: BackfillDepegsRouteContext): Promise<Response> {
+  return executeBackfillDepegs(db, url, url.searchParams.get("dry-run") === "true", coingeckoApiKey);
+}
+
 export async function handleBackfillDepegs(
   db: D1Database,
   url: URL,
@@ -131,102 +247,7 @@ export async function handleBackfillDepegs(
   request?: Request,
   coingeckoApiKey?: string | null,
 ): Promise<Response> {
-  return runAdminJob(
-    { request, trustedAdmin, url },
-    async (context) => {
-      const { dryRun } = context;
-      const window = parseOptionalDayWindow(url, {
-        includeContextDays: true,
-        includeReplayWindow: true,
-      });
-      if (window instanceof Response) return window;
-      const replayWindow = window.replayWindow;
-
-      const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
-        defaultBatchSize: BATCH_SIZE,
-        allowBatchSizeOverride: false,
-      });
-      if ("response" in selection) {
-        return selection.response;
-      }
-      const coins = selection.coins;
-
-      if (coins.length === 0) {
-        return noAdminTargetsResponse();
-      }
-
-      const plan = await buildBackfillPlan({
-        db,
-        coins,
-        replayWindow,
-        coingeckoApiKey: coingeckoApiKey ?? null,
-      });
-
-      let totalEvents = 0;
-      const errors: string[] = [];
-      const skipped: string[] = [];
-      const previews: BackfillReplayPreview[] = [];
-
-      // Process coins sequentially — each still needs CG price history fetch.
-      // Serializing avoids memory pressure from parsing multiple large JSON responses.
-      for (const prepared of plan.preparedCoins) {
-        const outcome = await executeBackfillForCoin({
-          db,
-          prepared,
-          pegRates: plan.pegRates,
-          fxRates: plan.fxRates,
-          fxSeries: plan.fxSeries,
-          commoditySeries: plan.commoditySeries,
-          replayWindow,
-          coingeckoApiKey: coingeckoApiKey ?? null,
-          dryRun,
-          applyBackfillEvents: (meta, events, window, run) =>
-            applyBackfillEvents(db, meta, events, window, run),
-        });
-        if (outcome.status === "skipped") {
-          skipped.push(prepared.meta.symbol);
-        } else if (outcome.status === "error") {
-          errors.push(outcome.errorMessage ?? `${prepared.meta.symbol}: unknown error`);
-          continue;
-        }
-        if (dryRun && outcome.preview) {
-          previews.push(outcome.preview);
-        }
-        totalEvents += outcome.eventCount;
-      }
-
-      if (dryRun) {
-        return jsonResponse(buildAdminJobSummary({
-          dryRun: true,
-          coinsProcessed: coins.length,
-          recomputedBackfillEvents: totalEvents,
-          startDay: replayWindow?.startDay ?? null,
-          endDay: replayWindow?.endDay ?? null,
-          contextDays: replayWindow?.contextDays ?? null,
-          previews,
-          skipped,
-          errors,
-          commodities: plan.commodityPegs.length > 0
-            ? {
-                goldDataPoints: plan.commoditySeries["GOLD"]?.length ?? 0,
-                silverDataPoints: plan.commoditySeries["SILVER"]?.length ?? 0,
-              }
-            : undefined,
-        }));
-      }
-
-      return jsonResponse(buildAdminJobSummary({
-        coinsProcessed: coins.length,
-        eventsCreated: totalEvents,
-        skipped,
-        errors,
-        commodities: plan.commodityPegs.length > 0
-          ? {
-              goldDataPoints: plan.commoditySeries["GOLD"]?.length ?? 0,
-              silverDataPoints: plan.commoditySeries["SILVER"]?.length ?? 0,
-            }
-          : undefined,
-      }));
-    },
+  return runAdminJob({ request, trustedAdmin, url }, (context) =>
+    executeBackfillDepegs(db, url, context.dryRun, coingeckoApiKey),
   );
 }

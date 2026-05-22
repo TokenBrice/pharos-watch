@@ -12,10 +12,7 @@ export interface JsonResponseOptions {
 type JsonResponseInit = Record<string, string> | JsonResponseOptions | undefined;
 type DefinedJsonResponseInit = Exclude<JsonResponseInit, undefined>;
 
-export function withErrorHandler<T extends unknown[]>(
-  endpoint: string,
-  handler: ApiHandler<T>,
-): ApiHandler<T> {
+export function withErrorHandler<T extends unknown[]>(endpoint: string, handler: ApiHandler<T>): ApiHandler<T> {
   return async (...args: T): Promise<Response> => {
     try {
       return await handler(...args);
@@ -40,11 +37,24 @@ function normalizeJsonResponseOptions(initOrHeaders: JsonResponseInit): JsonResp
   return { headers: initOrHeaders };
 }
 
-export function errorResponse(
-  status: number,
-  message: string,
-  initOrHeaders?: JsonResponseInit,
-): Response {
+export function withResponseHeaders(response: Response, headersInit: HeadersInit): Response {
+  const headers = new Headers(response.headers);
+  new Headers(headersInit).forEach((value, key) => {
+    headers.set(key, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+export function noStoreResponse(response: Response): Response {
+  if (response.headers.get("Cache-Control") === "no-store") return response;
+  return withResponseHeaders(response, { "Cache-Control": "no-store" });
+}
+
+export function errorResponse(status: number, message: string, initOrHeaders?: JsonResponseInit): Response {
   const options = normalizeJsonResponseOptions(initOrHeaders);
   return jsonResponse({ error: message }, { ...options, status });
 }
@@ -66,6 +76,12 @@ export function jsonResponse(body: unknown, initOrHeaders?: JsonResponseInit): R
     status: options.status,
     headers,
   });
+}
+
+export function methodNotAllowedResponse(message: string, allowedMethods: readonly string[]): Response {
+  const response = errorResponse(405, message);
+  response.headers.set("Allow", allowedMethods.join(", "));
+  return response;
 }
 
 interface JsonFreshResponseOptions {

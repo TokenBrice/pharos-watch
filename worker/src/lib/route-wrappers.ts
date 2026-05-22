@@ -1,6 +1,6 @@
 import { withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
-import { errorResponse, jsonResponse, withErrorHandler } from "./api-utils";
+import { errorResponse, jsonResponse, noStoreResponse, withErrorHandler } from "./api-utils";
 import type { JsonResponseOptions } from "./api-response";
 
 import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
@@ -24,40 +24,26 @@ interface RunAdminRouteOptions {
   shouldUseIdempotency?: boolean;
 }
 
-function withNoStore(response: Response): Response {
-  if (response.headers.get("Cache-Control") === "no-store") return response;
-
-  const headers = new Headers(response.headers);
-  headers.set("Cache-Control", "no-store");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
-
-export function runAdminRoute(
-  options: RunAdminRouteOptions,
-  handler: () => Promise<Response>,
-): Promise<Response> {
+export function runAdminRoute(options: RunAdminRouteOptions, handler: () => Promise<Response>): Promise<Response> {
   return withErrorHandler(options.endpoint, async () => {
     const method = options.request?.method?.toUpperCase() ?? "GET";
-    if (
-      MUTATING_METHODS.has(method) &&
-      options.request?.headers.get(X_PHAROS_ADMIN_HEADER) !== "1"
-    ) {
+    if (MUTATING_METHODS.has(method) && options.request?.headers.get(X_PHAROS_ADMIN_HEADER) !== "1") {
       return jsonResponse(
         { error: "Missing required X-Pharos-Admin header; refusing mutation." },
         { status: 403, noStore: true },
       );
     }
-    return withAdmin(options.request, () => {
-      if (options.action && options.db && options.shouldUseIdempotency !== false) {
-        return runIdempotentAdminAction(options.db, options.action, options.request, handler);
-      }
-      return handler();
-    }, options.trustedAdmin);
-  })().then(withNoStore);
+    return withAdmin(
+      options.request,
+      () => {
+        if (options.action && options.db && options.shouldUseIdempotency !== false) {
+          return runIdempotentAdminAction(options.db, options.action, options.request, handler);
+        }
+        return handler();
+      },
+      options.trustedAdmin,
+    );
+  })().then(noStoreResponse);
 }
 
 type AdminResponseOptions = Omit<JsonResponseOptions, "noStore">;
@@ -143,9 +129,6 @@ export async function runTrustedAdminMutation(handler: () => Promise<Response>):
   } catch (error) {
     const name = error instanceof Error ? error.name : "UnknownError";
     console.error(`[admin-mutation] uncaught ${name}:`, error);
-    return jsonResponse(
-      { error: name, message: "Admin mutation failed" },
-      { status: 503, noStore: true },
-    );
+    return jsonResponse({ error: name, message: "Admin mutation failed" }, { status: 503, noStore: true });
   }
 }

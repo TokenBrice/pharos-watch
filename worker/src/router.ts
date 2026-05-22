@@ -5,7 +5,7 @@ import {
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
 
-import { errorResponse } from "./lib/api-utils";
+import { errorResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-utils";
 import {
   getRouteMatch,
   ROUTER_STATIC_PATHS,
@@ -23,9 +23,7 @@ function addAdminGetNoStoreHeader(path: string, request: Request | undefined, re
   if (request?.method !== "GET") return response;
   const endpoint = getEndpointDefinition(path);
   if (!endpoint?.adminRequired) return response;
-  if (response.headers.get("Cache-Control") === "no-store") return response;
-  response.headers.set("Cache-Control", "no-store");
-  return response;
+  return noStoreResponse(response);
 }
 
 function stripHeadBody(request: Request | undefined, response: Response): Response {
@@ -46,9 +44,7 @@ function validateRouteMatchMethod(
   method: string,
   routeMatch: RouteMatch,
 ): EndpointMethodValidationError | null {
-  const allowedMethods = routeMatch.endpoint
-    ? getEndpointAllowedMethods(url, routeMatch.endpoint)
-    : routeMatch.methods;
+  const allowedMethods = routeMatch.endpoint ? getEndpointAllowedMethods(url, routeMatch.endpoint) : routeMatch.methods;
   return validateAllowedEndpointMethods(method, allowedMethods);
 }
 
@@ -92,9 +88,9 @@ export function route(
   if (!resolvedRoute) return null;
 
   if (resolvedRoute.methodValidation) {
-    const resp = errorResponse(405, resolvedRoute.methodValidation.message);
-    resp.headers.set("Allow", resolvedRoute.methodValidation.allowedMethods.join(", "));
-    return Promise.resolve(resp);
+    return Promise.resolve(
+      methodNotAllowedResponse(resolvedRoute.methodValidation.message, resolvedRoute.methodValidation.allowedMethods),
+    );
   }
 
   return handleRouteWithErrorBoundary(routeCtx, resolvedRoute.routeMatch, path);

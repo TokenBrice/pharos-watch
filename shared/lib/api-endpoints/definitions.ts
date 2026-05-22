@@ -95,20 +95,35 @@ type AdminDualModeMutationDefinition<T extends EndpointDefinitionFactoryInput> =
   readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
 };
 
+const ENDPOINT_METADATA_FACTORY_MARKER: unique symbol = Symbol("endpointMetadataFactory");
+
+type FactoryMarkedEndpoint = BaseEndpointDefinition & {
+  readonly [ENDPOINT_METADATA_FACTORY_MARKER]?: true;
+};
+
+function markFactoryDefinition<const T extends BaseEndpointDefinition>(definition: T): T {
+  Object.defineProperty(definition, ENDPOINT_METADATA_FACTORY_MARKER, {
+    value: true,
+  });
+  return definition;
+}
+
+function isFactoryMarkedEndpoint(endpoint: BaseEndpointDefinition): boolean {
+  return (endpoint as FactoryMarkedEndpoint)[ENDPOINT_METADATA_FACTORY_MARKER] === true;
+}
+
 function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicGetDefinition<T> {
-  return {
+  return markFactoryDefinition({
     cacheBypass: false,
     ...definition,
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
-  } as PublicGetDefinition<T>;
+  } as PublicGetDefinition<T>);
 }
 
-function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(
-  definition: T,
-): PublicPostDefinition<T> {
-  return {
+function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicPostDefinition<T> {
+  return markFactoryDefinition({
     cacheBypass: true,
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
@@ -116,41 +131,39 @@ function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(
     methods: ["POST"],
     adminRequired: false,
     mutatingAdmin: false,
-  } as PublicPostDefinition<T>;
+  } as PublicPostDefinition<T>);
 }
 
 function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminGetDefinition<T> {
-  return {
+  return markFactoryDefinition({
     cacheBypass: true,
     ...definition,
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
-  } as AdminGetDefinition<T>;
+  } as AdminGetDefinition<T>);
 }
 
-function adminMutation<const T extends EndpointDefinitionFactoryInput>(
-  definition: T,
-): AdminMutationDefinition<T> {
-  return {
+function adminMutation<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminMutationDefinition<T> {
+  return markFactoryDefinition({
     cacheBypass: true,
     ...definition,
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
-  } as AdminMutationDefinition<T>;
+  } as AdminMutationDefinition<T>);
 }
 
 function adminDualModeMutation<const T extends EndpointDefinitionFactoryInput>(
   definition: T,
 ): AdminDualModeMutationDefinition<T> {
-  return {
+  return markFactoryDefinition({
     cacheBypass: true,
     ...definition,
     methods: ["GET", "POST"],
     adminRequired: true,
     mutatingAdmin: true,
-  } as AdminDualModeMutationDefinition<T>;
+  } as AdminDualModeMutationDefinition<T>);
 }
 
 export interface StatusPageAction {
@@ -169,91 +182,67 @@ export interface EndpointMethodValidationError {
 
 export type DynamicAdminEndpointMatch =
   | {
-    key: "discovery-candidate-dismiss";
-    path: string;
-    candidateId: number;
-    methods: readonly EndpointMethod[];
-  }
+      key: "discovery-candidate-dismiss";
+      path: string;
+      candidateId: number;
+      methods: readonly EndpointMethod[];
+    }
   | {
-    key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
-    path: string;
-    apiKeyId: number;
-    methods: readonly EndpointMethod[];
-  }
+      key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
+      path: string;
+      apiKeyId: number;
+      methods: readonly EndpointMethod[];
+    }
   | {
-    key: "api-key-request-reject" | "api-key-request-release-claim";
-    path: string;
-    requestId: string;
-    methods: readonly EndpointMethod[];
-  }
+      key: "api-key-request-reject" | "api-key-request-release-claim";
+      path: string;
+      requestId: string;
+      methods: readonly EndpointMethod[];
+    }
   | {
-    key: "admin-telegram-chat";
-    path: string;
-    chatId: string;
-    methods: readonly EndpointMethod[];
-  };
+      key: "admin-telegram-chat";
+      path: string;
+      chatId: string;
+      methods: readonly EndpointMethod[];
+    };
 
 const BASE_ENDPOINT_DEFINITIONS = [
   // Public endpoints probed by the status dashboard.
-  {
+  publicGet({
     key: "stablecoins",
     path: API_PATHS.stablecoins(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "stablecoin-detail-canary",
     path: API_PATHS.stablecoinDetail("usdt-tether"),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     routeDependencies: ["coingeckoApiKey"],
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
-  },
-  {
+  }),
+  publicGet({
     key: "stablecoin-summary-canary",
     path: API_PATHS.stablecoinSummary("usdt-tether"),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "stablecoin-reserves-canary",
     path: API_PATHS.stablecoinReserves("iusd-infinifi"),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "stablecoin-charts",
     path: API_PATHS.stablecoinCharts(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "peg-summary",
     path: API_PATHS.pegSummary(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
+  }),
   publicGet({
     key: "health",
     path: API_PATHS.health(),
@@ -261,285 +250,169 @@ const BASE_ENDPOINT_DEFINITIONS = [
     publicApiAccess: "exempt",
     probeGroup: "public",
   }),
-  {
+  publicGet({
     key: "public-status-history",
     path: API_PATHS.publicStatusHistory(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "blacklist",
     path: API_PATHS.blacklist(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "blacklist-summary",
     path: API_PATHS.blacklistSummary(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "depeg-events",
     path: API_PATHS.depegEvents(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "events",
     path: API_PATHS.events(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "usds-status",
     path: API_PATHS.usdsStatus(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "bluechip-ratings",
     path: API_PATHS.bluechipRatings(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "dex-liquidity",
     path: API_PATHS.dexLiquidity(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "dex-liquidity-history",
     path: API_PATHS.dexLiquidityHistoryBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
     probePath: API_PATHS.dexLiquidityHistoryProbe("usdt-tether"),
-  },
-  {
+  }),
+  publicGet({
     key: "supply-history",
     path: API_PATHS.supplyHistoryBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
     probePath: API_PATHS.supplyHistory("usdt-tether"),
-  },
-  {
+  }),
+  publicGet({
     key: "daily-digest",
     path: API_PATHS.dailyDigest(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "digest-archive",
     path: API_PATHS.digestArchive(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "digest-snapshot",
     path: API_PATHS.digestSnapshotBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
-  },
-  {
+  }),
+  publicGet({
     key: "snapshots-index",
     path: API_PATHS.snapshotsIndex(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     // Keep this out of public probes because valid dates come from /api/snapshots/index.
     key: "snapshot-day",
     path: "/api/snapshots/:date.json",
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
-  },
-  {
+  }),
+  publicGet({
     // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
     // Keep this out of public probes because valid dates come from /api/snapshots/index.
     key: "snapshot-coin",
     path: "/api/snapshot/:date/stablecoin/:id",
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
-  },
-  {
+  }),
+  publicGet({
     key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "yield-adapter-manifest",
     path: API_PATHS.yieldAdapterManifest(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "yield-history",
     path: API_PATHS.yieldHistoryBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
     probePath: API_PATHS.yieldHistoryProbe("usdt-tether"),
-  },
-  {
+  }),
+  publicGet({
     key: "safety-score-history",
     path: API_PATHS.safetyScoreHistoryBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
     probePath: API_PATHS.safetyScoreHistoryProbe("usdt-tether"),
-  },
-  {
+  }),
+  publicGet({
     key: "stability-index",
     path: API_PATHS.stabilityIndex(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "report-cards",
     path: API_PATHS.reportCards(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "mint-burn-flows",
     path: API_PATHS.mintBurnFlowsBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "mint-burn-events",
     path: API_PATHS.mintBurnEventsBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
     probePath: API_PATHS.mintBurnEvents({ stablecoin: "usdt-tether" }),
-  },
-  {
+  }),
+  publicGet({
     key: "stress-signals",
     path: API_PATHS.stressSignalsBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     strictContract: true,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "chains",
     path: API_PATHS.chains(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
-  {
+  }),
+  publicGet({
     key: "non-usd-share",
     path: API_PATHS.nonUsdShareBase(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
     probePath: API_PATHS.nonUsdShare(90),
-  },
-  {
+  }),
+  publicGet({
     key: "telegram-pulse",
     path: API_PATHS.telegramPulse(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
     probeGroup: "public",
-  },
+  }),
   publicPostExempt({
     key: "telegram-mini-app-session",
     path: API_PATHS.telegramMiniAppSession(),
@@ -601,31 +474,19 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: true,
     routeDependencies: ["apiKeyHashPepper"],
   },
-  {
+  adminGet({
     key: "api-key-requests-admin",
     path: API_PATHS.apiKeyRequestsAdmin(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
     siteDataAccess: "denied",
-  },
-  {
+  }),
+  adminGet({
     key: "api-key-audit-log",
     path: API_PATHS.apiKeyAuditLog(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
-  },
-  {
+  }),
+  adminGet({
     key: "admin-action-log",
     path: API_PATHS.adminActionLog(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
-  },
+  }),
   adminMutation({
     key: "trigger-digest",
     path: API_PATHS.triggerDigest(),
@@ -854,6 +715,25 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "admin",
   }),
 ] as const satisfies readonly BaseEndpointDefinition[];
+
+const ENDPOINT_METADATA_FACTORY_EXEMPT_KEYS = new Set<string>([
+  // GET lists keys; POST creates a key. The admin mutation gate is enforced
+  // inside the route handler because this endpoint intentionally supports both
+  // read and write operations on the same path.
+  "api-keys",
+]);
+
+function assertStandardEndpointMetadataUsesFactories(definitions: readonly BaseEndpointDefinition[]): void {
+  for (const endpoint of definitions) {
+    if (isFactoryMarkedEndpoint(endpoint)) continue;
+    if (ENDPOINT_METADATA_FACTORY_EXEMPT_KEYS.has(endpoint.key)) continue;
+    throw new Error(
+      `Endpoint "${endpoint.key}" repeats standard method/auth/cache metadata; use an endpoint metadata factory or add an explicit exemption.`,
+    );
+  }
+}
+
+assertStandardEndpointMetadataUsesFactories(BASE_ENDPOINT_DEFINITIONS);
 
 export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
 export type EndpointDefinitionByKey<K extends EndpointKey> = Extract<(typeof ENDPOINT_DEFINITIONS)[number], { key: K }>;

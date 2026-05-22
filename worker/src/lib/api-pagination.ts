@@ -1,6 +1,12 @@
 import { buildPaginatedQuery } from "./db";
 import { getLatestSuccessfulCronTimestamp } from "./api-freshness";
-import { parseQueryParams, type ParamSpec } from "./api-params";
+import {
+  encodeJsonCursor,
+  parseBooleanParam,
+  parseJsonCursorParam,
+  parseQueryParams,
+  type ParamSpec,
+} from "./api-params";
 import { errorResponse, jsonFreshResponse } from "./api-response";
 
 const PAGINATED_TABLES = new Set([
@@ -86,36 +92,7 @@ interface ParsedPagination {
 }
 
 function encodeCursor(values: CursorPrimitive[]): string {
-  const payload = JSON.stringify({ v: 1, values });
-  const bytes = new TextEncoder().encode(payload);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function decodeBase64Url(value: string): string | null {
-  try {
-    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
-    const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return new TextDecoder().decode(bytes);
-  } catch {
-    return null;
-  }
-}
-
-function parseBooleanParam(
-  value: string | null,
-  name: string,
-  defaultValue: boolean,
-): boolean | Response {
-  if (value == null || value === "") return defaultValue;
-  if (value === "true" || value === "1") return true;
-  if (value === "false" || value === "0") return false;
-  return errorResponse(400, `Invalid ${name}: must be true or false`);
+  return encodeJsonCursor({ v: 1, values });
 }
 
 function parseCursorValues<TRow>(
@@ -124,38 +101,32 @@ function parseCursorValues<TRow>(
 ): CursorPrimitive[] | null | Response {
   if (!rawCursor) return null;
   if (!config) return errorResponse(400, "Invalid cursor: cursor pagination is not supported for this endpoint");
-  const decoded = decodeBase64Url(rawCursor);
-  if (!decoded) return errorResponse(400, "Invalid cursor: malformed cursor");
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decoded);
-  } catch {
-    return errorResponse(400, "Invalid cursor: malformed cursor");
-  }
+  return parseJsonCursorParam(rawCursor, (parsed) => {
+    if (parsed === null || typeof parsed !== "object") return null;
+    const payload = parsed as { v?: unknown; values?: unknown };
+    if (payload.v !== 1 || !Array.isArray(payload.values) || payload.values.length !== config.columns.length) {
+      return null;
+    }
 
-  const payload = parsed as { v?: unknown; values?: unknown };
-  if (payload.v !== 1 || !Array.isArray(payload.values) || payload.values.length !== config.columns.length) {
-    return errorResponse(400, "Invalid cursor: malformed cursor");
-  }
-
-  const values: CursorPrimitive[] = [];
-  for (let i = 0; i < config.columns.length; i++) {
-    const column = config.columns[i]!;
-    const value = payload.values[i];
-    if (column.type === "number") {
-      if (typeof value !== "number" || !Number.isFinite(value)) {
-        return errorResponse(400, "Invalid cursor: malformed cursor");
+    const values: CursorPrimitive[] = [];
+    for (let i = 0; i < config.columns.length; i++) {
+      const column = config.columns[i]!;
+      const value = payload.values[i];
+      if (column.type === "number") {
+        if (typeof value !== "number" || !Number.isFinite(value)) {
+          return null;
+        }
+        values.push(value);
+        continue;
+      }
+      if (typeof value !== "string") {
+        return null;
       }
       values.push(value);
-      continue;
     }
-    if (typeof value !== "string") {
-      return errorResponse(400, "Invalid cursor: malformed cursor");
-    }
-    values.push(value);
-  }
-  return values;
+    return values;
+  });
 }
 
 function buildCursorWhereClause<TRow>(
@@ -243,7 +214,12 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   }
 
   const dataLimit = config.cursor ? config.limit + 1 : config.limit;
-  const { where: dataWhere, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({
+  const {
+    where: dataWhere,
+    limitClause,
+    offsetClause,
+    paginationBindings,
+  } = buildPaginatedQuery({
     conditions: dataConditions,
     limit: dataLimit,
     offset: config.cursorValues ? 0 : config.offset,
@@ -315,7 +291,11 @@ export function parsePaginatedEventParams(
   } satisfies Record<"limit" | "offset", ParamSpec>);
   if (parsed instanceof Response) return parsed;
 
-  const includeTotal = parseBooleanParam(searchParams.get("includeTotal"), "includeTotal", config.includeTotalDefault ?? true);
+  const includeTotal = parseBooleanParam(
+    searchParams.get("includeTotal"),
+    "includeTotal",
+    config.includeTotalDefault ?? true,
+  );
   if (includeTotal instanceof Response) return includeTotal;
 
   const cursorParamName = cursor?.parameterName ?? "cursor";

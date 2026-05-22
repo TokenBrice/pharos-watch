@@ -1,7 +1,15 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
-import { errorResponse, jsonResponse, parseOptionalRequestJsonObject, parseQueryParams } from "../lib/api-utils";
+import {
+  errorResponse,
+  jsonResponse,
+  parseBooleanInput,
+  parseOptionalRequestJsonObject,
+  parseQueryParams,
+  readBodyOrQueryParam,
+  readBodyOrQueryStringParam,
+} from "../lib/api-utils";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
@@ -10,9 +18,7 @@ import {
 } from "../lib/blacklist-contracts";
 import { createBudget, createRateLimiter } from "../lib/evm-logs";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import {
-  recoverBlacklistAmountForRow,
-} from "../cron/blacklist/amount-recovery";
+import { recoverBlacklistAmountForRow } from "../cron/blacklist/amount-recovery";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
@@ -43,16 +49,6 @@ type GapRow = {
 type ResolvedCandidate =
   | { row: GapRow; kind: "resolved"; config: ContractEventConfig }
   | { row: GapRow; kind: "missing_config" | "ambiguous_config" };
-
-function parseBooleanInput(value: unknown, fallback: boolean): boolean {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "true") return true;
-    if (normalized === "false") return false;
-  }
-  return fallback;
-}
 
 function resolveCandidate(row: GapRow): ResolvedCandidate {
   const stablecoin = row.stablecoin.toUpperCase() as BlacklistStablecoin;
@@ -100,9 +96,9 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
   return runTrustedAdminMutation(async () => {
     const body = await parseOptionalRequestJsonObject(request);
     if (body instanceof Response) return body;
-    const dryRun = parseBooleanInput(body.dryRun ?? url.searchParams.get("dryRun"), true);
+    const dryRun = parseBooleanInput(readBodyOrQueryParam(body, url.searchParams, "dryRun"), true);
     const onlyMissingProvenance = parseBooleanInput(
-      body.onlyMissingProvenance ?? url.searchParams.get("onlyMissingProvenance"),
+      readBodyOrQueryParam(body, url.searchParams, "onlyMissingProvenance"),
       false,
     );
 
@@ -119,10 +115,8 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
 
     const maxAttempts = typeof body.maxAttempts === "number" ? Math.trunc(body.maxAttempts) : maxAttemptsParam;
 
-    const chainId = typeof body.chainId === "string" ? body.chainId.trim().toLowerCase() : url.searchParams.get("chainId")?.trim().toLowerCase() ?? null;
-    const stablecoinInput = typeof body.stablecoin === "string"
-      ? body.stablecoin.trim().toUpperCase()
-      : url.searchParams.get("stablecoin")?.trim().toUpperCase() ?? null;
+    const chainId = readBodyOrQueryStringParam(body, url.searchParams, "chainId")?.toLowerCase() ?? null;
+    const stablecoinInput = readBodyOrQueryStringParam(body, url.searchParams, "stablecoin")?.toUpperCase() ?? null;
     if (stablecoinInput && !VALID_STABLECOINS.has(stablecoinInput as BlacklistStablecoin)) {
       return errorResponse(400, "Invalid stablecoin parameter");
     }
@@ -234,14 +228,16 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
         if (candidate.kind === "ambiguous_config") configAmbiguous++;
         if (candidate.kind === "missing_config") configMissing++;
         updates.push(
-          db.prepare(
-            `UPDATE blacklist_events
+          db
+            .prepare(
+              `UPDATE blacklist_events
              SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
                  amount_last_attempted_at = ?,
                  amount_last_error_class = ?,
                  amount_last_provider = ?
              WHERE id = ?`,
-          ).bind(attemptAt, errorClass, "none", candidate.row.id),
+            )
+            .bind(attemptAt, errorClass, "none", candidate.row.id),
         );
         continue;
       }
@@ -267,21 +263,23 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
       if (recovery.amount == null) {
         providerFailed++;
         updates.push(
-          db.prepare(
-            `UPDATE blacklist_events
+          db
+            .prepare(
+              `UPDATE blacklist_events
              SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
                  amount_last_attempted_at = ?,
                  amount_last_error_class = ?,
                  amount_last_provider = ?,
                  amount_status = ?
              WHERE id = ?`,
-          ).bind(
-            attemptAt,
-            recovery.lastErrorClass ?? "provider_null",
-            recovery.lastProvider,
-            recovery.amountStatus,
-            row.id,
-          ),
+            )
+            .bind(
+              attemptAt,
+              recovery.lastErrorClass ?? "provider_null",
+              recovery.lastProvider,
+              recovery.amountStatus,
+              row.id,
+            ),
         );
         continue;
       }
@@ -289,8 +287,9 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
       resolved++;
       if (recovery.amount === 0) resolvedZero++;
       updates.push(
-        db.prepare(
-          `UPDATE blacklist_events
+        db
+          .prepare(
+            `UPDATE blacklist_events
            SET amount = ?,
                amount_native = ?,
                amount_usd_at_event = ?,
@@ -303,18 +302,19 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
                amount_last_error_class = NULL,
                amount_last_provider = ?
            WHERE id = ?`,
-        ).bind(
-          recovery.amount,
-          recovery.amount,
-          recovery.amountUsd,
-          recovery.amountSource,
-          recovery.amountStatus,
-          config.contractAddress,
-          config.configKey,
-          attemptAt,
-          recovery.lastProvider,
-          row.id,
-        ),
+          )
+          .bind(
+            recovery.amount,
+            recovery.amount,
+            recovery.amountUsd,
+            recovery.amountSource,
+            recovery.amountStatus,
+            config.contractAddress,
+            config.configKey,
+            attemptAt,
+            recovery.lastProvider,
+            row.id,
+          ),
       );
     }
 

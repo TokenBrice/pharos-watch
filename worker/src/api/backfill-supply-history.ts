@@ -12,7 +12,11 @@ import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { fetchEvmUint256AtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../lib/evm-rpc";
+import {
+  fetchEvmUint256AtBlock,
+  resolveClosestBlockAtOrBeforeTimestamp,
+  type EvmBlockSearchCache,
+} from "../lib/evm-rpc";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../lib/evm-selectors";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
@@ -89,11 +93,7 @@ async function fetchHistoricalPegFxPrices(
 // multi-chain reserves that far exceed the token's market cap).
 
 function firstEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
-  return (
-    contracts?.find(
-      (c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron",
-    ) ?? null
-  );
+  return contracts?.find((c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron") ?? null;
 }
 
 function isWithinBackfillWindow(snapshotDate: number, window?: SupplyBackfillWindow): boolean {
@@ -115,24 +115,17 @@ async function fetchOnChainTotalSupply(
   if (!contract || !chainRpcs) return null;
 
   try {
-    const raw = await fetchEvmUint256AtBlock(
-      contract.chain,
-      contract.address,
-      TOTAL_SUPPLY_SELECTOR,
-      "latest",
-      { chainRpcs, timeoutMs: 10_000 },
-    );
+    const raw = await fetchEvmUint256AtBlock(contract.chain, contract.address, TOTAL_SUPPLY_SELECTOR, "latest", {
+      chainRpcs,
+      timeoutMs: 10_000,
+    });
     if (raw == null || raw <= 0n) return null;
     const supply = Number(raw) / 10 ** (contract.decimals ?? 18);
     if (!Number.isFinite(supply) || supply <= 0) return null;
-    console.log(
-      `[backfill-commodity] ${logLabel}: on-chain totalSupply fallback = ${supply.toFixed(2)} units`,
-    );
+    console.log(`[backfill-commodity] ${logLabel}: on-chain totalSupply fallback = ${supply.toFixed(2)} units`);
     return supply;
   } catch (err) {
-    console.warn(
-      `[backfill-commodity] ${logLabel}: on-chain totalSupply probe failed — ${String(err).slice(0, 200)}`,
-    );
+    console.warn(`[backfill-commodity] ${logLabel}: on-chain totalSupply probe failed — ${String(err).slice(0, 200)}`);
     return null;
   }
 }
@@ -315,11 +308,7 @@ async function backfillCommodity(
     // supply × price when the CG market_cap series is all zeros.
     let effectiveSupply = marketHistory.circulatingSupply;
     if (!effectiveSupply || effectiveSupply <= 0) {
-      const onChain = await fetchOnChainTotalSupply(
-        config.contracts,
-        config.chainRpcs,
-        `${id} (${config.geckoId})`,
-      );
+      const onChain = await fetchOnChainTotalSupply(config.contracts, config.chainRpcs, `${id} (${config.geckoId})`);
       if (onChain != null) effectiveSupply = onChain;
     }
 
@@ -421,6 +410,248 @@ async function backfillCommodity(
   return { rows: stmts.length };
 }
 
+export interface BackfillSupplyHistoryRouteContext {
+  db: D1Database;
+  url: URL;
+  coingeckoApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}
+
+async function executeBackfillSupplyHistory(
+  db: D1Database,
+  url: URL,
+  cgApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<Response> {
+  const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
+  const dayWindow = parseOptionalDayWindow(url, {
+    maxEndDay: getLastCompletedUtcDay(),
+    invalidDayMessage: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
+  });
+  if (dayWindow instanceof Response) return dayWindow;
+  const supplyBackfillWindow: SupplyBackfillWindow = {
+    startDay: dayWindow.startDay,
+    endDay: dayWindow.endDay,
+  };
+
+  const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
+    defaultBatchSize: DEFAULT_BATCH_SIZE,
+  });
+  if ("response" in selection) {
+    return selection.response;
+  }
+  const coins = selection.coins;
+
+  if (coins.length === 0) {
+    return noAdminTargetsResponse();
+  }
+
+  let totalRows = 0;
+  const errors: string[] = [];
+  const skipped: string[] = [];
+
+  const runCoinGeckoMarketChartBackfill = async (meta: (typeof coins)[number], failureLabel: string): Promise<void> => {
+    const historicalOnChainResult = await backfillHistoricalOnChainSupply(db, meta, {
+      chainRpcs,
+      window: supplyBackfillWindow,
+    });
+    if (historicalOnChainResult) {
+      if (historicalOnChainResult.error) {
+        errors.push(`${meta.symbol}: ${historicalOnChainResult.error}`);
+      } else {
+        totalRows += historicalOnChainResult.rows;
+      }
+      return;
+    }
+
+    if (!meta.geckoId) {
+      skipped.push(meta.symbol);
+      return;
+    }
+
+    try {
+      const result = await backfillCommodity(db, meta.id, {
+        geckoId: meta.geckoId,
+        protocolSlug: meta.protocolSlug ?? undefined,
+        cgApiKey,
+        contracts: meta.contracts,
+        chainRpcs,
+        window: supplyBackfillWindow,
+      });
+      if (result.error) {
+        errors.push(`${meta.symbol}: ${result.error}`);
+      } else {
+        totalRows += result.rows;
+      }
+    } catch (err) {
+      errors.push(`${meta.symbol}: ${failureLabel} — ${err}`);
+    }
+  };
+
+  for (const meta of coins) {
+    // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
+    const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
+    if (isCommodity && meta.geckoId) {
+      await runCoinGeckoMarketChartBackfill(meta, "commodity backfill failed");
+      continue;
+    }
+
+    // CoinGecko-only and non-gold/silver commodity coins: backfill via CoinGecko market_chart
+    // (same path as commodity tokens — market_cap from CG is accurate for USD stablecoins too)
+    if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
+      await runCoinGeckoMarketChartBackfill(meta, "CoinGecko backfill failed");
+      continue;
+    }
+
+    // Determine if this coin needs native→USD conversion
+    const isUsd = meta.flags.pegCurrency === "USD";
+    const needsConversion = !isUsd;
+    const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
+    const dlId = meta.llamaId ?? meta.id;
+
+    let detail: StablecoinDetail | null = null;
+    let historicalPrices: { timestamp: number; price: number }[] = [];
+    try {
+      const [detailRes, priceSeries] = await Promise.all([
+        fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
+          headers: { "User-Agent": USER_AGENT },
+        }),
+        geckoId
+          ? fetchMarketBackfillPriceSeries(meta, geckoId, {
+              granularity: "daily",
+              coingeckoApiKey: cgApiKey ?? null,
+            })
+          : Promise.resolve(null),
+      ]);
+      if (!detailRes?.ok) {
+        errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
+        continue;
+      }
+      detail = (await detailRes.json()) as StablecoinDetail;
+
+      historicalPrices = priceSeries?.prices ?? [];
+    } catch (err) {
+      errors.push(`${meta.symbol}: fetch failed — ${err}`);
+      continue;
+    }
+
+    const tokens = detail?.tokens;
+    if (!tokens || tokens.length === 0) {
+      skipped.push(meta.symbol);
+      continue;
+    }
+
+    if (needsConversion && historicalPrices.length === 0) {
+      const fxPrices = await fetchHistoricalPegFxPrices(db, meta, tokens);
+      historicalPrices = fxPrices.map((point) => ({
+        timestamp: point.timestamp,
+        price: point.rate,
+      }));
+    }
+
+    // For non-USD coins: require historical price data by default.
+    // Optional emergency fallback can use current price for only a short recent window.
+    const fallbackPrice = needsConversion && detail?.price ? detail.price : null;
+    if (needsConversion && historicalPrices.length === 0) {
+      if (!allowConstantPriceFallback) {
+        errors.push(
+          `${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`,
+        );
+        continue;
+      }
+      if (!fallbackPrice) {
+        errors.push(`${meta.symbol}: non-USD coin missing historical prices and fallback price`);
+        continue;
+      }
+      const reason = !geckoId ? "no geckoId" : "price API returned no data";
+      console.warn(
+        `[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`,
+      );
+    }
+
+    const priceBySnapshotDate = new Map<number, number>();
+    const historicalRateSeries = historicalPrices.map((point) => ({
+      timestamp: point.timestamp,
+      rate: point.price,
+    }));
+    for (const point of historicalPrices) {
+      const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
+      priceBySnapshotDate.set(snapshotDate, point.price);
+    }
+
+    function findHistoricalPrice(snapshotDate: number): number | null {
+      const exact = priceBySnapshotDate.get(snapshotDate);
+      if (exact != null) return exact;
+      if (needsConversion && historicalPrices.length > 0) {
+        const interpolated = interpolateRateAtTimestamp(historicalRateSeries, snapshotDate);
+        return interpolated && interpolated > 0 ? interpolated : null;
+      }
+      return null;
+    }
+
+    const stmts: D1PreparedStatement[] = [];
+
+    const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * DAY_SECONDS;
+    for (const entry of tokens) {
+      const circ = entry.circulating;
+      if (!circ) continue;
+
+      // Sum across all peg buckets (native currency for non-USD, USD for USD coins)
+      const rawSum = sumPegBuckets(circ);
+      if (rawSum <= 0) continue;
+
+      // Floor to UTC midnight
+      const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
+      if (!isWithinBackfillWindow(snapshotDate, supplyBackfillWindow)) continue;
+      let marketCapUsd: number;
+      let price = findHistoricalPrice(snapshotDate);
+
+      if (needsConversion) {
+        // Non-USD: multiply native supply by USD price to get market cap
+        if (price == null && allowConstantPriceFallback && fallbackPrice && entry.date >= fallbackWindowStart) {
+          price = fallbackPrice;
+        }
+        if (!price || price <= 0) continue;
+        marketCapUsd = rawSum * price;
+      } else {
+        // USD: rawSum is already in USD
+        marketCapUsd = rawSum;
+      }
+
+      stmts.push(
+        db
+          .prepare(
+            "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+          )
+          .bind(meta.id, snapshotDate, marketCapUsd, price),
+      );
+    }
+
+    if (stmts.length > 0) {
+      await batchExecute(db, stmts);
+      totalRows += stmts.length;
+    }
+  }
+
+  return jsonResponse(
+    buildAdminJobSummary({
+      coinsProcessed: coins.length,
+      rowsInserted: totalRows,
+      skipped,
+      errors,
+    }),
+  );
+}
+
+export function handleBackfillSupplyHistoryTrusted({
+  db,
+  url,
+  coingeckoApiKey,
+  chainRpcs,
+}: BackfillSupplyHistoryRouteContext): Promise<Response> {
+  return executeBackfillSupplyHistory(db, url, coingeckoApiKey, chainRpcs);
+}
+
 export async function handleBackfillSupplyHistory(
   db: D1Database,
   url: URL,
@@ -429,228 +660,5 @@ export async function handleBackfillSupplyHistory(
   cgApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Response> {
-  return runAdminJob(
-    { request, trustedAdmin, url },
-    async () => {
-      const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
-      const dayWindow = parseOptionalDayWindow(url, {
-        maxEndDay: getLastCompletedUtcDay(),
-        invalidDayMessage: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
-      });
-      if (dayWindow instanceof Response) return dayWindow;
-      const supplyBackfillWindow: SupplyBackfillWindow = {
-        startDay: dayWindow.startDay,
-        endDay: dayWindow.endDay,
-      };
-
-      const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
-        defaultBatchSize: DEFAULT_BATCH_SIZE,
-      });
-      if ("response" in selection) {
-        return selection.response;
-      }
-      const coins = selection.coins;
-
-      if (coins.length === 0) {
-        return noAdminTargetsResponse();
-      }
-
-      let totalRows = 0;
-      const errors: string[] = [];
-      const skipped: string[] = [];
-
-      const runCoinGeckoMarketChartBackfill = async (
-        meta: (typeof coins)[number],
-        failureLabel: string,
-      ): Promise<void> => {
-        const historicalOnChainResult = await backfillHistoricalOnChainSupply(db, meta, {
-          chainRpcs,
-          window: supplyBackfillWindow,
-        });
-        if (historicalOnChainResult) {
-          if (historicalOnChainResult.error) {
-            errors.push(`${meta.symbol}: ${historicalOnChainResult.error}`);
-          } else {
-            totalRows += historicalOnChainResult.rows;
-          }
-          return;
-        }
-
-        if (!meta.geckoId) {
-          skipped.push(meta.symbol);
-          return;
-        }
-
-        try {
-          const result = await backfillCommodity(db, meta.id, {
-            geckoId: meta.geckoId,
-            protocolSlug: meta.protocolSlug ?? undefined,
-            cgApiKey,
-            contracts: meta.contracts,
-            chainRpcs,
-            window: supplyBackfillWindow,
-          });
-          if (result.error) {
-            errors.push(`${meta.symbol}: ${result.error}`);
-          } else {
-            totalRows += result.rows;
-          }
-        } catch (err) {
-          errors.push(`${meta.symbol}: ${failureLabel} — ${err}`);
-        }
-      };
-
-      for (const meta of coins) {
-        // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
-        const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
-        if (isCommodity && meta.geckoId) {
-          await runCoinGeckoMarketChartBackfill(meta, "commodity backfill failed");
-          continue;
-        }
-
-        // CoinGecko-only and non-gold/silver commodity coins: backfill via CoinGecko market_chart
-        // (same path as commodity tokens — market_cap from CG is accurate for USD stablecoins too)
-        if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
-          await runCoinGeckoMarketChartBackfill(meta, "CoinGecko backfill failed");
-          continue;
-        }
-
-        // Determine if this coin needs native→USD conversion
-        const isUsd = meta.flags.pegCurrency === "USD";
-        const needsConversion = !isUsd;
-        const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
-        const dlId = meta.llamaId ?? meta.id;
-
-        let detail: StablecoinDetail | null = null;
-        let historicalPrices: { timestamp: number; price: number }[] = [];
-        try {
-          const [detailRes, priceSeries] = await Promise.all([
-            fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
-              headers: { "User-Agent": USER_AGENT },
-            }),
-            geckoId
-              ? fetchMarketBackfillPriceSeries(meta, geckoId, {
-                granularity: "daily",
-                coingeckoApiKey: cgApiKey ?? null,
-              })
-              : Promise.resolve(null),
-          ]);
-          if (!detailRes?.ok) {
-            errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
-            continue;
-          }
-          detail = (await detailRes.json()) as StablecoinDetail;
-
-          historicalPrices = priceSeries?.prices ?? [];
-        } catch (err) {
-          errors.push(`${meta.symbol}: fetch failed — ${err}`);
-          continue;
-        }
-
-        const tokens = detail?.tokens;
-        if (!tokens || tokens.length === 0) {
-          skipped.push(meta.symbol);
-          continue;
-        }
-
-        if (needsConversion && historicalPrices.length === 0) {
-          const fxPrices = await fetchHistoricalPegFxPrices(db, meta, tokens);
-          historicalPrices = fxPrices.map((point) => ({
-            timestamp: point.timestamp,
-            price: point.rate,
-          }));
-        }
-
-        // For non-USD coins: require historical price data by default.
-        // Optional emergency fallback can use current price for only a short recent window.
-        const fallbackPrice = needsConversion && detail?.price ? detail.price : null;
-        if (needsConversion && historicalPrices.length === 0) {
-          if (!allowConstantPriceFallback) {
-            errors.push(
-              `${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`,
-            );
-            continue;
-          }
-          if (!fallbackPrice) {
-            errors.push(`${meta.symbol}: non-USD coin missing historical prices and fallback price`);
-            continue;
-          }
-          const reason = !geckoId ? "no geckoId" : "price API returned no data";
-          console.warn(
-            `[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`,
-          );
-        }
-
-        const priceBySnapshotDate = new Map<number, number>();
-        const historicalRateSeries = historicalPrices.map((point) => ({
-          timestamp: point.timestamp,
-          rate: point.price,
-        }));
-        for (const point of historicalPrices) {
-          const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
-          priceBySnapshotDate.set(snapshotDate, point.price);
-        }
-
-        function findHistoricalPrice(snapshotDate: number): number | null {
-          const exact = priceBySnapshotDate.get(snapshotDate);
-          if (exact != null) return exact;
-          if (needsConversion && historicalPrices.length > 0) {
-            const interpolated = interpolateRateAtTimestamp(historicalRateSeries, snapshotDate);
-            return interpolated && interpolated > 0 ? interpolated : null;
-          }
-          return null;
-        }
-
-        const stmts: D1PreparedStatement[] = [];
-
-        const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * DAY_SECONDS;
-        for (const entry of tokens) {
-          const circ = entry.circulating;
-          if (!circ) continue;
-
-          // Sum across all peg buckets (native currency for non-USD, USD for USD coins)
-          const rawSum = sumPegBuckets(circ);
-          if (rawSum <= 0) continue;
-
-          // Floor to UTC midnight
-          const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
-          if (!isWithinBackfillWindow(snapshotDate, supplyBackfillWindow)) continue;
-          let marketCapUsd: number;
-          let price = findHistoricalPrice(snapshotDate);
-
-          if (needsConversion) {
-            // Non-USD: multiply native supply by USD price to get market cap
-            if (price == null && allowConstantPriceFallback && fallbackPrice && entry.date >= fallbackWindowStart) {
-              price = fallbackPrice;
-            }
-            if (!price || price <= 0) continue;
-            marketCapUsd = rawSum * price;
-          } else {
-            // USD: rawSum is already in USD
-            marketCapUsd = rawSum;
-          }
-
-          stmts.push(
-            db
-              .prepare(
-                "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-              )
-              .bind(meta.id, snapshotDate, marketCapUsd, price),
-          );
-        }
-
-        if (stmts.length > 0) {
-          await batchExecute(db, stmts);
-          totalRows += stmts.length;
-        }
-      }
-
-      return jsonResponse(buildAdminJobSummary({
-        coinsProcessed: coins.length,
-        rowsInserted: totalRows,
-        skipped,
-        errors,
-      }));
-    },
-  );
+  return runAdminJob({ request, trustedAdmin, url }, () => executeBackfillSupplyHistory(db, url, cgApiKey, chainRpcs));
 }

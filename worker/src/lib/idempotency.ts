@@ -1,4 +1,4 @@
-import { errorResponse } from "./api-utils";
+import { errorResponse, withResponseHeaders } from "./api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 interface IdempotencyRecord {
@@ -11,7 +11,8 @@ interface IdempotencyRecord {
 const PENDING_RESPONSE_STATUS = -1;
 const FAILED_RESPONSE_STATUS = -2;
 const FAILED_RESPONSE_HTTP_STATUS = 500;
-const FAILED_RESPONSE_MESSAGE = "Previous idempotent attempt failed before cleanup could be confirmed. Retry with a new Idempotency-Key.";
+const FAILED_RESPONSE_MESSAGE =
+  "Previous idempotent attempt failed before cleanup could be confirmed. Retry with a new Idempotency-Key.";
 
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -30,13 +31,9 @@ function getIdempotencyKey(request: Request | undefined): string | null {
 }
 
 function withIdempotencyHeaders(response: Response, key: string, replayed: boolean): Response {
-  const headers = new Headers(response.headers);
-  headers.set("Idempotency-Key", key);
-  headers.set("X-Idempotent-Replay", replayed ? "true" : "false");
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+  return withResponseHeaders(response, {
+    "Idempotency-Key": key,
+    "X-Idempotent-Replay": replayed ? "true" : "false",
   });
 }
 
@@ -61,11 +58,7 @@ async function requestFingerprint(request: Request): Promise<string> {
   return sha256Hex(canonical);
 }
 
-async function loadIdempotencyRecord(
-  db: D1Database,
-  action: string,
-  key: string,
-): Promise<IdempotencyRecord | null> {
+async function loadIdempotencyRecord(db: D1Database, action: string, key: string): Promise<IdempotencyRecord | null> {
   return db
     .prepare(
       "SELECT request_hash, response_status, response_body, created_at FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ?",
@@ -107,25 +100,19 @@ export async function runIdempotentAdminAction(
         .prepare("DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND response_status = ?")
         .bind(action, key, PENDING_RESPONSE_STATUS)
         .run()
-        .catch((e) => { console.warn("[idempotency] cleanup after key-reuse failed:", e); });
+        .catch((e) => {
+          console.warn("[idempotency] cleanup after key-reuse failed:", e);
+        });
     }
     return errorResponse(409, "Idempotency key reuse with different request payload");
   }
 
   if (existing.response_status === PENDING_RESPONSE_STATUS && !insertedReservation) {
-    return withIdempotencyHeaders(
-      errorResponse(409, "Idempotency key is currently in progress"),
-      key,
-      true,
-    );
+    return withIdempotencyHeaders(errorResponse(409, "Idempotency key is currently in progress"), key, true);
   }
 
   if (existing.response_status === FAILED_RESPONSE_STATUS) {
-    return withIdempotencyHeaders(
-      buildStoredFailureResponse(existing.response_body),
-      key,
-      true,
-    );
+    return withIdempotencyHeaders(buildStoredFailureResponse(existing.response_body), key, true);
   }
 
   if (existing.response_status !== PENDING_RESPONSE_STATUS) {
@@ -154,7 +141,10 @@ export async function runIdempotentAdminAction(
         .run();
       pendingReservationCleared = (cleanupResult.meta?.changes ?? 0) > 0;
     } catch (cleanupError) {
-      console.warn("[idempotency] cleanup after execution error failed; attempting terminal failure replay:", cleanupError);
+      console.warn(
+        "[idempotency] cleanup after execution error failed; attempting terminal failure replay:",
+        cleanupError,
+      );
     }
 
     if (pendingReservationCleared) {
@@ -184,7 +174,10 @@ export async function runIdempotentAdminAction(
         return withIdempotencyHeaders(buildStoredFailureResponse(failureBody), key, false);
       }
     } catch (failureUpdateError) {
-      console.error("[idempotency] failed to persist terminal failure replay after execution error:", failureUpdateError);
+      console.error(
+        "[idempotency] failed to persist terminal failure replay after execution error:",
+        failureUpdateError,
+      );
     }
 
     try {
@@ -200,7 +193,9 @@ export async function runIdempotentAdminAction(
       console.error("[idempotency] final cleanup after execution error failed:", finalCleanupError);
     }
 
-    console.error("[idempotency] reservation state after execution error could not be confirmed; propagating original error");
+    console.error(
+      "[idempotency] reservation state after execution error could not be confirmed; propagating original error",
+    );
     throw err;
   }
   const responseBody = await response.clone().text();
@@ -217,7 +212,9 @@ export async function runIdempotentAdminAction(
     .prepare("DELETE FROM admin_idempotency_keys WHERE created_at < ?")
     .bind(now - 7 * DAY_SECONDS)
     .run()
-    .catch((e) => { console.warn("[idempotency] TTL prune failed:", e); });
+    .catch((e) => {
+      console.warn("[idempotency] TTL prune failed:", e);
+    });
 
   return withIdempotencyHeaders(response, key, false);
 }
