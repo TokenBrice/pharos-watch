@@ -94,7 +94,7 @@ The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, a
 
 `worker/package.json` keeps `npm run deploy` as a guarded command via `scripts/ci/guard-worker-deploy.mjs` that exits with release-flow guidance. Production Worker releases use the CI-documented sequence: upload a Worker Version, run validation and migration checks, preview-smoke the uploaded version, promote it with `wrangler versions deploy`, and then sync triggers.
 
-`.github/scripts/wait-for-workflow-job.mjs` polls the GitHub Actions REST API for same-run job completion. Jobs that call it must grant `actions: read` and pass `GITHUB_TOKEN` or `GH_TOKEN`; transient API/JSON failures are retried by the polling loop.
+`.github/scripts/wait-for-workflow-job.mjs` polls the GitHub Actions REST API for same-run job completion. Jobs that call it must grant `actions: read` and pass `GITHUB_TOKEN`; transient API/JSON failures are retried by the polling loop.
 
 ## CI-Critical Scripts
 
