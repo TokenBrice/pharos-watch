@@ -17,10 +17,10 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Idea 19 (quiet calm deviations + magnitude-aware mcap delta) | off | 2026-08-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Idea 20b (mobile sticky compact summary) | off | 2026-08-01 |
 | `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Idea 13b (recent blacklist banner, FE-only v1) | off | 2026-08-01 |
-| `NEXT_PUBLIC_PHAROS_HERO_VERDICT` | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion) | on unless explicitly `false` | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_HERO_VERDICT` | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion) | on unless explicitly `false` | n/a (default-on, no expiry) |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | Idea 4 (curated + tape event-annotated charts) | off | 2026-09-01 |
 
-`expiresAt` is advisory — the corresponding gate in code carries the same date in a comment. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check (`scripts/ci/check-stale-flags.mjs`) runs in `validate:prebuild` and fails the build when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
+`expiresAt` is advisory — each default-off gate in code carries the same date in a comment (the default-on `HERO_VERDICT` has no expiry). Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check (`scripts/ci/check-stale-flags.mjs`) runs in `validate:prebuild` and fails the build when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
 
 ## Flip readiness gates
 
@@ -47,7 +47,7 @@ What must be true before turning each flag on in production:
 
 - [x] Hero verdict surface lands behind the flag (`<AiSummary>` hoisted above grid when on).
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
-- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current coverage: 391/391 one-liners and 391/391 AI summaries are present; TL;DR-first top-60 editorial QA remains in flight.**
+- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current coverage: verify via `npm run check:one-liner-coverage` and `npm run check:glossary-coverage`; TL;DR-first top-60 editorial QA remains in flight.**
 
 ### `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`
 

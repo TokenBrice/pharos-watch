@@ -1,6 +1,6 @@
 # Runbook: PharosWatchBot BotFather Configuration
 
-BotFather owns the bot-profile metadata, Main Mini App URL, profile launch toggle, preview screenshots, and loading-screen customization. None of these are reconciled by Worker code (bot name, short/long description, default menu button, allowed updates, and command list **are** reconciled — see [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Webhook and Command Registration"). This runbook captures the operator-owned fields that must be checked, including placeholders for BotFather-only assets that are not observable from the repo, plus the smoke-test checklist that must pass after each deploy and after each BotFather UI change.
+BotFather owns the bot-profile metadata, Main Mini App URL, profile launch toggle, preview screenshots, and loading-screen customization. None of these are reconciled by Worker code (bot name, short/long description, default menu button, allowed updates, and command list **are** reconciled — see [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Operational Notes"). This runbook captures the operator-owned fields that must be checked, including placeholders for BotFather-only assets that are not observable from the repo, plus the smoke-test checklist that must pass after each deploy and after each BotFather UI change.
 
 Verify quarterly or after a BotFather UI change.
 
