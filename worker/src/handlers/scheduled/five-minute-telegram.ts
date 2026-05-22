@@ -51,13 +51,11 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
         },
         {
           job: "telegram-disambiguation-cleanup",
-          kind: "db-only-sidecar",
           errorMessage: "[cron] telegram-disambiguation-cleanup failed:",
           run: (signal) => cleanExpiredDisambiguations(runtime.db, signal),
         },
         {
           job: "telegram-pulse-snapshot",
-          kind: "db-only-sidecar",
           errorMessage: "[cron] telegram-pulse-snapshot failed:",
           run: () => publishTelegramPulseSnapshot(runtime.db).then(() => undefined),
         },

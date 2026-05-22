@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
+import { assertAllFetchRoutesUsed, mockFetch, mockFetchStrict } from "../__shared/mock-fetch";
 
 describe("mockFetch helper", () => {
   afterEach(() => {
@@ -28,9 +28,9 @@ describe("mockFetch helper", () => {
   });
 
   it("supports exact URL matching in strictUrl mode", async () => {
-    const fetchSpy = mockFetch([
+    const fetchSpy = mockFetchStrict([
       { match: "https://api.example.test/prices?ids=usdt", body: { exact: true } },
-    ], { strictUrl: true, requireMatch: true });
+    ]);
 
     const res = await fetch("https://api.example.test/prices?ids=usdt");
     expect(await res.json()).toEqual({ exact: true });
@@ -52,5 +52,16 @@ describe("mockFetch helper", () => {
     expect(() => fetchSpy.assertAllRoutesUsed()).toThrow(
       "mockFetch: unused route match(es): api.example.test/unused",
     );
+  });
+
+  it("can create a strict spy without stubbing global fetch", async () => {
+    const fetchSpy = mockFetchStrict([
+      { match: "https://api.example.test/prices", body: { exact: true } },
+    ], { stubGlobal: false });
+
+    const res = await fetchSpy("https://api.example.test/prices");
+
+    expect(await res.json()).toEqual({ exact: true });
+    expect(() => assertAllFetchRoutesUsed(fetchSpy)).not.toThrow();
   });
 });

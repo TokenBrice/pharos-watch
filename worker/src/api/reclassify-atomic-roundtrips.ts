@@ -1,6 +1,5 @@
-import { requireAdmin } from "../lib/auth";
 import { jsonResponse, parseOptionalNonNegativeIntegerParam } from "../lib/api-utils";
-import { runTrustedAdminMutation } from "../lib/route-wrappers";
+import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
 import { batchExecute } from "../lib/db";
 import { collectAffectedHours, recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundtrip-detection";
@@ -59,10 +58,14 @@ export async function handleReclassifyAtomicRoundtrips(
   trustedAdmin: boolean | undefined,
   request?: Request,
 ): Promise<Response> {
-  const authErr = await requireAdmin(request, trustedAdmin);
-  if (authErr) return authErr;
-
-  return handleReclassifyAtomicRoundtripsTrusted(db, url);
+  return runAdminRoute(
+    {
+      endpoint: "reclassify-atomic-roundtrips",
+      request,
+      trustedAdmin,
+    },
+    () => handleReclassifyAtomicRoundtripsTrusted(db, url),
+  );
 }
 
 export async function handleReclassifyAtomicRoundtripsTrusted(

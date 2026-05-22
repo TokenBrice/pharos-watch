@@ -42,9 +42,11 @@ function resolveDynamicStablecoinRoute(
 type DynamicEndpointDescriptorKey = Parameters<typeof getDynamicEndpointDescriptorByKey>[0];
 type DynamicAdminEndpointKey = DynamicAdminEndpointMatch["key"];
 type ExpandedDynamicAdminEndpointMatch<T extends DynamicAdminEndpointMatch = DynamicAdminEndpointMatch> =
-  T extends { key: infer Key }
-    ? Key extends DynamicAdminEndpointKey
-      ? Omit<T, "key"> & { key: Key }
+  T extends DynamicAdminEndpointMatch
+    ? T["key"] extends infer Key
+      ? Key extends DynamicAdminEndpointKey
+        ? Omit<T, "key"> & { key: Key }
+        : never
       : never
     : never;
 type DynamicAdminEndpointFor<Key extends DynamicAdminEndpointKey> =
@@ -185,9 +187,8 @@ export const DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS = Object.freeze(
 
 function bindDynamicAdminRouteMatch<Key extends DynamicAdminEndpointKey>(
   dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>,
+  binding: DynamicAdminRouteBinding<Key>,
 ): RouteMatch {
-  // Cast: TS cannot narrow the binding type to the matching Key generic from a string-keyed lookup
-  const binding = DYNAMIC_ADMIN_ROUTE_BINDINGS[dynamicAdminEndpoint.key] as unknown as DynamicAdminRouteBinding<Key>;
   return {
     dependencies: binding.dependencies,
     methods: binding.methods,
@@ -195,10 +196,51 @@ function bindDynamicAdminRouteMatch<Key extends DynamicAdminEndpointKey>(
   };
 }
 
+function isDynamicAdminEndpoint<Key extends DynamicAdminEndpointKey>(
+  dynamicAdminEndpoint: DynamicAdminEndpointMatch,
+  key: Key,
+): dynamicAdminEndpoint is DynamicAdminEndpointFor<Key> {
+  return dynamicAdminEndpoint.key === key;
+}
+
+function bindMatchedDynamicAdminRoute(dynamicAdminEndpoint: DynamicAdminEndpointMatch): RouteMatch {
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "discovery-candidate-dismiss")) {
+    return bindDynamicAdminRouteMatch(
+      dynamicAdminEndpoint,
+      DYNAMIC_ADMIN_ROUTE_BINDINGS["discovery-candidate-dismiss"],
+    );
+  }
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "api-key-update")) {
+    return bindDynamicAdminRouteMatch(dynamicAdminEndpoint, DYNAMIC_ADMIN_ROUTE_BINDINGS["api-key-update"]);
+  }
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "api-key-deactivate")) {
+    return bindDynamicAdminRouteMatch(dynamicAdminEndpoint, DYNAMIC_ADMIN_ROUTE_BINDINGS["api-key-deactivate"]);
+  }
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "api-key-rotate")) {
+    return bindDynamicAdminRouteMatch(dynamicAdminEndpoint, DYNAMIC_ADMIN_ROUTE_BINDINGS["api-key-rotate"]);
+  }
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "api-key-request-reject")) {
+    return bindDynamicAdminRouteMatch(
+      dynamicAdminEndpoint,
+      DYNAMIC_ADMIN_ROUTE_BINDINGS["api-key-request-reject"],
+    );
+  }
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "api-key-request-release-claim")) {
+    return bindDynamicAdminRouteMatch(
+      dynamicAdminEndpoint,
+      DYNAMIC_ADMIN_ROUTE_BINDINGS["api-key-request-release-claim"],
+    );
+  }
+  if (isDynamicAdminEndpoint(dynamicAdminEndpoint, "admin-telegram-chat")) {
+    return bindDynamicAdminRouteMatch(dynamicAdminEndpoint, DYNAMIC_ADMIN_ROUTE_BINDINGS["admin-telegram-chat"]);
+  }
+  throw new Error(`Unhandled dynamic admin endpoint: ${dynamicAdminEndpoint.key}`);
+}
+
 export function getDynamicRouteMatch(path: string): RouteMatch | null {
   const dynamicAdminEndpoint = matchDynamicAdminEndpoint(path);
   if (dynamicAdminEndpoint) {
-    return bindDynamicAdminRouteMatch(dynamicAdminEndpoint);
+    return bindMatchedDynamicAdminRoute(dynamicAdminEndpoint);
   }
 
   for (const definition of DYNAMIC_ROUTE_DEFINITIONS) {

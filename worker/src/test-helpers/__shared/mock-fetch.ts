@@ -12,6 +12,8 @@ export interface MockFetchOptions {
   requireMatch?: boolean;
   /** Match the full request URL exactly instead of substring search. */
   strictUrl?: boolean;
+  /** Do not install the spy as global fetch. */
+  stubGlobal?: boolean;
 }
 
 type MockFetchFn = (input: string | Request | URL, init?: RequestInit) => Promise<Response>;
@@ -55,6 +57,16 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
       throw new Error(`mockFetch: unused route match(es): ${unused.map((route) => route.match).join(", ")}`);
     }
   };
-  vi.stubGlobal("fetch", spy);
+  if (options.stubGlobal !== false) {
+    vi.stubGlobal("fetch", spy);
+  }
   return spy;
+}
+
+export function mockFetchStrict(routes: MockRoute[] = [], options: Omit<MockFetchOptions, "requireMatch" | "strictUrl"> = {}): MockFetchSpy {
+  return mockFetch(routes, { ...options, requireMatch: true, strictUrl: true });
+}
+
+export function assertAllFetchRoutesUsed(fetchSpy: Pick<MockFetchSpy, "assertAllRoutesUsed">): void {
+  fetchSpy.assertAllRoutesUsed();
 }

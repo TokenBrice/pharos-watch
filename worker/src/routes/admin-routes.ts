@@ -2,7 +2,7 @@ import { handleBackfillDepegs } from "../api/backfill-depegs";
 import { handleBackfillSupplyHistory } from "../api/backfill-supply-history";
 import { handleBackfillStabilityIndex } from "../api/backfill-stability-index";
 import { handleBackfillYieldHistory } from "../api/backfill-yield-history";
-import { handleAuditDepegHistory } from "../api/audit-depeg-history";
+import { handleAuditDepegHistoryTrusted } from "../api/audit-depeg-history";
 import { handleBackfillCgPrices } from "../api/backfill-cg-prices";
 import { handleBackfillMintBurnPrices } from "../api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
@@ -20,70 +20,75 @@ import { handleAdminTelegramResend } from "../api/admin-telegram-resend";
 import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
 import { handleStatusProbeHistory } from "../api/status-probe-history";
 import { makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
-import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
+import { defineStaticRoute, type StaticRouteDefinition, type StaticRouteHandler } from "./shared";
+import type { EndpointKey } from "@shared/lib/api-endpoints";
+
+function defineIdempotentAdminRoute<K extends EndpointKey>(
+  key: K,
+  handler: StaticRouteHandler<K>,
+): StaticRouteDefinition {
+  return defineStaticRoute(key, makeIdempotentAdminRoute(key, key, handler));
+}
+
+function defineConditionalIdempotentAdminRoute<K extends EndpointKey>(
+  key: K,
+  shouldUseIdempotency: (context: Parameters<StaticRouteHandler<K>>[0]) => boolean,
+  handler: StaticRouteHandler<K>,
+): StaticRouteDefinition {
+  return defineStaticRoute(key, makeConditionalIdempotentAdminRoute(key, key, shouldUseIdempotency, handler));
+}
 
 export const ADMIN_STATIC_ROUTES = [
-  defineStaticRoute("backfill-depegs", makeIdempotentAdminRoute(
-    "backfill-depegs",
+  defineIdempotentAdminRoute(
     "backfill-depegs",
     ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
       handleBackfillDepegs(db, url, trustedAdmin, request, coingeckoApiKey),
-  )),
-  defineStaticRoute("backfill-supply-history", makeIdempotentAdminRoute(
-    "backfill-supply-history",
+  ),
+  defineIdempotentAdminRoute(
     "backfill-supply-history",
     ({ db, url, trustedAdmin, request, coingeckoApiKey, chainRpcs }) =>
       handleBackfillSupplyHistory(db, url, trustedAdmin, request, coingeckoApiKey, chainRpcs),
-  )),
-  defineStaticRoute("backfill-stability-index", makeIdempotentAdminRoute(
-    "backfill-stability-index",
+  ),
+  defineIdempotentAdminRoute(
     "backfill-stability-index",
     ({ db, trustedAdmin, request }) => handleBackfillStabilityIndex(db, trustedAdmin, request),
-  )),
-  defineStaticRoute("audit-depeg-history", makeConditionalIdempotentAdminRoute(
-    "audit-depeg-history",
+  ),
+  defineConditionalIdempotentAdminRoute(
     "audit-depeg-history",
     ({ request }) => request.method === "POST",
-    ({ db, url, trustedAdmin, request }) => handleAuditDepegHistory(db, url, trustedAdmin, request),
-  )),
-  defineStaticRoute("backfill-cg-prices", makeIdempotentAdminRoute(
-    "backfill-cg-prices",
+    ({ db, url, request }) => handleAuditDepegHistoryTrusted(db, url, request),
+  ),
+  defineIdempotentAdminRoute(
     "backfill-cg-prices",
     ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
       handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
-  )),
-  defineStaticRoute("backfill-yield-history", makeIdempotentAdminRoute(
-    "backfill-yield-history",
+  ),
+  defineIdempotentAdminRoute(
     "backfill-yield-history",
     ({ db, url, trustedAdmin, request }) => handleBackfillYieldHistory(db, url, trustedAdmin, request),
-  )),
-  defineStaticRoute("backfill-mint-burn-prices", makeIdempotentAdminRoute(
-    "backfill-mint-burn-prices",
+  ),
+  defineIdempotentAdminRoute(
     "backfill-mint-burn-prices",
     ({ db, url, trustedAdmin, request }) => handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
-  )),
-  defineStaticRoute("backfill-mint-burn", makeIdempotentAdminRoute(
-    "backfill-mint-burn",
+  ),
+  defineIdempotentAdminRoute(
     "backfill-mint-burn",
     ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
       handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
-  )),
-  defineStaticRoute("backfill-tape", makeIdempotentAdminRoute(
-    "backfill-tape",
+  ),
+  defineIdempotentAdminRoute(
     "backfill-tape",
     ({ db, url, trustedAdmin, request }) => handleBackfillTape(db, url, trustedAdmin, request),
-  )),
-  defineStaticRoute("reclassify-atomic-roundtrips", makeIdempotentAdminRoute(
-    "reclassify-atomic-roundtrips",
+  ),
+  defineIdempotentAdminRoute(
     "reclassify-atomic-roundtrips",
     ({ db, url }) => handleReclassifyAtomicRoundtripsTrusted(db, url),
-  )),
-  defineStaticRoute("backfill-dews", makeConditionalIdempotentAdminRoute(
-    "backfill-dews",
+  ),
+  defineConditionalIdempotentAdminRoute(
     "backfill-dews",
     ({ request }) => request.method === "POST",
     ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
-  )),
+  ),
   defineStaticRoute("remediate-blacklist-amount-gaps", makeIdempotentAdminRoute(
     "route-remediate-blacklist-amount-gaps",
     "remediate-blacklist-amount-gaps",

@@ -1,5 +1,5 @@
 import { parseQueryParams, jsonResponse, errorResponse } from "../lib/api-utils";
-import { withAdminMutation } from "../lib/route-wrappers";
+import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -755,7 +755,22 @@ export async function handleAuditDepegHistory(
   trustedAdmin?: boolean,
   request?: Request,
 ): Promise<Response> {
-  return withAdminMutation(request, trustedAdmin, async () => {
+  return runAdminRoute(
+    {
+      endpoint: "audit-depeg-history",
+      request,
+      trustedAdmin,
+    },
+    () => handleAuditDepegHistoryTrusted(db, url, request),
+  );
+}
+
+export async function handleAuditDepegHistoryTrusted(
+  db: D1Database,
+  url: URL,
+  request?: Request,
+): Promise<Response> {
+  return runTrustedAdminMutation(async () => {
     try {
       const auditRequest = parseAuditRequest(url, request);
       if (auditRequest instanceof Response) return auditRequest;

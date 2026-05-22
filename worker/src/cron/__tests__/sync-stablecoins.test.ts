@@ -1,28 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockRegistry, mockCircuitBreaker } from "../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
 
-interface MockRoute {
-  match: string;
-  body: unknown;
-  status?: number;
-  headers?: Record<string, string>;
-}
-
-function mockFetch(routes: MockRoute[] = []): ReturnType<typeof vi.fn> {
-  const spy = vi.fn(async (url: string) => {
-    const route = routes.find((candidate) => url.includes(candidate.match));
-    if (!route) {
-      return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
-    }
-    const body = typeof route.body === "string" ? route.body : JSON.stringify(route.body);
-    return new Response(body, {
-      status: route.status ?? 200,
-      headers: { "Content-Type": "application/json", ...route.headers },
-    });
-  });
+function mockFetchWithRetry(routes: Parameters<typeof mockFetch>[0]): ReturnType<typeof mockFetch> {
+  const spy = mockFetch(routes, { requireMatch: true, stubGlobal: false });
   fetchWithRetryMock.mockImplementation((url: string) => spy(url));
   return spy;
 }
@@ -375,7 +359,7 @@ describe("syncStablecoins", () => {
 
     const dlData = makeDlResponse(60);
 
-    mockFetch([
+    mockFetchWithRetry([
       // CoinGecko market data (commodity/fiat tokens — our mock has no commodities, so empty response is fine)
       { match: "api.coingecko.com", body: {} },
       // DefiLlama stablecoins API
@@ -430,7 +414,7 @@ describe("syncStablecoins", () => {
     ]);
     const dlData = makeDlResponse(60);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -484,7 +468,7 @@ describe("syncStablecoins", () => {
       };
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -518,7 +502,7 @@ describe("syncStablecoins", () => {
       },
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -542,7 +526,7 @@ describe("syncStablecoins", () => {
 
     vi.mocked(runGtProbePass).mockRejectedValueOnce(new Error("gt transient failure"));
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -584,7 +568,7 @@ describe("syncStablecoins", () => {
       ],
     ]));
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -657,7 +641,7 @@ describe("syncStablecoins", () => {
       };
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -723,7 +707,7 @@ describe("syncStablecoins", () => {
       };
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -786,7 +770,7 @@ describe("syncStablecoins", () => {
       cgPrices: new Map([["tether", 0.15]]),
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -869,7 +853,7 @@ describe("syncStablecoins", () => {
       cgPrices: new Map([["tether", 0.153]]),
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -976,7 +960,7 @@ describe("syncStablecoins", () => {
       cgPrices: new Map([["tether", 1.05]]),
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1074,7 +1058,7 @@ describe("syncStablecoins", () => {
       };
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1117,7 +1101,7 @@ describe("syncStablecoins", () => {
     // Only 10 assets — below MIN_VALID_ASSET_COUNT (50)
     const dlData = makeDlResponse(10);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1131,7 +1115,7 @@ describe("syncStablecoins", () => {
   it("fails the run when DL returns 500 and fallback is insufficient", async () => {
     const db = makeDb();
 
-    mockFetch([
+    mockFetchWithRetry([
       // CG market data — provides supply data for fallback
       {
         match: "api.coingecko.com",
@@ -1160,7 +1144,7 @@ describe("syncStablecoins", () => {
 
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
-    mockFetch([
+    mockFetchWithRetry([
       // CG market data
       {
         match: "api.coingecko.com",
@@ -1180,7 +1164,7 @@ describe("syncStablecoins", () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1210,7 +1194,7 @@ describe("syncStablecoins", () => {
 
     vi.mocked(detectDepegEvents).mockRejectedValueOnce(new Error("depeg crash"));
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1235,7 +1219,7 @@ describe("syncStablecoins", () => {
       { id: "999", name: null, symbol: "BAD2", price: 1, pegType: "peggedUSD", circulating: { peggedUSD: 100 }, chainCirculating: {}, chains: [] } as unknown as (typeof dlData.peggedAssets)[0],
     );
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1257,7 +1241,7 @@ describe("syncStablecoins", () => {
       issues: "forced-test-validation-failure",
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1297,7 +1281,7 @@ describe("syncStablecoins", () => {
     missingPriceAsset.priceSource = undefined;
     missingPriceAsset.priceConfidence = null;
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1324,7 +1308,7 @@ describe("syncStablecoins", () => {
     const dlData = makeDlResponse(60);
     const reportProgress = vi.fn(async () => undefined);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1358,7 +1342,7 @@ describe("syncStablecoins", () => {
       issues: "forced-fallback-validation-failure",
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: cgData },
       { match: "stablecoins.llama.fi", body: { error: "down" }, status: 500 },
     ]);
@@ -1383,7 +1367,7 @@ describe("syncStablecoins", () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1411,7 +1395,7 @@ describe("syncStablecoins", () => {
       },
     } as unknown as Record<string, unknown>;
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1436,7 +1420,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1485,7 +1469,7 @@ describe("syncStablecoins", () => {
       { match: "cache", rows: [] },
     ]);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1527,7 +1511,7 @@ describe("syncStablecoins", () => {
     ]);
     const cacheWrites = trackCacheWrites(db);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1553,7 +1537,7 @@ describe("syncStablecoins", () => {
       { match: "cache", rows: [] },
     ]);
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1581,7 +1565,7 @@ describe("syncStablecoins", () => {
     const cacheWrites = trackCacheWrites(db);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1625,7 +1609,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1663,7 +1647,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1755,7 +1739,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1804,7 +1788,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1860,7 +1844,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1906,7 +1890,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -1961,7 +1945,7 @@ describe("syncStablecoins", () => {
     } as unknown as (typeof dlData.peggedAssets)[0];
 
     const nowMs = Date.now();
-    mockFetch([
+    mockFetchWithRetry([
       {
         match: "simple/price?ids=societe-generale-forge-eurcv",
         body: {
@@ -2045,7 +2029,7 @@ describe("syncStablecoins", () => {
       chains: ["BSC", "Ethereum"],
     } as unknown as (typeof dlData.peggedAssets)[0];
 
-    mockFetch([
+    mockFetchWithRetry([
       {
         match: "simple/price?ids=bilira",
         body: {
@@ -2092,7 +2076,7 @@ describe("syncStablecoins", () => {
     const dlData = makeDlResponse(60);
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       {
         match: "api.coingecko.com",
         body: {
@@ -2126,7 +2110,7 @@ describe("syncStablecoins", () => {
     const dlData = makeDlResponse(60);
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       {
         match: "api.coingecko.com",
         body: {
@@ -2180,7 +2164,7 @@ describe("syncStablecoins", () => {
     const dlData = makeDlResponse(60);
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    const fetchSpy = mockFetch([
+    const fetchSpy = mockFetchWithRetry([
       {
         match: "api.coingecko.com",
         body: {
@@ -2248,7 +2232,7 @@ describe("syncStablecoins", () => {
       .mockResolvedValueOnce(1_500_000_000_000n);
 
     const dlData = makeDlResponse(60);
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: { "allunity-chf": {} } },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -2313,7 +2297,7 @@ describe("syncStablecoins", () => {
       ]),
     );
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com/simple/price", body: cgBody },
       { match: "stablecoins.llama.fi", body: { error: "upstream" }, status: 500 },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -2384,7 +2368,7 @@ describe("syncStablecoins", () => {
       cgPrices: new Map([["tether", 0.97]]),
     });
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -2446,7 +2430,7 @@ describe("syncStablecoins", () => {
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
     const dlData = makeDlResponse(60);
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com/simple/price", body: { error: "cg down" }, status: 500 },
       { match: "stablecoins.llama.fi", body: dlData },
       {
@@ -2681,7 +2665,7 @@ describe("syncStablecoins", () => {
 
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
 
-    mockFetch([
+    mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
@@ -2730,10 +2714,10 @@ describe("syncStablecoins", () => {
       });
     }
 
-    // Capture the CG route spy ONCE outside the closure — calling mockFetch(...)
+    // Capture the CG route spy ONCE outside the closure — calling mockFetchWithRetry(...)
     // again inside the closure would call fetchWithRetryMock.mockImplementation()
     // and overwrite this very router mid-test.
-    const cgMockFetch = mockFetch([
+    const cgMockFetch = mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
     ]) as unknown as (url: string) => Promise<Response>;
@@ -2780,7 +2764,7 @@ describe("syncStablecoins", () => {
       return stub as Response;
     }
 
-    const cgMockFetch = mockFetch([
+    const cgMockFetch = mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
     ]) as unknown as (url: string) => Promise<Response>;
@@ -2817,7 +2801,7 @@ describe("syncStablecoins", () => {
     // No real sleeps in this test path — default fake timers are fine.
     const db = makeDb();
 
-    const cgMockFetch = mockFetch([
+    const cgMockFetch = mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
     ]) as unknown as (url: string) => Promise<Response>;

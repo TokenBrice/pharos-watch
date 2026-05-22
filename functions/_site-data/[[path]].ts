@@ -19,8 +19,8 @@ import {
 } from "../lib/site-api-env";
 import {
   DEFAULT_PROXY_TIMEOUT_MS,
-  fetchUpstreamProxy,
 } from "../lib/upstream-proxy";
+import { runPagesProxy, type PagesProxyContext } from "../lib/pages-proxy-harness";
 import { resolveSiteDataRequestedPath } from "../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = [
@@ -47,14 +47,7 @@ const FORWARDED_RESPONSE_HEADERS = [
   "Access-Control-Max-Age",
 ] as const;
 
-interface SiteDataProxyContext {
-  request: Request;
-  env: SiteDataProxyEnv;
-  waitUntil?: (promise: Promise<unknown>) => void;
-  params: {
-    path?: string | string[];
-  };
-}
+type SiteDataProxyContext = PagesProxyContext<SiteDataProxyEnv>;
 
 function methodNotAllowed(): Response {
   return jsonError(405, "Method not allowed", { Allow: SITE_DATA_ALLOWED_METHOD });
@@ -148,77 +141,83 @@ async function queueSiteDataTelemetry(
   await promise;
 }
 
-export const onRequest = async (context: SiteDataProxyContext): Promise<Response> => {
-  const { request, env, params } = context;
-  const requestUrl = new URL(request.url);
-  const rejected = rejectIfNotSiteDataUiOrigin(request, env, () => jsonError(404, "Not found"));
-  if (rejected) {
-    return rejected;
-  }
-
-  if (!isSiteDataAllowedMethod(request.method)) {
-    return methodNotAllowed();
-  }
-
-  const envIssues = validatePagesSiteDataProxyEnv(env);
-  for (const issue of envIssues) {
-    console.warn(`[site-data-proxy] ${issue.message}`);
-  }
-  if (envIssues.some((issue) => issue.code === "site-api-origin-missing" || issue.code === "site-api-secret-missing")) {
-    return jsonError(500, "Site API proxy is not configured");
-  }
-
-  const requestedPath = resolveRequestedPath(params);
-  const upstreamPath = requestedPath ? resolveSiteDataUpstreamPath(requestedPath) : null;
-  if (!upstreamPath) {
-    return jsonError(404, "Not found");
-  }
-
-  const bypassPagesCache = hasConditionalRequestHeaders(request);
-  const cacheKey = buildCacheKey(request);
-  if (!bypassPagesCache) {
-    const cached = await getDefaultCache().match(cacheKey);
-    if (cached) {
-      await queueSiteDataTelemetry(context, upstreamPath, "pages-cache-hit");
-      return cached;
+export const onRequest = async (context: SiteDataProxyContext): Promise<Response> => runPagesProxy(context, {
+  logPrefix: "site-data-proxy",
+  rejectRequest: ({ request, env }) => {
+    const rejected = rejectIfNotSiteDataUiOrigin(request, env, () => jsonError(404, "Not found"));
+    if (rejected) {
+      return rejected;
     }
-  }
 
-  const upstreamHeaders = buildUpstreamHeaders(request, env);
-  if (upstreamHeaders instanceof Response) {
-    return upstreamHeaders;
-  }
+    return isSiteDataAllowedMethod(request.method) ? null : methodNotAllowed();
+  },
+  validateEnv: ({ env }) => {
+    const envIssues = validatePagesSiteDataProxyEnv(env);
+    for (const issue of envIssues) {
+      console.warn(`[site-data-proxy] ${issue.message}`);
+    }
+    return envIssues.some((issue) => issue.code === "site-api-origin-missing" || issue.code === "site-api-secret-missing")
+      ? jsonError(500, "Site API proxy is not configured")
+      : null;
+  },
+  resolveUpstreamPath: ({ params }) => {
+    const requestedPath = resolveRequestedPath(params);
+    return requestedPath ? resolveSiteDataUpstreamPath(requestedPath) : null;
+  },
+  rejectUpstreamPath: (_context, upstreamPath) => upstreamPath ? null : jsonError(404, "Not found"),
+  beforeFetch: async (proxyContext, upstreamPath) => {
+    const { request } = proxyContext;
+    if (hasConditionalRequestHeaders(request)) {
+      return null;
+    }
 
-  const upstreamOrigin = resolveSiteApiOrigin(env);
-  if (!upstreamOrigin) {
-    return jsonError(500, "Site API proxy is not configured");
-  }
+    const cached = await getDefaultCache().match(buildCacheKey(request));
+    if (!cached) {
+      return null;
+    }
 
-  const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
-  const upstreamResult = await fetchUpstreamProxy(request, {
-    upstreamUrl: upstreamUrl.toString(),
-    method: "GET",
-    headers: upstreamHeaders,
-    timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
-    timeoutReason: new DOMException("Site API upstream timed out", "TimeoutError"),
-    logPrefix: "site-data-proxy",
-    timeoutMessage: "Site API upstream timed out",
-    fetchFailedMessage: "Site API upstream fetch failed",
-  });
-  if (!upstreamResult.ok) {
+    await queueSiteDataTelemetry(proxyContext, upstreamPath, "pages-cache-hit");
+    return cached;
+  },
+  buildUpstreamRequest: ({ request, env }, upstreamPath) => {
+    const upstreamHeaders = buildUpstreamHeaders(request, env);
+    if (upstreamHeaders instanceof Response) {
+      return upstreamHeaders;
+    }
+
+    const upstreamOrigin = resolveSiteApiOrigin(env);
+    if (!upstreamOrigin) {
+      return jsonError(500, "Site API proxy is not configured");
+    }
+
+    const requestUrl = new URL(request.url);
+    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
+    return {
+      upstreamUrl: upstreamUrl.toString(),
+      method: "GET",
+      headers: upstreamHeaders,
+      timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
+      timeoutReason: new DOMException("Site API upstream timed out", "TimeoutError"),
+      timeoutMessage: "Site API upstream timed out",
+      fetchFailedMessage: "Site API upstream fetch failed",
+    };
+  },
+  onFetchError: async (proxyContext, upstreamPath, errorKind, response) => {
     await queueSiteDataTelemetry(
-      context,
+      proxyContext,
       upstreamPath,
-      upstreamResult.errorKind === "timeout" ? "pages-upstream-timeout" : "pages-upstream-error",
+      errorKind === "timeout" ? "pages-upstream-timeout" : "pages-upstream-error",
       "site-api",
     );
-    return upstreamResult.response;
-  }
-
-  const response = buildProxyResponse(upstreamResult.response);
-  await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", "site-api");
-  if (!bypassPagesCache && canCacheResponse(response)) {
-    queuePagesCacheWrite(context, cacheKey, response);
-  }
-  return response;
-};
+    return response;
+  },
+  buildResponse: async (proxyContext, upstreamPath, upstreamResponse) => {
+    const { request } = proxyContext;
+    const response = buildProxyResponse(upstreamResponse);
+    await queueSiteDataTelemetry(proxyContext, upstreamPath, "pages-upstream-fetch", "site-api");
+    if (!hasConditionalRequestHeaders(request) && canCacheResponse(response)) {
+      queuePagesCacheWrite(proxyContext, buildCacheKey(request), response);
+    }
+    return response;
+  },
+});

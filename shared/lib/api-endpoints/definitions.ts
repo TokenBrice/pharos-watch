@@ -48,6 +48,111 @@ type BaseEndpointDefinition = Omit<EndpointDefinition, "publicApiAccess" | "site
   siteDataAccess?: EndpointSiteDataAccess;
 };
 
+type EndpointDefinitionFactoryInput<Key extends string = string> = Omit<
+  BaseEndpointDefinition,
+  "key" | "methods" | "adminRequired" | "mutatingAdmin" | "cacheBypass" | "publicApiAccess" | "siteDataAccess"
+> & {
+  key: Key;
+  cacheBypass?: boolean;
+  publicApiAccess?: EndpointPublicApiAccess;
+  siteDataAccess?: EndpointSiteDataAccess;
+};
+
+type PublicGetDefinition<T extends EndpointDefinitionFactoryInput> = T & {
+  readonly methods: readonly ["GET"];
+  readonly adminRequired: false;
+  readonly mutatingAdmin: false;
+  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : false;
+};
+
+type PublicPostDefinition<T extends EndpointDefinitionFactoryInput> = T & {
+  readonly methods: readonly ["POST"];
+  readonly adminRequired: false;
+  readonly mutatingAdmin: false;
+  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
+  readonly publicApiAccess: T["publicApiAccess"] extends EndpointPublicApiAccess ? T["publicApiAccess"] : "exempt";
+  readonly siteDataAccess: T["siteDataAccess"] extends EndpointSiteDataAccess ? T["siteDataAccess"] : "denied";
+};
+
+type AdminGetDefinition<T extends EndpointDefinitionFactoryInput> = T & {
+  readonly methods: readonly ["GET"];
+  readonly adminRequired: true;
+  readonly mutatingAdmin: false;
+  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
+};
+
+type AdminMutationDefinition<T extends EndpointDefinitionFactoryInput> = T & {
+  readonly methods: readonly ["POST"];
+  readonly adminRequired: true;
+  readonly mutatingAdmin: true;
+  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
+};
+
+type AdminDualModeMutationDefinition<T extends EndpointDefinitionFactoryInput> = T & {
+  readonly methods: readonly ["GET", "POST"];
+  readonly adminRequired: true;
+  readonly mutatingAdmin: true;
+  readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
+};
+
+function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicGetDefinition<T> {
+  return {
+    cacheBypass: false,
+    ...definition,
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+  } as PublicGetDefinition<T>;
+}
+
+function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(
+  definition: T,
+): PublicPostDefinition<T> {
+  return {
+    cacheBypass: true,
+    publicApiAccess: "exempt",
+    siteDataAccess: "denied",
+    ...definition,
+    methods: ["POST"],
+    adminRequired: false,
+    mutatingAdmin: false,
+  } as PublicPostDefinition<T>;
+}
+
+function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminGetDefinition<T> {
+  return {
+    cacheBypass: true,
+    ...definition,
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+  } as AdminGetDefinition<T>;
+}
+
+function adminMutation<const T extends EndpointDefinitionFactoryInput>(
+  definition: T,
+): AdminMutationDefinition<T> {
+  return {
+    cacheBypass: true,
+    ...definition,
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+  } as AdminMutationDefinition<T>;
+}
+
+function adminDualModeMutation<const T extends EndpointDefinitionFactoryInput>(
+  definition: T,
+): AdminDualModeMutationDefinition<T> {
+  return {
+    cacheBypass: true,
+    ...definition,
+    methods: ["GET", "POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+  } as AdminDualModeMutationDefinition<T>;
+}
+
 export interface StatusPageAction {
   label: string;
   path: string;
@@ -149,16 +254,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
     strictContract: true,
     probeGroup: "public",
   },
-  {
+  publicGet({
     key: "health",
     path: API_PATHS.health(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
     cacheBypass: true,
     publicApiAccess: "exempt",
     probeGroup: "public",
-  },
+  }),
   {
     key: "public-status-history",
     path: API_PATHS.publicStatusHistory(),
@@ -438,108 +540,58 @@ const BASE_ENDPOINT_DEFINITIONS = [
     cacheBypass: false,
     probeGroup: "public",
   },
-  {
+  publicPostExempt({
     key: "telegram-mini-app-session",
     path: API_PATHS.telegramMiniAppSession(),
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: true,
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
     routeDependencies: ["telegram"],
-  },
-  {
+  }),
+  publicPostExempt({
     key: "telegram-mini-app-mutation",
     path: API_PATHS.telegramMiniAppMutation(),
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: true,
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
     routeDependencies: ["telegram"],
-  },
-  {
+  }),
+  publicPostExempt({
     key: "feedback",
     path: API_PATHS.feedback(),
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: true,
-    publicApiAccess: "exempt",
     routeDependencies: ["feedbackEnv"],
-  },
-  {
+  }),
+  publicPostExempt({
     key: "api-key-requests",
     path: API_PATHS.apiKeyRequests(),
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: true,
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
     routeDependencies: ["apiKeySelfServeEnv"],
-  },
-  {
+  }),
+  publicPostExempt({
     key: "api-key-request-verify",
     path: API_PATHS.apiKeyRequestVerify(),
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: true,
-    publicApiAccess: "exempt",
-    siteDataAccess: "denied",
     routeDependencies: ["apiKeyHashPepper", "apiKeySelfServeEnv"],
-  },
-  {
+  }),
+  publicPostExempt({
     key: "telegram-webhook",
     path: API_PATHS.telegramWebhook(),
-    methods: ["POST"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: true,
-    publicApiAccess: "exempt",
     routeDependencies: ["telegram"],
-  },
+  }),
 
   // Admin status/probe endpoints.
-  {
+  adminGet({
     key: "status",
     path: API_PATHS.status(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
     routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig"],
     probeGroup: "admin",
-  },
-  {
+  }),
+  adminGet({
     key: "status-history",
     path: API_PATHS.statusHistoryBase(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
     probeGroup: "admin",
     probePath: API_PATHS.statusHistory({ limit: 10 }),
-  },
-  {
+  }),
+  adminGet({
     key: "request-source-stats",
     path: API_PATHS.requestSourceStatsBase(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
-  },
-  {
+  }),
+  adminGet({
     key: "yield-source-decisions",
     path: API_PATHS.yieldSourceDecisions(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
-  },
+  }),
   {
     key: "api-keys",
     path: API_PATHS.apiKeys(),
@@ -574,12 +626,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: false,
     cacheBypass: true,
   },
-  {
+  adminMutation({
     key: "trigger-digest",
     path: API_PATHS.triggerDigest(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
     cacheBypass: false,
     routeDependencies: ["anthropicApiKey", "telegram"],
     probeGroup: "manual",
@@ -588,13 +637,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Trigger daily digest? Bypasses 1h dedup window.",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "reset-blacklist-sync",
     path: API_PATHS.resetBlacklistSync(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
     cacheBypass: false,
     probeGroup: "manual",
     statusPageAction: {
@@ -603,28 +649,20 @@ const BASE_ENDPOINT_DEFINITIONS = [
       destructive: true,
       method: "POST",
     },
-  },
-  {
+  }),
+  adminGet({
     key: "debug-sync-state",
     path: API_PATHS.debugSyncState(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
     probeGroup: "admin",
     statusPageAction: {
       label: "Debug Sync State",
       confirm: "Fetch sync state debug dump?",
       method: "GET",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "remediate-blacklist-amount-gaps",
     path: API_PATHS.remediateBlacklistAmountGaps(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["chainRpcs"],
     probeGroup: "manual",
     statusPageAction: {
@@ -632,14 +670,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-blacklist-current-balances",
     path: API_PATHS.backfillBlacklistCurrentBalances(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["chainRpcs"],
     probeGroup: "manual",
     statusPageAction: {
@@ -647,14 +681,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Backfill current-balance cache for coins missing balance rows? Prefer dry-run first (?dryRun=true).",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-depegs",
     path: API_PATHS.backfillDepegs(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
@@ -663,14 +693,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
       method: "POST",
       acceptsStablecoinFilter: true,
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-supply-history",
     path: API_PATHS.backfillSupplyHistory(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["coingeckoApiKey", "chainRpcs"],
     probeGroup: "manual",
     statusPageAction: {
@@ -679,14 +705,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
       method: "POST",
       acceptsStablecoinFilter: true,
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-cg-prices",
     path: API_PATHS.backfillCgPrices(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
@@ -695,14 +717,10 @@ const BASE_ENDPOINT_DEFINITIONS = [
       method: "POST",
       acceptsStablecoinFilter: true,
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-yield-history",
     path: API_PATHS.backfillYieldHistory(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Yield History",
@@ -710,42 +728,30 @@ const BASE_ENDPOINT_DEFINITIONS = [
       method: "POST",
       acceptsStablecoinFilter: true,
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-stability-index",
     path: API_PATHS.backfillStabilityIndex(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill PSI",
       confirm: "Backfill stability index history?",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-mint-burn-prices",
     path: API_PATHS.backfillMintBurnPrices(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Mint/Burn Prices",
       confirm: "Backfill mint/burn USD prices for NULL events?",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-mint-burn",
     path: API_PATHS.backfillMintBurn(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["alchemyApiKey"],
     probeGroup: "manual",
     statusPageAction: {
@@ -753,42 +759,30 @@ const BASE_ENDPOINT_DEFINITIONS = [
       confirm: "Run mint/burn backfill job?",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "backfill-tape",
     path: API_PATHS.backfillTape(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Tape",
       confirm: "Re-run tape projectors for selected classes? Prefer dry-run first (?dryRun=true).",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminMutation({
     key: "reclassify-atomic-roundtrips",
     path: API_PATHS.reclassifyAtomicRoundtrips(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {
       label: "Reclassify Roundtrips",
       confirm: "Reclassify atomic roundtrips in mint/burn data?",
       method: "POST",
     },
-  },
-  {
+  }),
+  adminDualModeMutation({
     key: "audit-depeg-history",
     path: API_PATHS.auditDepegHistoryBase(),
-    methods: ["GET", "POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     probePath: API_PATHS.auditDepegHistoryDryRun(),
     statusPageAction: {
@@ -797,108 +791,68 @@ const BASE_ENDPOINT_DEFINITIONS = [
       method: "GET",
       path: API_PATHS.auditDepegHistoryDryRun(),
     },
-  },
-  {
+  }),
+  adminDualModeMutation({
     key: "backfill-dews",
     path: API_PATHS.backfillDews(),
-    methods: ["GET", "POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill DEWS",
       confirm: "Run DEWS historical backfill validation?",
       method: "GET",
     },
-  },
-  {
+  }),
+  adminGet({
     key: "discovery-candidates",
     path: API_PATHS.discoveryCandidates(),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
     probeGroup: "admin",
-  },
+  }),
   // Operator controls that require context-specific query params (?job=,
   // ?circuit=, ?leaseOwner=). Reachable via curl/wrangler or via a future
   // contextual-button UI integration; no generic `statusPageAction` because
   // AdminActionButton doesn't currently collect free-form query params.
-  {
+  adminMutation({
     key: "reset-cron-lease",
     path: API_PATHS.resetCronLease(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminMutation({
     key: "reset-circuit-breaker",
     path: API_PATHS.resetCircuitBreaker(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminMutation({
     key: "kill-cron-in-flight",
     path: API_PATHS.killCronInFlight(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminMutation({
     key: "bulk-dismiss-discovery-candidates",
     path: API_PATHS.bulkDismissDiscoveryCandidates(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminMutation({
     key: "clear-telegram-pending",
     path: API_PATHS.clearTelegramPending(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminMutation({
     key: "admin-telegram-resend",
     path: API_PATHS.adminTelegramResend(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     routeDependencies: ["telegram"],
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminMutation({
     key: "admin-telegram-broadcast",
     path: API_PATHS.adminTelegramBroadcast(),
-    methods: ["POST"],
-    adminRequired: true,
-    mutatingAdmin: true,
-    cacheBypass: true,
     probeGroup: "manual",
-  },
-  {
+  }),
+  adminGet({
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),
     probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),
-    methods: ["GET"],
-    adminRequired: true,
-    mutatingAdmin: false,
-    cacheBypass: true,
     probeGroup: "admin",
-  },
+  }),
 ] as const satisfies readonly BaseEndpointDefinition[];
 
 export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];

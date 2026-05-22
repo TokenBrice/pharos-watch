@@ -13,23 +13,19 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
       tasks: [
         {
           job: "prune-status-probe-runs",
-          kind: "db-only-sidecar",
           run: (signal) => runPruneStatusProbeRuns(runtime.db, signal),
         },
         {
           job: "prune-cron-history",
-          kind: "db-only-sidecar",
           run: (signal) => runPruneCronHistory(runtime.db, signal),
         },
         {
           job: "telegram-inactive-cleanup",
-          kind: "db-only-sidecar",
           run: (signal) =>
             runTelegramInactiveCleanup(runtime.db, signal, runtime.env.TELEGRAM_BOT_TOKEN),
         },
         {
           job: "telegram-retention-cleanup",
-          kind: "db-only-sidecar",
           run: (signal) => runTelegramRetentionCleanup(runtime.db, signal),
         },
       ],

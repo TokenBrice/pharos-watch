@@ -39,6 +39,14 @@ export interface MockD1Options {
   strictSql?: boolean;
 }
 
+export function mockD1Strict(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1(tables, { strict: true });
+}
+
+export function assertAllD1MatchesUsed(db: Pick<MockD1Database, "assertAllMatchesUsed">): void {
+  db.assertAllMatchesUsed();
+}
+
 function toError(value: unknown): Error {
   if (value instanceof Error) return value;
   return new Error(String(value));

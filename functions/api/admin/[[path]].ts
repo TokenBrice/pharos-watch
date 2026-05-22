@@ -1,4 +1,5 @@
 import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
+import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import { withNoindex } from "../../lib/noindex";
@@ -15,8 +16,8 @@ import {
 } from "../../lib/proxy-utils";
 import {
   DEFAULT_PROXY_TIMEOUT_MS,
-  fetchUpstreamProxy,
 } from "../../lib/upstream-proxy";
+import { runPagesProxy, type PagesProxyContext } from "../../lib/pages-proxy-harness";
 import { resolveOpsAdminUpstreamPath } from "../../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = [
@@ -37,19 +38,12 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Data-Age",
   "X-Idempotent-Replay",
 ] as const;
-import { MUTATING_METHODS, X_PHAROS_ADMIN_HEADER } from "@shared/lib/admin-gate";
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
 const EXTENDED_STATUS_PROXY_PATHS = new Set(["/api/status", "/api/status-history"]);
 const OPS_STATUS_PROXY_TIMEOUT_MS = 20_000;
 const OPS_AUDIT_DEPEG_HISTORY_PROXY_TIMEOUT_MS = 45_000;
 
-interface OpsAdminProxyContext {
-  request: Request;
-  env: OpsAdminProxyEnv;
-  params: {
-    path?: string | string[];
-  };
-}
+type OpsAdminProxyContext = PagesProxyContext<OpsAdminProxyEnv>;
 
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
   return resolveOpsAdminUpstreamPath(params);
@@ -153,69 +147,75 @@ function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProx
     : jsonError(403, "Forbidden");
 }
 
-export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
-  const { request, env, params } = context;
-  const requestUrl = new URL(request.url);
-  const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
-  if (rejected) {
-    return withNoindex(rejected);
-  }
+export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => runPagesProxy(context, {
+  logPrefix: "ops-proxy",
+  rejectRequest: ({ request, env }) => {
+    const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
+    return rejected ? withNoindex(rejected) : null;
+  },
+  validateEnv: ({ env }) => {
+    for (const issue of validatePagesOpsProxyEnv(env)) {
+      console.warn(`[ops-proxy] ${issue.message}`);
+    }
+    return null;
+  },
+  resolveUpstreamPath: ({ params }) => resolveUpstreamPath(params),
+  rejectUpstreamPath: (_context, upstreamPath) => (
+    upstreamPath && isAdminPath(upstreamPath)
+      ? null
+      : withNoindex(jsonError(404, "Not found"))
+  ),
+  rejectMethod: ({ request, env }, upstreamPath) => {
+    const requestUrl = new URL(request.url);
+    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveOpsApiOrigin(env));
+    const methodValidation = validateEndpointMethod(upstreamUrl, request.method);
+    if (!methodValidation) {
+      return null;
+    }
 
-  for (const issue of validatePagesOpsProxyEnv(env)) {
-    console.warn(`[ops-proxy] ${issue.message}`);
-  }
-
-  const upstreamPath = resolveUpstreamPath(params);
-  if (!upstreamPath || !isAdminPath(upstreamPath)) {
-    return withNoindex(jsonError(404, "Not found"));
-  }
-
-  const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveOpsApiOrigin(env));
-  const methodValidation = validateEndpointMethod(upstreamUrl, request.method);
-  if (methodValidation) {
     const response = jsonError(405, methodValidation.message);
     response.headers.set("Allow", methodValidation.allowedMethods.join(", "));
     return withNoindex(response);
-  }
+  },
+  beforeFetch: async ({ request, env }) => {
+    const authError = await requireValidOpsUiJwt(request, env);
+    if (authError) {
+      return withNoindex(authError);
+    }
 
-  const authError = await requireValidOpsUiJwt(request, env);
-  if (authError) {
-    return withNoindex(authError);
-  }
+    const originError = requireSameOriginForMutatingRequest(request, env);
+    return originError ? withNoindex(originError) : null;
+  },
+  buildUpstreamRequest: ({ request, env }, upstreamPath) => {
+    const upstreamHeaders = buildUpstreamHeaders(request, env);
+    if (upstreamHeaders instanceof Response) {
+      return withNoindex(upstreamHeaders);
+    }
 
-  const originError = requireSameOriginForMutatingRequest(request, env);
-  if (originError) {
-    return withNoindex(originError);
-  }
+    const requestUrl = new URL(request.url);
+    const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveOpsApiOrigin(env));
+    return {
+      upstreamUrl: upstreamUrl.toString(),
+      method: request.method,
+      headers: upstreamHeaders,
+      body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+      timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
+      timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
+      timeoutMessage: "Operator API upstream timed out",
+      fetchFailedMessage: "Operator API upstream fetch failed",
+    };
+  },
+  onFetchError: (_context, _upstreamPath, _errorKind, response) => withNoindex(response),
+  buildResponse: ({ request }, _upstreamPath, upstreamResponse) => {
+    const redirectLocation = upstreamResponse.headers.get("Location");
+    if (
+      upstreamResponse.status >= 300 &&
+      upstreamResponse.status < 400 &&
+      isCloudflareAccessLocation(redirectLocation)
+    ) {
+      return withNoindex(jsonError(502, "Operator API upstream auth failed"));
+    }
 
-  const upstreamHeaders = buildUpstreamHeaders(request, env);
-  if (upstreamHeaders instanceof Response) {
-    return withNoindex(upstreamHeaders);
-  }
-
-  const upstreamResult = await fetchUpstreamProxy(request, {
-    upstreamUrl: upstreamUrl.toString(),
-    method: request.method,
-    headers: upstreamHeaders,
-    body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-    timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
-    timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
-    logPrefix: "ops-proxy",
-    timeoutMessage: "Operator API upstream timed out",
-    fetchFailedMessage: "Operator API upstream fetch failed",
-  });
-  if (!upstreamResult.ok) {
-    return withNoindex(upstreamResult.response);
-  }
-
-  const redirectLocation = upstreamResult.response.headers.get("Location");
-  if (
-    upstreamResult.response.status >= 300 &&
-    upstreamResult.response.status < 400 &&
-    isCloudflareAccessLocation(redirectLocation)
-  ) {
-    return withNoindex(jsonError(502, "Operator API upstream auth failed"));
-  }
-
-  return withNoindex(buildProxyResponse(upstreamResult.response, request.method));
-};
+    return withNoindex(buildProxyResponse(upstreamResponse, request.method));
+  },
+});

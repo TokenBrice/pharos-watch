@@ -3,11 +3,9 @@ import type { ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export type ScheduledSlotGroupMode = "serial" | "parallel";
-export type ScheduledSlotTaskKind = "job" | "db-only-sidecar";
 
 export interface ScheduledSlotTask {
   job: string;
-  kind?: ScheduledSlotTaskKind;
   errorMessage?: string;
   run: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../__shared/mock-d1";
 
 describe("mockD1 helper", () => {
   it("supports bind-aware matching and tracks statement history", async () => {
@@ -81,9 +81,9 @@ describe("mockD1 helper", () => {
   });
 
   it("supports strict mode as exact SQL plus required match shorthand", async () => {
-    const db = mockD1([
+    const db = mockD1Strict([
       { match: "SELECT value FROM sample WHERE id = ?", rows: [{ value: "one" }] },
-    ], { strict: true });
+    ]);
 
     const result = await db.prepare("SELECT   value   FROM   sample WHERE id = ?").bind(1).all<{ value: string }>();
     expect(result.results).toEqual([{ value: "one" }]);
@@ -99,5 +99,15 @@ describe("mockD1 helper", () => {
     await expect(
       db.prepare("SELECT * FROM missing").all(),
     ).rejects.toThrow("mockD1: no match for SQL: SELECT * FROM missing");
+  });
+
+  it("exposes a shared assertion helper for strict fixture usage", async () => {
+    const db = mockD1Strict([
+      { match: "SELECT value FROM sample", rows: [{ value: "one" }] },
+    ]);
+
+    await db.prepare("SELECT value FROM sample").all();
+
+    expect(() => assertAllD1MatchesUsed(db)).not.toThrow();
   });
 });
