@@ -29,6 +29,7 @@ Local dev-server (maintained): http://localhost:3000/
 - If you change pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, or Chain Health, update `/methodology` and the relevant changelog/timeline doc.
 - Methodology versions must increase numerically, not semver-style. After v5.9, use v5.91 for a minor update or v6.0 for a major update, not v5.10.
 - You are logged into wrangler; use it for debugging when useful.
+- Do not create branch, worktree, or PR unless explictly asked to; default to working, commiting and pushing on main.
 
 ## Repo Map
 
