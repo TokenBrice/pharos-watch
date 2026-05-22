@@ -884,7 +884,7 @@ All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and 
 
 **File:** `src/hooks/use-blacklist-events.ts`
 **Endpoints:** `GET /api/blacklist-summary` + `GET /api/blacklist`
-**Cache:** `staleTime: 60 min`, `refetchInterval: 120 min`
+**Cache:** `staleTime: 360 min` (6h, = `sync-blacklist` producer interval), `refetchInterval: 720 min` (12h)
 
 The summary hook loads aggregate cards/chart/filter metadata from the dedicated summary endpoint. The page hook fetches only the currently requested table slice, including server-side filtering, sorting, search, and pagination.
 Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist` writer timestamp, so the shared stale-data banner does not warn before the next scheduled blacklist run is actually late.

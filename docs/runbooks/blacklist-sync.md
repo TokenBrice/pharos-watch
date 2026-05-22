@@ -10,7 +10,7 @@ The blacklist ingestion pipeline has unresolved gaps in recent blocks. Missing a
 
 ## First checks
 
-1. **Admin page → Debug sync state:** GET `/api/admin/debug-sync-state` (button in Control section). Shows last processed block per chain.
+1. **Admin page → Debug sync state:** GET `/api/debug-sync-state` (button in Control section). Shows last processed block per chain.
 2. **Config-level lag:** compare `config_key` rows, not only chain names. Same-symbol/same-chain deployments can have separate contract/config cursors, and new freeze-ledger snapshots are contract/config scoped.
 3. **Stuck chain:** look for a `last_block` that has not advanced for many hours relative to network tip. Remember Tron `last_block` is a millisecond timestamp.
 4. **Circuit-open skips:** inspect recent `sync-blacklist` `cron_runs.metadata` for `apiErrorConfigs`, `apiErrorClasses`, budget exhaustion, or circuit-open source skips before resetting cursors.

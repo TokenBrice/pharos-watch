@@ -280,7 +280,6 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | ----- | ------------ | --------- |
 | BUIDL | 20 | BlackRock fund, 0.20% management fee |
 | cgUSD | 35 | Cygnus Finance T-bill proxy, net of 0.35% protocol fee |
-| USYC | 50 | Hashnote fund, modeled as ~10% performance fee at a 5% T-bill baseline |
 | YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
 | USDN | 0 | Noble M0 T-bill rebase proxy |
@@ -289,6 +288,11 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | WTGXX | 25 | WisdomTree Government MMF Digital Fund, 0.25% mgmt fee |
 | USTBL | 10 | Spiko US T-Bills MMF (UCITS), 0.10% TER |
 | EUTBL | 15 | Spiko EU T-Bills MMF (UCITS), modeled net of 0.15%, EUR-denominated (€STR benchmark) |
+| sUSD | 0 | Solayer sUSD, T-bill proxy |
+| UKTBL | 15 | Spiko UK T-Bills MMF, modeled net of 0.15%, GBP-denominated |
+| EURSAFO | 0 | Spiko Amundi Smart Cash overnight swap proxy, EUR-denominated |
+| GBPSAFO | 0 | Spiko Amundi Smart Cash overnight swap proxy, GBP-denominated |
+| EURSPKCC | 0 | Spiko cash-and-carry strategy proxy (EUR risk-free leg) |
 
 Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
 
