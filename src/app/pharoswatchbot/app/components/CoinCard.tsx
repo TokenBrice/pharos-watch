@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Info, Trash2 } from "lucide-react";
+import { ExternalLink, Info, ShieldCheck, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ALERT_LABELS,
@@ -43,7 +43,7 @@ function SegmentedControl<T>({ value, options, onChange, disabled, ariaLabel }: 
             onClick={() => onChange(option.value)}
             className={cn(
               "pharos-focus-ring min-h-12 rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-              selected ? "border-sky-500/35 bg-sky-500/10 text-sky-800 dark:text-sky-200" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
+              selected ? "mini-selected" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
             )}
           >
             <span className="block text-sm font-semibold">{option.label}</span>
@@ -89,7 +89,7 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
       className={cn(
         "rounded-2xl border bg-card/90 p-4 transition-colors",
         highlighted
-          ? "border-sky-500/60 ring-2 ring-sky-500/35"
+          ? "mini-highlight"
           : "border-border/70",
       )}
     >
@@ -99,10 +99,10 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
           <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
         </div>
         <MiniButton ariaLabel={`Remove ${coin.symbol}`} variant="secondary" disabled={!canMutate || isMutating} onClick={() => onRemove(coin)}>
-          <Trash2 className="h-4 w-4" aria-hidden="true" /> Remove
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
         </MiniButton>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label={`${coin.symbol} alert types`}>
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={`${coin.symbol} alert types`}>
         {(Object.keys(ALERT_LABELS) as TelegramAlertType[]).map((type) => (
           <TogglePill
             key={type}
@@ -131,7 +131,7 @@ export function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOp
           variant="secondary"
           onClick={() => onOpenInsight({ kind: "coverage", coinId: coin.stablecoinId })}
         >
-          <Info className="h-4 w-4" aria-hidden="true" /> Coverage
+          <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Coverage
         </MiniButton>
         <MiniButton
           ariaLabel={`View ${coin.symbol} on Pharos`}

@@ -35,7 +35,7 @@ function LaunchTargetCoinCard({ coinId, coin, canMutate, isMutating, onMutate, o
       className={cn(
         "rounded-2xl border bg-card/90 p-4 transition-colors",
         highlighted
-          ? "border-sky-500/60 ring-2 ring-sky-500/35"
+          ? "mini-highlight"
           : "border-border/70",
       )}
     >
@@ -134,7 +134,7 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
     <div className="space-y-4">
       <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
         <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden="true" />
+          <Search className="h-4 w-4 text-[color:var(--mini-accent)]" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-foreground">Add a coin</h2>
         </div>
         <label className="sr-only" htmlFor="telegram-mini-app-coin-search">Search stablecoins</label>
@@ -197,7 +197,7 @@ export function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemov
       </section>
 
       {pendingUndo ? (
-        <section role="status" className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-3 text-sm text-foreground">
+        <section role="status" className="rounded-2xl border border-[color:var(--mini-accent-border)] bg-[color:var(--mini-accent-fill)] p-3 text-sm text-foreground">
           <div className="flex items-center justify-between gap-3">
             <p className="min-w-0 truncate">{pendingUndo.symbol} removed from watchlist.</p>
             <MiniButton ariaLabel={`Undo remove ${pendingUndo.symbol}`} variant="secondary" disabled={!canMutate || isMutating} onClick={onUndo}>

@@ -73,8 +73,8 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
           <div className="flex items-center justify-between gap-3">
             <p className="pharos-kicker">Snooze alerts</p>
             {snoozeActive ? (
-              <span className="shrink-0 rounded-md border border-sky-500/35 bg-sky-500/10 px-2 py-1 text-[11px] font-semibold text-sky-800 dark:text-sky-200">
-                Quiet until {formatSnoozePill(snoozeUntil)}
+              <span className="mini-selected shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold">
+                Quiet until <span className="pharos-numeric">{formatSnoozePill(snoozeUntil)}</span>
               </span>
             ) : null}
           </div>
@@ -105,16 +105,16 @@ export function StatusPanel({ state, canMutate, isMutating, onMutate, optimistic
       <div className="grid gap-3 sm:grid-cols-2">
         <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
           <p className="pharos-kicker">Quiet hours</p>
-          <p className="mt-2 text-lg font-semibold text-foreground">
+          <p className="mt-2 text-lg font-semibold text-foreground pharos-numeric">
             {state.subscriber.quietHours.enabled
               ? `${formatHour(state.subscriber.quietHours.startHourUtc)}–${formatHour(state.subscriber.quietHours.endHourUtc)} UTC`
               : "Off"}
           </p>
         </section>
         <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
-          <p className="pharos-kicker">Delivery health</p>
-          <p className="mt-2 text-lg font-semibold text-foreground">{formatTime(state.health.lastSuccessfulDeliveryAt)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{state.health.queuedAlerts} queued alerts</p>
+          <p className="pharos-kicker">Last delivery</p>
+          <p className="mt-2 text-lg font-semibold text-foreground pharos-numeric">{formatTime(state.health.lastSuccessfulDeliveryAt)}</p>
+          <p className="mt-1 text-xs text-muted-foreground"><span className="pharos-numeric">{state.health.queuedAlerts}</span> queued alerts</p>
         </section>
       </div>
     </div>
