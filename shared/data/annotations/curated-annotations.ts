@@ -1066,6 +1066,25 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       severity: "low",
       href: "https://decrypt.co/297381/dtrinity-launches-subsidized-stablecoin-lending-protocol-on-fraxtal-l2",
     },
+    {
+      // 2026-03-17 — dTRINITY dLEND exploit created ~$257K dUSD bad debt.
+      ts: Date.UTC(2026, 2, 17),
+      kind: "governance",
+      label: "dLEND exploit — ~$257K dUSD bad debt",
+      severity: "high",
+      href: "https://blocksec.com/blog/weekly-web3-security-incident-roundup-mar-16-mar-22-2026",
+    },
+  ],
+  "sdusd-dtrinity": [
+    {
+      // 2026-03-17 — sdUSD is the tracked dUSD savings wrapper and inherits
+      // the dTRINITY dLEND exploit risk through its parent collateral.
+      ts: Date.UTC(2026, 2, 17),
+      kind: "governance",
+      label: "dLEND exploit — sdUSD inherits dUSD bad-debt risk",
+      severity: "high",
+      href: "https://nomoslabs.io/archive/dtrinity-2026",
+    },
   ],
   "eurau-allunity": [
     {
@@ -1589,16 +1608,6 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       href: "https://www.prnewswire.com/news-releases/quantoz-payments-issues-euro-and-us-dollar-stablecoins-receives-backing-from-major-crypto-asset-firms-302307631.html",
     },
   ],
-  "usdr-ring": [
-    {
-      // 2023-10-11 — Tangible USDR collapse; DAI reserves drained, low ~$0.51.
-      ts: Date.UTC(2023, 9, 11),
-      kind: "depeg",
-      label: "Tangible USDR collapse — DAI reserves drained, depeg low ~$0.51",
-      severity: "high",
-      href: "https://www.dlnews.com/articles/defi/usdr-stablecoin-backed-by-real-estate-collapses/",
-    },
-  ],
   "usdr-stablr": [
     {
       ts: Date.UTC(2024, 6, 1),
@@ -1645,6 +1654,15 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "Lendf.Me imBTC reentrancy — $25M drained, dForce lending impaired",
       severity: "high",
       href: "https://medium.com/dforcenet/dforce-lendf-me-incident-summary-and-recovery-plan-7e2d2b3e2c66",
+    },
+    {
+      // 2026-04-04 — CoinGecko daily data first shows dForce USX below $0.50
+      // in its current prolonged deep-depeg period.
+      ts: Date.UTC(2026, 3, 4),
+      kind: "depeg",
+      label: "dForce USX deep depeg — price breaks below $0.50",
+      severity: "high",
+      href: "https://www.coingecko.com/en/coins/dforce-usd",
     },
   ],
   "wemix-dollar-wemix": [
@@ -1693,6 +1711,126 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "Resolv exploit exposure — yoUSD NAV drawdown ~2.95%",
       severity: "high",
       href: "https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident",
+    },
+  ],
+  "cusd-celo": [
+    {
+      // 2020-06-28 — Governance activated the Celo stability protocol and
+      // enabled Celo Dollar transfers.
+      ts: Date.UTC(2020, 5, 28),
+      kind: "governance",
+      label: "Stability protocol activated — cUSD transfers enabled",
+      severity: "med",
+      href: "https://forum.celo.org/t/governance-proposal-to-activate-celo-stability-protocol-and-enable-cusd-transfers/547",
+    },
+    {
+      // 2025-12-17 — Mento rebrands Celo Dollar (cUSD) as Mento Dollar (USDm).
+      ts: Date.UTC(2025, 11, 17),
+      kind: "governance",
+      label: "Mento rebrand — cUSD becomes USDm, V3 multichain FX",
+      severity: "med",
+      href: "https://www.mento.org/blog/a-new-chapter-in-multichain-fx-the-evolution-of-mento-stablecoins",
+    },
+  ],
+  "jtrsy-anemoy": [
+    {
+      // 2026-03-20 — S&P upgraded JTRSY fund credit quality to AAAf and
+      // affirmed S1+ volatility rating.
+      ts: Date.UTC(2026, 2, 20),
+      kind: "governance",
+      label: "S&P upgrade — JTRSY reaches AAAf/S1+ ratings",
+      severity: "low",
+      href: "https://www.spglobal.com/ratings/en/regulatory/article/-/view/type/HTML/id/3534006",
+    },
+  ],
+  "kag-kinesis": [
+    {
+      // 2026-05-18 — ERC-20 KAG lists on Mercado Bitcoin.
+      ts: Date.UTC(2026, 4, 18),
+      kind: "governance",
+      label: "KAG ERC-20 lists on Mercado Bitcoin",
+      severity: "low",
+      href: "https://kinesis.money/company-news/kau-kag-listed-on-mercado-bitcoin/",
+    },
+  ],
+  "kau-kinesis": [
+    {
+      // 2026-05-18 — ERC-20 KAU lists on Mercado Bitcoin.
+      ts: Date.UTC(2026, 4, 18),
+      kind: "governance",
+      label: "KAU ERC-20 lists on Mercado Bitcoin",
+      severity: "low",
+      href: "https://kinesis.money/company-news/kau-kag-listed-on-mercado-bitcoin/",
+    },
+  ],
+  "safo-spiko-usd": [
+    {
+      // 2026-03-19 — Spiko and Amundi launch SAFO.
+      ts: Date.UTC(2026, 2, 19),
+      kind: "governance",
+      label: "SAFO launch — Amundi/Spiko tokenized overnight fund",
+      severity: "med",
+      href: "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4?inline=",
+    },
+  ],
+  "silk-shade-protocol": [
+    {
+      // 2023-10-08 — DefiLlama daily data bottoms near $0.956 during the
+      // underpeg window Shade attributed to LP imbalance.
+      ts: Date.UTC(2023, 9, 8),
+      kind: "depeg",
+      label: "LP imbalance — SILK trades below basket peg",
+      severity: "med",
+      href: "https://forum.shadeprotocol.io/t/silk-stability-restoration-for-underpeg-scenarios/370",
+    },
+  ],
+  "sofid-sofi": [
+    {
+      // 2025-12-18 — SoFi launches SoFiUSD through SoFi Bank, N.A.
+      ts: Date.UTC(2025, 11, 18),
+      kind: "governance",
+      label: "SoFiUSD launch — first national-bank public-chain stablecoin",
+      severity: "med",
+      href: "https://investors.sofi.com/news/news-details/2025/SoFi-Launches-Fully-Reserved-Stablecoin-to-Power-Financial-Infrastructure-for-Banks-Fintechs-and-Enterprise-Partners/default.aspx",
+    },
+  ],
+  "spkcc-spiko": [
+    {
+      // 2025-07-24 — Spiko Cash & Carry official launch date.
+      ts: Date.UTC(2025, 6, 24),
+      kind: "governance",
+      label: "SPKCC launch — Spiko cash-and-carry fund",
+      severity: "low",
+      href: "https://www.spiko.io/spiko-cash-and-carry",
+    },
+  ],
+  "usp-pareto-credit": [
+    {
+      // 2025-11-21 — DefiLlama daily data shows USP's secondary-market
+      // discount bottoming near $0.916.
+      ts: Date.UTC(2025, 10, 21),
+      kind: "depeg",
+      label: "Secondary-market discount — USP low ~$0.916",
+      severity: "high",
+      href: "https://coins.llama.fi/chart/coingecko:pareto-usp?start=1763000000&span=120&period=1d&searchWidth=4h",
+    },
+  ],
+  "zeusd-zoth": [
+    {
+      // 2025-03-01 — Zoth collateral-accounting bug enabled unbacked ZeUSD.
+      ts: Date.UTC(2025, 2, 1),
+      kind: "governance",
+      label: "Zoth exploit — $285K unbacked ZeUSD mint",
+      severity: "high",
+      href: "https://blog.verichains.io/p/anatomy-of-a-hack-how-a-simple-logic",
+    },
+    {
+      // 2025-03-21 — Compromised admin key enabled a malicious Zoth upgrade.
+      ts: Date.UTC(2025, 2, 21),
+      kind: "governance",
+      label: "Zoth key exploit — ~$8.4M USD0++ drained",
+      severity: "high",
+      href: "https://www.halborn.com/blog/post/explained-the-zoth-hack-march-2025",
     },
   ],
 };
