@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
+import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
 import { RESERVE_RISK_VALUES, ReserveSliceSchema, type ReserveRisk, type ReserveSlice } from "./reserves";
 import {
   RedemptionHolderEligibilitySchema,
@@ -10,65 +11,7 @@ import {
   RedemptionRouteStatusSourceSchema,
 } from "./redemption";
 
-export const LIVE_RESERVE_ADAPTER_KEYS = [
-  "abracadabra",
-  "accountable",
-  "anzen-usdz",
-  "asymmetry",
-  "attestation-pdf-index",
-  "blast-usdb-yield-manager",
-  "btcfi",
-  "buck-io-transparency",
-  "cap-vault",
-  "centrifuge-vault",
-  "chainlink-nav",
-  "chainlink-por",
-  "circle-transparency",
-  "collateral-positions-api",
-  "crvusd",
-  "curated-validated",
-  "dola-inverse",
-  "erc4626-single-asset",
-  "ethena",
-  "evm-branch-balances",
-  "falcon",
-  "fdusd-transparency",
-  "frax-balance-sheet",
-  "frax-fpi-collateral",
-  "fx",
-  "gho",
-  "infinifi",
-  "jupusd",
-  "lista",
-  "liquity-v1",
-  "liquity-v2-branches",
-  "m0",
-  "mento",
-  "nest-vault-positions",
-  "openeden-usdo",
-  "origin-vault-balances",
-  "quantoz-transparency",
-  "re-metrics",
-  "resupply-pairs",
-  "reserve-protocol-dtf",
-  "reservoir",
-  "ripple-transparency",
-  "sgforge-coinvertible",
-  "sgho-wrapper",
-  "solstice-attestation",
-  "single-asset",
-  "sky-makercore",
-  "superstate-liquidity",
-  "tether",
-  "river-protocol-info",
-  "usdgo-transparency",
-  "usdh-native-markets",
-  "usdai-proof-of-reserves",
-  "usd1-bundle-oracle",
-  "usdd-data-platform",
-  "yamato",
-  "zephyr-scanner",
-] as const;
+export { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey };
 
 export const LIVE_RESERVE_SOURCE_MODEL_VALUES = ["dynamic-mix", "validated-static", "single-bucket"] as const;
 
@@ -100,7 +43,6 @@ export const LIVE_RESERVE_SEMANTICS_VALUES = [
 export const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
 export const LIVE_RESERVE_RISK_VALUES = RESERVE_RISK_VALUES;
 
-export type LiveReserveAdapterKey = (typeof LIVE_RESERVE_ADAPTER_KEYS)[number];
 export type LiveReserveSourceModel = (typeof LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
 export type LiveReserveEvidenceClass = (typeof LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
 export type LiveReserveSourceSharingMode = (typeof LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];

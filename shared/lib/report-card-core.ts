@@ -1,4 +1,5 @@
 import type { DimensionKey, ReportCardGrade } from "../types";
+import { clampScore } from "./math";
 import { SAFETY_SCORE_VERSION } from "./safety-score-version";
 
 export const METHODOLOGY_VERSION = SAFETY_SCORE_VERSION;
@@ -98,7 +99,7 @@ export const GRADE_RADAR_COLORS: Record<string, string> = {
 
 export function scoreToGrade(score: number | null): ReportCardGrade {
   if (score === null) return "NR";
-  const clamped = Math.max(0, Math.min(100, score));
+  const clamped = clampScore(score);
   for (const { grade, min } of GRADE_THRESHOLDS) {
     if (clamped >= min) return grade;
   }

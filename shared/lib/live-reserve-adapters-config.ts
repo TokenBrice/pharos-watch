@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  LIVE_RESERVE_ADAPTER_KEYS,
   type LiveReserveAdapterKey,
   type LiveReservesConfig,
 } from "../types/live-reserves";
@@ -37,7 +36,9 @@ function validateAdapterConfigPolicy(
   }
 }
 
-const liveReserveConfigVariants = LIVE_RESERVE_ADAPTER_KEYS.map((adapterKey) =>
+const liveReserveConfigAdapterKeys = Object.keys(adapterParamsSchemas) as LiveReserveAdapterKey[];
+
+const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) =>
   baseLiveReserveConfigSchema.extend({
     adapter: z.literal(adapterKey),
     inputs: createLiveReserveInputsSchema(adapterKey),

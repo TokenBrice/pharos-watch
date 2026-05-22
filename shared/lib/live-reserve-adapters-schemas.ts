@@ -50,65 +50,16 @@ const LiveReserveInputSchemaByKind = {
     .strict(),
 } as const satisfies Record<LiveReserveInputKind, z.ZodTypeAny>;
 
-export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = {
-  abracadabra: ["onchain-evm"],
-  accountable: ["http-json"],
-  "anzen-usdz": ["onchain-evm"],
-  asymmetry: ["http-json"],
-  "attestation-pdf-index": ["http-html"],
-  "blast-usdb-yield-manager": ["onchain-evm"],
-  btcfi: ["http-json"],
-  "buck-io-transparency": ["http-html"],
-  "cap-vault": ["onchain-evm"],
-  "centrifuge-vault": ["onchain-evm"],
-  "chainlink-nav": ["onchain-evm"],
-  "chainlink-por": ["onchain-evm"],
-  "circle-transparency": ["http-html"],
-  "collateral-positions-api": ["http-json"],
-  crvusd: ["http-json", "onchain-evm"],
-  "curated-validated": ["onchain-evm", "onchain-solana"],
-  "dola-inverse": ["http-json"],
-  "erc4626-single-asset": ["onchain-evm"],
-  ethena: ["http-json"],
-  "evm-branch-balances": ["onchain-evm"],
-  falcon: ["http-json"],
-  "fdusd-transparency": ["http-html"],
-  "frax-balance-sheet": ["http-json"],
-  "frax-fpi-collateral": ["http-json"],
-  fx: ["http-json", "onchain-evm"],
-  gho: ["onchain-evm"],
-  infinifi: ["http-json"],
-  jupusd: ["http-json"],
-  lista: ["onchain-evm"],
-  "liquity-v1": ["onchain-evm"],
-  "liquity-v2-branches": ["onchain-evm"],
-  m0: ["http-json"],
-  mento: ["http-json"],
-  "nest-vault-positions": ["http-json"],
-  "openeden-usdo": ["http-json"],
-  "origin-vault-balances": ["onchain-evm"],
-  "quantoz-transparency": ["http-html"],
-  "re-metrics": ["http-html"],
-  "resupply-pairs": ["onchain-evm"],
-  "reserve-protocol-dtf": ["http-json", "onchain-evm"],
-  reservoir: ["http-json"],
-  "ripple-transparency": ["http-html"],
-  "sgforge-coinvertible": ["http-html"],
-  "sgho-wrapper": ["onchain-evm"],
-  "solstice-attestation": ["http-json"],
-  "single-asset": ["http-json", "onchain-evm"],
-  "sky-makercore": ["http-json"],
-  "superstate-liquidity": ["onchain-evm"],
-  tether: ["http-json"],
-  "river-protocol-info": ["http-json"],
-  "usdgo-transparency": ["http-json"],
-  "usdh-native-markets": ["http-html"],
-  "usdai-proof-of-reserves": ["http-json"],
-  "usd1-bundle-oracle": ["onchain-evm"],
-  "usdd-data-platform": ["http-json"],
-  yamato: ["onchain-evm"],
-  "zephyr-scanner": ["http-json"],
-} as const satisfies Record<LiveReserveAdapterKey, readonly LiveReserveInputKind[]>;
+type LiveReserveAdapterSchemaMetadata = {
+  primaryInputKinds: readonly LiveReserveInputKind[];
+  params: z.ZodTypeAny;
+};
+
+function defineLiveReserveAdapterSchemaMetadata<
+  T extends Record<LiveReserveAdapterKey, LiveReserveAdapterSchemaMetadata>,
+>(metadata: T): T {
+  return metadata;
+}
 
 function createInputSchemaForKinds(kinds: readonly LiveReserveInputKind[]): z.ZodTypeAny {
   const schemas = kinds.map((kind) => LiveReserveInputSchemaByKind[kind]);
@@ -159,7 +110,15 @@ const usd1BundleOracleParamsSchema = z
 const accountableParamsSchema = z
   .object({
     bucket: z
-      .enum(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"])
+      .enum([
+        "type",
+        "reserves_split",
+        "deployment",
+        "type_split",
+        "stablecoin_split",
+        "exposure_split",
+        "protocol_split",
+      ])
       .optional(),
     riskMap: riskRecordSchema.optional(),
     renameMap: stringRecordSchema.optional(),
@@ -574,65 +533,82 @@ const abracadabraParamsSchema = z
   })
   .strict();
 
-export const adapterParamsSchemas = {
-  abracadabra: abracadabraParamsSchema,
-  accountable: accountableParamsSchema,
-  "anzen-usdz": noParamsSchema,
-  asymmetry: noParamsSchema,
-  "attestation-pdf-index": attestationPdfIndexParamsSchema,
-  "blast-usdb-yield-manager": blastUsdbYieldManagerParamsSchema,
-  btcfi: btcfiParamsSchema,
-  "buck-io-transparency": noParamsSchema,
-  "cap-vault": capVaultParamsSchema,
-  "centrifuge-vault": centrifugeVaultParamsSchema,
-  "chainlink-nav": chainlinkNavParamsSchema,
-  "chainlink-por": chainlinkPorParamsSchema,
-  "circle-transparency": circleTransparencyParamsSchema,
-  "collateral-positions-api": collateralPositionsParamsSchema,
-  crvusd: noParamsSchema,
-  "curated-validated": curatedValidatedParamsSchema,
-  "dola-inverse": noParamsSchema,
-  "erc4626-single-asset": erc4626SingleAssetParamsSchema,
-  ethena: noParamsSchema,
-  "evm-branch-balances": evmBranchBalancesParamsSchema,
-  falcon: noParamsSchema,
-  "fdusd-transparency": noParamsSchema,
-  "frax-balance-sheet": noParamsSchema,
-  "frax-fpi-collateral": noParamsSchema,
-  fx: fxParamsSchema,
-  gho: ghoParamsSchema,
-  infinifi: noParamsSchema,
-  jupusd: jupusdParamsSchema,
-  lista: evmBranchBalancesParamsSchema,
-  "liquity-v1": liquityV1ParamsSchema,
-  "liquity-v2-branches": liquityV2BranchesParamsSchema,
-  m0: noParamsSchema,
-  mento: mentoParamsSchema,
-  "nest-vault-positions": nestVaultPositionsParamsSchema,
-  "openeden-usdo": noParamsSchema,
-  "origin-vault-balances": originVaultBalancesParamsSchema,
-  "quantoz-transparency": quantozTransparencyParamsSchema,
-  "re-metrics": noParamsSchema,
-  "resupply-pairs": resupplyPairsParamsSchema,
-  "reserve-protocol-dtf": reserveProtocolDtfParamsSchema,
-  reservoir: noParamsSchema,
-  "ripple-transparency": noParamsSchema,
-  "sgforge-coinvertible": sgForgeCoinvertibleParamsSchema,
-  "sgho-wrapper": erc4626SingleAssetParamsSchema,
-  "solstice-attestation": noParamsSchema,
-  "single-asset": singleAssetParamsSchema,
-  "sky-makercore": noParamsSchema,
-  "superstate-liquidity": superstateLiquidityParamsSchema,
-  tether: noParamsSchema,
-  "river-protocol-info": noParamsSchema,
-  "usdgo-transparency": noParamsSchema,
-  "usdh-native-markets": noParamsSchema,
-  "usdai-proof-of-reserves": noParamsSchema,
-  "usd1-bundle-oracle": usd1BundleOracleParamsSchema,
-  "usdd-data-platform": noParamsSchema,
-  yamato: yamatoParamsSchema,
-  "zephyr-scanner": noParamsSchema,
-} as const satisfies Record<LiveReserveAdapterKey, z.ZodTypeAny>;
+export const liveReserveAdapterSchemaMetadata = defineLiveReserveAdapterSchemaMetadata({
+  abracadabra: { primaryInputKinds: ["onchain-evm"], params: abracadabraParamsSchema },
+  accountable: { primaryInputKinds: ["http-json"], params: accountableParamsSchema },
+  "anzen-usdz": { primaryInputKinds: ["onchain-evm"], params: noParamsSchema },
+  asymmetry: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "attestation-pdf-index": { primaryInputKinds: ["http-html"], params: attestationPdfIndexParamsSchema },
+  "blast-usdb-yield-manager": { primaryInputKinds: ["onchain-evm"], params: blastUsdbYieldManagerParamsSchema },
+  btcfi: { primaryInputKinds: ["http-json"], params: btcfiParamsSchema },
+  "buck-io-transparency": { primaryInputKinds: ["http-html"], params: noParamsSchema },
+  "cap-vault": { primaryInputKinds: ["onchain-evm"], params: capVaultParamsSchema },
+  "centrifuge-vault": { primaryInputKinds: ["onchain-evm"], params: centrifugeVaultParamsSchema },
+  "chainlink-nav": { primaryInputKinds: ["onchain-evm"], params: chainlinkNavParamsSchema },
+  "chainlink-por": { primaryInputKinds: ["onchain-evm"], params: chainlinkPorParamsSchema },
+  "circle-transparency": { primaryInputKinds: ["http-html"], params: circleTransparencyParamsSchema },
+  "collateral-positions-api": { primaryInputKinds: ["http-json"], params: collateralPositionsParamsSchema },
+  crvusd: { primaryInputKinds: ["http-json", "onchain-evm"], params: noParamsSchema },
+  "curated-validated": { primaryInputKinds: ["onchain-evm", "onchain-solana"], params: curatedValidatedParamsSchema },
+  "dola-inverse": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "erc4626-single-asset": { primaryInputKinds: ["onchain-evm"], params: erc4626SingleAssetParamsSchema },
+  ethena: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "evm-branch-balances": { primaryInputKinds: ["onchain-evm"], params: evmBranchBalancesParamsSchema },
+  falcon: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "fdusd-transparency": { primaryInputKinds: ["http-html"], params: noParamsSchema },
+  "frax-balance-sheet": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "frax-fpi-collateral": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  fx: { primaryInputKinds: ["http-json", "onchain-evm"], params: fxParamsSchema },
+  gho: { primaryInputKinds: ["onchain-evm"], params: ghoParamsSchema },
+  infinifi: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  jupusd: { primaryInputKinds: ["http-json"], params: jupusdParamsSchema },
+  lista: { primaryInputKinds: ["onchain-evm"], params: evmBranchBalancesParamsSchema },
+  "liquity-v1": { primaryInputKinds: ["onchain-evm"], params: liquityV1ParamsSchema },
+  "liquity-v2-branches": { primaryInputKinds: ["onchain-evm"], params: liquityV2BranchesParamsSchema },
+  m0: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  mento: { primaryInputKinds: ["http-json"], params: mentoParamsSchema },
+  "nest-vault-positions": { primaryInputKinds: ["http-json"], params: nestVaultPositionsParamsSchema },
+  "openeden-usdo": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "origin-vault-balances": { primaryInputKinds: ["onchain-evm"], params: originVaultBalancesParamsSchema },
+  "quantoz-transparency": { primaryInputKinds: ["http-html"], params: quantozTransparencyParamsSchema },
+  "re-metrics": { primaryInputKinds: ["http-html"], params: noParamsSchema },
+  "resupply-pairs": { primaryInputKinds: ["onchain-evm"], params: resupplyPairsParamsSchema },
+  "reserve-protocol-dtf": { primaryInputKinds: ["http-json", "onchain-evm"], params: reserveProtocolDtfParamsSchema },
+  reservoir: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "ripple-transparency": { primaryInputKinds: ["http-html"], params: noParamsSchema },
+  "sgforge-coinvertible": { primaryInputKinds: ["http-html"], params: sgForgeCoinvertibleParamsSchema },
+  "sgho-wrapper": { primaryInputKinds: ["onchain-evm"], params: erc4626SingleAssetParamsSchema },
+  "solstice-attestation": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "single-asset": { primaryInputKinds: ["http-json", "onchain-evm"], params: singleAssetParamsSchema },
+  "sky-makercore": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "superstate-liquidity": { primaryInputKinds: ["onchain-evm"], params: superstateLiquidityParamsSchema },
+  tether: { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "river-protocol-info": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "usdgo-transparency": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "usdh-native-markets": { primaryInputKinds: ["http-html"], params: noParamsSchema },
+  "usdai-proof-of-reserves": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  "usd1-bundle-oracle": { primaryInputKinds: ["onchain-evm"], params: usd1BundleOracleParamsSchema },
+  "usdd-data-platform": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+  yamato: { primaryInputKinds: ["onchain-evm"], params: yamatoParamsSchema },
+  "zephyr-scanner": { primaryInputKinds: ["http-json"], params: noParamsSchema },
+});
+
+type LiveReserveAdapterSchemaMetadataMap = typeof liveReserveAdapterSchemaMetadata;
+
+export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = Object.fromEntries(
+  Object.entries(liveReserveAdapterSchemaMetadata).map(([adapterKey, metadata]) => [
+    adapterKey,
+    metadata.primaryInputKinds,
+  ]),
+) as {
+  [K in keyof LiveReserveAdapterSchemaMetadataMap]: LiveReserveAdapterSchemaMetadataMap[K]["primaryInputKinds"];
+};
+
+export const adapterParamsSchemas = Object.fromEntries(
+  Object.entries(liveReserveAdapterSchemaMetadata).map(([adapterKey, metadata]) => [adapterKey, metadata.params]),
+) as {
+  [K in keyof LiveReserveAdapterSchemaMetadataMap]: LiveReserveAdapterSchemaMetadataMap[K]["params"];
+};
 
 export type LiveReserveAdapterParamsByKey = {
   [K in keyof typeof adapterParamsSchemas]: z.infer<(typeof adapterParamsSchemas)[K]>;

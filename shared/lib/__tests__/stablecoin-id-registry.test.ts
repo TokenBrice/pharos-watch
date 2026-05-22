@@ -154,8 +154,26 @@ describe("REGISTRY_BY_CMC_SLUG", () => {
     expect(REGISTRY_BY_CMC_SLUG.get("jupusd")?.symbol).toBe("JUPUSD");
   });
 
+  it("has no duplicate cmcSlugs", () => {
+    const cmcSlugCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
+      (stablecoin) => stablecoin.cmcSlug,
+    ).length;
+
+    expect(REGISTRY_BY_CMC_SLUG.size).toBe(cmcSlugCount);
+  });
+
   it("skips entries without cmcSlug", () => {
     expect(REGISTRY_BY_CMC_SLUG.size).toBeLessThan(TRACKED_STABLECOINS.length);
+  });
+});
+
+describe("REGISTRY_BY_GECKO_ID", () => {
+  it("has no duplicate geckoIds", () => {
+    const geckoIdCount = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS].filter(
+      (stablecoin) => stablecoin.geckoId,
+    ).length;
+
+    expect(REGISTRY_BY_GECKO_ID.size).toBe(geckoIdCount);
   });
 });
 

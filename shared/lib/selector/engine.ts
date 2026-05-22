@@ -1188,14 +1188,10 @@ export function runSelector(
     survivors.push(row);
   }
 
-  // 5. Circuit-breakers
   const universeLen = universe.length;
-  const skippedFrac = universeLen > 0 ? skippedForCoverage.length / universeLen : 0;
-  const sparse = skippedFrac > 0.25;
-  const uneven = !sparse && skippedFrac > 0.15;
 
   // 6. Layer 2 — scoring
-  const scored: ScoredEntry[] = [];
+  let scored: ScoredEntry[] = [];
   for (const row of survivors) {
     const result = scoreRow(row, input.profile, input);
     if (result == null || result.degenerate) {
@@ -1225,23 +1221,43 @@ export function runSelector(
     for (const entry of scored) {
       entry.recommendedSource = selectYieldSource(entry.row, input);
     }
+    scored = scored.filter((entry) => {
+      if (entry.recommendedSource != null) return true;
+      excluded.push({
+        id: entry.row.id,
+        reason: "coverage-too-thin",
+        severity: "info",
+        detail: "missing-recommended-source",
+      });
+      skippedForCoverage.push({
+        id: entry.row.id,
+        symbol: entry.row.symbol,
+        missingSignals: ["recommendedSource"],
+      });
+      return false;
+    });
   }
 
-  // 8. Trading-only: per-input staleness.
+  // 8. Circuit-breakers
+  const skippedFrac = universeLen > 0 ? skippedForCoverage.length / universeLen : 0;
+  const sparse = skippedFrac > 0.25;
+  const uneven = !sparse && skippedFrac > 0.15;
+
+  // 9. Trading-only: per-input staleness.
   if (input.profile === "trading") {
     for (const entry of scored) {
       entry.perInputStaleness = tradingPerInputStaleness(entry.row);
     }
   }
 
-  // 9. Variant dedup
+  // 10. Variant dedup
   const deduped = dedupVariants(scored, input.profile);
 
-  // 10. Rank with tie-breakers
+  // 11. Rank with tie-breakers
   deduped.sort(compareScored);
   const ranked = applyConcentrationSafeguard(deduped);
 
-  // 11. Confidence demotion (Trading skips per R2 Active Trader P2)
+  // 12. Confidence demotion (Trading skips per R2 Active Trader P2)
   if (input.profile !== "trading" && ranked.length >= 2) {
     if (ranked[0]!.confidence < 40) {
       const tmp = ranked[0]!;
@@ -1250,7 +1266,7 @@ export function runSelector(
     }
   }
 
-  // 12. Build top-3 recommendations
+  // 13. Build top-3 recommendations
   const recommended: SelectorRecommendation[] = [];
   for (let i = 0; i < ranked.length; i += 1) {
     const entry = ranked[i]!;
@@ -1267,12 +1283,10 @@ export function runSelector(
       rankRobustnessFor(ranked, i),
     );
     if (rec == null) {
-      // template-coverage gap or yield missing source — exclude with reason
+      // template-coverage gap — Yield rows without a source were removed before ranking.
       excluded.push({
         id: entry.row.id,
-        reason: input.profile === "yield" && entry.recommendedSource == null
-          ? "coverage-too-thin"
-          : "template-coverage-gap",
+        reason: "template-coverage-gap",
         severity: "info",
       });
       continue;
@@ -1304,7 +1318,7 @@ export function runSelector(
   }
   const usedRelaxedFallback = relaxedReasons.size > 0;
 
-  // 13. Lower-ranked-list
+  // 14. Lower-ranked-list
   const lowerRanked = selectLowerRanked(
     ranked,
     excluded,

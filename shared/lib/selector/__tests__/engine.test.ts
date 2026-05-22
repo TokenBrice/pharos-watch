@@ -300,6 +300,104 @@ describe("runSelector — Yield happy path", () => {
     expect(rec!.confidence).toBeLessThan(100);
     expect(out.coverageWarnings.redistributionCount).toBeGreaterThan(0);
   });
+
+  it("removes Yield rows without a usable source before ranking and alternates", () => {
+    const base = buildFixtureData().rows.get("usds-sky");
+    expect(base).toBeDefined();
+    const makeYieldRow = (
+      id: string,
+      overrides: Partial<MergedRow>,
+    ): MergedRow => ({
+      ...base!,
+      id,
+      symbol: id.slice(0, 5).toUpperCase(),
+      name: id,
+      protocolSlug: id,
+      variantOf: null,
+      yieldProtocolSlug: `source-${id}`,
+      yieldVenueChain: "ethereum",
+      yieldSources: undefined,
+      ...overrides,
+    });
+    const phantom = makeYieldRow("phantom-yield-no-source", {
+      safetyScore: 87,
+      pharosYieldScore: 83,
+      apy30d: 5,
+      supplyUsd: 70_000_000_000,
+      yieldProtocolSlug: null,
+      yieldVenueChain: null,
+      yieldSources: [],
+    });
+    const rows = new Map<string, MergedRow>([
+      [
+        "valid-a",
+        makeYieldRow("valid-a", {
+          safetyScore: 92,
+          pharosYieldScore: 88,
+          apy30d: 5.5,
+          supplyUsd: 100_000_000_000,
+        }),
+      ],
+      [
+        "valid-b",
+        makeYieldRow("valid-b", {
+          safetyScore: 90,
+          pharosYieldScore: 86,
+          apy30d: 5.3,
+          supplyUsd: 90_000_000_000,
+        }),
+      ],
+      [
+        "valid-c",
+        makeYieldRow("valid-c", {
+          safetyScore: 88,
+          pharosYieldScore: 84,
+          apy30d: 5.1,
+          supplyUsd: 80_000_000_000,
+        }),
+      ],
+      [
+        "valid-d",
+        makeYieldRow("valid-d", {
+          safetyScore: 70,
+          pharosYieldScore: 60,
+          apy30d: 4.2,
+          supplyUsd: 10_000_000_000,
+        }),
+      ],
+      [
+        "valid-e",
+        makeYieldRow("valid-e", {
+          safetyScore: 65,
+          pharosYieldScore: 58,
+          apy30d: 4.1,
+          supplyUsd: 9_000_000_000,
+        }),
+      ],
+      [phantom.id, phantom],
+    ]);
+
+    const out = runSelector(input, { rows }, FIXTURE_DATASET);
+
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["valid-a", "valid-b", "valid-c"]);
+    expect(out.recommended[2]?.rankRobustness).toEqual({
+      label: "clear-margin",
+      scoreMargin: 12,
+    });
+    expect(out.lowerRanked.map((row) => row.id)).not.toContain(phantom.id);
+    expect(out.lowerRanked.map((row) => row.id)).toContain("valid-e");
+    expect(out.coverageWarnings.skippedForCoverage).toContainEqual({
+      id: phantom.id,
+      symbol: phantom.symbol,
+      missingSignals: ["recommendedSource"],
+    });
+    expect(out.exclusionSummary).toContainEqual(
+      expect.objectContaining({
+        reason: "coverage-too-thin",
+        sampleIds: [phantom.id],
+      }),
+    );
+  });
 });
 
 describe("runSelector — Trading happy path", () => {

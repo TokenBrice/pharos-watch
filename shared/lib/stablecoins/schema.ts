@@ -6,7 +6,7 @@ import {
   PEG_CURRENCY_VALUES,
 } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
-import { ReserveSliceSchema } from "../../types/reserves";
+import { FullReserveCompositionSchema } from "../../types/reserves";
 import {
   CoinNoticeSchema,
   BlacklistabilityReviewSchema,
@@ -132,7 +132,7 @@ const obituarySchema = z.object({
   sourceLabel: z.string().min(1),
 });
 
-const StablecoinMetaAssetRawSchema = z.object({
+const StablecoinMetaAssetSchemaShape = {
   id: StablecoinIdSchema,
   llamaId: z.string().optional(),
   detailProvider: DetailProviderSchema.optional(),
@@ -167,7 +167,7 @@ const StablecoinMetaAssetRawSchema = z.object({
   variantOf: z.string().optional(),
   variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),
   archetypeOverride: z.boolean().describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.").optional(),
-  reserves: z.array(ReserveSliceSchema).optional(),
+  reserves: FullReserveCompositionSchema.optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeSchema).optional(),
   tags: z.array(z.string()).optional(),
@@ -183,7 +183,9 @@ const StablecoinMetaAssetRawSchema = z.object({
   featuredContent: z.array(FeaturedContentSchema).optional(),
   milestones: z.array(LaunchMilestoneSchema).optional(),
   dateHistory: z.array(DateHistoryEntrySchema).optional(),
-}).strict();
+} satisfies Record<keyof StablecoinMeta, z.ZodTypeAny>;
+
+const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).strict();
 
 export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine((meta, ctx) => {
   if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {

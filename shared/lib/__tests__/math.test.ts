@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clamp } from "../math";
+import { clamp, clampScore } from "../math";
 
 describe("clamp", () => {
   it("returns value when within range", () => {
@@ -22,5 +22,13 @@ describe("clamp", () => {
   });
   it("handles min === max", () => {
     expect(clamp(5, 3, 3)).toBe(3);
+  });
+});
+
+describe("clampScore", () => {
+  it("clamps to the report-card score range", () => {
+    expect(clampScore(-1)).toBe(0);
+    expect(clampScore(42)).toBe(42);
+    expect(clampScore(101)).toBe(100);
   });
 });

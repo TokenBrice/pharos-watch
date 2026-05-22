@@ -280,6 +280,22 @@ describe("StablecoinMeta schema — reserves depType valid cases", () => {
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
   });
+
+  it("rejects curated reserves that do not describe a full composition", () => {
+    const json = [
+      {
+        id: "fixture-reserves-partial",
+        name: "Fixture Partial Reserves",
+        symbol: "FPR",
+        flags: baseFlags,
+        reserves: [
+          { name: "USDC", pct: 40, risk: "low" },
+          { name: "Treasuries", pct: 20, risk: "very-low" },
+        ],
+      },
+    ];
+    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/Reserve composition must sum to 100%/);
+  });
 });
 
 describe("StablecoinMeta schema — real fixture smoke tests", () => {

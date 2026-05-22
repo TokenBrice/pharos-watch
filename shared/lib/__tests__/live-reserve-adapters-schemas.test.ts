@@ -7,9 +7,14 @@ import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "../live-reserve-adapters";
+import { LIVE_RESERVE_ADAPTER_KEYS } from "../../types/live-reserves";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../live-reserve-adapters-definitions";
 import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  adapterParamsSchemas,
   baseLiveReserveConfigSchema,
+  liveReserveAdapterSchemaMetadata,
 } from "../live-reserve-adapters-schemas";
 
 const LATE_MONTHLY_SOURCE_AGE_IDS = [
@@ -154,6 +159,21 @@ describe("LiveReservesConfigSchema URL validation", () => {
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
+  it("keeps adapter registry maps aligned", () => {
+    const keys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
+    expect(Object.keys(liveReserveAdapterSchemaMetadata).sort()).toEqual(keys);
+    expect(Object.keys(adapterParamsSchemas).sort()).toEqual(keys);
+    expect(Object.keys(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS).sort()).toEqual(keys);
+    expect(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort()).toEqual(keys);
+
+    for (const adapterKey of LIVE_RESERVE_ADAPTER_KEYS) {
+      expect(adapterParamsSchemas[adapterKey]).toBe(liveReserveAdapterSchemaMetadata[adapterKey].params);
+      expect(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]).toBe(
+        liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,
+      );
+    }
+  });
+
   it("rejects unsupported adapter semantics", () => {
     const result = LiveReservesConfigSchema.safeParse({
       adapter: "chainlink-por",

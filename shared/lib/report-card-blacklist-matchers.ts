@@ -1,5 +1,6 @@
 import { CENTRALIZED_CUSTODY_CRYPTO } from "./centralized-custody";
 import type { ReserveSlice, StablecoinMeta } from "../types";
+import { buildDelimitedSymbolPattern } from "./reserve-symbol-matchers";
 
 export type BlacklistStatus = boolean | "possible" | "inherited" | "dilutable";
 const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
@@ -114,17 +115,11 @@ function textMatchesAny(text: string, patterns: readonly RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function buildBlacklistableSymbolPattern(symbol: string): RegExp {
-  const escaped = escapeRegExp(symbol.toLowerCase());
-  // eslint-disable-next-line security/detect-non-literal-regexp -- symbol is escaped before interpolation
-  return new RegExp(
-    `(?:^|[^a-z0-9])${SYMBOL_MATCHER_PREFIX_GROUP}${escaped}${SYMBOL_MATCHER_SUFFIX_GROUP}(?=$|[^a-z0-9])`,
-    "i",
-  );
+  return buildDelimitedSymbolPattern(symbol.toLowerCase(), {
+    prefixPattern: SYMBOL_MATCHER_PREFIX_GROUP,
+    suffixPattern: SYMBOL_MATCHER_SUFFIX_GROUP,
+  });
 }
 
 function sliceTextSignalsDirectBlacklistRisk(text: string): boolean {

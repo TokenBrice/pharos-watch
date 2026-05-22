@@ -17,12 +17,27 @@ export const READABLE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = READ
 export const PSI_INCLUSIVE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = PSI_ELIGIBLE_META_BY_ID;
 /** Reverse index: DefiLlama numeric id → meta. Guaranteed unique (throws at module load on collision). */
 export const REGISTRY_BY_LLAMA_ID: Map<string, StablecoinMeta> = new Map();
-/** Reverse index: CoinGecko id → meta. May have collisions if two coins share a geckoId; later wins. */
+/** Reverse index: CoinGecko id → meta. Guaranteed unique (throws at module load on collision). */
 export const REGISTRY_BY_GECKO_ID: Map<string, StablecoinMeta> = new Map();
-/** Reverse index: CoinMarketCap slug → meta. */
+/** Reverse index: CoinMarketCap slug → meta. Guaranteed unique (throws at module load on collision). */
 export const REGISTRY_BY_CMC_SLUG: Map<string, StablecoinMeta> = new Map();
 /** Dead-coin lookup by DefiLlama id. Values are display names for UI labels on archived assets. */
 export const DEAD_BY_LLAMA_ID: Map<string, string> = new Map();
+
+function setUniqueExternalId(
+  registry: Map<string, StablecoinMeta>,
+  provider: "llamaId" | "geckoId" | "cmcSlug",
+  externalId: string,
+  meta: StablecoinMeta,
+): void {
+  const existing = registry.get(externalId);
+  if (existing) {
+    throw new Error(
+      `[stablecoin-id-registry] Duplicate ${provider}: ${externalId} (${existing.id}, ${meta.id})`,
+    );
+  }
+  registry.set(externalId, meta);
+}
 
 for (const meta of ALL_LIVE_COINS) {
   if (REGISTRY_BY_ID.has(meta.id)) {
@@ -31,18 +46,15 @@ for (const meta of ALL_LIVE_COINS) {
   REGISTRY_BY_ID.set(meta.id, meta);
 
   if (meta.llamaId) {
-    if (REGISTRY_BY_LLAMA_ID.has(meta.llamaId)) {
-      throw new Error(`[stablecoin-id-registry] Duplicate llamaId: ${meta.llamaId}`);
-    }
-    REGISTRY_BY_LLAMA_ID.set(meta.llamaId, meta);
+    setUniqueExternalId(REGISTRY_BY_LLAMA_ID, "llamaId", meta.llamaId, meta);
   }
 
   if (meta.geckoId) {
-    REGISTRY_BY_GECKO_ID.set(meta.geckoId, meta);
+    setUniqueExternalId(REGISTRY_BY_GECKO_ID, "geckoId", meta.geckoId, meta);
   }
 
   if (meta.cmcSlug) {
-    REGISTRY_BY_CMC_SLUG.set(meta.cmcSlug, meta);
+    setUniqueExternalId(REGISTRY_BY_CMC_SLUG, "cmcSlug", meta.cmcSlug, meta);
   }
 }
 

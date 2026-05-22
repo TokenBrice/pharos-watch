@@ -1,4 +1,5 @@
 import type { StablecoinMeta } from "../types";
+import { buildReserveSymbolMatcher } from "./reserve-symbol-matchers";
 
 /**
  * Crypto assets with centralized custody (single custodian or consortium).
@@ -9,14 +10,12 @@ export const CENTRALIZED_CUSTODY_CRYPTO = new Set([
 ]);
 
 // Pre-compiled patterns sorted longest-first for whole-word matching
-const CENTRALIZED_CRYPTO_PATTERNS = [...CENTRALIZED_CUSTODY_CRYPTO]
+const CENTRALIZED_CRYPTO_MATCHERS = [...CENTRALIZED_CUSTODY_CRYPTO]
   .sort((a, b) => b.length - a.length)
-  // eslint-disable-next-line security/detect-non-literal-regexp -- patterns are built from curated in-repo ticker constants.
-  .map((sym) => new RegExp(`(?:^|[^A-Z0-9])${sym}(?:[^A-Z0-9]|$)`));
+  .map((symbol) => buildReserveSymbolMatcher(symbol));
 
 function sliceMatchesCentralizedCrypto(name: string): boolean {
-  const upper = name.toUpperCase();
-  return CENTRALIZED_CRYPTO_PATTERNS.some((re) => re.test(upper));
+  return CENTRALIZED_CRYPTO_MATCHERS.some((matches) => matches(name));
 }
 
 /**

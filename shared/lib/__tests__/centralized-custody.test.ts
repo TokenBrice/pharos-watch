@@ -53,6 +53,21 @@ describe("computeCentralizedCustodyFraction", () => {
     expect(computeCentralizedCustodyFraction("wbtc-heavy", mockCoins)).toBeCloseTo(0.6);
   });
 
+  it("matches centralized-custody symbols case-insensitively without substring false positives", () => {
+    const coins: Pick<StablecoinMeta, "id" | "reserves" | "flags">[] = [
+      {
+        id: "case-match",
+        flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false } as StablecoinMeta["flags"],
+        reserves: [
+          { name: "cbBTC collateral", pct: 50, risk: "medium" },
+          { name: "prefixXWBTCYsuffix", pct: 50, risk: "medium" },
+        ],
+      },
+    ];
+
+    expect(computeCentralizedCustodyFraction("case-match", coins)).toBeCloseTo(0.5);
+  });
+
   it("counts CeFi stablecoins as centralized-custody", () => {
     expect(computeCentralizedCustodyFraction("usdc-backed", mockCoins)).toBeCloseTo(0.8);
   });
