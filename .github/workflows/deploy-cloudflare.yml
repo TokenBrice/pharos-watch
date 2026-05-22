@@ -59,6 +59,7 @@ jobs:
       previous_version_id: ${{ steps.current-deployment.outputs.previous_version_id }}
       version_id: ${{ steps.upload-version.outputs.version_id }}
       preview_url: ${{ steps.upload-version.outputs.preview_url }}
+      version_upload_unavailable: ${{ steps.upload-version.outputs.version_upload_unavailable }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -94,8 +95,27 @@ jobs:
         run: |
           rm -f "$WRANGLER_OUTPUT_FILE_PATH"
           cd worker
-          npx --yes wrangler@4.91.0 versions upload --message "GitHub Actions candidate ${GITHUB_SHA}"
+          set +e
+          npx --yes wrangler@4.91.0 versions upload --message "GitHub Actions candidate ${GITHUB_SHA}" 2>&1 | tee /tmp/wrangler-versions-upload.log
+          upload_status="${PIPESTATUS[0]}"
+          set -e
           cd ..
+
+          if [ "$upload_status" -ne 0 ]; then
+            if grep -q "entitlements.not_available \\[code: 10007\\]" /tmp/wrangler-versions-upload.log; then
+              echo "version_upload_unavailable=true" >> "$GITHUB_OUTPUT"
+              {
+                echo "## Worker Versions upload unavailable"
+                echo ""
+                echo "Cloudflare returned \`entitlements.not_available [code: 10007]\` for \`wrangler versions upload\`."
+                echo "The deploy-worker job will use the validated legacy \`wrangler deploy\` fallback after the validation and migration gates."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit "$upload_status"
+          fi
+
+          echo "version_upload_unavailable=false" >> "$GITHUB_OUTPUT"
           node .github/scripts/parse-version-upload.mjs >> "$GITHUB_OUTPUT"
 
   deploy-worker:
@@ -134,6 +154,7 @@ jobs:
       - name: Apply production D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Smoke uploaded preview worker
+        if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable != 'true' }}
         run: npm run test:smoke-api
         env:
           SMOKE_API_BASE: ${{ needs.upload-worker-version.outputs.preview_url }}
@@ -141,6 +162,7 @@ jobs:
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           SMOKE_API_REQUIRE_KEY: "true"
       - name: Promote uploaded worker version to production
+        if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable != 'true' }}
         env:
           WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.version_id }}
           WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
@@ -148,6 +170,9 @@ jobs:
           rm -f "$WRANGLER_OUTPUT_FILE_PATH"
           cd worker
           npx --no-install wrangler versions deploy "${WORKER_VERSION_ID}@100" --message "GitHub Actions deploy ${GITHUB_SHA}" --yes
+      - name: Deploy worker with legacy Wrangler deploy fallback
+        if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable == 'true' }}
+        run: cd worker && npx --no-install wrangler deploy
       - name: Sync worker triggers
         run: cd worker && npx --no-install wrangler triggers deploy
       - name: Smoke production worker
@@ -163,7 +188,12 @@ jobs:
           SMOKE_API_RETRY_DELAY_MS: "5000"
           SMOKE_API_TIMEOUT_MS: "15000"
       - name: Roll back production worker to previous stable version
-        if: ${{ steps.production-smoke-api.outcome == 'failure' && needs.upload-worker-version.outputs.previous_version_id != '' }}
+        if: >-
+          ${{
+            steps.production-smoke-api.outcome == 'failure'
+            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
+            && needs.upload-worker-version.outputs.previous_version_id != ''
+          }}
         env:
           PREVIOUS_WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.previous_version_id }}
         run: >-

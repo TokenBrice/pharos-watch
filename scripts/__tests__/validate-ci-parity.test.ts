@@ -386,6 +386,8 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).toContain("Upload prep is intentionally optimized");
     expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 deployments status --json");
     expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 versions upload");
+    expect(uploadWorkerJob).toContain("entitlements.not_available \\\\[code: 10007\\\\]");
+    expect(uploadWorkerJob).toContain("version_upload_unavailable=true");
 
     const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "pages-release");
     expect(deployWorkerJob).toContain(
@@ -395,7 +397,10 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
     expect(deployWorkerJob).toContain("Apply production D1 migrations");
     expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
+    expect(deployWorkerJob).toContain("needs.upload-worker-version.outputs.version_upload_unavailable != 'true'");
     expect(deployWorkerJob).toContain("Smoke production worker");
+    expect(deployWorkerJob).toContain("Deploy worker with legacy Wrangler deploy fallback");
+    expect(deployWorkerJob).toContain("cd worker && npx --no-install wrangler deploy");
     expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
     expect(deployWorkerJob).toContain("Run worker-only live smokes");
     expect(deployWorkerJob).not.toContain("- pages-prepare");

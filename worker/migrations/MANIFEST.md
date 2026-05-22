@@ -96,7 +96,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 - Required rollout-safety header: `-- rollout-safety: backward-compatible`
 - Standard production deploy applies D1 migrations before the new Worker is live, so every new migration from `0071` onward must keep the previous production Worker running until deploy completes.
 - `backward-compatible` means additive or compatibility-preserving changes only. Do not drop or rename tables/columns in the default deploy path, and do not add `NOT NULL` columns without a `DEFAULT` because the still-live Worker may still issue inserts before promotion.
-- The deploy workflow reruns `npm run check:migrations` on the release runner and uploads the candidate Worker version before remote `wrangler d1 migrations apply` so the schema-change-to-preview-smoke window stays as short as this default path allows.
+- The deploy workflow reruns `npm run check:migrations` on the release runner and uploads the candidate Worker version before remote `wrangler d1 migrations apply` when Workers Versions are available, so the schema-change-to-preview-smoke window stays as short as this default path allows. If Cloudflare returns `entitlements.not_available [code: 10007]` for Workers Versions, CI falls back to `wrangler deploy` after the same validation and migration gates and relies on the production smoke for deployment proof.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Automatic Worker rollback only re-promotes the previous Worker version. It does not undo D1 schema or data changes.
 
@@ -108,7 +108,7 @@ If a migration corrupts data:
 2. **Restore:** `cd worker && npx wrangler d1 time-travel restore stablecoin-db --bookmark=<BOOKMARK>`
 3. **Remove bad migration** from `worker/migrations/` directory
 4. **Re-apply remaining:** `cd worker && npx wrangler d1 migrations apply stablecoin-db --remote`
-5. **Redeploy worker:** use the standard production deploy workflow, or manually run the equivalent Worker Versions sequence (`cd worker && npx wrangler versions upload`, smoke the preview URL, `npx wrangler versions deploy <VERSION_ID>@100`, then `npx wrangler triggers deploy`). `wrangler deploy` bypasses the preview-smoke/promotion flow and should be treated as an emergency shortcut only.
+5. **Redeploy worker:** use the standard production deploy workflow, or manually run the equivalent Worker Versions sequence (`cd worker && npx wrangler versions upload`, smoke the preview URL, `npx wrangler versions deploy <VERSION_ID>@100`, then `npx wrangler triggers deploy`). If the account lacks Workers Versions entitlement, the standard workflow uses the legacy `wrangler deploy` fallback after validation and migration gates; manual `wrangler deploy` still bypasses CI validation and should be treated as an emergency shortcut only.
 
 Cloudflare D1 Time Travel retention is account-plan dependent. Verify the current retention window in Cloudflare before relying on a rollback bookmark.
 
