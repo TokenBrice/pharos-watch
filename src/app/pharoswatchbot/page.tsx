@@ -604,7 +604,7 @@ export default function PharosWatchBotPage() {
                               height={screenshot.height}
                               loading={screenshot.title === "Home" ? "eager" : "lazy"}
                               sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
-                              className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain"
+                              className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain lg:max-h-[560px]"
                             />
                           </div>
                           <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65">
