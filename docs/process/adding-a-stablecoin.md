@@ -772,6 +772,7 @@ Do not hardcode direct pushes to `main` into the process. Follow the repo's norm
 - `cdp`
 - `synthetic-delta-neutral`
 - `algorithmic`
+- `rwa-credit-fund`
 
 ### Current live-reserve semantics
 

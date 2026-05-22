@@ -22,6 +22,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 |-------|---------|
 | `rwa-backed` | Backed by real-world assets (fiat reserves, treasuries, gold) |
 | `crypto-backed` | Backed by on-chain crypto collateral |
+| `algorithmic` | Legacy / shadow-only — still a valid `BACKING_TYPE_VALUES` member but no longer assigned to any tracked coin; retained only for PSI shadow assets (see prose below) |
 
 Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing bucket. Coins with programmatic peg controls are classified by their actual collateral base instead. Historical shadow assets kept only for PSI continuity can still carry legacy `algorithmic` metadata.
 
