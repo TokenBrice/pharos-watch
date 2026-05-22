@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findBroadSharedTypesValueImports } from "../ci/check-shared-types-imports.mjs";
+import {
+  findBroadSharedTypesValueImports,
+  findSharedTypesRuntimeImports,
+} from "../ci/check-shared-types-imports.mjs";
 
 let tempDirs: string[] = [];
 
@@ -47,5 +50,46 @@ describe("findBroadSharedTypesValueImports", () => {
         names: ["StablecoinListResponseSchema"],
       },
     ]);
+  });
+});
+
+describe("findSharedTypesRuntimeImports", () => {
+  it("rejects shared/types imports from shared/lib", () => {
+    const root = makeTempRepo();
+    mkdirSync(join(root, "shared/types"), { recursive: true });
+    writeFileSync(
+      join(root, "shared/types/status.ts"),
+      'import type { PricingSourceKey } from "../lib/pricing-source-registry";\nexport type Row = PricingSourceKey;\n',
+    );
+
+    expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([
+      {
+        file: join(root, "shared/types/status.ts"),
+        line: 1,
+        source: "../lib/pricing-source-registry",
+      },
+    ]);
+  });
+
+  it("allows shared/types imports from sibling type modules", () => {
+    const root = makeTempRepo();
+    mkdirSync(join(root, "shared/types"), { recursive: true });
+    writeFileSync(
+      join(root, "shared/types/status.ts"),
+      'import type { DiscoveryCandidate } from "./discovery";\nexport type Row = DiscoveryCandidate;\n',
+    );
+
+    expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([]);
+  });
+
+  it("ignores test files under shared/types", () => {
+    const root = makeTempRepo();
+    mkdirSync(join(root, "shared/types/__tests__"), { recursive: true });
+    writeFileSync(
+      join(root, "shared/types/__tests__/core.test.ts"),
+      'import { getFilterTags } from "../../lib/filter-tags";\n',
+    );
+
+    expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([]);
   });
 });

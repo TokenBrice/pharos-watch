@@ -11,3 +11,15 @@ function formatReportCardDetailItem(item: ReportCardDetailItem): string {
 export function joinReportCardDetail(items: readonly ReportCardDetailItem[]): string {
   return items.map(formatReportCardDetailItem).join(". ");
 }
+
+export function detailItemsFromParts(parts: readonly string[]): ReportCardDetailItem[] {
+  return parts.map((part) => {
+    const separator = part.indexOf(": ");
+    if (separator === -1) return { label: "Detail", value: part, detail: part };
+    return {
+      label: part.slice(0, separator),
+      value: part.slice(separator + 2),
+      detail: part,
+    };
+  });
+}

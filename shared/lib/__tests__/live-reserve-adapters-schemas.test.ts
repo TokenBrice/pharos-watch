@@ -167,6 +167,13 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     expect(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort()).toEqual(keys);
 
     for (const adapterKey of LIVE_RESERVE_ADAPTER_KEYS) {
+      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].key).toBe(adapterKey);
+      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].params).toBe(
+        liveReserveAdapterSchemaMetadata[adapterKey].params,
+      );
+      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].primaryInputKinds).toBe(
+        liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,
+      );
       expect(adapterParamsSchemas[adapterKey]).toBe(liveReserveAdapterSchemaMetadata[adapterKey].params);
       expect(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS[adapterKey]).toBe(
         liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,

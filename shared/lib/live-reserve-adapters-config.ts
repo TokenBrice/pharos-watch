@@ -36,7 +36,7 @@ function validateAdapterConfigPolicy(
   }
 }
 
-const liveReserveConfigAdapterKeys = Object.keys(adapterParamsSchemas) as LiveReserveAdapterKey[];
+const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS) as LiveReserveAdapterKey[];
 
 const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) =>
   baseLiveReserveConfigSchema.extend({

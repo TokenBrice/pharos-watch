@@ -4,10 +4,9 @@ import type {
   ReportCardDimension,
   DependencyWeight,
   VariantKind,
-  ReportCardDetailItem,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
-import { joinReportCardDetail } from "./report-card-detail";
+import { detailItemsFromParts, joinReportCardDetail } from "./report-card-detail";
 import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
 
 const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
@@ -146,15 +145,7 @@ export function scoreDependencyRisk(
     parts.push(`Ceiling: ${ceilingType} dependency ceiling (${Math.round(ceiling)})`);
   }
 
-  const detailItems: ReportCardDetailItem[] = parts.map((part) => {
-    const separator = part.indexOf(": ");
-    if (separator === -1) return { label: "Detail", value: part, detail: part };
-    return {
-      label: part.slice(0, separator),
-      value: part.slice(separator + 2),
-      detail: part,
-    };
-  });
+  const detailItems = detailItemsFromParts(parts);
 
   return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

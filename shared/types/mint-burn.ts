@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "@shared/lib/mint-burn-signals";
+import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "./mint-burn-signals";
+
+export {
+  NET_FLOW_DIRECTION_24H_VALUES,
+  PRESSURE_SHIFT_STATE_VALUES,
+  type NetFlowDirection24h,
+  type PressureShiftState,
+} from "./mint-burn-signals";
 
 const SignedFlowIntensitySchema = z.number().min(-100).max(100);
 const PressureShiftStateSchema = z.enum(PRESSURE_SHIFT_STATE_VALUES);

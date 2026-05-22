@@ -3,7 +3,6 @@ import type {
   PegSummaryCoin,
   RedemptionBackstopEntry,
   ReportCardDimension,
-  ReportCardDetailItem,
   StablecoinMeta,
 } from "../types";
 import {
@@ -13,7 +12,7 @@ import {
 } from "./redemption-backstop-scoring";
 import { ACTIVE_DEPEG_CAP_F_BPS } from "./report-card-active-depeg";
 import { scoreToGrade } from "./report-card-core";
-import { joinReportCardDetail } from "./report-card-detail";
+import { detailItemsFromParts, joinReportCardDetail } from "./report-card-detail";
 
 interface PegStabilityFacts {
   score: number;
@@ -56,15 +55,7 @@ function buildPegStabilityDimension(peg: PegSummaryCoin, meta: StablecoinMeta, l
     detail += " (yield-bearing — expected price appreciation excluded)";
   }
 
-  const detailItems: ReportCardDetailItem[] = parts.map((part) => {
-    const separator = part.indexOf(": ");
-    if (separator === -1) return { label: "Detail", value: part, detail: part };
-    return {
-      label: part.slice(0, separator),
-      value: part.slice(separator + 2),
-      detail: part,
-    };
-  });
+  const detailItems = detailItemsFromParts(parts);
   if (facts.yieldBearing) {
     detailItems.push({
       label: "Adjustment",
@@ -357,15 +348,7 @@ export function scoreLiquidity(
     parts.push("Redemption route configured but currently unrated");
   }
 
-  const detailItems: ReportCardDetailItem[] = parts.map((part) => {
-    const separator = part.indexOf(": ");
-    if (separator === -1) return { label: "Detail", value: part, detail: part };
-    return {
-      label: part.slice(0, separator),
-      value: part.slice(separator + 2),
-      detail: part,
-    };
-  });
+  const detailItems = detailItemsFromParts(parts);
 
   return { grade: scoreToGrade(score), score, detail: joinReportCardDetail(detailItems), detailItems };
 }

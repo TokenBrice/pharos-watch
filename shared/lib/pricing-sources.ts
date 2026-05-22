@@ -3,6 +3,12 @@ import {
   getPricingSourceRegistryEntry,
   type PricingSourceKey,
 } from "./pricing-source-registry";
+import {
+  PRICE_SOURCE_HEALTH_BUCKET_KEYS,
+  type PriceSourceHealthBucketKey,
+} from "../types/pricing-source-health";
+
+export { PRICE_SOURCE_HEALTH_BUCKET_KEYS } from "../types/pricing-source-health";
 
 export const PRICE_TRANSPARENCY_SOURCE_KEYS = [
   ...PRICING_SOURCE_REGISTRY.map((entry) => entry.key),
@@ -11,17 +17,17 @@ export const PRICE_TRANSPARENCY_SOURCE_KEYS = [
 const PRICE_SOURCE_HEALTH_BUCKET_DEFS = [
   { key: "coingecko+defillama-list", label: "CoinGecko + DefiLlama (list)", shortLabel: "CG+DL-list" },
   ...PRICING_SOURCE_REGISTRY.map((entry) => ({
-    key: entry.key,
+    key: entry.key as PriceSourceHealthBucketKey,
     label: entry.label,
     shortLabel: entry.shortLabel,
   })),
   { key: "missing", label: "Missing", shortLabel: "Missing" },
-] as const;
-
-export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = PRICE_SOURCE_HEALTH_BUCKET_DEFS.map((bucket) => bucket.key);
+] as const satisfies readonly {
+  key: PriceSourceHealthBucketKey;
+  label: string;
+  shortLabel: string;
+}[];
 const PRICE_SOURCE_HEALTH_BUCKET_KEY_SET = new Set<string>(PRICE_SOURCE_HEALTH_BUCKET_KEYS);
-
-export type PriceSourceHealthBucketKey = (typeof PRICE_SOURCE_HEALTH_BUCKET_DEFS)[number]["key"];
 
 export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHealthBucketKey, number> {
   return Object.fromEntries(

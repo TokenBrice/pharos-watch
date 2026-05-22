@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
-import { LiveReservesConfigSchema } from "../live-reserve-adapters";
+import { LiveReservesConfigSchema } from "../live-reserve-adapters-config";
 import {
   DetailProviderSchema,
   PEG_CURRENCY_VALUES,

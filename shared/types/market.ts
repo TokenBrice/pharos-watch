@@ -1,13 +1,21 @@
 import { z } from "zod";
-import type { BluechipGrade, MethodologyEnvelope, PegCurrency } from "./core";
+import type { MethodologyEnvelope, PegCurrency } from "./core";
 import {
-  BluechipGradeSchema,
   DepegPrimaryTrustSchema,
   MethodologyEnvelopeSchema,
   PriceConfidenceSchema,
   PriceObservedAtModeSchema,
 } from "./core";
 import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
+
+export {
+  BluechipRatingSchema,
+  BluechipRatingsMapSchema,
+  BluechipSmidgeSchema,
+  type BluechipRating,
+  type BluechipRatingsMap,
+  type BluechipSmidge,
+} from "./bluechip";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
 const PriceSourceConfidenceProfileSchema = z.object({
@@ -116,47 +124,6 @@ export interface DeadStablecoin {
   sourceLabel: string;
   contracts?: { chain: string; address: string }[];
 }
-
-export interface BluechipSmidge {
-  stability: string | null;
-  management: string | null;
-  implementation: string | null;
-  decentralization: string | null;
-  governance: string | null;
-  externals: string | null;
-}
-
-export const BluechipSmidgeSchema = z.object({
-  stability: z.string().nullable(),
-  management: z.string().nullable(),
-  implementation: z.string().nullable(),
-  decentralization: z.string().nullable(),
-  governance: z.string().nullable(),
-  externals: z.string().nullable(),
-});
-
-export interface BluechipRating {
-  grade: BluechipGrade;
-  slug: string;
-  collateralization: number;
-  smartContractAudit: boolean;
-  dateOfRating: string;
-  dateLastChange: string | null;
-  smidge: BluechipSmidge;
-}
-
-export const BluechipRatingSchema = z.object({
-  grade: BluechipGradeSchema,
-  slug: z.string(),
-  collateralization: z.number(),
-  smartContractAudit: z.boolean(),
-  dateOfRating: z.string(),
-  dateLastChange: z.string().nullable(),
-  smidge: BluechipSmidgeSchema,
-});
-
-export type BluechipRatingsMap = Record<string, BluechipRating>;
-export const BluechipRatingsMapSchema = z.record(z.string(), BluechipRatingSchema);
 
 export const LiquidityPoolSourceFamilySchema = z.enum([
   "dl",

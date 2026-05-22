@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from "node:fs";
-import { extname, relative } from "node:path";
+import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
@@ -9,6 +9,25 @@ import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const EXCLUDED_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules", "out"]);
 const DEFAULT_ROOTS = ["functions", "shared", "src", "worker/src", "scripts"];
+const SHARED_TYPES_ROOT = "shared/types";
+
+function isWithinPath(parentDir, candidatePath) {
+  const relativePath = relative(parentDir, candidatePath);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
+function shouldSkipSharedTypesBoundaryFile(file, cwd) {
+  const pathParts = relative(cwd, file).split(sep);
+  return pathParts.includes("__tests__") || file.endsWith(".test.ts") || file.endsWith(".test.tsx");
+}
+
+function getModuleSpecifier(statement) {
+  if (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) {
+    const moduleSpecifier = statement.moduleSpecifier;
+    return moduleSpecifier && ts.isStringLiteral(moduleSpecifier) ? moduleSpecifier.text : null;
+  }
+  return null;
+}
 
 export function findBroadSharedTypesValueImports(roots = DEFAULT_ROOTS, cwd = process.cwd()) {
   const violations = [];
@@ -50,21 +69,71 @@ export function findBroadSharedTypesValueImports(roots = DEFAULT_ROOTS, cwd = pr
   return violations;
 }
 
+export function findSharedTypesRuntimeImports(roots = [SHARED_TYPES_ROOT], cwd = process.cwd()) {
+  const violations = [];
+  const sharedLibRoot = resolve(cwd, "shared/lib");
+  for (const root of roots) {
+    const rootDir = resolveSourceRoot(root, cwd);
+    for (const file of collectSourceFiles(rootDir, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS })) {
+      if (shouldSkipSharedTypesBoundaryFile(file, cwd)) continue;
+
+      const source = readFileSync(file, "utf8");
+      const sourceFile = ts.createSourceFile(
+        file,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        extname(file) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+      );
+
+      for (const statement of sourceFile.statements) {
+        const moduleSpecifier = getModuleSpecifier(statement);
+        if (!moduleSpecifier) continue;
+
+        const importsSharedLib = moduleSpecifier === "@shared/lib" || moduleSpecifier.startsWith("@shared/lib/");
+        const resolvesIntoSharedLib = moduleSpecifier.startsWith(".")
+          && isWithinPath(sharedLibRoot, resolve(dirname(file), moduleSpecifier));
+        if (!importsSharedLib && !resolvesIntoSharedLib) continue;
+
+        const location = sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile));
+        violations.push({
+          file,
+          line: location.line + 1,
+          source: moduleSpecifier,
+        });
+      }
+    }
+  }
+  return violations;
+}
+
 function runCli() {
-  const violations = findBroadSharedTypesValueImports();
-  if (violations.length === 0) {
+  const broadTypeViolations = findBroadSharedTypesValueImports();
+  const sharedTypesBoundaryViolations = findSharedTypesRuntimeImports();
+  if (broadTypeViolations.length === 0 && sharedTypesBoundaryViolations.length === 0) {
     console.log("[shared-types-imports] no broad @shared/types value imports found");
+    console.log("[shared-types-imports] no shared/types -> shared/lib imports found");
     return;
   }
 
-  console.error(
-    "[shared-types-imports] import runtime values from @shared/types/<submodule>; reserve @shared/types for import type.",
-  );
-  for (const violation of violations) {
+  if (broadTypeViolations.length > 0) {
     console.error(
-      `- ${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.names.join(", ")}`,
+      "[shared-types-imports] import runtime values from @shared/types/<submodule>; reserve @shared/types for import type.",
     );
+    for (const violation of broadTypeViolations) {
+      console.error(
+        `- ${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.names.join(", ")}`,
+      );
+    }
   }
+
+  if (sharedTypesBoundaryViolations.length > 0) {
+    console.error("[shared-types-imports] shared/types modules must not import shared/lib modules.");
+    for (const violation of sharedTypesBoundaryViolations) {
+      console.error(`- ${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.source}`);
+    }
+  }
+
   process.exit(1);
 }
 

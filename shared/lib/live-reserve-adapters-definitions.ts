@@ -15,6 +15,7 @@ import {
   UNVERIFIED_ONLY_FRESHNESS,
   VERIFIED_ONLY_FRESHNESS,
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
+  liveReserveAdapterSchemaMetadata,
 } from "./live-reserve-adapters-schemas";
 
 type LiveReserveAdapterConfigValidationPolicy = {
@@ -92,7 +93,19 @@ const UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS = [
   "not-applicable",
 ] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
 
-export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
+type LiveReserveAdapterSourceDefinition = {
+  sourceModel: LiveReserveSourceModel;
+  evidenceClass: LiveReserveEvidenceClass;
+  sharedSourceMode: LiveReserveSourceSharingMode;
+  configValidation: LiveReserveAdapterConfigValidationPolicy;
+  redemptionTelemetry: {
+    capacity: "direct" | "proxy" | "none";
+    fee: "current-bps" | "none";
+  };
+  validation?: LiveReserveAdapterValidationPolicy;
+};
+
+const LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS = {
   abracadabra: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -673,15 +686,23 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   },
 } as const satisfies Record<
   LiveReserveAdapterKey,
-  {
-    sourceModel: LiveReserveSourceModel;
-    evidenceClass: LiveReserveEvidenceClass;
-    sharedSourceMode: LiveReserveSourceSharingMode;
-    configValidation: LiveReserveAdapterConfigValidationPolicy;
-    redemptionTelemetry: {
-      capacity: "direct" | "proxy" | "none";
-      fee: "current-bps" | "none";
-    };
-    validation?: LiveReserveAdapterValidationPolicy;
-  }
+  LiveReserveAdapterSourceDefinition
 >;
+
+export const LIVE_RESERVE_ADAPTER_DEFINITIONS = Object.fromEntries(
+  (Object.entries(LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS) as Array<[
+    LiveReserveAdapterKey,
+    LiveReserveAdapterSourceDefinition,
+  ]>).map(([key, definition]) => [
+    key,
+    {
+      key,
+      ...definition,
+      ...liveReserveAdapterSchemaMetadata[key],
+    },
+  ]),
+) as {
+  [K in LiveReserveAdapterKey]: (typeof LIVE_RESERVE_ADAPTER_SOURCE_DEFINITIONS)[K]
+    & (typeof liveReserveAdapterSchemaMetadata)[K]
+    & { key: K };
+};

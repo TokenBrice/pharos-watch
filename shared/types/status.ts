@@ -1,7 +1,16 @@
 import { z } from "zod";
 import type { LiquidityCoverageClass } from "./market";
 import type { MintBurnCoverageStatus } from "./mint-burn";
-import type { PriceSourceHealthBucketKey } from "../lib/pricing-sources";
+import type { DiscoveryCandidate } from "./discovery";
+import type { PriceSourceHealth } from "./pricing-source-health";
+
+export type { DiscoveryCandidate, DiscoveryCandidatesResponse } from "./discovery";
+export type {
+  PriceSourceDepthBucket,
+  PriceSourceDepthDistribution,
+  PriceSourceHealth,
+  PriceSourceHealthBucketKey,
+} from "./pricing-source-health";
 
 export interface CacheStatus {
   ageSeconds: number | null;
@@ -537,47 +546,6 @@ export interface TelegramDispatchCronMetadata {
   suppressedSafetyChangesAtSeed: number | null;
   eventsDetected: ParsedTelegramDispatchEventsDetected | null;
   perAlertType: PerAlertTypeDelivery | null;
-}
-
-export interface DiscoveryCandidate {
-  id: number;
-  geckoId: string | null;
-  llamaId: number | null;
-  name: string;
-  symbol: string;
-  marketCap: number | null;
-  source: "defillama" | "coingecko" | "both";
-  firstSeen: number;
-  lastSeen: number;
-  daysSeen: number;
-  dismissed: boolean;
-}
-
-export interface DiscoveryCandidatesResponse {
-  candidates: DiscoveryCandidate[];
-  total: number;
-}
-
-export type PriceSourceDepthBucket = "0" | "1" | "2" | "3" | "4" | "5+";
-
-export type PriceSourceDepthDistribution = Record<PriceSourceDepthBucket, number>;
-
-export interface PriceSourceHealth {
-  sourceDistribution: Record<PriceSourceHealthBucketKey, number>;
-  /**
-   * Distribution of active canonical assets by candidate `consensusSources`
-   * count. Bucket `5+` contains all assets with five or more candidate
-   * sources.
-   */
-  sourceDepthDistribution?: PriceSourceDepthDistribution;
-  confidenceDistribution: {
-    high: number;
-    "single-source": number;
-    low: number;
-    fallback: number;
-  };
-  totalAssets: number;
-  lastSync: number;
 }
 
 export interface LiquidityHealth {
