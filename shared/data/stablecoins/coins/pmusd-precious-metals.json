@@ -18,9 +18,9 @@
   "geckoId": "precious-metals-usd",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://pmusd.raac.io/",
-    "provider": "RAAC / Instruxi dashboard",
-    "attestorTier": "self",
+    "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por",
+    "provider": "Chainlink Proof of Reserve / Instruxi",
+    "attestorTier": "niche",
     "cadence": "real-time"
   },
   "links": [
