@@ -3,6 +3,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { access, rm, writeFile, readFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -45,6 +46,57 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function buildBaseUrl(host, port) {
+  const hostname = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+  return `http://${hostname}:${port}`;
+}
+
+function canListen(host, port) {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once("error", () => {
+      resolve(false);
+    });
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen({ host, port });
+  });
+}
+
+function allocatePort(host) {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.once("listening", () => {
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : null;
+      server.close(() => {
+        if (port == null) {
+          reject(new Error("Could not allocate local static-export smoke port"));
+        } else {
+          resolve(String(port));
+        }
+      });
+    });
+    server.listen({ host, port: 0 });
+  });
+}
+
+async function resolveStaticExportPort(host) {
+  const explicitPort = process.env.STATIC_EXPORT_PORT?.trim();
+  if (explicitPort) return explicitPort;
+
+  const preferredPort = "4173";
+  if (await canListen(host, Number.parseInt(preferredPort, 10))) {
+    return preferredPort;
+  }
+
+  const fallbackPort = await allocatePort(host);
+  console.warn(`[pages-smoke] ${host}:${preferredPort} is already in use; using ${host}:${fallbackPort}.`);
+  return fallbackPort;
+}
+
 // ------------------------------------------------------------------
 // Server lifecycle
 // ------------------------------------------------------------------
@@ -53,12 +105,15 @@ const siteProxySecret = firstNonEmpty(
   process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET,
   process.env.SITE_API_SHARED_SECRET,
 );
+const staticExportHost = process.env.STATIC_EXPORT_HOST ?? "127.0.0.1";
+const staticExportPort = await resolveStaticExportPort(staticExportHost);
+const staticExportBaseUrl = buildBaseUrl(staticExportHost, staticExportPort);
 const serverEnv = {
   ...process.env,
   ...(apiKey ? { STATIC_EXPORT_API_KEY: apiKey } : {}),
   ...(siteProxySecret ? { STATIC_EXPORT_SITE_API_SHARED_SECRET: siteProxySecret } : {}),
-  STATIC_EXPORT_HOST: process.env.STATIC_EXPORT_HOST ?? "127.0.0.1",
-  STATIC_EXPORT_PORT: process.env.STATIC_EXPORT_PORT ?? "4173",
+  STATIC_EXPORT_HOST: staticExportHost,
+  STATIC_EXPORT_PORT: staticExportPort,
   ...pickEnv("STATIC_EXPORT_"),
 };
 
@@ -107,11 +162,11 @@ for (const sig of ["SIGINT", "SIGTERM"]) {
 // ------------------------------------------------------------------
 // Wait for server readiness (30 × 1 s)
 // ------------------------------------------------------------------
-console.log("[pages-smoke] Waiting for static export server on http://127.0.0.1:4173 ...");
+console.log(`[pages-smoke] Waiting for static export server on ${staticExportBaseUrl} ...`);
 let ready = false;
 for (let attempt = 1; attempt <= 30; attempt++) {
   try {
-    const res = await fetch("http://127.0.0.1:4173/");
+    const res = await fetch(`${staticExportBaseUrl}/`);
     if (res.status < 400) { ready = true; break; }
   } catch { /* not up yet */ }
   await sleep(1000);
@@ -139,9 +194,9 @@ function runNpmScript(args) {
 }
 
 try {
-  smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", "http://127.0.0.1:4173", "--mode", "local"]);
+  smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", staticExportBaseUrl, "--mode", "local"]);
   if (smokeExit === 0 && shouldRunMobileSmoke()) {
-    smokeExit = await runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", "http://127.0.0.1:4173"]);
+    smokeExit = await runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", staticExportBaseUrl]);
   } else if (smokeExit === 0) {
     console.log("[pages-smoke] Skipping mobile smoke (PAGES_SMOKE_INCLUDE_MOBILE=0).");
   }

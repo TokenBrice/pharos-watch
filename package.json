@@ -47,7 +47,7 @@
     "calibrate:yield-pys-v8": "tsx scripts/maintenance/yield-pys-v8-calibration.ts",
     "freeze-stablecoin": "tsx scripts/maintenance/freeze-stablecoin.ts",
     "sync:digests": "tsx scripts/maintenance/sync-digests.ts",
-    "serve:static-export": "node scripts/maintenance/serve-static-export.mjs",
+    "serve:static-export": "tsx scripts/maintenance/serve-static-export.mjs",
     "test:a11y": "playwright test tests/visual/a11y/axe-routes.spec.ts",
     "test:smoke-api": "node scripts/maintenance/smoke-api.mjs",
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
