@@ -41,6 +41,27 @@ export const CRITICAL_TEST_FILES = [
   "functions/__tests__/site-data-proxy.test.ts",
 ];
 
+export const CRITICAL_CONTRACT_TEST_FILES = [
+  "src/lib/__tests__/api-fetch-contracts.test.ts",
+  "src/lib/__tests__/api-endpoints.test.ts",
+  "worker/src/api/__tests__/router-contract.test.ts",
+  "worker/src/api/__tests__/cache-passthrough.test.ts",
+  "worker/src/api/__tests__/peg-summary.test.ts",
+  "worker/src/api/__tests__/report-cards.test.ts",
+  "worker/src/api/__tests__/stability-index.test.ts",
+  "worker/src/api/__tests__/dex-liquidity.test.ts",
+  "worker/src/api/__tests__/yield-rankings.test.ts",
+  "worker/src/api/__tests__/yield-history.test.ts",
+  "worker/src/api/__tests__/stress-signals.test.ts",
+  "worker/src/api/__tests__/mint-burn-flows.test.ts",
+  "worker/src/api/__tests__/depeg-events.test.ts",
+  "worker/src/api/__tests__/events.test.ts",
+];
+
+export function buildCriticalContractTestArgs(extraArgs = []) {
+  return ["run", ...CRITICAL_CONTRACT_TEST_FILES, ...extraArgs];
+}
+
 export function buildCriticalCoverageArgs(extraArgs = []) {
   return [
     "run",

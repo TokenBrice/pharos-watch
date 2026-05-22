@@ -119,33 +119,13 @@ jobs:
       - name: Wait for validation gate
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          for attempt in $(seq 1 120); do
-            result="$(
-              gh run view "$GITHUB_RUN_ID" \
-                --repo "$GITHUB_REPOSITORY" \
-                --json jobs \
-                --jq '.jobs[] | select(.name == "validate / validate") | (.conclusion // .status)' \
-                2>/tmp/validate-gate-gh.err \
-                | tail -n 1
-            )"
-
-            case "$result" in
-              success)
-                exit 0
-                ;;
-              failure|cancelled|timed_out|action_required|skipped)
-                echo "validate / validate result was ${result}; stopping production Worker deployment."
-                exit 1
-                ;;
-            esac
-
-            sleep 5
-          done
-
-          cat /tmp/validate-gate-gh.err 2>/dev/null || true
-          echo "Timed out waiting for validate / validate to finish."
-          exit 1
+        run: >-
+          node .github/scripts/wait-for-workflow-job.mjs
+          --job "validate / validate"
+          --attempts 120
+          --sleep-sec 5
+          --stop-message "stopping production Worker deployment."
+          --timeout-message "Timed out waiting for validate / validate to finish."
       - name: Rehearse D1 migrations locally
         run: npm run check:migrations
       - name: Apply production D1 migrations
@@ -402,64 +382,24 @@ jobs:
       - name: Wait for validation gate
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          for attempt in $(seq 1 120); do
-            result="$(
-              gh run view "$GITHUB_RUN_ID" \
-                --repo "$GITHUB_REPOSITORY" \
-                --json jobs \
-                --jq '.jobs[] | select(.name == "validate / validate") | (.conclusion // .status)' \
-                2>/tmp/validate-gate-gh.err \
-                | tail -n 1
-            )"
-
-            case "$result" in
-              success)
-                exit 0
-                ;;
-              failure|cancelled|timed_out|action_required|skipped)
-                echo "validate / validate result was ${result}; stopping production Pages deployment."
-                exit 1
-                ;;
-            esac
-
-            sleep 5
-          done
-
-          cat /tmp/validate-gate-gh.err 2>/dev/null || true
-          echo "Timed out waiting for validate / validate to finish."
-          exit 1
+        run: >-
+          node .github/scripts/wait-for-workflow-job.mjs
+          --job "validate / validate"
+          --attempts 120
+          --sleep-sec 5
+          --stop-message "stopping production Pages deployment."
+          --timeout-message "Timed out waiting for validate / validate to finish."
       - name: Wait for worker promotion gate
         if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          for attempt in $(seq 1 180); do
-            result="$(
-              gh run view "$GITHUB_RUN_ID" \
-                --repo "$GITHUB_REPOSITORY" \
-                --json jobs \
-                --jq '.jobs[] | select(.name == "deploy-worker") | (.conclusion // .status)' \
-                2>/tmp/worker-gate-gh.err \
-                | tail -n 1
-            )"
-
-            case "$result" in
-              success)
-                exit 0
-                ;;
-              failure|cancelled|timed_out|action_required|skipped)
-                echo "deploy-worker result was ${result}; stopping production Pages deployment."
-                exit 1
-                ;;
-            esac
-
-            sleep 5
-          done
-
-          cat /tmp/worker-gate-gh.err 2>/dev/null || true
-          echo "Timed out waiting for deploy-worker to finish."
-          exit 1
+        run: >-
+          node .github/scripts/wait-for-workflow-job.mjs
+          --job "deploy-worker"
+          --attempts 180
+          --sleep-sec 5
+          --stop-message "stopping production Pages deployment."
+          --timeout-message "Timed out waiting for deploy-worker to finish."
       - name: Deploy Pages with retry
         id: deploy-pages
         run: |

@@ -1,27 +1,14 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const DEFAULT_ROOTS = ["worker/src/handlers/scheduled", "worker/src/cron"];
 const WAIVER_FILE = "scripts/lib/cron-abort-contract-waivers.json";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs"]);
-
-function collectFiles(dir, files = []) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const entryPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "__tests__" || entry.name === "__mocks__") continue;
-      collectFiles(entryPath, files);
-      continue;
-    }
-    if (entry.isFile() && SOURCE_EXTENSIONS.has(extname(entry.name))) {
-      files.push(entryPath);
-    }
-  }
-  return files;
-}
+const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__"]);
 
 function readWaivers(cwd) {
   try {
@@ -49,7 +36,7 @@ export function scanCronAbortContract(roots = DEFAULT_ROOTS, cwd = process.cwd()
   const scannedFiles = [];
 
   for (const root of roots) {
-    const files = collectFiles(join(cwd, root));
+    const files = collectSourceFiles(join(cwd, root), { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS });
     scannedFiles.push(...files);
     for (const file of files) {
       const rel = relative(cwd, file).replaceAll("\\", "/");

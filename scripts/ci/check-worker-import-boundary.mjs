@@ -1,31 +1,11 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const WORKER_SRC_DIR = "worker/src";
 const SOURCE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs", ".cts"]);
+const SOURCE_FILE_EXCLUDED_DIRS = new Set();
 const WORKER_TO_FRONTEND_IMPORT_PATTERN = /(?:from\s+["'][^"']*(?:@\/|src\/)|import\s*\(\s*["'][^"']*(?:@\/|src\/))/;
 const FRONTEND_TO_WORKER_IMPORT_PATTERN = /(?:from\s+["'][^"']*worker\/src\/|import\s*\(\s*["'][^"']*worker\/src\/)/;
-
-function isSourceFile(path) {
-  const dot = path.lastIndexOf(".");
-  if (dot === -1) return false;
-  return SOURCE_FILE_EXTENSIONS.has(path.slice(dot));
-}
-
-function collectFiles(dir, files = []) {
-  for (const entry of readdirSync(dir)) {
-    const fullPath = join(dir, entry);
-    const stats = statSync(fullPath);
-    if (stats.isDirectory()) {
-      collectFiles(fullPath, files);
-      continue;
-    }
-    if (stats.isFile() && isSourceFile(fullPath)) {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
 
 function formatMatches(matches) {
   for (const match of matches) {
@@ -62,7 +42,10 @@ const BOUNDARY_EXEMPT_FILES = new Set(BOUNDARY_WAIVERS.map((waiver) => waiver.fi
 
 function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
   try {
-    const files = collectFiles(rootDir);
+    const files = collectSourceFiles(rootDir, {
+      extensions: SOURCE_FILE_EXTENSIONS,
+      excludedDirs: SOURCE_FILE_EXCLUDED_DIRS,
+    });
     const matches = [];
     for (const file of files) {
       if (excludeTests && file.includes("/__tests__/")) continue;

@@ -1,40 +1,20 @@
 #!/usr/bin/env node
 
-import { readdirSync, readFileSync } from "node:fs";
-import { extname, isAbsolute, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { extname, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const EXCLUDED_DIRS = new Set([".git", ".next", "coverage", "dist", "node_modules", "out"]);
 const DEFAULT_ROOTS = ["functions", "shared", "src", "worker/src", "scripts"];
 
-function collectFiles(rootDir) {
-  const files = [];
-
-  function visit(dir) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        if (!EXCLUDED_DIRS.has(entry.name)) {
-          visit(join(dir, entry.name));
-        }
-        continue;
-      }
-      if (entry.isFile() && SOURCE_EXTENSIONS.has(extname(entry.name))) {
-        files.push(join(dir, entry.name));
-      }
-    }
-  }
-
-  visit(rootDir);
-  return files;
-}
-
 export function findBroadSharedTypesValueImports(roots = DEFAULT_ROOTS, cwd = process.cwd()) {
   const violations = [];
   for (const root of roots) {
-    const rootDir = isAbsolute(root) ? root : join(cwd, root);
-    for (const file of collectFiles(rootDir)) {
+    const rootDir = resolveSourceRoot(root, cwd);
+    for (const file of collectSourceFiles(rootDir, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS })) {
       const source = readFileSync(file, "utf8");
       const sourceFile = ts.createSourceFile(
         file,

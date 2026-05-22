@@ -1,3 +1,116 @@
+export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
+  {
+    command: "npm run validate:prebuild",
+    deployImpact: "full",
+    paths: ["scripts/maintenance/run-validate-prebuild.mjs", "scripts/lib/validate-contract.mjs"],
+  },
+  { command: "npm run audit:deps", deployImpact: "validation-only", paths: [] },
+  {
+    command: "npm run audit:pricing-providers",
+    deployImpact: "full",
+    paths: ["scripts/maintenance/audit-pricing-provider-config.ts"],
+  },
+  { command: "npm run lint", deployImpact: "validation-only", paths: [] },
+  { command: "npm run typecheck", deployImpact: "validation-only", paths: [] },
+  { command: "npm run check:agent-doc-sync", deployImpact: "validation-only", paths: ["scripts/ci/check-agent-doc-sync.mjs"] },
+  { command: "npm run check:attestor-tier-coverage", deployImpact: "full", paths: ["scripts/ci/check-attestor-tier-coverage.ts"] },
+  { command: "npm run check:cron-abort-contract", deployImpact: "full", paths: ["scripts/ci/check-cron-abort-contract.mjs"] },
+  { command: "npm run check:cron-connections", deployImpact: "full", paths: ["scripts/ci/check-cron-connection-budget.ts"] },
+  { command: "npm run check:cron-sync", deployImpact: "full", paths: ["scripts/ci/check-cron-schedule-sync.ts"] },
+  { command: "npm run check:doc-counts", deployImpact: "validation-only", paths: ["scripts/ci/check-doc-counts.mjs"] },
+  { command: "npm run check:doc-source-paths", deployImpact: "validation-only", paths: ["scripts/ci/check-doc-source-paths.mjs"] },
+  { command: "npm run check:doc-sync", deployImpact: "validation-only", paths: ["scripts/ci/check-doc-sync.ts"] },
+  { command: "npm run check:duplicate-exports", deployImpact: "full", paths: ["scripts/ci/check-duplicate-exports.mjs"] },
+  { command: "npm run check:env-contract", deployImpact: "full", paths: ["scripts/ci/check-env-contract.mjs"] },
+  { command: "npm run check:frozen-invariants", deployImpact: "full", paths: ["scripts/ci/check-frozen-invariants.ts"] },
+  {
+    command: "npm run check:generated-artifacts",
+    deployImpact: "pages",
+    paths: ["scripts/maintenance/run-generated-artifacts.mjs"],
+  },
+  { command: "npm run check:glossary-coverage", deployImpact: "validation-only", paths: ["scripts/ci/check-glossary-coverage.ts"] },
+  { command: "npm run check:one-liner-coverage", deployImpact: "validation-only", paths: ["scripts/ci/check-one-liner-coverage.ts"] },
+  {
+    command: "npm run check:mechanism-archetype-coverage",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-mechanism-archetype-coverage.ts"],
+  },
+  {
+    command: "npm run check:archetype-explainer-coverage",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-archetype-explainer-coverage.ts"],
+  },
+  { command: "npm run check:hook-polling-window", deployImpact: "validation-only", paths: ["scripts/ci/check-hook-polling-window.mjs"] },
+  { command: "npm run check:hotspot-ratchet", deployImpact: "full", paths: ["scripts/ci/check-hotspot-ratchet.mjs"] },
+  { command: "npm run check:migrations", deployImpact: "worker", paths: ["scripts/ci/check-worker-migrations.mjs"] },
+  { command: "npm run check:redemption-backstops", deployImpact: "full", paths: ["scripts/ci/check-redemption-backstops.ts"] },
+  {
+    command: "npm run check:reserve-fixture-freshness",
+    deployImpact: "validation-only",
+    paths: ["scripts/ci/check-reserve-fixture-freshness.mjs"],
+  },
+  {
+    command: "npm run check:selector-banned-phrases",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-selector-banned-phrases.mjs"],
+  },
+  { command: "npm run check:shared-cycles", deployImpact: "full", paths: ["scripts/ci/check-shared-cycles.mjs"] },
+  { command: "npm run check:shared-types-imports", deployImpact: "full", paths: ["scripts/ci/check-shared-types-imports.mjs"] },
+  { command: "npm run check:sql-safety", deployImpact: "worker", paths: ["scripts/ci/check-sql-interpolation-safety.mjs"] },
+  { command: "npm run check:stale-flags", deployImpact: "validation-only", paths: ["scripts/ci/check-stale-flags.mjs"] },
+  { command: "npm run check:stablecoin-data", deployImpact: "full", paths: ["scripts/ci/check-stablecoin-data.ts"] },
+  { command: "npm run check:supply-helper-usage", deployImpact: "full", paths: ["scripts/ci/check-supply-helper-usage.mjs"] },
+  { command: "npm run check:unused-code", deployImpact: "full", paths: ["scripts/ci/check-unused-code.mjs"] },
+  {
+    command: "npm run check:verified-doc-links",
+    deployImpact: "validation-only",
+    paths: ["scripts/ci/check-verified-doc-links.mjs"],
+  },
+  { command: "npm run check:world-map", deployImpact: "pages", paths: ["scripts/maintenance/build-world-map-svg.ts"] },
+  { command: "npm run check:worker-boundary", deployImpact: "full", paths: ["scripts/ci/check-worker-import-boundary.mjs"] },
+  { command: "npm run build", deployImpact: "pages", paths: [] },
+  { command: "npm run test:a11y", deployImpact: "pages", paths: [] },
+  {
+    command: "npm run check:feature-flag-inlining",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-feature-flag-inlining.mjs"],
+  },
+  { command: "npm run seo:check", deployImpact: "pages", paths: ["scripts/ci/check-seo-static.mjs"] },
+  {
+    command: "npm run check:phishing-signatures",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-phishing-signatures.mjs"],
+  },
+  {
+    command: "npm run check:classifier-sensitive-copy",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-classifier-sensitive-copy.mjs"],
+  },
+  { command: "npm run check:build-size", deployImpact: "pages", paths: ["scripts/maintenance/report-build-size.mjs"] },
+  { command: "npm run check:build-attribution", deployImpact: "pages", paths: ["scripts/ci/check-build-attribution.mjs"] },
+  {
+    command: "npm run check:methodology-pdfs",
+    deployImpact: "pages",
+    paths: ["scripts/maintenance/generate-methodology-pdfs.ts"],
+  },
+  { command: "npm run test:noncritical", deployImpact: "full", paths: ["scripts/maintenance/run-noncritical-tests.mjs"] },
+  { command: "npm run coverage:critical", deployImpact: "full", paths: ["scripts/maintenance/run-critical-coverage.mjs"] },
+  { command: "npm run typecheck:worker", deployImpact: "worker", paths: [] },
+  { command: "npm run validate:pages-smoke", deployImpact: "pages", paths: ["scripts/maintenance/run-pages-smoke.mjs"] },
+  { command: "npm run validate:worker-smoke", deployImpact: "worker", paths: ["scripts/maintenance/run-worker-smoke.mjs"] },
+];
+
+function getValidationCommandDeployImpactPaths(...impacts) {
+  const impactSet = new Set(impacts);
+  return [
+    ...new Set(
+      VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY
+        .filter((entry) => impactSet.has(entry.deployImpact))
+        .flatMap((entry) => entry.paths),
+    ),
+  ].sort();
+}
+
 export const DEPLOY_IMPACT_REGISTRY = {
   fullDeployInfra: {
     exactPaths: [
@@ -11,6 +124,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
   },
   fullDeployGuardrails: {
     exactPaths: [
+      ...getValidationCommandDeployImpactPaths("full"),
       "scripts/maintenance/audit-pricing-provider-config.ts",
       "scripts/ci/check-attestor-tier-coverage.ts",
       "scripts/ci/check-critical-coverage.mjs",
@@ -48,6 +162,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
   },
   pages: {
     exactPaths: [
+      ...getValidationCommandDeployImpactPaths("pages"),
       "next.config.ts",
       "postcss.config.mjs",
       "scripts/ci/check-seo-static.mjs",
@@ -79,6 +194,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
   },
   worker: {
     exactPaths: [
+      ...getValidationCommandDeployImpactPaths("worker"),
       "scripts/ci/check-cron-schedule-sync.ts",
       "scripts/ci/check-worker-import-boundary.mjs",
       "scripts/ci/check-worker-migrations.mjs",

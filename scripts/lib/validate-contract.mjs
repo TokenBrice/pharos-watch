@@ -1,3 +1,5 @@
+import { VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY } from "./automation-registry.mjs";
+
 export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run audit:deps",
   "npm run audit:pricing-providers",
@@ -109,3 +111,30 @@ export function buildCiValidateCommands() {
     ...WORKER_VALIDATE_COMMANDS,
   ];
 }
+
+function normalizeValidationCommand(command) {
+  if (command.startsWith("npm run test:noncritical -- --shard=")) {
+    return "npm run test:noncritical";
+  }
+  return command;
+}
+
+export function validateValidationCommandImpactRegistry(commands = [
+  ...VALIDATE_PREBUILD_COMMANDS,
+  ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+  ...PAGES_VALIDATE_COMMANDS,
+  ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+  ...WORKER_VALIDATE_COMMANDS,
+  ...PAGES_SMOKE_VALIDATE_COMMANDS,
+  ...WORKER_SMOKE_VALIDATE_COMMANDS,
+]) {
+  const classifiedCommands = new Set(VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY.map((entry) => entry.command));
+  const missing = [...new Set(commands.map(normalizeValidationCommand))].filter(
+    (command) => !classifiedCommands.has(command),
+  );
+  if (missing.length > 0) {
+    throw new Error(`Missing validation deploy-impact classification for: ${missing.join(", ")}`);
+  }
+}
+
+validateValidationCommandImpactRegistry();
