@@ -25,6 +25,9 @@
       "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

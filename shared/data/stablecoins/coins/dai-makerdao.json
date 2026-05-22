@@ -32,9 +32,6 @@
       "url": "https://docs.makerdao.com/"
     }
   ],
-  "jurisdiction": {
-    "country": "Denmark"
-  },
   "contracts": [
     {
       "chain": "ethereum",

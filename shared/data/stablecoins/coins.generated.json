@@ -1665,7 +1665,8 @@
     ],
     "jurisdiction": {
       "country": "Bermuda",
-      "regulator": "Bermuda Monetary Authority (SAC Act)"
+      "regulator": "BMA",
+      "license": "DABA License"
     },
     "contracts": [
       {
@@ -4906,8 +4907,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Mexico",
-      "regulator": "CNBV, IPAB & CONDUSEF"
+      "country": "Mexico"
     },
     "contracts": [
       {
@@ -5827,9 +5827,6 @@
         "url": "https://dune.com/warshine/crvusd-balance-sheet"
       }
     ],
-    "jurisdiction": {
-      "country": "Switzerland"
-    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -6267,9 +6264,6 @@
         "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
       }
     ],
-    "jurisdiction": {
-      "country": "Germany"
-    },
     "contracts": [
       {
         "chain": "celo",
@@ -6515,9 +6509,6 @@
         "url": "https://docs.makerdao.com/"
       }
     ],
-    "jurisdiction": {
-      "country": "Denmark"
-    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -17439,6 +17430,11 @@
         "url": "https://www.coingecko.com/en/coins/midas-mapollo"
       }
     ],
+    "jurisdiction": {
+      "country": "Germany",
+      "regulator": "Liechtenstein FMA",
+      "license": "EEA-restricted tokenized certificate"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -17847,6 +17843,11 @@
         "url": "https://www.coingecko.com/en/coins/midas-mhyper"
       }
     ],
+    "jurisdiction": {
+      "country": "Germany",
+      "regulator": "Liechtenstein FMA",
+      "license": "EEA-restricted tokenized certificate"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -18137,6 +18138,11 @@
         "url": "https://www.coingecko.com/en/coins/midas-mmev"
       }
     ],
+    "jurisdiction": {
+      "country": "Germany",
+      "regulator": "Liechtenstein FMA",
+      "license": "EEA-restricted tokenized certificate"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -18594,6 +18600,11 @@
         "url": "https://docs.midas.app/"
       }
     ],
+    "jurisdiction": {
+      "country": "Germany",
+      "regulator": "Liechtenstein FMA",
+      "license": "EEA-restricted tokenized certificate"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -19483,6 +19494,9 @@
         "url": "https://docs.nest.credit/"
       }
     ],
+    "jurisdiction": {
+      "country": "Marshall Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -19837,6 +19851,9 @@
         "url": "https://docs.nest.credit/"
       }
     ],
+    "jurisdiction": {
+      "country": "Marshall Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -19950,6 +19967,9 @@
         "url": "https://docs.nest.credit/"
       }
     ],
+    "jurisdiction": {
+      "country": "Marshall Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -20265,6 +20285,9 @@
         "url": "https://docs.nest.credit/"
       }
     ],
+    "jurisdiction": {
+      "country": "Marshall Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -23438,7 +23461,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Panama"
+      "country": "Singapore"
     },
     "contracts": [
       {
@@ -26167,9 +26190,6 @@
         "url": "https://docs.synthetix.io/"
       }
     ],
-    "jurisdiction": {
-      "country": "Australia"
-    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -28237,7 +28257,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Dominica"
+      "country": "British Virgin Islands"
     },
     "contracts": [
       {
@@ -33896,9 +33916,6 @@
         "url": "https://docs.sky.money/"
       }
     ],
-    "jurisdiction": {
-      "country": "Cayman Islands"
-    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -36729,7 +36746,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Bermuda / Cayman Islands",
+      "country": "Bermuda",
       "regulator": "BMA",
       "license": "DABA License"
     },
@@ -37473,7 +37490,7 @@
     "jurisdiction": {
       "country": "Liechtenstein",
       "regulator": "FMA",
-      "license": "Blockchain Act"
+      "license": "TVTG (Blockchain Act)"
     },
     "contracts": [
       {
@@ -39933,6 +39950,9 @@
         "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "dependencies": [
       {
         "id": "usdc-circle",
@@ -40147,6 +40167,7 @@
     ],
     "jurisdiction": {
       "country": "United States",
+      "regulator": "FinCEN / NYDFS / state money transmitter regulators",
       "license": "MoonPay Money Transmitter Licenses (49 states), New York BitLicense, New York Trust Charter"
     },
     "contracts": [

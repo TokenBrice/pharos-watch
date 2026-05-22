@@ -39,9 +39,6 @@
       "url": "https://dune.com/warshine/crvusd-balance-sheet"
     }
   ],
-  "jurisdiction": {
-    "country": "Switzerland"
-  },
   "contracts": [
     {
       "chain": "ethereum",

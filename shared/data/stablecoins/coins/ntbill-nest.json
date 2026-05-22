@@ -31,6 +31,9 @@
       "url": "https://docs.nest.credit/"
     }
   ],
+  "jurisdiction": {
+    "country": "Marshall Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

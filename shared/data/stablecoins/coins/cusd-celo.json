@@ -38,9 +38,6 @@
       "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
     }
   ],
-  "jurisdiction": {
-    "country": "Germany"
-  },
   "contracts": [
     {
       "chain": "celo",

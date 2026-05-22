@@ -36,6 +36,11 @@
       "url": "https://www.coingecko.com/en/coins/midas-mhyper"
     }
   ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "Liechtenstein FMA",
+    "license": "EEA-restricted tokenized certificate"
+  },
   "contracts": [
     {
       "chain": "ethereum",

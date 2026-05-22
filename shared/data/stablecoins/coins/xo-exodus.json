@@ -46,6 +46,7 @@
   ],
   "jurisdiction": {
     "country": "United States",
+    "regulator": "FinCEN / NYDFS / state money transmitter regulators",
     "license": "MoonPay Money Transmitter Licenses (49 states), New York BitLicense, New York Trust Charter"
   },
   "contracts": [

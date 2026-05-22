@@ -45,7 +45,8 @@
   ],
   "jurisdiction": {
     "country": "Bermuda",
-    "regulator": "Bermuda Monetary Authority (SAC Act)"
+    "regulator": "BMA",
+    "license": "DABA License"
   },
   "contracts": [
     {

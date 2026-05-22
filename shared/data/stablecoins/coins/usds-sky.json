@@ -32,9 +32,6 @@
       "url": "https://docs.sky.money/"
     }
   ],
-  "jurisdiction": {
-    "country": "Cayman Islands"
-  },
   "contracts": [
     {
       "chain": "ethereum",

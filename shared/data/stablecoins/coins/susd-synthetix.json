@@ -31,9 +31,6 @@
       "url": "https://docs.synthetix.io/"
     }
   ],
-  "jurisdiction": {
-    "country": "Australia"
-  },
   "contracts": [
     {
       "chain": "ethereum",

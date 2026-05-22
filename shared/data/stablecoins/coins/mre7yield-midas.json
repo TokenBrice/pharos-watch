@@ -29,6 +29,11 @@
       "url": "https://docs.midas.app/"
     }
   ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "Liechtenstein FMA",
+    "license": "EEA-restricted tokenized certificate"
+  },
   "contracts": [
     {
       "chain": "ethereum",
