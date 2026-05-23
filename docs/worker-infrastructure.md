@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 38 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and scheduled runtime work across 19 cron expressions / runner slots. `CRON_INTERVALS` / `/api/status` track the 39 `CRON_JOB_DEFINITIONS` jobs across 18 job-bearing slots; `CRON_CONNECTION_BUDGET_ENTRIES` also includes budget-only scheduled surfaces such as Telegram registration reconciliation and the separate `*/5 * * * *` digest-trigger poll slot. The digest-trigger poll is the 19th runner slot and executes manual digest requests under the `daily-digest` lease rather than registering as its own status job.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -168,7 +168,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - Public `/api/*` routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
 - Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
 - Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`, self-serve `30/min`).
-- Protected cacheable `GET` edge-cache hits can use a narrow fast path when the key was recently verified in the same isolate and is not self-serve. That path still validates the presented token against the bounded fresh auth cache and applies the bounded isolate-local limiter before serving the cached response. Cold keys, self-serve keys, stale-cache auth, edge-cache misses, cache-bypass routes, and non-`GET` requests keep the normal D1-backed auth and limiter path; the existing isolate-local fallback limiter also remains available for brief D1 limiter dependency failures on protected cacheable reads with recently verified non-self-serve keys.
+- Protected cacheable `GET` edge-cache hits can use a narrow fast path when the key was recently verified in the same isolate and is not self-serve. That path still validates the presented token against the bounded fresh auth cache and applies the bounded isolate-local limiter before serving the cached response. Cold keys, self-serve keys, stale-cache auth, edge-cache misses, cache-bypass routes, and non-`GET` requests keep the normal D1-backed auth and limiter path. After repeated D1 limiter failures, a 60-second isolate-local circuit opens only for protected cacheable reads and caps the fallback quota at the self-serve default; non-cacheable requests continue to fail closed with `503`.
 - Requests already authorized for the `ops-api.pharos.watch` admin lane bypass the per-key limiter.
 - `/api/api-key-requests` and `/api/api-key-requests/verify` are exempt from `X-API-Key`, return no-store responses, and have their own request/verification throttles in `api_key_request_rate_limit_v2`; successful issuance is additionally capped through `api_key_self_serve_issuance_limits`.
 - `/api/telegram-webhook` is exempt from the gate because Telegram authenticates separately with `X-Telegram-Bot-Api-Secret-Token`.
@@ -426,11 +426,12 @@ crons = [
 
 ### Trigger 2: `9,24,39,54 * * * *` (status self-check - isolated offset)
 
-| Job                 | Function               | File                                   | Documentation                             |
-| ------------------- | ---------------------- | -------------------------------------- | ----------------------------------------- |
-| `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | [Status Dashboard](./status-dashboard.md) |
+| Job                         | Function                       | File                                            | Documentation                             |
+| --------------------------- | ------------------------------ | ----------------------------------------------- | ----------------------------------------- |
+| `status-self-check`         | `runStatusSelfCheck()`         | `worker/src/cron/status-self-check.ts`          | [Status Dashboard](./status-dashboard.md) |
+| `cron-staleness-watchdog`   | `runCronStalenessWatchdog()`   | `worker/src/cron/cron-staleness-watchdog.ts`    | [Status Dashboard](./status-dashboard.md) |
 
-Dedicated quarter-hourly offset trigger for public/admin status probes. It runs at :09/:24/:39/:54 so real-HTTP probes do not compete with the heavier quarter-hourly stablecoin pricing slot.
+Dedicated quarter-hourly offset trigger for public/admin status probes and freshness alerting. It runs at :09/:24/:39/:54 so real-HTTP probes and Tier-1 cache staleness checks do not compete with the heavier quarter-hourly stablecoin pricing slot. The watchdog reuses the same freshness-sentinel/table fallback status builder as `/api/health`, alerts through `ALERT_WEBHOOK_URL` when watched producer caches exceed `2x` their interval, and dedupes stale alerts through the D1 `cache` table.
 
 ### Trigger 3: `3 */6 * * *` (blacklist — dedicated, every 6h)
 
@@ -598,7 +599,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | Budget row | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
 | ---------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
 | 1       | `*/15 * * * *`     |       3 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained)       |    3     |
-| 2       | `9,24,39,54 * * * *` |                                     1 (status self-check probes)                                  |    5     |
+| 2       | `9,24,39,54 * * * *` |                       1 (status self-check probes -> staleness watchdog alert)                    |    5     |
 | 3       | `3 */6 * * *`      |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
 | 4       | `4,34 * * * *`     |                                        1 (Alchemy JSON-RPC)                                        |    5     |
 | 5       | `6 */2 * * *`      |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
@@ -1189,7 +1190,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 38 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 39 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1200,6 +1201,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `compute-dews`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `project-tape`                  | 1,800s (30min)   | `26,56 * * * *`                                   |
 | `status-self-check`             | 900s (15min)     | `9,24,39,54 * * * *`                              |
+| `cron-staleness-watchdog`       | 900s (15min)     | `9,24,39,54 * * * *`                              |
 | `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
 | `telegram-degradation-watchdog` | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
 | `telegram-disambiguation-cleanup` | 300s (5min)    | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
