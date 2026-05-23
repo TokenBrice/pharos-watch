@@ -26,7 +26,7 @@ describe("nav-config", () => {
 
   it("orders the sidebar groups and routes as requested while excluding legacy Risk Lab grouping", () => {
     expect(NAV_GROUPS.some((group) => group.key === "risk-lab")).toBe(false);
-    expect(NAV_GROUPS.map((group) => group.key)).toEqual(["data", "tools", "monitor", "info"]);
+    expect(NAV_GROUPS.map((group) => group.key)).toEqual(["data", "tools", "monitor", "learn", "info"]);
 
     const trackGroup = NAV_GROUPS.find((group) => group.key === "data");
     const analyzeGroup = NAV_GROUPS.find((group) => group.key === "tools");
@@ -66,12 +66,21 @@ describe("nav-config", () => {
       "/about",
       "/funding",
       "/methodology",
-      "/learn/mechanisms",
       "/coverage",
       "/api",
       "/changelog",
     ]);
     expect(infoGroup?.items.find((item) => item.href === "/api")?.label).toBe("API Access");
+
+    // LEARN groups the educational surfaces (mechanisms moved here from REFERENCE).
+    const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
+    expect(learnGroup?.label).toBe("LEARN");
+    expect(learnGroup?.items.map((item) => item.href)).toEqual([
+      "/learn",
+      "/learn/mechanisms",
+      "/learn/case-studies",
+      "/learn/glossary",
+    ]);
   });
 
   it("exposes PharosVille as an external companion entry, not a primary or group route", () => {

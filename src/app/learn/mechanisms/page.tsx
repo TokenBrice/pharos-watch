@@ -47,9 +47,10 @@ export default function MechanismExplainersHub() {
     <ExplainerPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
-        { name: "Learn", url: "/learn/mechanisms/" },
+        { name: "Learn", url: "/learn/" },
+        { name: "Mechanisms", url: "/learn/mechanisms/" },
       ]}
-      breadcrumbLabel="Learn"
+      breadcrumbLabel="Mechanisms"
       title="Six ways a stablecoin holds its peg"
       subtitle="The mechanism a coin uses determines how it survives stress. These six explainers map each design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
     >

@@ -1,0 +1,63 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { buildPageMetadata } from "@/lib/page-metadata";
+import { CASE_STUDIES, CASE_STUDY_ORDER, getCaseStudy } from "../content";
+import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
+import { CaseStudyBody } from "../case-study-body";
+import { CaseStudyPageShell } from "../case-study-page-shell";
+
+const CASE_STUDY_SLUGS = new Set<string>(CASE_STUDY_ORDER);
+
+export function generateStaticParams() {
+  return CASE_STUDY_ORDER.map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  if (!CASE_STUDY_SLUGS.has(slug)) {
+    return { title: "Not Found", robots: { index: false } };
+  }
+  const study = CASE_STUDIES[slug];
+  return buildPageMetadata({
+    // Layout applies the "%s | Pharos" title template; keep the bare study title
+    // here to avoid double-branding and stay within SERP length.
+    title: study.title,
+    description: study.metaDescription,
+    canonical: `/learn/case-studies/${slug}/`,
+    ogImage: `/og-learn-case-${slug}.png`,
+  });
+}
+
+export default async function CaseStudyPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  if (!CASE_STUDY_SLUGS.has(slug)) {
+    notFound();
+  }
+  const study = getCaseStudy(slug)!;
+
+  return (
+    <CaseStudyPageShell
+      breadcrumbItems={[
+        { name: "Home", url: "/" },
+        { name: "Learn", url: "/learn/" },
+        { name: "Case Studies", url: "/learn/case-studies/" },
+        { name: study.title, url: `/learn/case-studies/${slug}/` },
+      ]}
+      finalLabel={study.eyebrow}
+      title={study.title}
+      subtitle={study.subtitle}
+      leadParagraphs={study.lead}
+    >
+      <CaseStudyArticleJsonLd study={study} />
+      <CaseStudyBody study={study} />
+    </CaseStudyPageShell>
+  );
+}

@@ -1,30 +1,32 @@
 import Link from "next/link";
 import { BreadcrumbJsonLd, type BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 
-interface ExplainerPageShellProps {
+interface CaseStudyPageShellProps {
+  /** Drives the BreadcrumbList JSON-LD (site-relative urls). */
   breadcrumbItems: BreadcrumbItem[];
-  breadcrumbLabel: string;
   title: string;
   subtitle?: string;
   leadParagraphs?: readonly string[];
+  /** Trailing visible crumb (a study title). Omit on the hub. */
+  finalLabel?: string;
   children: React.ReactNode;
 }
 
-export function ExplainerPageShell({
+export function CaseStudyPageShell({
   breadcrumbItems,
-  breadcrumbLabel,
   title,
   subtitle,
   leadParagraphs = [],
+  finalLabel,
   children,
-}: ExplainerPageShellProps) {
+}: CaseStudyPageShellProps) {
   return (
     <div className="mx-auto w-full max-w-[68rem] space-y-12">
       <BreadcrumbJsonLd items={breadcrumbItems} />
       <header className="space-y-6">
         <nav
           aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm"
+          className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground sm:text-sm"
         >
           <Link
             href="/"
@@ -40,9 +42,22 @@ export function ExplainerPageShell({
             Learn
           </Link>
           <span>/</span>
-          <span className="text-foreground">{breadcrumbLabel}</span>
+          {finalLabel ? (
+            <>
+              <Link
+                href="/learn/case-studies/"
+                className="pharos-focus-ring inline-flex items-center text-inherit hover:text-foreground"
+              >
+                Case Studies
+              </Link>
+              <span>/</span>
+              <span className="text-foreground">{finalLabel}</span>
+            </>
+          ) : (
+            <span className="text-foreground">Case Studies</span>
+          )}
         </nav>
-        <h1 className="max-w-[22ch] text-[clamp(2.25rem,4.5vw,4rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-foreground">
+        <h1 className="max-w-[24ch] text-[clamp(2.25rem,4.5vw,4rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-foreground">
           {title}
         </h1>
         {subtitle ? (

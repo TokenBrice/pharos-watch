@@ -133,7 +133,7 @@ export default function GlossaryPage() {
       breadcrumbName="Glossary"
       breadcrumbItems={[
         { name: "Home", url: "/" },
-        { name: "Learn", url: "/learn/mechanisms/" },
+        { name: "Learn", url: "/learn/" },
         { name: "Glossary", url: "/learn/glossary/" },
       ]}
       path="/learn/glossary/"

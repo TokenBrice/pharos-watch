@@ -1,0 +1,332 @@
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  getMechanismArchetypeLabel,
+  getMechanismExplainerPath,
+} from "@shared/lib/classification";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { logosById } from "@/lib/logos";
+import { cn } from "@/lib/utils";
+import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
+import { CaseStudyChart } from "./case-study-chart";
+import { CaseStudyTimeline } from "./case-study-timeline";
+import type { CaseStudy, CaseStudyOutcome } from "./content/types";
+
+const OUTCOME_LABEL: Record<CaseStudyOutcome, string> = {
+  survived: "Survived",
+  wounded: "Wounded",
+  died: "Died",
+};
+
+const OUTCOME_CHIP: Record<CaseStudyOutcome, string> = {
+  survived: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+  wounded: "border-amber-500/40 text-amber-600 dark:text-amber-400",
+  died: "border-rose-500/40 text-rose-600 dark:text-rose-400",
+};
+
+function SectionKicker({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className: string;
+}) {
+  return <p className={cn("pharos-kicker", className)}>{children}</p>;
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
+      {children}
+    </h2>
+  );
+}
+
+function FactStrip({ study }: { study: CaseStudy }) {
+  const peak = study.eventWindow.peakDeviationBps;
+  const low = study.eventWindow.lowPrice;
+  return (
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-border/50 bg-card/40 p-5 sm:grid-cols-4 sm:p-6">
+      <div className="space-y-1">
+        <dt className="pharos-kicker text-muted-foreground">Outcome</dt>
+        <dd>
+          <span
+            className={cn(
+              "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
+              OUTCOME_CHIP[study.outcome],
+            )}
+          >
+            {OUTCOME_LABEL[study.outcome]}
+          </span>
+        </dd>
+      </div>
+      <div className="space-y-1">
+        <dt className="pharos-kicker text-muted-foreground">When</dt>
+        <dd className="font-mono text-sm tabular-nums text-foreground">
+          {study.eventDateLabel}
+        </dd>
+      </div>
+      <div className="space-y-1">
+        <dt className="pharos-kicker text-muted-foreground">Mechanism</dt>
+        <dd className="text-sm text-foreground">
+          <Link
+            href={getMechanismExplainerPath(study.archetype)}
+            className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+          >
+            {getMechanismArchetypeLabel(study.archetype)}
+          </Link>
+        </dd>
+      </div>
+      <div className="space-y-1">
+        <dt className="pharos-kicker text-muted-foreground">Peak deviation</dt>
+        <dd className="font-mono text-sm tabular-nums text-foreground">
+          {peak != null ? `${peak > 0 ? "+" : ""}${peak} bps` : "—"}
+          {low != null ? (
+            <span className="text-muted-foreground"> · ${low.toFixed(3)}</span>
+          ) : null}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+function HowPharosSawIt({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  if (!study.dataWidgets || study.dataWidgets.length === 0) return null;
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>How Pharos saw it</SectionKicker>
+        <SectionHeading>The peg on the tape</SectionHeading>
+      </div>
+      <div className="space-y-6">
+        {study.dataWidgets.map((widget) => (
+          <CaseStudyChart key={widget.coinId} widget={widget} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Timeline({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>How it unfolded</SectionKicker>
+        <SectionHeading>Timeline</SectionHeading>
+      </div>
+      <CaseStudyTimeline entries={study.timeline} />
+    </section>
+  );
+}
+
+function Narrative({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  return (
+    <>
+      {study.sections.map((section, i) => (
+        <section key={i} className="space-y-4">
+          <SectionKicker className={kickerClass}>
+            {String(i + 1).padStart(2, "0")}
+          </SectionKicker>
+          <SectionHeading>{section.heading}</SectionHeading>
+          <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">
+            {section.paragraphs.map((paragraph, j) => (
+              <p key={j}>{paragraph}</p>
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
+function Watchpoints({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>
+          What to watch if this recurs
+        </SectionKicker>
+        <SectionHeading>Watchpoints</SectionHeading>
+      </div>
+      <ol className="divide-y divide-border/40">
+        {study.watchpoints.map((point, i) => (
+          <li
+            key={i}
+            className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
+          >
+            <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <p className="text-[15px] leading-relaxed text-foreground">{point}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function RelatedCoins({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  const related = study.relatedCoins ?? [];
+  if (related.length === 0) return null;
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>The blast radius</SectionKicker>
+        <SectionHeading>Coins caught in the contagion</SectionHeading>
+      </div>
+      <ul className="divide-y divide-border/40">
+        {related.map((coin) => {
+          const meta = TRACKED_META_BY_ID.get(coin.coinId);
+          if (!meta) return null;
+          const logoSrc = logosById[coin.coinId];
+          return (
+            <li key={coin.coinId}>
+              <Link
+                href={buildStablecoinUrl(coin.coinId)}
+                className="pharos-focus-ring group grid gap-3 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,16ch)_minmax(0,1fr)_auto] sm:items-baseline sm:gap-8"
+              >
+                <div className="flex items-start gap-2.5">
+                  {logoSrc ? (
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      aria-hidden="true"
+                      width={20}
+                      height={20}
+                      className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
+                      {meta.symbol}
+                    </span>
+                    <span className="text-xs leading-snug text-muted-foreground">
+                      {meta.name}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[15px] leading-relaxed text-muted-foreground">
+                  {coin.note}
+                </p>
+                <ArrowUpRight
+                  className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue sm:block"
+                  aria-hidden="true"
+                />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Sources({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  return (
+    <section className="space-y-5">
+      <SectionKicker className={kickerClass}>Primary sources</SectionKicker>
+      <ul className="divide-y divide-border/40">
+        {study.sources.map((source, i) => (
+          <li key={i}>
+            <a
+              href={source.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pharos-focus-ring group flex items-start justify-between gap-3 py-3 text-[15px] leading-snug text-foreground transition-colors hover:text-frost-blue"
+            >
+              <span>{source.label}</span>
+              <ArrowUpRight
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue"
+                aria-hidden="true"
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function CrossLinksFooter({
+  study,
+  kickerClass,
+}: {
+  study: CaseStudy;
+  kickerClass: string;
+}) {
+  return (
+    <section className="space-y-5 border-t border-border/60 pt-10">
+      <SectionKicker className={kickerClass}>Continue reading</SectionKicker>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {study.crossLinks.map((link, i) => (
+          <li key={i}>
+            <Link
+              href={link.href}
+              className="pharos-focus-ring group flex items-start justify-between gap-3 border-b border-border/40 py-3 text-[15px] leading-snug text-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+            >
+              <span>{link.label}</span>
+              <ArrowUpRight
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue"
+                aria-hidden="true"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function CaseStudyBody({ study }: { study: CaseStudy }) {
+  const kickerClass = ARCHETYPE_VISUALS[study.archetype].kickerClass;
+  return (
+    <>
+      <FactStrip study={study} />
+      <HowPharosSawIt study={study} kickerClass={kickerClass} />
+      <Timeline study={study} kickerClass={kickerClass} />
+      <Narrative study={study} kickerClass={kickerClass} />
+      <Watchpoints study={study} kickerClass={kickerClass} />
+      <RelatedCoins study={study} kickerClass={kickerClass} />
+      <Sources study={study} kickerClass={kickerClass} />
+      <CrossLinksFooter study={study} kickerClass={kickerClass} />
+    </>
+  );
+}

@@ -26,6 +26,9 @@ import {
   Globe,
   Ship,
   Landmark,
+  GraduationCap,
+  BookMarked,
+  BookA,
   createLucideIcon,
 } from "lucide-react";
 
@@ -105,13 +108,22 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    key: "learn",
+    label: "LEARN",
+    items: [
+      { href: "/learn", label: "Learn Overview", icon: GraduationCap, description: "The Pharos learning center: mechanisms, case studies, and glossary" },
+      { href: "/learn/mechanisms", label: "Mechanisms", icon: Lightbulb, description: "How each stablecoin design produces its peg" },
+      { href: "/learn/case-studies", label: "Case Studies", icon: BookMarked, description: "Long-form retrospectives of major depegs and failures" },
+      { href: "/learn/glossary", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined and version-pinned" },
+    ],
+  },
+  {
     key: "info",
     label: "REFERENCE",
     items: [
       { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
       { href: "/funding", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
       { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
-      { href: "/learn/mechanisms", label: "Mechanisms", icon: Lightbulb, description: "How each stablecoin design produces its peg" },
       { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
       { href: "/api", label: "API Access", icon: KeyRound, description: "Request a public API key and open the endpoint reference" },
       { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
@@ -124,6 +136,7 @@ export const DEFAULT_EXPANDED: Record<string, boolean> = {
   tools: false,
   monitor: false,
   info: false,
+  learn: false,
 };
 
 /** Bottom items (always shown at sidebar bottom) */

@@ -5,6 +5,7 @@ import { PUBLIC_DATASET_TOPICS } from "@shared/lib/api-endpoints/datasets";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { CASE_STUDY_ORDER } from "@/app/learn/case-studies/content";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
@@ -297,6 +298,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${SITE_URL}/learn/`,
+      lastModified: lastEdited("/learn/"),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
       url: `${SITE_URL}/learn/glossary/`,
       lastModified: lastEdited("/learn/glossary/"),
       changeFrequency: "monthly",
@@ -412,6 +419,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 
+  const learnCaseStudyPages: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/learn/case-studies/`,
+      lastModified: lastEdited("/learn/case-studies/"),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    ...CASE_STUDY_ORDER.map((slug) => ({
+      url: `${SITE_URL}/learn/case-studies/${slug}/`,
+      lastModified: lastEdited(`/learn/case-studies/${slug}/`),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+  ];
+
   const comparisonPages: MetadataRoute.Sitemap = STATIC_COMPARISON_PAGES.map((page) => ({
     url: `${SITE_URL}${page.href}`,
     lastModified: new Date("2026-03-07"),
@@ -457,6 +479,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...pegPages,
     ...taxonomyPages,
     ...learnMechanismPages,
+    ...learnCaseStudyPages,
     ...comparisonPages,
     ...digestPages,
     ...depegEventPages,
