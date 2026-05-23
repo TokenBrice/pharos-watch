@@ -1,3 +1,4 @@
+import { runCronStalenessWatchdog } from "../../cron/cron-staleness-watchdog";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
@@ -19,6 +20,16 @@ function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext): Sched
               runtime.ctx,
               runtime.mintBurnFreshnessConfig,
               runtime.alertWebhookUrl,
+            ),
+        },
+        {
+          job: "cron-staleness-watchdog",
+          errorMessage: "[cron] cron-staleness-watchdog failed in isolated slot:",
+          run: (signal) =>
+            runCronStalenessWatchdog(
+              runtime.db,
+              runtime.alertWebhookUrl,
+              signal,
             ),
         },
       ],

@@ -230,6 +230,16 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential self-URL probes (loopback or external)
+    connectionGroup: "status-self-check-chain",
+  },
+  {
+    job: "cron-staleness-watchdog",
+    label: "Cron staleness watchdog",
+    group: "quarter-hourly",
+    scheduleKey: "statusSelfCheckOffset",
+    triggerMode: "isolated",
+    maxConnections: 1, // DB freshness inspection plus optional webhook alert
+    connectionGroup: "status-self-check-chain",
   },
   {
     job: "dispatch-telegram-alerts",
