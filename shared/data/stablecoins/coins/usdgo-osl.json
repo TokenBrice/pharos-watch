@@ -7,8 +7,8 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
-    "rwa": true,
+    "yieldBearing": false,
+    "rwa": false,
     "navToken": false
   },
   "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",

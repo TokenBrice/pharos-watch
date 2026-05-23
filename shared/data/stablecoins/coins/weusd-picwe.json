@@ -2,7 +2,7 @@
   "id": "weusd-picwe",
   "name": "WEUSD",
   "symbol": "WEUSD",
-  "oneLiner": "WEUSD is PicWe's omni-chain USDC wrapper minted and redeemed 1:1 against USDC; the token has been trading off-peg near $0.91 despite documented backing.",
+  "oneLiner": "WEUSD is PicWe's omni-chain USDT wrapper minted and redeemed 1:1 against USDT; the token has been trading off-peg near $0.91 despite documented backing.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "100% USDC-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
-  "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDC and supports on-chain redemption back to USDC with a documented redemption fee.",
+  "collateral": "100% USDT-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
+  "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDT and supports on-chain redemption back to USDT with a documented redemption fee.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "278",
   "detailProvider": "defillama",
@@ -72,10 +72,10 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "USDC reserves",
+      "name": "USDT reserves",
       "pct": 100,
       "risk": "low",
-      "coinId": "usdc-circle",
+      "coinId": "usdt-tether",
       "depType": "collateral"
     }
   ],
@@ -83,7 +83,7 @@
     {
       "type": "warning",
       "title": "Active depeg",
-      "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDC backing; redemption pipeline may be impaired."
+      "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDT backing; redemption pipeline may be impaired."
     }
   ]
 }

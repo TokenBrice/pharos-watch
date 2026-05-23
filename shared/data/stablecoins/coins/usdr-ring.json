@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-  "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint and liquidity-management routes; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+  "pegMechanism": "RUSD is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
   "detailProvider": "coingecko",
   "geckoId": "ring-usd",
   "protocolSlug": "ring-protocol",
@@ -27,7 +27,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+      "url": "https://docs.ring.exchange/"
     }
   ],
   "contracts": [
@@ -43,7 +43,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+        "url": "https://docs.ring.exchange/"
       },
       {
         "label": "Website",
@@ -69,7 +69,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "usdr-ring",
     "display": {
-      "url": "https://ringprotocol.gitbook.io/ring-protocol/",
+      "url": "https://docs.ring.exchange/",
       "label": "Ring Protocol docs"
     },
     "inputs": {

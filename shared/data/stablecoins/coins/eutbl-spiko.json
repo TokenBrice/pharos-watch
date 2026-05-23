@@ -73,7 +73,7 @@
     {
       "chain": "stellar",
       "address": "EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
-      "decimals": 7
+      "decimals": 5
     },
     {
       "chain": "starknet",

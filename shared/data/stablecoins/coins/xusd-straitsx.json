@@ -67,7 +67,7 @@
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-top",
+  "custodyModel": "institutional-regulated",
   "reserves": [
     {
       "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",

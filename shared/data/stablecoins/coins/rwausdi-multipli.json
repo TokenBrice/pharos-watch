@@ -13,7 +13,7 @@
   },
   "collateral": "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
   "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
-  "mechanismArchetype": "tbill",
+  "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "340",
   "detailProvider": "defillama",
   "links": [

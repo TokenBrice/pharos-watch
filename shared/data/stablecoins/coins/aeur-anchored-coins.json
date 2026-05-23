@@ -32,6 +32,20 @@
     "regulator": "VQF (FINMA-recognized SRO)",
     "license": "SRO Member"
   },
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Anchored Coins AEUR (issuer winding down to comply with MiCAR)",
+        "url": "https://www.anchoredcoins.com/en/landing/aeur"
+      },
+      {
+        "label": "Binance delists non-MiCA stablecoins incl. AEUR in EEA",
+        "url": "https://www.financemagnates.com/cryptocurrency/binance-finally-delists-tether-usdt-from-european-spot-trading-in-compliance-with-mica/"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",

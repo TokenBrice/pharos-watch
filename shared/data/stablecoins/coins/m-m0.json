@@ -6,17 +6,17 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
-    "governance": "centralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": true,
     "navToken": false
   },
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": false,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: M resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Resolved to No: M0's M has on-chain TTG/POWER governance over permissioned minters and off-chain T-bill custody, but the M token itself exposes no holder-balance freeze, blacklist, or seizure surface.",
+    "reviewer": "Opus med-confidence verification",
+    "reviewedAt": "2026-05-23"
   },
   "infrastructures": [
     "m0"

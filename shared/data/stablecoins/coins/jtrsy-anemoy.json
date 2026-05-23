@@ -77,7 +77,7 @@
     {
       "chain": "monad",
       "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
-      "decimals": 18
+      "decimals": 6
     },
     {
       "chain": "solana",

@@ -16,9 +16,9 @@
   "mechanismArchetype": "cdp",
   "llamaId": "265",
   "detailProvider": "defillama",
-  "canBeBlacklisted": true,
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Docs",
@@ -29,9 +29,9 @@
         "url": "https://app.orki.finance/"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Explicit No retained: USDK is an immutable, admin-keyless Liquity-v2 (BOLD) fork; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
+    "reviewer": "Opus med-confidence verification",
+    "reviewedAt": "2026-05-23"
   },
   "links": [
     {

@@ -137,9 +137,8 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
       "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
       "reviewer": "Codex inferred-status backfill",
@@ -460,6 +459,20 @@
       "country": "Switzerland",
       "regulator": "VQF (FINMA-recognized SRO)",
       "license": "SRO Member"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Anchored Coins AEUR (issuer winding down to comply with MiCAR)",
+          "url": "https://www.anchoredcoins.com/en/landing/aeur"
+        },
+        {
+          "label": "Binance delists non-MiCA stablecoins incl. AEUR in EEA",
+          "url": "https://www.financemagnates.com/cryptocurrency/binance-finally-delists-tether-usdt-from-european-spot-trading-in-compliance-with-mica/"
+        }
+      ]
     },
     "contracts": [
       {
@@ -2420,7 +2433,7 @@
       "governance": "centralized",
       "yieldBearing": true,
       "rwa": true,
-      "navToken": true
+      "navToken": false
     },
     "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
     "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
@@ -5335,6 +5348,23 @@
       "regulator": "BaFin",
       "license": "EMI (MiCA)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "BaFin",
+      "authorizedEntity": "AllUnity GmbH",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "AllUnity CHFAU (BaFin EMI under MiCA)",
+          "url": "https://allunity.com/chfau/"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -7131,9 +7161,9 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": "possible",
       "sources": [
         {
           "label": "Docs",
@@ -7144,9 +7174,9 @@
           "url": "https://dapp.moneyonchain.com/"
         }
       ],
-      "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Explicit Possible retained: DOC is a permissionless rBTC CDP with no holder-balance freeze or blacklist on the token, but the Money On Chain contract suite is DAO-governed and proxy-upgradeable, leaving an indirect intervention surface.",
+      "reviewer": "Opus med-confidence verification",
+      "reviewedAt": "2026-05-23"
     },
     "chainTier": "mature-alt-l1",
     "deploymentModel": "third-party-bridge",
@@ -7394,7 +7424,6 @@
     },
     "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-usd",
     "cmcSlug": "dtrinity-dusd",
     "links": [
@@ -8124,6 +8153,23 @@
       "regulator": "BaFin",
       "license": "EMI (MiCA)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "BaFin",
+      "authorizedEntity": "AllUnity GmbH",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "AllUnity EURAU (BaFin EMI under MiCA)",
+          "url": "https://allunity.com/eurau/"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -8252,6 +8298,23 @@
       "regulator": "ACPR",
       "license": "EMI (MiCA)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "ACPR",
+      "authorizedEntity": "Circle Internet Financial Europe SAS",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Circle: first global stablecoin issuer to comply with MiCA",
+          "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -8369,6 +8432,23 @@
       "regulator": "ACPR",
       "license": "EMI (MiCA)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "ACPR",
+      "authorizedEntity": "Societe Generale-FORGE",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "SG-FORGE CoinVertible (EMI under MiCA)",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -8472,6 +8552,23 @@
       "country": "Iceland",
       "regulator": "Financial Supervisory Authority of the Central Bank of Iceland",
       "license": "Electronic Money Institution (EMI)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "Central Bank of Iceland",
+      "authorizedEntity": "Monerium EMI ehf",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Monerium EURe MiCA white paper",
+          "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+        }
+      ]
     },
     "contracts": [
       {
@@ -8596,6 +8693,23 @@
       "country": "Luxembourg",
       "regulator": "CSSF",
       "license": "Credit Institution (MiCA)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "credit-institution",
+      "competentAuthority": "CSSF",
+      "authorizedEntity": "Banking Circle S.A.",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "CSSF list of EMT issuers",
+          "url": "https://www.cssf.lu/en/issuers-of-e-money-tokens-emts/"
+        }
+      ]
     },
     "contracts": [
       {
@@ -8766,6 +8880,23 @@
       "regulator": "FIN-FSA",
       "license": "Electronic Money Institution"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "FIN-FSA",
+      "authorizedEntity": "Paxos Issuance Europe Oy (formerly Membrane Finance Oy)",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Paxos EUROe redemption notice (issuer wind-down)",
+          "url": "https://www.paxos.com/euroe-redemptions"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -8873,6 +9004,23 @@
       "country": "France",
       "regulator": "ACPR",
       "license": "EMI (MiCA)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "ACPR",
+      "authorizedEntity": "SALVUS",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Schuman EUROP whitepaper",
+          "url": "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"
+        }
+      ]
     },
     "contracts": [
       {
@@ -9054,6 +9202,23 @@
       "regulator": "DNB",
       "license": "EMI (MiCA)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "DNB",
+      "authorizedEntity": "Quantoz Payments B.V.",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Quantoz EURQ/USDQ (DNB EMI under MiCAR)",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -9157,6 +9322,23 @@
       "country": "Malta",
       "regulator": "MFSA",
       "license": "EMI (MiCA)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "MFSA",
+      "authorizedEntity": "StablR Ltd",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "StablR secures EMI license for MiCAR-compliant EURR",
+          "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
+        }
+      ]
     },
     "contracts": [
       {
@@ -9886,7 +10068,7 @@
       {
         "chain": "stellar",
         "address": "EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
-        "decimals": 7
+        "decimals": 5
       },
       {
         "chain": "starknet",
@@ -13505,7 +13687,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
@@ -13773,7 +13955,6 @@
     },
     "collateral": "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
     "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "honey-3",
     "pythFeedId": "0xf67b033925d73d43ba4401e00308d9b0f26ab4fbd1250e8b5407b9eaade7e1f4",
     "links": [
@@ -14543,12 +14724,11 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
     "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "infinifi-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -15319,7 +15499,7 @@
     },
     "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
     "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "cdp",
     "geckoId": "dephaser-jpy",
     "links": [
       {
@@ -15465,7 +15645,7 @@
       {
         "chain": "monad",
         "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
-        "decimals": 18
+        "decimals": 6
       },
       {
         "chain": "solana",
@@ -17153,7 +17333,7 @@
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
-      "governance": "centralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": true,
       "navToken": false
@@ -17257,11 +17437,11 @@
       }
     ],
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": false,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: M resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Resolved to No: M0's M has on-chain TTG/POWER governance over permissioned minters and off-chain T-bill custody, but the M token itself exposes no holder-balance freeze, blacklist, or seizure surface.",
+      "reviewer": "Opus med-confidence verification",
+      "reviewedAt": "2026-05-23"
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-unregulated",
@@ -18764,7 +18944,6 @@
     },
     "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
     "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "main-street-usd",
     "cmcSlug": "main-street-usd",
     "links": [
@@ -18915,8 +19094,7 @@
       {
         "name": "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)",
         "pct": 25,
-        "risk": "high",
-        "coinId": "usdc-circle"
+        "risk": "high"
       },
       {
         "name": "ETH / WBTC / sfrxETH",
@@ -19070,8 +19248,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "MiFID II Derivative Debt Instrument; EEA-passported; not available to U.S. or UK retail persons"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (MiFID II financial instrument); EEA-passported; not available to U.S. or UK retail persons"
     },
     "contracts": [
       {
@@ -19659,7 +19837,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Berachain-native Collateral Vault branches: WBERA, pumpBTC, solvBTC, solvBTC.bbn, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
+    "collateral": "Berachain-native Collateral Vault branches: iBGT (Infrared liquid staked BGT), iBERA, WBERA, pumpBTC, solvBTC, solvBTC.bbn, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
     "pegMechanism": "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
     "mechanismArchetype": "cdp",
     "geckoId": "nectar",
@@ -23080,7 +23258,7 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
@@ -23484,7 +23662,7 @@
     },
     "collateral": "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
     "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
-    "mechanismArchetype": "tbill",
+    "mechanismArchetype": "rwa-credit-fund",
     "links": [
       {
         "label": "Website",
@@ -23594,7 +23772,6 @@
     },
     "collateral": "USD share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
     "pegMechanism": "USD-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-    "mechanismArchetype": "tbill",
     "geckoId": "safo",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -26382,7 +26559,7 @@
       "governance": "centralized",
       "yieldBearing": true,
       "rwa": true,
-      "navToken": true
+      "navToken": false
     },
     "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
     "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
@@ -28291,7 +28468,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -30428,6 +30605,23 @@
       "regulator": "NYDFS / 50-state MTL",
       "license": "Virtual Currency License (BitLicense)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "ACPR",
+      "authorizedEntity": "Circle Internet Financial Europe SAS",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Circle: first global stablecoin issuer to comply with MiCA",
+          "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -30762,6 +30956,23 @@
       "country": "France",
       "regulator": "ACPR",
       "license": "EMI (MiCA)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "ACPR",
+      "authorizedEntity": "Societe Generale-FORGE",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "SG-FORGE CoinVertible (EMI under MiCA)",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        }
+      ]
     },
     "contracts": [
       {
@@ -31558,6 +31769,23 @@
       "regulator": "MAS",
       "license": "Major Payment Institution"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "FIN-FSA",
+      "authorizedEntity": "Paxos Issuance Europe Oy",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Paxos: Global Dollar (USDG) launches in the EU under MiCA",
+          "url": "https://www.paxos.com/newsroom/global-dollar-(usdg)-launches-in-the-eu"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -31780,8 +32008,8 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
-      "rwa": true,
+      "yieldBearing": false,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",
@@ -32273,9 +32501,9 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": false,
       "sources": [
         {
           "label": "Docs",
@@ -32286,9 +32514,9 @@
           "url": "https://app.orki.finance/"
         }
       ],
-      "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Explicit No retained: USDK is an immutable, admin-keyless Liquity-v2 (BOLD) fork; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
+      "reviewer": "Opus med-confidence verification",
+      "reviewedAt": "2026-05-23"
     },
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -33723,6 +33951,23 @@
       "regulator": "DNB",
       "license": "EMI (MiCAR)"
     },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "DNB",
+      "authorizedEntity": "Quantoz Payments B.V.",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Quantoz EURQ/USDQ (DNB EMI under MiCAR)",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -33826,9 +34071,9 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": true,
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": true,
+      "reviewedStatus": false,
       "sources": [
         {
           "label": "Docs",
@@ -33839,9 +34084,9 @@
           "url": "https://app.quill.finance/"
         }
       ],
-      "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Explicit No retained: USDQ is an immutable, admin-keyless Liquity-v2 (BOLD) fork on Scroll; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
+      "reviewer": "Opus med-confidence verification",
+      "reviewedAt": "2026-05-23"
     },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
@@ -33954,7 +34199,7 @@
       "navToken": false
     },
     "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
-    "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint and liquidity-management routes; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
+    "pegMechanism": "RUSD is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
     "geckoId": "ring-usd",
     "protocolSlug": "ring-protocol",
     "links": [
@@ -33968,7 +34213,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+        "url": "https://docs.ring.exchange/"
       }
     ],
     "contracts": [
@@ -33984,7 +34229,7 @@
       "sources": [
         {
           "label": "Docs",
-          "url": "https://ringprotocol.gitbook.io/ring-protocol/"
+          "url": "https://docs.ring.exchange/"
         },
         {
           "label": "Website",
@@ -34009,7 +34254,7 @@
       "semantics": "collateral-mix",
       "breakerScope": "usdr-ring",
       "display": {
-        "url": "https://ringprotocol.gitbook.io/ring-protocol/",
+        "url": "https://docs.ring.exchange/",
         "label": "Ring Protocol docs"
       },
       "adapter": "curated-validated",
@@ -34070,6 +34315,23 @@
       "country": "Malta",
       "regulator": "MFSA",
       "license": "EMI (MiCA)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "MFSA",
+      "authorizedEntity": "StablR Ltd",
+      "references": [
+        {
+          "label": "ESMA MiCA register (issuers of EMTs)",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "StablR EMI license (MiCAR-compliant EMTs)",
+          "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
+        }
+      ]
     },
     "contracts": [
       {
@@ -34576,6 +34838,20 @@
       "country": "El Salvador",
       "regulator": "CNAD",
       "license": "Digital Asset Issuance / DASP"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Binance delists USDT from EEA spot trading to comply with MiCA",
+          "url": "https://www.financemagnates.com/cryptocurrency/binance-finally-delists-tether-usdt-from-european-spot-trading-in-compliance-with-mica/"
+        },
+        {
+          "label": "ESMA MiCA register and webpage",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        }
+      ]
     },
     "contracts": [
       {
@@ -35622,7 +35898,7 @@
     "detailProvider": "defillama",
     "name": "Anzen USDz",
     "symbol": "USDz",
-    "oneLiner": "USDz is Anzen's RWA dollar backed 1:1 by Secured Private Credit Tokens — U.S. private-credit assets underwritten by Percent — locked in smart contracts.",
+    "oneLiner": "USDz is Anzen's RWA dollar backed mainly by Percent-underwritten U.S. private credit (SPCT), plus a Superstate tokenized-T-bill and cash sleeve.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -35631,8 +35907,9 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "Diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT), underwritten by Percent (U.S.-licensed broker-dealer)",
-    "pegMechanism": "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+    "collateral": "Primarily diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT) underwritten by Percent (U.S.-licensed broker-dealer), alongside a Superstate USTB/USCC tokenized-Treasury sleeve and a cash buffer",
+    "pegMechanism": "Each USDz backed 1:1 by its reserve basket — majority SPCT private credit plus a Superstate USTB/USCC tokenized-Treasury sleeve and cash — locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "anzen-usdz",
     "proofOfReserves": {
       "type": "real-time",
@@ -35703,7 +35980,8 @@
       {
         "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
         "pct": 15,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "ustb-superstate"
       },
       {
         "name": "Cash and cash equivalents",
@@ -36842,7 +37120,7 @@
     "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
     "mechanismArchetype": "cdp",
     "geckoId": "dforce-usd",
-    "cmcSlug": "dforce-usd",
+    "cmcSlug": "token-force-usd",
     "protocolSlug": "dforce-lending",
     "links": [
       {
@@ -38751,7 +39029,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "USDC and fiat reserve assets held for WEMIX Dollar on WEMIX3.0; issuer materials describe full collateralization by secure on-chain and off-chain assets.",
@@ -38806,7 +39084,7 @@
     "detailProvider": "defillama",
     "name": "WEUSD",
     "symbol": "WEUSD",
-    "oneLiner": "WEUSD is PicWe's omni-chain USDC wrapper minted and redeemed 1:1 against USDC; the token has been trading off-peg near $0.91 despite documented backing.",
+    "oneLiner": "WEUSD is PicWe's omni-chain USDT wrapper minted and redeemed 1:1 against USDT; the token has been trading off-peg near $0.91 despite documented backing.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -38815,8 +39093,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "100% USDC-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
-    "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDC and supports on-chain redemption back to USDC with a documented redemption fee.",
+    "collateral": "100% USDT-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
+    "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDT and supports on-chain redemption back to USDT with a documented redemption fee.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "weusd",
     "links": [
@@ -38874,10 +39152,10 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "USDC reserves",
+        "name": "USDT reserves",
         "pct": 100,
         "risk": "low",
-        "coinId": "usdc-circle",
+        "coinId": "usdt-tether",
         "depType": "collateral"
       }
     ],
@@ -38885,7 +39163,7 @@
       {
         "type": "warning",
         "title": "Active depeg",
-        "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDC backing; redemption pipeline may be impaired."
+        "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDT backing; redemption pipeline may be impaired."
       }
     ]
   },
@@ -41125,7 +41403,7 @@
     },
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
-    "custodyModel": "institutional-top",
+    "custodyModel": "institutional-regulated",
     "reserves": [
       {
         "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
@@ -41527,7 +41805,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "centralized",
+      "governance": "centralized-dependent",
       "yieldBearing": true,
       "rwa": false,
       "navToken": false
@@ -41578,11 +41856,11 @@
       }
     ],
     "blacklistabilityReview": {
-      "reviewedStatus": true,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: YUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "Resolved to Upstream: YUSD is a USDe-style delta-neutral synthetic dollar; freeze exposure is inherited from upstream USDT/USDC deposits and centralized custody rather than a direct token-level blacklist on YUSD.",
+      "reviewer": "Opus med-confidence verification",
+      "reviewedAt": "2026-05-23"
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",

@@ -46,6 +46,23 @@
     "regulator": "ACPR",
     "license": "EMI (MiCA)"
   },
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "Circle Internet Financial Europe SAS",
+    "references": [
+      {
+        "label": "ESMA MiCA register (issuers of EMTs)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Circle: first global stablecoin issuer to comply with MiCA",
+        "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",

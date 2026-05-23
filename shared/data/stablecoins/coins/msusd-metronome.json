@@ -80,8 +80,7 @@
     {
       "name": "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)",
       "pct": 25,
-      "risk": "high",
-      "coinId": "usdc-circle"
+      "risk": "high"
     },
     {
       "name": "ETH / WBTC / sfrxETH",

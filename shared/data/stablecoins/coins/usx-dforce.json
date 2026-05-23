@@ -17,7 +17,7 @@
   "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
   "mechanismArchetype": "cdp",
   "geckoId": "dforce-usd",
-  "cmcSlug": "dforce-usd",
+  "cmcSlug": "token-force-usd",
   "protocolSlug": "dforce-lending",
   "links": [
     {

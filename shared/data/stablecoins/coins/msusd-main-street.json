@@ -13,7 +13,6 @@
   },
   "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
   "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
-  "mechanismArchetype": "fiat-cash",
   "llamaId": "297",
   "detailProvider": "defillama",
   "geckoId": "main-street-usd",

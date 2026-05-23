@@ -41,6 +41,23 @@
     "regulator": "CSSF",
     "license": "Credit Institution (MiCA)"
   },
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "credit-institution",
+    "competentAuthority": "CSSF",
+    "authorizedEntity": "Banking Circle S.A.",
+    "references": [
+      {
+        "label": "ESMA MiCA register (issuers of EMTs)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "CSSF list of EMT issuers",
+        "url": "https://www.cssf.lu/en/issuers-of-e-money-tokens-emts/"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",

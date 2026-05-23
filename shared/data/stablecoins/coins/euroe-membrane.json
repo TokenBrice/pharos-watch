@@ -53,6 +53,23 @@
     "regulator": "FIN-FSA",
     "license": "Electronic Money Institution"
   },
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "FIN-FSA",
+    "authorizedEntity": "Paxos Issuance Europe Oy (formerly Membrane Finance Oy)",
+    "references": [
+      {
+        "label": "ESMA MiCA register (issuers of EMTs)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Paxos EUROe redemption notice (issuer wind-down)",
+        "url": "https://www.paxos.com/euroe-redemptions"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",

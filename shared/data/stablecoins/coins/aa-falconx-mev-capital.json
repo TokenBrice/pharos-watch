@@ -12,7 +12,7 @@
     "navToken": true
   },
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: AA_FalconXUSDC resolves to Upstream because USDC and USDf collateral inside the senior tranche inherit Circle and Falcon admin surfaces.",
     "reviewer": "Codex inferred-status backfill",
@@ -20,7 +20,6 @@
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
-  "canBeBlacklisted": true,
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC base asset in the Pareto FalconX Credit Vault, providing fixed-rate exposure to FalconX institutional credit lines curated by M11 Credit.",
   "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",

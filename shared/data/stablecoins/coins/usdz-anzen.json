@@ -2,7 +2,7 @@
   "id": "usdz-anzen",
   "name": "Anzen USDz",
   "symbol": "USDz",
-  "oneLiner": "USDz is Anzen's RWA dollar backed 1:1 by Secured Private Credit Tokens — U.S. private-credit assets underwritten by Percent — locked in smart contracts.",
+  "oneLiner": "USDz is Anzen's RWA dollar backed mainly by Percent-underwritten U.S. private credit (SPCT), plus a Superstate tokenized-T-bill and cash sleeve.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,9 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT), underwritten by Percent (U.S.-licensed broker-dealer)",
-  "pegMechanism": "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+  "collateral": "Primarily diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT) underwritten by Percent (U.S.-licensed broker-dealer), alongside a Superstate USTB/USCC tokenized-Treasury sleeve and a cash buffer",
+  "pegMechanism": "Each USDz backed 1:1 by its reserve basket — majority SPCT private credit plus a Superstate USTB/USCC tokenized-Treasury sleeve and cash — locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+  "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "202",
   "detailProvider": "defillama",
   "geckoId": "anzen-usdz",
@@ -85,7 +86,8 @@
     {
       "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
       "pct": 15,
-      "risk": "medium"
+      "risk": "medium",
+      "coinId": "ustb-superstate"
     },
     {
       "name": "Cash and cash equivalents",

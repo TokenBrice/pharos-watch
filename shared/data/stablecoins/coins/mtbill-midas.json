@@ -40,8 +40,8 @@
   ],
   "jurisdiction": {
     "country": "Germany",
-    "regulator": "Liechtenstein FMA",
-    "license": "MiFID II Derivative Debt Instrument; EEA-passported; not available to U.S. or UK retail persons"
+    "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+    "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (MiFID II financial instrument); EEA-passported; not available to U.S. or UK retail persons"
   },
   "contracts": [
     {
