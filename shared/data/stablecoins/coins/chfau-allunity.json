@@ -95,7 +95,7 @@
     {
       "type": "info",
       "title": "Active coverage pending",
-      "message": "CHFAU is deployed on Ethereum but the issuer site reports zero circulating supply and CoinGecko does not yet publish usable live price data. AllUnity describes CHFAU as 'LIVE SOON' relative to its July 2025 announcement."
+      "message": "CHFAU launched on 2026-02-26 as a MiCAR-compliant, BaFin-licensed Swiss franc stablecoin, but CoinGecko does not yet publish usable live price data, so active price coverage remains pending."
     }
   ]
 }

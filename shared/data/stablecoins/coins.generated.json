@@ -3055,7 +3055,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Brazilian National Treasury bonds (LTN/NTN-B); yield from the Selic-linked rate (currently ~15%) is structured to be shared with token holders",
@@ -4204,7 +4204,7 @@
     },
     "yieldConfig": {
       "yieldSource": "BlackRock T-bill fund",
-      "yieldType": "nav-appreciation"
+      "yieldType": "rebase"
     }
   },
   {
@@ -5389,7 +5389,7 @@
       {
         "type": "info",
         "title": "Active coverage pending",
-        "message": "CHFAU is deployed on Ethereum but the issuer site reports zero circulating supply and CoinGecko does not yet publish usable live price data. AllUnity describes CHFAU as 'LIVE SOON' relative to its July 2025 announcement."
+        "message": "CHFAU launched on 2026-02-26 as a MiCAR-compliant, BaFin-licensed Swiss franc stablecoin, but CoinGecko does not yet publish usable live price data, so active price coverage remains pending."
       }
     ]
   },
@@ -6124,7 +6124,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Basket of regulated stablecoins: USDC, USDT, pyUSD, BUIDL, and BENJI (max 40% each)",
+    "collateral": "Basket of regulated stablecoins and tokenized MMF shares: USDC, USDT, pyUSD, BUIDL, and WTGXX (WisdomTree Government MMF) (max 40% each)",
     "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
     "geckoId": "cap-usd",
     "cmcSlug": "cap-cusd",
@@ -6908,7 +6908,7 @@
     },
     "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
     "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "djed",
     "cmcSlug": "djed",
     "links": [
@@ -7864,7 +7864,8 @@
       }
     ],
     "jurisdiction": {
-      "country": "Singapore"
+      "country": "United States",
+      "regulator": "Nebraska Department of Banking and Finance"
     },
     "contracts": [
       {
@@ -10093,7 +10094,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -11240,7 +11241,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -11484,6 +11485,13 @@
         "chain": "monad",
         "address": "0x39bb4e0a204412bb98e821d25e7d955e69d40fd1",
         "decimals": 18
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
       }
     ],
     "blacklistabilityReview": {
@@ -17289,7 +17297,7 @@
     "detailProvider": "coingecko",
     "name": "MAI",
     "symbol": "MAI",
-    "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across nine chains; currently in a sustained soft depeg below $0.99.",
+    "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across 15 chains; currently in a sustained soft depeg below $0.99.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -17442,7 +17450,7 @@
       {
         "type": "warning",
         "title": "Soft depeg below $0.99",
-        "message": "MAI has been trading around $0.987 across all 9 supported chains; CDP redemption pressure is not currently restoring parity."
+        "message": "MAI has been trading around $0.987 across all 15 supported chains; CDP redemption pressure is not currently restoring parity."
       }
     ]
   },
@@ -18392,8 +18400,8 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian, invested in accordance with NYDFS permissible investment rules",
-    "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
+    "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian under the issuer's Antigua & Barbuda FSRC license",
+    "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at a qualified custodian",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mnee-usd-stablecoin",
     "proofOfReserves": {
@@ -19353,7 +19361,7 @@
     },
     "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
     "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "real-mxn",
     "links": [
       {
@@ -22189,8 +22197,8 @@
     ],
     "jurisdiction": {
       "country": "United States",
-      "regulator": "OCC",
-      "license": "National Trust Charter"
+      "regulator": "NYDFS",
+      "license": "Limited Purpose Trust Charter"
     },
     "contracts": [
       {
@@ -28967,7 +28975,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -29398,7 +29406,7 @@
       {
         "chain": "monad",
         "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
-        "decimals": 6
+        "decimals": 18
       },
       {
         "chain": "mantle",
@@ -30504,7 +30512,7 @@
       {
         "chain": "algorand",
         "address": "31566704",
-        "decimals": 5
+        "decimals": 6
       },
       {
         "chain": "hedera",
@@ -36833,7 +36841,7 @@
     "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
     "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
     "mechanismArchetype": "cdp",
-    "geckoId": "token-dforce-usd",
+    "geckoId": "dforce-usd",
     "cmcSlug": "dforce-usd",
     "protocolSlug": "dforce-lending",
     "links": [
@@ -37129,7 +37137,7 @@
     "id": "uty-xsy",
     "llamaId": "305",
     "detailProvider": "defillama",
-    "name": "XSY UTY",
+    "name": "Unity",
     "symbol": "UTY",
     "oneLiner": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: USDC deposits hedged by long AVAX spot and short perps, with a 7-day redemption unbonding.",
     "flags": {

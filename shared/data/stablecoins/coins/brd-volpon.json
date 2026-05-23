@@ -8,7 +8,7 @@
     "pegCurrency": "BRL",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Brazilian National Treasury bonds (LTN/NTN-B); yield from the Selic-linked rate (currently ~15%) is structured to be shared with token holders",

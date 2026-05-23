@@ -130,7 +130,7 @@
     {
       "chain": "algorand",
       "address": "31566704",
-      "decimals": 5
+      "decimals": 6
     },
     {
       "chain": "hedera",

@@ -16,7 +16,7 @@
   "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
   "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
   "mechanismArchetype": "cdp",
-  "geckoId": "token-dforce-usd",
+  "geckoId": "dforce-usd",
   "cmcSlug": "dforce-usd",
   "protocolSlug": "dforce-lending",
   "links": [

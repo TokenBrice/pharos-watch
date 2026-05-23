@@ -506,7 +506,7 @@
       "pegCurrency": "BRL",
       "governance": "centralized",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "1:1 mint/redemption against BRL subscriptions held in trust at CF Inovacao S.A.; the underlying Treasury-bond portfolio is the reserve, and accrued interest is passed back to holders rather than retained by the issuer",
@@ -1172,7 +1172,7 @@
       "navToken": false
     },
     "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "djed",
     "canBeBlacklisted": false
   },
@@ -1695,7 +1695,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
@@ -1879,7 +1879,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -2973,7 +2973,7 @@
     "id": "mai-qidao",
     "name": "MAI",
     "symbol": "MAI",
-    "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across nine chains; currently in a sustained soft depeg below $0.99.",
+    "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across 15 chains; currently in a sustained soft depeg below $0.99.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -3142,7 +3142,7 @@
       "rwa": true,
       "navToken": false
     },
-    "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
+    "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at a qualified custodian",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mnee-usd-stablecoin"
   },
@@ -3319,7 +3319,7 @@
       "navToken": false
     },
     "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "real-mxn"
   },
   {
@@ -4960,7 +4960,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -6178,7 +6178,7 @@
     },
     "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
     "mechanismArchetype": "cdp",
-    "geckoId": "token-dforce-usd",
+    "geckoId": "dforce-usd",
     "protocolSlug": "dforce-lending"
   },
   {
@@ -6216,7 +6216,7 @@
   },
   {
     "id": "uty-xsy",
-    "name": "XSY UTY",
+    "name": "Unity",
     "symbol": "UTY",
     "oneLiner": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: USDC deposits hedged by long AVAX spot and short perps, with a 7-day redemption unbonding.",
     "flags": {

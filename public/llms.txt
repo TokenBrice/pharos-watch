@@ -244,7 +244,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [MAI (MAI)](https://pharos.watch/stablecoin/mai-qidao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Bucket Protocol BUCK (BUCK)](https://pharos.watch/stablecoin/buck-bucket-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Mezo USD (MUSD)](https://pharos.watch/stablecoin/meusd-mezo/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [XSY UTY (UTY)](https://pharos.watch/stablecoin/uty-xsy/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Unity (UTY)](https://pharos.watch/stablecoin/uty-xsy/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Stasis Euro (EURS)](https://pharos.watch/stablecoin/eurs-stasis/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Metronome Synth USD (MSUSD)](https://pharos.watch/stablecoin/msusd-metronome/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Royal Dollar (RUSD)](https://pharos.watch/stablecoin/rusd-royal-dollar/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -270,7 +270,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Tether USA-T (USAT)](https://pharos.watch/stablecoin/usat-tether/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Mento Dollar (USDm)](https://pharos.watch/stablecoin/cusd-celo/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Alchemix USD (ALUSD)](https://pharos.watch/stablecoin/alusd-alchemix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Felix feUSD (FEUSD)](https://pharos.watch/stablecoin/feusd-felix/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Felix feUSD (FEUSD)](https://pharos.watch/stablecoin/feusd-felix/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Fidelity Digital Dollar (FIDD)](https://pharos.watch/stablecoin/fidd-fidelity/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USDGO (USDGO)](https://pharos.watch/stablecoin/usdgo-osl/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Main Street USD (MSUSD)](https://pharos.watch/stablecoin/msusd-main-street/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

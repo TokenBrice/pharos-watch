@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian, invested in accordance with NYDFS permissible investment rules",
-  "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
+  "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian under the issuer's Antigua & Barbuda FSRC license",
+  "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at a qualified custodian",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "284",
   "detailProvider": "defillama",

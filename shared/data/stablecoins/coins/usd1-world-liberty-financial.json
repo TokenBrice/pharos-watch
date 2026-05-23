@@ -70,7 +70,7 @@
     {
       "chain": "monad",
       "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
-      "decimals": 6
+      "decimals": 18
     },
     {
       "chain": "mantle",

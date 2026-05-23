@@ -13,7 +13,7 @@
   },
   "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
   "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "real-mxn",
   "links": [

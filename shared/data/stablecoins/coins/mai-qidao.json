@@ -2,7 +2,7 @@
   "id": "mai-qidao",
   "name": "MAI",
   "symbol": "MAI",
-  "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across nine chains; currently in a sustained soft depeg below $0.99.",
+  "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across 15 chains; currently in a sustained soft depeg below $0.99.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -139,7 +139,7 @@
     {
       "type": "warning",
       "title": "Soft depeg below $0.99",
-      "message": "MAI has been trading around $0.987 across all 9 supported chains; CDP redemption pressure is not currently restoring parity."
+      "message": "MAI has been trading around $0.987 across all 15 supported chains; CDP redemption pressure is not currently restoring parity."
     }
   ],
   "liveReservesConfig": {

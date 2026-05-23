@@ -135,6 +135,6 @@
   },
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",
-    "yieldType": "nav-appreciation"
+    "yieldType": "rebase"
   }
 }

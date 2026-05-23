@@ -1,6 +1,6 @@
 {
   "id": "uty-xsy",
-  "name": "XSY UTY",
+  "name": "Unity",
   "symbol": "UTY",
   "oneLiner": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: USDC deposits hedged by long AVAX spot and short perps, with a 7-day redemption unbonding.",
   "flags": {
