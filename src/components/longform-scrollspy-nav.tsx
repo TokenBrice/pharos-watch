@@ -237,7 +237,7 @@ export function LongformScrollspyNav({
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:mx-0 md:rounded-2xl md:px-4 md:py-2.5",
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:mx-0 md:rounded-2xl md:px-4 md:py-2.5 lg:top-[calc(env(safe-area-inset-top)+3px)]",
           className,
         )}
       >

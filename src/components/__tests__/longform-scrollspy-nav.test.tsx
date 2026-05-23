@@ -161,4 +161,19 @@ describe("LongformScrollspyNav", () => {
 
     expect(scrollToMock).not.toHaveBeenCalled();
   });
+
+  it("keeps the mobile header offset but pins the banner near the top on desktop", () => {
+    const { container } = render(
+      <Harness
+        sections={[
+          { id: "overview", label: "Overview" },
+          { id: "pipeline", label: "Pipeline" },
+        ]}
+      />,
+    );
+
+    const stickyNav = container.querySelector(".sticky");
+    expect(stickyNav?.className).toContain("top-[calc(env(safe-area-inset-top)+3.5rem)]");
+    expect(stickyNav?.className).toContain("lg:top-[calc(env(safe-area-inset-top)+3px)]");
+  });
 });
