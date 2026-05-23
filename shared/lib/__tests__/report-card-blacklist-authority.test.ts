@@ -59,7 +59,8 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("suiusde-sui")).toBe(true);
     expect(resolved.get("jusd-jusd-stable-token")).toBe(true);
     expect(resolved.get("usda-alpha-partner")).toBe(true);
-    expect(resolved.get("doc-money-on-chain")).toBe(true);
+    // doc-money-on-chain: re-audited down to "possible" in the metadata backfill.
+    expect(resolved.get("doc-money-on-chain")).toBe("possible");
     expect(resolved.get("usdrif-rif")).toBe(true);
     expect(resolved.get("usdr-ring")).toBe(true);
     expect(resolved.get("inalpha-nest")).toBe(true);
@@ -101,11 +102,12 @@ describe("report-card blacklist authority", () => {
     // Felix feUSD on Hyperliquid: TransparentUpgradeableProxy. Project docs
     // cite "Admin Parameter Controls" and "Emergency Pausing" as features.
     expect(resolved.get("feusd-felix")).toBe(true);
-    // Quill USDQ on Scroll: deployed token is an upgradeable proxy
-    // (GoPlus is_proxy: 1), so admin can swap implementation to add freeze.
-    expect(resolved.get("usdq-quill")).toBe(true);
-    // Orki USDK on Swellchain: EIP1967 proxy with unverified implementation.
-    expect(resolved.get("usdk-orki")).toBe(true);
+    // Quill USDQ on Scroll: re-audited in the metadata backfill as an immutable,
+    // admin-keyless Liquity-v2 (BOLD) fork — no token-level freeze, seizure, or
+    // proxy-upgrade surface, so the earlier upgradeable-proxy classification is dropped.
+    expect(resolved.get("usdq-quill")).toBe(false);
+    // Orki USDK on Swellchain: re-audited to non-freezable in the metadata backfill.
+    expect(resolved.get("usdk-orki")).toBe(false);
     // srUSD: AccessControl with DEFAULT_ADMIN_ROLE able to grant MINTER —
     // no token-level freeze but unbounded mint-grant capability → "dilutable".
     expect(resolved.get("srusd-reservoir")).toBe("dilutable");
