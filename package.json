@@ -112,6 +112,8 @@
     "og:capture": "node scripts/maintenance/screenshot-og.mjs",
     "build:og-editorial": "node scripts/maintenance/build-og-editorial.mjs",
     "check:og-editorial": "node scripts/maintenance/build-og-editorial.mjs --check",
+    "build:og-case-studies": "node scripts/maintenance/build-og-case-studies.mjs",
+    "check:og-case-studies": "node scripts/maintenance/build-og-case-studies.mjs --check",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
   },

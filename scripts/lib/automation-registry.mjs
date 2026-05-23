@@ -442,6 +442,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     command: "node scripts/maintenance/build-og-editorial.mjs",
     script: "scripts/maintenance/build-og-editorial.mjs",
   },
+  {
+    id: "og-case-studies",
+    checkCommand: "node scripts/maintenance/build-og-case-studies.mjs --check",
+    command: "node scripts/maintenance/build-og-case-studies.mjs",
+    script: "scripts/maintenance/build-og-case-studies.mjs",
+  },
 ];
 
 export function buildGeneratedArtifactCommands({ check = false } = {}) {
