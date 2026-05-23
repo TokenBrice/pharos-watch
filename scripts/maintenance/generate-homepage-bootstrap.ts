@@ -1,0 +1,221 @@
+/**
+ * Generate the homepage bootstrap payload embedded into the static shell.
+ *
+ * `--check` validates the checked-in payload shape and endpoint schemas without
+ * making network calls, so local and PR builds do not fail on live API drift.
+ */
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { classifyFreshnessRatio } from "../../shared/lib/status-thresholds";
+import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
+import {
+  HOMEPAGE_BOOTSTRAP_DESCRIPTORS,
+  HOMEPAGE_BOOTSTRAP_VERSION,
+  normalizeHomepageBootstrapPayload,
+  validateHomepageBootstrapPayloadData,
+  type HomepageBootstrapPayload,
+  type HomepageBootstrapQueryId,
+} from "../../src/lib/homepage-bootstrap";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, "../..");
+const OUTPUT_PATH = join(REPO_ROOT, "src/generated/homepage-bootstrap.json");
+const CHECK_MODE = process.argv.includes("--check");
+
+function emptyPayload(): HomepageBootstrapPayload {
+  return {
+    version: HOMEPAGE_BOOTSTRAP_VERSION,
+    generatedAt: 0,
+    source: null,
+    queries: {},
+  };
+}
+
+function resolveApiBase(): string | null {
+  const raw =
+    process.env.HOMEPAGE_BOOTSTRAP_API_URL?.trim() ||
+    process.env.DIGEST_API_URL?.trim() ||
+    process.env.PUBLIC_DATASETS_API_URL?.trim() ||
+    process.env.SMOKE_API_BASE?.trim() ||
+    process.env.API_BASE_URL?.trim();
+  return raw ? raw.replace(/\/+$/, "") : null;
+}
+
+function fetchHeaders(): Record<string, string> {
+  const apiKey =
+    process.env.HOMEPAGE_BOOTSTRAP_API_KEY?.trim() ||
+    process.env.DIGEST_API_KEY?.trim() ||
+    process.env.PUBLIC_DATASETS_API_KEY?.trim() ||
+    process.env.SMOKE_API_KEY?.trim() ||
+    process.env.PHAROS_API_KEY?.trim();
+  return {
+    Accept: "application/json",
+    ...(apiKey ? { "X-API-Key": apiKey } : {}),
+  };
+}
+
+function parseExistingPayload(): HomepageBootstrapPayload | null {
+  if (!existsSync(OUTPUT_PATH)) {
+    return null;
+  }
+
+  try {
+    return normalizeHomepageBootstrapPayload(JSON.parse(readFileSync(OUTPUT_PATH, "utf8")));
+  } catch {
+    return null;
+  }
+}
+
+function writePayload(payload: HomepageBootstrapPayload): void {
+  mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
+  writeFileSync(OUTPUT_PATH, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function fail(message: string): never {
+  console.error(`[generate-homepage-bootstrap] ${message}`);
+  process.exit(1);
+}
+
+function extractMeta(json: unknown, ageHeader: string | null, maxAgeSec: number): {
+  data: unknown;
+  meta: ApiMeta | null;
+} {
+  let data = json;
+  let meta: ApiMeta | null = null;
+
+  if (json && typeof json === "object" && !Array.isArray(json) && "_meta" in json) {
+    const { _meta, ...rest } = json as Record<string, unknown>;
+    const parsed = ApiMetaSchema.safeParse(_meta);
+    if (parsed.success) {
+      meta = parsed.data;
+    }
+    data = rest;
+  }
+
+  if (!meta && ageHeader) {
+    const age = Number(ageHeader);
+    if (Number.isFinite(age) && age >= 0) {
+      meta = {
+        updatedAt: Math.floor(Date.now() / 1000) - age,
+        ageSeconds: age,
+        status: classifyFreshnessRatio(age / maxAgeSec),
+      };
+    }
+  }
+
+  return { data, meta };
+}
+
+async function fetchBootstrapQuery(
+  apiBase: string,
+  id: HomepageBootstrapQueryId,
+  path: string,
+  maxAgeSec: number,
+  schema: { safeParse: (value: unknown) => { success: boolean; data?: unknown } } | undefined,
+): Promise<HomepageBootstrapPayload["queries"][HomepageBootstrapQueryId] | null> {
+  const url = `${apiBase}${path}`;
+  try {
+    const response = await fetch(url, { headers: fetchHeaders() });
+    if (!response.ok) {
+      console.warn(`[generate-homepage-bootstrap] ${path} -> HTTP ${response.status}`);
+      return null;
+    }
+
+    const json = await response.json();
+    const { data, meta } = extractMeta(json, response.headers.get("X-Data-Age"), maxAgeSec);
+    const parsed = schema?.safeParse(data);
+    if (parsed && !parsed.success) {
+      console.warn(`[generate-homepage-bootstrap] ${path} failed schema validation`);
+      return null;
+    }
+
+    return {
+      id,
+      path,
+      fetchedAt: Date.now(),
+      data: parsed ? parsed.data : data,
+      meta,
+    };
+  } catch (error) {
+    console.warn(`[generate-homepage-bootstrap] ${path} fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+}
+
+async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayload> {
+  const entries = await Promise.all(
+    HOMEPAGE_BOOTSTRAP_DESCRIPTORS.map(({ id, descriptor }) =>
+      fetchBootstrapQuery(
+        apiBase,
+        id,
+        descriptor.path,
+        descriptor.metaMaxAgeSec ?? descriptor.producerIntervalMs / 1000,
+        descriptor.schema,
+      ).then((query) => [id, query] as const),
+    ),
+  );
+
+  const queries: HomepageBootstrapPayload["queries"] = {};
+  for (const [id, query] of entries) {
+    if (query) {
+      queries[id] = query;
+    }
+  }
+
+  return {
+    version: HOMEPAGE_BOOTSTRAP_VERSION,
+    generatedAt: Date.now(),
+    source: apiBase,
+    queries,
+  };
+}
+
+function validateCheckedInPayload(): void {
+  const payload = parseExistingPayload();
+  if (!payload) {
+    fail(`${OUTPUT_PATH} is missing or invalid`);
+  }
+
+  const errors = validateHomepageBootstrapPayloadData(payload);
+  if (errors.length > 0) {
+    fail(`payload data failed schema validation:\n${errors.join("\n")}`);
+  }
+}
+
+async function main(): Promise<void> {
+  if (CHECK_MODE) {
+    validateCheckedInPayload();
+    console.log("[generate-homepage-bootstrap] checked payload shape");
+    return;
+  }
+
+  const apiBase = resolveApiBase();
+  if (!apiBase) {
+    const existing = parseExistingPayload();
+    if (existing) {
+      console.log("[generate-homepage-bootstrap] no API base configured; preserving existing payload");
+      return;
+    }
+    writePayload(emptyPayload());
+    console.log("[generate-homepage-bootstrap] wrote empty bootstrap payload");
+    return;
+  }
+
+  const payload = await generatePayload(apiBase);
+  if (Object.keys(payload.queries).length === 0) {
+    const existing = parseExistingPayload();
+    if (existing && Object.keys(existing.queries).length > 0) {
+      console.warn("[generate-homepage-bootstrap] no endpoints fetched; preserving existing populated payload");
+      return;
+    }
+  }
+
+  writePayload(payload);
+  console.log(`[generate-homepage-bootstrap] wrote ${Object.keys(payload.queries).length} queries`);
+}
+
+main().catch((error) => {
+  fail(error instanceof Error ? error.message : String(error));
+});

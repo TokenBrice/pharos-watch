@@ -7,6 +7,10 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
+import {
+  readHomepageBootstrapPayloadFromDocument,
+  seedHomepageBootstrapQueries,
+} from "@/lib/homepage-bootstrap";
 import { RouteProgressBar } from "@/components/route-progress-bar";
 
 // Create a context for toast functionality
@@ -149,8 +153,8 @@ function AppProviders({ children }: { children: React.ReactNode }) {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
-    () =>
-      new QueryClient({
+    () => {
+      const client = new QueryClient({
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000,
@@ -158,7 +162,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
           },
         },
-      })
+      });
+      seedHomepageBootstrapQueries(client, readHomepageBootstrapPayloadFromDocument());
+      return client;
+    }
   );
 
   return (

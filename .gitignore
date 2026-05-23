@@ -27,6 +27,7 @@
 !/src/generated/depeg-event-related-data.json
 !/src/generated/depeg-event-search-data.json
 !/src/generated/docs-metadata.json
+!/src/generated/homepage-bootstrap.json
 !/src/generated/sitemap-dates.json
 
 # production

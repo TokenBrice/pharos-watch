@@ -11,6 +11,7 @@ import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
 import { HomepageTopTape } from "@/components/homepage-top-tape";
+import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -92,6 +93,7 @@ export default function RootLayout({
         >
           Skip to data table
         </a>
+        <HomepageBootstrapScript />
         <Providers>
           <SidebarProvider>
             <RouteChrome>

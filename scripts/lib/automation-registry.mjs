@@ -395,6 +395,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-public-datasets.ts",
   },
   {
+    id: "homepage-bootstrap",
+    checkCommand: "tsx scripts/maintenance/generate-homepage-bootstrap.ts --check",
+    command: "tsx scripts/maintenance/generate-homepage-bootstrap.ts",
+    script: "scripts/maintenance/generate-homepage-bootstrap.ts",
+  },
+  {
     id: "postman",
     checkCommand: "tsx scripts/maintenance/generate-postman-collection.ts --check",
     command: "tsx scripts/maintenance/generate-postman-collection.ts",
