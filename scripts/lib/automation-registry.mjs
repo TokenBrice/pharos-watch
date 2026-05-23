@@ -261,6 +261,7 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "postcss.config.mjs",
   "scripts/maintenance/explain-build-chunks.mjs",
   "scripts/maintenance/generate-docs-metadata.ts",
+  "scripts/maintenance/generate-homepage-bootstrap.ts",
   "scripts/maintenance/generate-llms-txt.ts",
   "scripts/maintenance/generate-markdown-exports.ts",
   "scripts/maintenance/generate-openapi-spec.ts",

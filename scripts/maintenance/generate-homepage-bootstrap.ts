@@ -25,6 +25,8 @@ const REPO_ROOT = join(__dirname, "../..");
 const OUTPUT_PATH = join(REPO_ROOT, "src/generated/homepage-bootstrap.json");
 const CHECK_MODE = process.argv.includes("--check");
 const registry = FRONTEND_API_QUERY_REGISTRY;
+const MAX_HOMEPAGE_BOOTSTRAP_BYTES = 900_000;
+const MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES = 450_000;
 const HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS = [
   { id: "stablecoins", descriptor: registry.stablecoins },
   { id: "pegSummary", descriptor: registry.pegSummary },
@@ -84,6 +86,43 @@ function parseExistingPayload(): HomepageBootstrapPayload | null {
 function writePayload(payload: HomepageBootstrapPayload): void {
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
   writeFileSync(OUTPUT_PATH, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function jsonByteLength(value: unknown): number {
+  return Buffer.byteLength(JSON.stringify(value), "utf8");
+}
+
+function enforcePayloadBudget(payload: HomepageBootstrapPayload): {
+  payload: HomepageBootstrapPayload;
+  omitted: string[];
+} {
+  const queries: HomepageBootstrapPayload["queries"] = {};
+  const omitted: string[] = [];
+
+  for (const { id } of HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS) {
+    const query = payload.queries[id];
+    if (!query) continue;
+
+    const queryBytes = jsonByteLength(query);
+    if (queryBytes > MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES) {
+      omitted.push(`${id} (${queryBytes} bytes > ${MAX_HOMEPAGE_BOOTSTRAP_QUERY_BYTES})`);
+      continue;
+    }
+
+    const candidate = { ...payload, queries: { ...queries, [id]: query } };
+    const candidateBytes = jsonByteLength(candidate);
+    if (candidateBytes > MAX_HOMEPAGE_BOOTSTRAP_BYTES) {
+      omitted.push(`${id} (payload ${candidateBytes} bytes > ${MAX_HOMEPAGE_BOOTSTRAP_BYTES})`);
+      continue;
+    }
+
+    queries[id] = query;
+  }
+
+  return {
+    payload: { ...payload, queries },
+    omitted,
+  };
 }
 
 function fail(message: string): never {
@@ -216,9 +255,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  const payload = await generatePayload(apiBase);
-  if (Object.keys(payload.queries).length === 0) {
+  const generated = await generatePayload(apiBase);
+  if (Object.keys(generated.queries).length === 0) {
     fail("configured API base returned no usable bootstrap queries; refusing to preserve a stale populated payload");
+  }
+
+  const { payload, omitted } = enforcePayloadBudget(generated);
+  for (const entry of omitted) {
+    console.warn(`[generate-homepage-bootstrap] omitted ${entry} from inline payload budget`);
   }
 
   writePayload(payload);
