@@ -91,6 +91,14 @@ export const content: ArchetypeContent = {
       label: "How PegScore and DEWS treat algorithmic deviators",
     },
     {
+      href: "/learn/case-studies/terra-ust-2022/",
+      label: "Case study: TerraUSD's death spiral",
+    },
+    {
+      href: "/learn/case-studies/iron-titan-2021/",
+      label: "Case study: IRON Finance, the algorithmic prequel",
+    },
+    {
       href: "/freezewatch",
       label: "/freezewatch Dilutable bucket and live mint activity",
     },

@@ -103,6 +103,14 @@ export const content: ArchetypeContent = {
       label: "CDP — crypto-collateralized designs that liquidate instead of hedge",
     },
     {
+      href: "/learn/case-studies/usde-oracle-2025/",
+      label: "Case study: USDe's Binance oracle print",
+    },
+    {
+      href: "/learn/case-studies/usr-resolv-2026/",
+      label: "Case study: Resolv USD's privileged-mint failure",
+    },
+    {
       href: "/cemetery/",
       label: "Cemetery — historical synthetic delta-neutral failures",
     },

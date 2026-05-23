@@ -104,6 +104,10 @@ export const content: ArchetypeContent = {
       label: "Sibling explainer: tokenized T-Bill funds",
     },
     {
+      href: "/learn/case-studies/usdc-svb-2023/",
+      label: "Case study: USDC and the Silicon Valley Bank weekend",
+    },
+    {
       href: "/cemetery/",
       label: "Cemetery — historical fiat-cash failures",
     },

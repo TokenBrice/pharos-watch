@@ -16,6 +16,7 @@ import { buildLiveCompareUrl } from "@/lib/compare-pages";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl, buildInfrastructureTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { CASE_STUDY_BY_COIN_ID } from "@/app/learn/case-studies/content";
 
 interface StaticComparisonEntry {
   href: string;
@@ -97,9 +98,10 @@ export function ExploreNextSection({
     });
   }
 
+  const caseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
   const hasPeers = related.length > 0 || staticComparisonPages.length > 0;
   const hasBrowse = taxonomyLinks.length > 0 || trackerLinks.length > 0;
-  if (!hasPeers && !hasBrowse) {
+  if (!hasPeers && !hasBrowse && !caseStudy) {
     return null;
   }
 
@@ -115,6 +117,24 @@ export function ExploreNextSection({
           Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add context to what you just read.
         </p>
       </div>
+
+      {caseStudy ? (
+        <Link
+          href={`/learn/case-studies/${caseStudy.slug}/`}
+          className="pharos-focus-ring group flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/50 px-4 py-3 transition-colors hover:border-foreground/30 hover:bg-accent"
+        >
+          <span className="min-w-0">
+            <span className="pharos-kicker block text-frost-blue">Case study</span>
+            <span className="mt-0.5 block text-sm font-medium text-foreground">
+              {caseStudy.title}
+            </span>
+          </span>
+          <ArrowRight
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground"
+          />
+        </Link>
+      ) : null}
 
       {hasPeers ? (
         <div className="space-y-4">

@@ -114,6 +114,14 @@ export const content: ArchetypeContent = {
       href: "/yield/",
       label: "Yield-bearing stablecoins ranked by PYS",
     },
+    {
+      href: "/learn/case-studies/usd0pp-usual-2025/",
+      label: "Case study: USD0++ and redemption-terms risk",
+    },
+    {
+      href: "/learn/case-studies/pmusd-precious-metals/",
+      label: "Case study: pmUSD's in-situ gold collateral",
+    },
   ],
   visuals: ARCHETYPE_VISUALS["rwa-credit-fund"],
 };

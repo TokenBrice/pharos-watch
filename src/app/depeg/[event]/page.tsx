@@ -27,6 +27,7 @@ import {
   type DepegEventEntry,
 } from "./page-data";
 import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
+import { CASE_STUDY_BY_DEPEG_SLUG } from "@/app/learn/case-studies/content";
 
 export function generateStaticParams() {
   return DEPEG_EVENT_ENTRIES.map((event) => ({ event: event.slug }));
@@ -391,6 +392,18 @@ export default async function DepegEventPage(
           {coin.oneLiner ? (
             <p className="text-sm text-muted-foreground">{coin.oneLiner}</p>
           ) : null}
+        </section>
+      ) : null}
+
+      {CASE_STUDY_BY_DEPEG_SLUG[event.slug] ? (
+        <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">
+          <p className="pharos-kicker">Deep dive</p>
+          <Link
+            href={`/learn/case-studies/${CASE_STUDY_BY_DEPEG_SLUG[event.slug].slug}/`}
+            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+          >
+            {CASE_STUDY_BY_DEPEG_SLUG[event.slug].title} — full case study →
+          </Link>
         </section>
       ) : null}
 

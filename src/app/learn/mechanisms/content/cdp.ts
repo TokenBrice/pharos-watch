@@ -111,6 +111,14 @@ export const content: ArchetypeContent = {
       label: "Synthetic delta-neutral explainer",
     },
     {
+      href: "/learn/case-studies/dai-black-thursday/",
+      label: "Case study: Dai's Black Thursday and PSM dependency",
+    },
+    {
+      href: "/learn/case-studies/crvusd-exploit-trilogy/",
+      label: "Case study: crvUSD's exploit trilogy",
+    },
+    {
       href: "/cemetery/",
       label: "Cemetery — historical CDP failures",
     },
