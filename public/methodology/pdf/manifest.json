@@ -9,8 +9,8 @@
       "title": "Blacklist Tracker Changelog",
       "version": "3.993",
       "urn": "urn:pharos:methodology:blacklist-tracker@v3.993",
-      "textHash": "6e4dc53e9501b171d5d05cadc7934963277d111af92fb07a9a5c3f17c2c3e20d",
-      "textLength": 23085
+      "textHash": "be25a0b2aeac2d28fe6b5b66aad0b860fa6858ed792fb41af801d30e37ea89a9",
+      "textLength": 23136
     },
     {
       "filename": "chain-health-v1.2.pdf",
@@ -19,8 +19,8 @@
       "title": "Chain Health Changelog",
       "version": "1.2",
       "urn": "urn:pharos:methodology:chain-health@v1.2",
-      "textHash": "d3e0141dd25d64c066d88b8fe56dfa519d69bf60a047fb922af2485ac43c61aa",
-      "textLength": 4007
+      "textHash": "c782ea89066a943bbb2b24584a4c661bfe5d08284d95649d0245eeae9fff8f09",
+      "textLength": 4058
     },
     {
       "filename": "depeg-dews-v6.0.pdf",
@@ -29,8 +29,8 @@
       "title": "Depeg Tracker and DEWS Changelog",
       "version": "6.0",
       "urn": "urn:pharos:methodology:depeg-dews@v6.0",
-      "textHash": "cec0bd54d370a077551f1a16d7a40f072d6fa927bafa1425e5bbc2115fe04282",
-      "textLength": 26715
+      "textHash": "36f4957f3c73fad20dce18231122333f130fab4e386fbc97e6bd1b3b50bac5dc",
+      "textLength": 26766
     },
     {
       "filename": "index.pdf",
@@ -39,8 +39,8 @@
       "title": "Pharos Methodology Index",
       "version": null,
       "urn": "urn:pharos:methodology:index",
-      "textHash": "5f07c84f6bd9caa97d8b9430ff1eba72c1d636664d646eff9065d1ccf0882922",
-      "textLength": 32450
+      "textHash": "8f5073f286614f067ee73be0284dd1549438ece7b7bdb3f40a3aad526cc73b2b",
+      "textLength": 32501
     },
     {
       "filename": "liquidity-score-v5.7.pdf",
@@ -49,8 +49,8 @@
       "title": "Liquidity Score Changelog",
       "version": "5.7",
       "urn": "urn:pharos:methodology:liquidity-score@v5.7",
-      "textHash": "fdaa0fe05f5d2416fcafd48109c7ae7223e814a1dc49c197172a0aafab43e694",
-      "textLength": 21694
+      "textHash": "138dfbb58fd30baa47ed06339232e14a00c48e25721a250836ef04db38d906d7",
+      "textLength": 21745
     },
     {
       "filename": "mint-burn-flow-v6.11.pdf",
@@ -59,8 +59,8 @@
       "title": "Mint/Burn Flow Changelog",
       "version": "6.11",
       "urn": "urn:pharos:methodology:mint-burn-flow@v6.11",
-      "textHash": "5e7e4c34bbee09235b204567dc727d1db43c51bea40342ce6f2ac7539baa7493",
-      "textLength": 16073
+      "textHash": "f3ec0468e96168110826d022ceb0ec973f71bdb142a86182b30d2c438a0e500e",
+      "textLength": 16124
     },
     {
       "filename": "pricing-pipeline-v6.06.pdf",
@@ -69,8 +69,8 @@
       "title": "Pricing Pipeline Changelog",
       "version": "6.06",
       "urn": "urn:pharos:methodology:pricing-pipeline@v6.06",
-      "textHash": "867c5644ce119ccd60092bac8bc515221d69b72db71943543b06ad41211e40ed",
-      "textLength": 58622
+      "textHash": "f6c5d6c92607e42d84ca9b6a48887b2017b4795fd4a8f00be67b68efc449204f",
+      "textLength": 58673
     },
     {
       "filename": "scoring-v7.26.pdf",
@@ -79,8 +79,8 @@
       "title": "Safety Scores Changelog",
       "version": "7.26",
       "urn": "urn:pharos:methodology:scoring@v7.26",
-      "textHash": "46f58c0cd054bfeca807bed319b108b10d3f1c177338ba30416b4b5e43846dec",
-      "textLength": 41981
+      "textHash": "9ee9cadd0637daaaede45bc978f62fa56ad079905afc99d7eb6038a97c4934d0",
+      "textLength": 42032
     },
     {
       "filename": "stability-index-v3.3.pdf",
@@ -89,8 +89,8 @@
       "title": "Stability Index (PSI) Changelog",
       "version": "3.3",
       "urn": "urn:pharos:methodology:stability-index@v3.3",
-      "textHash": "56f1a1acc4c18dbe38f2306f20b31eb9d8fb07e3cdc74fbadc749c7aa39e2a5b",
-      "textLength": 6273
+      "textHash": "0391bebd52f5ff0f3e7f3a6242a9fd7d8d1fd89012de5cf3c47339d45e44214a",
+      "textLength": 6324
     },
     {
       "filename": "yield-v8.17.pdf",
@@ -99,8 +99,8 @@
       "title": "Yield Intelligence Changelog",
       "version": "8.17",
       "urn": "urn:pharos:methodology:yield@v8.17",
-      "textHash": "abbf56d07eb6fb9d684743d0cded8d1825bc7c8a7e808158b97f84891df3569d",
-      "textLength": 51163
+      "textHash": "e3d5bd5e72efa201531ae03edf51ad1bac54840a532c777ffa013e255220468a",
+      "textLength": 51214
     }
   ]
 }
