@@ -3,49 +3,48 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shar
 import type { Env } from "../lib/env";
 import { runScheduledSlotWithFence } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
-import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
-import { runStatusSelfCheckSlot } from "./scheduled/status-self-check";
-import { runSixHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
-import { runHalfHourlyMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
-import { runTwoHourlyDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
-import { runHalfHourlyMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
-import { runHalfHourlySlot } from "./scheduled/half-hourly";
-import { runHalfHourlyChartsSlot } from "./scheduled/half-hourly-charts";
-import { runDewsPsiSlot } from "./scheduled/dews-psi";
-import { runFourHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
-import { runHourlyYieldSlot } from "./scheduled/hourly-yield";
-import { runYieldSupplementalSlot } from "./scheduled/yield-supplemental";
-import { runFiveMinuteTelegramSlot } from "./scheduled/five-minute-telegram";
-import { runDigestTriggerPollSlot } from "./scheduled/digest-trigger-poll";
-import { runDaily0300Slot } from "./scheduled/daily-0300";
-import { runDaily0800Slot } from "./scheduled/daily-0800";
-import { runDaily0805Slot } from "./scheduled/daily-0805";
-import { runDaily0810Slot } from "./scheduled/daily-0810";
-import { runMonthlyYieldAuditSlot } from "./scheduled/monthly-yield-audit";
 
 type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
+type SlotRunnerLoader = () => Promise<SlotRunner>;
 
-export const SLOT_RUNNER_BY_KEY = {
-  quarterHourly: runQuarterHourlySlot,
-  statusSelfCheckOffset: runStatusSelfCheckSlot,
-  sixHourlyBlacklist: runSixHourlyBlacklistSlot,
-  halfHourlyMintBurnCritical: runHalfHourlyMintBurnCriticalSlot,
-  twoHourlyDexDiscovery: runTwoHourlyDexDiscoverySlot,
-  halfHourlyMintBurnExtended: runHalfHourlyMintBurnExtendedSlot,
-  halfHourlyOffset: runHalfHourlySlot,
-  halfHourlyChartsOffset: runHalfHourlyChartsSlot,
-  dewsPsiOffset: runDewsPsiSlot,
-  fourHourlyReserveSync: runFourHourlyReserveSyncSlot,
-  hourlyYieldSync: runHourlyYieldSlot,
-  fourHourlyYieldSupplemental: runYieldSupplementalSlot,
-  fiveMinuteTelegramAlerts: runFiveMinuteTelegramSlot,
-  digestTriggerPoll: runDigestTriggerPollSlot,
-  daily0300Utc: runDaily0300Slot,
-  daily0800Utc: runDaily0800Slot,
-  daily0805Utc: runDaily0805Slot,
-  daily0810Utc: runDaily0810Slot,
-  monthlyYieldAudit: runMonthlyYieldAuditSlot,
-} satisfies Record<ScheduledRunnerKey, SlotRunner>;
+export const SLOT_RUNNER_LOADER_BY_KEY = {
+  quarterHourly: () => import("./scheduled/quarter-hourly").then((mod) => mod.runQuarterHourlySlot),
+  statusSelfCheckOffset: () => import("./scheduled/status-self-check").then((mod) => mod.runStatusSelfCheckSlot),
+  sixHourlyBlacklist: () => import("./scheduled/hourly-blacklist").then((mod) => mod.runSixHourlyBlacklistSlot),
+  halfHourlyMintBurnCritical: () =>
+    import("./scheduled/twenty-minute-mint-burn-critical").then((mod) => mod.runHalfHourlyMintBurnCriticalSlot),
+  twoHourlyDexDiscovery: () =>
+    import("./scheduled/thirty-minute-dex-discovery").then((mod) => mod.runTwoHourlyDexDiscoverySlot),
+  halfHourlyMintBurnExtended: () =>
+    import("./scheduled/twenty-minute-mint-burn-extended").then((mod) => mod.runHalfHourlyMintBurnExtendedSlot),
+  halfHourlyOffset: () => import("./scheduled/half-hourly").then((mod) => mod.runHalfHourlySlot),
+  halfHourlyChartsOffset: () =>
+    import("./scheduled/half-hourly-charts").then((mod) => mod.runHalfHourlyChartsSlot),
+  dewsPsiOffset: () => import("./scheduled/dews-psi").then((mod) => mod.runDewsPsiSlot),
+  fourHourlyReserveSync: () =>
+    import("./scheduled/hourly-live-reserves").then((mod) => mod.runFourHourlyReserveSyncSlot),
+  hourlyYieldSync: () => import("./scheduled/hourly-yield").then((mod) => mod.runHourlyYieldSlot),
+  fourHourlyYieldSupplemental: () =>
+    import("./scheduled/yield-supplemental").then((mod) => mod.runYieldSupplementalSlot),
+  fiveMinuteTelegramAlerts: () =>
+    import("./scheduled/five-minute-telegram").then((mod) => mod.runFiveMinuteTelegramSlot),
+  digestTriggerPoll: () => import("./scheduled/digest-trigger-poll").then((mod) => mod.runDigestTriggerPollSlot),
+  daily0300Utc: () => import("./scheduled/daily-0300").then((mod) => mod.runDaily0300Slot),
+  daily0800Utc: () => import("./scheduled/daily-0800").then((mod) => mod.runDaily0800Slot),
+  daily0805Utc: () => import("./scheduled/daily-0805").then((mod) => mod.runDaily0805Slot),
+  daily0810Utc: () => import("./scheduled/daily-0810").then((mod) => mod.runDaily0810Slot),
+  monthlyYieldAudit: () => import("./scheduled/monthly-yield-audit").then((mod) => mod.runMonthlyYieldAuditSlot),
+} satisfies Record<ScheduledRunnerKey, SlotRunnerLoader>;
+
+export const SLOT_RUNNER_BY_KEY = Object.fromEntries(
+  Object.entries(SLOT_RUNNER_LOADER_BY_KEY).map(([key, loadRunner]) => [
+    key,
+    async (runtime: ScheduledRuntimeContext) => {
+      const runner = await loadRunner();
+      return runner(runtime);
+    },
+  ]),
+) as Record<ScheduledRunnerKey, SlotRunner>;
 
 export const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = Object.fromEntries(
   Object.values(SCHEDULED_SLOT_PLANS_BY_SCHEDULE).map((plan) => [plan.schedule, SLOT_RUNNER_BY_KEY[plan.runnerKey]]),
