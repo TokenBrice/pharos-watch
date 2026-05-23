@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { ReferenceLine } from "recharts";
 import { cn } from "@/lib/utils";
 import type { ChartAnnotation, ChartAnnotationKind } from "@shared/types/chart-annotation";
@@ -142,6 +143,14 @@ export function ChartAnnotationLegend({
             ) : (
               <span className="inline-flex items-baseline gap-1.5">{content}</span>
             )}
+            {a.caseStudySlug ? (
+              <Link
+                href={`/learn/case-studies/${a.caseStudySlug}/`}
+                className="pharos-focus-ring shrink-0 rounded-sm font-medium text-frost-blue underline-offset-2 hover:underline"
+              >
+                Case study &rarr;
+              </Link>
+            ) : null}
           </li>
         );
       })}

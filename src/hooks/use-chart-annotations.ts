@@ -9,6 +9,7 @@ import type {
   ChartAnnotationKind,
 } from "@shared/types/chart-annotation";
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
+import { caseStudySlugForEvent } from "@/app/learn/case-studies/content";
 import { CRON_1H } from "@/lib/cron-intervals";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";
 import { useApiQueryWithMeta } from "./use-api-query";
@@ -162,6 +163,11 @@ export function useChartAnnotations(
     }
 
     annotations.sort((a, b) => a.ts - b.ts);
-    return { data: annotations, isLoading: query.isLoading };
+    // Link any pin that falls inside a case study's event window to that study.
+    const linked = annotations.map((a) => {
+      const slug = caseStudySlugForEvent(stablecoinId, a.ts);
+      return slug ? { ...a, caseStudySlug: slug } : a;
+    });
+    return { data: linked, isLoading: query.isLoading };
   }, [enabled, stablecoinId, fromMs, toMs, query.data, query.isLoading]);
 }

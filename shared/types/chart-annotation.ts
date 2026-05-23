@@ -29,4 +29,10 @@ export interface ChartAnnotation {
   severity?: "low" | "med" | "high";
   /** Optional primary-source URL (issuer post-mortem, regulator filing, etc.). */
   href?: string;
+  /**
+   * Optional slug of the Pharos case study covering this event. Resolved at
+   * render time from the case-study event windows (not stored in curated data),
+   * so the chart legend can link the pin to its long-form retrospective.
+   */
+  caseStudySlug?: string;
 }
