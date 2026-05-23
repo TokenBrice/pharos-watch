@@ -38,6 +38,7 @@ describe("client registry field contract", () => {
       canBeBlacklistedSource: "issuer docs",
       commodityOunces: null,
       infrastructures: ["circle"],
+      mica: null,
       reserves: [{ asset: "cash" }],
     };
 
