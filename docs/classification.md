@@ -53,6 +53,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `proofOfReserves?: ProofOfReserves` — proof of reserves configuration
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
+- `mica?: MicaProfile` — EU MiCA authorization status, EMT/ART token type, competent authority, issuer entity, significance flag, and sourced register/reference links. See [mica-tracker.md](./mica-tracker.md).
 - `contracts?: ContractDeployment[]` — on-chain contract addresses per chain
 - `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
 - `canBeBlacklisted?: boolean | "possible" | "dilutable"` — freeze/blacklist/dilution capability (reported descriptively)

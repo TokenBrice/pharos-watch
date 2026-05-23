@@ -2,7 +2,7 @@
 
 **Status: shipped.** The `/mica/` route and the `mica` metadata extension are live. This document began as the pre-build spec and now serves as the as-built reference; the implementation follows it, with two deltas: the status label/color map lives in a dedicated `shared/lib/mica.ts` (not `shared/lib/classification.ts`), and the initial register-verified backfill covers 24 coins (expandable via the `mica-research` skill).
 
-The tracker maps every tracked stablecoin to its standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing).
+The tracker maps every tracked stablecoin to its standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing-non-goals).
 
 The data foundation already half-exists: 225 coins carry a `jurisdiction` block, EU regulators (ACPR, DNB, BaFin, MFSA, AMF) and `"EMI (MiCA)"` licenses appear as free text, and ~23 EUR-pegged coins plus the major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort.
 
@@ -132,14 +132,14 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 - `src/app/mica/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ. (frontend agent)
 - `src/app/mica/client.tsx` — filters + table, reads the bundled registry through `@shared/lib/stablecoins/client-registry`. (frontend agent)
-- `src/app/mica/model.ts` — `buildMicaViewModel()` mapping registry rows → table rows, filtering out coins with no `mica`. (frontend agent)
+- `src/app/mica/model.ts` — `buildMicaViewModel()` mapping registry rows → table rows, filtering out coins with no `mica` and frozen assets whose MiCA metadata is historical. (frontend agent)
 - `src/app/mica/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
 
-**Columns:** coin · MiCA status badge · token type (EMT/ART) · competent authority · authorized entity · `significant` marker · register link.
+**Columns:** coin · MiCA status badge · token type (EMT/ART) · competent authority · authorized entity · `significant` marker · source links.
 
-**Filters (URL-encoded, via `useUrlFilters`):** `status`, `tokenType`, `pegCurrency`, free-text search. Example: `/mica/?status=authorized&peg=EUR`.
+**Filters (URL-encoded, via `useUrlFilters`):** `status`, `type`, `peg`, and free-text search as `q`. Example: `/mica/?status=authorized&peg=EUR`. The client also accepts legacy `tokenType` and `pegCurrency` query keys as read-only aliases.
 
-**Status color tokens:** add to the classification color set (`shared/lib/classification.ts`) rather than defining locally — `authorized` → healthy/green, `pending`/`transitional` → warning/amber, `non-compliant` → danger/red, `out-of-scope` → muted. (See `CLAUDE.md`: classification labels/colors are centralized.)
+**Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
 **Navigation:** add one `NavItem` to `NAV_GROUPS` in `src/lib/nav-config.ts`, most naturally under the `monitor` (MONITOR) group, e.g. `{ href: "/mica/", label: "MiCA Tracker", icon: ScrollText | <new>, description: "EU MiCA authorization status across tracked stablecoins" }`. The sidebar and command palette auto-index from `NAV_GROUPS`.
 

@@ -139,6 +139,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/learn/mechanisms/[archetype]/`                | [learn-mechanisms-page.md](./learn-mechanisms-page.md), [classification.md](./classification.md)                                                      |
 | `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
 | `/methodology/`                                 | [methodology-page.md](./methodology-page.md)                                                                                                          |
+| `/mica/`                                        | [mica-tracker.md](./mica-tracker.md)                                                                                                                  |
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
