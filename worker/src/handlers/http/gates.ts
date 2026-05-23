@@ -13,7 +13,11 @@ import {
   type AuthenticatedApiKey,
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
+  isApiKeyRateLimitDependencyCircuitOpen,
+  recordApiKeyRateLimitDependencyFailure,
+  recordApiKeyRateLimitDependencySuccess,
   recordApiKeyUsage,
+  resolveIsolateFallbackApiKeyRateLimit,
 } from "../../lib/api-keys";
 import {
   hasValidAdminCredential,
@@ -152,23 +156,47 @@ export async function evaluateAccessGate(
   }
 
   const canUseIsolateFallbackRateLimit = isCacheableGetRequest(request, url);
+  const isolateFallbackRateLimit = resolveIsolateFallbackApiKeyRateLimit(apiKeyAuth.key.rateLimitPerMinute);
   let rateLimitResponse: Response | null;
-  try {
-    rateLimitResponse = await checkApiKeyRateLimit(
-      env.DB,
-      apiKeyAuth.key.id,
-      apiKeyAuth.key.rateLimitPerMinute,
-    );
-  } catch (err) {
+  if (isApiKeyRateLimitDependencyCircuitOpen()) {
     if (canUseIsolateFallbackRateLimit) {
-      console.warn("[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:", err);
+      console.warn("[public-api-auth] API key rate-limit dependency circuit open; using isolate-local fallback limiter");
       rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
+        apiKeyAuth.key.id,
+        isolateFallbackRateLimit,
+      );
+    } else {
+      console.warn("[public-api-auth] API key rate-limit dependency circuit open; failing closed");
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+    }
+  } else {
+    try {
+      rateLimitResponse = await checkApiKeyRateLimit(
+        env.DB,
         apiKeyAuth.key.id,
         apiKeyAuth.key.rateLimitPerMinute,
       );
-    } else {
-      console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+      recordApiKeyRateLimitDependencySuccess();
+    } catch (err) {
+      const circuit = recordApiKeyRateLimitDependencyFailure();
+      if (canUseIsolateFallbackRateLimit) {
+        console.warn(
+          "[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:",
+          {
+            consecutiveFailures: circuit.consecutiveFailures,
+            circuitOpened: circuit.opened,
+            openUntilMs: circuit.openUntilMs || null,
+            error: err,
+          },
+        );
+        rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
+          apiKeyAuth.key.id,
+          isolateFallbackRateLimit,
+        );
+      } else {
+        console.warn("[public-api-auth] API key rate-limit dependency unavailable:", err);
+        return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+      }
     }
   }
   if (rateLimitResponse) {

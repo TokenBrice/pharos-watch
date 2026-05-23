@@ -79,6 +79,11 @@ interface IsolateLocalApiKeyRateLimitEntry {
   count: number;
 }
 
+interface ApiKeyRateLimitDependencyCircuitState {
+  consecutiveFailures: number;
+  openUntilMs: number;
+}
+
 export interface ParsedApiKeyToken {
   prefix: string;
   secret: string;
@@ -167,6 +172,10 @@ const _ak = new IsolateLocalState(() => ({
   apiKeyCache: new Map<string, CachedApiKeyEntry>(),
   apiKeyLastUsageUpdateById: new Map<number, number>(),
   apiKeyFallbackRateLimitById: new Map<number, IsolateLocalApiKeyRateLimitEntry>(),
+  apiKeyRateLimitDependencyCircuit: {
+    consecutiveFailures: 0,
+    openUntilMs: 0,
+  } as ApiKeyRateLimitDependencyCircuitState,
   lastApiKeyRateLimitPruneBucket: null as number | null,
   pendingApiKeyPrune: null as Promise<void> | null,
 }));

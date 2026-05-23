@@ -11,10 +11,14 @@ import {
   getApiKeyAuthCacheTtlMs,
   getApiKeyLocalRateLimitMaxEntries,
   getApiKeyUsageUpdateCacheMaxEntries,
+  isApiKeyRateLimitDependencyCircuitOpen,
   listApiKeys,
   parseApiKeyToken,
+  recordApiKeyRateLimitDependencyFailure,
+  recordApiKeyRateLimitDependencySuccess,
   resetApiKeyStateForTests,
   recordApiKeyUsage,
+  resolveIsolateFallbackApiKeyRateLimit,
   rotateApiKey,
   updateApiKey,
 } from "../api-keys";
@@ -753,6 +757,38 @@ describe("api key helpers", () => {
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 600)).toBeNull();
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 601)).toBeNull();
     expect(checkIsolateLocalApiKeyRateLimit(7, 2, 602)?.status).toBe(429);
+  });
+
+  it("opens and resets the API key rate-limit dependency circuit", () => {
+    expect(isApiKeyRateLimitDependencyCircuitOpen(1_000)).toBe(false);
+
+    expect(recordApiKeyRateLimitDependencyFailure(1_000)).toMatchObject({
+      consecutiveFailures: 1,
+      opened: false,
+    });
+    expect(recordApiKeyRateLimitDependencyFailure(1_001)).toMatchObject({
+      consecutiveFailures: 2,
+      opened: false,
+    });
+    const opened = recordApiKeyRateLimitDependencyFailure(1_002);
+    expect(opened).toMatchObject({
+      consecutiveFailures: 3,
+      opened: true,
+    });
+    expect(opened.openUntilMs).toBe(61_002);
+    expect(isApiKeyRateLimitDependencyCircuitOpen(61_001)).toBe(true);
+    expect(isApiKeyRateLimitDependencyCircuitOpen(61_002)).toBe(false);
+
+    recordApiKeyRateLimitDependencySuccess();
+    expect(getApiKeyRuntimeState().apiKeyRateLimitDependencyCircuit).toEqual({
+      consecutiveFailures: 0,
+      openUntilMs: 0,
+    });
+  });
+
+  it("caps the dependency fallback limiter to the self-serve quota without raising stricter keys", () => {
+    expect(resolveIsolateFallbackApiKeyRateLimit(120)).toBe(30);
+    expect(resolveIsolateFallbackApiKeyRateLimit(10)).toBe(10);
   });
 
   it("caps the isolate-local API key auth cache", async () => {

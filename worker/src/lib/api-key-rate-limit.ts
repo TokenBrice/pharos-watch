@@ -1,4 +1,10 @@
 import {
+  API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
+  API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
+  CIRCUIT_OPEN_THRESHOLD,
+  SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
+} from "@shared/lib/ops-limits";
+import {
   capApiKeyMapEntries,
   getApiKeyLocalRateLimitMaxEntries,
   getApiKeyRateLimitPruneWindowMultiplier,
@@ -10,6 +16,55 @@ import {
   type AuthenticatedApiKey,
 } from "./api-key-core";
 import { errorResponse } from "./api-response";
+
+const API_KEY_RATE_LIMIT_CIRCUIT_COOLDOWN_MS = API_KEY_DEPENDENCY_RETRY_AFTER_SEC * 1000;
+
+export interface ApiKeyRateLimitDependencyCircuitSnapshot {
+  consecutiveFailures: number;
+  openUntilMs: number;
+  opened: boolean;
+}
+
+export function isApiKeyRateLimitDependencyCircuitOpen(nowMs = Date.now()): boolean {
+  return getApiKeyRuntimeState().apiKeyRateLimitDependencyCircuit.openUntilMs > nowMs;
+}
+
+export function recordApiKeyRateLimitDependencySuccess(): void {
+  const circuit = getApiKeyRuntimeState().apiKeyRateLimitDependencyCircuit;
+  circuit.consecutiveFailures = 0;
+  circuit.openUntilMs = 0;
+}
+
+export function recordApiKeyRateLimitDependencyFailure(
+  nowMs = Date.now(),
+): ApiKeyRateLimitDependencyCircuitSnapshot {
+  const circuit = getApiKeyRuntimeState().apiKeyRateLimitDependencyCircuit;
+  if (circuit.openUntilMs > nowMs) {
+    return {
+      consecutiveFailures: circuit.consecutiveFailures,
+      openUntilMs: circuit.openUntilMs,
+      opened: true,
+    };
+  }
+
+  circuit.consecutiveFailures += 1;
+  if (circuit.consecutiveFailures >= CIRCUIT_OPEN_THRESHOLD) {
+    circuit.openUntilMs = nowMs + API_KEY_RATE_LIMIT_CIRCUIT_COOLDOWN_MS;
+  }
+
+  return {
+    consecutiveFailures: circuit.consecutiveFailures,
+    openUntilMs: circuit.openUntilMs,
+    opened: circuit.openUntilMs > nowMs,
+  };
+}
+
+export function resolveIsolateFallbackApiKeyRateLimit(limit: number): number {
+  return Math.max(
+    API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
+    Math.min(limit, SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE),
+  );
+}
 
 export async function checkApiKeyRateLimit(
   db: ApiKeyDb,

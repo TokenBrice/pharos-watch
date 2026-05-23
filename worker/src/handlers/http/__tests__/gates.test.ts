@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
   verifyAccessJwt: vi.fn(),
@@ -7,7 +7,11 @@ const { verifyAccessJwt, apiKeyMocks } = vi.hoisted(() => ({
     authenticateApiKeyFromFreshCache: vi.fn(),
     checkApiKeyRateLimit: vi.fn(),
     checkIsolateLocalApiKeyRateLimit: vi.fn(),
+    isApiKeyRateLimitDependencyCircuitOpen: vi.fn(),
+    recordApiKeyRateLimitDependencyFailure: vi.fn(),
+    recordApiKeyRateLimitDependencySuccess: vi.fn(),
     recordApiKeyUsage: vi.fn(),
+    resolveIsolateFallbackApiKeyRateLimit: vi.fn(),
   },
 }));
 
@@ -21,7 +25,11 @@ vi.mock("../../../lib/api-keys", () => ({
   authenticateApiKeyFromFreshCache: apiKeyMocks.authenticateApiKeyFromFreshCache,
   checkApiKeyRateLimit: apiKeyMocks.checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit: apiKeyMocks.checkIsolateLocalApiKeyRateLimit,
+  isApiKeyRateLimitDependencyCircuitOpen: apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen,
+  recordApiKeyRateLimitDependencyFailure: apiKeyMocks.recordApiKeyRateLimitDependencyFailure,
+  recordApiKeyRateLimitDependencySuccess: apiKeyMocks.recordApiKeyRateLimitDependencySuccess,
   recordApiKeyUsage: apiKeyMocks.recordApiKeyUsage,
+  resolveIsolateFallbackApiKeyRateLimit: apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit,
 }));
 
 import {
@@ -49,6 +57,16 @@ function makeEnv() {
 }
 
 describe("evaluateAccessGate", () => {
+  beforeEach(() => {
+    apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValue(false);
+    apiKeyMocks.recordApiKeyRateLimitDependencyFailure.mockReturnValue({
+      consecutiveFailures: 1,
+      openUntilMs: 0,
+      opened: false,
+    });
+    apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit.mockImplementation((limit: number) => Math.min(limit, 30));
+  });
+
   afterEach(() => {
     verifyAccessJwt.mockReset();
     for (const mock of Object.values(apiKeyMocks)) {
@@ -132,6 +150,7 @@ describe("evaluateAccessGate", () => {
     expect(result.apiKey).toBe(validKey);
     expect(result.requestLane).toBe("public-api");
     expect(apiKeyMocks.checkApiKeyRateLimit).toHaveBeenCalledWith(db, 7, 60);
+    expect(apiKeyMocks.recordApiKeyRateLimitDependencySuccess).toHaveBeenCalled();
     expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledWith(db, validKey, "/api/stablecoins");
   });
 
@@ -152,10 +171,64 @@ describe("evaluateAccessGate", () => {
     } as never);
 
     expect(result.response).toBeNull();
-    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
+    expect(apiKeyMocks.recordApiKeyRateLimitDependencyFailure).toHaveBeenCalled();
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
     expect(warn).toHaveBeenCalledWith(
       "[public-api-auth] API key rate-limit dependency unavailable; using isolate-local fallback limiter:",
-      expect.any(Error),
+      expect.objectContaining({
+        consecutiveFailures: 1,
+        circuitOpened: false,
+      }),
+    );
+    warn.mockRestore();
+  });
+
+  it("uses the isolate-local limiter while the public API rate-limit circuit is open", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValueOnce(true);
+    apiKeyMocks.checkIsolateLocalApiKeyRateLimit.mockReturnValueOnce(null);
+    apiKeyMocks.recordApiKeyUsage.mockResolvedValueOnce(undefined);
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: {} as D1Database,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response).toBeNull();
+    expect(apiKeyMocks.checkApiKeyRateLimit).not.toHaveBeenCalled();
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
+    expect(warn).toHaveBeenCalledWith(
+      "[public-api-auth] API key rate-limit dependency circuit open; using isolate-local fallback limiter",
+    );
+    warn.mockRestore();
+  });
+
+  it("fails closed for non-cacheable public API requests while the rate-limit circuit is open", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });
+    apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValueOnce(true);
+    const request = new Request("https://api.pharos.watch/api/stablecoins", {
+      method: "POST",
+      headers: { "X-API-Key": "pharos_test_valid" },
+    });
+
+    const result = await evaluateAccessGate(request, new URL(request.url), {
+      ...makeEnv(),
+      DB: {} as D1Database,
+      API_KEY_HASH_PEPPER: "pepper",
+    } as never);
+
+    expect(result.response?.status).toBe(503);
+    expect(apiKeyMocks.checkApiKeyRateLimit).not.toHaveBeenCalled();
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).not.toHaveBeenCalled();
+    expect(apiKeyMocks.recordApiKeyUsage).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      "[public-api-auth] API key rate-limit dependency circuit open; failing closed",
     );
     warn.mockRestore();
   });

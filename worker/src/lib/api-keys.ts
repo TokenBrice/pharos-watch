@@ -13,7 +13,11 @@ export {
 export {
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
+  isApiKeyRateLimitDependencyCircuitOpen,
+  recordApiKeyRateLimitDependencyFailure,
+  recordApiKeyRateLimitDependencySuccess,
   recordApiKeyUsage,
+  resolveIsolateFallbackApiKeyRateLimit,
 } from "./api-key-rate-limit";
 export {
   getApiKeyAuthCacheMaxEntries,
