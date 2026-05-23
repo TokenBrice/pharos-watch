@@ -564,7 +564,7 @@ The simulated scenarios are:
 
 The script reports target chats, message chunks, pending enqueues, estimated drain time, and rough D1 read/write statement counts using the current sender budget: 3,600 fresh attempts per run, 900 pending drain attempts per run, 5-minute cron cadence, 14-minute dispatch timeout, Telegram's ordinary 30 msg/sec broadcast guidance, a conservative p95 send-latency/D1-write pacing model, and 1-hour risk-alert pending TTL. It also replays the Telegram table migrations into local SQLite and runs `EXPLAIN QUERY PLAN` checks for fan-out, pending drain, pulse/status aggregates, and the current active-watcher history fallback. Direct/global fan-out and pending drain are index-gated; preset and fallback aggregate scans are marked `REVIEW`.
 
-By default the load script is informational for SLOs and fails only on critical query-plan regressions. Use `npm run check:telegram-load -- --enforce-target-slo` during a sender-capacity rollout when the 5,000-watcher target is expected to meet the normal under-15-minute risk-alert SLO.
+The package-level `npm run check:telegram-load` command is blocking: it passes `--enforce-target-slo` and fails when the 5,000-watcher target misses the normal under-15-minute risk-alert SLO. For an advisory local report that only fails critical query-plan regressions, run `tsx scripts/ci/check-telegram-load.ts` directly without `--enforce-target-slo`.
 
 ### Rollout Plan for Higher Capacity
 

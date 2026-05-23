@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";

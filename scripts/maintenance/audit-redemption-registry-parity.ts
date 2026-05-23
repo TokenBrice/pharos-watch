@@ -277,7 +277,7 @@ if (command === "--snapshot" && args[0]) {
   }
   console.log("Redemption registry parity snapshots match.");
 } else {
-  console.error("Usage: tsx scripts/audit-redemption-registry-parity.ts --snapshot <path>");
-  console.error("   or: tsx scripts/audit-redemption-registry-parity.ts --compare <before.json> <after.json>");
+  console.error("Usage: tsx scripts/maintenance/audit-redemption-registry-parity.ts --snapshot <path>");
+  console.error("   or: tsx scripts/maintenance/audit-redemption-registry-parity.ts --compare <before.json> <after.json>");
   process.exit(1);
 }

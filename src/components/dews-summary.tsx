@@ -34,9 +34,6 @@ import {
 } from "@/components/dews-summary-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
-// Re-export pure helpers consumed by tests and sibling components
-export { computeBandCounts, getAggregateFreshnessTimestamp, resolveRadarClick } from "@/components/dews-summary-model";
-
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
 
 // ---------------------------------------------------------------------------

@@ -20,7 +20,7 @@ import {
   fetchHistoricalSecondaryFxRates,
   buildCommodityMedianSeriesFromCg,
   type CommodityPeg,
-} from "../backfill-fx";
+} from "../../lib/backfill-fx";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 import {
   parseSupplyData,

@@ -40,7 +40,7 @@ export type FreezeWatchPageFilters = {
 
 export function parseFreezeWatchPageFilters(search: string): FreezeWatchPageFilters {
   const params = new URLSearchParams(search);
-  const rawStablecoin = params.get("stablecoin") ?? "all";
+  const rawStablecoin = params.get("stablecoin") ?? params.get("coin") ?? "all";
   const rawChain = params.get("chain") ?? params.get("chainId") ?? "all";
   const rawEventType = params.get("event") ?? "all";
   const rawSortBy = params.get("sortBy") ?? "date";

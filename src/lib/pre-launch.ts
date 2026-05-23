@@ -25,15 +25,6 @@ export const PHASE_BADGE: Record<LaunchPhase, string> = {
     "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
 };
 
-/** Phase → ring color around logo node (static for Tailwind scanner). */
-export const PHASE_RING: Record<LaunchPhase, string> = {
-  announced: "ring-amber-500/40 hover:ring-amber-500/70",
-  testnet: "ring-indigo-500/40 hover:ring-indigo-500/70",
-  auditing: "ring-violet-500/40 hover:ring-violet-500/70",
-  beta: "ring-emerald-500/40 hover:ring-emerald-500/70",
-  "launching-soon": "ring-sky-500/40 hover:ring-sky-500/70",
-};
-
 // ---------------------------------------------------------------------------
 // Milestone display constants
 // ---------------------------------------------------------------------------
@@ -150,4 +141,3 @@ export function dateScore(raw?: string): number {
   if (y) return Number(y[1]) * 13 + 13;
   return 999999;
 }
-

@@ -24,6 +24,14 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     paths: ["scripts/ci/check-agent-doc-sync.mjs"],
   },
   {
+    command: "npm run check:agent-skill-symlinks",
+    deployImpact: "validation-only",
+    paths: [
+      "scripts/ci/check-agent-skill-symlinks.mjs",
+      "scripts/lib/agent-skill-symlink-waivers.json",
+    ],
+  },
+  {
     command: "npm run check:attestor-tier-coverage",
     deployImpact: "full",
     paths: ["scripts/ci/check-attestor-tier-coverage.ts"],
@@ -32,6 +40,11 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     command: "npm run check:cron-abort-contract",
     deployImpact: "full",
     paths: ["scripts/ci/check-cron-abort-contract.mjs"],
+  },
+  {
+    command: "npm run check:client-registry-imports",
+    deployImpact: "pages",
+    paths: ["scripts/ci/check-client-registry-imports.mjs"],
   },
   {
     command: "npm run check:cron-connections",
@@ -125,6 +138,11 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     command: "npm run check:supply-helper-usage",
     deployImpact: "full",
     paths: ["scripts/ci/check-supply-helper-usage.mjs"],
+  },
+  {
+    command: "npm run check:script-entrypoints",
+    deployImpact: "validation-only",
+    paths: ["scripts/ci/check-script-entrypoints.mjs"],
   },
   { command: "npm run check:unused-code", deployImpact: "full", paths: ["scripts/ci/check-unused-code.mjs"] },
   {
@@ -364,6 +382,12 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
 
 export const GENERATED_ARTIFACT_REGISTRY = [
   {
+    id: "agent-code-map",
+    checkCommand: "node scripts/maintenance/generate-agent-code-map.mjs --check",
+    command: "node scripts/maintenance/generate-agent-code-map.mjs",
+    script: "scripts/maintenance/generate-agent-code-map.mjs",
+  },
+  {
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
@@ -420,10 +444,16 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-llms-txt.ts",
   },
   {
-    id: "stablecoin-frozen-registry",
-    checkCommand: "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
-    command: "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
-    script: "scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
+    id: "stablecoin-prevalidated-registry",
+    checkCommand: "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
+    command: "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
+    script: "scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
+  },
+  {
+    id: "legacy-stablecoin-redirects",
+    checkCommand: "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
+    command: "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
+    script: "scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
   },
   {
     id: "stablecoin-client-registry",
@@ -444,6 +474,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/build-og-editorial.mjs",
   },
   {
+    id: "og-learn",
+    checkCommand: "node scripts/maintenance/build-og-learn-images.mjs --check",
+    command: "node scripts/maintenance/build-og-learn-images.mjs",
+    script: "scripts/maintenance/build-og-learn-images.mjs",
+  },
+  {
     id: "og-case-studies",
     checkCommand: "node scripts/maintenance/build-og-case-studies.mjs --check",
     command: "node scripts/maintenance/build-og-case-studies.mjs",
@@ -462,6 +498,6 @@ export function buildGeneratedArtifactCommands({ check = false } = {}) {
 
 export function getNoncriticalTestGeneratedPrerequisites() {
   return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.noncriticalTestPrerequisite === true).map(
-    (artifact) => artifact.script,
+    (artifact) => artifact.checkCommand,
   );
 }

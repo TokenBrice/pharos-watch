@@ -14,7 +14,7 @@ interface PegReferenceInputs {
   pegType: string | undefined;
   commodityOunces?: number;
   fallbackRates?: Record<string, number>;
-  metaById?: Map<string, StablecoinMeta>;
+  metaById?: ReadonlyMap<string, Pick<StablecoinMeta, "commodityOunces">>;
 }
 
 interface PegReferenceContext {

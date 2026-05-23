@@ -176,6 +176,7 @@ describe("StablecoinDetailClient", () => {
     const { container } = render(
       <StablecoinDetailClient
         id={coin.id}
+        coin={coin}
         summary={null}
         staticCoin={buildStablecoinStaticMeta(coin)}
         staticProfileContent={<section data-testid="static-profile">Static stablecoin profile</section>}
@@ -190,7 +191,7 @@ describe("StablecoinDetailClient", () => {
   it("renders the parent variants card outside the overview section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = render(
-      <StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
     const overviewSections = container.querySelectorAll("#overview");
@@ -228,7 +229,7 @@ describe("StablecoinDetailClient", () => {
     }));
 
     const { container } = render(
-      <StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
     const overviewSections = container.querySelectorAll("#overview");

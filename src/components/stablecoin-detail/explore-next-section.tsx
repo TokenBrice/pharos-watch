@@ -12,8 +12,8 @@ import {
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
-import { buildLiveCompareUrl } from "@/lib/compare-pages";
-import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl, buildInfrastructureTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
+import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl, buildInfrastructureTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CASE_STUDY_BY_COIN_ID } from "@/app/learn/case-studies/content";

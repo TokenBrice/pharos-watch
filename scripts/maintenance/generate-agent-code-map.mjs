@@ -5,11 +5,12 @@ import { dirname, join, relative } from "node:path";
 
 const ROOT = process.cwd();
 const OUTPUT = "docs/agent-code-map.md";
+const CHECK = process.argv.includes("--check");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".json", ".css"]);
-const SKIP_PARTS = new Set(["node_modules", ".next", "out", "coverage", ".git", ".wrangler", ".cache"]);
+const SKIP_PARTS = new Set(["node_modules", ".next", "out", ".git", ".wrangler", ".cache"]);
 
 const SECTIONS = [
-  { title: "Frontend routes", root: "src/app", maxFiles: 120, include: (file) => /\/(page|client|layout|error|not-found|robots|sitemap)\.(tsx|ts)$/.test(file) },
+  { title: "Frontend routes", root: "src/app", maxFiles: 180, include: (file) => /\/(page|client|layout|error|loading|not-found|robots|sitemap)\.(tsx|ts)$/.test(file) },
   { title: "Frontend hooks", root: "src/hooks", maxFiles: 50, include: sourceFile },
   { title: "Frontend library", root: "src/lib", maxFiles: 50, include: sourceFile },
   { title: "Key components", root: "src/components", maxFiles: 40, include: (file) => sourceFile(file) && !file.includes("/ui/") },
@@ -183,7 +184,19 @@ for (const section of SECTIONS) {
   lines.push("");
 }
 
-mkdirSync(dirname(join(ROOT, OUTPUT)), { recursive: true });
-writeFileSync(join(ROOT, OUTPUT), `${lines.join("\n").trimEnd()}\n`);
-const size = statSync(join(ROOT, OUTPUT)).size;
+const outputPath = join(ROOT, OUTPUT);
+const contents = `${lines.join("\n").trimEnd()}\n`;
+
+if (CHECK) {
+  if (!existsSync(outputPath) || readFileSync(outputPath, "utf8") !== contents) {
+    console.error(`${OUTPUT} is out of date. Run \`node scripts/maintenance/generate-agent-code-map.mjs\`.`);
+    process.exit(1);
+  }
+  console.log(`${OUTPUT} is up to date.`);
+  process.exit(0);
+}
+
+mkdirSync(dirname(outputPath), { recursive: true });
+writeFileSync(outputPath, contents);
+const size = statSync(outputPath).size;
 console.log(`Wrote ${OUTPUT} (${size} bytes).`);

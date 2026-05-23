@@ -34,7 +34,7 @@ import {
   OTHER_COIN_FX,
   PEG_TO_FX,
   SECONDARY_PEG_TO_FX,
-} from "./backfill-fx";
+} from "../lib/backfill-fx";
 
 const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_BACKFILL_WINDOW_DAYS = 30;

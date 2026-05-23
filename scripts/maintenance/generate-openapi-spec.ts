@@ -511,7 +511,7 @@ function render() {
 syncGeneratedArtifacts({
   artifacts: [{ path: OUTPUT_PATH, contents: render() }],
   check: CHECK_MODE,
-  staleMessage: "OpenAPI spec is out of date. Run `tsx scripts/generate-openapi-spec.ts`.",
+  staleMessage: "OpenAPI spec is out of date. Run `tsx scripts/maintenance/generate-openapi-spec.ts`.",
   currentMessage: "OpenAPI spec is current",
   writtenMessage: "Generated OpenAPI spec",
 });

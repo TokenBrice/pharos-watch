@@ -1,5 +1,10 @@
 import type { MechanismArchetype, StablecoinMeta } from "../../types";
 
+type MechanismArchetypeMeta = Pick<
+  StablecoinMeta,
+  "archetypeOverride" | "mechanismArchetype" | "variantOf"
+>;
+
 /**
  * Resolve the effective mechanismArchetype for a coin.
  *
@@ -10,8 +15,8 @@ import type { MechanismArchetype, StablecoinMeta } from "../../types";
  * - If the parent is missing from the registry, fall back to the coin's own archetype.
  */
 export function resolveMechanismArchetype(
-  coin: StablecoinMeta,
-  registry: ReadonlyMap<string, StablecoinMeta>,
+  coin: MechanismArchetypeMeta,
+  registry: ReadonlyMap<string, MechanismArchetypeMeta>,
 ): MechanismArchetype | null {
   if (coin.archetypeOverride === true || !coin.variantOf) {
     return coin.mechanismArchetype ?? null;

@@ -224,11 +224,11 @@ The handler explicitly supports `detailProvider === "coingecko"` and `detailProv
 
 Individual stablecoin market cap history. Area chart with time range filtering (7d, 30d, 90d, all). Used on the stablecoin detail page.
 
-### TotalMcapChart
+### HomeAltHero Market-Cap Chart
 
-**File:** `src/components/total-mcap-chart.tsx`
+**File:** `src/components/home-alt-hero.tsx`
 
-Aggregated market cap breakdown. The total series comes from `GET /api/stablecoin-charts`, whose cached historical backbone starts from DefiLlama aggregate chart data but is reconciled with structural supplemental tracked-asset daily history from D1 `supply_history` before publication. The endpoint then appends or replaces the trailing point with a live aggregate from the current `stablecoins` cache so the homepage chart headline matches the KPI card. The named buckets use each coin's cached detail history (`GET /api/stablecoin/:id`) so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The visible stacks are USDT, USDC, `USDS + DAI`, and `Others`.
+Aggregated homepage market-cap breakdown. The total series comes from `GET /api/stablecoin-charts`, whose cached historical backbone starts from DefiLlama aggregate chart data but is reconciled with structural supplemental tracked-asset daily history from D1 `supply_history` before publication. The endpoint then appends or replaces the trailing point with a live aggregate from the current `stablecoins` cache so the homepage chart headline matches the KPI card. The named buckets use per-coin `useSupplyHistory(...)` data and `buildTotalMcapChartRows(...)` in `src/lib/total-mcap-chart.ts` so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The visible stacks are USDT, USDC, `USDS + DAI`, and `Others`.
 
 ### Compare page
 
@@ -289,4 +289,5 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook for `/api/supply-history` |
 | `src/hooks/use-compare-data-model.ts` | Compare-page supply-history queries |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |
-| `src/components/total-mcap-chart.tsx` | Aggregated mcap breakdown chart |
+| `src/components/home-alt-hero.tsx` | Homepage aggregated mcap breakdown chart |
+| `src/lib/total-mcap-chart.ts` | Pure row builder for homepage mcap breakdown stacks |

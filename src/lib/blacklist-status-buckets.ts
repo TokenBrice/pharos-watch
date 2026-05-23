@@ -1,6 +1,9 @@
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
+  CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/client-registry";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 export type BlacklistStatusBucketKey = "yes" | "dilutable" | "upstream" | "possible" | "no";

@@ -8,7 +8,7 @@ import {
   OTHER_COIN_FX,
   COMMODITY_PEGS,
   buildFxLookup,
-} from "../backfill-fx";
+} from "../../lib/backfill-fx";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 import {
   buildBackfillReplayPreview,

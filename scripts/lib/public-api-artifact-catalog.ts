@@ -232,7 +232,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
-    key: "stablecoin-detail-canary",
+    key: "stablecoin-detail",
     path: stablecoinPathTemplate(API_PATHS.stablecoinDetail(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin detail",
     description: "Full per-coin analytics dossier for a canonical Pharos stablecoin ID.",
@@ -244,7 +244,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
-    key: "stablecoin-summary-canary",
+    key: "stablecoin-summary",
     path: stablecoinPathTemplate(API_PATHS.stablecoinSummary(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin summary",
     description: "Lightweight per-coin price and aggregate supply snapshot.",
@@ -256,7 +256,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
-    key: "stablecoin-reserves-canary",
+    key: "stablecoin-reserves",
     path: stablecoinPathTemplate(API_PATHS.stablecoinReserves(STABLECOIN_ID_TOKEN)),
     summary: "Stablecoin reserves",
     description: "Live or fallback reserve composition for live-reserve-enabled assets.",

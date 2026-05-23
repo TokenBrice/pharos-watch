@@ -230,7 +230,7 @@ syncGeneratedArtifacts({
     { path: CSV_OUTPUT, contents: nextCsv },
   ],
   check: CHECK_MODE,
-  staleMessage: "Cemetery dataset exports are out of date. Run `tsx scripts/generate-cemetery-dataset.ts`.",
+  staleMessage: "Cemetery dataset exports are out of date. Run `tsx scripts/maintenance/generate-cemetery-dataset.ts`.",
   currentMessage: "Cemetery dataset exports are current",
   writtenMessage: `Generated cemetery dataset exports for ${rows.length} stablecoins`,
 });

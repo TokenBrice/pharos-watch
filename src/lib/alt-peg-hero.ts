@@ -1,6 +1,6 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
@@ -61,15 +61,8 @@ const SKY_LAYOUT: Record<SkyCohortKind, { cx: number; cy: number; spreadX: numbe
   constellation: { cx: 82, cy: 52, spreadX: 13, spreadY: 30 },
 };
 
-interface LlamaCoin {
-  llamaId?: string;
-}
-
 function resolveLogo(coin: StablecoinData): string | undefined {
-  const byId = logosById[coin.id];
-  if (byId) return byId;
-  const llamaId = (coin as unknown as LlamaCoin).llamaId;
-  return llamaId ? logosById[llamaId] : undefined;
+  return logosById[coin.id];
 }
 
 function toHeroCoin(coin: StablecoinData, peg: PegCurrency): HeroCoin | null {

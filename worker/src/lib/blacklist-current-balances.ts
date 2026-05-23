@@ -4,6 +4,7 @@ import {
 } from "@shared/lib/blacklist";
 import type { BlacklistStablecoin } from "@shared/types/market";
 import type { D1Database } from "@cloudflare/workers-types";
+import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 
 export interface BlacklistCurrentBalanceRow {
   id: string;
@@ -36,13 +37,25 @@ function buildBlacklistCurrentBalanceId(
 
 class BlacklistCurrentBalanceMap extends Map<string, BlacklistCurrentBalanceRow> {
   private readonly legacyFallbacks = new Map<string, BlacklistCurrentBalanceRow | null>();
+  private readonly loggedLegacyFallbackKeys = new Set<string>();
 
   addLegacyFallback(key: string, row: BlacklistCurrentBalanceRow): void {
     this.legacyFallbacks.set(key, this.legacyFallbacks.has(key) ? null : row);
   }
 
   override get(key: string): BlacklistCurrentBalanceRow | undefined {
-    return super.get(key) ?? this.legacyFallbacks.get(key) ?? undefined;
+    const scoped = super.get(key);
+    if (scoped) return scoped;
+    const legacy = this.legacyFallbacks.get(key) ?? undefined;
+    if (legacy && !this.loggedLegacyFallbackKeys.has(key)) {
+      this.loggedLegacyFallbackKeys.add(key);
+      recordRuntimeFallbackUsage("blacklist-current-balance-legacy-identity", {
+        key,
+        stablecoin: legacy.stablecoin,
+        chainId: legacy.chainId,
+      });
+    }
+    return legacy;
   }
 }
 

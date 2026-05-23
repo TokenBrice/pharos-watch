@@ -106,15 +106,9 @@ Current Release 1 behavior:
 
 ## Homepage Integration
 
-The homepage Research Surfaces band no longer renders `PegDiversityChart` and `NonUsdShareChart`.
+The homepage no longer carries a separate alt-peg teaser component. Its top market-cap hero (`src/components/home-alt-hero.tsx`) includes the live non-USD share, and the browse strip links aggregate fiat non-USD traffic to `/?peg=fiat-non-usd-peg#home-alt-rankings`.
 
-Instead it renders:
-
-- `CategoryStats`
-- `TotalMcapChart`
-- `HomepageAltPegsTeaser`
-
-`HomepageAltPegsTeaser` uses the same shared frontend model (`buildAltPegSnapshot(...)`) as the dedicated route so the homepage CTA and `/alt-pegs/` stay aligned on the current non-USD snapshot.
+The dedicated `/alt-pegs/` route remains the canonical surface for `buildAltPegSnapshot(...)`, cohort history, and crawlable peg drill-down pages.
 
 ---
 

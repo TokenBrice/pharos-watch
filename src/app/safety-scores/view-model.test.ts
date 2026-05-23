@@ -10,7 +10,7 @@ import {
   getCoreSettlementProfile,
   groupReportCardsByGrade,
 } from "./view-model";
-import { makeReportCard as makeCard } from "./test-helpers";
+import { makeReportCard as makeCard } from "@/test/fixtures/safety-scores";
 
 describe("safety score view-model", () => {
   it("builds market-cap lookups from pegged asset supply buckets", () => {

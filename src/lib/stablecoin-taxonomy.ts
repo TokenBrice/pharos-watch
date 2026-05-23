@@ -1,7 +1,13 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { BackingType, FilterTag, GovernanceType, Infrastructure, StablecoinMeta } from "@shared/types";
+import type { BackingType, FilterTag, GovernanceType, StablecoinMeta } from "@shared/types";
+import {
+  BACKING_SLUGS,
+  GOVERNANCE_SLUGS,
+  INFRASTRUCTURE_SLUGS,
+  type InfrastructureTaxonomyValue,
+} from "@/lib/stablecoin-taxonomy-urls";
 
-export type InfrastructureTaxonomyValue = Infrastructure;
+export type { InfrastructureTaxonomyValue };
 
 type TaxonomyKind = "governance" | "backing" | "infrastructure";
 
@@ -27,18 +33,6 @@ export interface StablecoinTaxonomyHubRouteConfig {
   itemListName: string;
   pages: ReadonlyArray<StablecoinTaxonomyPage<BackingType | GovernanceType | InfrastructureTaxonomyValue>>;
 }
-
-const GOVERNANCE_SLUGS: Record<GovernanceType, string> = {
-  centralized: "cefi",
-  "centralized-dependent": "cefi-dependent",
-  decentralized: "defi",
-};
-
-const BACKING_SLUGS: Record<BackingType, string> = {
-  "rwa-backed": "rwa",
-  "crypto-backed": "crypto",
-  algorithmic: "algorithmic",
-};
 
 const GOVERNANCE_CONTENT: Record<
   GovernanceType,
@@ -162,7 +156,7 @@ const INFRASTRUCTURE_CONTENT: Record<
   }
 > = {
   "liquity-v1": {
-    slug: "liquity-v1",
+    slug: INFRASTRUCTURE_SLUGS["liquity-v1"],
     title: "Liquity v1 Infrastructure Stablecoins",
     shortLabel: "Liquity v1",
     intro:
@@ -171,7 +165,7 @@ const INFRASTRUCTURE_CONTENT: Record<
       `${count} Liquity v1 stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare classic zero-interest Liquity-style CDP designs in one place.`,
   },
   "liquity-v2": {
-    slug: "liquity-v2",
+    slug: INFRASTRUCTURE_SLUGS["liquity-v2"],
     title: "Liquity v2 Infrastructure Stablecoins",
     shortLabel: "Liquity v2",
     intro:
@@ -180,7 +174,7 @@ const INFRASTRUCTURE_CONTENT: Record<
       `${count} Liquity v2 stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare BOLD-style CDP designs with user-set rates and Stability Pools.`,
   },
   m0: {
-    slug: "m0",
+    slug: INFRASTRUCTURE_SLUGS.m0,
     title: "M0 Infrastructure Stablecoins",
     shortLabel: "M0",
     intro:
@@ -272,16 +266,3 @@ export const BACKING_TAXONOMY_PAGE_BY_SLUG = new Map(BACKING_TAXONOMY_PAGES.map(
 export const INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG = new Map(
   INFRASTRUCTURE_TAXONOMY_PAGES.map((page) => [page.slug, page]),
 );
-
-export function buildGovernanceTaxonomyUrl(value: GovernanceType): string {
-  return `/stablecoins/governance/${GOVERNANCE_SLUGS[value]}/`;
-}
-
-export function buildBackingTaxonomyUrl(value: BackingType): string {
-  return `/stablecoins/backing/${BACKING_SLUGS[value]}/`;
-}
-
-export function buildInfrastructureTaxonomyUrl(value: InfrastructureTaxonomyValue): string {
-  const page = INFRASTRUCTURE_TAXONOMY_PAGES.find((candidate) => candidate.value === value);
-  return page?.href ?? `/stablecoins/infrastructure/${value}/`;
-}

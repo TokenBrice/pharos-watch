@@ -1,15 +1,10 @@
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { DIMENSION_ORDER, scoreToGrade } from "@shared/lib/report-cards";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
-const deadLlamaIds = new Set(DEAD_STABLECOINS.flatMap((coin) => (coin.llamaId ? [coin.llamaId] : [])));
-
-export const PORTFOLIO_COIN_OPTIONS = ACTIVE_STABLECOINS.filter(
-  (stablecoin) => !stablecoin.llamaId || !deadLlamaIds.has(stablecoin.llamaId),
-).map((stablecoin) => ({
+export const PORTFOLIO_COIN_OPTIONS = ACTIVE_STABLECOINS.map((stablecoin) => ({
   id: stablecoin.id,
   name: stablecoin.name,
   symbol: stablecoin.symbol,

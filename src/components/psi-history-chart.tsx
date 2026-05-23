@@ -11,7 +11,6 @@ import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
-import { useStabilityIndexDetail } from "@/hooks/api-hooks";
 import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { trackEvent } from "@/lib/analytics";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
@@ -21,7 +20,6 @@ import {
   type ChartDataTableColumn,
 } from "@/components/chart-primitives/data-table";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { buildPsiChartData } from "@shared/lib/psi-view-model";
 import { formatRangeTickDate } from "@/lib/chart-time-range";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -244,37 +242,4 @@ export function ScoreChart({
       </CardContent>
     </Card>
   );
-}
-
-/* ─── Self-contained wrapper (fetches its own data) ────────────── */
-
-export function PsiHistoryChart({
-  excludeEvents,
-  showHeader = true,
-}: {
-  excludeEvents?: string[];
-  showHeader?: boolean;
-} = {}) {
-  const { data, isLoading } = useStabilityIndexDetail();
-  const history = data?.history;
-  const current = data?.current;
-
-  const chartData = useMemo(() => {
-    return buildPsiChartData(history, current);
-  }, [current, history]);
-
-  if (isLoading) {
-    return (
-      <Card className="rounded-xl">
-        <CardHeader>
-          <CardTitle as="h2">Pharos Stability Index History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return <ScoreChart data={chartData} excludeEvents={excludeEvents} showHeader={showHeader} />;
 }

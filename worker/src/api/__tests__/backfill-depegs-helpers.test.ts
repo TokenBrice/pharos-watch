@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildFxLookup, fetchHistoricalSecondaryFxRates } from "../backfill-fx";
+import { buildFxLookup, fetchHistoricalSecondaryFxRates } from "../../lib/backfill-fx";
 import {
   extractDepegEvents,
   findNearestSupply,

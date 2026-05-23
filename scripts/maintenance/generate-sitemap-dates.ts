@@ -45,7 +45,7 @@ walkPages(APP_DIR, "/", dates);
 syncGeneratedArtifacts({
   artifacts: [{ path: OUTPUT, contents: JSON.stringify(dates, null, 2) + "\n" }],
   check: CHECK_MODE,
-  staleMessage: "src/generated/sitemap-dates.json is out of date. Run `tsx scripts/generate-sitemap-dates.ts`.",
+  staleMessage: "src/generated/sitemap-dates.json is out of date. Run `tsx scripts/maintenance/generate-sitemap-dates.ts`.",
   currentMessage: `Sitemap dates are current for ${Object.keys(dates).length} pages`,
   writtenMessage: `Generated sitemap dates for ${Object.keys(dates).length} pages`,
 });

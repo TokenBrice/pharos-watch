@@ -30,7 +30,7 @@ import {
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID, type StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,
@@ -42,13 +42,13 @@ import type { ReserveResult } from "@shared/lib/reserve-templates";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { isThreatBand } from "@shared/lib/classification";
 import { deriveStablecoinVerdict, type StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
-import { getVariantParent, getVariantRelationship, getVariants } from "@shared/lib/stablecoins";
 import { getReserves } from "@shared/lib/reserve-templates";
-import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
+import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getVariantDisplay } from "@/lib/variant-display";
+import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
 import {
   HERO_MUTED_CLASS,
   HERO_NEGATIVE_TREND_CLASS,
@@ -239,7 +239,7 @@ export function buildPegPriceSnapshot(
     pegType: coinData.pegType,
     commodityOunces: coin.commodityOunces,
     fallbackRates: listData.fxFallbackRates,
-    metaById: TRACKED_META_BY_ID,
+    metaById: CLIENT_TRACKED_META_BY_ID,
   });
   const deviationBps = deriveDeviationBps(coinData.price, pegContext.pegReference);
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
@@ -334,9 +334,9 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   logoSrc?: string;
   reportCard: ReportCard | undefined;
   reportCardUpdatedAt: number | null;
-  variantParent: StablecoinMeta | null;
-  variantSiblings: StablecoinMeta[];
-  childVariants: StablecoinMeta[];
+  variantParent: StablecoinClientMeta | null;
+  variantSiblings: StablecoinClientMeta[];
+  childVariants: StablecoinClientMeta[];
   isVariant: boolean;
   hasVariants: boolean;
   coinData: StablecoinData;
@@ -394,7 +394,7 @@ export interface HeroCardViewModel {
   logoSrc?: string;
   reportCard: ReportCard | null;
   verdict: StablecoinVerdict;
-  variantParent?: StablecoinMeta | null;
+  variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
   variantChipClass: string | null;
   infrastructures: Infrastructure[];
@@ -472,7 +472,7 @@ export interface BuildHeroCardViewModelParams {
   stressSignal: StressSignalEntry | null;
   reportCard: ReportCard | null;
   verdict: StablecoinVerdict;
-  variantParent?: StablecoinMeta | null;
+  variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
 }
 
@@ -515,13 +515,9 @@ export function buildStablecoinDetailHeroViewModel({
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
   const blacklistSource = blacklistStatus === "dilutable" ? coin.canBeBlacklistedSource : undefined;
-  const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
+  const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
-  const benchmarkSymbol = primaryComparisonPage
-    ? primaryComparisonPage.left.id === coin.id
-      ? primaryComparisonPage.right.symbol
-      : primaryComparisonPage.left.symbol
-    : null;
+  const benchmarkSymbol = primaryComparisonPage?.benchmarkSymbol ?? null;
 
   const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
   const hasPrevWeek = typeof prevWeek === "number" && prevWeek > 0;
@@ -724,9 +720,9 @@ export function buildStablecoinDetailViewModel({
   const redemptionBackstop = redemptionBackstops.data?.coins?.[id];
   const reportCard = reportCards.data?.cards.find((candidate) => candidate.id === id);
   const featureAvailability = buildFeatureAvailability(id, coin, supplemental);
-  const variantRelationship = getVariantRelationship(id);
-  const variantParent = getVariantParent(id);
-  const childVariants = getVariants(id);
+  const variantRelationship = getClientVariantRelationship(id);
+  const variantParent = getClientVariantParent(id);
+  const childVariants = getClientVariants(id);
   const reserves = supplemental.reserves.live ?? getReserves(coin);
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
     ? featureAvailability.stressSignal.band

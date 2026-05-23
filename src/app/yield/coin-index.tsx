@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { YieldType } from "@shared/types";
 
 interface CoinIndexEntry {

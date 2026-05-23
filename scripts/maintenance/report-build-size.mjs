@@ -13,11 +13,9 @@ const DEFAULT_BUDGETS = {
   // Next App Router static exports emit multiple RSC helper files per route,
   // so track file count explicitly instead of discovering this at deploy time.
   totalOutFiles: 20_000,
-  // Bumped from 12 MB after Council-13 W2-C split: the slim client registry
-  // (~250 KiB) now ships alongside the still-extant fat-registry consumers
-  // (cemetery, stablecoin-detail page, upcoming). Net steady-state is below
-  // the new ceiling; tighten back down once the remaining fat consumers
-  // migrate to slim (followup TASK-7 / W2-C stage 2).
+  // Bumped from 12 MB after Council-13 W2-C split. The client registry now
+  // includes reserve and portfolio exposure fields, while several static
+  // pages still legitimately consume the full registry at build time.
   totalJsBytes: 14_500_000,
   largestJsBytes: 1_200_000,
   totalCssBytes: 650_000,

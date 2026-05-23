@@ -7,11 +7,13 @@ import { useLogos } from "@/hooks/use-logos";
 import { ContagionGraph } from "@/components/contagion-graph";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CollateralUsageSection } from "./collateral-usage-section";
+import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 
 interface ContagionSnapshotProps {
   stablecoinId: string;
   variantRelationshipCard?: ReactNode;
   hasCollateralUsage?: boolean;
+  collateralUsageEntries?: readonly CollateralUsageEntry[];
 }
 
 const DETAIL_NODE_LIMIT = 500;
@@ -20,6 +22,7 @@ export function ContagionSnapshot({
   stablecoinId,
   variantRelationshipCard,
   hasCollateralUsage,
+  collateralUsageEntries = [],
 }: ContagionSnapshotProps) {
   const { data: rc } = useReportCards();
   const { data: list } = useStablecoins();
@@ -52,7 +55,7 @@ export function ContagionSnapshot({
       {variantRelationshipCard}
       {hasCollateralUsage ? (
         <div className={hasVariantCard ? "border-t border-border/40 pt-6" : undefined}>
-          <CollateralUsageSection stablecoinId={stablecoinId} />
+          <CollateralUsageSection entries={collateralUsageEntries} />
         </div>
       ) : null}
     </div>

@@ -215,22 +215,27 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   }),
   publicGet({
-    key: "stablecoin-detail-canary",
-    path: API_PATHS.stablecoinDetail("usdt-tether"),
+    // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    key: "stablecoin-detail",
+    path: "/api/stablecoin/:id",
     routeDependencies: ["coingeckoApiKey"],
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
   }),
   publicGet({
-    key: "stablecoin-summary-canary",
-    path: API_PATHS.stablecoinSummary("usdt-tether"),
+    // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    key: "stablecoin-summary",
+    path: "/api/stablecoin-summary/:id",
     probeGroup: "public",
+    probePath: API_PATHS.stablecoinSummary("usdt-tether"),
   }),
   publicGet({
-    key: "stablecoin-reserves-canary",
-    path: API_PATHS.stablecoinReserves("iusd-infinifi"),
+    // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    key: "stablecoin-reserves",
+    path: "/api/stablecoin-reserves/:id",
     probeGroup: "public",
+    probePath: API_PATHS.stablecoinReserves("iusd-infinifi"),
   }),
   publicGet({
     key: "stablecoin-charts",

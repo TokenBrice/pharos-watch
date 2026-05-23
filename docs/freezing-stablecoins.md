@@ -32,7 +32,7 @@ The script prints two artifacts:
 - Append the snapshot entry to `frozen-snapshots.json`.
 - In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, then regenerate the frozen registry with `node scripts/maintenance/generate-stablecoin-frozen-registry.mjs`. Do not edit generated aggregates, frozen registry output, or legacy category shells by hand.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, then regenerate the prevalidated registry with `node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs`. Do not edit generated aggregates, prevalidated registry output, or legacy category shells by hand.
 
 The schema enforces the invariant: `frozenAt` is required when `status === "frozen"`, and `obituary` is only allowed when `status === "frozen"`.
 
@@ -64,7 +64,7 @@ cp "public/logos/${LLAMA_ID}-${SYMBOL}.png" "public/logos/cemetery/${SYMBOL_LOWE
 
 ```bash
 tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
-node scripts/maintenance/generate-stablecoin-frozen-registry.mjs
+node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs
 npm run check:stablecoin-data
 npm run check:frozen-invariants
 npm run lint

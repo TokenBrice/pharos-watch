@@ -1,5 +1,5 @@
 import type { TapeEvent } from "@shared/types/tape-event";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 export function utcDayKey(tsMs: number): string {
   return new Date(tsMs).toISOString().slice(0, 10);

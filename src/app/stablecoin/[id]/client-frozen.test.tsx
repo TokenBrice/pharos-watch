@@ -183,7 +183,7 @@ describe("StablecoinDetailClient (frozen)", () => {
   it("renders the FrozenStateBanner alongside the hero when status === frozen", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
-    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
     expect(screen.getByRole("heading", { name: /Sunset by issuer\./ })).toBeTruthy();
     expect(screen.getByRole("link", { name: /cemetery/i })).toBeTruthy();
   });
@@ -191,7 +191,7 @@ describe("StablecoinDetailClient (frozen)", () => {
   it("renders FrozenDataNote labels above each chart section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
-    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
     const notes = screen.getAllByText(/no longer collects new metrics/i);
     // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
     // sections render unconditionally for this fixture.
@@ -208,7 +208,7 @@ describe("StablecoinDetailClient (frozen)", () => {
         updatedAt: "2026-04-01",
       },
     });
-    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    render(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
 
     const banner = screen.getByRole("heading", { name: /Sunset by issuer\./ });
     const summary = screen.getByTestId("ai-summary");

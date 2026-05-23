@@ -177,7 +177,7 @@ syncGeneratedArtifacts({
     { path: ENVIRONMENT_OUTPUT, contents: renderEnvironment() },
   ],
   check: CHECK_MODE,
-  staleMessage: "Postman exports are out of date. Run `tsx scripts/generate-postman-collection.ts`.",
+  staleMessage: "Postman exports are out of date. Run `tsx scripts/maintenance/generate-postman-collection.ts`.",
   currentMessage: "Postman exports are current",
   writtenMessage: "Generated Postman collection and environment",
 });

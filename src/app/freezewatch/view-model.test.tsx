@@ -80,6 +80,12 @@ describe("parseFreezeWatchPageFilters", () => {
 
     expect(filters.chainFilter).toBe("ethereum");
   });
+
+  it("accepts coin as a temporary URL alias for stablecoin", () => {
+    const filters = parseFreezeWatchPageFilters("?coin=usdt");
+
+    expect(filters.stablecoinFilter).toBe("USDT");
+  });
 });
 
 describe("useFreezeWatchPageController", () => {

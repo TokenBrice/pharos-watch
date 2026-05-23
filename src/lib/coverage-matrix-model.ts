@@ -1,11 +1,13 @@
 import {
-  buildDependencyGraphEdges,
   collectDependencyGraphIds,
   filterDependencyGraphEdgesToLive,
 } from "@shared/lib/dependency-graph";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
+  type StablecoinClientMeta,
+} from "@shared/lib/stablecoins/client-registry";
 import type {
   DexLiquidityMap,
   MintBurnFlowsResponse,
@@ -50,7 +52,7 @@ export interface CoverageMatrixModelInput {
   yieldRankings: CoverageMatrixQueryResource<YieldRankingsResponse>;
   mintBurnFlows: CoverageMatrixQueryResource<MintBurnFlowsResponse>;
   reportCards: CoverageMatrixQueryResource<ReportCardsResponse>;
-  activeStablecoins?: readonly StablecoinMeta[];
+  activeStablecoins?: readonly StablecoinClientMeta[];
 }
 
 function buildQueryAvailability(
@@ -110,7 +112,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   );
   const dependencyIds = collectDependencyGraphIds(
     filterDependencyGraphEdgesToLive(
-      input.reportCards.data?.dependencyGraph?.edges ?? buildDependencyGraphEdges(activeStablecoins),
+      input.reportCards.data?.dependencyGraph?.edges ?? [],
       liveIds,
     ),
   );
@@ -121,7 +123,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     const reportCard = reportCardById.get(coin.id);
     const mcap = asset ? getCirculatingRaw(asset) : 0;
     return buildCoverageRow({
-      coin,
+      coin: coin as StablecoinMeta,
       marketCapUsd: mcap,
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,

@@ -12,6 +12,7 @@
  * Jurisdiction is not on the slim client-registry (only on the fat
  * server-side `StablecoinMeta`). Deferred to v2 per brief escalation rule.
  */
+import { createTableComparator } from "@/lib/table-comparator";
 import type { UrlStateSchema } from "@/lib/url-state";
 import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
 import { PEG_METADATA } from "@shared/lib/classification";
@@ -205,23 +206,14 @@ export type ScreenerSortKey =
 
 export type ScreenerSortDirection = "asc" | "desc";
 
-function compareValues(
-  a: number | null | undefined,
-  b: number | null | undefined,
-  direction: ScreenerSortDirection,
-): number {
-  const aMissing = a == null;
-  const bMissing = b == null;
-  if (aMissing && bMissing) return 0;
-  if (aMissing) return 1;
-  if (bMissing) return -1;
-  return direction === "asc" ? a - b : b - a;
-}
-
-function compareStrings(a: string, b: string, direction: ScreenerSortDirection): number {
-  const cmp = a.localeCompare(b);
-  return direction === "asc" ? cmp : -cmp;
-}
+const compareScreenerRows = createTableComparator<ScreenerSortKey, ScreenerRow>({
+  name: (row) => row.symbol || row.name,
+  supply: (row) => row.supplyUsd,
+  pegScore: (row) => row.pegScore,
+  dewsScore: (row) => row.dewsScore,
+  liquidityScore: (row) => row.liquidityScore,
+  safetyScore: (row) => row.safetyScore,
+});
 
 export function sortScreenerRows(
   rows: readonly ScreenerRow[],
@@ -229,24 +221,7 @@ export function sortScreenerRows(
   sortDirection: ScreenerSortDirection,
 ): ScreenerRow[] {
   const copy = [...rows];
-  copy.sort((a, b) => {
-    switch (sortKey) {
-      case "name":
-        return compareStrings(a.symbol || a.name, b.symbol || b.name, sortDirection);
-      case "supply":
-        return compareValues(a.supplyUsd, b.supplyUsd, sortDirection);
-      case "pegScore":
-        return compareValues(a.pegScore, b.pegScore, sortDirection);
-      case "dewsScore":
-        return compareValues(a.dewsScore, b.dewsScore, sortDirection);
-      case "liquidityScore":
-        return compareValues(a.liquidityScore, b.liquidityScore, sortDirection);
-      case "safetyScore":
-        return compareValues(a.safetyScore, b.safetyScore, sortDirection);
-      default:
-        return 0;
-    }
-  });
+  copy.sort((a, b) => compareScreenerRows(a, b, { key: sortKey, direction: sortDirection }));
   return copy;
 }
 

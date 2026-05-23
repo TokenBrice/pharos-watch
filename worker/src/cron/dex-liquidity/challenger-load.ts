@@ -1,5 +1,6 @@
 import { detectDexPriceChallengerTableState } from "./challenger-publish";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
+import { recordRuntimeFallbackUsage } from "../../lib/runtime-fallback-telemetry";
 import type {
   DexPriceChallengerLoadRow,
   DexPriceChallengerLoadDiagnostics,
@@ -22,6 +23,11 @@ export async function loadPublishedDexPoolChallengers(
   const legacy = await loadLegacyDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
 
   if (!state.challengersTable || !state.snapshotsTable) {
+    recordRuntimeFallbackUsage("dex-challenger-legacy", {
+      reason: "missing-tables",
+      topPoolCoins: legacy.topPoolCoins.size,
+      fallbackCoins: legacy.fallbackCoins.size,
+    });
     return {
       challengersByStablecoin: legacy.challengersByStablecoin,
       diagnostics: {
@@ -73,6 +79,11 @@ export async function loadPublishedDexPoolChallengers(
     if (!msg.includes("no such table")) {
       console.error("[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
     }
+    recordRuntimeFallbackUsage("dex-challenger-legacy", {
+      reason: "snapshot-query-failed",
+      topPoolCoins: legacy.topPoolCoins.size,
+      fallbackCoins: legacy.fallbackCoins.size,
+    });
     return {
       challengersByStablecoin: legacy.challengersByStablecoin,
       diagnostics: {
@@ -121,6 +132,11 @@ export async function loadPublishedDexPoolChallengers(
     if (!msg.includes("no such table")) {
       console.error("[challenger-persistence] Unexpected error loading challenger rows:", msg);
     }
+    recordRuntimeFallbackUsage("dex-challenger-legacy", {
+      reason: "challenger-query-failed",
+      topPoolCoins: legacy.topPoolCoins.size,
+      fallbackCoins: legacy.fallbackCoins.size,
+    });
     return {
       challengersByStablecoin: legacy.challengersByStablecoin,
       diagnostics: {
@@ -213,6 +229,15 @@ export async function loadPublishedDexPoolChallengers(
 
   const hasPublished = publishedCoins.size > 0;
   const hasLegacy = legacyUsedCoins.size > 0;
+  if (hasLegacy || legacyFallbackCoins.size > 0) {
+    recordRuntimeFallbackUsage("dex-challenger-legacy", {
+      reason: hasLegacy ? "legacy-rows-used" : "legacy-needed-without-rows",
+      legacyUsedCoins: legacyUsedCoins.size,
+      legacyFallbackCoins: legacyFallbackCoins.size,
+      staleSnapshotCoins: staleSnapshotCoins.length,
+      incompletePublishedCoins: incompletePublishedCoins.length,
+    });
+  }
   const mode: DexPriceChallengerLoadDiagnostics["mode"] =
     hasPublished && hasLegacy ? "mixed" : hasPublished ? "published" : hasLegacy ? "legacy" : "absent";
 

@@ -3,10 +3,9 @@
 /**
  * Banned-phrase lint for the Stablecoin Picker surface.
  *
- * Scans the engine editorial templates, the Selector route hard-coded copy, the Selector
- * components, and the editorial worked examples in `agents/screener-selector/03-editorial.md`
- * for marketing/recommendation phrases that violate the Selector editorial policy (design §4.5
- * and the §11 revisions in `agents/selector-implementation-plan.md`).
+ * Scans the engine editorial templates, the Selector route hard-coded copy,
+ * Selector components, and checked-in editorial worked examples for
+ * marketing/recommendation phrases that violate the Selector editorial policy.
  *
  * Patterns intentionally use negative lookbehind / lookahead so that legitimate compound forms
  * (e.g. "safer", "safety", "safely", "safeguard", "unsafe", "Safety Score") do not trigger.
@@ -40,10 +39,8 @@ const SCAN_TARGETS = [
   // editorial prose, so the scan is scoped to that section. Section bounds are derived from
   // the `## 4.` / `## 5.` heading pair at runtime.
   {
-    kind: "file-section",
-    path: "agents/screener-selector/03-editorial.md",
-    startHeading: "## 4. Three worked examples",
-    endHeading: "## 5.",
+    kind: "file",
+    path: "scripts/fixtures/selector-editorial-examples.md",
   },
 ];
 
@@ -89,17 +86,23 @@ async function pathExists(absPath) {
 async function collectFiles(target) {
   const abs = join(REPO_ROOT, target.path);
   if (target.kind === "file") {
-    if (!(await pathExists(abs))) return [];
+    if (!(await pathExists(abs))) {
+      throw new Error(`required scan target missing: ${target.path}`);
+    }
     return [{ path: abs, sectionBounds: null }];
   }
   if (target.kind === "file-section") {
-    if (!(await pathExists(abs))) return [];
+    if (!(await pathExists(abs))) {
+      throw new Error(`required scan target missing: ${target.path}`);
+    }
     return [{
       path: abs,
       sectionBounds: { startHeading: target.startHeading, endHeading: target.endHeading },
     }];
   }
-  if (!(await pathExists(abs))) return [];
+  if (!(await pathExists(abs))) {
+    throw new Error(`required scan target missing: ${target.path}`);
+  }
   const stats = await stat(abs);
   if (!stats.isDirectory()) {
     return [];
@@ -257,6 +260,7 @@ if (isCliRun) {
 
 export {
   BANNED_PATTERNS,
+  collectFiles,
   scanSource,
   scanFile,
 };

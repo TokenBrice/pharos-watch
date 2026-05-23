@@ -5,7 +5,7 @@
  * operator must paste into the registry source files.
  *
  * Usage:
- *   PHAROS_API_KEY=... npx tsx scripts/freeze-stablecoin.ts <coinId>
+ *   PHAROS_API_KEY=... npx tsx scripts/maintenance/freeze-stablecoin.ts <coinId>
  *
  * Inputs:
  *   - <coinId>: must already exist in shared/data/stablecoins/coins/*.json
@@ -102,7 +102,7 @@ async function fetchPeakMcap(coinId: string): Promise<number> {
 async function main() {
   const coinId = process.argv[2];
   if (!coinId) {
-    console.error("Usage: npx tsx scripts/freeze-stablecoin.ts <coinId>");
+    console.error("Usage: npx tsx scripts/maintenance/freeze-stablecoin.ts <coinId>");
     process.exit(2);
   }
   const today = new Date();

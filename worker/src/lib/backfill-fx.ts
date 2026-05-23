@@ -7,14 +7,14 @@ import {
   mergeDateRates,
   type TimestampedRatePoint,
 } from "@shared/lib/rate-series";
-import { USER_AGENT } from "../lib/constants";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { cancelResponseBodyQuietly } from "../lib/response-body";
-import { getCache, setCache } from "../lib/db-cache";
-import { FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
-import { rethrowIfAborted } from "../lib/abort";
+import { USER_AGENT } from "./constants";
+import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
+import { getCache, setCache } from "./db-cache";
+import { FrankfurterTimeSeriesSchema } from "./external-api-schemas";
+import { rethrowIfAborted } from "./abort";
 import type { D1Database } from "@cloudflare/workers-types";
-import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./backfill-price-sources";
+import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
 const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;

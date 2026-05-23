@@ -142,7 +142,7 @@ function parseArgs(argv: readonly string[]): ScoreDiffArgs {
 }
 
 function printUsage(): void {
-  console.log("Usage: tsx scripts/audit-redemption-v4-score-diff.ts [--out <path>] [--format json|markdown]");
+  console.log("Usage: tsx scripts/maintenance/audit-redemption-v4-score-diff.ts [--out <path>] [--format json|markdown]");
   console.log("       [--threshold <points>] [--supply-usd <usd>] [--v4-profile <json>]");
 }
 

@@ -57,7 +57,7 @@ for (const doc of PUBLIC_DOCS) {
 syncGeneratedArtifacts({
   artifacts: [{ path: OUTPUT, contents: JSON.stringify(metadata, null, 2) + "\n" }],
   check: CHECK_MODE,
-  staleMessage: "src/generated/docs-metadata.json is out of date. Run `tsx scripts/generate-docs-metadata.ts`.",
+  staleMessage: "src/generated/docs-metadata.json is out of date. Run `tsx scripts/maintenance/generate-docs-metadata.ts`.",
   currentMessage: `Docs metadata is current for ${PUBLIC_DOCS.length} public docs`,
   writtenMessage: `Generated docs metadata for ${PUBLIC_DOCS.length} public docs`,
 });

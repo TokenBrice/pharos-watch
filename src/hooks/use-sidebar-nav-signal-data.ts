@@ -1,10 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { CRON_15MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST, CRON_1MIN } from "@/lib/cron-intervals";
 import { getPollingWindow } from "@/hooks/use-api-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";
+import {
+  FRONTEND_API_QUERY_REGISTRY,
+  type FrontendApiQueryDescriptor,
+} from "@/lib/api-query-registry";
 import type {
   BlacklistSummaryResponse,
   DailyDigestResponse,
@@ -13,11 +15,11 @@ import type {
   StabilityIndexResponse,
 } from "@shared/types";
 
-function useLightApiQuery<T>(key: string, path: string, intervalMs: number, enabled = true) {
-  const { staleTime, refetchInterval } = getPollingWindow(intervalMs);
+function useLightApiQuery<T>(descriptor: FrontendApiQueryDescriptor<T>, enabled = true) {
+  const { staleTime, refetchInterval } = getPollingWindow(descriptor.producerIntervalMs);
   return useQuery({
-    queryKey: ["api", key],
-    queryFn: () => fetchLightApiJson<T>(path),
+    queryKey: ["api", ...descriptor.queryKey],
+    queryFn: () => fetchLightApiJson<T>(descriptor.path),
     enabled,
     staleTime,
     refetchInterval,
@@ -26,26 +28,24 @@ function useLightApiQuery<T>(key: string, path: string, intervalMs: number, enab
 }
 
 export function useSidebarPegSummarySignal() {
-  return useLightApiQuery<PegSummaryResponse>("peg-summary", API_PATHS.pegSummary(), CRON_15MIN);
+  return useLightApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_REGISTRY.pegSummary);
 }
 
 export function useSidebarStabilityIndexSignal() {
-  return useLightApiQuery<StabilityIndexResponse>("stability-index", API_PATHS.stabilityIndex(), CRON_30MIN);
+  return useLightApiQuery<StabilityIndexResponse>(FRONTEND_API_QUERY_REGISTRY.stabilityIndex);
 }
 
 export function useSidebarBlacklistSignal(enabled: boolean) {
   return useLightApiQuery<BlacklistSummaryResponse>(
-    "blacklist-summary",
-    API_PATHS.blacklistSummary(),
-    CRON_BLACKLIST,
+    FRONTEND_API_QUERY_REGISTRY.blacklistSummary,
     enabled,
   );
 }
 
 export function useSidebarHealthSignal() {
-  return useLightApiQuery<HealthResponse>("health", API_PATHS.health(), CRON_1MIN);
+  return useLightApiQuery<HealthResponse>(FRONTEND_API_QUERY_REGISTRY.health);
 }
 
 export function useSidebarDailyDigestSignal() {
-  return useLightApiQuery<DailyDigestResponse>("daily-digest", API_PATHS.dailyDigest(), CRON_24H);
+  return useLightApiQuery<DailyDigestResponse>(FRONTEND_API_QUERY_REGISTRY.dailyDigest);
 }

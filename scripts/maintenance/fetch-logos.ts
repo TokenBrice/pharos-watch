@@ -1,8 +1,10 @@
 /**
  * Fetches stablecoin logos from CoinGecko and writes logos.json.
- * Run locally: tsx scripts/fetch-logos.ts
+ * Run locally: tsx scripts/maintenance/fetch-logos.ts
  * CoinGecko blocks Cloudflare Workers, so this must run from a local machine.
  */
+
+import stablecoins from "../../shared/data/stablecoins/coins.generated.json";
 
 const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
 const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
@@ -12,8 +14,7 @@ const EXTRA_GECKO_IDS: Record<string, string> = {
   "pax-gold": "paxg-paxos",
 };
 
-interface DefiLlamaAsset {
-  id: string;
+interface StablecoinLogoSeed {
   gecko_id?: string;
 }
 
@@ -31,21 +32,23 @@ async function fetchLogos(): Promise<void> {
     process.exit(1);
   }
 
-  const llamaData = (await llamaRes.json()) as { peggedAssets: DefiLlamaAsset[] };
+  const llamaData = (await llamaRes.json()) as { peggedAssets: StablecoinLogoSeed[] };
   const assets = llamaData.peggedAssets ?? [];
 
-  // Build gecko_id -> llama_id mapping
-  const geckoToLlama: Record<string, string> = {};
-  for (const a of assets) {
-    if (a.gecko_id) {
-      geckoToLlama[a.gecko_id] = a.id;
+  const llamaGeckoIds = new Set(assets.flatMap((asset) => (asset.gecko_id ? [asset.gecko_id] : [])));
+
+  // Build gecko_id -> canonical ticker-issuer id mapping.
+  const geckoToCanonicalId: Record<string, string> = {};
+  for (const coin of stablecoins) {
+    if (coin.geckoId && llamaGeckoIds.has(coin.geckoId)) {
+      geckoToCanonicalId[coin.geckoId] = coin.id;
     }
   }
-  for (const [geckoId, internalId] of Object.entries(EXTRA_GECKO_IDS)) {
-    geckoToLlama[geckoId] = internalId;
+  for (const [geckoId, canonicalId] of Object.entries(EXTRA_GECKO_IDS)) {
+    geckoToCanonicalId[geckoId] = canonicalId;
   }
 
-  const geckoIds = Object.keys(geckoToLlama);
+  const geckoIds = Object.keys(geckoToCanonicalId);
   console.log(`Found ${geckoIds.length} coins with gecko_id`);
 
   // Fetch logos from CoinGecko in batches
@@ -64,9 +67,9 @@ async function fetchLogos(): Promise<void> {
     if (res.ok) {
       const coins: CoinGeckoMarket[] = await res.json();
       for (const coin of coins) {
-        const llamaId = geckoToLlama[coin.id];
-        if (llamaId && coin.image) {
-          logoMap[llamaId] = coin.image.replace("/large/", "/small/");
+        const canonicalId = geckoToCanonicalId[coin.id];
+        if (canonicalId && coin.image) {
+          logoMap[canonicalId] = coin.image.replace("/large/", "/small/");
         }
       }
     } else {
@@ -99,7 +102,7 @@ async function fetchLogos(): Promise<void> {
     // file doesn't exist yet — start fresh
   }
   for (const [id, url] of Object.entries(existing)) {
-    if (url.startsWith("/logos/") && !(id in logoMap)) {
+    if (!/^\d+$/.test(id) && url.startsWith("/logos/") && !(id in logoMap)) {
       logoMap[id] = url;
     }
   }

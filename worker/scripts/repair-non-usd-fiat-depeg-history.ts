@@ -16,7 +16,7 @@ import {
   SECONDARY_PEG_TO_FX,
   buildFxLookup,
   fetchHistoricalFxRates,
-} from "../src/api/backfill-fx";
+} from "../src/lib/backfill-fx";
 import { extractDepegEvents, parseSupplyData } from "../src/api/backfill-depegs-extraction";
 import { summarizeBackfillReplayDiff, type ExistingDepegEventRow } from "../src/api/backfill-depegs-preview";
 import {

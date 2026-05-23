@@ -1,4 +1,7 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
+  type StablecoinClientMeta,
+} from "@shared/lib/stablecoins/client-registry";
 import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
 import type { PegCurrency } from "@shared/types";
 import {
@@ -8,7 +11,6 @@ import {
   PEG_LABELS_SHORT,
   PEG_SLUGS,
 } from "@/lib/peg-landing";
-import type { StablecoinMeta } from "@shared/types";
 
 export interface PegTaxonomyPage {
   slug: string;
@@ -19,7 +21,7 @@ export interface PegTaxonomyPage {
   description: string;
   intro: string;
   filterTag: ReturnType<typeof pegCurrencyToFilterTag>;
-  coins: StablecoinMeta[];
+  coins: StablecoinClientMeta[];
 }
 
 export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((peg) => {

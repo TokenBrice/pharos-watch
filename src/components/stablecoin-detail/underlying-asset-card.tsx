@@ -5,12 +5,13 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { StablecoinMeta, VariantKind } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import type { VariantKind } from "@shared/types";
 
 interface UnderlyingAssetCardProps {
-  parent: StablecoinMeta;
+  parent: StablecoinClientMeta;
   kind: VariantKind;
-  siblings: StablecoinMeta[];
+  siblings: StablecoinClientMeta[];
 }
 
 export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetCardProps) {

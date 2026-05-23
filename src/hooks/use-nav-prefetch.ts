@@ -4,10 +4,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
-import {
-  createApiPollingQueryOptions,
-  createApiPollingQueryOptionsWithMeta,
-} from "@/hooks/use-api-query";
+import { createApiPollingQueryOptionsWithMeta } from "@/hooks/use-api-query";
 
 const PREFETCH_DEBOUNCE_MS = 100;
 
@@ -101,7 +98,7 @@ const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
   "/flows": (qc) => {
     const flows = FRONTEND_API_QUERY_REGISTRY.mintBurnFlows();
     void qc.prefetchQuery(
-      createApiPollingQueryOptions(
+      createApiPollingQueryOptionsWithMeta(
         flows.queryKey,
         flows.path,
         flows.producerIntervalMs,

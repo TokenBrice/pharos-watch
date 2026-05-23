@@ -33,7 +33,7 @@ export interface PegRatesResult {
  */
 export function derivePegRates(
   assets: PegAssetBase[],
-  metaById?: Map<string, StablecoinMeta>,
+  metaById?: ReadonlyMap<string, Pick<StablecoinMeta, "commodityOunces">>,
   fallbackRates?: Record<string, number>,
 ): PegRatesResult {
   const groups: Record<string, number[]> = {};

@@ -14,15 +14,16 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,
   type StablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
+import type { StablecoinMeta } from "@shared/types";
 
 interface UseStablecoinDetailViewModelParams {
   id: string;
+  coin: StablecoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
 }
@@ -31,10 +32,10 @@ export type { StablecoinDetailSummary, StablecoinDetailViewModel };
 
 export function useStablecoinDetailViewModel({
   id,
+  coin,
   summary,
   logoSrc,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
-  const coin = TRACKED_META_BY_ID.get(id);
   const {
     data: supplyData,
     isLoading: supplyLoading,
@@ -103,10 +104,6 @@ export function useStablecoinDetailViewModel({
     refetchReportCards,
     refetchSupply,
   ]);
-
-  if (!coin) {
-    return { status: "not-found", handleRetryAll };
-  }
 
   return buildStablecoinDetailViewModel({
     core: {

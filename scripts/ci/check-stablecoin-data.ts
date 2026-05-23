@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
 import { validateVariantRelationships } from "../../shared/lib/stablecoins/validate-variants";
 import { CHAIN_META } from "../../shared/lib/chains";
-import type { StablecoinMeta } from "../../shared/types";
+import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import {
   CANONICAL_ORDER_ASSET_FILE,
@@ -25,10 +26,19 @@ import {
 const RESERVE_TOTAL_TOLERANCE = 0.5;
 const DEPENDENCY_RESERVE_WEIGHT_TOLERANCE = 0.005;
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
+const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
+  // Kava USDX remains a live tracked feed while the cemetery keeps the 2022
+  // UST-collateral depeg incident as a separate historical row.
+  "42::usdx-kava::usdx-kava-usdx-2022-06",
+  // Hubble USDH remains readable for active/frozen surfaces while the cemetery
+  // keeps the 2026 wind-down incident distinct from Native Markets/Hermetica USDH.
+  "65::usdh-hubble::usdh-hubble-2026-05",
+]);
 const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([
   "zsd-zephyr-protocol",
   "zys-zephyr-protocol",
 ]);
+const LOGOS_FILE = "data/logos.json";
 
 let errorCount = 0;
 
@@ -223,6 +233,96 @@ function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
   return issues;
 }
 
+function isTrackedRuntimeCoin(coin: StablecoinMeta): boolean {
+  return coin.status !== "pre-launch";
+}
+
+function getDeadStablecoinRegistryIssues(deadCoins: readonly DeadStablecoin[]): string[] {
+  const issues: string[] = [];
+  const seenIds = new Map<string, string>();
+  const seenLlamaIds = new Map<string, string>();
+  const seenContracts = new Map<string, string>();
+
+  for (const dead of deadCoins) {
+    const existingId = seenIds.get(dead.id);
+    if (existingId) {
+      issues.push(`duplicate cemetery id "${dead.id}" found in ${existingId} and ${dead.name}`);
+    } else {
+      seenIds.set(dead.id, dead.name);
+    }
+
+    if (dead.llamaId) {
+      const existingLlamaId = seenLlamaIds.get(dead.llamaId);
+      if (existingLlamaId) {
+        issues.push(`duplicate cemetery llamaId "${dead.llamaId}" found in ${existingLlamaId} and ${dead.id}`);
+      } else {
+        seenLlamaIds.set(dead.llamaId, dead.id);
+      }
+    }
+
+    for (const contract of dead.contracts ?? []) {
+      const key = `${contract.chain}:${contract.address.toLowerCase()}`;
+      const existingContract = seenContracts.get(key);
+      if (existingContract) {
+        issues.push(`duplicate cemetery contract "${key}" found in ${existingContract} and ${dead.id}`);
+      } else {
+        seenContracts.set(key, dead.id);
+      }
+    }
+  }
+
+  return issues;
+}
+
+function getTrackedDeadLlamaIdOverlapIssues(
+  entries: readonly StablecoinSourceEntry[],
+  deadCoins: readonly DeadStablecoin[],
+): string[] {
+  const issues: string[] = [];
+  const deadByLlamaId = new Map<string, DeadStablecoin[]>();
+
+  for (const dead of deadCoins) {
+    if (!dead.llamaId) continue;
+    const existing = deadByLlamaId.get(dead.llamaId);
+    if (existing) {
+      existing.push(dead);
+    } else {
+      deadByLlamaId.set(dead.llamaId, [dead]);
+    }
+  }
+
+  for (const entry of entries) {
+    if (!entry.coin.llamaId || !isTrackedRuntimeCoin(entry.coin)) continue;
+    const deadMatches = deadByLlamaId.get(entry.coin.llamaId) ?? [];
+    for (const dead of deadMatches) {
+      const waiverKey = `${entry.coin.llamaId}::${entry.coin.id}::${dead.id}`;
+      if (ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST.has(waiverKey)) continue;
+      issues.push(
+        `${entry.file} (${entry.coin.id}): tracked runtime llamaId "${entry.coin.llamaId}" also appears in cemetery row "${dead.id}"`,
+      );
+    }
+  }
+
+  return issues;
+}
+
+function getLogoRegistryIssues(): string[] {
+  let logoMap: unknown;
+  try {
+    logoMap = JSON.parse(readFileSync(LOGOS_FILE, "utf8")) as unknown;
+  } catch (error) {
+    return [`${LOGOS_FILE}: ${error instanceof Error ? error.message : String(error)}`];
+  }
+
+  if (!logoMap || typeof logoMap !== "object" || Array.isArray(logoMap)) {
+    return [`${LOGOS_FILE}: expected object keyed by canonical stablecoin id`];
+  }
+
+  return Object.keys(logoMap)
+    .filter((key) => /^\d+$/.test(key))
+    .map((key) => `${LOGOS_FILE}: raw numeric DefiLlama logo key "${key}" must be migrated to a canonical id`);
+}
+
 let canonicalOrder: string[] = [];
 let legacyEntries: StablecoinSourceEntry[] = [];
 let perCoinEntries: StablecoinSourceEntry[] = [];
@@ -276,6 +376,18 @@ if (errorCount === 0) {
     reportError(
       `${STABLECOIN_DATA_DIR}: duplicate stablecoin id "${issue.id}" found in ${issue.entries.map((entry) => entry.file).join(", ")}`,
     );
+  }
+
+  for (const issue of getDeadStablecoinRegistryIssues(DEAD_STABLECOINS)) {
+    reportError(`${STABLECOIN_DATA_DIR}/../dead-stablecoins.json: ${issue}`);
+  }
+
+  for (const issue of getTrackedDeadLlamaIdOverlapIssues(allEntries, DEAD_STABLECOINS)) {
+    reportError(issue);
+  }
+
+  for (const issue of getLogoRegistryIssues()) {
+    reportError(issue);
   }
 
   const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);

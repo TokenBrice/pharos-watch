@@ -38,7 +38,7 @@ describe("useUrlFilters", () => {
     expect(screen.getByTestId("peg-filter").textContent).toBe("");
 
     await act(async () => {
-      window.history.pushState(null, "", "/?peg=fiat-non-usd-peg#filter-bar");
+      window.history.pushState(null, "", "/?peg=fiat-non-usd-peg#home-alt-rankings");
       await Promise.resolve();
     });
 

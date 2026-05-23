@@ -39,8 +39,8 @@ vi.mock("../backfill-price-sources", async (importOriginal) => {
   };
 });
 
-vi.mock("../backfill-fx", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../backfill-fx")>();
+vi.mock("../../lib/backfill-fx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/backfill-fx")>();
   return {
     ...actual,
     fetchHistoricalFxRates: vi.fn(async () => ({})),
@@ -51,7 +51,7 @@ vi.mock("../backfill-fx", async (importOriginal) => {
 
 import { handleBackfillDepegs } from "../backfill-depegs";
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
-import { buildCommodityMedianSeriesFromCg } from "../backfill-fx";
+import { buildCommodityMedianSeriesFromCg } from "../../lib/backfill-fx";
 
 stubCryptoForAuth();
 

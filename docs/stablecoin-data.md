@@ -7,7 +7,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 | Surface | Source |
 | --- | --- |
 | Editable catalog source of truth | `shared/data/stablecoins/coins/*.json` |
-| Generated runtime aggregates | `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/coins.client.generated.json`, `shared/data/stablecoins/coins.frozen.generated.ts` |
+| Generated runtime aggregates | `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/coins.client.generated.json`, `shared/data/stablecoins/coins.prevalidated.generated.ts`, `shared/data/stablecoins/legacy-llama-redirects.generated.json` |
 | Legacy compatibility shells | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
 | Canonical display/order list | `shared/data/stablecoins/canonical-order.json` |
 | Full registry and active/pre-launch/frozen splits | `shared/lib/stablecoins/registry.ts` |
@@ -28,13 +28,13 @@ tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 
 Legacy category shards remain only as read-only compatibility shells. Do not add or move entries into `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, or `pre-launch.json`; they should remain empty, and `npm run check:stablecoin-data` guards that source layout.
 
-The client and frozen registries are also generated from the per-coin catalog. `coins.client.generated.json` powers lightweight browser-facing metadata through `shared/lib/stablecoins/client-registry.ts`; `coins.frozen.generated.ts` lets the full registry load frozen archive entries without validating the entire aggregate on the hot path. Run `npm run check:generated-artifacts` after metadata edits, and regenerate those projections with the scripts named by that check if they drift.
+The client, prevalidated runtime, and legacy redirect projections are also generated from the per-coin catalog. `coins.client.generated.json` powers lightweight browser-facing metadata through `shared/lib/stablecoins/client-registry.ts`; `coins.prevalidated.generated.ts` lets the full registry load checked metadata without validating the entire aggregate on the hot path; `legacy-llama-redirects.generated.json` is the minimal Pages Functions map for old numeric DefiLlama stablecoin URLs. Run `npm run check:generated-artifacts` after metadata edits, and regenerate those projections with the scripts named by that check if they drift.
 
 ## Editing Rules
 
 - Keep IDs canonical and stable: lowercase `ticker-issuer` format, aligned with `shared/lib/stablecoin-id-registry.ts`.
 - Add or update exactly one file under `shared/data/stablecoins/coins/*.json`, then update `canonical-order.json`.
-- Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin edits, and keep the client/frozen generated projections fresh.
+- Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin edits, and keep the client, prevalidated runtime, and legacy redirect projections fresh.
 - Preserve existing supply policy. Primary supply comes from DefiLlama through the existing fallback path; do not add manual, on-chain, CMC, or DEX supply overrides.
 - Contract metadata belongs under each coin's `contracts` array. Use verified chain IDs and decimals from source metadata or explorers before adding them.
 - Use `liveReservesConfig`, `yieldConfig`, and other feature configs only when the relevant pipeline already supports that source family.

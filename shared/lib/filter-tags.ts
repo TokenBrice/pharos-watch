@@ -1,8 +1,6 @@
 import type { FilterTag, PegCurrency, StablecoinMeta } from "../types/core";
 import {
-  PEG_FILTER_TAG_LABELS,
   PEG_METADATA,
-  type PegCurrencyFilterTag,
 } from "./classification";
 import {
   getReportCardGradeRank,
@@ -32,36 +30,6 @@ export const FIAT_NON_USD_PEG_TAGS = pegFilterTagsWhere(
 export const OTHER_PEG_TAGS = pegFilterTagsWhere(
   (peg) => peg !== "USD" && peg !== "EUR" && peg !== "GOLD",
 );
-
-const NON_PEG_FILTER_TAG_LABELS = {
-  "fiat-non-usd-peg": "Fiat non-USD",
-  "commodity-peg": "Commodities",
-  centralized: "Centralized",
-  "centralized-dependent": "CeFi-Dependent",
-  decentralized: "Decentralized",
-  "rwa-backed": "RWA-Backed",
-  "crypto-backed": "Crypto-Backed",
-  algorithmic: "Algorithmic",
-  "infrastructure-liquity-v1": "Liquity v1",
-  "infrastructure-liquity-v2": "Liquity v2",
-  "infrastructure-m0": "M0",
-  "variant-tracked": "All variants",
-  "variant-savings-passthrough": "Savings variant",
-  "variant-strategy-vault": "Strategy variant",
-  "variant-risk-absorption": "Risk absorption variant",
-  "variant-bond-maturity": "Bond variant",
-  "grade-a": "A",
-  "grade-ge-b": "≥B",
-  "grade-ge-c": "≥C",
-  "grade-ge-c-plus": "≥C+",
-  "grade-ge-c-minus": "≥C-",
-  "grade-le-d": "≤D",
-} satisfies Record<Exclude<FilterTag, PegCurrencyFilterTag>, string>;
-
-export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
-  ...PEG_FILTER_TAG_LABELS,
-  ...NON_PEG_FILTER_TAG_LABELS,
-};
 
 export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
   return PEG_METADATA[peg].filterTag;

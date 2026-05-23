@@ -78,7 +78,7 @@ function buildCollapsedFiatPreview(
 export function PegBrowseStrip({
   pegs,
   pegCoinCount: countFn,
-  fiatExceptUsdHref = "/?peg=fiat-non-usd-peg#filter-bar",
+  fiatExceptUsdHref = "/?peg=fiat-non-usd-peg#home-alt-rankings",
 }: {
   pegs: typeof ACTIVE_PEGS;
   pegCoinCount: (peg: (typeof ACTIVE_PEGS)[number]) => number;

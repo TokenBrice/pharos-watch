@@ -94,6 +94,8 @@ function buildEventsPath(filter: UseEventsFilter, options: BuildEventsPathOption
 }
 
 function eventsInfiniteQueryOptions(filter: UseEventsFilter = {}) {
+  // Infinite event feeds keep a custom descriptor because each page carries a
+  // cursor and the first page alone requests the expensive total count.
   const { staleTime, refetchInterval } = getPollingWindow(CRON_15MIN);
   return infiniteQueryOptions({
     queryKey: ["events", "infinite", eventsQueryKeyFilters(filter)] as const,

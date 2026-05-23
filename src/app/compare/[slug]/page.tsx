@@ -12,7 +12,7 @@ import {
 } from "@/lib/compare-pages";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
-import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 
 export function generateStaticParams() {
   return buildSlugStaticParams("slug", STATIC_COMPARISON_PAGES);

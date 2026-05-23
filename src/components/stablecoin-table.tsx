@@ -28,7 +28,7 @@ import { StablecoinTableEmptyState } from "@/components/stablecoin-table-empty-s
 import { StablecoinVirtualRow } from "@/components/stablecoin-table-row";
 import { useRowCursor } from "@/hooks/use-row-cursor";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { buildLiveCompareUrl } from "@/lib/compare-pages";
+import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import {
   buildTrackedIdSet,

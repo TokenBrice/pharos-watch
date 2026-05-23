@@ -5,10 +5,10 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 
 interface ParentVariantsCardProps {
-  variants: StablecoinMeta[];
+  variants: StablecoinClientMeta[];
 }
 
 export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {

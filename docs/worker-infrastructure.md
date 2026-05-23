@@ -206,6 +206,19 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 The kill switches are for observability degradation only. They do not disable API-key auth, D1-backed quota enforcement, public self-serve request throttles, feedback throttles, admin audit logs, or Telegram security checks. Per-key `api_key_request_stats` remain enabled when Worker route/source attribution is disabled so operators can still see keyed public API load driving limiter pressure. Setting `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` disables only those per-key stats rows and should be reserved for public API spikes where D1 pressure is already visible elsewhere.
 
+### Stale D1 Schema Inventory
+
+Several migration-era tables are intentionally schema-retained until a separate destructive D1 cleanup rollout runs. Current Worker code does not read or write:
+
+| Table | Replaced by / current runtime path | Cleanup status |
+| --- | --- | --- |
+| `public_api_rate_limit` | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit` | stale schema-retained table |
+| `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` | stale schema-retained table; migrated forward by `0085_total_request_attribution.sql` |
+| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` | stale schema-retained table kept for old-worker compatibility during the v2 deploy window |
+| `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | stale schema-retained table unless feedback D1 persistence is deliberately reintroduced |
+
+Do not drop these in a normal migration. Destructive cleanup requires production backup/Time Travel verification, fresh zero-use evidence, and a dedicated rollout after compatible Worker code has soaked.
+
 ### CORS Headers
 
 Applied to every response via `addCorsHeaders()`:

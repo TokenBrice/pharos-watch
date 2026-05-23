@@ -6,10 +6,12 @@
  * `shared/lib/stablecoins/client-registry.ts`.
  *
  * The full per-coin asset is ~1.37 MiB (391 entries × ~50 fields). Client
- * surfaces only read ~16 of those fields for routing, labels, filtering,
- * and classification. This generator drops the heavy arrays (`reserves`,
- * `contracts`, `dependencies`, `blacklistabilityReview`, `featuredContent`,
- * obituary prose, etc.) and emits an array with deterministic key ordering.
+ * surfaces read a curated subset of those fields for routing, labels,
+ * filtering, classification, reserve coverage summaries, and portfolio
+ * exposure. This generator drops fields that still belong on server-only
+ * paths (`contracts`, `dependencies`, `blacklistabilityReview`,
+ * `featuredContent`, obituary prose, etc.) and emits an array with
+ * deterministic key ordering.
  *
  * The output file is checked in (not generated at runtime) so the Next.js
  * client bundle can `import` it directly without a runtime fetch.

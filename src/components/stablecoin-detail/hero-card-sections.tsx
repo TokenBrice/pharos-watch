@@ -10,6 +10,7 @@ import type {
   StablecoinData,
   StablecoinMeta,
 } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import {
   HeroDesktopIdentity,
@@ -74,7 +75,7 @@ interface HeroSectionBaseProps {
   coinData: StablecoinData;
   logoSrc?: string;
   verdict: StablecoinVerdict;
-  variantParent?: StablecoinMeta | null;
+  variantParent?: StablecoinClientMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
   pegRef: number;

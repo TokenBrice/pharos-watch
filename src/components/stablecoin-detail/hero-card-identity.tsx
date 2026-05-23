@@ -16,7 +16,7 @@ import {
   getMechanismExplainerPath,
   resolveMechanismArchetype,
 } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
@@ -26,13 +26,15 @@ import type {
   ReportCard,
   StablecoinMeta,
 } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { getFreezableLabel } from "@/lib/blacklist-status";
+import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
   buildGovernanceTaxonomyUrl,
-} from "@/lib/stablecoin-taxonomy";
+} from "@/lib/stablecoin-taxonomy-urls";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
@@ -306,7 +308,7 @@ function HeroVariantChip({
   variantChipClass,
   mobile = false,
 }: {
-  variantParent?: StablecoinMeta | null;
+  variantParent?: StablecoinClientMeta | null;
   variantChipClass?: string | null;
   mobile?: boolean;
 }) {
@@ -330,7 +332,7 @@ function HeroVariantChip({
 interface HeroIdentityProps {
   coin: StablecoinMeta;
   logoSrc?: string;
-  variantParent?: StablecoinMeta | null;
+  variantParent?: StablecoinClientMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
   reportCard?: ReportCard | null;
@@ -384,7 +386,7 @@ export function FreezablePill({
   }
   const href = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
     ? "#blacklist"
-    : `/blacklist?coin=${coin.symbol}`;
+    : buildCoinTrackerLink(coin.id, "freezewatch", coin.symbol).href;
   return (
     <Link
       href={href}

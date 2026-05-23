@@ -2,9 +2,9 @@ import type { StablecoinMeta } from "../../types";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import {
-  STABLECOIN_META_ASSETS_FROZEN,
-  STABLECOIN_META_ASSETS_FROZEN_HASH,
-} from "../../data/stablecoins/coins.frozen.generated";
+  STABLECOIN_META_ASSETS_PREVALIDATED,
+  STABLECOIN_META_ASSETS_PREVALIDATED_HASH,
+} from "../../data/stablecoins/coins.prevalidated.generated";
 import {
   findStablecoinCatalogInvariantIssues,
   parseCanonicalOrderAsset,
@@ -25,9 +25,9 @@ const CANONICAL_ORDER = parseCanonicalOrderAsset(
 
 /**
  * Synchronous FNV-1a 32-bit fingerprint, mirroring the generator in
- * scripts/maintenance/generate-stablecoin-frozen-registry.mjs. Runs in Node, Workers,
+ * scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs. Runs in Node, Workers,
  * and browsers without crypto APIs. Used only to detect drift between the
- * frozen TS snapshot and the source JSON — never security-sensitive.
+ * prevalidated TS snapshot and the source JSON — never security-sensitive.
  */
 function fnv1a32(input: string): string {
   let hash = 0x811c9dc5;
@@ -39,23 +39,23 @@ function fnv1a32(input: string): string {
 }
 
 const sourceFingerprint = fnv1a32(JSON.stringify(perCoinGeneratedAsset));
-const frozenSnapshotIsFresh = sourceFingerprint === STABLECOIN_META_ASSETS_FROZEN_HASH;
+const prevalidatedSnapshotIsFresh = sourceFingerprint === STABLECOIN_META_ASSETS_PREVALIDATED_HASH;
 
 let PER_COIN_SOURCE_COINS: StablecoinMeta[];
 
-if (frozenSnapshotIsFresh) {
+if (prevalidatedSnapshotIsFresh) {
   // Fast path: build-time generator + `npm run check:stablecoin-data` ran
   // Zod + invariants + variant validation against this exact JSON. Skip
   // the duplicate per-boot work.
-  PER_COIN_SOURCE_COINS = STABLECOIN_META_ASSETS_FROZEN as StablecoinMeta[];
+  PER_COIN_SOURCE_COINS = STABLECOIN_META_ASSETS_PREVALIDATED as StablecoinMeta[];
 } else {
-  // Drift path: someone edited a coin JSON without regenerating the frozen
+  // Drift path: someone edited a coin JSON without regenerating the prevalidated
   // module (typical dev hot-reload scenario). Fall back to the live Zod
   // parse + invariants so the runtime still rejects bad data.
   console.warn(
     `[stablecoin-registry] coins.generated.json fingerprint ${sourceFingerprint} ` +
-      `does not match frozen snapshot ${STABLECOIN_META_ASSETS_FROZEN_HASH}; ` +
-      "running live Zod validation. Run `node scripts/maintenance/generate-stablecoin-frozen-registry.mjs` to refresh.",
+      `does not match prevalidated snapshot ${STABLECOIN_META_ASSETS_PREVALIDATED_HASH}; ` +
+      "running live Zod validation. Run `node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs` to refresh.",
   );
   PER_COIN_SOURCE_COINS = parseStablecoinMetaAssets(
     perCoinGeneratedAsset,
@@ -102,7 +102,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = CANONICAL_ORDER.map((id) =>
   return entry;
 });
 
-if (!frozenSnapshotIsFresh) {
+if (!prevalidatedSnapshotIsFresh) {
   const variantErrors = validateVariantRelationships(TRACKED_STABLECOINS);
   if (variantErrors.length > 0) {
     throw new Error(`Stablecoin variant validation failed:\n${variantErrors.join("\n")}`);

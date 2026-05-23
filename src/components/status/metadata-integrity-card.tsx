@@ -1,5 +1,5 @@
 import { STATUS_RESERVE_DRIFT_THRESHOLD_POINTS } from "@shared/lib/status-thresholds";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ClassificationWarning, ReserveDriftEntry, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 

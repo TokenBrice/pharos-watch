@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import legacyLlamaRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
 
 interface StablecoinRouteEnv {
   ASSETS: {
@@ -6,18 +6,16 @@ interface StablecoinRouteEnv {
   };
 }
 
-const TRACKED_BY_LLAMA_ID = new Map(
-  TRACKED_STABLECOINS.flatMap((coin) => (coin.llamaId ? [[coin.llamaId, coin]] : [])),
-);
+const LEGACY_LLAMA_REDIRECTS = legacyLlamaRedirects as Record<string, string>;
 
 function resolveLegacyStablecoinRedirect(url: URL): string | null {
   const match = url.pathname.match(/^\/stablecoin\/(\d+)\/?$/);
   if (!match) return null;
 
-  const coin = TRACKED_BY_LLAMA_ID.get(match[1]);
-  if (!coin) return null;
+  const coinId = LEGACY_LLAMA_REDIRECTS[match[1]];
+  if (!coinId) return null;
 
-  const target = new URL(`/stablecoin/${coin.id}/`, url);
+  const target = new URL(`/stablecoin/${coinId}/`, url);
   target.search = url.search;
   return target.toString();
 }

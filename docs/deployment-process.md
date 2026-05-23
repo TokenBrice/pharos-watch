@@ -2,15 +2,17 @@
 
 ## Purpose
 
-This document defines the production deploy flow and the required local gate for merged worktree changes.
+This document defines the production deploy flow and the required local gate before pushing production-impacting work.
 
 ## Core Rules
 
 1. Pull requests into `main` run the shared validation gate in GitHub Actions; production deploys still ship from pushes to `main`, while a separate Pages-only rebuild workflow refreshes the static export daily. Both workflows also support manual dispatch.
-2. Heavy feature/refactor work must be done in a dedicated worktree branch.
-3. After merging a worktree branch into local `main`, run the merge gate before pushing.
+2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one.
+3. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. After merging that branch into local `main`, run the merge gate before pushing.
 
-## Worktree Flow
+## Optional Worktree Flow
+
+Use this only when the maintainer explicitly asks for a separate worktree or branch.
 
 1. Create a worktree from `origin/main`.
 

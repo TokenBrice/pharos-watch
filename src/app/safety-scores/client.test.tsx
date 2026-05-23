@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportCardsClient } from "./client";
 import type { ReportCard } from "@shared/types";
-import { makeCoreSettlementReportCard as makeCard } from "./test-helpers";
+import { makeCoreSettlementReportCard as makeCard } from "@/test/fixtures/safety-scores";
 
 const refetchReportCards = vi.fn();
 const refetchPrices = vi.fn();

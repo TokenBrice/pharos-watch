@@ -17,9 +17,9 @@ const { TRACKED_STATUS_BY_ID } = vi.hoisted(() => ({
   } as Record<string, boolean | "possible" | "inherited" | "dilutable">,
 }));
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  ACTIVE_STABLECOINS: [{ id: "usdt-tether" }, { id: "usdp-parallel" }, { id: "lusd-liquity" }],
-  TRACKED_META_BY_ID: new Map([
+vi.mock("@shared/lib/stablecoins/client-registry", () => ({
+  CLIENT_ACTIVE_STABLECOINS: [{ id: "usdt-tether" }, { id: "usdp-parallel" }, { id: "lusd-liquity" }],
+  CLIENT_TRACKED_META_BY_ID: new Map([
     ["usdt-tether", {}],
     ["usdp-parallel", {}],
     ["lusd-liquity", {}],

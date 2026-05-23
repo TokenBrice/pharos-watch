@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
+const CHECK_MODE = process.argv.includes("--check");
 
 const SNAP_PATH = resolve(
   REPO_ROOT,
@@ -12,7 +13,6 @@ const SNAP_PATH = resolve(
 );
 
 const OUT_DIR = resolve(REPO_ROOT, "agents/og-learn-staging");
-mkdirSync(OUT_DIR, { recursive: true });
 
 const SLUGS = ["fiat-cash", "tbill", "cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"];
 
@@ -24,6 +24,40 @@ const TITLES = {
   algorithmic: "Algorithmic Stablecoins, Explained",
   "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
 };
+
+function checkPublishedPngs() {
+  const missing = [];
+  const empty = [];
+  for (const slug of SLUGS) {
+    const path = resolve(REPO_ROOT, "public", `og-learn-${slug}.png`);
+    if (!existsSync(path)) {
+      missing.push(`public/og-learn-${slug}.png`);
+      continue;
+    }
+    if (statSync(path).size <= 0) {
+      empty.push(`public/og-learn-${slug}.png`);
+    }
+  }
+
+  if (missing.length > 0 || empty.length > 0) {
+    if (missing.length > 0) {
+      console.error(`Missing mechanism OG PNG(s): ${missing.join(", ")}`);
+    }
+    if (empty.length > 0) {
+      console.error(`Empty mechanism OG PNG(s): ${empty.join(", ")}`);
+    }
+    process.exit(1);
+  }
+
+  console.log(`Mechanism OG PNG check passed (${SLUGS.length} file(s)).`);
+}
+
+if (CHECK_MODE) {
+  checkPublishedPngs();
+  process.exit(0);
+}
+
+mkdirSync(OUT_DIR, { recursive: true });
 
 // Dark-mode token substitutions. var() doesn't resolve in standalone SVG;
 // inline literal oklch() colors keep the dark-mode appearance.

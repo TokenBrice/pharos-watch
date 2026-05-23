@@ -46,6 +46,8 @@ export function depegEventsInfiniteQueryOptions(
   stablecoinId?: string,
   options: { activeOnly?: boolean; includePending?: boolean } = {},
 ) {
+  // Cursor pagination and active/pending variants intentionally stay outside
+  // the static query registry; the path builder still comes from API_PATHS.
   const { staleTime, refetchInterval } = getPollingWindow(CRON_15MIN);
   return infiniteQueryOptions({
     queryKey: [

@@ -123,6 +123,16 @@ export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, Scheduled
   ),
 );
 
+/**
+ * Jobs that intentionally share one logical `cron_runs.job` identity across
+ * more than one scheduled runner slot. Each entry uses one lease/status row on
+ * purpose; anything not listed here should have a distinct job name.
+ */
+export const SHARED_SCHEDULED_JOB_IDENTITIES = {
+  "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
+  "snapshot-supply": ["quarterHourly", "daily0800Utc"],
+} as const satisfies Record<string, readonly CronScheduleKey[]>;
+
 export function flattenScheduledSlotPlanJobs(plan: ScheduledSlotPlan): string[] {
   return plan.jobChains.flatMap((chain) => [...chain]);
 }

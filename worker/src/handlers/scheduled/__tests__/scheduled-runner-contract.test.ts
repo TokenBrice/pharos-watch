@@ -7,6 +7,7 @@ import {
 import {
   flattenScheduledSlotPlanJobs,
   getScheduledSlotPlanBudgetEntries,
+  SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import { SLOT_RUNNER_BY_KEY } from "../../scheduled";
@@ -41,5 +42,28 @@ describe("scheduled runner contract", () => {
       expect(getScheduledSlotPlanBudgetEntries(plan), `${entry.job} must have a scheduled budget entry`)
         .toContain(entry.job);
     }
+  });
+
+  it("keeps shared cron job identities explicit", () => {
+    const schedulesByJob = new Map<string, CronScheduleKey[]>();
+    for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
+      for (const job of flattenScheduledSlotPlanJobs(plan)) {
+        const schedules = schedulesByJob.get(job) ?? [];
+        schedules.push(plan.scheduleKey);
+        schedulesByJob.set(job, schedules);
+      }
+    }
+
+    const sharedJobs = Object.fromEntries(
+      [...schedulesByJob.entries()]
+        .filter(([, schedules]) => schedules.length > 1)
+        .map(([job, schedules]) => [job, sorted(schedules)]),
+    );
+
+    expect(sharedJobs).toEqual(
+      Object.fromEntries(
+        Object.entries(SHARED_SCHEDULED_JOB_IDENTITIES).map(([job, schedules]) => [job, sorted(schedules)]),
+      ),
+    );
   });
 });

@@ -8,13 +8,13 @@ import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
  *
  * Mirrors the shape of `shared/lib/stablecoins/registry.ts` but ships only
  * the fields enumerated in `StablecoinClientMeta`. The full registry stays
- * for server callers that need `reserves`, `contracts`, `dependencies`,
+ * for server callers that need `contracts`, `dependencies`,
  * `blacklistabilityReview`, obituary text, etc.
  *
  * Source-of-truth pipeline:
  *   `coins.generated.json` (1.37 MiB, full)
  *     -> `scripts/build-data/build-client-registry.mjs`
- *     -> `coins.client.generated.json` (~280 KiB, slim)
+ *     -> `coins.client.generated.json` (~790 KiB, client projection)
  *     -> this module
  *
  * `validate-client-registry-fields` (CI) keeps the slim projection a strict

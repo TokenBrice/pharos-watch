@@ -5,6 +5,7 @@ import { extname, dirname, join, relative, resolve } from "path";
 import ts from "typescript";
 
 const ROOT = process.cwd();
+const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
 const SOURCE_DIRS = ["src", "shared", "worker/src", "functions"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".js", ".mjs"]);
 const REPORTABLE_DIR_PREFIXES = ["src/", "shared/", "worker/src/", "functions/"];
@@ -195,17 +196,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/start-here-callout.ts::MAX_START_HERE_HOMEPAGE_SESSIONS",
   "src/lib/status-dashboard-model.ts::getTopCauses",
   "src/lib/yield-constants.ts::WARNING_SIGNAL_LABELS",
-  // Static chart primitives consumed by validation-deferred chart wrappers.
-  "src/components/chart-primitives.tsx::StaticTimeXAxis",
-  "src/components/chart-primitives.tsx::StaticMonoYAxis",
-  "src/components/chart-primitives.tsx::StaticTimeGrid",
-  // ANNOTATION_HEX_COLORS + bucketAnnotationsByQuarter are consumed by sibling
-  // chart helpers in the same file; the static scan does not resolve same-file
-  // references. ChartDataTableDisclosure is the a11y disclosure companion to
-  // ChartDataTable, awaiting per-chart adoption.
-  "src/components/chart-primitives.tsx::ANNOTATION_HEX_COLORS",
-  "src/components/chart-primitives.tsx::bucketAnnotationsByQuarter",
-  "src/components/chart-primitives.tsx::ChartDataTableDisclosure",
   // Consumed by the KpiBar host within the same module; same-file reference
   // the static scan cannot resolve.
   "src/components/kpi-bar-parts.tsx::PsiBandHistoryStrip",
@@ -379,7 +369,7 @@ if (unusedExports.length > 0) {
   }
 }
 
-if (process.argv.includes("--audit-allowlist")) {
+if (AUDIT_ALLOWLIST) {
   const stale = [];
   for (const entry of EXPORT_ALLOWLIST) {
     const [file] = entry.split("::");

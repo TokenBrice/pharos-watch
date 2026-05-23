@@ -42,12 +42,13 @@ import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
 import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
-import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
+import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import type { BlacklistStablecoin } from "@shared/types";
+import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import type { BlacklistStablecoin, StablecoinMeta } from "@shared/types";
 import { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
 
 const FeedbackModal = dynamic(
@@ -180,25 +181,29 @@ function DetailLoadingShell({
 
 interface StablecoinDetailClientProps {
   id: string;
+  coin: StablecoinMeta;
   summary: StablecoinDetailSummary | null;
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
+  collateralUsageEntries?: readonly CollateralUsageEntry[];
   staticProfileContent?: ReactNode;
   exploreNextContent?: ReactNode;
 }
 
 export default function StablecoinDetailClient({
   id,
+  coin,
   summary,
   staticCoin,
   logoSrc,
+  collateralUsageEntries = [],
   staticProfileContent = null,
   exploreNextContent = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [activeBannerId, setActiveBannerId] = useState<string>("overview");
   const heroRef = useRef<HTMLDivElement>(null);
-  const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
+  const viewModel = useStablecoinDetailViewModel({ id, coin, summary, logoSrc });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
 
   if (viewModel.status === "loading") {
@@ -356,7 +361,7 @@ export default function StablecoinDetailClient({
             <span className="text-border">|</span>
             <Link
               href={
-                getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ??
+                getPrimaryStaticComparisonLinkForCoin(viewModel.coin.id)?.href ??
                 buildLiveCompareUrl([viewModel.coin.id])
               }
               className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
@@ -409,6 +414,7 @@ export default function StablecoinDetailClient({
           stablecoinId={viewModel.id}
           variantRelationshipCard={variantRelationshipCard}
           hasCollateralUsage={hasCollateralUsage}
+          collateralUsageEntries={collateralUsageEntries}
         />
         {showPegChart ? (
           <MarketDataSection

@@ -17,7 +17,7 @@
 
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { MAX_COMPARE_COINS } from "@/lib/compare-config";
-import { buildLiveCompareUrl } from "@/lib/compare-pages";
+import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { encodeState, type UrlStateField } from "@/lib/url-state";
 import {
   SCREENER_URL_SCHEMA,

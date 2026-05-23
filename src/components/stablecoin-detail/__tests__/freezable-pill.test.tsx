@@ -139,11 +139,11 @@ describe("FreezablePill", () => {
     expect(link.getAttribute("href")).toBe("#blacklist");
   });
 
-  it("links non-BLACKLIST_STABLECOINS symbols to /blacklist?coin=<symbol>", () => {
+  it("links non-BLACKLIST_STABLECOINS symbols to the canonical FreezeWatch stablecoin filter", () => {
     const { getByRole } = render(
       <FreezablePill coin={NON_BLACKLIST_COIN} reportCard={makeReportCard("dilutable")} />,
     );
     const link = getByRole("link");
-    expect(link.getAttribute("href")).toBe("/blacklist?coin=DAI");
+    expect(link.getAttribute("href")).toBe("/freezewatch/?stablecoin=DAI");
   });
 });

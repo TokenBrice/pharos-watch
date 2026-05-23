@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it } from "vitest";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
-import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "./test-helpers";
+import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
 
 function makeBoardRanking(overrides = {}) {
   return makeYieldRanking({

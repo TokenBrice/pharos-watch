@@ -13,7 +13,7 @@ import {
   buildBackingTaxonomyUrl,
   buildGovernanceTaxonomyUrl,
   buildInfrastructureTaxonomyUrl,
-} from "@/lib/stablecoin-taxonomy";
+} from "@/lib/stablecoin-taxonomy-urls";
 
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;

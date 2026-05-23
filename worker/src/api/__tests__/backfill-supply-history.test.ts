@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
-import { fetchHistoricalFxRates } from "../backfill-fx";
+import { fetchHistoricalFxRates } from "../../lib/backfill-fx";
 
 stubCryptoForAuth();
 
@@ -37,8 +37,8 @@ vi.mock("../backfill-price-sources", () => ({
 import { handleBackfillSupplyHistory } from "../backfill-supply-history";
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
 
-vi.mock("../backfill-fx", async () => {
-  const actual = await vi.importActual<typeof import("../backfill-fx")>("../backfill-fx");
+vi.mock("../../lib/backfill-fx", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/backfill-fx")>("../../lib/backfill-fx");
   return {
     ...actual,
     fetchHistoricalFxRates: vi.fn(async () => ({})),

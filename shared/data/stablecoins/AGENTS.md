@@ -10,11 +10,11 @@ Applies to `shared/data/stablecoins/**`.
 
 ## Rules
 
-See root CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents stablecoin-data-specific items.
+See root AGENTS.md / CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents stablecoin-data-specific items.
 
 - Author stablecoin metadata in `shared/data/stablecoins/coins/*.json`; this directory is the editable source of truth.
 - Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` after per-coin edits. Do not edit generated registry artifacts by hand.
-- Keep the client and frozen projections fresh too: `shared/data/stablecoins/coins.client.generated.json` and `shared/data/stablecoins/coins.frozen.generated.ts` are generated from the same per-coin catalog and guarded by `npm run check:generated-artifacts`.
+- Keep the client, prevalidated, and legacy redirect projections fresh too: `shared/data/stablecoins/coins.client.generated.json`, `shared/data/stablecoins/coins.prevalidated.generated.ts`, and `shared/data/stablecoins/legacy-llama-redirects.generated.json` are generated from the same per-coin catalog and guarded by `npm run check:generated-artifacts`.
 - Treat `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json` as read-only compatibility shells. They should remain empty, and `npm run check:stablecoin-data` guards that layout.
 - Keep `canonical-order.json` aligned with the per-coin catalog.
 - Add or update contracts only when the address is verified against the relevant source.

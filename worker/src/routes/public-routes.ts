@@ -1,6 +1,4 @@
 import { handleBluechipRatings, handleStablecoinCharts, handleStablecoins, handleUsdsStatus, handleYieldRankings } from "../api/cache-handlers";
-import { handleStablecoinSummary } from "../api/stablecoin-summary";
-import { handleStablecoinReserves } from "../api/stablecoin-reserves";
 import { handleBlacklist } from "../api/blacklist";
 import { handleBlacklistSummary } from "../api/blacklist-summary";
 import { handleDepegEvents } from "../api/depeg-events";
@@ -25,17 +23,12 @@ import { handleStressSignals } from "../api/stress-signals";
 import { handleChains } from "../api/chains";
 import { handleNonUsdShare } from "../api/non-usd-share";
 import { handlePublicStatusHistory } from "../api/public-status-history";
-import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { handleSnapshotsIndex } from "../api/snapshot";
 import { handleTelegramPulse } from "../api/telegram-pulse";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 
 export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("stablecoins", ({ db }) => handleStablecoins(db)),
-  defineStaticRoute("stablecoin-detail-canary", ({ db, execCtx, coingeckoApiKey }) =>
-    handleStablecoinDetail(db, "usdt-tether", execCtx, coingeckoApiKey)),
-  defineStaticRoute("stablecoin-summary-canary", ({ db }) => handleStablecoinSummary(db, "usdt-tether")),
-  defineStaticRoute("stablecoin-reserves-canary", ({ db }) => handleStablecoinReserves(db, "iusd-infinifi")),
   defineStaticRoute("stablecoin-charts", ({ db }) => handleStablecoinCharts(db)),
   defineStaticRoute("blacklist", ({ db, url }) => handleBlacklist(db, url)),
   defineStaticRoute("blacklist-summary", ({ db }) => handleBlacklistSummary(db)),

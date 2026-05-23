@@ -7,11 +7,11 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:74cdc38d851bf4c9d6c59ed719518dd3ffaa6f503b9ea7e041c0b6ff2d1ea308",
+  "sourceChecksum": "sha256:b86ae1edc1a81adfc6de8a89f8cc8604dc30e5d5cf5b391733dfce17feae21dc",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
-      "checksum": "sha256:e8897111f1a41d676bce36447bb1b56e77343480ef9a26062aea45e8ad8d7407",
+      "checksum": "sha256:fb8ffaed97087745ebfc8bb7268e9a0cd73cab8fe61d09aef496485b3018feb9",
       "role": "Curated dead-stablecoin metadata."
     },
     {
@@ -21,7 +21,7 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 95,
+  "rowCount": 92,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -617,31 +617,6 @@
       "pharosUrl": "https://pharos.watch/cemetery/#lvlusd-level-usd-2025-10"
     },
     {
-      "id": "usdl-lift-dollar-2025-10",
-      "name": "Lift Dollar",
-      "symbol": "USDL",
-      "llamaId": null,
-      "logoUrl": "https://pharos.watch/logos/cemetery/usdl.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2025-10",
-      "deathDatePrecision": "month",
-      "peakMcapUsd": 148588007,
-      "epitaph": "Consolidated into USDG",
-      "obituary": "Paxos wound down Lift Dollar to focus on larger-scale institutional products. Minting ended October 2025 and remaining USDL was converted to USDG (Paxos's new stablecoin).",
-      "sourceUrl": "https://www.paxos.com/newsroom/winding-down-usdl-lift-dollar",
-      "sourceLabel": "Paxos",
-      "archivedDataAvailable": false,
-      "contracts": [
-        {
-          "chain": "ethereum",
-          "address": "0xbdc7c08592ee4aa51d06c27ee23d5087d65adbcd"
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdl-lift-dollar-2025-10"
-    },
-    {
       "id": "csusdl-coinshift-csusdl-2025-10",
       "name": "Coinshift csUSDL",
       "symbol": "csUSDL",
@@ -910,56 +885,6 @@
         }
       ],
       "pharosUrl": "https://pharos.watch/cemetery/#hyusd-high-yield-usd-2025-06"
-    },
-    {
-      "id": "usdm-mountain-protocol-usd-2025-05",
-      "name": "Mountain Protocol USD",
-      "symbol": "USDM",
-      "llamaId": "132",
-      "logoUrl": "https://pharos.watch/logos/cemetery/usdm-mountain.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2025-05",
-      "deathDatePrecision": "month",
-      "peakMcapUsd": 157210136,
-      "epitaph": "Team took the exit",
-      "obituary": "Mountain Protocol's yield-bearing USDM was the regulated darling of the T-bill stablecoin wave — licensed in Bermuda, rebasing daily, deployed across eight chains. It peaked at $157M in March 2024, then bled for a year as the yield-bearing stablecoin market became a knife fight. When Anchorage Digital came shopping for talent and licenses in May 2025, the team took the exit: minting off, rewards zeroed, and the remaining tokens dumped into a Uniswap pool for whoever was left holding them.",
-      "sourceUrl": "https://cointelegraph.com/news/anchorage-digital-acquires-stablecoin-issuer-mountain-protocol",
-      "sourceLabel": "CoinTelegraph",
-      "archivedDataAvailable": false,
-      "contracts": [
-        {
-          "chain": "ethereum",
-          "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c"
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/cemetery/#usdm-mountain-protocol-usd-2025-05"
-    },
-    {
-      "id": "euroe-euroe-2025-05",
-      "name": "EUROe",
-      "symbol": "EUROe",
-      "llamaId": "98",
-      "logoUrl": "https://pharos.watch/logos/cemetery/euroe.png",
-      "pegCurrency": "EUR",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2025-05",
-      "deathDatePrecision": "month",
-      "peakMcapUsd": 1750000,
-      "epitaph": "Membrane dissolved",
-      "obituary": "Membrane Finance built one of Europe's first MiCA-compliant euro stablecoins — regulated by FIN-FSA in Finland, backed 1:1 with ring-fenced euro reserves, audited by KPMG. It never broke $2M in circulation. Paxos acquired Membrane in January 2025 to gain EU regulatory access, then announced a full wind-down of EUROe two months later to focus on bringing the Global Dollar (USDG) to Europe instead. Holders were urged to redeem; the contracts quietly went dark.",
-      "sourceUrl": "https://www.euroe.com/blog/paxos",
-      "sourceLabel": "EUROe Blog",
-      "archivedDataAvailable": false,
-      "contracts": [
-        {
-          "chain": "ethereum",
-          "address": "0x820802Fa8a99901F52e39acD21177b0BE6EE2974"
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/cemetery/#euroe-euroe-2025-05"
     },
     {
       "id": "l-bold-legacy-bold-2025-02",
@@ -2017,12 +1942,7 @@
       "sourceUrl": "https://www.coingecko.com/en/coins/spiceusd",
       "sourceLabel": "CoinGecko",
       "archivedDataAvailable": false,
-      "contracts": [
-        {
-          "chain": "arbitrum",
-          "address": "0xd74f5255d557944cf7dd0e45ff521520002d5748"
-        }
-      ],
+      "contracts": [],
       "pharosUrl": "https://pharos.watch/cemetery/#usds-spiceusd-2022-09"
     },
     {

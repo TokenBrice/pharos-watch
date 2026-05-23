@@ -34,7 +34,7 @@ import {
   buildBackingTaxonomyUrl,
   buildGovernanceTaxonomyUrl,
   buildInfrastructureTaxonomyUrl,
-} from "@/lib/stablecoin-taxonomy";
+} from "@/lib/stablecoin-taxonomy-urls";
 
 export function KeyInfoCard({
   meta,

@@ -1,6 +1,7 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { createTableComparator } from "@/lib/table-comparator";
-import type { DexLiquidityData, StablecoinMeta } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import type { DexLiquidityData } from "@shared/types";
 
 export type LiquiditySortKey =
   | "score"
@@ -16,7 +17,7 @@ export type LiquiditySortKey =
   | "durability";
 
 export interface LiquidityRow {
-  meta: StablecoinMeta;
+  meta: StablecoinClientMeta;
   liq: DexLiquidityData;
 }
 

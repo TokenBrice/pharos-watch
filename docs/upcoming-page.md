@@ -107,7 +107,7 @@ The route now promotes the Telegram launch-alert workflow in two layers:
 - `src/app/upcoming/page.tsx` renders an `sr-only` nav containing links for every `PRE_LAUNCH_STABLECOIN`, so the page remains crawlable even though the visible card grid is client-rendered.
 - The page emits `CollectionPage` and `ItemList` JSON-LD for the current pre-launch detail routes.
 
-This route is also referenced from the homepage through `UpcomingStablecoinsSection`.
+The visible route entrypoint is `/upcoming/`; the homepage does not render a separate upcoming-asset section.
 
 ---
 
@@ -125,6 +125,6 @@ If launch-phase labels, drift heuristics, or fuzzy-date handling change, update:
 
 1. `src/lib/pre-launch.ts`
 2. this document
-3. any homepage copy that describes the upcoming-stablecoin surface (`src/components/upcoming-stablecoins-section.tsx` and [homepage.md](./homepage.md))
+3. any homepage copy that describes the upcoming-stablecoin surface
 
 If pre-launch stablecoins stop linking into the normal `/stablecoin/[id]/` detail route, also update [stablecoin-detail-page.md](./stablecoin-detail-page.md).

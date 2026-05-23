@@ -12,7 +12,7 @@ import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { useRowCursor, type UseRowCursorResult } from "@/hooks/use-row-cursor";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { buildLiveCompareUrl } from "@/lib/compare-pages";
+import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { SORT_COLUMN_EVENT, type SortColumnEventDetail } from "@/components/providers";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";

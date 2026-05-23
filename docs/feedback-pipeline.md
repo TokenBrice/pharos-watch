@@ -126,7 +126,7 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
 5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
 
-**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; durable `feedback_submissions` is added by `worker/migrations/0078_feedback_submissions.sql`):
+**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; `feedback_submissions` was added by `worker/migrations/0078_feedback_submissions.sql` but is not used by the current runtime):
 
 ```sql
 CREATE TABLE IF NOT EXISTS feedback_submissions (
@@ -160,7 +160,7 @@ CREATE INDEX IF NOT EXISTS idx_feedback_rate_limit_ip
   ON feedback_rate_limit(ip_hash, submitted_at);
 ```
 
-`feedback_submissions` is retained in the schema as durable storage for the feedback domain, but the current runtime path creates the GitHub issue directly and does not yet persist one row per submission there.
+`feedback_submissions` is schema-retained only. The current runtime path creates the GitHub issue directly, does not persist one row per submission, and treats the table as part of the next separately coordinated destructive D1 cleanup unless durable feedback persistence is deliberately reintroduced with privacy/retention docs and tests.
 
 #### Auto-verification (data corrections)
 

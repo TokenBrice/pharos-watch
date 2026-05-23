@@ -8,8 +8,8 @@ import { withCiVitestArgs } from "../lib/vitest-ci-args.mjs";
 
 const generatedPrerequisites = getNoncriticalTestGeneratedPrerequisites();
 
-for (const script of generatedPrerequisites) {
-  const generated = spawnSync(localBin("tsx"), [script], {
+for (const command of generatedPrerequisites) {
+  const generated = spawnSync("bash", ["-lc", command], {
     stdio: "inherit",
   });
 

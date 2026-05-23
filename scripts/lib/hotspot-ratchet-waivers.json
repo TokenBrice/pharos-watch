@@ -15,6 +15,14 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
+  "src/app/stablecoin/[id]/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Stablecoin detail client now owns the expanded stablecoin detail tab shell, detail view-model orchestration, frozen-state messaging, and multiple report-card/reserve/yield panels. Keep it queued for a focused detail-page split after the prevalidated registry cleanup settles; extract tab sections before adding more detail-page features.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-23",
+    "reviewAfter": "2026-08-23",
+    "nextAction": "Split stablecoin detail tab-section rendering and frozen-state orchestration into focused components in the next detail-page cleanup pass."
+  },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche.",
@@ -106,14 +114,6 @@
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
     "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/homepage-client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface.",
     "owner": "repo-maintenance",
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",

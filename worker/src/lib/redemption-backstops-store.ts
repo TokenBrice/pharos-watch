@@ -52,6 +52,7 @@ import {
 } from "@shared/lib/redemption-backstop-confidence";
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
+import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
 interface RedemptionBackstopRow {
@@ -553,6 +554,13 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         }
 
         const rowCount = Object.keys(map).length;
+        if (source === "legacy-current") {
+          recordRuntimeFallbackUsage("redemption-backstop-legacy-current", {
+            runId: run.run_id,
+            rowCount,
+            expectedCount: run.written_count,
+          });
+        }
         if (rowCount !== run.written_count) {
           rejectionReasons.push(`${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`);
           continue;

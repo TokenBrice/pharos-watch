@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getCache } from "./db-cache";
 import { decodeCachedJson, type JsonDecodeMode } from "./cache-json";
+import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/market";
 
 // Validate critical fields only -- passthrough preserves all upstream data
@@ -235,6 +236,12 @@ export async function loadStablecoinsCache(
 
   if (!decoded.ok) {
     if (decoded.payload != null) {
+      if (decoded.reason === "legacy-array-payload") {
+        recordRuntimeFallbackUsage("stablecoins-cache-legacy-array", {
+          updatedAt: decoded.updatedAt,
+          filteredCount: decoded.payload.filteredCount,
+        });
+      }
       return {
         kind: "degraded",
         reason: decoded.reason,

@@ -6,7 +6,7 @@ import {
   type YieldSourceDepthLens,
 } from "@/lib/yield-source-risk";
 import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import {
   type PegCurrency,

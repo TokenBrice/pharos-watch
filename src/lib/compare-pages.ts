@@ -2,34 +2,11 @@ import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shar
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { STATIC_COMPARE_PAIRS, buildLiveCompareUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@/lib/urls";
 
-export const STATIC_COMPARE_PAIRS = [
-  ["usdt-tether", "usdc-circle"],
-  ["usdt-tether", "usde-ethena"],
-  ["usdt-tether", "dai-makerdao"],
-  ["usdt-tether", "usds-sky"],
-  ["usdc-circle", "usde-ethena"],
-  ["usdc-circle", "dai-makerdao"],
-  ["usdc-circle", "usds-sky"],
-  ["usde-ethena", "dai-makerdao"],
-  ["usde-ethena", "usds-sky"],
-  ["usds-sky", "dai-makerdao"],
-  ["rlusd-ripple", "usdc-circle"],
-  ["usdt-tether", "pyusd-paypal"],
-  ["usdt-tether", "rlusd-ripple"],
-  ["usdc-circle", "pyusd-paypal"],
-  ["usdt-tether", "fdusd-first-digital"],
-  ["usdc-circle", "fdusd-first-digital"],
-  ["usdt-tether", "frax-frax"],
-  ["usdc-circle", "frax-frax"],
-  ["dai-makerdao", "gho-aave"],
-  ["dai-makerdao", "crvusd-curve"],
-  ["gho-aave", "crvusd-curve"],
-  ["usdt-tether", "usd0-usual"],
-  ["usdc-circle", "usd0-usual"],
-] as const;
+export { STATIC_COMPARE_PAIRS };
 
 const BACKING_COPY = {
   "rwa-backed": "real-world-asset-backed",
@@ -62,10 +39,6 @@ function getStablecoinOrThrow(id: string): StablecoinMeta {
   return coin;
 }
 
-function buildComparisonSlug(left: StablecoinMeta, right: StablecoinMeta): string {
-  return `${left.id}-vs-${right.id}`;
-}
-
 function assertStaticComparePairs() {
   const slugs = new Set<string>();
   const unorderedKeys = new Set<string>();
@@ -78,7 +51,7 @@ function assertStaticComparePairs() {
       throw new Error(`Static comparison pair includes frozen stablecoin: ${leftId} vs ${rightId}`);
     }
 
-    const slug = `${leftId}-vs-${rightId}`;
+    const slug = buildStaticComparisonSlug(leftId, rightId);
     if (slugs.has(slug)) {
       throw new Error(`Duplicate static comparison slug: ${slug}`);
     }
@@ -155,19 +128,16 @@ function buildComparisonDescription(left: StablecoinMeta, right: StablecoinMeta)
   );
 }
 
-export function buildLiveCompareUrl(coinIds: readonly string[]): string {
-  return `/compare/?coins=${coinIds.map((coinId) => encodeURIComponent(coinId)).join(",")}`;
-}
-
 assertStaticComparePairs();
 
 export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PAIRS.map(([leftId, rightId]) => {
   const left = getStablecoinOrThrow(leftId);
   const right = getStablecoinOrThrow(rightId);
   const shortTitle = `${left.symbol} vs ${right.symbol}`;
+  const slug = buildStaticComparisonSlug(left.id, right.id);
   return {
-    slug: buildComparisonSlug(left, right),
-    href: `/compare/${buildComparisonSlug(left, right)}/`,
+    slug,
+    href: `/compare/${slug}/`,
     title: `${shortTitle}: ${left.name} vs ${right.name}`,
     shortTitle,
     description: buildComparisonDescription(left, right),

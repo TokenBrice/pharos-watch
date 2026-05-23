@@ -79,6 +79,12 @@ if (PSI_INCLUSIVE_REGISTRY_BY_ID.size !== PSI_ELIGIBLE_STABLECOINS.length) {
 
 for (const dead of DEAD_STABLECOINS) {
   if (dead.llamaId) {
+    const existing = DEAD_BY_LLAMA_ID.get(dead.llamaId);
+    if (existing) {
+      throw new Error(
+        `[stablecoin-id-registry] Duplicate dead llamaId: ${dead.llamaId} (${existing}, ${dead.name})`,
+      );
+    }
     DEAD_BY_LLAMA_ID.set(dead.llamaId, dead.name);
   }
 }

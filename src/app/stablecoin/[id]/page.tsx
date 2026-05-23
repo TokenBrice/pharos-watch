@@ -19,16 +19,30 @@ import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
+import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
-function hasCollateralUsageTarget(stablecoinId: string) {
-  return TRACKED_STABLECOINS.some((candidate) => {
+function buildCollateralUsageEntries(stablecoinId: string): CollateralUsageEntry[] {
+  const usage: CollateralUsageEntry[] = [];
+  for (const candidate of TRACKED_STABLECOINS) {
     if (candidate.id === stablecoinId || candidate.variantOf === stablecoinId) {
-      return false;
+      continue;
     }
-    return deriveDependencies(candidate).some((dependency) => dependency.id === stablecoinId);
-  });
+    for (const dependency of deriveDependencies(candidate)) {
+      if (dependency.id !== stablecoinId) continue;
+      usage.push({
+        coin: {
+          id: candidate.id,
+          name: candidate.name,
+          symbol: candidate.symbol,
+        },
+        weight: dependency.weight,
+        type: dependency.type ?? "collateral",
+      });
+    }
+  }
+  return usage.sort((a, b) => b.weight - a.weight);
 }
 
 function DetailPageShellFallback({
@@ -166,8 +180,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const staticComparisonPages = getStaticComparisonPagesForCoin(id);
+  const collateralUsageEntries = buildCollateralUsageEntries(id);
   const staticCoin = buildStablecoinStaticMeta(coin, {
-    hasCollateralUsage: hasCollateralUsageTarget(id),
+    hasCollateralUsage: collateralUsageEntries.length > 0,
   });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
 
@@ -186,9 +201,11 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       }>
         <StablecoinDetailClient
           id={id}
+          coin={coin}
           summary={summary}
           staticCoin={staticCoin}
           logoSrc={logosById[coin.id]}
+          collateralUsageEntries={collateralUsageEntries}
           exploreNextContent={
             <ExploreNextSection
               coin={coin}

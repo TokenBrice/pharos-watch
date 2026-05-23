@@ -33,13 +33,22 @@ describe("client registry field contract", () => {
       tags: ["major"],
       frozenAt: null,
       launchDate: "2018-09-26",
+      announcedDate: "2018-05-15",
+      expectedLaunchDate: null,
       launchPhase: "live",
+      milestones: [],
+      dateHistory: [],
       canBeBlacklisted: true,
       canBeBlacklistedSource: "issuer docs",
       commodityOunces: null,
       infrastructures: ["circle"],
       mica: null,
+      yieldConfig: null,
+      liveReservesConfig: null,
+      proofOfReserves: null,
       reserves: [{ asset: "cash" }],
+      collateral: "cash",
+      collateralQuality: "rwa",
     };
 
     expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([

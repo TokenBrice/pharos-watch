@@ -1,4 +1,4 @@
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
 
 export const PINNED_STABLECOINS_STORAGE_KEY = "pharos-pinned-stablecoins";
 export const MAX_PINNED_STABLECOINS = 12;

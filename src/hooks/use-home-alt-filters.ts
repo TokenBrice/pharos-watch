@@ -1,10 +1,8 @@
 "use client";
 
-// Peg-only filter slice for the compact homepage. Wraps the same URL machinery used by
-// useHomepageFilters so the chip row and the main table stay in sync via ?peg=.
-
 import { useCallback, useMemo } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS } from "@shared/lib/filter-tags";
 import type { FilterTag } from "@shared/types";
 
 export type HomeAltPegFilter = "all" | "usd-peg" | "fiat-non-usd-peg" | "commodity-peg";
@@ -18,7 +16,10 @@ const VALID_PEG_VALUES: ReadonlySet<HomeAltPegFilter> = new Set([
 
 function normalizePeg(raw: string | null): HomeAltPegFilter {
   if (!raw) return "all";
-  return VALID_PEG_VALUES.has(raw as HomeAltPegFilter) ? (raw as HomeAltPegFilter) : "all";
+  if (VALID_PEG_VALUES.has(raw as HomeAltPegFilter)) return raw as HomeAltPegFilter;
+  if (COMMODITY_PEG_TAGS.includes(raw as FilterTag)) return "commodity-peg";
+  if (FIAT_NON_USD_PEG_TAGS.includes(raw as FilterTag)) return "fiat-non-usd-peg";
+  return "all";
 }
 
 export interface UseHomeAltFiltersReturn {

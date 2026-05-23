@@ -83,7 +83,7 @@ export const SIGNAL_CHART_COLORS: Record<string, string> = {
   yield: "#fb923c",
 };
 
-/** Brand-specific colors for the total market-cap chart (from total-mcap-chart.tsx) */
+/** Brand-specific colors for market-cap charts. */
 export const USDT_GREEN = "#26a17b";
 export const USDC_BLUE = "#2775ca";
 export const SKY_YELLOW = "#f5a623";

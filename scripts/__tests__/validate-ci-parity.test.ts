@@ -166,7 +166,9 @@ describe("validate-ci parity", () => {
       "npm run lint",
       "npm run typecheck",
       "npm run check:agent-doc-sync",
+      "npm run check:agent-skill-symlinks",
       "npm run check:attestor-tier-coverage",
+      "npm run check:client-registry-imports",
       "npm run check:cron-abort-contract",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
@@ -187,6 +189,7 @@ describe("validate-ci parity", () => {
       "npm run check:redemption-backstops",
       "npm run check:reserve-fixture-freshness",
       "npm run check:selector-banned-phrases",
+      "npm run check:script-entrypoints",
       "npm run check:shared-cycles",
       "npm run check:shared-types-imports",
       "npm run check:sql-safety",
@@ -202,6 +205,7 @@ describe("validate-ci parity", () => {
 
   it("preserves generated artifact order through the shared prebuild registry and runner", () => {
     const expectedCommands = [
+      "node scripts/maintenance/generate-agent-code-map.mjs",
       "tsx scripts/maintenance/generate-sitemap-dates.ts",
       "tsx scripts/maintenance/generate-docs-metadata.ts",
       "tsx scripts/maintenance/generate-depeg-event-search-data.ts",
@@ -211,13 +215,16 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-postman-collection.ts",
       "tsx scripts/maintenance/generate-openapi-spec.ts",
       "tsx scripts/maintenance/generate-llms-txt.ts",
-      "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
+      "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
+      "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
       "node scripts/build-data/build-client-registry.mjs",
       "node scripts/maintenance/generate-api-reference.mjs",
       "node scripts/maintenance/build-og-editorial.mjs",
+      "node scripts/maintenance/build-og-learn-images.mjs",
       "node scripts/maintenance/build-og-case-studies.mjs",
     ];
     const expectedCheckCommands = [
+      "node scripts/maintenance/generate-agent-code-map.mjs --check",
       "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
       "tsx scripts/maintenance/generate-docs-metadata.ts --check",
       "tsx scripts/maintenance/generate-depeg-event-search-data.ts --check",
@@ -227,14 +234,17 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-postman-collection.ts --check",
       "tsx scripts/maintenance/generate-openapi-spec.ts --check",
       "tsx scripts/maintenance/generate-llms-txt.ts --check",
-      "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
+      "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
+      "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
       "node scripts/build-data/build-client-registry.mjs --check",
       "node scripts/maintenance/generate-api-reference.mjs --check",
       "node scripts/maintenance/build-og-editorial.mjs --check",
+      "node scripts/maintenance/build-og-learn-images.mjs --check",
       "node scripts/maintenance/build-og-case-studies.mjs --check",
     ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
+      "agent-code-map",
       "sitemap-dates",
       "docs-metadata",
       "depeg-event-search-data",
@@ -244,17 +254,19 @@ describe("validate-ci parity", () => {
       "postman",
       "openapi",
       "llms-txt",
-      "stablecoin-frozen-registry",
+      "stablecoin-prevalidated-registry",
+      "legacy-stablecoin-redirects",
       "stablecoin-client-registry",
       "api-reference",
       "og-editorial",
+      "og-learn",
       "og-case-studies",
     ]);
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
     expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
-      "scripts/maintenance/generate-sitemap-dates.ts",
-      "scripts/maintenance/generate-docs-metadata.ts",
+      "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+      "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     ]);
     expect(buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands))).toEqual(
       expectedCommands.map((cmd) => [[cmd]]),

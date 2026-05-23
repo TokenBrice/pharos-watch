@@ -342,13 +342,7 @@
     "epitaph": "Lost its flavor",
     "obituary": "A partially algorithmic stablecoin on Avalanche from the Spice Trade DEX ecosystem. Launched in May 2022 into the post-UST wreckage, it never gained meaningful adoption. The peg broke almost immediately, sliding to $0.07, and the anonymous team abandoned the project. $18M in ghost supply sits unredeemable on Avalanche.",
     "sourceUrl": "https://www.coingecko.com/en/coins/spiceusd",
-    "sourceLabel": "CoinGecko",
-    "contracts": [
-      {
-        "chain": "arbitrum",
-        "address": "0xd74f5255d557944cf7dd0e45ff521520002d5748"
-      }
-    ]
+    "sourceLabel": "CoinGecko"
   },
   {
     "id": "husd-husd-2022-10",
@@ -1195,48 +1189,6 @@
     ]
   },
   {
-    "id": "usdm-mountain-protocol-usd-2025-05",
-    "name": "Mountain Protocol USD",
-    "symbol": "USDM",
-    "llamaId": "132",
-    "logo": "usdm-mountain.png",
-    "pegCurrency": "USD",
-    "causeOfDeath": "abandoned",
-    "deathDate": "2025-05",
-    "peakMcap": 157210136,
-    "epitaph": "Team took the exit",
-    "obituary": "Mountain Protocol's yield-bearing USDM was the regulated darling of the T-bill stablecoin wave — licensed in Bermuda, rebasing daily, deployed across eight chains. It peaked at $157M in March 2024, then bled for a year as the yield-bearing stablecoin market became a knife fight. When Anchorage Digital came shopping for talent and licenses in May 2025, the team took the exit: minting off, rewards zeroed, and the remaining tokens dumped into a Uniswap pool for whoever was left holding them.",
-    "sourceUrl": "https://cointelegraph.com/news/anchorage-digital-acquires-stablecoin-issuer-mountain-protocol",
-    "sourceLabel": "CoinTelegraph",
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c"
-      }
-    ]
-  },
-  {
-    "id": "euroe-euroe-2025-05",
-    "name": "EUROe",
-    "symbol": "EUROe",
-    "llamaId": "98",
-    "logo": "euroe.png",
-    "pegCurrency": "EUR",
-    "causeOfDeath": "abandoned",
-    "deathDate": "2025-05",
-    "peakMcap": 1750000,
-    "epitaph": "Membrane dissolved",
-    "obituary": "Membrane Finance built one of Europe's first MiCA-compliant euro stablecoins — regulated by FIN-FSA in Finland, backed 1:1 with ring-fenced euro reserves, audited by KPMG. It never broke $2M in circulation. Paxos acquired Membrane in January 2025 to gain EU regulatory access, then announced a full wind-down of EUROe two months later to focus on bringing the Global Dollar (USDG) to Europe instead. Holders were urged to redeem; the contracts quietly went dark.",
-    "sourceUrl": "https://www.euroe.com/blog/paxos",
-    "sourceLabel": "EUROe Blog",
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0x820802Fa8a99901F52e39acD21177b0BE6EE2974"
-      }
-    ]
-  },
-  {
     "id": "dyad-dyad-v2-2025-06",
     "name": "DYAD v2",
     "symbol": "DYAD",
@@ -1411,26 +1363,6 @@
       {
         "chain": "ethereum",
         "address": "0x7c1156e515aa1a2e851674120074968c905aaf37"
-      }
-    ]
-  },
-  {
-    "id": "usdl-lift-dollar-2025-10",
-    "name": "Lift Dollar",
-    "symbol": "USDL",
-    "logo": "usdl.png",
-    "pegCurrency": "USD",
-    "causeOfDeath": "abandoned",
-    "deathDate": "2025-10",
-    "peakMcap": 148588007,
-    "epitaph": "Consolidated into USDG",
-    "obituary": "Paxos wound down Lift Dollar to focus on larger-scale institutional products. Minting ended October 2025 and remaining USDL was converted to USDG (Paxos's new stablecoin).",
-    "sourceUrl": "https://www.paxos.com/newsroom/winding-down-usdl-lift-dollar",
-    "sourceLabel": "Paxos",
-    "contracts": [
-      {
-        "chain": "ethereum",
-        "address": "0xbdc7c08592ee4aa51d06c27ee23d5087d65adbcd"
       }
     ]
   },

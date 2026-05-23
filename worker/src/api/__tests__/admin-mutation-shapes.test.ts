@@ -6,8 +6,8 @@
  * parameterized contract test in `admin-auth-contract.test.ts` (added in
  * commit 8ba5ae71c) — do NOT duplicate it here.
  *
- * Skipped: `backfill-fx.ts` has no `handle*` HTTP entrypoint; it is utility
- * code (fx series helpers) consumed by other handlers, so there is no
+ * Skipped: `worker/src/lib/backfill-fx.ts` has no `handle*` HTTP entrypoint; it
+ * is utility code (fx series helpers) consumed by other handlers, so there is no
  * request/response shape to assert.
  */
 import { describe, expect, it, vi } from "vitest";

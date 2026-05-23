@@ -9,11 +9,9 @@ import {
   type SimulationLinkDatum,
 } from "d3-force";
 import {
-  buildDependencyGraphEdges,
   filterDependencyGraphEdgesToLive,
   type DependencyGraphEdge,
 } from "@shared/lib/dependency-graph";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DependencyType, ReportCard } from "@shared/types";
 
 // ---------------------------------------------------------------------------
@@ -208,7 +206,7 @@ function pushTargetsOutOfLane(
 export function buildGraphData(
   cards: ReportCard[],
   mcapMap: Map<string, number>,
-  dependencyEdges: readonly DependencyGraphEdge[] = buildDependencyGraphEdges(ACTIVE_STABLECOINS),
+  dependencyEdges: readonly DependencyGraphEdge[] = [],
   maxNodes: number = MAX_NODES,
 ): { nodes: GraphNode[]; links: GraphLink[] } {
   const cardMap = new Map(cards.map((c) => [c.id, c]));

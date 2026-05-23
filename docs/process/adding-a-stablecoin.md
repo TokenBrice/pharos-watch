@@ -702,7 +702,7 @@ Optional:
 
 - `backfill-supply-history` accepts `allow-constant-price-fallback=true` for specific sparse-history cases
 
-Do not hardcode direct pushes to `main` into the process. Follow the repo's normal branch and deploy workflow.
+Do not hardcode branch or PR creation into the process. Follow the repo's current agent guidance: routine maintenance can land on `main`, while separate branches/worktrees/PRs are used only when the maintainer explicitly asks for that workflow.
 
 ## Phase 9 - Post-Deploy Verification
 

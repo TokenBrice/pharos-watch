@@ -4,15 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { deriveDependencies } from "@shared/lib/dependency-derivation";
-import type { DependencyType, StablecoinMeta } from "@shared/types";
-
-interface CollateralUsageEntry {
-  coin: StablecoinMeta;
-  weight: number;
-  type: DependencyType;
-}
+import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 
 const PREVIEW_COUNT = 9;
 
@@ -21,22 +13,6 @@ const TIER_DEFS = [
   { key: "partial", label: "Partial", test: (w: number) => w >= 0.1 && w < 0.5 },
   { key: "minor", label: "Minor exposure", test: (w: number) => w < 0.1 },
 ] as const;
-
-function useCollateralUsage(stablecoinId: string): CollateralUsageEntry[] {
-  return useMemo(() => {
-    const usage: CollateralUsageEntry[] = [];
-    for (const coin of TRACKED_STABLECOINS) {
-      if (coin.id === stablecoinId) continue;
-      if (coin.variantOf === stablecoinId) continue;
-      for (const dep of deriveDependencies(coin)) {
-        if (dep.id === stablecoinId) {
-          usage.push({ coin, weight: dep.weight, type: dep.type ?? "collateral" });
-        }
-      }
-    }
-    return usage.sort((a, b) => b.weight - a.weight);
-  }, [stablecoinId]);
-}
 
 function CollateralUsageItem({ entry, logoSrc }: { entry: CollateralUsageEntry; logoSrc: string | undefined }) {
   const pct = Math.round(entry.weight * 100);
@@ -63,11 +39,11 @@ function CollateralUsageItem({ entry, logoSrc }: { entry: CollateralUsageEntry; 
 }
 
 interface CollateralUsageSectionProps {
-  stablecoinId: string;
+  entries: readonly CollateralUsageEntry[];
 }
 
-export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionProps) {
-  const usage = useCollateralUsage(stablecoinId);
+export function CollateralUsageSection({ entries }: CollateralUsageSectionProps) {
+  const usage = useMemo(() => [...entries].sort((a, b) => b.weight - a.weight), [entries]);
   const { data: logos } = useLogos();
   const [showAll, setShowAll] = useState(false);
 

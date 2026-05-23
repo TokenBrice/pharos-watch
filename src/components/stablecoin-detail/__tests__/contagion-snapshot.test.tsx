@@ -41,8 +41,8 @@ vi.mock("@/components/methodology-hint", () => ({
 }));
 
 vi.mock("@/components/stablecoin-detail/collateral-usage-section", () => ({
-  CollateralUsageSection: ({ stablecoinId }: { stablecoinId: string }) => (
-    <div data-testid="collateral-usage-mock">collateral-usage:{stablecoinId}</div>
+  CollateralUsageSection: ({ entries }: { entries: Array<{ coin: { id: string } }> }) => (
+    <div data-testid="collateral-usage-mock">collateral-usage:{entries.map((entry) => entry.coin.id).join(",")}</div>
   ),
 }));
 
@@ -163,9 +163,15 @@ describe("ContagionSnapshot", () => {
       ),
     });
 
-    render(<ContagionSnapshot stablecoinId="usdc-circle" hasCollateralUsage />);
+    render(
+      <ContagionSnapshot
+        stablecoinId="usdc-circle"
+        hasCollateralUsage
+        collateralUsageEntries={[{ coin: { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }, weight: 0.8, type: "collateral" }]}
+      />,
+    );
 
-    expect(screen.getByTestId("collateral-usage-mock").textContent).toBe("collateral-usage:usdc-circle");
+    expect(screen.getByTestId("collateral-usage-mock").textContent).toBe("collateral-usage:usde-ethena");
     expect(screen.getByTestId("contagion-graph-mock")).toBeTruthy();
   });
 

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import {
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS_SHORT,
@@ -31,6 +31,7 @@ import type { LaunchPhase } from "@shared/types";
 import aiSummaries from "../../data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
 
+const PRE_LAUNCH_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter((coin) => coin.status === "pre-launch");
 const typedLogos = logosById;
 const typedSummaries = aiSummaries as Record<
   string,

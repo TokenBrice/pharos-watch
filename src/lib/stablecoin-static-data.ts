@@ -6,7 +6,7 @@ export const TRACKED_STABLECOIN_COUNT = 394;
 export const ACTIVE_STABLECOIN_COUNT = 364;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 26;
 export const FROZEN_STABLECOIN_COUNT = 4;
-export const DEAD_STABLECOIN_COUNT = 91;
+export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
   centralized: 177,

@@ -27,6 +27,7 @@ import type {
   YieldHistoryResponse,
   YieldRankingsResponse,
 } from "@shared/types";
+import { TelegramPulseSchema, type TelegramPulse } from "@shared/types/status";
 import { StablecoinChartResponseSchema, UsdsStatusResponseSchema } from "@shared/types/digest";
 import {
   BluechipRatingsMapSchema,
@@ -58,6 +59,7 @@ import {
   CRON_BLACKLIST,
   CRON_MINT_BURN,
   CRON_RESERVE_SYNC,
+  CRON_TELEGRAM_PULSE,
   CRON_YIELD,
 } from "@/lib/cron-intervals";
 import type { ZodType } from "zod";
@@ -273,6 +275,12 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     path: API_PATHS.usdsStatus(),
     producerIntervalMs: CRON_15MIN,
     schema: UsdsStatusResponseSchema,
+  }),
+  telegramPulse: pollingDescriptor<TelegramPulse>({
+    queryKey: ["telegram-pulse"],
+    path: API_PATHS.telegramPulse(),
+    producerIntervalMs: CRON_TELEGRAM_PULSE,
+    schema: TelegramPulseSchema,
   }),
   yieldHistory: (stablecoinId: string, days: number, mode: YieldHistoryMode, sourceKey?: string | null) =>
     pollingDescriptor<YieldHistoryResponse>({
