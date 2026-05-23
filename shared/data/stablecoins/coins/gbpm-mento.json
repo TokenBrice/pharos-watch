@@ -91,5 +91,8 @@
     "params": {
       "cdpStablecoin": "GBPm"
     }
-  }
+  },
+  "infrastructures": [
+    "liquity-v2"
+  ]
 }

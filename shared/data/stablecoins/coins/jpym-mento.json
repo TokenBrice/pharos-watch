@@ -91,5 +91,8 @@
     "params": {
       "cdpStablecoin": "JPYm"
     }
-  }
+  },
+  "infrastructures": [
+    "liquity-v2"
+  ]
 }

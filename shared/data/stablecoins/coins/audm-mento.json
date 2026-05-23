@@ -90,5 +90,8 @@
       "type": "collateral",
       "weight": 1
     }
+  ],
+  "infrastructures": [
+    "liquity-v2"
   ]
 }

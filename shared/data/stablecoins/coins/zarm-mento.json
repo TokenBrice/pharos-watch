@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento South African Rand",
   "symbol": "ZARm",
-  "oneLiner": "ZARm is Mento's South African Rand stablecoin, oracle-priced and backed by the Mento Reserve mix of sUSDS, CELO, EURC, USDC, USDT, and ETH derivatives.",
+  "oneLiner": "ZARm is Mento's South African rand stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "ZAR",
@@ -13,8 +13,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-  "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit ZARm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+  "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+  "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing ZARm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the ZARm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
   "mechanismArchetype": "cdp",
   "geckoId": "celo-south-african-rand",
   "proofOfReserves": {
@@ -59,49 +59,11 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-      "pct": 43,
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
       "risk": "low",
-      "coinId": "susds-sky"
-    },
-    {
-      "name": "CELO",
-      "pct": 17,
-      "risk": "high"
-    },
-    {
-      "name": "EURC",
-      "pct": 14,
-      "risk": "low",
-      "coinId": "eurc-circle"
-    },
-    {
-      "name": "USDC",
-      "pct": 11,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "USDT",
-      "pct": 7,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "axlEUROC",
-      "pct": 5,
-      "risk": "medium",
-      "coinId": "eurc-circle"
-    },
-    {
-      "name": "stETH",
-      "pct": 2,
-      "risk": "low"
-    },
-    {
-      "name": "AUSD and smaller reserve assets",
-      "pct": 1,
-      "risk": "low"
+      "coinId": "cusd-celo",
+      "depType": "collateral"
     }
   ],
   "liveReservesConfig": {
@@ -122,5 +84,15 @@
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     }
-  }
+  },
+  "infrastructures": [
+    "liquity-v2"
+  ],
+  "dependencies": [
+    {
+      "id": "cusd-celo",
+      "type": "collateral",
+      "weight": 1
+    }
+  ]
 }

@@ -260,7 +260,10 @@
     },
     "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing AUDm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the AUDm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-australian-dollar"
+    "geckoId": "celo-australian-dollar",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "audx-aussie-dollar-token",
@@ -585,7 +588,7 @@
     "id": "brlm-mento",
     "name": "Mento Brazilian Real",
     "symbol": "BRLm",
-    "oneLiner": "BRLm is Mento's oracle-priced Brazilian real on Celo, exchanged through FPMM swap routes against the diversified Mento reserve mix.",
+    "oneLiner": "BRLm is Mento's Brazilian real stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "BRL",
@@ -594,9 +597,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit BRLm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing BRLm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the BRLm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-real-creal"
+    "geckoId": "celo-real-creal",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "brlv-crown",
@@ -768,7 +774,7 @@
     "id": "cadm-mento",
     "name": "Mento Canadian Dollar",
     "symbol": "CADm",
-    "oneLiner": "CADm is Mento's oracle-priced Canadian dollar stablecoin on Celo, redeemable through reserve swaps backed by a diversified basket of stablecoins and crypto.",
+    "oneLiner": "CADm is Mento's Canadian dollar stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "CAD",
@@ -777,9 +783,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit CADm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing CADm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the CADm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-canadian-dollar"
+    "geckoId": "celo-canadian-dollar",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "cash-phantom",
@@ -866,7 +875,6 @@
       "navToken": false
     },
     "pegMechanism": "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
-    "mechanismArchetype": "cdp",
     "geckoId": "celo-euro"
   },
   {
@@ -936,7 +944,10 @@
     },
     "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint CHFm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
     "mechanismArchetype": "cdp",
-    "geckoId": "cchf"
+    "geckoId": "cchf",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "cjpy-yamato",
@@ -981,7 +992,7 @@
     "id": "copm-mento",
     "name": "Mento Colombian Peso",
     "symbol": "COPm",
-    "oneLiner": "COPm is Mento's oracle-priced Colombian peso stablecoin on Celo, mint and redeem through the Mento reserve backed by a mixed crypto and stablecoin basket.",
+    "oneLiner": "COPm is Mento's Colombian peso stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "OTHER",
@@ -990,9 +1001,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit COPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing COPm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the COPm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
-    "geckoId": "ccop"
+    "geckoId": "ccop",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "crvusd-curve",
@@ -1905,7 +1919,10 @@
     },
     "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-british-pound"
+    "geckoId": "celo-british-pound",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "gbpsafo-spiko",
@@ -1963,7 +1980,7 @@
     "id": "ghsm-mento",
     "name": "Mento Ghanaian Cedi",
     "symbol": "GHSm",
-    "oneLiner": "GHSm is Mento's Ghanaian cedi stablecoin on Celo, backed by a reserve mix (sUSDS, CELO, EURC, USDC, stETH) with FPMM swap routes priced by oracles.",
+    "oneLiner": "GHSm is Mento's Ghanaian cedi stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "OTHER",
@@ -1972,9 +1989,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit GHSm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing GHSm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the GHSm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
-    "geckoId": "cghs"
+    "geckoId": "cghs",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "gldy-streamex",
@@ -2564,7 +2584,10 @@
     },
     "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint JPYm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-japanese-yen"
+    "geckoId": "celo-japanese-yen",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "jpysc-sbi-startale",
@@ -2718,7 +2741,7 @@
     "id": "kesm-mento",
     "name": "Mento Kenyan Shilling",
     "symbol": "KESm",
-    "oneLiner": "KESm is Mento's oracle-priced Kenyan-shilling stablecoin on Celo, issued via FPMM swaps against a multi-asset reserve dashboarded by Mento Labs.",
+    "oneLiner": "KESm is Mento's Kenyan shilling stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "OTHER",
@@ -2727,9 +2750,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit KESm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing KESm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the KESm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-kenyan-shilling"
+    "geckoId": "celo-kenyan-shilling",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "kgst-kyrgyz-som",
@@ -3677,7 +3703,7 @@
     "id": "phpm-mento",
     "name": "Mento Philippine Peso",
     "symbol": "PHPm",
-    "oneLiner": "PHPm is Mento's Celo-native Philippine Peso stablecoin minted via oracle-priced FX swaps against the Mento Reserve basket of crypto and stablecoins.",
+    "oneLiner": "PHPm is Mento's Philippine peso stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "PHP",
@@ -3686,8 +3712,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit PHPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
-    "geckoId": "puso"
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing PHPm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the PHPm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
+    "mechanismArchetype": "cdp",
+    "geckoId": "puso",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "pht-pht",
@@ -6777,7 +6807,10 @@
       "navToken": false
     },
     "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
-    "mechanismArchetype": "cdp"
+    "mechanismArchetype": "cdp",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "xsgd-straitsx",
@@ -6982,7 +7015,7 @@
     "id": "zarm-mento",
     "name": "Mento South African Rand",
     "symbol": "ZARm",
-    "oneLiner": "ZARm is Mento's South African Rand stablecoin, oracle-priced and backed by the Mento Reserve mix of sUSDS, CELO, EURC, USDC, USDT, and ETH derivatives.",
+    "oneLiner": "ZARm is Mento's South African rand stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "ZAR",
@@ -6991,9 +7024,12 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit ZARm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing ZARm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the ZARm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
-    "geckoId": "celo-south-african-rand"
+    "geckoId": "celo-south-african-rand",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "zarp-zarp",

@@ -75,5 +75,8 @@
       "title": "Live CDP reserve sync pending",
       "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
     }
+  ],
+  "infrastructures": [
+    "liquity-v2"
   ]
 }

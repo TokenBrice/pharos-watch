@@ -1488,6 +1488,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -3455,7 +3458,7 @@
     "detailProvider": "defillama",
     "name": "Mento Brazilian Real",
     "symbol": "BRLm",
-    "oneLiner": "BRLm is Mento's oracle-priced Brazilian real on Celo, exchanged through FPMM swap routes against the diversified Mento reserve mix.",
+    "oneLiner": "BRLm is Mento's Brazilian real stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "BRL",
@@ -3464,8 +3467,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit BRLm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing BRLm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the BRLm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
     "geckoId": "celo-real-creal",
     "proofOfReserves": {
@@ -3515,6 +3518,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -4530,7 +4536,7 @@
     "detailProvider": "defillama",
     "name": "Mento Canadian Dollar",
     "symbol": "CADm",
-    "oneLiner": "CADm is Mento's oracle-priced Canadian dollar stablecoin on Celo, redeemable through reserve swaps backed by a diversified basket of stablecoins and crypto.",
+    "oneLiner": "CADm is Mento's Canadian dollar stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "CAD",
@@ -4539,8 +4545,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit CADm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing CADm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the CADm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
     "geckoId": "celo-canadian-dollar",
     "proofOfReserves": {
@@ -4590,6 +4596,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -5009,7 +5018,6 @@
     },
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     "pegMechanism": "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
-    "mechanismArchetype": "cdp",
     "geckoId": "celo-euro",
     "proofOfReserves": {
       "type": "real-time",
@@ -5451,6 +5459,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -5706,7 +5717,7 @@
     "detailProvider": "defillama",
     "name": "Mento Colombian Peso",
     "symbol": "COPm",
-    "oneLiner": "COPm is Mento's oracle-priced Colombian peso stablecoin on Celo, mint and redeem through the Mento reserve backed by a mixed crypto and stablecoin basket.",
+    "oneLiner": "COPm is Mento's Colombian peso stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "OTHER",
@@ -5715,8 +5726,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit COPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing COPm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the COPm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
     "geckoId": "ccop",
     "proofOfReserves": {
@@ -5766,6 +5777,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -11484,6 +11498,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -11875,7 +11892,7 @@
     "detailProvider": "defillama",
     "name": "Mento Ghanaian Cedi",
     "symbol": "GHSm",
-    "oneLiner": "GHSm is Mento's Ghanaian cedi stablecoin on Celo, backed by a reserve mix (sUSDS, CELO, EURC, USDC, stETH) with FPMM swap routes priced by oracles.",
+    "oneLiner": "GHSm is Mento's Ghanaian cedi stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "OTHER",
@@ -11884,8 +11901,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit GHSm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing GHSm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the GHSm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
     "geckoId": "cghs",
     "proofOfReserves": {
@@ -11916,6 +11933,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -11928,51 +11952,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "susds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo",
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -15177,6 +15166,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -15996,7 +15988,7 @@
     "detailProvider": "defillama",
     "name": "Mento Kenyan Shilling",
     "symbol": "KESm",
-    "oneLiner": "KESm is Mento's oracle-priced Kenyan-shilling stablecoin on Celo, issued via FPMM swaps against a multi-asset reserve dashboarded by Mento Labs.",
+    "oneLiner": "KESm is Mento's Kenyan shilling stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "OTHER",
@@ -16005,8 +15997,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit KESm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing KESm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the KESm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
     "geckoId": "celo-kenyan-shilling",
     "proofOfReserves": {
@@ -16037,6 +16029,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -16049,51 +16048,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "susds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo",
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -21633,7 +21597,7 @@
     "detailProvider": "defillama",
     "name": "Mento Philippine Peso",
     "symbol": "PHPm",
-    "oneLiner": "PHPm is Mento's Celo-native Philippine Peso stablecoin minted via oracle-priced FX swaps against the Mento Reserve basket of crypto and stablecoins.",
+    "oneLiner": "PHPm is Mento's Philippine peso stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "PHP",
@@ -21642,8 +21606,9 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit PHPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing PHPm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the PHPm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
+    "mechanismArchetype": "cdp",
     "geckoId": "puso",
     "proofOfReserves": {
       "type": "real-time",
@@ -21677,6 +21642,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -21689,51 +21661,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "susds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo",
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -40722,6 +40659,9 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
         "name": "USDm (Mento Dollar) CDP collateral",
@@ -42138,7 +42078,7 @@
     "detailProvider": "defillama",
     "name": "Mento South African Rand",
     "symbol": "ZARm",
-    "oneLiner": "ZARm is Mento's South African Rand stablecoin, oracle-priced and backed by the Mento Reserve mix of sUSDS, CELO, EURC, USDC, USDT, and ETH derivatives.",
+    "oneLiner": "ZARm is Mento's South African rand stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "ZAR",
@@ -42147,8 +42087,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit ZARm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing ZARm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the ZARm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
     "mechanismArchetype": "cdp",
     "geckoId": "celo-south-african-rand",
     "proofOfReserves": {
@@ -42179,6 +42119,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -42191,51 +42138,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v2"
+    ],
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "susds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo",
+        "depType": "collateral"
       }
     ],
     "liveReservesConfig": {
