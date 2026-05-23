@@ -40,6 +40,11 @@ const cronMocks = vi.hoisted(() => ({
   generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runDiscoveryScan: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runPruneCronHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runTelegramInactiveCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runTelegramRetentionCleanup: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runYieldCoverageAudit: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   refreshAggregateMintBurnFlowCache: vi.fn(async () => new Response("{}")),
   logCronRun: vi.fn(async (
     _db: D1Database,
@@ -115,6 +120,15 @@ vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }
 vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
 vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
 vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscoveryScan }));
+vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cronMocks.runPruneStatusProbeRuns }));
+vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
+vi.mock("../cron/telegram-inactive-cleanup", () => ({
+  runTelegramInactiveCleanup: cronMocks.runTelegramInactiveCleanup,
+}));
+vi.mock("../cron/telegram-retention-cleanup", () => ({
+  runTelegramRetentionCleanup: cronMocks.runTelegramRetentionCleanup,
+}));
+vi.mock("../cron/yield-coverage-audit", () => ({ runYieldCoverageAudit: cronMocks.runYieldCoverageAudit }));
 vi.mock("../api/mint-burn-flows", () => ({
   refreshAggregateMintBurnFlowCache: cronMocks.refreshAggregateMintBurnFlowCache,
 }));
@@ -765,6 +779,65 @@ describe("worker.scheduled", () => {
     expect(cronMocks.dispatchTelegramAlerts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
+  });
+
+  it("polls the manual digest trigger on the shared 5-min trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "*/5 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.getCache).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();
+    expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
+  });
+
+  it("runs daily 03:00 housekeeping on its dedicated trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "0 3 * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.runPruneStatusProbeRuns).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runPruneCronHistory).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runTelegramInactiveCleanup).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runTelegramRetentionCleanup).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
+  });
+
+  it("runs the monthly yield coverage audit on its dedicated trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "0 6 1 * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.runYieldCoverageAudit).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
   it("runs the extended mint/burn lane on the offset 30-min slot", async () => {
