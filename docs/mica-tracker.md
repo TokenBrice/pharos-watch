@@ -1,6 +1,6 @@
 # MiCA Compliance Tracker
 
-**Status: design spec (not yet built).** Proposed `/mica/` route plus the `mica` metadata extension that backs it. This document is the implementation contract; nothing here ships until the schema and backfill land.
+**Status: shipped.** The `/mica/` route and the `mica` metadata extension are live. This document began as the pre-build spec and now serves as the as-built reference; the implementation follows it, with two deltas: the status label/color map lives in a dedicated `shared/lib/mica.ts` (not `shared/lib/classification.ts`), and the initial register-verified backfill covers 24 coins (expandable via the `mica-research` skill).
 
 The tracker maps every tracked stablecoin to its standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing).
 

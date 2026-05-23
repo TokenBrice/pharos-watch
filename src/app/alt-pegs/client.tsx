@@ -149,7 +149,15 @@ function AltPegDistributionCard({
           <p className="pharos-kicker">Current Distribution</p>
           <h2 className="pharos-section-title">Which Non-USD Pegs Matter Now</h2>
           <p className="pharos-meta">
-            Ranked by current market cap, with direct links into each peg cohort page.
+            Ranked by current market cap, with direct links into each peg cohort page. EUR stablecoins are
+            reshaped by EU MiCA rules — see the{" "}
+            <Link
+              href="/mica"
+              className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+            >
+              MiCA Tracker
+            </Link>
+            .
           </p>
         </div>
         <div className="rounded-full border border-border/60 bg-muted/15 px-3 py-1.5 font-mono text-xs text-muted-foreground">

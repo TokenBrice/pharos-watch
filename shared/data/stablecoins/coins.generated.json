@@ -9131,6 +9131,16 @@
     "jurisdiction": {
       "country": "Turkey"
     },
+    "mica": {
+      "status": "out-of-scope",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Token Teknoloji A.S. - Euro Token (Turkey-domiciled issuer; traded on Bitlo)",
+          "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "avalanche",
@@ -9434,6 +9444,18 @@
       "country": "Malta",
       "regulator": "MFSA",
       "license": "MiCA"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "competentAuthority": "MFSA",
+      "authorizedEntity": "STSS (Malta) Limited",
+      "references": [
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - STASIS not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        }
+      ]
     },
     "contracts": [
       {
@@ -32840,6 +32862,23 @@
       "regulator": "Finanstilsynet",
       "license": "MiCA E-Money Token (EMT)"
     },
+    "mica": {
+      "status": "pending",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "Finanstilsynet",
+      "authorizedEntity": "Norwegian Block Exchange AS (NBX)",
+      "references": [
+        {
+          "label": "USDM EU Issuer white paper notified to Finanstilsynet (25 Sep 2024)",
+          "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/671252e5de22175efb179b4b_USDM%20White%20paper%20notification%20date%2025th%20September%202024.pdf"
+        },
+        {
+          "label": "NBX granted e-money institution license by Finanstilsynet (2022)",
+          "url": "https://www.marketscreener.com/quote/stock/NORWEGIAN-BLOCK-EXCHANGE-130615471/news/E-money-license-granted-by-Finanstilsynet-40894370/"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "cardano",
@@ -37863,6 +37902,22 @@
       "regulator": "FMA",
       "license": "TVTG (Blockchain Act)"
     },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "competentAuthority": "FMA Liechtenstein",
+      "authorizedEntity": "VNX Commodities AG",
+      "references": [
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - VNX not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "FMA Liechtenstein - MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
+          "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -38091,6 +38146,22 @@
       "regulator": "FMA",
       "license": "TVTG (Blockchain Act)"
     },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "competentAuthority": "FMA Liechtenstein",
+      "authorizedEntity": "VNX Commodities AG",
+      "references": [
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - VNX not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "FMA Liechtenstein - MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
+          "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+        }
+      ]
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -38237,6 +38308,22 @@
       "country": "Liechtenstein",
       "regulator": "FMA",
       "license": "TVTG (Blockchain Act)"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "competentAuthority": "FMA Liechtenstein",
+      "authorizedEntity": "VNX Commodities AG",
+      "references": [
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - VNX not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "FMA Liechtenstein - MiCAR e-money token requirements (EMT issuance reserved to credit/e-money institutions)",
+          "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+        }
+      ]
     },
     "contracts": [
       {
@@ -38448,6 +38535,22 @@
       "country": "Liechtenstein",
       "regulator": "FMA",
       "license": "TVTG (Blockchain Act)"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "ART",
+      "competentAuthority": "FMA Liechtenstein",
+      "authorizedEntity": "VNX Commodities AG",
+      "references": [
+        {
+          "label": "ESMA interim MiCA register (issuers of ARTs) - VNX not listed",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "FMA Liechtenstein - MiCAR asset-referenced token authorisation requirements",
+          "url": "https://www.fma-li.li/en/supervision-regulation/fintech/micar"
+        }
+      ]
     },
     "contracts": [
       {

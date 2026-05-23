@@ -40,6 +40,23 @@
     "regulator": "Finanstilsynet",
     "license": "MiCA E-Money Token (EMT)"
   },
+  "mica": {
+    "status": "pending",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "Finanstilsynet",
+    "authorizedEntity": "Norwegian Block Exchange AS (NBX)",
+    "references": [
+      {
+        "label": "USDM EU Issuer white paper notified to Finanstilsynet (25 Sep 2024)",
+        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/671252e5de22175efb179b4b_USDM%20White%20paper%20notification%20date%2025th%20September%202024.pdf"
+      },
+      {
+        "label": "NBX granted e-money institution license by Finanstilsynet (2022)",
+        "url": "https://www.marketscreener.com/quote/stock/NORWEGIAN-BLOCK-EXCHANGE-130615471/news/E-money-license-granted-by-Finanstilsynet-40894370/"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "cardano",

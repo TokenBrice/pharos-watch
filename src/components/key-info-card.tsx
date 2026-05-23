@@ -360,12 +360,14 @@ export function KeyInfoCard({
                     </span>
                   )}
                   {meta.mica && (
-                    <span
+                    <Link
+                      href="/mica"
                       title={MICA_STATUS_DESCRIPTIONS[meta.mica.status]}
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${MICA_STATUS_BADGE_STYLES[meta.mica.status].cls}`}
+                      aria-label={`MiCA status: ${MICA_STATUS_BADGE_STYLES[meta.mica.status].label} — view the MiCA Tracker`}
+                      className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${MICA_STATUS_BADGE_STYLES[meta.mica.status].cls}`}
                     >
                       MiCA: {MICA_STATUS_BADGE_STYLES[meta.mica.status].label}
-                    </span>
+                    </Link>
                   )}
                 </div>
               ) : (
