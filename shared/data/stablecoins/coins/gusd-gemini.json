@@ -47,6 +47,20 @@
     "regulator": "NYDFS",
     "license": "Trust Charter"
   },
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Gemini: GUSD listed among non-MiCA-compliant stablecoins, unavailable in EU/EEA",
+        "url": "https://support.gemini.com/hc/en-us/articles/37588427367835-Liquidation-of-assets-in-preparation-for-MiCA"
+      },
+      {
+        "label": "Coinbase Europe delists GUSD, PYUSD, PAX and USDT for MiCA compliance",
+        "url": "https://decrypt.co/296453/coinbase-europe-delists-usdt"
+      }
+    ]
+  },
   "contracts": [
     {
       "chain": "ethereum",
