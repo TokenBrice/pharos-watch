@@ -313,4 +313,14 @@ describe("evaluateAccessGate", () => {
     expect(checkCachedPublicApiReadFastRateLimit(validKey as never)).toBe(rateLimitResponse);
     expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 60);
   });
+
+  it("caps cached public reads while the API-key rate-limit circuit is open", () => {
+    apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen.mockReturnValueOnce(true);
+    apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit.mockReturnValueOnce(30);
+    apiKeyMocks.checkIsolateLocalApiKeyRateLimit.mockReturnValueOnce(null);
+
+    expect(checkCachedPublicApiReadFastRateLimit({ ...validKey, rateLimitPerMinute: 180 } as never)).toBeNull();
+    expect(apiKeyMocks.resolveIsolateFallbackApiKeyRateLimit).toHaveBeenCalledWith(180);
+    expect(apiKeyMocks.checkIsolateLocalApiKeyRateLimit).toHaveBeenCalledWith(7, 30);
+  });
 });

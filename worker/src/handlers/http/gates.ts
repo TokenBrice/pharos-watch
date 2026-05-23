@@ -242,5 +242,8 @@ export async function evaluateCachedPublicApiReadFastGate(
 }
 
 export function checkCachedPublicApiReadFastRateLimit(apiKey: AuthenticatedApiKey): Response | null {
-  return checkIsolateLocalApiKeyRateLimit(apiKey.id, apiKey.rateLimitPerMinute);
+  const limit = isApiKeyRateLimitDependencyCircuitOpen()
+    ? resolveIsolateFallbackApiKeyRateLimit(apiKey.rateLimitPerMinute)
+    : apiKey.rateLimitPerMinute;
+  return checkIsolateLocalApiKeyRateLimit(apiKey.id, limit);
 }

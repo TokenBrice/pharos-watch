@@ -189,19 +189,34 @@ export async function runCronStalenessWatchdog(
 
   const alertedCacheKeys = new Set<string>();
   if (dueForAlert.length > 0) {
-    await sendAlert(alertWebhookUrl, "Cron freshness stale", buildAlertMessage(dueForAlert, nowSec));
-    for (const observation of dueForAlert) {
-      alertedCacheKeys.add(observation.cacheKey);
+    const delivered = await sendAlert(alertWebhookUrl, "Cron freshness stale", buildAlertMessage(dueForAlert, nowSec));
+    if (delivered) {
+      for (const observation of dueForAlert) {
+        alertedCacheKeys.add(observation.cacheKey);
+      }
     }
   }
 
+  const recoveredAlertedCacheKeys = new Set<string>();
+  const recoveryAlertFailedCacheKeys = new Set<string>();
   if (recovered.length > 0) {
-    for (const observation of recovered) {
-      await deleteCache(db, alertCacheKey(observation.cacheKey));
-    }
     const alertableRecovered = recovered.filter((observation) => (markers.get(observation.cacheKey)?.lastAlertedAt ?? 0) > 0);
+    let recoveredAlertDelivered = alertableRecovered.length === 0;
     if (alertableRecovered.length > 0) {
-      await sendAlert(alertWebhookUrl, "Cron freshness recovered", buildRecoveryMessage(alertableRecovered, nowSec));
+      recoveredAlertDelivered = await sendAlert(alertWebhookUrl, "Cron freshness recovered", buildRecoveryMessage(alertableRecovered, nowSec));
+      for (const observation of alertableRecovered) {
+        if (recoveredAlertDelivered) {
+          recoveredAlertedCacheKeys.add(observation.cacheKey);
+        } else {
+          recoveryAlertFailedCacheKeys.add(observation.cacheKey);
+        }
+      }
+    }
+    for (const observation of recovered) {
+      const markerWasAlerted = (markers.get(observation.cacheKey)?.lastAlertedAt ?? 0) > 0;
+      if (!markerWasAlerted || recoveredAlertDelivered) {
+        await deleteCache(db, alertCacheKey(observation.cacheKey));
+      }
     }
   }
 
@@ -218,11 +233,17 @@ export async function runCronStalenessWatchdog(
     itemCount: stale.length,
     metadata: JSON.stringify({
       stale,
-      alerted: dueForAlert.map((observation) => observation.cacheKey),
+      attemptedAlerts: dueForAlert.map((observation) => observation.cacheKey),
+      alerted: [...alertedCacheKeys],
+      failedAlerts: dueForAlert
+        .filter((observation) => !alertedCacheKeys.has(observation.cacheKey))
+        .map((observation) => observation.cacheKey),
       suppressed: stale
         .filter((observation) => !alertedCacheKeys.has(observation.cacheKey))
         .map((observation) => observation.cacheKey),
       recovered: recovered.map((observation) => observation.cacheKey),
+      deliveredRecoveryAlerts: [...recoveredAlertedCacheKeys],
+      failedRecoveryAlerts: [...recoveryAlertFailedCacheKeys],
       warnings: status.warnings,
       failures: status.failures,
       diagnostics: status.diagnostics,
