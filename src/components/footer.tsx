@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowUpRight, Rss } from "lucide-react";
 import { CATEGORY_LINKS } from "@/lib/constants";
 import { TrustStrip } from "@/components/trust-strip";
-import { FooterFreshnessPill } from "@/components/footer-freshness-pill";
 
 const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/feed/digest.xml", label: "Digest" },
@@ -73,9 +72,6 @@ export function Footer() {
             <p className="text-sm leading-relaxed text-muted-foreground">
               Pharos tracks live stablecoin conditions across market cap, peg stability, liquidity, and dependency risk.
             </p>
-            <div className="pt-1">
-              <FooterFreshnessPill />
-            </div>
           </div>
 
           <div
