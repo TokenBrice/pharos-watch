@@ -279,9 +279,3 @@ export function getAllowedRedemptionCapacityWarningReason(
   if (warning.effect === "info") return null;
   return DEGRADED_SYNC_WARNING_APPROVALS.get(`${stablecoinId}:${warning.code}`)?.capacityNote ?? null;
 }
-
-export function getUnusedLiveRedemptionTelemetryPolicy(
-  stablecoinId: string,
-): RedemptionUnusedTelemetryPolicyEntry | null {
-  return UNUSED_TELEMETRY_APPROVALS.get(stablecoinId) ?? null;
-}

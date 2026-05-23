@@ -7,7 +7,11 @@ import {
   resolveFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { RedemptionBackstopsResponseSchema, type RedemptionDocSourceSupport, type RedemptionRouteFamily } from "@shared/types";
+import {
+  RedemptionBackstopsResponseSchema,
+  type RedemptionDocSourceSupport,
+  type RedemptionRouteFamily,
+} from "@shared/types/redemption";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import {
   getBackstopRegistryOverrideReasons,
@@ -22,7 +26,6 @@ import {
 } from "@shared/lib/redemption-backstop-configs/manifest";
 import {
   REDEMPTION_BACKSTOP_POLICY_ENTRIES,
-  getUnusedLiveRedemptionTelemetryPolicy,
   type RedemptionBackstopPolicyEntry,
 } from "@shared/lib/redemption-backstop-configs/policies";
 
@@ -122,6 +125,12 @@ const ROUTE_FAMILY_ORDER: RedemptionRouteFamily[] = [
   "psm-swap",
   "basket-redeem",
 ];
+
+const UNUSED_LIVE_REDEMPTION_TELEMETRY_POLICY_IDS = new Set(
+  REDEMPTION_BACKSTOP_POLICY_ENTRIES.filter((entry) => entry.kind === "unused-live-redemption-telemetry").map(
+    (entry) => entry.stablecoinId,
+  ),
+);
 
 export function validateRedemptionBackstopRegistry(
   options: RedemptionRegistryValidationOptions = {},
@@ -614,7 +623,7 @@ function validateUnusedLiveRedemptionTelemetryPolicies(
     const config = mergedConfigs[id];
     if (config?.capacityModel.kind === "reserve-sync-metadata") continue;
 
-    if (getUnusedLiveRedemptionTelemetryPolicy(id)) continue;
+    if (UNUSED_LIVE_REDEMPTION_TELEMETRY_POLICY_IDS.has(id)) continue;
 
     addFinding(
       findings,

@@ -21,21 +21,21 @@ export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
   cost: 0.1,
 } as const;
 
-export const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.1;
+const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.1;
 
-export const REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE = {
+const REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE = {
   supplyRatio: 0.05,
   floorUsd: 100_000,
   capUsd: 25_000_000,
 } as const;
 
-export const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = {
+const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = {
   high: 1,
   medium: 0.75,
   low: 0.35,
 } as const satisfies Record<RedemptionModelConfidence, number>;
 
-export const REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR = {
+const REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR = {
   formula: "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
   missingCapacityBehavior: "unbounded",
 } as const;
