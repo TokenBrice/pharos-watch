@@ -82,7 +82,9 @@ export function resolveCapacityBasis(
     if (capacityConfidence === "live-direct") return "live-direct-telemetry";
     if (capacityConfidence === "live-proxy") return "live-proxy-buffer";
     if (model.basis) return model.basis;
-    return "live-proxy-buffer";
+    if (routeFamily === "psm-swap") return "psm-balance-share";
+    if (routeFamily === "queue-redeem") return "strategy-buffer";
+    return "hot-buffer";
   }
 
   if (model.basis) return model.basis;

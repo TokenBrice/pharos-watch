@@ -557,6 +557,44 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.missingCapacityOkThreshold).toBe(1);
   });
 
+  it("reports error when every configured route is missing capacity", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = ["cusd-cap"];
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: [makeAsset({ id: "cusd-cap", symbol: "CUSD", circulating: { peggedUSD: 10_000_000 } })],
+      },
+    });
+    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
+      makeResolvedSnapshot("cusd-cap", now, {
+        score: null,
+        effectiveExitScore: null,
+        capacityScore: null,
+        provider: "reserve-sync-metadata",
+        sourceMode: "static",
+        resolutionState: "missing-capacity",
+        capacityConfidence: "dynamic",
+        capacitySemantics: "immediate-bounded",
+        modelConfidence: "low",
+        immediateCapacityUsd: null,
+        immediateCapacityRatio: null,
+        notes: ["Live reserve metadata lacks scoring-grade freshness evidence"],
+      }),
+    );
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("error");
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.resolved).toBe(0);
+    expect(metadata.unresolvedMissingCapacity).toBe(1);
+    expect(metadata.unresolvedCritical).toBe(0);
+  });
+
   it("still degrades when missing-capacity drift exceeds the tolerance budget", async () => {
     const now = Math.floor(Date.now() / 1000);
     configuredIdsMock = Array.from({ length: 101 }, (_value, index) => `coin-${index + 1}`);
@@ -727,6 +765,28 @@ describe("syncRedemptionBackstops", () => {
       29,
       expect.any(Number),
       expect.not.objectContaining({ suppressEffectiveExitScore: expect.anything() }),
+    );
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.liquidityStale).toBe(true);
+  });
+
+  it("marks missing DEX liquidity snapshots as stale", async () => {
+    loadDexLiquiditySnapshotMock.mockResolvedValue({
+      map: {},
+      latestUpdatedAt: null,
+    });
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("degraded");
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cusd-cap" }),
+      null,
+      expect.any(Number),
+      expect.anything(),
     );
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;

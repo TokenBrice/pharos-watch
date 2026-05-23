@@ -23,6 +23,33 @@ export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
 
 export const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.1;
 
+export const REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE = {
+  supplyRatio: 0.05,
+  floorUsd: 100_000,
+  capUsd: 25_000_000,
+} as const;
+
+export const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = {
+  high: 1,
+  medium: 0.75,
+  low: 0.35,
+} as const satisfies Record<RedemptionModelConfidence, number>;
+
+export const REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR = {
+  formula: "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
+  missingCapacityBehavior: "unbounded",
+} as const;
+
+export const REDEMPTION_EFFECTIVE_EXIT_MODEL = {
+  model: "best-path",
+  diversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+  modeledExitSize: REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE,
+  capacityFactor: REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR,
+  confidenceFactors: REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS,
+  diversificationPolicy:
+    "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots.",
+} as const;
+
 /**
  * Route-family score ceilings applied after the weighted component score.
  *
@@ -349,7 +376,13 @@ export function computeModeledExitSizeUsd(circulatingSupplyUsd: number | null | 
   if (circulatingSupplyUsd == null || !Number.isFinite(circulatingSupplyUsd) || circulatingSupplyUsd <= 0) {
     return null;
   }
-  return Math.min(Math.max(circulatingSupplyUsd * 0.05, 100_000), 25_000_000);
+  return Math.min(
+    Math.max(
+      circulatingSupplyUsd * REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE.supplyRatio,
+      REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE.floorUsd,
+    ),
+    REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE.capUsd,
+  );
 }
 
 function resolveEffectiveExitCapacityFactor(options: {
@@ -372,16 +405,7 @@ function resolveEffectiveExitCapacityFactor(options: {
 }
 
 function resolveEffectiveExitConfidenceFactor(modelConfidence: RedemptionModelConfidence | undefined): number {
-  switch (modelConfidence) {
-    case "high":
-      return 1;
-    case "medium":
-      return 0.75;
-    case "low":
-      return 0.35;
-    default:
-      return 1;
-  }
+  return modelConfidence ? REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS[modelConfidence] : 1;
 }
 
 export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {

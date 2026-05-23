@@ -12,7 +12,8 @@ function documentedOffchainEventualRoute(
   overrides: Partial<RedemptionLiquidityInput> = {},
 ): RedemptionLiquidityInput {
   return {
-    score: 65,
+    score: null,
+    eventualRedeemabilityScore: 65,
     routeFamily: "offchain-issuer",
     immediateCapacityUsd: null,
     immediateCapacityRatio: null,

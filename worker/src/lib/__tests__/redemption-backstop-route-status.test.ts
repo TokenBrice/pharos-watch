@@ -16,7 +16,7 @@ describe("mergeRedemptionRouteStatus", () => {
     });
   });
 
-  it("prioritizes live adapter route status over configured feed status", () => {
+  it("prioritizes live adapter route status over protocol feed status", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
       liveEvidence: {
@@ -38,6 +38,29 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.impaired).toBe(true);
     expect(result.capsApplied).toEqual(["route-status-impairment"]);
     expect(result.notes).toEqual(["Vault paused onchain"]);
+  });
+
+  it("prioritizes operator overrides over live adapter evidence", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      feedEvidence: {
+        origin: "operator-override",
+        routeStatus: "paused",
+        routeStatusSource: "operator-notice",
+        routeStatusReason: "Emergency operator pause",
+        routeStatusReviewedAt: "2026-05-12",
+      },
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("paused");
+    expect(result.routeStatusSource).toBe("operator-notice");
+    expect(result.impaired).toBe(true);
+    expect(result.notes).toEqual(["Emergency operator pause"]);
   });
 
   it("applies severe market impairment after an open protocol feed", () => {

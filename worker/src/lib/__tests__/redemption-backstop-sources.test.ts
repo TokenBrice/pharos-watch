@@ -619,6 +619,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityUsd).toBe(7_500_000); // 50M * 0.15
     expect(entry.provider).toBe("reserve-sync-fallback");
     expect(entry.capacityConfidence).toBe("heuristic");
+    expect(entry.capacityBasis).toBe("strategy-buffer");
   });
 
   it("uses reviewed fallback confidence and basis for reserve-sync fallback ratios", async () => {

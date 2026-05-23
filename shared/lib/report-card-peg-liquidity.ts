@@ -114,6 +114,7 @@ type RedemptionLiquidityInput = Pick<
   | "routeFamily"
   | "immediateCapacityUsd"
   | "immediateCapacityRatio"
+  | "eventualRedeemabilityScore"
   | "resolutionState"
   | "modelConfidence"
   | "capacitySemantics"
@@ -174,20 +175,30 @@ function isDocumentedOffchainIssuerEventualRoute(redemption: RedemptionLiquidity
   );
 }
 
+function getRedemptionRouteQualityScore(redemption: RedemptionLiquidityInput | undefined): number | null {
+  if (!redemption) return null;
+  if (redemption.score != null) return redemption.score;
+  if (redemption.capacitySemantics === "eventual-only") {
+    return redemption.eventualRedeemabilityScore ?? null;
+  }
+  return null;
+}
+
 function getSafetyEligibleRedemptionScore(
   redemption: RedemptionLiquidityInput | undefined,
   dexScore: number | null,
 ): number | null {
-  if (!redemption || redemption.score == null) return null;
+  const redemptionScore = getRedemptionRouteQualityScore(redemption);
+  if (!redemption || redemptionScore == null) return null;
   if (isDocumentedOffchainIssuerEventualRoute(redemption)) {
     if (dexScore == null) return null;
-    return Math.min(dexScore, redemption.score);
+    return Math.min(dexScore, redemptionScore);
   }
   if (redemption.capacitySemantics === "eventual-only") return null;
   if (isQueueLikeRedemption(redemption)) {
-    return Math.min(redemption.score, 70);
+    return Math.min(redemptionScore, 70);
   }
-  return redemption.score;
+  return redemptionScore;
 }
 
 function getRedemptionExclusionReason(
@@ -198,7 +209,8 @@ function getRedemptionExclusionReason(
   if (redemption.resolutionState === "impaired") {
     return "route currently impaired";
   }
-  if (redemption.resolutionState !== "resolved" || redemption.score == null) {
+  const routeQualityScore = getRedemptionRouteQualityScore(redemption);
+  if (redemption.resolutionState !== "resolved" || routeQualityScore == null) {
     return "route currently unrated";
   }
   if (redemption.modelConfidence === "low") {
@@ -249,7 +261,7 @@ function buildLiquidityScoringFacts(
   const eligibilityOptions = { ...options, dexLiquidityScore: dexScore };
   const redemptionEligibleForLiquidity = isRedemptionEligibleForLiquidity(redemption, eligibilityOptions);
   const redemptionExclusionReason = getRedemptionExclusionReason(redemption, eligibilityOptions);
-  const redemptionScore = redemption?.score ?? null;
+  const redemptionScore = getRedemptionRouteQualityScore(redemption);
   const eligibleRedemptionScore = redemptionEligibleForLiquidity
     ? getSafetyEligibleRedemptionScore(redemption, dexScore)
     : null;

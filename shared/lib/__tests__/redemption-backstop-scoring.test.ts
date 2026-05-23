@@ -6,6 +6,7 @@ import {
   computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
+  REDEMPTION_EFFECTIVE_EXIT_MODEL,
 } from "../redemption-backstop-scoring";
 
 describe("computeEffectiveExitScore", () => {
@@ -108,6 +109,23 @@ describe("computeEffectiveExitScore", () => {
     expect(computeModeledExitSizeUsd(1_000_000)).toBe(100_000);
     expect(computeModeledExitSizeUsd(100_000_000)).toBe(5_000_000);
     expect(computeModeledExitSizeUsd(10_000_000_000)).toBe(25_000_000);
+  });
+
+  it("exports the effective-exit model parameters used by scoring and cron metadata", () => {
+    expect(REDEMPTION_EFFECTIVE_EXIT_MODEL).toMatchObject({
+      model: "best-path",
+      diversificationFactor: 0.1,
+      modeledExitSize: {
+        supplyRatio: 0.05,
+        floorUsd: 100_000,
+        capUsd: 25_000_000,
+      },
+      confidenceFactors: {
+        high: 1,
+        medium: 0.75,
+        low: 0.35,
+      },
+    });
   });
 });
 

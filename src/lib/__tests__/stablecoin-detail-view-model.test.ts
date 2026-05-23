@@ -184,6 +184,67 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hasYieldSection).toBe(false);
   });
 
+  it("wires the selected redemption backstop and stale-query state", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(coin).toBeDefined();
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeBuildStablecoinDetailViewModelParams({
+        core: {
+          id: "usdt-tether",
+          coin: coin!,
+        },
+        queries: {
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "usdt-tether",
+                  name: "Tether",
+                  symbol: "USDT",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          redemptionBackstops: {
+            data: {
+              coins: {
+                "usdt-tether": {
+                  stablecoinId: "usdt-tether",
+                  score: null,
+                  eventualRedeemabilityScore: 65,
+                  effectiveExitScore: 72,
+                  resolutionState: "resolved",
+                  routeFamily: "offchain-issuer",
+                },
+              },
+              updatedAt: 1_700_000_000,
+            } as never,
+            dataUpdatedAt: 12_345,
+            meta: { source: "test" },
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    expect(viewModel.redemptionBackstop?.stablecoinId).toBe("usdt-tether");
+    expect(viewModel.redemptionBackstop?.effectiveExitScore).toBe(72);
+    expect(viewModel.staleQueries.find((query) => query.preset === "redemptionBackstops")).toMatchObject({
+      dataUpdatedAt: 12_345,
+      hasData: true,
+      meta: { source: "test" },
+    });
+  });
+
   it("enables the yield section for non-yield-bearing coins when a live ranking exists", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();

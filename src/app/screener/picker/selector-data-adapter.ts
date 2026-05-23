@@ -122,8 +122,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       concentrationHhi: dex?.concentrationHhi ?? rawInputs?.concentrationHhi ?? null,
       chainTvl: dex?.chainTvl ?? {},
       effectiveExitScore:
-        redemption?.effectiveExitScore
-        ?? rawInputs?.effectiveExitScore
+        rawInputs?.effectiveExitScore
+        ?? redemption?.effectiveExitScore
         ?? (dex as { effectiveExitScore?: number | null } | undefined)?.effectiveExitScore
         ?? null,
 

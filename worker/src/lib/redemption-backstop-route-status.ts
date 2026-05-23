@@ -43,6 +43,12 @@ function getStaticRedemptionRouteStatusFeed(stablecoinId: string): RedemptionRou
   return STATIC_ROUTE_STATUS_OVERRIDES[stablecoinId] ?? null;
 }
 
+function isOperatorOverride(
+  evidence: RedemptionRouteStatusFeedEntry | null | undefined,
+): evidence is RedemptionRouteStatusFeedEntry {
+  return evidence?.origin === "operator-override";
+}
+
 export function loadStaticRedemptionRouteStatusFeedMap(
   stablecoinIds: readonly string[],
 ): Map<string, RedemptionRouteStatusFeedEntry> {
@@ -66,8 +72,10 @@ export function mergeRedemptionRouteStatus(args: {
   allowSevereMarketOpenException: boolean;
 }): MergedRedemptionRouteStatus {
   const liveEvidence = normalizeEvidence(args.liveEvidence);
-  const feedEvidence = normalizeEvidence(args.feedEvidence);
-  const selected = liveEvidence ??
+  const operatorEvidence = isOperatorOverride(args.feedEvidence) ? normalizeEvidence(args.feedEvidence) : null;
+  const feedEvidence = !isOperatorOverride(args.feedEvidence) ? normalizeEvidence(args.feedEvidence) : null;
+  const selected = operatorEvidence ??
+    liveEvidence ??
     feedEvidence ??
     normalizeEvidence(args.staticEvidence) ?? {
       routeStatus: "unknown" as const,

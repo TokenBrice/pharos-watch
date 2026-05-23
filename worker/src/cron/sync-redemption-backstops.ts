@@ -4,7 +4,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import {
-  EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+  REDEMPTION_EFFECTIVE_EXIT_MODEL,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
@@ -81,16 +81,11 @@ function buildRegistryMetadata(
     } else {
       strongProxyCount += 1;
     }
-    return [
+    return {
       stablecoinId,
-      config.routeFamily,
-      config.accessModel,
-      config.settlementModel,
-      config.executionModel,
-      config.outputAssetType,
-      config.capacityModel.kind,
-      confidence,
-    ];
+      config,
+      resolvedCapacityConfidence: confidence,
+    };
   });
 
   return {
@@ -103,7 +98,7 @@ function buildRegistryMetadata(
     v4ScoringParametersHash: stableHash({
       componentWeights: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
       routeFamilyCaps: REDEMPTION_ROUTE_FAMILY_CAPS,
-      effectiveExitDiversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+      effectiveExitModel: REDEMPTION_EFFECTIVE_EXIT_MODEL,
     }),
   };
 }
@@ -158,7 +153,10 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   // report-card path, which also uses the last-known DEX score when stale —
   // see `worker/src/lib/report-cards-snapshot-card.ts`.
   let liquidityStale = false;
-  if (latestUpdatedAt != null) {
+  if (latestUpdatedAt == null) {
+    console.warn("[sync-redemption-backstops] Liquidity data is missing");
+    liquidityStale = true;
+  } else {
     const ageSec = now - latestUpdatedAt;
     if (ageSec > DEX_LIQUIDITY_FRESHNESS_SEC) {
       console.warn(`[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
@@ -268,8 +266,13 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   });
   await pruneRemovedRedemptionBackstops(db, configuredIds);
 
+  const hasZeroResolvedCapacityFailure = resolvedCount === 0 && missingCapacityCount > 0;
   const status: CronResult["status"] =
-    resolvedCount === 0 && hasBlockingUnresolved ? "error" : hasDegradedSyncSignal ? "degraded" : "ok";
+    resolvedCount === 0 && (hasBlockingUnresolved || hasZeroResolvedCapacityFailure)
+      ? "error"
+      : hasDegradedSyncSignal
+        ? "degraded"
+        : "ok";
 
   return {
     status,

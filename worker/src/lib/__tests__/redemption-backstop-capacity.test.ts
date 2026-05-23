@@ -26,10 +26,16 @@ describe("resolveCapacityBasis", () => {
       ).toBe("hot-buffer");
     });
 
-    it("falls back to live-proxy-buffer when confidence is other and no basis is set", () => {
+    it("falls back to route-family basis when confidence is other and no basis is set", () => {
       expect(
         resolveCapacityBasis("stablecoin-redeem", { kind: "reserve-sync-metadata" }, "dynamic"),
-      ).toBe("live-proxy-buffer");
+      ).toBe("hot-buffer");
+      expect(
+        resolveCapacityBasis("psm-swap", { kind: "reserve-sync-metadata" }, "documented-bound"),
+      ).toBe("psm-balance-share");
+      expect(
+        resolveCapacityBasis("queue-redeem", { kind: "reserve-sync-metadata" }, "heuristic"),
+      ).toBe("strategy-buffer");
     });
   });
 

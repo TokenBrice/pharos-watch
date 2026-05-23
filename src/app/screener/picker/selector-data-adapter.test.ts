@@ -477,7 +477,7 @@ describe("buildSelectorRows", () => {
     );
   });
 
-  it("prefers redemption effective exit and maps report-card raw inputs", () => {
+  it("prefers Safety-gated report-card effective exit and maps raw inputs", () => {
     const result = buildSelectorRows(baseArgs({
       reportData: reportData({
         rawInputs: createReportCardRawInputs({
@@ -528,7 +528,7 @@ describe("buildSelectorRows", () => {
     }));
 
     const row = result.rows.get("usdc-usd-coin");
-    expect(row?.effectiveExitScore).toBe(86);
+    expect(row?.effectiveExitScore).toBe(70);
     expect(row?.liquidityScore).toBe(79);
     expect(row?.concentrationHhi).toBe(0.37);
     expect(row?.effectiveTvlUsd).toBe(25_000_000);
