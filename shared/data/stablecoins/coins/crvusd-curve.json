@@ -134,22 +134,27 @@
   "dependencies": [
     {
       "id": "usdc-circle",
-      "weight": 0.25,
+      "weight": 0.2,
       "type": "mechanism"
     },
     {
       "id": "usdt-tether",
-      "weight": 0.25,
+      "weight": 0.2,
       "type": "mechanism"
     },
     {
       "id": "pyusd-paypal",
-      "weight": 0.25,
+      "weight": 0.2,
       "type": "mechanism"
     },
     {
-      "id": "tusd-trueusd",
-      "weight": 0.25,
+      "id": "frxusd-frax",
+      "weight": 0.2,
+      "type": "mechanism"
+    },
+    {
+      "id": "gho-aave",
+      "weight": 0.2,
       "type": "mechanism"
     }
   ],

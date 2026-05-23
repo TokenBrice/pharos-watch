@@ -5046,7 +5046,7 @@
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: CEUR resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+      "evidence": "Inferred review retained: EURm resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -5892,22 +5892,27 @@
     "dependencies": [
       {
         "id": "usdc-circle",
-        "weight": 0.25,
+        "weight": 0.2,
         "type": "mechanism"
       },
       {
         "id": "usdt-tether",
-        "weight": 0.25,
+        "weight": 0.2,
         "type": "mechanism"
       },
       {
         "id": "pyusd-paypal",
-        "weight": 0.25,
+        "weight": 0.2,
         "type": "mechanism"
       },
       {
-        "id": "tusd-trueusd",
-        "weight": 0.25,
+        "id": "frxusd-frax",
+        "weight": 0.2,
+        "type": "mechanism"
+      },
+      {
+        "id": "gho-aave",
+        "weight": 0.2,
         "type": "mechanism"
       }
     ],
@@ -10420,7 +10425,7 @@
     "symbol": "FPI",
     "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -10477,7 +10482,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
-    "collateralQuality": "rwa",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
       {
         "name": "FRAX stablecoin reserves",
@@ -16643,7 +16648,7 @@
       },
       {
         "chain": "codex",
-        "address": "0xe898e1cffa565aae8bacc364aa7d65a6a2d20f16",
+        "address": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
         "decimals": 18
       },
       {
@@ -17185,7 +17190,7 @@
     "pegMechanism": "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
     "mechanismArchetype": "tbill",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://dashboard.m0.org/",
       "provider": "M0 Protocol (on-chain Validator attestations)",
       "attestorTier": "niche",
@@ -20308,7 +20313,7 @@
       "reviewer": "Codex coverage expansion",
       "reviewedAt": "2026-05-12"
     },
-    "chainTier": "stage1-l2",
+    "chainTier": "ethereum",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
@@ -24662,7 +24667,6 @@
     "pegReferenceId": "dusd-dtrinity",
     "collateral": "dUSD deposited into dTRINITY dSTAKE vaults and supplied into dLEND; deployments are chain-isolated and non-fungible across networks.",
     "pegMechanism": "Stake dUSD to mint sdUSD vault receipts and unstake back into dUSD when dLEND liquidity is available; dSTAKE charges no staking fee, unstaking can incur up to 10 bps retained by the vault, and NAV appreciates as dLEND supply APY accrues.",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-staked-dusd",
     "links": [
       {
@@ -26000,7 +26004,6 @@
     "pegReferenceId": "gho-aave",
     "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
     "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
-    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "Website",
@@ -26176,7 +26179,6 @@
     "pegReferenceId": "usds-sky",
     "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
     "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
-    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "Website",
@@ -28937,7 +28939,7 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
-      "provider": "Anchorage Digital Bank reserve attestations",
+      "provider": "Deloitte & Touche (published via Anchorage Digital Bank)",
       "attestorTier": "big4",
       "cadence": "monthly",
       "attestorJurisdiction": "United States"
@@ -37041,7 +37043,7 @@
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "governanceQuality": "wrapper",
+    "governanceQuality": "single-entity",
     "reserves": [
       {
         "name": "USDC",
@@ -39368,7 +39370,6 @@
     },
     "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
     "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "wrapped-savings-rusd",
     "proofOfReserves": {
       "type": "real-time",
@@ -42326,7 +42327,7 @@
       {
         "chain": "solana",
         "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
-        "decimals": 18
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {

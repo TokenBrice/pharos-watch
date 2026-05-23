@@ -51,7 +51,7 @@
   },
   "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "governanceQuality": "wrapper",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "USDC",

@@ -67,7 +67,7 @@
     {
       "chain": "solana",
       "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
-      "decimals": 18
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

@@ -193,7 +193,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [MNEE USD (MNEE)](https://pharos.watch/stablecoin/mnee-mnee/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Polymarket USD (PUSD)](https://pharos.watch/stablecoin/pusd-polymarket/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [OpenEden TBILL (TBILL)](https://pharos.watch/stablecoin/tbill-openeden/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Frax Price Index (FPI)](https://pharos.watch/stablecoin/fpi-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to CPI.
+- [Frax Price Index (FPI)](https://pharos.watch/stablecoin/fpi-frax/): CeFi-dependent stablecoin collateralized by crypto assets pegged to CPI.
 - [Unitas (USDU)](https://pharos.watch/stablecoin/usdu-unitas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [USDH Stablecoin (USDH)](https://pharos.watch/stablecoin/usdh-native-markets/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [xDAI (xDAI)](https://pharos.watch/stablecoin/xdai-gnosis/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

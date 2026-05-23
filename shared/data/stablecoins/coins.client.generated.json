@@ -1735,7 +1735,7 @@
     "symbol": "FPI",
     "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": true,
@@ -4179,7 +4179,6 @@
       "navToken": true
     },
     "pegMechanism": "Stake dUSD to mint sdUSD vault receipts and unstake back into dUSD when dLEND liquidity is available; dSTAKE charges no staking fee, unstaking can incur up to 10 bps retained by the vault, and NAV appreciates as dLEND supply APY accrues.",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "dtrinity-staked-dusd",
     "variantOf": "dusd-dtrinity",
     "variantKind": "strategy-vault"
@@ -4426,7 +4425,6 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
-    "mechanismArchetype": "cdp",
     "variantOf": "gho-aave",
     "variantKind": "risk-absorption"
   },
@@ -4463,7 +4461,6 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
-    "mechanismArchetype": "cdp",
     "variantOf": "usds-sky",
     "variantKind": "risk-absorption"
   },
@@ -6580,7 +6577,6 @@
       "navToken": true
     },
     "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "wrapped-savings-rusd"
   },
   {

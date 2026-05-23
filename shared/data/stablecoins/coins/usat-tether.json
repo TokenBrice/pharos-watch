@@ -94,7 +94,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
-    "provider": "Anchorage Digital Bank reserve attestations",
+    "provider": "Deloitte & Touche (published via Anchorage Digital Bank)",
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"
