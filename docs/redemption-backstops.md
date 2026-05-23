@@ -46,8 +46,8 @@ No external HTTP calls happen during the redemption-backstop pass itself; any li
 Status semantics:
 
 - `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, when the only unresolved rows are a tiny `missing-capacity` tail within the current tolerance budget (`ceil(configured * 1%)`), or when current market evidence intentionally marks a route `impaired`
-- `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale
-- `error` when zero routes resolve to a usable scored row because of route failures, cache misses, or blocking unresolved states
+- `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity`/non-`impaired` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale or missing
+- `error` when zero routes resolve to a usable scored row because of route failures, cache misses, blocking unresolved states, or all configured routes missing capacity
 
 Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `availabilityDegraded`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, `liquidityStale`, `severeActiveDepegThresholdBps`, registry/run manifest fields (`registryHash`, `familyCounts`, `strongProxyCount`, `heuristicCount`, `validatorVersion`, `configMethodologyVersion`, `v4ScoringParametersHash`), and route-status producer fields (`routeStatusProducer`, `routeStatusProducerFetches`, `routeStatusOverrideCount`), plus capped `failedIds`, `availabilityDegradedIds`, or `missingFromCache` when relevant. `availabilityDegraded`/`availabilityDegradedIds` are row-level route-availability signals and do not by themselves degrade the cron run.
 
@@ -93,7 +93,7 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 - If only redemption exists: passthrough the capacity/confidence-adjusted redemption score
 - If neither exists: `null`
 
-The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In v4, eventual-only routes expose `eventualRedeemabilityScore` for route-quality context but do not create redemption-only Safety liquidity uplift without current executable capacity.
+The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale or missing DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In v4, eventual-only routes expose `eventualRedeemabilityScore` for route-quality context but do not create redemption-only Safety liquidity uplift without current executable capacity. Documented offchain issuer eventual routes can contribute only a DEX-gated primary-market bonus, using `eventualRedeemabilityScore` as the route-quality ceiling while requiring a current DEX liquidity floor.
 
 Severe active downside depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row is directionally below peg with `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. Severe upside events do not automatically impair a route whose redemption still clears at par into a non-impaired output asset. For configured tracked wrappers whose metadata keeps `pegReferenceId === variantOf`, downside impairment now also propagates from the parent stablecoin's open severe-depeg row as output-asset impairment. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
 
@@ -185,6 +185,7 @@ Each row also carries:
   - `static-config` for normal config-derived status
   - `market-implied` for the severe active-depeg exercisability gate
   - `operator-notice`, `protocol-api`, and `onchain` are reserved for future current-route evidence sources
+  - operator overrides take precedence over live adapter and protocol-feed evidence so emergency route controls cannot be masked by stale open telemetry
 - `holderEligibility`:
   - derived from the route access model by default: permissionless onchain routes are `any-holder`, whitelist routes are `whitelisted-primary`, issuer API routes are `verified-customer`, and manual routes are `issuer-discretionary`
 - `capacityConfidence`:
@@ -200,6 +201,7 @@ Each row also carries:
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Report cards generally treat these as visible-only, except documented offchain issuer routes can add a DEX-gated primary-market exit bonus under Safety Score methodology v7.05+
 - `capacityBasis`:
   - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
+  - reserve-sync fallback ratios use the configured `basis` when present, otherwise route-family defaults such as `psm-balance-share`, `strategy-buffer`, or `hot-buffer`; they are not labeled `live-proxy-buffer` unless live proxy telemetry produced the capacity
 - Live reserve telemetry fields are additive display/provenance context, not Safety Score eligibility by themselves:
   - `capacityKind` describes the adapter-declared evidence shape, such as `live-direct-bounded`, `live-queue`, `live-proxy-validated`, `documented-bound`, `documented-eventual`, or `heuristic`
   - `freshnessKind` describes the adapter-declared redemption freshness evidence, such as `verified-source-timestamp`, `same-run-onchain`, `same-run-api`, `reviewed-static`, or `unverified`
@@ -282,7 +284,7 @@ Key columns:
 
 `details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, optional live telemetry fields, fee fields, `resolutionState`, `routeStatus`, `routeStatusSource`, `routeStatusReason`, `routeStatusReviewedAt`, `holderEligibility`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
 
-`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest valid completed run and filter current rows to that generation. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. Legacy rows without a completed run remain readable as a fallback during rollout and local bootstrap.
+`snapshot_run_id` links current rows to a completed `redemption_backstop_runs` manifest when written by the post-`0094` worker. API and report-card readers prefer the latest valid completed run and filter current rows to that generation. If the newest completed manifest is incomplete or its rows are unreadable, readers try recent earlier completed runs before returning `503`. If no completed manifest exists but the manifest table has run records and the current table contains rows with a non-null `snapshot_run_id`, readers return `503` instead of treating those partial manifested rows as legacy data. Legacy rows without a completed run remain readable as a fallback during rollout and local bootstrap only when the current table has no manifested rows.
 
 ### `redemption_backstop_history`
 
@@ -317,7 +319,7 @@ Stored fields:
 - `max_updated_at`
 - `metadata_json`
 
-The sync inserts a `running` row before writing current/history rows and marks it `completed` only after all row batches succeed. If a row batch or completion update fails after the manifest is started, the writer best-effort marks the manifest `failed` with failure metadata before rethrowing. Readers prefer the latest valid completed run and use `max_updated_at` for response freshness. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior.
+The sync inserts a `running` row before writing current/history rows and marks it `completed` only after all row batches succeed. If a row batch or completion update fails after the manifest is started, the writer best-effort marks the manifest `failed` with failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior only for current rows that are not tied to any manifested run.
 
 ---
 
@@ -328,8 +330,8 @@ The sync inserts a `running` row before writing current/history rows and marks i
 **File:** `worker/src/api/redemption-backstops.ts`
 
 - Returns `503` with `{ "error": "Data not yet available" }` until at least one 4-hourly sync has written rows
-- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1
-- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run or latest stored snapshot row and `currentVersion` preserved as the live code version
+- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1 or when only partial manifested current rows are available
+- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run manifest or latest stored snapshot row for true legacy snapshots, and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
 See [API Reference](./api-reference.md) for the exact response shape.
