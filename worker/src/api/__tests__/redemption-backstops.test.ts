@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { assertAllD1MatchesUsed, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
 import { handleRedemptionBackstops } from "../redemption-backstops";
 
 function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
@@ -51,16 +51,36 @@ function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const COMPLETED_RUNS_SQL =
+  "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
+const ANY_RUN_MANIFEST_SQL = "SELECT run_id FROM redemption_backstop_runs LIMIT 1";
+const ANY_MANIFESTED_CURRENT_ROW_SQL =
+  "SELECT stablecoin_id FROM redemption_backstop WHERE snapshot_run_id IS NOT NULL LIMIT 1";
+const CURRENT_MAX_UPDATED_AT_SQL = "SELECT MAX(updated_at) AS updated_at FROM redemption_backstop";
+const CURRENT_ROWS_SQL =
+  "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop";
+const RUN_ROWS_BY_RUN_ID_SQL =
+  "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
+
 describe("handleRedemptionBackstops", () => {
   it("returns 503 when the current snapshot cannot be read", async () => {
-    const db = mockD1([
+    const db = mockD1Strict([
       {
-        match: "FROM redemption_backstop",
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [],
+      },
+      {
+        match: ANY_RUN_MANIFEST_SQL,
+        rows: [],
+      },
+      {
+        match: CURRENT_ROWS_SQL,
         rows: [],
         throwError: new Error("db unavailable"),
       },
       {
-        match: "SELECT MAX(updated_at) AS updated_at FROM redemption_backstop",
+        match: CURRENT_MAX_UPDATED_AT_SQL,
         rows: [],
         first: { updated_at: 1_700_000_000 },
       },
@@ -71,35 +91,55 @@ describe("handleRedemptionBackstops", () => {
     await expect(response.json()).resolves.toEqual({
       error: "Redemption backstop snapshot unavailable",
     });
+    assertAllD1MatchesUsed(db);
   });
 
   it("returns 503 when no current snapshot exists", async () => {
-    const db = mockD1([
+    const db = mockD1Strict([
       {
-        match: "SELECT MAX(updated_at) AS updated_at FROM redemption_backstop",
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [],
+      },
+      {
+        match: ANY_RUN_MANIFEST_SQL,
+        rows: [],
+      },
+      {
+        match: CURRENT_MAX_UPDATED_AT_SQL,
         rows: [],
         first: { updated_at: null },
       },
       {
-        match: "FROM redemption_backstop",
+        match: CURRENT_ROWS_SQL,
         rows: [],
       },
     ]);
 
     const response = await handleRedemptionBackstops(db);
     expect(response.status).toBe(503);
+    assertAllD1MatchesUsed(db);
   });
 
   it("returns the current redemption backstop map and methodology", async () => {
     const updatedAt = 1_700_000_000;
-    const db = mockD1([
+    const db = mockD1Strict([
       {
-        match: "SELECT MAX(updated_at) AS updated_at FROM redemption_backstop",
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [],
+      },
+      {
+        match: ANY_RUN_MANIFEST_SQL,
+        rows: [],
+      },
+      {
+        match: CURRENT_MAX_UPDATED_AT_SQL,
         rows: [],
         first: { updated_at: updatedAt },
       },
       {
-        match: "FROM redemption_backstop",
+        match: CURRENT_ROWS_SQL,
         rows: [makeRedemptionRow({ updated_at: updatedAt })],
       },
     ]);
@@ -122,23 +162,87 @@ describe("handleRedemptionBackstops", () => {
           capacityKind?: string;
         }
       >;
-      methodology: { version: string };
+      methodology: { version: string; routeFamilyCaps: Record<string, number> };
       updatedAt: number;
     };
 
     expect(body.updatedAt).toBe(updatedAt);
     expect(body.methodology.version).toBe("1.1");
+    expect(body.methodology.routeFamilyCaps).toEqual({ queueRedeem: 70, offchainIssuer: 65 });
     expect(body.coins["cusd-cap"]?.effectiveExitScore).toBe(56);
     expect(body.coins["cusd-cap"]?.resolutionState).toBe("resolved");
     expect(body.coins["cusd-cap"]?.modelConfidence).toBe("low");
     expect(body.coins["cusd-cap"]?.capacityKind).toBe("live-proxy-validated");
     expect(body.coins["cusd-cap"]?.feeDescription).toContain("Fixed redemption fee");
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("returns 503 instead of serving partial current rows from a failed first manifested run", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [],
+      },
+      {
+        match: ANY_RUN_MANIFEST_SQL,
+        rows: [{ run_id: "run-failed" }],
+      },
+      {
+        match: ANY_MANIFESTED_CURRENT_ROW_SQL,
+        rows: [{ stablecoin_id: "cusd-cap" }],
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Redemption backstop snapshot unavailable",
+    });
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("attributes methodology.version from the completed run manifest", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-v404",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: 1_700_000_000,
+            methodology_version: "4.04",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-v404"],
+        rows: [makeRedemptionRow({ snapshot_run_id: "run-v404", methodology_version: "4.03" })],
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+    expect(response.status).toBe(200);
+
+    const rawBody = await response.json();
+    const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success ? parsed.data.methodology.version : null).toBe("4.04");
+    expect(parsed.success ? parsed.data.coins["cusd-cap"]?.methodologyVersion : null).toBe("4.03");
+    assertAllD1MatchesUsed(db);
   });
 
   it("serves an earlier valid completed run when the newest completed run is invalid", async () => {
-    const db = mockD1([
+    const db = mockD1Strict([
       {
-        match: "FROM redemption_backstop_runs",
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
         rows: [{
           run_id: "run-new-bad",
           completed_at: 1_700_000_010,
@@ -158,17 +262,12 @@ describe("handleRedemptionBackstops", () => {
         }],
       },
       {
-        match: "WHERE snapshot_run_id = ?",
+        match: RUN_ROWS_BY_RUN_ID_SQL,
         matchBinds: ["run-old-valid"],
         rows: [makeRedemptionRow({
           snapshot_run_id: "run-old-valid",
           updated_at: 1_699_999_990,
         })],
-      },
-      {
-        match: "MAX(updated_at)",
-        rows: [],
-        throwError: new Error("legacy path should not be used"),
       },
     ]);
 
@@ -180,5 +279,6 @@ describe("handleRedemptionBackstops", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.success ? parsed.data.updatedAt : null).toBe(1_699_999_990);
     expect(parsed.success ? parsed.data.coins["cusd-cap"]?.updatedAt : null).toBe(1_699_999_990);
+    assertAllD1MatchesUsed(db);
   });
 });

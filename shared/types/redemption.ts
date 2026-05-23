@@ -172,6 +172,11 @@ const HttpUrlSchema = z
     }
   }, "Expected an http(s) URL");
 
+const ScoreSchema = z.number().finite().min(0).max(100);
+const RatioSchema = z.number().finite().min(0).max(1);
+const NonNegativeNumberSchema = z.number().finite().nonnegative();
+const PositiveNumberSchema = z.number().finite().positive();
+
 export const RedemptionDocSourceSchema = z.object({
   label: z.string(),
   url: HttpUrlSchema,
@@ -188,46 +193,46 @@ export const RedemptionDocsSchema = z.object({
 });
 
 export const RedemptionCapacityProfileSchema = z.object({
-  immediateUsd: z.number().nonnegative().nullable().optional(),
-  dailyLimitUsd: z.number().nonnegative().nullable().optional(),
-  queuedUsd: z.number().nonnegative().nullable().optional(),
-  eventualUsd: z.number().nonnegative().nullable().optional(),
-  scoringUsd: z.number().nonnegative().nullable().optional(),
+  immediateUsd: NonNegativeNumberSchema.nullable().optional(),
+  dailyLimitUsd: NonNegativeNumberSchema.nullable().optional(),
+  queuedUsd: NonNegativeNumberSchema.nullable().optional(),
+  eventualUsd: NonNegativeNumberSchema.nullable().optional(),
+  scoringUsd: NonNegativeNumberSchema.nullable().optional(),
   scoringHorizon: RedemptionCapacityScoringHorizonSchema,
   capacityProfileConfidence: RedemptionCapacityConfidenceSchema,
-  modeledExitSizeUsd: z.number().positive().optional(),
+  modeledExitSizeUsd: PositiveNumberSchema.optional(),
 });
 export type RedemptionCapacityProfile = z.infer<typeof RedemptionCapacityProfileSchema>;
 
 export const RedemptionCostScenarioScoresSchema = z.object({
-  retail: z.number().nullable().optional(),
-  activeUser: z.number().nullable().optional(),
-  institutional: z.number().nullable().optional(),
+  retail: ScoreSchema.nullable().optional(),
+  activeUser: ScoreSchema.nullable().optional(),
+  institutional: ScoreSchema.nullable().optional(),
 });
 export type RedemptionCostScenarioScores = z.infer<typeof RedemptionCostScenarioScoresSchema>;
 
 export const RedemptionConfidenceDetailsSchema = z.object({
-  capacityEvidenceQuality: z.number().min(0).max(100),
-  feeEvidenceQuality: z.number().min(0).max(100),
-  routeStatusFreshness: z.number().min(0).max(100),
-  holderCohortBreadth: z.number().min(0).max(100),
-  sourceQuality: z.number().min(0).max(100),
-  reviewedDocAgeDays: z.number().nonnegative().nullable().optional(),
+  capacityEvidenceQuality: ScoreSchema,
+  feeEvidenceQuality: ScoreSchema,
+  routeStatusFreshness: ScoreSchema,
+  holderCohortBreadth: ScoreSchema,
+  sourceQuality: ScoreSchema,
+  reviewedDocAgeDays: NonNegativeNumberSchema.nullable().optional(),
   reasons: z.array(z.string()).optional(),
 });
 export type RedemptionConfidenceDetails = z.infer<typeof RedemptionConfidenceDetailsSchema>;
 
 export const RedemptionBackstopEntrySchema = z.object({
   stablecoinId: z.string(),
-  score: z.number().nullable(),
-  effectiveExitScore: z.number().nullable(),
-  dexLiquidityScore: z.number().nullable(),
-  accessScore: z.number().nullable(),
-  settlementScore: z.number().nullable(),
-  executionCertaintyScore: z.number().nullable(),
-  capacityScore: z.number().nullable(),
-  outputAssetQualityScore: z.number().nullable(),
-  costScore: z.number().nullable(),
+  score: ScoreSchema.nullable(),
+  effectiveExitScore: ScoreSchema.nullable(),
+  dexLiquidityScore: ScoreSchema.nullable(),
+  accessScore: ScoreSchema.nullable(),
+  settlementScore: ScoreSchema.nullable(),
+  executionCertaintyScore: ScoreSchema.nullable(),
+  capacityScore: ScoreSchema.nullable(),
+  outputAssetQualityScore: ScoreSchema.nullable(),
+  costScore: ScoreSchema.nullable(),
   routeFamily: RedemptionRouteFamilySchema,
   accessModel: RedemptionAccessModelSchema,
   settlementModel: RedemptionSettlementModelSchema,
@@ -249,25 +254,25 @@ export const RedemptionBackstopEntrySchema = z.object({
   feeModelKind: RedemptionFeeModelKindSchema,
   modelConfidence: RedemptionModelConfidenceSchema,
   confidenceDetails: RedemptionConfidenceDetailsSchema.optional(),
-  immediateCapacityUsd: z.number().nullable(),
-  immediateCapacityRatio: z.number().nullable(),
-  eventualRedeemabilityScore: z.number().nullable().optional(),
+  immediateCapacityUsd: NonNegativeNumberSchema.nullable(),
+  immediateCapacityRatio: RatioSchema.nullable(),
+  eventualRedeemabilityScore: ScoreSchema.nullable().optional(),
   capacityKind: RedemptionLiveCapacityKindSchema.optional(),
   freshnessKind: RedemptionLiveFreshnessKindSchema.optional(),
-  sourceTimestamp: z.number().optional(),
+  sourceTimestamp: NonNegativeNumberSchema.optional(),
   sourceUrls: z.array(HttpUrlSchema).optional(),
-  settlementDelaySec: z.number().nonnegative().optional(),
-  queueDepthUsd: z.number().nonnegative().optional(),
-  dailyLimitUsd: z.number().nonnegative().optional(),
-  minRedeemUsd: z.number().nonnegative().optional(),
+  settlementDelaySec: NonNegativeNumberSchema.optional(),
+  queueDepthUsd: NonNegativeNumberSchema.optional(),
+  dailyLimitUsd: NonNegativeNumberSchema.optional(),
+  minRedeemUsd: NonNegativeNumberSchema.optional(),
   liveHolderEligibility: RedemptionHolderEligibilitySchema.optional(),
-  feeBps: z.number().nullable(),
+  feeBps: NonNegativeNumberSchema.nullable(),
   feeDescription: z.string().optional(),
   costScenarioScores: RedemptionCostScenarioScoresSchema.optional(),
   routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
   queueEnabled: z.boolean(),
   methodologyVersion: z.string(),
-  updatedAt: z.number(),
+  updatedAt: NonNegativeNumberSchema,
   docs: RedemptionDocsSchema.nullable().optional(),
   notes: z.array(z.string()).optional(),
   capsApplied: z.array(z.string()).optional(),
@@ -321,21 +326,21 @@ export type RedemptionBackstopMap = Record<string, RedemptionBackstopEntry>;
 
 export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.extend({
   componentWeights: z.object({
-    access: z.number(),
-    settlement: z.number(),
-    executionCertainty: z.number(),
-    capacity: z.number(),
-    outputAssetQuality: z.number(),
-    cost: z.number(),
+    access: RatioSchema,
+    settlement: RatioSchema,
+    executionCertainty: RatioSchema,
+    capacity: RatioSchema,
+    outputAssetQuality: RatioSchema,
+    cost: RatioSchema,
   }),
   effectiveExitModel: z.object({
     model: z.string(),
-    diversificationFactor: z.number(),
+    diversificationFactor: RatioSchema,
     modeledExitSize: z
       .object({
-        supplyRatio: z.number(),
-        floorUsd: z.number(),
-        capUsd: z.number(),
+        supplyRatio: RatioSchema,
+        floorUsd: NonNegativeNumberSchema,
+        capUsd: NonNegativeNumberSchema,
       })
       .optional(),
     capacityFactor: z
@@ -346,16 +351,16 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
       .optional(),
     confidenceFactors: z
       .object({
-        high: z.number(),
-        medium: z.number(),
-        low: z.number(),
+        high: RatioSchema,
+        medium: RatioSchema,
+        low: RatioSchema,
       })
       .optional(),
     diversificationPolicy: z.string().optional(),
   }),
   routeFamilyCaps: z.object({
-    queueRedeem: z.number(),
-    offchainIssuer: z.number(),
+    queueRedeem: ScoreSchema,
+    offchainIssuer: ScoreSchema,
   }),
 });
 export type RedemptionBackstopMethodology = z.infer<typeof RedemptionBackstopMethodologySchema>;
@@ -363,6 +368,6 @@ export type RedemptionBackstopMethodology = z.infer<typeof RedemptionBackstopMet
 export const RedemptionBackstopsResponseSchema = z.object({
   coins: RedemptionBackstopMapSchema,
   methodology: RedemptionBackstopMethodologySchema,
-  updatedAt: z.number(),
+  updatedAt: NonNegativeNumberSchema,
 });
 export type RedemptionBackstopsResponse = z.infer<typeof RedemptionBackstopsResponseSchema>;

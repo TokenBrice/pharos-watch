@@ -2249,7 +2249,7 @@ Current redemption-backstop dataset for redeemable assets.
 
 **Error responses:** `503` when `redemption_backstop` has no rows yet, or when the current snapshot cannot be read cleanly.
 
-Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the latest valid completed run when one exists, which prevents a partially written hourly sync from being treated as a fresh complete dataset. If the newest completed manifest is incomplete or its rows are unreadable, the reader tries recent earlier completed runs before returning `503`. Legacy rows without a completed run remain readable during bootstrap and migration fallback.
+Rows written by the current worker are grouped by a completed snapshot run manifest. The API serves the latest valid completed run when one exists, which prevents a partially written hourly sync from being treated as a fresh complete dataset. If the newest completed manifest is incomplete or its rows are unreadable, the reader tries recent earlier completed runs before returning `503`. If no completed manifest exists but the manifest table has run records and the current table contains rows with a non-null `snapshot_run_id`, the reader returns `503` instead of treating those partial manifested rows as legacy data. Legacy rows without a completed run remain readable during bootstrap and migration fallback only when the current table has no manifested rows.
 
 **Response**
 
@@ -2261,10 +2261,18 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "score": 88,
       "effectiveExitScore": 56,
       "dexLiquidityScore": 29,
+      "accessScore": 100,
+      "settlementScore": 100,
+      "executionCertaintyScore": 80,
+      "capacityScore": 100,
+      "outputAssetQualityScore": 80,
+      "costScore": 40,
       "routeFamily": "basket-redeem",
       "accessModel": "permissionless-onchain",
       "settlementModel": "atomic",
+      "executionModel": "deterministic-basket",
       "outputAssetType": "stable-basket",
+      "provider": "supply-full-model",
       "immediateCapacityUsd": null,
       "immediateCapacityRatio": null,
       "sourceMode": "estimated",
@@ -2286,15 +2294,17 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeConfidence": "undisclosed-reviewed",
       "feeModelKind": "undisclosed-reviewed",
       "modelConfidence": "low",
+      "feeBps": null,
+      "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.03"
+      "methodologyVersion": "4.04"
     }
   },
   "methodology": {
-    "version": "4.03",
-    "versionLabel": "v4.03",
-    "currentVersion": "4.03",
-    "currentVersionLabel": "v4.03",
+    "version": "4.04",
+    "versionLabel": "v4.04",
+    "currentVersion": "4.04",
+    "currentVersionLabel": "v4.04",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2324,6 +2334,10 @@ Rows written by the current worker are grouped by a completed snapshot run manif
         "low": 0.35
       },
       "diversificationPolicy": "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots."
+    },
+    "routeFamilyCaps": {
+      "queueRedeem": 70,
+      "offchainIssuer": 65
     }
   },
   "updatedAt": 1773350400

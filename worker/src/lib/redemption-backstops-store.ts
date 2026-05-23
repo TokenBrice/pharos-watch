@@ -39,7 +39,7 @@ import {
   toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
 import {
-  EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
+  REDEMPTION_EFFECTIVE_EXIT_MODEL,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
@@ -87,6 +87,7 @@ export interface RedemptionBackstopLoadResult {
   map: RedemptionBackstopMap;
   latestUpdatedAt: number | null;
   runId?: string | null;
+  methodologyVersion?: string | null;
 }
 
 interface RedemptionBackstopRunRow {
@@ -397,6 +398,29 @@ async function getRecentCompletedRedemptionBackstopRuns(
   }
 }
 
+async function hasAnyRedemptionBackstopRunManifest(db: D1Database): Promise<boolean> {
+  try {
+    const row = await db.prepare("SELECT run_id FROM redemption_backstop_runs LIMIT 1").first<{ run_id: string }>();
+    return row != null;
+  } catch (error) {
+    if (isMissingTableError(error)) return false;
+    throw error;
+  }
+}
+
+async function hasManifestedCurrentRedemptionBackstopRows(db: D1Database): Promise<boolean> {
+  try {
+    const row = await db
+      .prepare("SELECT stablecoin_id FROM redemption_backstop WHERE snapshot_run_id IS NOT NULL LIMIT 1")
+      .first<{ stablecoin_id: string }>();
+    return row != null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    if (isMissingTableError(error) || message.includes("no such column")) return false;
+    throw error;
+  }
+}
+
 async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null): Promise<RedemptionBackstopMap> {
   let rows: D1Result<RedemptionBackstopRow>;
   try {
@@ -538,11 +562,18 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
           map,
           latestUpdatedAt: run.max_updated_at,
           runId: run.run_id,
+          methodologyVersion: run.methodology_version,
         };
       }
 
       throw new RedemptionBackstopSnapshotUnavailableError(
         `No valid completed redemption backstop run found (${rejectionReasons.join("; ")})`,
+      );
+    }
+
+    if ((await hasAnyRedemptionBackstopRunManifest(db)) && (await hasManifestedCurrentRedemptionBackstopRows(db))) {
+      throw new RedemptionBackstopSnapshotUnavailableError(
+        "No completed redemption backstop run found for manifested current rows",
       );
     }
 
@@ -578,7 +609,12 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
 
   const coins = loaded.map;
   const updatedAt = loaded.latestUpdatedAt ?? 0;
-  const snapshotMethodology = resolveSnapshotMethodologyVersion(coins, updatedAt);
+  const snapshotMethodology = loaded.methodologyVersion
+    ? {
+        version: loaded.methodologyVersion,
+        versionLabel: toRedemptionBackstopVersionLabel(loaded.methodologyVersion),
+      }
+    : resolveSnapshotMethodologyVersion(coins, updatedAt);
 
   return {
     coins,
@@ -599,26 +635,7 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
         outputAssetQuality: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality,
         cost: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.cost,
       },
-      effectiveExitModel: {
-        model: "best-path",
-        diversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
-        modeledExitSize: {
-          supplyRatio: 0.05,
-          floorUsd: 100_000,
-          capUsd: 25_000_000,
-        },
-        capacityFactor: {
-          formula: "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
-          missingCapacityBehavior: "unbounded",
-        },
-        confidenceFactors: {
-          high: 1,
-          medium: 0.75,
-          low: 0.35,
-        },
-        diversificationPolicy:
-          "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots.",
-      },
+      effectiveExitModel: REDEMPTION_EFFECTIVE_EXIT_MODEL,
       routeFamilyCaps: {
         queueRedeem: REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem,
         offchainIssuer: REDEMPTION_ROUTE_FAMILY_CAPS.offchainIssuer,
