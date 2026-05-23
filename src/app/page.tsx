@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomeAltClient } from "@/components/home-alt-client";
+import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -56,6 +57,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
+      <HomepageBootstrapScript />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

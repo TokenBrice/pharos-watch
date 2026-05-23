@@ -1,13 +1,14 @@
 import homepageBootstrapPayload from "@/generated/homepage-bootstrap.json";
 import {
   HOMEPAGE_BOOTSTRAP_SCRIPT_ID,
+  countSeedableHomepageBootstrapQueries,
   normalizeHomepageBootstrapPayload,
 } from "@/lib/homepage-bootstrap";
 import { safeJsonLd } from "@/lib/json-ld";
 
 export function HomepageBootstrapScript() {
   const payload = normalizeHomepageBootstrapPayload(homepageBootstrapPayload);
-  if (!payload || Object.keys(payload.queries).length === 0) {
+  if (!payload || countSeedableHomepageBootstrapQueries(payload) === 0) {
     return null;
   }
 

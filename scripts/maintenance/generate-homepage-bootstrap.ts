@@ -10,12 +10,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyFreshnessRatio } from "../../shared/lib/status-thresholds";
 import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
+import { FRONTEND_API_QUERY_REGISTRY, type FrontendApiQueryDescriptor } from "../../src/lib/api-query-registry";
 import {
-  HOMEPAGE_BOOTSTRAP_DESCRIPTORS,
   HOMEPAGE_BOOTSTRAP_VERSION,
   normalizeHomepageBootstrapPayload,
   validateHomepageBootstrapPayloadData,
   type HomepageBootstrapPayload,
+  type HomepageBootstrapQuery,
   type HomepageBootstrapQueryId,
 } from "../../src/lib/homepage-bootstrap";
 
@@ -23,6 +24,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
 const OUTPUT_PATH = join(REPO_ROOT, "src/generated/homepage-bootstrap.json");
 const CHECK_MODE = process.argv.includes("--check");
+const registry = FRONTEND_API_QUERY_REGISTRY;
+const HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS = [
+  { id: "stablecoins", descriptor: registry.stablecoins },
+  { id: "pegSummary", descriptor: registry.pegSummary },
+  { id: "dexLiquidity", descriptor: registry.dexLiquidity },
+  { id: "reportCards", descriptor: registry.reportCards },
+  { id: "stressSignals", descriptor: registry.stressSignals },
+  { id: "stabilityIndex", descriptor: registry.stabilityIndex },
+] as const satisfies readonly {
+  id: HomepageBootstrapQueryId;
+  descriptor: FrontendApiQueryDescriptor<unknown>;
+}[];
 
 function emptyPayload(): HomepageBootstrapPayload {
   return {
@@ -114,7 +127,7 @@ async function fetchBootstrapQuery(
   path: string,
   maxAgeSec: number,
   schema: { safeParse: (value: unknown) => { success: boolean; data?: unknown } } | undefined,
-): Promise<HomepageBootstrapPayload["queries"][HomepageBootstrapQueryId] | null> {
+): Promise<HomepageBootstrapQuery | null> {
   const url = `${apiBase}${path}`;
   try {
     const response = await fetch(url, { headers: fetchHeaders() });
@@ -146,7 +159,7 @@ async function fetchBootstrapQuery(
 
 async function generatePayload(apiBase: string): Promise<HomepageBootstrapPayload> {
   const entries = await Promise.all(
-    HOMEPAGE_BOOTSTRAP_DESCRIPTORS.map(({ id, descriptor }) =>
+    HOMEPAGE_BOOTSTRAP_GENERATOR_DESCRIPTORS.map(({ id, descriptor }) =>
       fetchBootstrapQuery(
         apiBase,
         id,
@@ -205,11 +218,7 @@ async function main(): Promise<void> {
 
   const payload = await generatePayload(apiBase);
   if (Object.keys(payload.queries).length === 0) {
-    const existing = parseExistingPayload();
-    if (existing && Object.keys(existing.queries).length > 0) {
-      console.warn("[generate-homepage-bootstrap] no endpoints fetched; preserving existing populated payload");
-      return;
-    }
+    fail("configured API base returned no usable bootstrap queries; refusing to preserve a stale populated payload");
   }
 
   writePayload(payload);

@@ -7,7 +7,7 @@ export const HOMEPAGE_BOOTSTRAP_VERSION = 1;
 
 const registry = FRONTEND_API_QUERY_REGISTRY;
 
-export const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = [
+const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = [
   { id: "stablecoins", descriptor: registry.stablecoins },
   { id: "pegSummary", descriptor: registry.pegSummary },
   { id: "dexLiquidity", descriptor: registry.dexLiquidity },
@@ -119,9 +119,40 @@ function queryUpdatedAtMs(fetchedAt: number): number {
   return fetchedAt < 10_000_000_000 ? fetchedAt * 1000 : fetchedAt;
 }
 
+function descriptorMaxAgeMs(descriptor: FrontendApiQueryDescriptor<unknown>): number {
+  return (descriptor.metaMaxAgeSec ?? descriptor.producerIntervalMs / 1000) * 1000;
+}
+
+function isSeedableQuery(
+  query: HomepageBootstrapQuery,
+  descriptor: FrontendApiQueryDescriptor<unknown>,
+  nowMs: number,
+): boolean {
+  return nowMs - queryUpdatedAtMs(query.fetchedAt) <= descriptorMaxAgeMs(descriptor);
+}
+
+export function countSeedableHomepageBootstrapQueries(
+  payload: HomepageBootstrapPayload | null,
+  nowMs = Date.now(),
+): number {
+  if (!payload) {
+    return 0;
+  }
+
+  let count = 0;
+  for (const { id, descriptor } of HOMEPAGE_BOOTSTRAP_DESCRIPTORS) {
+    const query = payload.queries[id];
+    if (query && isSeedableQuery(query, descriptor, nowMs)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 export function seedHomepageBootstrapQueries(
   queryClient: QueryClient,
   payload: HomepageBootstrapPayload | null,
+  nowMs = Date.now(),
 ): number {
   if (!payload) {
     return 0;
@@ -131,6 +162,7 @@ export function seedHomepageBootstrapQueries(
   for (const { id, descriptor } of HOMEPAGE_BOOTSTRAP_DESCRIPTORS) {
     const query = payload.queries[id];
     if (!query) continue;
+    if (!isSeedableQuery(query, descriptor, nowMs)) continue;
 
     const parsed = descriptor.schema?.safeParse(query.data);
     if (parsed && !parsed.success) {

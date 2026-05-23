@@ -98,4 +98,23 @@ describe("KeyInfoCard contract interactions", () => {
     expect(screen.queryByText("Selected contract")).toBeNull();
     expect(screen.getByText("Primary contract")).toBeTruthy();
   });
+
+  it("links MiCA badges to the tracker and marks frozen statuses as historical", () => {
+    render(
+      <KeyInfoCard
+        meta={{
+          ...meta,
+          status: "frozen",
+          mica: {
+            status: "authorized",
+          },
+        } as StablecoinMeta}
+        resolvedMechanismArchetype={null}
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: /Historical MiCA status: Authorized/i });
+    expect(link.getAttribute("href")).toBe("/mica");
+    expect(screen.getByText("Historical MiCA: Authorized")).toBeTruthy();
+  });
 });

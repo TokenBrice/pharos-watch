@@ -85,6 +85,11 @@ export const DATA_SOURCE_GROUPS = [
       "Bluechip, Chainlink Data Feeds, ECB via Frankfurter, Open Exchange Rates (real-time FX cross-validation), fawazahmed0/currency-api (CNH and non-ECB FX), ExchangeRate-API (tertiary full-set FX fallback), gold-api.com, FRED DGS3MO, Treasury.gov yield curve XML fallback, the ECB Data API for 3M compounded €STR, SIX delayed SARON compound-rate downloads via public guest access, FRED IUDSOIA (GBP SONIA proxy), FRED IRSTCB01JPM156N (JPY call-rate proxy), Banxico SIE SF43936 (MXN CETES 28d, token-gated), BCB SGS series 11 (BRL SELIC), FRED IR3TIB01AUM156N (AUD interbank proxy), and Bank of Canada Valet V122530 (CAD CORRA proxy)",
   },
   {
+    label: "Regulatory Registers",
+    sources:
+      "ESMA MiCA registers, EBA EMT/ART issuer and significant-token registers, and national competent authority registers such as ACPR REGAFI, DNB/AFM, BaFin, MFSA, CBI, and the Bank of Lithuania where relevant",
+  },
+  {
     label: "DEX Data",
     sources:
       "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
@@ -305,7 +310,7 @@ export function getAboutFaqItems({
     {
       question: "Where does Pharos get its data?",
       answer:
-        "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, Etherscan, TronGrid, protocol-native APIs, and curated sources like Bluechip. Details on all data sources are available on the About page.",
+        "Pharos aggregates data from DefiLlama, CoinGecko, on-chain RPC nodes, Etherscan, TronGrid, protocol-native APIs, public regulatory registers, and curated sources like Bluechip. Details on all data sources are available on the About page.",
     },
   ];
 }

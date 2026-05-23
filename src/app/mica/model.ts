@@ -19,7 +19,7 @@ export interface MicaRow {
   competentAuthority?: string;
   authorizedEntity?: string;
   significant: boolean;
-  reference?: StablecoinLink;
+  references: StablecoinLink[];
 }
 
 export interface MicaFilters {
@@ -76,6 +76,7 @@ function buildAllMicaRows(): MicaRow[] {
   for (const meta of CLIENT_TRACKED_STABLECOINS) {
     const mica = meta.mica;
     if (!mica) continue;
+    if (meta.status === "frozen") continue;
     rows.push({
       id: meta.id,
       name: meta.name,
@@ -87,7 +88,7 @@ function buildAllMicaRows(): MicaRow[] {
       competentAuthority: mica.competentAuthority,
       authorizedEntity: mica.authorizedEntity,
       significant: mica.significant ?? false,
-      reference: mica.references?.[0],
+      references: mica.references ?? [],
     });
   }
   return rows;

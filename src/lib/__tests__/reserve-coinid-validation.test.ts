@@ -109,6 +109,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "infiniFi's static fallback groups Aave Horizon USDC and RLUSD into one small mixed bucket; live farm data carries exact coinIds when the source separates positions.",
   ],
   [
+    "msusd-metronome::Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)::USDC",
+    "Metronome reports this as a mixed Vesper vault-token bucket spanning USDC and ETH-family vaults, so a single USDC coinId would overstate the reserve dependency.",
+  ],
+  [
     "wemix-dollar-wemix::USDC and fiat reserve assets::USDC",
     "WEMIX$ describes a mixed USDC plus fiat reserve base without a current source split, so a 100% USDC dependency would overstate the relationship.",
   ],
@@ -147,6 +151,7 @@ describe("reserve coinId validation", () => {
       "buck-buck-assets",
       "frxusd-frax",
       "ftusd-flying-tulip",
+      "gbpm-mento",
       "susd1plus-lorenzo",
       "ussd-sonic-labs",
       "wemix-dollar-wemix",

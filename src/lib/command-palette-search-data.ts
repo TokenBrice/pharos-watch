@@ -147,7 +147,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["mai-qidao", "MAI", "MAI"],
   ["buck-bucket-protocol", "Bucket Protocol BUCK", "BUCK"],
   ["meusd-mezo", "Mezo USD", "MUSD"],
-  ["uty-xsy", "XSY UTY", "UTY"],
+  ["uty-xsy", "Unity", "UTY"],
   ["eurs-stasis", "Stasis Euro", "EURS"],
   ["msusd-metronome", "Metronome Synth USD", "MSUSD"],
   ["rusd-royal-dollar", "Royal Dollar", "RUSD"],

@@ -45,8 +45,8 @@ export function MicaClient() {
   const { getParam, setParam } = useUrlFilters();
 
   const statusFilter = normalizeMicaStatusFilter(getParam("status", "all"));
-  const tokenTypeFilter = normalizeMicaTokenTypeFilter(getParam("type", "all"));
-  const pegFilter = normalizePegFilter(getParam("peg", "all"));
+  const tokenTypeFilter = normalizeMicaTokenTypeFilter(getParam("type", getParam("tokenType", "all")));
+  const pegFilter = normalizePegFilter(getParam("peg", getParam("pegCurrency", "all")));
 
   const setStatusFilter = useCallback(
     (v: MicaStatus | "all") => {
@@ -189,7 +189,7 @@ export function MicaClient() {
                   <TableHead>Competent Authority</TableHead>
                   <TableHead>Authorized Entity</TableHead>
                   <TableHead className="text-center">Significant</TableHead>
-                  <TableHead className="text-right">Register</TableHead>
+                  <TableHead className="text-right">Sources</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -278,16 +278,21 @@ function MicaTableRow({ row, logo }: { row: MicaRow; logo: string | undefined })
         )}
       </TableCell>
       <TableCell className="text-right">
-        {row.reference ? (
-          <a
-            href={row.reference.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-frost-blue hover:underline"
-          >
-            {row.reference.label}
-            <ExternalLink className="h-3 w-3" aria-hidden="true" />
-          </a>
+        {row.references.length > 0 ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            {row.references.map((reference) => (
+              <a
+                key={`${reference.label}:${reference.url}`}
+                href={reference.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-frost-blue hover:underline"
+              >
+                {reference.label}
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}

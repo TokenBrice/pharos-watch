@@ -88,6 +88,8 @@ export function KeyInfoCard({
   const isDecentralized = meta.flags.governance === "decentralized";
   const hasLinks = meta.links && meta.links.length > 0;
   const hasContracts = contracts.length > 0;
+  const micaStatus = meta.mica ? MICA_STATUS_BADGE_STYLES[meta.mica.status] : null;
+  const micaBadgePrefix = meta.status === "frozen" ? "Historical MiCA" : "MiCA";
   const contractSummary = buildContractDeploymentSummary(contracts);
   const mobileContractsPreview = contracts.slice(0, 6);
   const visibleMobileContracts = showAllContractsMobile ? contracts : mobileContractsPreview;
@@ -359,14 +361,14 @@ export function KeyInfoCard({
                       {meta.jurisdiction.license}
                     </span>
                   )}
-                  {meta.mica && (
+                  {meta.mica && micaStatus && (
                     <Link
                       href="/mica"
-                      title={MICA_STATUS_DESCRIPTIONS[meta.mica.status]}
-                      aria-label={`MiCA status: ${MICA_STATUS_BADGE_STYLES[meta.mica.status].label} — view the MiCA Tracker`}
-                      className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${MICA_STATUS_BADGE_STYLES[meta.mica.status].cls}`}
+                      title={`${MICA_STATUS_DESCRIPTIONS[meta.mica.status]}${meta.status === "frozen" ? " Historical status retained for this frozen asset." : ""}`}
+                      aria-label={`${micaBadgePrefix} status: ${micaStatus.label} — view the MiCA Tracker`}
+                      className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${micaStatus.cls}`}
                     >
-                      MiCA: {MICA_STATUS_BADGE_STYLES[meta.mica.status].label}
+                      {micaBadgePrefix}: {micaStatus.label}
                     </Link>
                   )}
                 </div>
