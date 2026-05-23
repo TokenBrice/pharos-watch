@@ -28,6 +28,7 @@ import {
   getMechanismArchetypeCtaNoun,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
+import { MICA_STATUS_BADGE_STYLES, MICA_STATUS_DESCRIPTIONS } from "@shared/lib/mica";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -343,17 +344,27 @@ export function KeyInfoCard({
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Jurisdiction
               </p>
-              {meta.jurisdiction ? (
+              {meta.jurisdiction || meta.mica ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
-                  {meta.jurisdiction.regulator && (
+                  {meta.jurisdiction && (
+                    <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
+                  )}
+                  {meta.jurisdiction?.regulator && (
                     <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                       {meta.jurisdiction.regulator}
                     </span>
                   )}
-                  {meta.jurisdiction.license && (
+                  {meta.jurisdiction?.license && (
                     <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
                       {meta.jurisdiction.license}
+                    </span>
+                  )}
+                  {meta.mica && (
+                    <span
+                      title={MICA_STATUS_DESCRIPTIONS[meta.mica.status]}
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${MICA_STATUS_BADGE_STYLES[meta.mica.status].cls}`}
+                    >
+                      MiCA: {MICA_STATUS_BADGE_STYLES[meta.mica.status].label}
                     </span>
                   )}
                 </div>

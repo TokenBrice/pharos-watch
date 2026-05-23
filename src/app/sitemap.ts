@@ -183,6 +183,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.75,
     },
     {
+      url: `${SITE_URL}/mica/`,
+      lastModified: lastEdited("/mica/"),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+    {
       url: `${SITE_URL}/pharoswatchbot/`,
       lastModified: lastEdited("/pharoswatchbot/"),
       changeFrequency: "weekly",

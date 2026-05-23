@@ -94,6 +94,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
 - [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
 - [tape-page.md](./tape-page.md) - `/timeline/` cross-class event feed route, URL filter contract, digest grouping, projector pipeline, and homepage marquee integration
+- [mica-tracker.md](./mica-tracker.md) - **(proposed, not yet built)** `/mica/` EU MiCA authorization tracker design spec: `mica` metadata extension, status criteria, page contract, and phased plan
 
 ## Public Route Coverage
 

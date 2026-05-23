@@ -39,6 +39,7 @@ export type StablecoinClientMeta = Pick<
   | "canBeBlacklistedSource"
   | "commodityOunces"
   | "infrastructures"
+  | "mica"
 >;
 
 /** Canonical ordered list of fields surfaced in the client projection. */
@@ -64,4 +65,5 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "canBeBlacklistedSource",
   "commodityOunces",
   "infrastructures",
+  "mica",
 ] as const satisfies ReadonlyArray<keyof StablecoinClientMeta>;

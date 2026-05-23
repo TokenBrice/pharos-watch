@@ -8,6 +8,7 @@ import type {
   FeaturedContent,
   Jurisdiction,
   LaunchMilestone,
+  MicaProfile,
   ProofOfReserves,
   StablecoinFlags,
   StablecoinLink,
@@ -28,6 +29,9 @@ import {
   LAUNCH_MILESTONE_TYPE_VALUES,
   LAUNCH_PHASE_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
+  MICA_AUTHORIZATION_TYPE_VALUES,
+  MICA_STATUS_VALUES,
+  MICA_TOKEN_TYPE_VALUES,
   PEG_CURRENCY_VALUES,
   PROOF_OF_RESERVES_CADENCE_VALUES,
   PROOF_OF_RESERVES_TYPE_VALUES,
@@ -92,6 +96,24 @@ export const JurisdictionSchema: z.ZodType<Jurisdiction> = z.object({
   regulator: z.string().optional(),
   license: z.string().optional(),
 }).strict();
+
+export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
+  status: z.enum(MICA_STATUS_VALUES),
+  tokenType: z.enum(MICA_TOKEN_TYPE_VALUES).optional(),
+  authorizationType: z.enum(MICA_AUTHORIZATION_TYPE_VALUES).optional(),
+  competentAuthority: z.string().min(1).optional(),
+  authorizedEntity: z.string().min(1).optional(),
+  significant: z.boolean().optional(),
+  references: z.array(StablecoinLinkSchema).optional(),
+}).strict().superRefine((mica, ctx) => {
+  if (mica.status === "authorized" && (mica.references?.length ?? 0) === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "mica.status 'authorized' requires at least one register reference",
+      path: ["references"],
+    });
+  }
+});
 
 export const ContractDeploymentSchema: z.ZodType<ContractDeployment> = z.object({
   chain: z.string(),

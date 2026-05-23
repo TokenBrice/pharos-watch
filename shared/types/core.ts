@@ -117,6 +117,31 @@ export interface Jurisdiction {
   license?: string;
 }
 
+export const MICA_STATUS_VALUES = [
+  "authorized",
+  "pending",
+  "transitional",
+  "non-compliant",
+  "out-of-scope",
+] as const;
+export type MicaStatus = (typeof MICA_STATUS_VALUES)[number];
+
+export const MICA_TOKEN_TYPE_VALUES = ["EMT", "ART"] as const;
+export type MicaTokenType = (typeof MICA_TOKEN_TYPE_VALUES)[number];
+
+export const MICA_AUTHORIZATION_TYPE_VALUES = ["emi", "credit-institution"] as const;
+export type MicaAuthorizationType = (typeof MICA_AUTHORIZATION_TYPE_VALUES)[number];
+
+export interface MicaProfile {
+  status: MicaStatus;
+  tokenType?: MicaTokenType;
+  authorizationType?: MicaAuthorizationType;
+  competentAuthority?: string;
+  authorizedEntity?: string;
+  significant?: boolean;
+  references?: StablecoinLink[];
+}
+
 export interface ContractDeployment {
   chain: string;
   address: string;
@@ -295,6 +320,7 @@ export interface StablecoinMeta {
   proofOfReserves?: ProofOfReserves;
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
+  mica?: MicaProfile;
   contracts?: ContractDeployment[];
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];
