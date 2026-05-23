@@ -16,10 +16,28 @@ import {
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const RatioSchema = z.number().gt(0).lte(1);
+const HttpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Expected an http(s) URL");
+const ReviewedAtSchema = z
+  .string()
+  .regex(REVIEWED_AT_PATTERN, "Expected YYYY-MM-DD")
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }, "Expected a valid calendar date");
 
 const RedemptionDocSourceSchema = z.strictObject({
   label: z.string().min(1),
-  url: z.string().url(),
+  url: HttpUrlSchema,
   supports: z.array(RedemptionDocSourceSupportSchema).optional(),
 });
 
@@ -93,7 +111,7 @@ export const RedemptionBackstopConfigSchema = z
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     totalScoreCap: z.number().gt(0).lte(100).optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
-    reviewedAt: z.string().regex(REVIEWED_AT_PATTERN, "Expected YYYY-MM-DD").optional(),
+    reviewedAt: ReviewedAtSchema.optional(),
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {

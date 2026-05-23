@@ -172,14 +172,10 @@ export function documentedBoundSupplyFull(
 export function documentedVariableFee(
   feeDescription: string,
   confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",
+  feeModelKind?: Exclude<RedemptionFeeModelKind, "fixed-bps">,
 ): RedemptionCostModel {
-  const feeModelKind =
-    confidence === "formula"
-      ? "formula"
-      : feeDescription === NO_PUBLIC_NUMERIC_REDEMPTION_FEE
-        ? "undisclosed-reviewed"
-        : "documented-variable";
-  return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind };
+  const resolvedFeeModelKind = feeModelKind ?? (confidence === "formula" ? "formula" : "undisclosed-reviewed");
+  return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind: resolvedFeeModelKind };
 }
 
 export function sourceRef(label: string, url: string, supports?: RedemptionDocSourceSupport[]): RedemptionDocSource {

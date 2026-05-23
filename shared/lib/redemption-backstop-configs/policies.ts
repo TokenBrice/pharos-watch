@@ -4,7 +4,8 @@ import type { RedemptionLiveFreshnessKind } from "../../types/redemption";
 export type RedemptionBackstopPolicyKind =
   | "unverified-freshness"
   | "legacy-freshness-bridge"
-  | "degraded-sync-warning-exception";
+  | "degraded-sync-warning-exception"
+  | "unused-live-redemption-telemetry";
 
 interface RedemptionBackstopPolicyBase {
   kind: RedemptionBackstopPolicyKind;
@@ -24,9 +25,14 @@ export interface RedemptionDegradedSyncWarningPolicyEntry extends RedemptionBack
   capacityNote: string;
 }
 
+export interface RedemptionUnusedTelemetryPolicyEntry extends RedemptionBackstopPolicyBase {
+  kind: "unused-live-redemption-telemetry";
+}
+
 export type RedemptionBackstopPolicyEntry =
   | RedemptionFreshnessPolicyEntry
-  | RedemptionDegradedSyncWarningPolicyEntry;
+  | RedemptionDegradedSyncWarningPolicyEntry
+  | RedemptionUnusedTelemetryPolicyEntry;
 
 const POLICY_OWNER = "redemption-backstop-v4";
 
@@ -84,6 +90,151 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES = [
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-12",
   },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "ousd-origin-protocol",
+    reason:
+      "Origin vault balance telemetry is available, but OUSD redemption terms still require route review before replacing the documented eventual full-supply model.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "sgho-aave",
+    reason:
+      "sGHO wrapper telemetry describes wrapper liquidity; the configured route remains documented eventual until wrapper-to-GHO redemption and downstream GHO exit semantics are reviewed together.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "ybold-yearn",
+    reason:
+      "ERC-4626 idle-underlying telemetry exists, but yBOLD redemption capacity needs Yearn vault-specific review before promoting from documented eventual modeling.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "cjpy-yamato",
+    reason:
+      "Yamato adapter telemetry exists, but CJPY redemption modeling needs protocol-specific validation before it can replace the documented collateral-redemption route.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "fpi-frax",
+    reason:
+      "FPI collateral telemetry is available as a proxy; the route remains documented eventual pending review of the proxy's executable redemption bound.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "frax-frax",
+    reason:
+      "FRAX has live balance-sheet telemetry but no configured public redemption backstop yet; coverage remains explicitly waived until the active asset is reviewed for route eligibility.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "rusd-reservoir",
+    reason:
+      "Reservoir RUSD telemetry exists, but the active direct asset is not yet configured; wrapped Reservoir routes stay covered separately while this route is reviewed.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "gramg-token-teknoloji",
+    reason:
+      "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "grams-token-teknoloji",
+    reason:
+      "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "ggbr-goldfish-gold",
+    reason:
+      "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "pht-pht",
+    reason:
+      "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  ...[
+    "apyusd-apyx",
+    "cusdo-openeden",
+    "fxsave-f-x-protocol",
+    "gtusdc-gauntlet",
+    "gtusdcp-gauntlet",
+    "msy-main-street",
+    "said-gaib",
+    "savusd-avant",
+    "sbold-k3-capital",
+    "srusde-strata",
+    "steakusdc-steakhouse",
+    "steakusdt-steakhouse",
+    "stkgho-umbrella-aave",
+    "stusds-sky",
+    "susdd-tron-dao-reserve",
+    "susde-ethena",
+    "susn-noon",
+    "syrupusdc-maple",
+    "syrupusdt-maple",
+    "syusd-aegis",
+    "syzusd-yuzu",
+    "yousd-yield-optimizer",
+    "yusd-yieldfi",
+    "yvusdc-yearn",
+  ].map((stablecoinId) => ({
+    kind: "unused-live-redemption-telemetry" as const,
+    stablecoinId,
+    reason:
+      "ERC-4626-style idle-underlying telemetry exists, but the route remains on documented static modeling until the asset-specific wrapper exit and downstream redemption-capacity treatment are reviewed for reserve-sync scoring.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  })),
+  ...["ebusd-ebisu", "nect-beraborrow", "usdk-orki"].map((stablecoinId) => ({
+    kind: "unused-live-redemption-telemetry" as const,
+    stablecoinId,
+    reason:
+      "Liquity v2 branch telemetry exists, but the route remains on documented full-system collateral redemption until branch-level debt capacity is reviewed for this asset.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  })),
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "deuro-deuro",
+    reason:
+      "Collateral-position telemetry exists, but DEURO remains modeled as documented full-system collateral redemption until current executable capacity treatment is reviewed.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "ussd-sonic-labs",
+    reason:
+      "Frax balance-sheet proxy telemetry exists, but USSD remains modeled as documented collateral redemption until Sonic-specific proxy capacity semantics are reviewed.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-05-23",
+  },
 ] as const satisfies readonly RedemptionBackstopPolicyEntry[];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(
@@ -99,9 +250,13 @@ const LEGACY_FRESHNESS_BRIDGE_APPROVALS = new Set<string>(
 );
 
 const DEGRADED_SYNC_WARNING_APPROVALS = new Map<string, RedemptionDegradedSyncWarningPolicyEntry>();
+const UNUSED_TELEMETRY_APPROVALS = new Map<string, RedemptionUnusedTelemetryPolicyEntry>();
 for (const entry of REDEMPTION_BACKSTOP_POLICY_ENTRIES) {
   if (entry.kind === "degraded-sync-warning-exception") {
     DEGRADED_SYNC_WARNING_APPROVALS.set(`${entry.stablecoinId}:${entry.warningCode}`, entry);
+  }
+  if (entry.kind === "unused-live-redemption-telemetry") {
+    UNUSED_TELEMETRY_APPROVALS.set(entry.stablecoinId, entry);
   }
 }
 
@@ -123,4 +278,10 @@ export function getAllowedRedemptionCapacityWarningReason(
 ): string | null {
   if (warning.effect === "info") return null;
   return DEGRADED_SYNC_WARNING_APPROVALS.get(`${stablecoinId}:${warning.code}`)?.capacityNote ?? null;
+}
+
+export function getUnusedLiveRedemptionTelemetryPolicy(
+  stablecoinId: string,
+): RedemptionUnusedTelemetryPolicyEntry | null {
+  return UNUSED_TELEMETRY_APPROVALS.get(stablecoinId) ?? null;
 }

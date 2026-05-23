@@ -7,16 +7,24 @@ import {
   resolveFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { RedemptionDocSourceSupport, RedemptionRouteFamily } from "@shared/types";
+import { RedemptionBackstopsResponseSchema, type RedemptionDocSourceSupport, type RedemptionRouteFamily } from "@shared/types";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
-import { getBackstopRegistryOverrideReasons, getBackstopRegistrySourceFilePaths } from "@shared/lib/redemption-backstop-configs/factory";
+import {
+  getBackstopRegistryOverrideReasons,
+  getBackstopRegistrySourceFilePaths,
+} from "@shared/lib/redemption-backstop-configs/factory";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
+import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   buildRedemptionBackstopRegistry,
   type RedemptionBackstopConfigManifestEntry,
 } from "@shared/lib/redemption-backstop-configs/manifest";
-import { REDEMPTION_BACKSTOP_POLICY_ENTRIES, type RedemptionBackstopPolicyEntry } from "@shared/lib/redemption-backstop-configs/policies";
+import {
+  REDEMPTION_BACKSTOP_POLICY_ENTRIES,
+  getUnusedLiveRedemptionTelemetryPolicy,
+  type RedemptionBackstopPolicyEntry,
+} from "@shared/lib/redemption-backstop-configs/policies";
 
 export type RedemptionRegistryFindingSeverity = "error" | "warning";
 
@@ -101,6 +109,11 @@ const DOC_SOURCE_SUPPORT_BASELINE = {
   missingSupportKindCounts: Record<RedemptionDocSourceSupport, number>;
 };
 
+const UNCONFIGURED_ACTIVE_BASELINE = 60;
+const DAILY_LIMIT_CONTEXT_WINDOW = 80;
+const DAILY_LIMIT_TIME_TERMS = ["daily", "per-day", "per day"] as const;
+const DAILY_LIMIT_BOUND_TERMS = ["limit", "cap", "maximum", "max"] as const;
+
 const ROUTE_FAMILY_ORDER: RedemptionRouteFamily[] = [
   "offchain-issuer",
   "stablecoin-redeem",
@@ -127,6 +140,7 @@ export function validateRedemptionBackstopRegistry(
       sourceFileById.set(id, sourceFilePath);
     }
   }
+  inferStaticConfigSourceFilePaths(manifest, options.sourceTextByPath, sourceFileById);
   const findings: RedemptionRegistryFinding[] = [];
   const seenById = new Map<string, string>();
   const ownerById = new Map<string, RedemptionBackstopConfigManifestEntry>();
@@ -226,6 +240,7 @@ export function validateRedemptionBackstopRegistry(
   const auditRows = mergedIds.map((id) => {
     const config = mergedConfigs[id];
     const owner = ownerById.get(id);
+    const sourceFilePath = sourceFileById.get(id);
     const parseResult = RedemptionBackstopConfigSchema.safeParse(config);
     if (!parseResult.success) {
       for (const issue of parseResult.error.issues) {
@@ -238,13 +253,13 @@ export function validateRedemptionBackstopRegistry(
           {
             stablecoinId: id,
             family: owner?.name,
-            filePath: owner?.filePath,
+            filePath: sourceFilePath ?? owner?.filePath,
           },
         );
       }
     }
 
-    validateConfigInvariants(id, config, owner, findings);
+    validateConfigInvariants(id, config, owner, sourceFilePath, findings);
 
     const coveredSupportKinds = new Set<RedemptionDocSourceSupport>();
     for (const doc of config.docs ?? []) {
@@ -291,10 +306,18 @@ export function validateRedemptionBackstopRegistry(
 
   validateDocSupportRatchet(findings, sourcesWithoutSupports, missingSupportKindCounts);
   validateConfidenceDocs(findings, options.docsText, options.apiDocsText);
-  const policyRows = validateRedemptionBackstopPolicies(findings);
+  const policyRows = validateRedemptionBackstopPolicies(findings, mergedConfigs);
 
   const configuredIds = new Set(mergedIds);
   const unconfiguredActiveIds = [...ACTIVE_META_BY_ID.keys()].filter((id) => !configuredIds.has(id)).sort();
+  if (unconfiguredActiveIds.length > UNCONFIGURED_ACTIVE_BASELINE) {
+    addFinding(
+      findings,
+      "error",
+      "unconfigured-active-ratchet-regressed",
+      `Active stablecoins without redemption backstop configs increased to ${unconfiguredActiveIds.length} (baseline ${UNCONFIGURED_ACTIVE_BASELINE}).`,
+    );
+  }
   for (const id of unconfiguredActiveIds) {
     addFinding(
       findings,
@@ -306,6 +329,7 @@ export function validateRedemptionBackstopRegistry(
       },
     );
   }
+  validateUnusedLiveRedemptionTelemetryPolicies(mergedConfigs, configuredIds, findings);
 
   const heuristicIds = mergedIds.filter(
     (id) => resolveCapacityConfidence(mergedConfigs[id].capacityModel) === "heuristic",
@@ -329,9 +353,10 @@ function validateConfigInvariants(
   id: string,
   config: RedemptionBackstopConfig,
   owner: RedemptionBackstopConfigManifestEntry | undefined,
+  sourceFilePath: string | undefined,
   findings: RedemptionRegistryFinding[],
 ): void {
-  const context = { stablecoinId: id, family: owner?.name, filePath: owner?.filePath };
+  const context = { stablecoinId: id, family: owner?.name, filePath: sourceFilePath ?? owner?.filePath };
   if (config.costModel.kind === "dynamic-or-unclear" && !config.costModel.feeDescription) {
     addFinding(
       findings,
@@ -366,6 +391,15 @@ function validateConfigInvariants(
       "error",
       "reserve-sync-fallback-ratio-out-of-range",
       `${id}: reserve-sync fallbackRatio out of range (${config.capacityModel.fallbackRatio})`,
+      context,
+    );
+  }
+  if (mentionsNumericDailyLimit(config) && !hasConfiguredDailyLimit(config.capacityModel)) {
+    addFinding(
+      findings,
+      "error",
+      "daily-limit-mentioned-without-capacity-limit",
+      `${id}: notes or fee text mention a numeric daily limit but capacityModel.dailyLimitUsd is not configured.`,
       context,
     );
   }
@@ -454,7 +488,10 @@ function validateConfigInvariants(
   }
 }
 
-function validateRedemptionBackstopPolicies(findings: RedemptionRegistryFinding[]): RedemptionPolicyAuditRow[] {
+function validateRedemptionBackstopPolicies(
+  findings: RedemptionRegistryFinding[],
+  mergedConfigs: Readonly<Record<string, RedemptionBackstopConfig>>,
+): RedemptionPolicyAuditRow[] {
   const seen = new Set<string>();
 
   return REDEMPTION_BACKSTOP_POLICY_ENTRIES.map((entry) => {
@@ -497,7 +534,10 @@ function validateRedemptionBackstopPolicies(findings: RedemptionRegistryFinding[
         `${entry.stablecoinId}: redemption policy references unknown adapter (${adapterKey}).`,
         { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
       );
-    } else if (adapterDefinition.redemptionTelemetry.capacity === "none") {
+    } else if (
+      entry.kind !== "unused-live-redemption-telemetry" &&
+      adapterDefinition.redemptionTelemetry.capacity === "none"
+    ) {
       addFinding(
         findings,
         "error",
@@ -534,6 +574,18 @@ function validateRedemptionBackstopPolicies(findings: RedemptionRegistryFinding[
         { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
       );
     }
+    if (entry.kind === "unused-live-redemption-telemetry") {
+      const config = mergedConfigs[entry.stablecoinId];
+      if (config?.capacityModel.kind === "reserve-sync-metadata") {
+        addFinding(
+          findings,
+          "error",
+          "unused-live-telemetry-policy-stale",
+          `${entry.stablecoinId}: unused live redemption telemetry policy is stale because the config now consumes reserve-sync-metadata.`,
+          { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
+        );
+      }
+    }
 
     return {
       kind: entry.kind,
@@ -546,6 +598,37 @@ function validateRedemptionBackstopPolicies(findings: RedemptionRegistryFinding[
       liveReserveTelemetry: adapterDefinition?.redemptionTelemetry.capacity ?? null,
     };
   });
+}
+
+function validateUnusedLiveRedemptionTelemetryPolicies(
+  mergedConfigs: Record<string, RedemptionBackstopConfig>,
+  configuredIds: ReadonlySet<string>,
+  findings: RedemptionRegistryFinding[],
+): void {
+  for (const [id, meta] of ACTIVE_META_BY_ID) {
+    const adapterKey = meta.liveReservesConfig?.adapter ?? null;
+    if (!adapterKey) continue;
+    const definition = getLiveReserveAdapterDefinition(adapterKey);
+    if (!definition || definition.redemptionTelemetry.capacity === "none") continue;
+
+    const config = mergedConfigs[id];
+    if (config?.capacityModel.kind === "reserve-sync-metadata") continue;
+
+    if (getUnusedLiveRedemptionTelemetryPolicy(id)) continue;
+
+    addFinding(
+      findings,
+      "error",
+      "unused-live-redemption-telemetry",
+      configuredIds.has(id)
+        ? `${id}: live-reserve adapter ${adapterKey} exposes redemption capacity telemetry but the redemption config does not consume reserve-sync-metadata and has no unused-telemetry policy.`
+        : `${id}: live-reserve adapter ${adapterKey} exposes redemption capacity telemetry but the active stablecoin has no redemption config and no unused-telemetry policy.`,
+      {
+        stablecoinId: id,
+        filePath: "shared/lib/redemption-backstop-configs/policies.ts",
+      },
+    );
+  }
 }
 
 function validateDocSupportRatchet(
@@ -597,6 +680,176 @@ function validateConfidenceDocs(
         `docs/api-reference.md missing capacity-confidence term ${requiredTerm}`,
       );
     }
+  }
+  validateApiReferenceExample(findings, apiDocsText);
+}
+
+function validateApiReferenceExample(
+  findings: RedemptionRegistryFinding[],
+  apiDocsText: string | undefined,
+): void {
+  if (apiDocsText == null) return;
+  const sectionStart = apiDocsText.indexOf("### `GET /api/redemption-backstops`");
+  if (sectionStart < 0) {
+    addFinding(
+      findings,
+      "error",
+      "api-docs-missing-redemption-backstops-section",
+      "docs/api-reference.md missing GET /api/redemption-backstops section",
+    );
+    return;
+  }
+
+  const sectionText = apiDocsText.slice(sectionStart);
+  const match = /```json\n([\s\S]*?)\n```/.exec(sectionText);
+  if (!match) {
+    addFinding(
+      findings,
+      "error",
+      "api-docs-missing-redemption-backstops-example",
+      "docs/api-reference.md missing redemption-backstops JSON response example",
+    );
+    return;
+  }
+
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(match[1]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    addFinding(
+      findings,
+      "error",
+      "api-docs-invalid-redemption-backstops-example-json",
+      `docs/api-reference.md redemption-backstops example is not valid JSON: ${message}`,
+    );
+    return;
+  }
+
+  const parsed = RedemptionBackstopsResponseSchema.safeParse(parsedJson);
+  if (!parsed.success) {
+    addFinding(
+      findings,
+      "error",
+      "api-docs-redemption-backstops-example-schema-mismatch",
+      `docs/api-reference.md redemption-backstops example does not match RedemptionBackstopsResponseSchema: ${parsed.error.message}`,
+    );
+    return;
+  }
+
+  if (
+    parsed.data.methodology.version !== REDEMPTION_BACKSTOP_VERSION ||
+    parsed.data.methodology.currentVersion !== REDEMPTION_BACKSTOP_VERSION
+  ) {
+    addFinding(
+      findings,
+      "error",
+      "api-docs-redemption-backstops-version-stale",
+      `docs/api-reference.md redemption-backstops example must use methodology version ${REDEMPTION_BACKSTOP_VERSION}`,
+    );
+  }
+}
+
+function hasConfiguredDailyLimit(model: RedemptionBackstopConfig["capacityModel"]): boolean {
+  return "dailyLimitUsd" in model && model.dailyLimitUsd != null;
+}
+
+function mentionsNumericDailyLimit(config: RedemptionBackstopConfig): boolean {
+  const textParts = [config.costModel.feeDescription, ...(config.notes ?? [])].filter((part): part is string =>
+    Boolean(part),
+  );
+  return textParts.some((text) => mentionsDailyLimitContext(text) && containsAsciiDigit(text));
+}
+
+function mentionsDailyLimitContext(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const timeTermIndexes = collectWholeTermIndexes(normalized, DAILY_LIMIT_TIME_TERMS);
+  if (timeTermIndexes.length === 0) return false;
+
+  const boundTermIndexes = collectWholeTermIndexes(normalized, DAILY_LIMIT_BOUND_TERMS);
+  return timeTermIndexes.some((timeIndex) =>
+    boundTermIndexes.some((boundIndex) => Math.abs(boundIndex - timeIndex) <= DAILY_LIMIT_CONTEXT_WINDOW),
+  );
+}
+
+function collectWholeTermIndexes(text: string, terms: readonly string[]): number[] {
+  const indexes: number[] = [];
+  for (const term of terms) {
+    let index = text.indexOf(term);
+    while (index !== -1) {
+      const before = index === 0 ? "" : text[index - 1];
+      const after = text[index + term.length] ?? "";
+      if (!isAsciiWordChar(before) && !isAsciiWordChar(after)) {
+        indexes.push(index);
+      }
+      index = text.indexOf(term, index + term.length);
+    }
+  }
+  return indexes;
+}
+
+function containsAsciiDigit(text: string): boolean {
+  for (const char of text) {
+    if (char >= "0" && char <= "9") return true;
+  }
+  return false;
+}
+
+function isAsciiWordChar(char: string): boolean {
+  return (
+    (char >= "a" && char <= "z") ||
+    (char >= "A" && char <= "Z") ||
+    (char >= "0" && char <= "9") ||
+    char === "_"
+  );
+}
+
+function inferStaticConfigSourceFilePaths(
+  manifest: readonly RedemptionBackstopConfigManifestEntry[],
+  sourceTextByPath: ReadonlyMap<string, string> | undefined,
+  sourceFileById: Map<string, string>,
+): void {
+  if (!sourceTextByPath) return;
+
+  const declarationFileByIdentifier = new Map<string, string>();
+  for (const [filePath, sourceText] of sourceTextByPath) {
+    const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
+    function visitDeclaration(node: ts.Node): void {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+        declarationFileByIdentifier.set(node.name.text, filePath);
+      }
+      ts.forEachChild(node, visitDeclaration);
+    }
+    visitDeclaration(sourceFile);
+  }
+
+  for (const moduleEntry of manifest) {
+    const sourceText = sourceTextByPath.get(moduleEntry.filePath);
+    if (sourceText == null) continue;
+    const sourceFile = ts.createSourceFile(moduleEntry.filePath, sourceText, ts.ScriptTarget.Latest, true);
+    function visitRegistry(node: ts.Node): void {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text.endsWith("BACKSTOP_CONFIGS") &&
+        node.initializer &&
+        ts.isObjectLiteralExpression(node.initializer)
+      ) {
+        for (const property of node.initializer.properties) {
+          if (!ts.isPropertyAssignment(property)) continue;
+          const id = propertyNameText(property.name);
+          if (!id || sourceFileById.has(id)) continue;
+          const initializer = unwrapExpression(property.initializer);
+          if (!ts.isIdentifier(initializer)) continue;
+          const sourceFilePath = declarationFileByIdentifier.get(initializer.text);
+          if (sourceFilePath && sourceFilePath !== moduleEntry.filePath) {
+            sourceFileById.set(id, sourceFilePath);
+          }
+        }
+      }
+      ts.forEachChild(node, visitRegistry);
+    }
+    visitRegistry(sourceFile);
   }
 }
 
@@ -720,6 +973,17 @@ function propertyNameText(name: ts.PropertyName | ts.BindingName): string | unde
     return name.text;
   }
   return undefined;
+}
+
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  if (
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression) ||
+    ts.isParenthesizedExpression(expression)
+  ) {
+    return unwrapExpression(expression.expression);
+  }
+  return expression;
 }
 
 function collectStringArray(expression: ts.Expression | undefined): string[] | null {

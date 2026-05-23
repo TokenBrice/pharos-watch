@@ -15,9 +15,7 @@ const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
 const REVIEWED_RESERVE_PROTOCOL_DTF_AT = "2026-05-05";
 const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
 const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
-const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
-  REVIEWED_BASKET_REDEMPTION_AT,
-);
+const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "cusd-cap": {
@@ -27,11 +25,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: documentedVariableFee("Fixed redemption fee, but public docs do not publish the current rate"),
     docs: [
       sourceRef("Cap introduction", "https://docs.cap.app/", ["route", "capacity"]),
-      sourceRef(
-        "Cap cUSD mechanics",
-        "https://docs.cap.app/protocol-overview/cusd-mechanics",
-        ["route", "capacity"],
-      ),
+      sourceRef("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics", ["route", "capacity"]),
       sourceRef("Cap vault", "https://docs.cap.app/concepts/vault", ["route", "capacity", "fees"]),
       sourceRef("Cap risks", "https://docs.cap.app/risks", ["capacity", "settlement"]),
     ],
@@ -46,11 +40,11 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
     ),
     docs: [
-      sourceRef(
-        "Berachain Honey docs",
-        "https://docs.berachain.com/general/tokens/honey",
-        ["route", "capacity", "fees"],
-      ),
+      sourceRef("Berachain Honey docs", "https://docs.berachain.com/general/tokens/honey", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
     ],
     notes: [
       "Modeled against Basket Mode because the stress-state redemption path turns exits into proportional basket withdrawals when collateral becomes unstable",
@@ -58,7 +52,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dai-makerdao": {
     ...psmSwapBase,
-    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33 },
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33, basis: "psm-balance-share" },
     costModel: fixedFee(0, "LitePSM docs show fees are not activated for DAI <-> USDC"),
     notes: [
       "Fresh Sky reserve telemetry uses current PSM USDC balance as immediate capacity; fallback retains the reviewed 33% heuristic when live metadata is unavailable",
@@ -66,7 +60,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "usds-sky": {
     ...psmSwapBase,
-    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33 },
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33, basis: "psm-balance-share" },
     costModel: fixedFee(
       0,
       "USDS uses the LitePSMWrapper-USDS-USDC route, and Sky docs show LitePSM fees are not activated for the underlying DAI <-> USDC leg",
@@ -96,9 +90,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
     ),
     reviewedAt: "2026-05-11",
-    docs: [
-      sourceRef("BabelFish", "https://babelfish.money/", ["route", "capacity", "fees", "access", "settlement"]),
-    ],
+    docs: [sourceRef("BabelFish", "https://babelfish.money/", ["route", "capacity", "fees", "access", "settlement"])],
     notes: [
       "Fresh reserve sync reads the BabelFish holder's accepted bAsset balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
     ],
@@ -111,16 +103,11 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Usual docs describe EUR0 redemption into eligible euro RWA collateral through the dApp; public materials reviewed do not publish one fixed EUR0 redemption fee",
     ),
     docs: [
-      sourceRef("Usual EUR0 docs", "https://tech.usual.money/overview/features/eur0", [
+      sourceRef("Usual EUR0 docs", "https://tech.usual.money/overview/features/eur0", ["route", "capacity", "access"]),
+      sourceRef("Usual EUR0 contract docs", "https://tech.usual.money/smart-contracts/token-contracts/eur0", [
         "route",
-        "capacity",
         "access",
       ]),
-      sourceRef(
-        "Usual EUR0 contract docs",
-        "https://tech.usual.money/smart-contracts/token-contracts/eur0",
-        ["route", "access"],
-      ),
     ],
     notes: [
       "Modeled as the Usual dApp basket redemption route into eligible euro-denominated RWA collateral, primarily Spiko EUTBL, rather than a direct fiat EUR issuer rail.",
@@ -211,16 +198,14 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
     costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
     reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
-    docs: [
-      sourceRef("Bucket Protocol docs", "https://docs.bucketprotocol.io/", ["route", "capacity", "fees"]),
-    ],
+    docs: [sourceRef("Bucket Protocol docs", "https://docs.bucketprotocol.io/", ["route", "capacity", "fees"])],
     notes: [
       "The reviewed 25% bound matches the tracked USDC/USDT PSM reserve share rather than assuming the full BUCK supply is instantly redeemable through the stablecoin module",
     ],
   },
   "lisusd-lista": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "documented-bound" },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15, dailyLimitUsd: 500_000, confidence: "documented-bound" },
     costModel: fixedFee(
       200,
       "Lista docs list a 2% fee on lisUSD -> centralized stablecoin conversions and a 500,000 lisUSD daily redemption limit",
@@ -250,9 +235,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: documentedVariableFee(
       "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
     ),
-    docs: [
-      sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"]),
-    ],
+    docs: [sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"])],
     notes: [
       "Silk tracks a basket of GDP-weighted currencies; redemption pools combined with ShadeLend overcollateralization provide a reviewed basket-exit rail rather than a single-stable PSM",
       "Output asset type is mixed-collateral because the redeemed basket is not guaranteed to be all-stablecoin; it can include native Shade collateral assets",
@@ -265,11 +248,11 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Reserve Index docs describe mint and TVL fees, but do not document a separate redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Reserve Index minting & redeeming",
-        "https://docs.reserve.org/reserve-index/mint-redeem",
-        ["route", "capacity", "access"],
-      ),
+      sourceRef("Reserve Index minting & redeeming", "https://docs.reserve.org/reserve-index/mint-redeem", [
+        "route",
+        "capacity",
+        "access",
+      ]),
       sourceRef("Reserve Index fees", "https://docs.reserve.org/reserve-index/fees", ["fees"]),
       sourceRef(
         "Reserve Electronic USD overview",
@@ -324,6 +307,10 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
 };
 
-applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["dai-makerdao", "usds-sky", "dusd-alto"], REVIEWED_REMEDIATION_AT);
+applyTrackedReviewedDocs(
+  PSM_AND_BASKET_BACKSTOP_CONFIGS,
+  ["dai-makerdao", "usds-sky", "dusd-alto"],
+  REVIEWED_REMEDIATION_AT,
+);
 
 applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["usd3-reserve-protocol"], REVIEWED_RESERVE_PROTOCOL_DTF_AT);

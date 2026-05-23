@@ -12,6 +12,7 @@ export const USDE_ETHENA_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   capacityModel: {
     kind: "reserve-sync-metadata",
     fallbackRatio: 0.005,
+    basis: "hot-buffer",
   },
   costModel: documentedVariableFee(
     "Ethena docs describe direct USDe redemption for whitelisted mint users at $1 into supported stable assets, with users reimbursing transaction gas and execution costs rather than paying a separate fixed protocol fee",
