@@ -94,6 +94,68 @@
     "reviewer": "Codex data addition",
     "reviewedAt": "2026-05-24"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "FUSD is issuer-minted/redeemed through FinChain's eligible-customer rails; Ethereum proxy admin and implementation are resolved, but signer setup is not.",
+    "controls": [
+      {
+        "label": "FinChain issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "FinChain FUSD docs",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+          },
+          {
+            "label": "FinChain deployments",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+          }
+        ],
+        "evidence": "FinChain docs describe eligible-customer mint and redemption and list multichain FUSD deployments."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x29A48097055d6779e6832355680B7C7bF0D43C53",
+        "label": "FUSD EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "Ethereum reads at block 25166592 resolved implementation 0x27d2f80fdb8102044897d006c921645c8da92de0 and proxy admin 0x29A48097055d6779e6832355680B7C7bF0D43C53."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "FinChain FUSD docs",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        },
+        {
+          "label": "FinChain deployments",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        }
+      ],
+      "evidence": "FinChain docs and Ethereum proxy reads identify issuer-operated mint/redeem and the current proxy-admin path.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate mint role holders and verify Avalanche, Sonic, Monad, and Solana controls before claiming full multichain coverage."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "Tokenized U.S. Treasury bill and money-market fund reserves",

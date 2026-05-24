@@ -65,6 +65,100 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern; token and master-minter controls resolve to verified 3/5 Safes, with a guard present on the MasterMinter Safe.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+        "label": "XUSD token MasterMinter path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "StraitsX XUSD",
+            "url": "https://www.straitsx.com/xusd"
+          },
+          {
+            "label": "Ethereum token read contract",
+            "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+          }
+        ],
+        "evidence": "Ethereum reads returned owner() = 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964, implementation() = 0x71CdE20c36cCC0d4bED213315d8Fa42B59C18a3C, and masterMinter() = 0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB at block 25166611."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB",
+        "label": "XUSD MasterMinter Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x247160D158EcCCEE395388Ee1A96a83Eac0b6219",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB/"
+          }
+        ],
+        "evidence": "Safe API returned threshold 3, five owners, no enabled modules, and guard 0x247160D158EcCCEE395388Ee1A96a83Eac0b6219 on 2026-05-24."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964",
+        "label": "StraitsX token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
+          }
+        ],
+        "evidence": "Safe API returned threshold 3, five owners, no modules, and zero guard on 2026-05-24."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "StraitsX XUSD",
+          "url": "https://www.straitsx.com/xusd"
+        }
+      ],
+      "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",

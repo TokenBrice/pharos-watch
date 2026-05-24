@@ -60,6 +60,68 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token is an upgradeable proxy; exact mint role holders were not enumerated in this pass.",
+    "controls": [
+      {
+        "label": "Fidelity issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Fidelity FIDD overview",
+            "url": "https://www.fidelity.com/learning-center/trading-investing/FIDD-stablecoin"
+          },
+          {
+            "label": "Fidelity Digital Assets stablecoin",
+            "url": "https://www.fidelitydigitalassets.com/stablecoin"
+          }
+        ],
+        "evidence": "Fidelity describes FIDD as issued and supported by Fidelity Digital Assets under a full-service model covering issuance, purchases, redemptions, and reserves."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7C135549504245B5eAe64fc0E99Fa5ebabb8e35D",
+        "label": "FIDD Ethereum token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum FIDD token",
+            "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+          }
+        ],
+        "evidence": "Ethereum reads at block 25166592 resolved EIP-1967 implementation 0x8ae9cb3d9095da33555494110f567e3d974c6753; role holders were not enumerated."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Fidelity FIDD overview",
+          "url": "https://www.fidelity.com/learning-center/trading-investing/FIDD-stablecoin"
+        },
+        {
+          "label": "Ethereum FIDD token",
+          "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+        }
+      ],
+      "evidence": "Fidelity issuer materials and Ethereum proxy reads identify issuer-operated minting and the current implementation path.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate mint/admin roles and identify whether role holders are EOAs, Safes, or institutional custody systems."
+      ]
+    }
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

@@ -55,6 +55,71 @@
       "decimals": 6
     }
   ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "spUSDC is a Spark ERC-4626 savings wrapper over USDC. Wrapper shares are minted against deposited USDC and inherit Circle USDC's reviewed issuer mint authority for base supply.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "label": "Spark Savings USDC vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "ERC-4626 share accounting over deposited USDC; does not mint base USDC.",
+        "sources": [
+          {
+            "label": "Spark docs",
+            "url": "https://docs.spark.fi"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ],
+        "evidence": "Local metadata marks spUSDC as `variantOf: usdc-circle` and `variantKind: savings-passthrough`; collateral text describes USDC deposits into Spark's ERC-4626 savings vault V2."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "label": "Inherited Ethereum USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Circle USDC docs",
+            "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usdc-circle` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Spark docs",
+          "url": "https://docs.spark.fi"
+        }
+      ],
+      "evidence": "spUSDC is a savings wrapper over reviewed USDC. Wrapper share minting is collateralized by deposited USDC and does not create base USDC supply.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Spark vault admin/upgrade owner and Avalanche deployment controls before upgrading confidence."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "native",
   "custodyModel": "onchain",

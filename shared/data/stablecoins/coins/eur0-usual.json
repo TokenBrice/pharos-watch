@@ -58,6 +58,60 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EUR0 issuance is Usual-operated: eligible users mint/redeem through protocol collateral routes backed by euro RWA collateral, while the Ethereum token remains upgradeable through a proxy-admin path.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x3c89Cd1884E7bEf73Ca3eF08d2Ef6ec338fD8e49",
+        "label": "EUR0 token proxy / protocol mint route",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Usual EUR0 docs",
+            "url": "https://tech.usual.money/overview/features/eur0"
+          },
+          {
+            "label": "Ethereum EUR0 token",
+            "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+          }
+        ],
+        "evidence": "Official docs describe EUR0 mint/redeem against eligible euro collateral. Ethereum reads at block 25166591 resolved implementation 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d and proxy admin 0xd0fae00123a2e778c078c2691c6cb81a9db08577."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd0faE00123a2E778c078c2691C6cB81a9DB08577",
+        "label": "EUR0 EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166591; signer setup was not verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Usual EUR0 docs",
+          "url": "https://tech.usual.money/overview/features/eur0"
+        }
+      ],
+      "evidence": "Usual documentation identifies EUR0 as a collateral-backed protocol stablecoin with primary-market mint/redeem routes; Ethereum proxy reads identify the current implementation/admin path.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate the current EUR0 mint/redeem contract roles and identify whether proxy admin is a Safe, multisig, timelock, or EOA."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "Spiko EUTBL tokenized Eurozone Treasury-bill fund shares",

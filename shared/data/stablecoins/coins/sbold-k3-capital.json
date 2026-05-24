@@ -61,6 +61,43 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved",
+    "confidence": "manual-review",
+    "summary": "sBOLD is a risk-absorption variant over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD.",
+    "inheritedFrom": "bold-liquity",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+        "label": "sBOLD wrapper token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Liquity BOLD contract source",
+            "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+          }
+        ],
+        "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Liquity v2 docs",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+        }
+      ],
+      "evidence": "sBOLD should inherit BOLD's reviewed mint authority; no separate durable issuer mint path was resolved in local variant metadata.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",

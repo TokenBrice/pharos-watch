@@ -64,6 +64,67 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "PAXG supply is controlled by Paxos-operated supply-control infrastructure; Ethereum reads identify the current supplyController and token owner as externally owned admin addresses.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x2fb074FA59c9294c71246825C1c9A0c7782d41a4",
+        "label": "PAXG supplyController",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Paxos PAXG contract repository",
+            "url": "https://github.com/paxosglobal/paxos-gold-contract"
+          },
+          {
+            "label": "Ethereum PAXG token",
+            "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78#readContract"
+          }
+        ],
+        "evidence": "Paxos contract docs describe a single supplyController that can mint and burn PAXG; Ethereum RPC `supplyController()` returned this address, and `eth_getCode` returned no contract bytecode."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
+        "label": "PAXG token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum PAXG token",
+            "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78#readContract"
+          }
+        ],
+        "evidence": "Ethereum RPC `owner()` returned this address, and `eth_getCode` returned no contract bytecode."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Paxos PAXG product page",
+          "url": "https://www.paxos.com/pax-gold"
+        },
+        {
+          "label": "Paxos PAXG contract repository",
+          "url": "https://github.com/paxosglobal/paxos-gold-contract"
+        }
+      ],
+      "evidence": "Paxos describes PAXG as an issuer-operated gold-backed token; contract docs and Ethereum RPC identify the supplyController and owner path.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

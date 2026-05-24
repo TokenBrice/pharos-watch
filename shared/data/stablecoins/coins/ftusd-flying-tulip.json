@@ -65,6 +65,61 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "ftUSD mints/redeems through Flying Tulip's on-chain mint/redeem path. Ethereum reads identify a token owner/masterMinter address and a separate minter contract.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+        "label": "ftUSD minter contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Flying Tulip docs",
+            "url": "https://docs.flyingtulip.com/"
+          },
+          {
+            "label": "Ethereum ftUSD token",
+            "url": "https://etherscan.io/address/0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+          }
+        ],
+        "evidence": "minter() returned this address at Ethereum block 25166592; Flying Tulip docs describe 1:1 mint/redeem against USDC/USDT through on-chain contracts."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+        "label": "ftUSD token owner / masterMinter",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; signer setup was not verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Flying Tulip docs",
+          "url": "https://docs.flyingtulip.com/"
+        }
+      ],
+      "evidence": "Flying Tulip docs describe on-chain mint/redeem, and Ethereum reads identify the minter and owner/masterMinter addresses.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify the source and security setup of 0x1118E1c057211306A40A4D7006C040dBFE1370cb and 0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9.",
+        "Review the Sonic deployment separately."
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

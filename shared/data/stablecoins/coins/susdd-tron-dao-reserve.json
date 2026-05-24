@@ -47,6 +47,67 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "sUSDD is a savings wrapper over USDD. Wrapper shares are minted against deposited USDD and inherit USDD's reviewed permissioned mint/admin authority for base supply.",
+    "inheritedFrom": "usdd-tron-dao-reserve",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "label": "sUSDD Ethereum wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Savings wrapper over deposited USDD; does not mint base USDD.",
+        "sources": [
+          {
+            "label": "USDD website",
+            "url": "https://usdd.io/"
+          }
+        ],
+        "evidence": "Local metadata marks sUSDD as `variantOf: usdd-tron-dao-reserve` and `variantKind: savings-passthrough`."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "label": "Inherited USDD privileged token mint/admin authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USDD Etherscan contract source",
+            "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usdd-tron-dao-reserve` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USDD Etherscan contract source",
+          "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+        },
+        {
+          "label": "USDD website",
+          "url": "https://usdd.io/"
+        }
+      ],
+      "evidence": "sUSDD is a savings wrapper over reviewed USDD. Wrapper share minting is not a separate base USDD mint path.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Ethereum and BSC sUSDD wrapper admin/upgrade controls before upgrading confidence."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

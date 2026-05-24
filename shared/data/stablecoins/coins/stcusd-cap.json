@@ -18,6 +18,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "stcUSD is an ERC-4626 wrapper over Cap cUSD; wrapper minting is deposit/share accounting while durable cUSD mint authority is inherited from reviewed Cap vault controls.",
+    "inheritedFrom": "cusd-cap",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+        "label": "stcUSD ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "stcUSD token",
+            "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#readContract"
+          },
+          {
+            "label": "Cap stcUSD mechanics",
+            "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned Cap cUSD 0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC; parent cUSD has reviewed mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Cap stcUSD mechanics",
+          "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+        }
+      ],
+      "evidence": "On-chain asset read confirms stcUSD wraps cUSD; durable mint authority inherits from reviewed parent cUSD.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "variantOf": "cusd-cap",
   "variantKind": "strategy-vault",
   "pegReferenceId": "cusd-cap",

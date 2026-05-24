@@ -85,6 +85,73 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EURQ is issuer-minted by Quantoz. Ethereum uses the same HadronToken implementation family as reviewed USDQ, with owner-only minting and separate multisig-style owner/proxy-admin controls.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+        "label": "EURQ Ethereum owner mint authority",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Quantoz EURQ/USDQ",
+            "url": "https://www.quantoz.com/products/eurq-usdq"
+          },
+          {
+            "label": "Sourcify HadronToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+          }
+        ],
+        "evidence": "EURQ owner() returned this address at Ethereum block 25166592. required() returned 2 and getOwners() returned 5 owners. HadronToken source exposes owner-only mint(destination,amount)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa6724f792002D5677a7Bc370986E1B580b8773E7",
+        "label": "EURQ EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURQ token",
+            "url": "https://etherscan.io/address/0x8df723295214ea6f21026eeeb4382d475f146f9f"
+          }
+        ],
+        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166592. required() returned 2 and getOwners() returned 5 owners."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Quantoz EURQ/USDQ",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Sourcify HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        }
+      ],
+      "evidence": "Direct Ethereum reads resolved implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, owner 0x284Df7B9d9F471554E9257bD9b116189f7997d45, and proxy admin 0xa6724f792002D5677a7Bc370986E1B580b8773E7; source confirms owner-only minting.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate Polygon, XRPL, and Algorand controls before applying this as complete multichain coverage."
+      ]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

@@ -177,6 +177,71 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are minted against deposited USDe and the many bridged/wrapped deployments inherit base USDe's signed-order issuer mint path.",
+    "inheritedFrom": "usde-ethena",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "label": "Ethereum sUSDe staking wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Wrapper/share accounting over deposited USDe; does not mint base USDe.",
+        "sources": [
+          {
+            "label": "Ethena staking docs",
+            "url": "https://docs.ethena.fi/solution-design/staking-usde"
+          },
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          }
+        ],
+        "evidence": "Local metadata marks sUSDe as `variantOf: usde-ethena` and `variantKind: savings-passthrough`; Ethena docs describe staking USDe to receive sUSDe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "label": "Inherited USDe token minter contract",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethena mint and redeem docs",
+            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usde-ethena` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena staking docs",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        }
+      ],
+      "evidence": "sUSDe is a wrapper over reviewed USDe. Wrapper shares and bridged representations do not replace the base USDe mint path.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review OFT/bridge route controls for non-Ethereum sUSDe deployments separately if bridge mint authority is in scope."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",

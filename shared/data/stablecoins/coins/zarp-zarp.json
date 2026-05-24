@@ -77,6 +77,53 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "ZARP exposes AccessControl MINTER_ROLE minting to verified accounts; role holders and admin signer setup were not enumerated.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "label": "ZARP MINTER_ROLE token mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify ZARP source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+          },
+          {
+            "label": "ZARP GitHub",
+            "url": "https://github.com/venox-digital-assets/zarp.contract"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 at block 25166611. Source review showed MINTER_ROLE and mint(address,uint256) guarded by onlyRole(MINTER_ROLE), requiring the recipient to be verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "ZARP docs",
+          "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+        },
+        {
+          "label": "Sourcify ZARP source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+        }
+      ],
+      "evidence": "ZARP source verifies direct role-gated minting.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate DEFAULT_ADMIN_ROLE, MINTER_ROLE, UPGRADER_ROLE, and any Safe/multisig signer setup before adding threshold details."
+      ]
+    }
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "reserves": [

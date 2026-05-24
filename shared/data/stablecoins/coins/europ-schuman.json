@@ -95,6 +95,79 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EUROP is issuer-minted/redeemed by Schuman Financial; the Ethereum token owner/admin path resolves to a 3/4 Safe.",
+    "controls": [
+      {
+        "label": "Schuman issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Schuman EUROP",
+            "url": "https://schuman.io/europ/"
+          },
+          {
+            "label": "EUROP whitepaper",
+            "url": "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"
+          }
+        ],
+        "evidence": "Schuman materials identify EUROP as directly issued and redeemable by the regulated issuer."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE1F9754ff1f714cD3D0e939f368A97f87840cD16",
+        "label": "EUROP token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
+          }
+        ],
+        "evidence": "EUROP owner() returned this Safe at Ethereum block 25166591. Safe API returned threshold 3, four owners, no modules, zero guard, and zero moduleGuard."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Schuman EUROP",
+          "url": "https://schuman.io/europ/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
+        }
+      ],
+      "evidence": "Schuman materials and Ethereum reads identify the issuer mint route and current Ethereum owner Safe.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review Polygon, Avalanche, XRPL, and Plasma route/admin controls before claiming complete multichain signer coverage."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

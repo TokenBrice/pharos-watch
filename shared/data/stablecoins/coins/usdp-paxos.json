@@ -71,6 +71,70 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDP is issued and redeemed by Paxos under a centralized issuer model. The local Ethereum/Solana/BSC deployments should be treated as issuer-controlled supply until on-chain role reads prove a narrower posture.",
+    "controls": [
+      {
+        "label": "Paxos issuer-operated mint/redeem authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Paxos USDP",
+            "url": "https://www.paxos.com/usdp"
+          },
+          {
+            "label": "Paxos USDP docs",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+          }
+        ],
+        "evidence": "Paxos documentation presents USDP as a Paxos-issued stablecoin with direct 1:1 redemption through Paxos; local metadata lists Ethereum, Solana, and BSC deployments."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+        "label": "Ethereum USDP token",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum USDP contract",
+            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1"
+          }
+        ],
+        "evidence": "Local metadata lists the Ethereum USDP token at this address; production follow-up should resolve owner/minter roles before upgrading confidence."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Paxos USDP",
+          "url": "https://www.paxos.com/usdp"
+        },
+        {
+          "label": "Paxos USDP docs",
+          "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+        }
+      ],
+      "evidence": "Official Paxos materials describe USDP issuance/redemption as a Paxos-operated stablecoin flow. On-chain signer setup and minter-admin roles were not verified, so confidence remains manual-review.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Read Ethereum USDP owner/masterMinter/minter role state and proxy admin, if exposed.",
+        "Read Solana mintAuthority/freezeAuthority and BSC token owner/minter roles.",
+        "Do not claim Safe/multisig threshold/modules/guard unless verified through explorer/RPC or Safe Transaction Service."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [

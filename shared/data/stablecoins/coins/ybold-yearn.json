@@ -60,6 +60,52 @@
     "reviewer": "Codex yBOLD tracking pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "yBOLD is a Yearn vault share over BOLD; vault shares mint against deposited BOLD while base BOLD mint authority is inherited from the reviewed Liquity BOLD profile.",
+    "inheritedFrom": "bold-liquity",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+        "label": "Yearn yBOLD vault share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "asset() returned BOLD at 0x6440f144b7e50D6a8439336510312d2F54beB01D; wrapper minting does not create base BOLD supply.",
+        "sources": [
+          {
+            "label": "Yearn yBOLD docs",
+            "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+          },
+          {
+            "label": "Yearn yBOLD GitHub",
+            "url": "https://github.com/yearn/yBOLD"
+          }
+        ],
+        "evidence": "Ethereum reads returned asset() = 0x6440f144b7e50D6a8439336510312d2F54beB01D and apiVersion() = 3.0.4 at block 25166611."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Yearn yBOLD docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "Existing BOLD mint authority review",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        }
+      ],
+      "evidence": "yBOLD is a wrapper/strategy vault over reviewed BOLD with no separate base-supply mint authority.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

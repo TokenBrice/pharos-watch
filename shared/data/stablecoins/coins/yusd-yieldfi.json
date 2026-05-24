@@ -83,6 +83,55 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault; wrapper shares mint against USDC deposits or manager calls, while base USDC mint authority is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "label": "YieldFi YToken share minting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Verified source mints shares during deposit and permits manager-only mintYToken/burnYToken accounting; it does not mint base USDC.",
+        "sources": [
+          {
+            "label": "Sourcify YieldFi YToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+          },
+          {
+            "label": "YieldFi yUSD terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          }
+        ],
+        "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493, admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, manager() = 0x03ACc35286bAAE6D73d99a9f14Ef13752208C8dC, and administrator() = 0x10472f91f67C49260BDD65F016ea0757bb1Fc91e."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "YieldFi yUSD terms",
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+        },
+        {
+          "label": "Sourcify YieldFi YToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+        }
+      ],
+      "evidence": "YieldFi yUSD should be modeled as wrapper/strategy-vault share minting over reviewed USDC, with separate manager/admin control risk.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve YieldFi admin/proxy-admin signer setup before adding threshold details."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",

@@ -70,6 +70,60 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EUROT is issuer-minted by Token Teknoloji; the Avalanche token owner is an EOA shared with the reviewed Token Teknoloji metal-token deployments.",
+    "controls": [
+      {
+        "label": "Token Teknoloji issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Token Teknoloji EUROT",
+            "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+          }
+        ],
+        "evidence": "Token Teknoloji materials describe issuer-managed mint and burn for reserve tokens."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
+        "label": "EUROT Avalanche token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Avalanche EUROT token",
+            "url": "https://snowtrace.io/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          }
+        ],
+        "evidence": "owner() returned this address at Avalanche block 86270526; code read returned no contract bytecode."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Token Teknoloji EUROT",
+          "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+        }
+      ],
+      "evidence": "Official Token Teknoloji materials and Avalanche reads identify the issuer route and current token owner.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Polygon owner/roles and whether the owner EOA is backed by MPC, multisig, or institutional custody."
+      ]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-unregulated",

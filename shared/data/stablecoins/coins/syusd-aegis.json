@@ -56,6 +56,71 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "sYUSD is Aegis's yield-bearing wrapper over YUSD. Wrapper share minting is backed by deposited YUSD and inherits the reviewed YUSD AegisMinting plus 3/5 Safe authority for base supply.",
+    "inheritedFrom": "yusd-aegis",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "label": "Aegis sYUSD wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Yield-bearing wrapper over deposited YUSD; does not mint base YUSD.",
+        "sources": [
+          {
+            "label": "Aegis sYUSD docs",
+            "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+          },
+          {
+            "label": "Aegis smart contracts",
+            "url": "https://docs.aegis.im/smart-contracts"
+          }
+        ],
+        "evidence": "Local metadata marks sYUSD as `variantOf: yusd-aegis` and `variantKind: savings-passthrough`."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+        "label": "Inherited AegisMinting",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AegisMinting Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+          }
+        ],
+        "evidence": "Inherited from reviewed `yusd-aegis` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Aegis docs",
+          "url": "https://docs.aegis.im/"
+        },
+        {
+          "label": "Aegis sYUSD docs",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        }
+      ],
+      "evidence": "sYUSD is a yield-bearing wrapper over reviewed YUSD. Wrapper share minting is separate from base YUSD issuance.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Ethereum and BSC sYUSD wrapper admin/upgrade controls before upgrading confidence."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",

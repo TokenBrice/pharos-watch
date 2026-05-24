@@ -114,6 +114,63 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "XAUT is issuer-minted by Tether Gold; the Ethereum implementation exposes onlyOwner mint/redeem and the token owner is a verified 3/6 legacy multisig contract.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "label": "XAUT token onlyOwner mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify XAUT source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566/sources/project%3A%2Fcontracts%2FTether%2FTetherToken.sol"
+          },
+          {
+            "label": "Tether Gold FAQ",
+            "url": "https://gold.tether.to/faq"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566 and owner() = 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828. Source review showed mint(address,uint256) and redeem(uint256) restricted to onlyOwner."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "label": "XAUT owner legacy multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "On-chain reads returned required() = 3 and getOwners() with six owners at Ethereum block 25166611. This is not a Safe, so Safe modules/guard are not applicable."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Tether Gold FAQ",
+          "url": "https://gold.tether.to/faq"
+        },
+        {
+          "label": "Sourcify XAUT source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566/sources/project%3A%2Fcontracts%2FTether%2FTetherToken.sol"
+        }
+      ],
+      "evidence": "Official Tether materials and source/RPC reads identify owner-gated XAUT issuance.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

@@ -67,6 +67,71 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply.",
+    "inheritedFrom": "usds-sky",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "label": "Sky Savings USDS vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "ERC-4626 share accounting over deposited USDS; does not mint base USDS.",
+        "sources": [
+          {
+            "label": "Sky sUSDS docs",
+            "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+          },
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.skyeco.com/"
+          }
+        ],
+        "evidence": "Local metadata marks sUSDS as `variantOf: usds-sky` and `variantKind: savings-passthrough`; local collateral text describes the ERC-4626 savings vault."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+        "label": "Inherited USDS_JOIN token adapter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usds-sky` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
+        {
+          "label": "Sky sUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        }
+      ],
+      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Ethereum and Base sUSDS vault admin/upgrade controls before upgrading confidence."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",

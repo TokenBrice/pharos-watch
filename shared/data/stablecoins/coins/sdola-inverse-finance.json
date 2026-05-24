@@ -85,6 +85,43 @@
     "reviewer": "Codex data addition",
     "reviewedAt": "2026-05-24"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "sDOLA is an ERC-4626 savings wrapper over DOLA; wrapper minting is deposit/share accounting while durable DOLA mint authority is inherited from reviewed parent DOLA.",
+    "inheritedFrom": "dola-inverse-finance",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+        "label": "sDOLA ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "sDOLA token",
+            "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#readContract"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4; parent DOLA has reviewed mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "sDOLA token",
+          "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#readContract"
+        }
+      ],
+      "evidence": "On-chain asset read confirms sDOLA wraps DOLA; durable mint authority inherits from reviewed parent DOLA.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "reserves": [
     {
       "name": "DOLA deposited in the sDOLA savings wrapper",

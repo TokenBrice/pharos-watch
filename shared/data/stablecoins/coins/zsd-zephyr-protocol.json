@@ -70,6 +70,56 @@
     "reviewer": "Codex metadata pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "probable",
+    "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral; no privileged issuer/admin mint path was resolved from official materials.",
+    "controls": [
+      {
+        "label": "Zephyr native reserve mint/redeem rules",
+        "role": "other",
+        "authorityType": "none",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Minting depends on native reserve-ratio and oracle rules described in the Zephyr whitepaper/source, not an EVM-style privileged minter.",
+        "sources": [
+          {
+            "label": "Zephyr whitepaper",
+            "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+          },
+          {
+            "label": "Zephyr GitHub",
+            "url": "https://github.com/ZephyrProtocol/zephyr"
+          },
+          {
+            "label": "Zephyr reserve snapshots",
+            "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+          }
+        ],
+        "evidence": "Official whitepaper/docs describe ZSD as minted/redeemed against ZEPH reserve mechanics with reserve-ratio constraints; local metadata links the official source repository and live reserve snapshot API."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Zephyr whitepaper",
+          "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+        },
+        {
+          "label": "Zephyr GitHub",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ],
+      "evidence": "No separate privileged mint authority was resolved for native ZSD beyond protocol conversion rules.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "A protocol specialist should confirm no emergency hard-fork or foundation-operated mint bypass exists in current Zephyr code."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "ZEPH protocol reserve collateral",

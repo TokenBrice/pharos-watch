@@ -45,6 +45,119 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "facilitator-bucket-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "cdxUSD uses a GHO-style facilitator bucket model on Base. The active facilitator is a 3/9 Safe with a finite bucket, while the owner contract can authorize facilitators and update bucket capacity.",
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b",
+        "label": "cdxUSD active facilitator Safe",
+        "role": "facilitator",
+        "authorityType": "safe",
+        "directMintAbility": "cap-limited",
+        "threshold": 3,
+        "signerCount": 9,
+        "capDescription": "getFacilitator returned bucket capacity 100000000000000000000000000 and bucket level 6150000000000000000000000 at Base block 46426970.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "caps": "Finite facilitator bucket capacity read from getFacilitator/getFacilitatorBucket.",
+          "rateLimits": "Token exposes hourlyLimit/slidingHourlyLimitUtilization; hourlyLimit read returned 0 in this pass."
+        },
+        "sources": [
+          {
+            "label": "Cod3x tech stack",
+            "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+          },
+          {
+            "label": "Sourcify cdxUSD source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+          },
+          {
+            "label": "Base Safe transaction service",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b/"
+          }
+        ],
+        "evidence": "getFacilitatorsList returned this address; getFacilitator returned label Multisig and a finite bucket. Base Safe API returned threshold 3, 9 owners, no modules, and zero guard."
+      },
+      {
+        "chain": "base",
+        "address": "0xc0D3700924301AC384E5Eae3272E08220752DE3D",
+        "label": "cdxUSD owner contract",
+        "role": "bucket-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify cdxUSD source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+          }
+        ],
+        "evidence": "owner() returned this contract address at Base block 46426970; source exposes owner-only facilitator and bucket-capacity management functions."
+      },
+      {
+        "chain": "base",
+        "address": "0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba",
+        "label": "cdxUSD guardian Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 8,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Base cdxUSD contract",
+            "url": "https://basescan.org/address/0xc0d3700000987c99b3c9009069e4f8413fd22330#readContract"
+          },
+          {
+            "label": "Base Safe transaction service",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba/"
+          }
+        ],
+        "evidence": "guardian() returned this address; Base Safe API returned threshold 1, 8 owners, no modules, and zero guard."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Cod3x tech stack",
+          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        },
+        {
+          "label": "Sourcify cdxUSD source",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+        }
+      ],
+      "evidence": "Verified Base source and RPC reads identify a facilitator-bucket mint model, one active 3/9 Safe facilitator with finite bucket capacity, and an owner contract that can manage facilitators and bucket caps.",
+      "reviewer": "Codex mint-authority full-gap batch-1",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve owner contract internals and signer/upgrade model for 0xc0D3700924301AC384E5Eae3272E08220752DE3D.",
+        "Review LayerZero peer and bridge route configuration before raising confidence above manual-review."
+      ]
+    }
+  },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
   "reserves": [

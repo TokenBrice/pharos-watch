@@ -254,7 +254,72 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)"
+    "collateral": "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "AEUR is issuer-minted by Anchored Coins. Ethereum and BSC token owner plus proxy-admin ownership resolve to the same 4/6 Safe, and the verified implementation exposes owner-gated mint/burn/pause controls.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x1EEa4eE3F31ba4E3276C00Ee618df6f2Cc59f002",
+          "label": "AEUR Ethereum token owner and proxy-admin owner Safe",
+          "role": "direct-minter",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 4,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "chain": "bsc",
+          "address": "0x1EEa4eE3F31ba4E3276C00Ee618df6f2Cc59f002",
+          "label": "AEUR BSC token owner and proxy-admin owner Safe",
+          "role": "direct-minter",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 4,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59e7b43227af72dd80822de8e52acf2fce7a8049",
+          "label": "AEUR proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "contract",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Anchored Coins AEUR",
+          "url": "https://www.anchoredcoins.com/en/landing/aeur"
+        },
+        {
+          "label": "Sourcify AEUR implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x7b709447e7812cbb0faec635759144db88e0a58f?fields=metadata,abi"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x1EEa4eE3F31ba4E3276C00Ee618df6f2Cc59f002/"
+        },
+        {
+          "label": "BscScan AEUR token",
+          "url": "https://bscscan.com/address/0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21#readProxyContract"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-bsc.safe.global/api/v1/safes/0x1EEa4eE3F31ba4E3276C00Ee618df6f2Cc59f002/"
+        },
+        {
+          "label": "Ethereum AEUR contract",
+          "url": "https://etherscan.io/address/0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21#readProxyContract"
+        }
+      ]
+    }
   },
   {
     "id": "aid-gaib",
@@ -491,7 +556,45 @@
       }
     ],
     "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. Wrapper minting creates apyUSD shares against deposited apxUSD, while durable base issuance is inherited from reviewed apxUSD issuer authority.",
+      "inheritedFrom": "apxusd-apyx",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "label": "apyUSD ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "The wrapper mints apyUSD shares through deposit/mint flows against apxUSD; it does not mint base apxUSD.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
+          "label": "Inherited apxUSD issuer authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Apyx docs",
+          "url": "https://docs.apyx.fi"
+        },
+        {
+          "label": "Ethereum apyUSD contract",
+          "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "arc-anq",
@@ -2581,7 +2684,69 @@
         "risk": "high"
       }
     ],
-    "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies"
+    "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies",
+    "mintAuthoritySummary": {
+      "mintPath": "facilitator-bucket-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "cdxUSD uses a GHO-style facilitator bucket model on Base. The active facilitator is a 3/9 Safe with a finite bucket, while the owner contract can authorize facilitators and update bucket capacity.",
+      "controls": [
+        {
+          "chain": "base",
+          "address": "0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b",
+          "label": "cdxUSD active facilitator Safe",
+          "role": "facilitator",
+          "authorityType": "safe",
+          "directMintAbility": "cap-limited",
+          "threshold": 3,
+          "signerCount": 9,
+          "capDescription": "getFacilitator returned bucket capacity 100000000000000000000000000 and bucket level 6150000000000000000000000 at Base block 46426970.",
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "chain": "base",
+          "address": "0xc0D3700924301AC384E5Eae3272E08220752DE3D",
+          "label": "cdxUSD owner contract",
+          "role": "bucket-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "base",
+          "address": "0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba",
+          "label": "cdxUSD guardian Safe",
+          "role": "other",
+          "authorityType": "safe",
+          "directMintAbility": "parameter-only",
+          "threshold": 1,
+          "signerCount": 8,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Cod3x tech stack",
+          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        },
+        {
+          "label": "Sourcify cdxUSD source",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+        },
+        {
+          "label": "Base Safe transaction service",
+          "url": "https://safe-transaction-base.safe.global/api/v1/safes/0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b/"
+        },
+        {
+          "label": "Base cdxUSD contract",
+          "url": "https://basescan.org/address/0xc0d3700000987c99b3c9009069e4f8413fd22330#readContract"
+        },
+        {
+          "label": "Base Safe transaction service",
+          "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba/"
+        }
+      ]
+    }
   },
   {
     "id": "cetes-etherfuse",
@@ -4512,7 +4677,43 @@
         "depType": "collateral"
       }
     ],
-    "collateral": "Euro-denominated collateral tokens, primarily Spiko EUTBL tokenized Eurozone Treasury-bill fund shares, held through Usual's EUR0 collateral module"
+    "collateral": "Euro-denominated collateral tokens, primarily Spiko EUTBL tokenized Eurozone Treasury-bill fund shares, held through Usual's EUR0 collateral module",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EUR0 issuance is Usual-operated: eligible users mint/redeem through protocol collateral routes backed by euro RWA collateral, while the Ethereum token remains upgradeable through a proxy-admin path.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x3c89Cd1884E7bEf73Ca3eF08d2Ef6ec338fD8e49",
+          "label": "EUR0 token proxy / protocol mint route",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd0faE00123a2E778c078c2691C6cB81a9DB08577",
+          "label": "EUR0 EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Usual EUR0 docs",
+          "url": "https://tech.usual.money/overview/features/eur0"
+        },
+        {
+          "label": "Ethereum EUR0 token",
+          "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+        }
+      ]
+    }
   },
   {
     "id": "eurau-allunity",
@@ -4581,7 +4782,45 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment"
+    "collateral": "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURAU is issuer-minted/redeemed by AllUnity; the reviewed pass confirms the regulated issuer route and Ethereum proxy implementation, but not signer custody.",
+      "controls": [
+        {
+          "label": "AllUnity issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4933A85b5B5466FBaf179f72d3DE273C287eC2c2",
+          "label": "EURAU Ethereum token proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "AllUnity EURAU",
+          "url": "https://allunity.com/eurau/"
+        },
+        {
+          "label": "AllUnity whitepaper",
+          "url": "https://allunity.com/whitepaper/"
+        },
+        {
+          "label": "Ethereum EURAU token",
+          "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        }
+      ]
+    }
   },
   {
     "id": "eurc-circle",
@@ -4656,7 +4895,47 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro-denominated fiat reserves held separately from Circle operating funds at regulated financial institutions in the EEA"
+    "collateral": "Euro-denominated fiat reserves held separately from Circle operating funds at regulated financial institutions in the EEA",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURC is issuer-minted by Circle; Ethereum EURC exposes the same MasterMinter-style minter management path used by Circle EVM stablecoins.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x02398771fd1db790ef2B656Ca3BCB3075F27A72c",
+          "label": "Ethereum EURC MasterMinter",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3101386a38bEf8B79E49f12DEa12938A30e8AF96",
+          "label": "Ethereum EURC token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Circle EURC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-eurc"
+        },
+        {
+          "label": "Circle stablecoin EVM source",
+          "url": "https://github.com/circlefin/stablecoin-evm"
+        },
+        {
+          "label": "Ethereum EURC token",
+          "url": "https://etherscan.io/address/0x1abaea1f7c830bd89acc67ec4af516284b1bc33c#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "eurcv-societe-generale-forge",
@@ -4726,7 +5005,41 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition"
+    "collateral": "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURCV is issuer-minted/redeemed by SG-FORGE; Ethereum proxy implementation was resolved, while signer setup remains unverified.",
+      "controls": [
+        {
+          "label": "SG-FORGE issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5f7827fDeb7c20b443265Fc2F40845B715385fF2",
+          "label": "EURCV Ethereum token proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "SG-FORGE CoinVertible",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "Ethereum EURCV token",
+          "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+        }
+      ]
+    }
   },
   {
     "id": "eure-monerium",
@@ -4798,7 +5111,47 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA"
+    "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURE is minted and burned through Monerium's licensed EMI issuance flow; the Ethereum token owner/admin path resolves to a 3/6 Safe.",
+      "controls": [
+        {
+          "label": "Monerium issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
+          "label": "EURE token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Monerium tokens docs",
+          "url": "https://monerium.dev/docs/contracts-v2"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+        },
+        {
+          "label": "Monerium smart-contract source",
+          "url": "https://github.com/monerium/smart-contracts"
+        }
+      ]
+    }
   },
   {
     "id": "euri-banking-circle",
@@ -4871,7 +5224,54 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A."
+    "collateral": "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A.",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner and proxy-admin reads resolve to EOAs with no verified on-chain multisig setup.",
+      "controls": [
+        {
+          "label": "Banking Circle issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D",
+          "label": "EURI Ethereum token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
+          "label": "EURI EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Eurite about page",
+          "url": "https://www.eurite.com/about-us/"
+        },
+        {
+          "label": "EURI whitepaper",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+        },
+        {
+          "label": "Ethereum EURI token",
+          "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        }
+      ]
+    }
   },
   {
     "id": "euro3-3a-dao",
@@ -5019,7 +5419,47 @@
         "risk": "low"
       }
     ],
-    "collateral": "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund"
+    "collateral": "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EUROP is issuer-minted/redeemed by Schuman Financial; the Ethereum token owner/admin path resolves to a 3/4 Safe.",
+      "controls": [
+        {
+          "label": "Schuman issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE1F9754ff1f714cD3D0e939f368A97f87840cD16",
+          "label": "EUROP token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Schuman EUROP",
+          "url": "https://schuman.io/europ/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE1F9754ff1f714cD3D0e939f368A97f87840cD16/"
+        },
+        {
+          "label": "EUROP whitepaper",
+          "url": "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf"
+        }
+      ]
+    }
   },
   {
     "id": "eurot-token-teknoloji",
@@ -5062,7 +5502,41 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank"
+    "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EUROT is issuer-minted by Token Teknoloji; the Avalanche token owner is an EOA shared with the reviewed Token Teknoloji metal-token deployments.",
+      "controls": [
+        {
+          "label": "Token Teknoloji issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "avalanche",
+          "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
+          "label": "EUROT Avalanche token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Token Teknoloji EUROT",
+          "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+        },
+        {
+          "label": "Avalanche EUROT token",
+          "url": "https://snowtrace.io/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+        }
+      ]
+    }
   },
   {
     "id": "eurq-quantoz",
@@ -5136,7 +5610,51 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page"
+    "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURQ is issuer-minted by Quantoz. Ethereum uses the same HadronToken implementation family as reviewed USDQ, with owner-only minting and separate multisig-style owner/proxy-admin controls.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+          "label": "EURQ Ethereum owner mint authority",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 2,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xa6724f792002D5677a7Bc370986E1B580b8773E7",
+          "label": "EURQ EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "upgrade-only",
+          "threshold": 2,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Quantoz EURQ/USDQ",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Sourcify HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        },
+        {
+          "label": "Ethereum EURQ token",
+          "url": "https://etherscan.io/address/0x8df723295214ea6f21026eeeb4382d475f146f9f"
+        }
+      ]
+    }
   },
   {
     "id": "eurr-stablr",
@@ -5207,7 +5725,51 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash and cash equivalents held in segregated accounts at European financial institutions"
+    "collateral": "Cash and cash equivalents held in segregated accounts at European financial institutions",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 1/3 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x8278d2881DBf8F6FC01C98D196c4b16F1AadE5Bc",
+          "label": "EURR Ethereum owner mint authority",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 1,
+          "signerCount": 3,
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0",
+          "label": "EURR EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "upgrade-only",
+          "threshold": 1,
+          "signerCount": 1,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "StablR smart-contract docs",
+          "url": "https://docs.stablr.com/docs/smart-contract"
+        },
+        {
+          "label": "StablR EURR docs",
+          "url": "https://docs.stablr.com/docs/what-is-eurr"
+        },
+        {
+          "label": "Ethereum EURR token",
+          "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+        }
+      ]
+    }
   },
   {
     "id": "eurs-stasis",
@@ -5845,7 +6407,45 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon"
+    "collateral": "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token is an upgradeable proxy; exact mint role holders were not enumerated in this pass.",
+      "controls": [
+        {
+          "label": "Fidelity issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x7C135549504245B5eAe64fc0E99Fa5ebabb8e35D",
+          "label": "FIDD Ethereum token proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Fidelity FIDD overview",
+          "url": "https://www.fidelity.com/learning-center/trading-investing/FIDD-stablecoin"
+        },
+        {
+          "label": "Ethereum FIDD token",
+          "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+        },
+        {
+          "label": "Fidelity Digital Assets stablecoin",
+          "url": "https://www.fidelitydigitalassets.com/stablecoin"
+        }
+      ]
+    }
   },
   {
     "id": "fiusd-fiserv",
@@ -6329,7 +6929,43 @@
       }
     ],
     "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "ftUSD mints/redeems through Flying Tulip's on-chain mint/redeem path. Ethereum reads identify a token owner/masterMinter address and a separate minter contract.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+          "label": "ftUSD minter contract",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+          "label": "ftUSD token owner / masterMinter",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Flying Tulip docs",
+          "url": "https://docs.flyingtulip.com/"
+        },
+        {
+          "label": "Ethereum ftUSD token",
+          "url": "https://etherscan.io/address/0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+        }
+      ]
+    }
   },
   {
     "id": "fusd-finchain",
@@ -6366,7 +7002,45 @@
       }
     ],
     "collateral": "Tokenized U.S. Treasury bills and money-market funds, including Taikang Kaitai U.S. Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class), and Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC)",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "FUSD is issuer-minted/redeemed through FinChain's eligible-customer rails; Ethereum proxy admin and implementation are resolved, but signer setup is not.",
+      "controls": [
+        {
+          "label": "FinChain issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x29A48097055d6779e6832355680B7C7bF0D43C53",
+          "label": "FUSD EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "FinChain FUSD docs",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        },
+        {
+          "label": "FinChain deployments",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        },
+        {
+          "label": "Ethereum FinChain FUSD token",
+          "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        }
+      ]
+    }
   },
   {
     "id": "fusd-freedom-dollar",
@@ -6584,7 +7258,47 @@
       }
     ],
     "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "GBPe is minted and burned through Monerium's licensed EMI issuance flow; the Ethereum token owner/admin path resolves to the same 3/6 Safe as EURE.",
+      "controls": [
+        {
+          "label": "Monerium issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
+          "label": "GBPe token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Monerium tokens docs",
+          "url": "https://monerium.dev/docs/contracts-v2"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+        },
+        {
+          "label": "Monerium smart-contract source",
+          "url": "https://github.com/monerium/smart-contracts"
+        }
+      ]
+    }
   },
   {
     "id": "gbpm-mento",
@@ -6643,7 +7357,36 @@
       }
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "GBPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner/proxy-admin path resolves to a 4/7 Safe.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento GBPm token owner / proxy admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ]
+    }
   },
   {
     "id": "gbpsafo-spiko",
@@ -7116,7 +7859,41 @@
       }
     ],
     "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "GRAMG is issuer-minted by Token Teknoloji against physical gold reserves; the Avalanche token owner is an EOA shared with EUROT and GRAMS.",
+      "controls": [
+        {
+          "label": "Token Teknoloji issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "avalanche",
+          "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
+          "label": "GRAMG Avalanche token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Token Teknoloji GRAMG",
+          "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+        },
+        {
+          "label": "Avalanche GRAMG token",
+          "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+        }
+      ]
+    }
   },
   {
     "id": "grams-token-teknoloji",
@@ -7171,7 +7948,41 @@
       }
     ],
     "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "GRAMS is issuer-minted by Token Teknoloji against physical silver reserves; the Avalanche token owner is an EOA shared with EUROT and GRAMG.",
+      "controls": [
+        {
+          "label": "Token Teknoloji issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "avalanche",
+          "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
+          "label": "GRAMS Avalanche token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Token Teknoloji GRAMS",
+          "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
+        },
+        {
+          "label": "Avalanche GRAMS token",
+          "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
+        }
+      ]
+    }
   },
   {
     "id": "gtusdc-gauntlet",
@@ -7231,7 +8042,53 @@
       }
     ],
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho vault on Morpho Blue; the curator allocates across conservative USDC lending markets backed by blue-chip crypto and real-world asset collateral",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "gtUSDC is a MetaMorpho vault share over USDC; wrapper minting is share accounting while base USDC issuance remains inherited from Circle's reviewed USDC mint authority.",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xdd0f28e19C1780eb6396170735D45153D261490D",
+          "label": "Gauntlet USDC Prime V1 MetaMorpho vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Vault shares are minted only against deposited USDC exposure and do not create base USDC.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+          "label": "Inherited Ethereum USDC MasterMinter",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Morpho curation docs",
+          "url": "https://docs.morpho.org/curation/overview"
+        },
+        {
+          "label": "Reviewed parent",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d"
+        },
+        {
+          "label": "Reviewed USDC metadata source",
+          "url": "https://github.com/circlefin/stablecoin-evm"
+        }
+      ]
+    }
   },
   {
     "id": "gtusdcp-gauntlet",
@@ -7291,7 +8148,53 @@
       }
     ],
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho V2 vault on Morpho Blue; the curator allocates across permissioned USDC lending markets backed by blue-chip crypto and real-world asset collateral",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "gtUSDCp is a MetaMorpho V2 vault share over USDC; wrapper minting is share accounting while base USDC issuance remains inherited from Circle's reviewed USDC mint authority.",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x8c106EEdAd96553E64287a5A6839C3CC78Afa3d0",
+          "label": "Gauntlet USDC Prime Ethereum MetaMorpho V2 vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Vault shares are minted only against deposited USDC exposure and do not create base USDC.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+          "label": "Inherited Ethereum USDC MasterMinter",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Morpho curation docs",
+          "url": "https://docs.morpho.org/curation/overview"
+        },
+        {
+          "label": "Reviewed parent",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+        },
+        {
+          "label": "Reviewed USDC metadata source",
+          "url": "https://github.com/circlefin/stablecoin-evm"
+        }
+      ]
+    }
   },
   {
     "id": "gusd-gate",
@@ -7361,7 +8264,41 @@
         "risk": "high"
       }
     ],
-    "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC"
+    "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "Gate GUSD is issuer-operated through Gate's staking/mint product; Ethereum proxy implementation was resolved, while mint role holders were not.",
+      "controls": [
+        {
+          "label": "Gate issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xaf6186B3521B60E27396B5d23b48ABc34bF585C5",
+          "label": "Gate GUSD Ethereum token proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Gate GUSD",
+          "url": "https://www.gate.com/gusd"
+        },
+        {
+          "label": "Ethereum Gate GUSD token",
+          "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+        }
+      ]
+    }
   },
   {
     "id": "gusd-gemini",
@@ -7435,7 +8372,51 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders"
+    "collateral": "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "GUSD is issuer-minted by Gemini through a custodian-controlled contract model. Ethereum reads identify the current custodian contract and implementation.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xb983eD57aEaA180BC7a0078DDAdf1Ea217F2e421",
+          "label": "GUSD custodian contract",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6704BA24B8640BCcEE6bf2Fd276A6a1b8EdF4Ade",
+          "label": "GUSD current implementation",
+          "role": "other",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Gemini Dollar source",
+          "url": "https://github.com/gemini/dollar"
+        },
+        {
+          "label": "Gemini Dollar whitepaper",
+          "url": "https://www.gemini.com/static/dollar/gemini-dollar-whitepaper.pdf"
+        },
+        {
+          "label": "Gemini Dollar",
+          "url": "https://www.gemini.com/en-GB/dollar"
+        },
+        {
+          "label": "Ethereum GUSD token",
+          "url": "https://etherscan.io/address/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd#code"
+        }
+      ]
+    }
   },
   {
     "id": "gyen-gyen",
@@ -7490,7 +8471,57 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines"
+    "collateral": "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "GYEN uses GMO Trust's role-based fiat-token contract: a minter mints within capacity, while owner/admin roles can change privileged accounts and parameters.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x78AFae0A5203f27f623e4614A1cFEc8F75C5d11C",
+          "label": "GYEN current minter",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "cap-limited",
+          "capDescription": "GMO Trust source describes a capacity limit: minter cannot mint beyond capacity, while a separate capper can adjust capacity.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xfb5dAE5bF48dF4492B3101f00D844Ef1c0268C6D",
+          "label": "GYEN owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x7037368343299af3e9a9708337F6690D65efa517",
+          "label": "GYEN admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "GMO Trust stablecoin source",
+          "url": "https://github.com/trust-zcom/gmotrust-stablecoin-contract"
+        },
+        {
+          "label": "GMO Trust GYEN announcement",
+          "url": "https://www.gmo.jp/en/news/article/809/"
+        },
+        {
+          "label": "GYEN/ZUSD contract-address support",
+          "url": "https://support.stablecoin.z.com/hc/en-us/articles/360053460793-What-are-the-contract-addresses-for-GYEN-and-ZUSD"
+        }
+      ]
+    }
   },
   {
     "id": "gynusd-gyndore",
@@ -7645,7 +8676,55 @@
       }
     ],
     "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "hbUSDT is a Hyperbeat vault/share token over USDT; wrapper minting is share accounting while base USDT issuance remains inherited from Tether's reviewed USDT mint authority.",
+      "inheritedFrom": "usdt-tether",
+      "controls": [
+        {
+          "chain": "hyperevm",
+          "address": "0x5e105266db42f78fa814322bce7f388b4c2e61eb",
+          "label": "Hyperbeat hbUSDT vault token",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "hbUSDT shares are minted against USDT strategy deposits and do not create base USDT supply.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "label": "Inherited Ethereum USDT token owner multisig",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Hyperbeat",
+          "url": "https://hyperbeat.org/"
+        },
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        },
+        {
+          "label": "Accountable Hyperbeat reserves",
+          "url": "https://accountable.hyperbeat.org/"
+        },
+        {
+          "label": "Ethereum USDT contract",
+          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+        }
+      ]
+    }
   },
   {
     "id": "hchf-hedera-swiss-franc",
@@ -8766,7 +9845,60 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Japanese yen deposits and Japanese government bonds (100% backed)"
+    "collateral": "Japanese yen deposits and Japanese government bonds (100% backed)",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "JPYC is a centralized mintable ERC-20. The current Ethereum proxy implementation exposes role-managed minting, and RPC reads resolve a contract minterAdmin plus owner/pauser control surfaces.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB",
+          "label": "JPYC Ethereum proxy mint surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xc6B1Dc6C9fF85e968527f5C755fC07253a084247",
+          "label": "JPYC minterAdmin",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x31735b5DB5850f66082CC0f1a61cA1a8e07A60a5",
+          "label": "JPYC owner",
+          "role": "proxy-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "JPYC whitepaper",
+          "url": "https://www.jpyc.jp/white-paper-en.pdf"
+        },
+        {
+          "label": "Sourcify JPYC implementation source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0xf2fab05f26dc8da5a3f24d015fb043db7a8751cf/metadata.json"
+        },
+        {
+          "label": "Ethereum JPYC contract",
+          "url": "https://etherscan.io/address/0x431d5dff03120afa4bdf332c61a6e1766ef37bdb#code"
+        },
+        {
+          "label": "Ethereum JPYC contract",
+          "url": "https://etherscan.io/address/0x431d5dff03120afa4bdf332c61a6e1766ef37bdb#readProxyContract"
+        }
+      ]
+    }
   },
   {
     "id": "jpym-mento",
@@ -11116,7 +12248,68 @@
       }
     ],
     "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "msY is an ERC-4626-style strategy wrapper over Main Street USD. Wrapper minting creates msY shares against deposited MSUSD, while durable base-dollar issuance is inherited from the reviewed MSUSD parent.",
+      "inheritedFrom": "msusd-main-street",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
+          "label": "msY ERC-4626-style wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "The wrapper mints msY shares through deposit/mint flows against MSUSD asset deposits; it does not mint base MSUSD.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858",
+          "label": "msY owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "parameter-only",
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4ba01f22827018b4772CD326C7627FB4956A7C00",
+          "label": "Inherited MSUSD mint surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Main Street docs",
+          "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
+        },
+        {
+          "label": "Sourcify msY implementation source",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x843e3a09675e5fa00951c55727f8b0f2076c0d2c/metadata.json"
+        },
+        {
+          "label": "Ethereum msY contract",
+          "url": "https://etherscan.io/address/0x890a5122aa1da30fec4286de7904ff808f0bd74a#code"
+        },
+        {
+          "label": "Ethereum msY contract",
+          "url": "https://etherscan.io/address/0x890a5122aa1da30fec4286de7904ff808f0bd74a#readProxyContract"
+        },
+        {
+          "label": "Sourcify MSUSD implementation source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x96271bEa7A9c4B8eDd6c3A05E548f05F157ADA46/sources/src/v2/msUSDV2.sol"
+        }
+      ]
+    }
   },
   {
     "id": "mtbill-midas",
@@ -12237,7 +13430,47 @@
       }
     ],
     "collateral": "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "OUSG minting is operated through Ondo's qualified-access subscription/redemption path; official docs list the OUSG token and OUSG_InstantManager, and Ethereum AccessControl reads show contract-admin holders, but Safe/module setup is not verified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+          "label": "OUSG_InstantManager",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xAEd4caF2E535D964165B4392342F71bac77e8367",
+          "label": "OUSG token default-admin holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ondo OUSG product page",
+          "url": "https://ondo.finance/ousg"
+        },
+        {
+          "label": "Ondo smart contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        },
+        {
+          "label": "Ondo OUSG token",
+          "url": "https://etherscan.io/address/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "pathusd-bridge",
@@ -12327,7 +13560,47 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company"
+    "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "PAXG supply is controlled by Paxos-operated supply-control infrastructure; Ethereum reads identify the current supplyController and token owner as externally owned admin addresses.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x2fb074FA59c9294c71246825C1c9A0c7782d41a4",
+          "label": "PAXG supplyController",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
+          "label": "PAXG token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Paxos PAXG product page",
+          "url": "https://www.paxos.com/pax-gold"
+        },
+        {
+          "label": "Paxos PAXG contract repository",
+          "url": "https://github.com/paxosglobal/paxos-gold-contract"
+        },
+        {
+          "label": "Ethereum PAXG token",
+          "url": "https://etherscan.io/address/0x45804880de22913dafe09f4980848ece6ecbaf78#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "pc0000031-tradable",
@@ -14132,7 +15405,35 @@
       }
     ],
     "collateral": "BOLD deposited into K3's ERC-4626 sBOLD vault and allocated across Liquity V2 Stability Pools to earn interest and liquidation gains",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "none-resolved",
+      "confidence": "manual-review",
+      "summary": "sBOLD is a risk-absorption variant over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD.",
+      "inheritedFrom": "bold-liquity",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+          "label": "sBOLD wrapper token",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Liquity v2 docs",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+        },
+        {
+          "label": "Liquity BOLD contract source",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        }
+      ]
+    }
   },
   {
     "id": "scrvusd-curve",
@@ -14192,7 +15493,35 @@
       }
     ],
     "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "scrvUSD is an ERC-4626 savings wrapper over crvUSD; wrapper minting is deposit/share accounting while durable crvUSD mint authority is inherited from the reviewed Curve parent.",
+      "inheritedFrom": "crvusd-curve",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+          "label": "scrvUSD ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "scrvUSD token",
+          "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+        },
+        {
+          "label": "Curve crvUSD resources",
+          "url": "https://resources.curve.finance/crvusd/"
+        }
+      ]
+    }
   },
   {
     "id": "scusd-rings",
@@ -14289,7 +15618,35 @@
       }
     ],
     "collateral": "DAI deposited into the sDAI savings vault; the wrapper remains fully backed by DAI while the exchange rate compounds with the Dai Savings Rate",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sDAI is an ERC-4626 savings wrapper over DAI; wrapper minting is deposit/share accounting while durable DAI mint authority is inherited from reviewed Maker/Sky DAI.",
+      "inheritedFrom": "dai-makerdao",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+          "label": "sDAI ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "sDAI token",
+          "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+        },
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        }
+      ]
+    }
   },
   {
     "id": "sdola-inverse-finance",
@@ -14324,7 +15681,31 @@
       }
     ],
     "collateral": "DOLA deposited into Inverse Finance's ERC-4626 sDOLA wrapper around the DOLA Savings Account; DOLA remains in the smart contract while FiRM DBR revenue is auctioned into DOLA and distributed through the exchange rate",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "sDOLA is an ERC-4626 savings wrapper over DOLA; wrapper minting is deposit/share accounting while durable DOLA mint authority is inherited from reviewed parent DOLA.",
+      "inheritedFrom": "dola-inverse-finance",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+          "label": "sDOLA ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "sDOLA token",
+          "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "sdusd-dtrinity",
@@ -14521,7 +15902,35 @@
       }
     ],
     "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
-    "collateralQuality": "native"
+    "collateralQuality": "native",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sGHO is a savings wrapper over GHO; wrapper minting is share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls.",
+      "inheritedFrom": "gho-aave",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+          "label": "sGHO savings wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Aave GHO facilitators",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        {
+          "label": "sGHO token",
+          "url": "https://etherscan.io/address/0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "silk-shade-protocol",
@@ -14912,7 +16321,35 @@
       }
     ],
     "collateral": "Senior tranche token over a Strata risk-tranched USDe yield strategy; junior tranche capital absorbs first-loss or underperformance before senior holders",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "srUSDe is an ERC-4626 senior-risk wrapper over USDe; wrapper minting is deposit/share accounting while durable USDe mint authority is inherited from reviewed Ethena signed-order controls.",
+      "inheritedFrom": "usde-ethena",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+          "label": "srUSDe ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "srUSDe token",
+          "url": "https://etherscan.io/address/0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003#readContract"
+        },
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        }
+      ]
+    }
   },
   {
     "id": "stac-securitize",
@@ -15010,7 +16447,35 @@
       }
     ],
     "collateral": "ERC-4626 staked cUSD shares backed by Cap's reserve basket and operator-lending framework; yield comes from reserve yield and overcollateralized operator borrowing",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "stcUSD is an ERC-4626 wrapper over Cap cUSD; wrapper minting is deposit/share accounting while durable cUSD mint authority is inherited from reviewed Cap vault controls.",
+      "inheritedFrom": "cusd-cap",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+          "label": "stcUSD ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Cap stcUSD mechanics",
+          "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+        },
+        {
+          "label": "stcUSD token",
+          "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "steakusdc-steakhouse",
@@ -15070,7 +16535,39 @@
       }
     ],
     "collateral": "USDC deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "steakUSDC is a Morpho ERC-4626 vault over USDC; wrapper minting is deposit/share accounting while durable USDC issuance is inherited from reviewed Circle controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDC mint ability.",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+          "label": "steakUSDC MetaMorpho vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+        },
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        }
+      ]
+    }
   },
   {
     "id": "steakusdt-steakhouse",
@@ -15131,7 +16628,39 @@
       }
     ],
     "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "steakUSDT is a Morpho ERC-4626 vault over USDT; wrapper minting is deposit/share accounting while durable USDT issuance is inherited from reviewed Tether controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDT mint ability.",
+      "inheritedFrom": "usdt-tether",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+          "label": "steakUSDT MetaMorpho vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+        },
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        }
+      ]
+    }
   },
   {
     "id": "stkgho-umbrella-aave",
@@ -15189,7 +16718,35 @@
       }
     ],
     "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "stkGHO.v1 is an ERC-4626-style Umbrella staking receipt over GHO; wrapper minting is deposit/share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls.",
+      "inheritedFrom": "gho-aave",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+          "label": "stkGHO Umbrella wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Aave Umbrella docs",
+          "url": "https://aave.com/help/umbrella/umbrella"
+        },
+        {
+          "label": "stkGHO token",
+          "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "stusd-stoneyield",
@@ -15281,7 +16838,39 @@
       }
     ],
     "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "stUSDS is an ERC-4626 risk-capital wrapper over USDS; wrapper minting is deposit/share accounting while durable USDS mint authority is inherited from reviewed Sky governance controls.",
+      "inheritedFrom": "usds-sky",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+          "label": "stUSDS ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Sky stUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+        },
+        {
+          "label": "Sky USDS contracts",
+          "url": "https://github.com/sky-ecosystem/usds"
+        },
+        {
+          "label": "stUSDS token",
+          "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "suiusde-sui",
@@ -15500,7 +17089,50 @@
       }
     ],
     "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "sUSD1+ is a Lorenzo strategy-vault receipt over USD1+ exposure that ultimately inherits the reviewed World Liberty Financial USD1 issuer/controller mint path; wrapper share minting does not create base USD1 supply.",
+      "inheritedFrom": "usd1-world-liberty-financial",
+      "controls": [
+        {
+          "chain": "bsc",
+          "address": "0x4f2760b32720f013e900dc92f65480137391199b",
+          "label": "sUSD1+ wrapper token",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Wrapper/share accounting over Lorenzo USD1+ strategy exposure; does not mint base USD1.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2",
+          "label": "Inherited USD1 token owner/controller",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "timelockDelaySec": 259200,
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "USD1 website",
+          "url": "https://worldlibertyfinancial.com/usd1"
+        },
+        {
+          "label": "Lorenzo Protocol",
+          "url": "https://www.lorenzo-protocol.xyz/"
+        },
+        {
+          "label": "Lorenzo GitHub",
+          "url": "https://github.com/Lorenzo-Protocol/"
+        }
+      ]
+    }
   },
   {
     "id": "susdai-usd-ai",
@@ -15625,7 +17257,49 @@
       }
     ],
     "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
-    "collateralQuality": "native"
+    "collateralQuality": "native",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "spUSDC is a Spark ERC-4626 savings wrapper over USDC. Wrapper shares are minted against deposited USDC and inherit Circle USDC's reviewed issuer mint authority for base supply.",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+          "label": "Spark Savings USDC vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "ERC-4626 share accounting over deposited USDC; does not mint base USDC.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+          "label": "Inherited Ethereum USDC MasterMinter",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Spark docs",
+          "url": "https://docs.spark.fi"
+        },
+        {
+          "label": "Spark address registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry"
+        }
+      ]
+    }
   },
   {
     "id": "susdd-tron-dao-reserve",
@@ -15684,7 +17358,45 @@
       }
     ],
     "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "sUSDD is a savings wrapper over USDD. Wrapper shares are minted against deposited USDD and inherit USDD's reviewed permissioned mint/admin authority for base supply.",
+      "inheritedFrom": "usdd-tron-dao-reserve",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+          "label": "sUSDD Ethereum wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Savings wrapper over deposited USDD; does not mint base USDD.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+          "label": "Inherited USDD privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "USDD Etherscan contract source",
+          "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+        },
+        {
+          "label": "USDD website",
+          "url": "https://usdd.io/"
+        }
+      ]
+    }
   },
   {
     "id": "susde-ethena",
@@ -15745,7 +17457,49 @@
       }
     ],
     "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are minted against deposited USDe and the many bridged/wrapped deployments inherit base USDe's signed-order issuer mint path.",
+      "inheritedFrom": "usde-ethena",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+          "label": "Ethereum sUSDe staking wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Wrapper/share accounting over deposited USDe; does not mint base USDe.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+          "label": "Inherited USDe token minter contract",
+          "role": "backend-signer",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena staking docs",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "Ethena key addresses",
+          "url": "https://docs.ethena.fi/solution-design/key-addresses"
+        }
+      ]
+    }
   },
   {
     "id": "susds-sky",
@@ -15806,7 +17560,49 @@
       }
     ],
     "collateral": "USDS deposited into Sky's ERC-4626 savings vault; the wrapper remains fully backed by USDS while the exchange rate compounds with the Sky Savings Rate",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply.",
+      "inheritedFrom": "usds-sky",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+          "label": "Sky Savings USDS vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "ERC-4626 share accounting over deposited USDS; does not mint base USDS.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+          "label": "Inherited USDS_JOIN token adapter",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
+        {
+          "label": "Sky sUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        },
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.skyeco.com/"
+        }
+      ]
+    }
   },
   {
     "id": "susdt-spark",
@@ -15865,7 +17661,51 @@
       }
     ],
     "collateral": "USDT deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDT-denominated yield",
-    "collateralQuality": "native"
+    "collateralQuality": "native",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply.",
+      "inheritedFrom": "usdt-tether",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xe2e7a17dff93280dec073c995595155283e3c372",
+          "label": "Spark Savings USDT vault",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "ERC-4626 share accounting over deposited USDT; does not mint base USDT.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "label": "Inherited Ethereum USDT token owner multisig",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        },
+        {
+          "label": "Spark docs",
+          "url": "https://docs.spark.fi"
+        },
+        {
+          "label": "Spark address registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry"
+        }
+      ]
+    }
   },
   {
     "id": "susn-noon",
@@ -15933,7 +17773,49 @@
       }
     ],
     "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sUSN is Noon's staking wrapper over USN. Wrapper share minting is backed by deposited USN and inherits the reviewed USN MinterHandlerV2 plus Noon's 3/6 Safe authority for base supply.",
+      "inheritedFrom": "usn-noon",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xe24a3dc889621612422a64e6388927901608b91d",
+          "label": "Noon sUSN wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Staking wrapper over deposited USN; does not mint base USN.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+          "label": "Inherited USN MinterHandlerV2",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Noon docs",
+          "url": "https://docs.noon.capital/"
+        },
+        {
+          "label": "MinterHandlerV2 implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+        },
+        {
+          "label": "Noon proof of reserve",
+          "url": "https://noon.accountable.capital/"
+        }
+      ]
+    }
   },
   {
     "id": "syrupusdc-maple",
@@ -16129,7 +18011,53 @@
       }
     ],
     "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sYUSD is Aegis's yield-bearing wrapper over YUSD. Wrapper share minting is backed by deposited YUSD and inherits the reviewed YUSD AegisMinting plus 3/5 Safe authority for base supply.",
+      "inheritedFrom": "yusd-aegis",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+          "label": "Aegis sYUSD wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "Yield-bearing wrapper over deposited YUSD; does not mint base YUSD.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+          "label": "Inherited AegisMinting",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Aegis docs",
+          "url": "https://docs.aegis.im/"
+        },
+        {
+          "label": "Aegis sYUSD docs",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        },
+        {
+          "label": "Aegis smart contracts",
+          "url": "https://docs.aegis.im/smart-contracts"
+        },
+        {
+          "label": "AegisMinting Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+        }
+      ]
+    }
   },
   {
     "id": "syzusd-yuzu",
@@ -19781,7 +21709,45 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts"
+    "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDP is issued and redeemed by Paxos under a centralized issuer model. The local Ethereum/Solana/BSC deployments should be treated as issuer-controlled supply until on-chain role reads prove a narrower posture.",
+      "controls": [
+        {
+          "label": "Paxos issuer-operated mint/redeem authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+          "label": "Ethereum USDP token",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "unknown",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Paxos USDP",
+          "url": "https://www.paxos.com/usdp"
+        },
+        {
+          "label": "Paxos USDP docs",
+          "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+        },
+        {
+          "label": "Ethereum USDP contract",
+          "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1"
+        }
+      ]
+    }
   },
   {
     "id": "usdpt-western-union",
@@ -21259,7 +23225,50 @@
         "risk": "high"
       }
     ],
-    "collateral": "Over-collateralized productive DeFi collateral, including Curve Finance LP tokens, Pendle PTs, and other yield-bearing or LP positions from protocols such as Curve, Convex, Stake DAO, and Spectra."
+    "collateral": "Over-collateralized productive DeFi collateral, including Curve Finance LP tokens, Pendle PTs, and other yield-bearing or LP positions from protocols such as Curve, Convex, Stake DAO, and Spectra.",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USG is minted by approved Tangent markets, IR producers, and peg-keeper routes; a 3/4 Tangent Safe owner can grant and revoke those roles.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+          "label": "USG token role-gated mint functions",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source restricts mintDebt to isMinter, mintIR to isIRProducer, and mintPegKeeper to owner-approved peg keepers.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+          "label": "Tangent owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tangent USG docs",
+          "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+        },
+        {
+          "label": "Sourcify USG source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca/"
+        }
+      ]
+    }
   },
   {
     "id": "usn-noon",
@@ -21504,7 +23513,50 @@
       }
     ],
     "collateral": "USDC and USDS collateral deployed into Pareto credit vaults (private-credit lending pools), liquid buffers, and a stability fund",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USP mints against owner-approved collateral and through the Pareto queue; a 3/8 Safe owner controls collateral lists and emergency/admin parameters.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88",
+          "label": "ParetoDollar collateral mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "parameter-only",
+          "capDescription": "mint(collateralToken, amount) mints USP only for allowed collateral and only while queue collateralization checks pass.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
+          "label": "Pareto owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 8,
+          "modulesOrGuardsStatus": "present"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Pareto USP docs",
+          "url": "https://docs.pareto.credit/product/usp"
+        },
+        {
+          "label": "Sourcify ParetoDollar source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x7b70FCA01ab3745e24303B56F72296614768c337/sources/src/ParetoDollar.sol"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814/"
+        }
+      ]
+    }
   },
   {
     "id": "usp-pikudao",
@@ -21763,7 +23815,47 @@
       }
     ],
     "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USTB is a Superstate fund share token; issuance/redemption is issuer-operated and the Ethereum proxy owner/admin path resolves to externally owned addresses, with no Safe threshold verified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+          "label": "USTB token proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83",
+          "label": "USTB token owner / ProxyAdmin owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Superstate USTB docs",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/ustb"
+        },
+        {
+          "label": "Superstate USTB product page",
+          "url": "https://superstate.com/assets/ustb"
+        },
+        {
+          "label": "Ethereum USTB token",
+          "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+        }
+      ]
+    }
   },
   {
     "id": "ustbl-spiko",
@@ -21833,7 +23925,47 @@
       }
     ],
     "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USTBL minting and burning are restricted by Spiko's authority contract; the token owner is zero on Ethereum, but authority policy/signers remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+          "label": "USTBL token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Spiko USTBL product page",
+          "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        },
+        {
+          "label": "Spiko USTBL docs",
+          "url": "https://docs.spiko.io/"
+        }
+      ]
+    }
   },
   {
     "id": "usx-dforce",
@@ -21876,7 +24008,43 @@
         "risk": "high"
       }
     ],
-    "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes"
+    "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USX uses dForce's MSD token model: owner-controlled minters can mint directly, and the current Ethereum minter list contains one contract address.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+          "label": "USX MSD token minter registry",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x17e66B1e0260C930bfA567ff3ab5c71794279b94",
+          "label": "USX token owner",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "dForce USX docs",
+          "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+        },
+        {
+          "label": "Sourcify MSD source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe3ec7de9375bfc22f4481c4605431d67ed5bd260/sources/contracts/msd/MSD.sol"
+        }
+      ]
+    }
   },
   {
     "id": "usx-solstice",
@@ -22289,7 +24457,43 @@
       }
     ],
     "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "VBILL is a Securitize-administered fund token; its implementation exposes issueTokens surfaces and the current Ethereum owner resolves to an EOA.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+          "label": "VBILL Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "VBILL token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Securitize VBILL",
+          "url": "https://securitize.io/primary-market/vaneck-vbill"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156/sources/contracts/token/DSToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "vchf-vnx",
@@ -22360,7 +24564,48 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited"
+    "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "VCHF exposes role-gated minting with per-minter allowances; owner/RBAC controls can configure minters and allowances, but current RBAC bearer membership was not decoded.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+          "label": "VCHF VNX token minter role",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source requires the caller to satisfy the VNX RBAC minter role and spend no more than its minterAllowed allowance.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xCdB3867935247049e87c38eA270edD305D84c9AE",
+          "label": "VNX owner/RBAC admin path",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Sourcify VNX token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/sources/project%3A%2Fcontracts%2Fvnxc.sol"
+        },
+        {
+          "label": "VNX platform docs",
+          "url": "https://vnx.gitbook.io/vnx-platform/"
+        }
+      ]
+    }
   },
   {
     "id": "vcred-vcred",
@@ -22504,7 +24749,48 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG"
+    "collateral": "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "VEUR exposes role-gated minting with per-minter allowances; owner/RBAC controls can configure minters and allowances, but current RBAC bearer membership was not decoded.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
+          "label": "VEUR VNX token minter role",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source requires the caller to satisfy the VNX RBAC minter role and spend no more than its minterAllowed allowance.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xCdB3867935247049e87c38eA270edD305D84c9AE",
+          "label": "VNX owner/RBAC admin path",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Sourcify VNX token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/sources/project%3A%2Fcontracts%2Fvnxc.sol"
+        },
+        {
+          "label": "VNX platform docs",
+          "url": "https://vnx.gitbook.io/vnx-platform/"
+        }
+      ]
+    }
   },
   {
     "id": "vgbp-vnx",
@@ -22700,7 +24986,48 @@
       }
     ],
     "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "VNXAU exposes role-gated minting with per-minter allowances; owner/RBAC controls can configure minters and allowances, but current RBAC bearer membership was not decoded.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+          "label": "VNXAU VNX token minter role",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source requires the caller to satisfy the VNX RBAC minter role and spend no more than its minterAllowed allowance.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xCdB3867935247049e87c38eA270edD305D84c9AE",
+          "label": "VNX owner/RBAC admin path",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Sourcify VNX token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/sources/project%3A%2Fcontracts%2Fvnxc.sol"
+        },
+        {
+          "label": "VNX Gold docs",
+          "url": "https://vnx.gitbook.io/vnx-platform/vnx-gold/executive-summary"
+        }
+      ]
+    }
   },
   {
     "id": "vusd-virtue",
@@ -23248,7 +25575,36 @@
       }
     ],
     "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "wsrUSD is an ERC-4626 style wrapper over srUSD; wrapper shares are minted against srUSD deposits while base mint authority is inherited from reviewed Reservoir rUSD/srUSD controls.",
+      "inheritedFrom": "srusd-reservoir",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+          "label": "wsrUSD wrapper share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "asset() returned srUSD at 0x09D4214C03D01F49544C0448DBE3A27f768F2b34; wrapper minting does not create base rUSD supply.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Reservoir docs",
+          "url": "https://docs.reservoir.xyz"
+        },
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        }
+      ]
+    }
   },
   {
     "id": "wtgxx-wisdomtree",
@@ -23432,7 +25788,44 @@
       }
     ],
     "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "XAGm MToken minting is operator-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+          "label": "XAGm MToken operator mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source allows operator mintTo only within mintBudget; mintBudget read as 0 during this pass.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+          "label": "Matrixdock token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Matrixdock XAGm",
+          "url": "https://www.matrixdock.com/xagm"
+        },
+        {
+          "label": "Sourcify Matrixdock MToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/MToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "xai-silo-finance",
@@ -23572,7 +25965,44 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong"
+    "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "XAUm MToken minting is operator-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x2103e845c5e135493bb6c2a4f0b8651956ea8682",
+          "label": "XAUm MToken operator mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source allows operator mintTo only within mintBudget; mintBudget read as 0 during this pass.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+          "label": "Matrixdock token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Matrixdock XAUm",
+          "url": "https://www.matrixdock.com/xaum"
+        },
+        {
+          "label": "Sourcify Matrixdock MToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "xaut-tether",
@@ -23628,7 +26058,45 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce"
+    "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "XAUT is issuer-minted by Tether Gold; the Ethereum implementation exposes onlyOwner mint/redeem and the token owner is a verified 3/6 legacy multisig contract.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+          "label": "XAUT token onlyOwner mint",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "label": "XAUT owner legacy multisig",
+          "role": "minter-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tether Gold FAQ",
+          "url": "https://gold.tether.to/faq"
+        },
+        {
+          "label": "Sourcify XAUT source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566/sources/project%3A%2Fcontracts%2FTether%2FTetherToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "xdai-gnosis",
@@ -23657,7 +26125,34 @@
         "depType": "wrapper"
       }
     ],
-    "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations"
+    "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk.",
+      "inheritedFrom": "usds-sky",
+      "controls": [
+        {
+          "chain": "gnosis",
+          "label": "Gnosis xDAI native bridge/accounting route",
+          "role": "bridge-admin",
+          "authorityType": "bridge",
+          "directMintAbility": "cap-limited",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Gnosis Chain token docs",
+          "url": "https://docs.gnosischain.com/about/tokens/"
+        },
+        {
+          "label": "Existing USDS mint authority review",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        }
+      ]
+    }
   },
   {
     "id": "xmd-metal-dollar",
@@ -23753,7 +26248,43 @@
       }
     ],
     "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "XNK uses an owner-controlled legacy mintable ERC-20; minting is not finished and the owner is a contract whose signer/threshold setup was not verified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+          "label": "XNK legacy mintable token",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2691FBB371456eaC5C5AA0082a0f53C91249c044",
+          "label": "XNK owner contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Kinka whitepaper",
+          "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+        },
+        {
+          "label": "Sourcify XNK source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
+        }
+      ]
+    }
   },
   {
     "id": "xo-exodus",
@@ -23894,7 +26425,48 @@
       }
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+          "label": "XOFm StableTokenV2 mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source restricts mint to broker, validators, or exchange addresses.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento stable token owner",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 addresses",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        },
+        {
+          "label": "Sourcify Mento StableTokenV2 source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/42220/0x434563b0604be100f04b7ae485bcafe3c9d8850e/sources/lib/mento-core-2.2.0/contracts/tokens/StableTokenV2.sol"
+        }
+      ]
+    }
   },
   {
     "id": "xsgd-straitsx",
@@ -23957,7 +26529,72 @@
       }
     ],
     "collateral": "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "StraitsX tokens use a Circle-style MasterMinter pattern; token and master-minter controls resolve to verified 3/5 Safes, with guards present on the MasterMinter Safes.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x70e8de73ce538da2beed35d14187f6959a8eca96",
+          "label": "XSGD token MasterMinter path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4a423F581dF9A7575FBe9cf22013638E8DbbE273",
+          "label": "XSGD MasterMinter Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "present"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964",
+          "label": "StraitsX token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "StraitsX XSGD",
+          "url": "https://www.straitsx.com/xsgd"
+        },
+        {
+          "label": "StraitsX XUSD",
+          "url": "https://www.straitsx.com/xusd"
+        },
+        {
+          "label": "StraitsX product page",
+          "url": "https://www.straitsx.com/"
+        },
+        {
+          "label": "Ethereum token read contract",
+          "url": "https://etherscan.io/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4a423F581dF9A7575FBe9cf22013638E8DbbE273/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
+        }
+      ]
+    }
   },
   {
     "id": "xtusd-xt",
@@ -24188,7 +26825,64 @@
       }
     ],
     "collateral": "Cash, cash equivalents, and short-term U.S. government securities held at regulated financial institutions (DBS, Standard Chartered, UOB), segregated from corporate assets in custody accounts maintained with MAS-licensed custodians",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern; token and master-minter controls resolve to verified 3/5 Safes, with a guard present on the MasterMinter Safe.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
+          "label": "XUSD token MasterMinter path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB",
+          "label": "XUSD MasterMinter Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "present"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964",
+          "label": "StraitsX token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "StraitsX XUSD",
+          "url": "https://www.straitsx.com/xusd"
+        },
+        {
+          "label": "Ethereum token read contract",
+          "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
+        }
+      ]
+    }
   },
   {
     "id": "ybold-yearn",
@@ -24251,7 +26945,40 @@
       }
     ],
     "collateral": "BOLD deposited into Yearn's tokenized Liquity V2 Stability Pool strategy, allocated across Liquity V2 Stability Pools to earn liquidation fees and protocol interest",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "none-resolved",
+      "confidence": "verified",
+      "summary": "yBOLD is a Yearn vault share over BOLD; vault shares mint against deposited BOLD while base BOLD mint authority is inherited from the reviewed Liquity BOLD profile.",
+      "inheritedFrom": "bold-liquity",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+          "label": "Yearn yBOLD vault share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "asset() returned BOLD at 0x6440f144b7e50D6a8439336510312d2F54beB01D; wrapper minting does not create base BOLD supply.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Yearn yBOLD docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "Existing BOLD mint authority review",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        },
+        {
+          "label": "Yearn yBOLD GitHub",
+          "url": "https://github.com/yearn/yBOLD"
+        }
+      ]
+    }
   },
   {
     "id": "ylds-figure",
@@ -24613,7 +27340,36 @@
       }
     ],
     "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault; wrapper shares mint against USDC deposits or manager calls, while base USDC mint authority is inherited from Circle.",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "label": "YieldFi YToken share minting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "parameter-only",
+          "capDescription": "Verified source mints shares during deposit and permits manager-only mintYToken/burnYToken accounting; it does not mint base USDC.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "YieldFi yUSD terms",
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+        },
+        {
+          "label": "Sourcify YieldFi YToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "yvusdc-yearn",
@@ -24673,7 +27429,40 @@
       }
     ],
     "collateral": "USDC allocated by Yearn v3 strategy allocator across whitelisted yield strategies (Aave, Compound, Morpho, Sky and similar protocols) selected by Yearn governance",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "yvUSDC-1 is a Yearn vault share over USDC; vault shares mint against deposited USDC while base USDC mint authority is inherited from Circle.",
+      "inheritedFrom": "usdc-circle",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+          "label": "Yearn v3 USDC vault share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "asset() returned USDC; wrapper minting does not create base USDC supply.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Yearn v3 vault docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+        },
+        {
+          "label": "Existing USDC mint authority review",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Yearn v3 vault page",
+          "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+        }
+      ]
+    }
   },
   {
     "id": "yzusd-yuzu",
@@ -24917,7 +27706,48 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+          "label": "ZARm StableTokenV2 mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source restricts mint to broker, validators, or exchange addresses.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento stable token owner",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 addresses",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        },
+        {
+          "label": "Sourcify Mento StableTokenV2 source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/42220/0x434563b0604be100f04b7ae485bcafe3c9d8850e/sources/lib/mento-core-2.2.0/contracts/tokens/StableTokenV2.sol"
+        }
+      ]
+    }
   },
   {
     "id": "zarp-zarp",
@@ -24973,7 +27803,38 @@
       }
     ],
     "collateral": "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "ZARP exposes AccessControl MINTER_ROLE minting to verified accounts; role holders and admin signer setup were not enumerated.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+          "label": "ZARP MINTER_ROLE token mint",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "ZARP docs",
+          "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+        },
+        {
+          "label": "Sourcify ZARP source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+        },
+        {
+          "label": "ZARP GitHub",
+          "url": "https://github.com/venox-digital-assets/zarp.contract"
+        }
+      ]
+    }
   },
   {
     "id": "zchf-frankencoin",
@@ -25065,7 +27926,35 @@
       }
     ],
     "collateral": "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "bounded-admin",
+      "confidence": "verified",
+      "summary": "Frankencoin has no owner; minting is performed by minter plugins and positions that pass the protocol's veto-governed minter registry.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "label": "Frankencoin minter registry",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Approved minters and their registered positions can mint; new minters are subject to the application period and qualified pool-share holder veto.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Frankencoin docs",
+          "url": "https://docs.frankencoin.com/"
+        },
+        {
+          "label": "Sourcify Frankencoin source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xb58e61c3098d85632df34eecfb899a1ed80921cb/sources/contracts/Frankencoin.sol"
+        }
+      ]
+    }
   },
   {
     "id": "zeusd-zoth",
@@ -25238,7 +28127,37 @@
       }
     ],
     "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "immutable-user-collateralized",
+      "authorityPosture": "none-resolved",
+      "confidence": "probable",
+      "summary": "ZSD is minted and redeemed through Zephyr's native reserve-ratio protocol rules against ZEPH collateral; no privileged issuer/admin mint path was resolved from official materials.",
+      "controls": [
+        {
+          "label": "Zephyr native reserve mint/redeem rules",
+          "role": "other",
+          "authorityType": "none",
+          "directMintAbility": "none",
+          "capDescription": "Minting depends on native reserve-ratio and oracle rules described in the Zephyr whitepaper/source, not an EVM-style privileged minter.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Zephyr whitepaper",
+          "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+        },
+        {
+          "label": "Zephyr GitHub",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        },
+        {
+          "label": "Zephyr reserve snapshots",
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+        }
+      ]
+    }
   },
   {
     "id": "zys-zephyr-protocol",
@@ -25279,6 +28198,37 @@
       }
     ],
     "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "none-resolved",
+      "confidence": "probable",
+      "summary": "ZYS is a yield-share variant over the Zephyr ZSD yield reserve; supply risk should inherit reviewed ZSD native reserve mechanics.",
+      "inheritedFrom": "zsd-zephyr-protocol",
+      "controls": [
+        {
+          "label": "Zephyr ZYS share accounting",
+          "role": "wrapper",
+          "authorityType": "none",
+          "directMintAbility": "none",
+          "capDescription": "ZYS represents a claim on the ZSD yield reserve rather than an independent issuer mint path.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Zephyr docs",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr GitHub",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        },
+        {
+          "label": "Zephyr yield dashboard",
+          "url": "https://zephyrprotocol.com/yield"
+        }
+      ]
+    }
   }
 ]

@@ -81,6 +81,77 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "GYEN uses GMO Trust's role-based fiat-token contract: a minter mints within capacity, while owner/admin roles can change privileged accounts and parameters.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x78AFae0A5203f27f623e4614A1cFEc8F75C5d11C",
+        "label": "GYEN current minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "capDescription": "GMO Trust source describes a capacity limit: minter cannot mint beyond capacity, while a separate capper can adjust capacity.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GMO Trust stablecoin source",
+            "url": "https://github.com/trust-zcom/gmotrust-stablecoin-contract"
+          },
+          {
+            "label": "GYEN/ZUSD contract-address support",
+            "url": "https://support.stablecoin.z.com/hc/en-us/articles/360053460793-What-are-the-contract-addresses-for-GYEN-and-ZUSD"
+          }
+        ],
+        "evidence": "minter() returned this address at Ethereum block 25166592; code read returned no contract bytecode. GMO Trust source describes minter as the role that mints tokens."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfb5dAE5bF48dF4492B3101f00D844Ef1c0268C6D",
+        "label": "GYEN owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "owner() returned this address at Ethereum block 25166592; code read returned no contract bytecode. GMO Trust source says owner performs admin and minterAdmin assignments."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7037368343299af3e9a9708337F6690D65efa517",
+        "label": "GYEN admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "admin() returned this address at Ethereum block 25166592; code read returned no contract bytecode."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "GMO Trust stablecoin source",
+          "url": "https://github.com/trust-zcom/gmotrust-stablecoin-contract"
+        },
+        {
+          "label": "GMO Trust GYEN announcement",
+          "url": "https://www.gmo.jp/en/news/article/809/"
+        }
+      ],
+      "evidence": "GMO Trust source documents owner/admin/minter/capper roles and cap-limited minting. Ethereum reads identify current owner, admin, and minter addresses; implementation and proxy-admin coverage remains unresolved.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve current capper, minterAdmin, pauser, prohibiter, and wiper role addresses before full role coverage.",
+        "Review Solana and Stellar issuance controls separately."
+      ]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

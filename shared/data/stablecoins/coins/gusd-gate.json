@@ -53,6 +53,60 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "Gate GUSD is issuer-operated through Gate's staking/mint product; Ethereum proxy implementation was resolved, while mint role holders were not.",
+    "controls": [
+      {
+        "label": "Gate issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Gate GUSD",
+            "url": "https://www.gate.com/gusd"
+          }
+        ],
+        "evidence": "Gate describes GUSD minting by staking USDT/USDC and redemption through Gate-operated rails."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaf6186B3521B60E27396B5d23b48ABc34bF585C5",
+        "label": "Gate GUSD Ethereum token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum Gate GUSD token",
+            "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+          }
+        ],
+        "evidence": "Ethereum reads at block 25166592 resolved EIP-1967 implementation 0xc181faf98a90993bba78af4a9d5dde37d3dbadaf; role holders were not enumerated."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Gate GUSD",
+          "url": "https://www.gate.com/gusd"
+        }
+      ],
+      "evidence": "Gate's product page and Ethereum proxy reads identify issuer-operated minting and the current token implementation path.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate the token mint/admin roles and verify whether issuer backend controls are MPC, EOA, Safe, or custom multisig."
+      ]
+    }
+  },
   "custodyModel": "cex",
   "reserves": [
     {

@@ -108,6 +108,64 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EURAU is issuer-minted/redeemed by AllUnity; the reviewed pass confirms the regulated issuer route and Ethereum proxy implementation, but not signer custody.",
+    "controls": [
+      {
+        "label": "AllUnity issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "AllUnity EURAU",
+            "url": "https://allunity.com/eurau/"
+          },
+          {
+            "label": "AllUnity whitepaper",
+            "url": "https://allunity.com/whitepaper/"
+          }
+        ],
+        "evidence": "AllUnity materials describe direct 1:1 EURAU issuance/redemption by the regulated issuer."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4933A85b5B5466FBaf179f72d3DE273C287eC2c2",
+        "label": "EURAU Ethereum token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum EURAU token",
+            "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+          }
+        ],
+        "evidence": "Ethereum reads at block 25166591 resolved EIP-1967 implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482; role holders were not enumerated."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "AllUnity EURAU",
+          "url": "https://allunity.com/eurau/"
+        }
+      ],
+      "evidence": "AllUnity is the issuer/redemption operator; Ethereum proxy reads identify the current token implementation.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Identify current mint role holders and proxy admin signer setup across EVM, Solana, Stellar, and Tempo deployments."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

@@ -55,6 +55,77 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USG is minted by approved Tangent markets, IR producers, and peg-keeper routes; a 3/4 Tangent Safe owner can grant and revoke those roles.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "label": "USG token role-gated mint functions",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source restricts mintDebt to isMinter, mintIR to isIRProducer, and mintPegKeeper to owner-approved peg keepers.",
+        "sources": [
+          {
+            "label": "Sourcify USG source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+          }
+        ],
+        "evidence": "Source review showed mintDebt, mintIR, and mintPegKeeper guarded by isMinter, isIRProducer, and onlyOwner. Ethereum reads returned controlTower() = 0xF3f7669dcEED2f985815011C19eD68F667267215 and owner() = 0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca at block 25166611."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+        "label": "Tangent owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca/"
+          }
+        ],
+        "evidence": "Safe API returned threshold 3, four owners, no modules, and zero guard on 2026-05-24."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Tangent USG docs",
+          "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+        },
+        {
+          "label": "Sourcify USG source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+        }
+      ],
+      "evidence": "USG source and docs support a CDP/peg-keeper mint path controlled by owner-managed role mappings.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate current isMinter, isIRProducer, and isPegKeeper addresses from events before final production edit."
+      ]
+    }
+  },
   "canBeBlacklisted": false,
   "status": "active",
   "announcedDate": "2026-03",

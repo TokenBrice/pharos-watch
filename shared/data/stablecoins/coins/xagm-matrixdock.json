@@ -56,6 +56,62 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "XAGm MToken minting is operator-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+        "label": "XAGm MToken operator mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source allows operator mintTo only within mintBudget; mintBudget read as 0 during this pass.",
+        "sources": [
+          {
+            "label": "Sourcify Matrixdock MToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/MToken.sol"
+          },
+          {
+            "label": "Matrixdock XAGm",
+            "url": "https://www.matrixdock.com/xagm"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744, operator() = 0x89Bb23E4a82E04a253d9f11767feDf321C127799, owner() = 0xb573c94260582f0715FC477928B04A2708dd36D7, and mintBudget() = 0 at block 25166611."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+        "label": "Matrixdock token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "code read returned no contract bytecode, so no on-chain multisig threshold was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Matrixdock XAGm",
+          "url": "https://www.matrixdock.com/xagm"
+        },
+        {
+          "label": "Sourcify Matrixdock MToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/MToken.sol"
+        }
+      ],
+      "evidence": "Matrixdock source and direct reads identify operator-based budgeted minting plus owner-controlled operator changes.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",

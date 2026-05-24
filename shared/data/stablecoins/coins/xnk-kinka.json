@@ -70,6 +70,64 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "XNK uses an owner-controlled legacy mintable ERC-20; minting is not finished and the owner is a contract whose signer/threshold setup was not verified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "label": "XNK legacy mintable token",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify XNK source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
+          },
+          {
+            "label": "Kinka whitepaper",
+            "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+          }
+        ],
+        "evidence": "Ethereum reads returned owner() = 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 and mintingFinished() = false at block 25166611. Source review showed onlyOwner mint and finishMinting."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2691FBB371456eaC5C5AA0082a0f53C91249c044",
+        "label": "XNK owner contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "code read returned contract bytecode; no Safe threshold or owner model was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Kinka whitepaper",
+          "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+        },
+        {
+          "label": "Sourcify XNK source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
+        }
+      ],
+      "evidence": "XNK source/RPC reads show ongoing owner mint ability.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve the owner contract's admin/signature model."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

@@ -18,6 +18,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "srUSDe is an ERC-4626 senior-risk wrapper over USDe; wrapper minting is deposit/share accounting while durable USDe mint authority is inherited from reviewed Ethena signed-order controls.",
+    "inheritedFrom": "usde-ethena",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+        "label": "srUSDe ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "srUSDe token",
+            "url": "https://etherscan.io/address/0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003#readContract"
+          },
+          {
+            "label": "Ethena mint and redeem docs",
+            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned USDe 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; parent USDe has reviewed mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "srUSDe token",
+          "url": "https://etherscan.io/address/0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003#readContract"
+        }
+      ],
+      "evidence": "On-chain asset read confirms srUSDe wraps USDe; durable mint authority inherits from reviewed parent USDe.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "variantOf": "usde-ethena",
   "variantKind": "risk-absorption",
   "pegReferenceId": "usde-ethena",

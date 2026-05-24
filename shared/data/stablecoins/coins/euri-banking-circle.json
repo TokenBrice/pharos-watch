@@ -77,6 +77,78 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner and proxy-admin reads resolve to EOAs with no verified on-chain multisig setup.",
+    "controls": [
+      {
+        "label": "Banking Circle issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Eurite about page",
+            "url": "https://www.eurite.com/about-us/"
+          },
+          {
+            "label": "EURI whitepaper",
+            "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+          }
+        ],
+        "evidence": "Banking Circle materials identify EURI as an issuer-managed MiCA EMT issued on Ethereum and BSC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D",
+        "label": "EURI Ethereum token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURI token",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ],
+        "evidence": "owner() returned this address at Ethereum block 25166591; code read returned no contract bytecode."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
+        "label": "EURI EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166591; code read returned no contract bytecode."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Eurite about page",
+          "url": "https://www.eurite.com/about-us/"
+        },
+        {
+          "label": "EURI whitepaper",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+        }
+      ],
+      "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review BSC deployment roles before extending this to all EURI chains."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

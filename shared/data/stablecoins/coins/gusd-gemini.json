@@ -80,6 +80,68 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "GUSD is issuer-minted by Gemini through a custodian-controlled contract model. Ethereum reads identify the current custodian contract and implementation.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb983eD57aEaA180BC7a0078DDAdf1Ea217F2e421",
+        "label": "GUSD custodian contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Gemini Dollar",
+            "url": "https://www.gemini.com/en-GB/dollar"
+          },
+          {
+            "label": "Gemini Dollar source",
+            "url": "https://github.com/gemini/dollar"
+          },
+          {
+            "label": "Ethereum GUSD token",
+            "url": "https://etherscan.io/address/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd#code"
+          }
+        ],
+        "evidence": "custodian() returned this contract at Ethereum block 25166610. Verified source exposes requestPrint/confirmPrint mint flow and custodian/implementation change controls."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6704BA24B8640BCcEE6bf2Fd276A6a1b8EdF4Ade",
+        "label": "GUSD current implementation",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "erc20Impl() returned this implementation at Ethereum block 25166610; direct print authority is represented by the custodian control above."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Gemini Dollar source",
+          "url": "https://github.com/gemini/dollar"
+        },
+        {
+          "label": "Gemini Dollar whitepaper",
+          "url": "https://www.gemini.com/static/dollar/gemini-dollar-whitepaper.pdf"
+        }
+      ],
+      "evidence": "Gemini source and Ethereum reads identify the custodian-controlled print/mint architecture and current custodian/implementation addresses.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "The custodian contract's operational signer setup was not resolved as a Safe, multisig, timelock, or EOA set."
+      ]
+    }
+  },
   "custodyModel": "institutional-top",
   "reserves": [
     {

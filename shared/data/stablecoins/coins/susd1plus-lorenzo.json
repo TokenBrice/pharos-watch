@@ -50,6 +50,72 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "sUSD1+ is a Lorenzo strategy-vault receipt over USD1+ exposure that ultimately inherits the reviewed World Liberty Financial USD1 issuer/controller mint path; wrapper share minting does not create base USD1 supply.",
+    "inheritedFrom": "usd1-world-liberty-financial",
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0x4f2760b32720f013e900dc92f65480137391199b",
+        "label": "sUSD1+ wrapper token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Wrapper/share accounting over Lorenzo USD1+ strategy exposure; does not mint base USD1.",
+        "sources": [
+          {
+            "label": "Lorenzo Protocol",
+            "url": "https://www.lorenzo-protocol.xyz/"
+          },
+          {
+            "label": "Lorenzo GitHub",
+            "url": "https://github.com/Lorenzo-Protocol/"
+          }
+        ],
+        "evidence": "Local metadata marks sUSD1+ as `variantOf: usd1-world-liberty-financial` and `variantKind: strategy-vault`; base USD1 already has reviewed mint authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2",
+        "label": "Inherited USD1 token owner/controller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "timelockDelaySec": 259200,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USD1 website",
+            "url": "https://worldlibertyfinancial.com/usd1"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usd1-world-liberty-financial` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USD1 website",
+          "url": "https://worldlibertyfinancial.com/usd1"
+        },
+        {
+          "label": "Lorenzo Protocol",
+          "url": "https://www.lorenzo-protocol.xyz/"
+        }
+      ],
+      "evidence": "Local variant metadata ties sUSD1+ to reviewed USD1 authority; the child wrapper creates strategy shares, not base USD1 supply.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify BSC wrapper owner/admin before upgrading confidence above manual-review."
+      ]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",

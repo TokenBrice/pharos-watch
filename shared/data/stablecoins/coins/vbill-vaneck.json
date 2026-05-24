@@ -75,6 +75,61 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "VBILL is a Securitize-administered fund token; its implementation exposes issueTokens surfaces and the current Ethereum owner resolves to an EOA.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "label": "VBILL Securitize DSToken issuance surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156/sources/contracts/token/DSToken.sol"
+          },
+          {
+            "label": "Securitize VBILL",
+            "url": "https://securitize.io/primary-market/vaneck-vbill"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee at block 25166611. Source review identified issueTokens and issueTokensWithNoCompliance mint paths."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "label": "VBILL token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "code read returned no contract bytecode, so no on-chain multisig threshold was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Securitize VBILL",
+          "url": "https://securitize.io/primary-market/vaneck-vbill"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156/sources/contracts/token/DSToken.sol"
+        }
+      ],
+      "evidence": "Securitize source and direct reads identify an issuer-operated issueTokens path and EOA owner.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",

@@ -69,6 +69,64 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USTB is a Superstate fund share token; issuance/redemption is issuer-operated and the Ethereum proxy owner/admin path resolves to externally owned addresses, with no Safe threshold verified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+        "label": "USTB token proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Superstate USTB docs",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/ustb"
+          },
+          {
+            "label": "Ethereum USTB token",
+            "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, proxy admin 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146, token owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, and ProxyAdmin owner() = the same EOA at block 25166611."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83",
+        "label": "USTB token owner / ProxyAdmin owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "code read returned no contract bytecode for the owner address, so no on-chain Safe threshold was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Superstate USTB docs",
+          "url": "https://docs.superstate.com/investors/tokenized-funds/ustb"
+        },
+        {
+          "label": "Superstate USTB product page",
+          "url": "https://superstate.com/assets/ustb"
+        }
+      ],
+      "evidence": "Official Superstate materials describe subscription/redemption as Superstate-operated fund share issuance; direct proxy reads identify the current Ethereum admin path.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review verified implementation source on Etherscan before final production edit; Sourcify did not have the implementation source."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",

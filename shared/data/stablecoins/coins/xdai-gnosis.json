@@ -55,6 +55,58 @@
     "reviewer": "Codex dependency audit",
     "reviewedAt": "2026-05-21"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk.",
+    "inheritedFrom": "usds-sky",
+    "controls": [
+      {
+        "chain": "gnosis",
+        "label": "Gnosis xDAI native bridge/accounting route",
+        "role": "bridge-admin",
+        "authorityType": "bridge",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "lockboxOrEscrow": "Official Gnosis bridge routes lock or account for upstream USDS/DAI backing native xDAI.",
+          "trustedPeerOrRemote": "Official bridge route; exact current bridge contract threshold not decoded in this pass.",
+          "pausersAdminsUpgraders": "Bridge governance/admin controls not decoded in this pass."
+        },
+        "sources": [
+          {
+            "label": "Gnosis Chain token docs",
+            "url": "https://docs.gnosischain.com/about/tokens/"
+          },
+          {
+            "label": "Sky USDS Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          }
+        ],
+        "evidence": "Gnosis docs describe xDAI as the native token used on Gnosis Chain and backed through official bridge/token routes; local metadata models xDAI as backed by USDS locked or bridged through Gnosis infrastructure."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Gnosis Chain token docs",
+          "url": "https://docs.gnosischain.com/about/tokens/"
+        },
+        {
+          "label": "Existing USDS mint authority review",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        }
+      ],
+      "evidence": "xDAI should inherit upstream USDS mint authority while explicitly retaining bridge route risk.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Decode current Gnosis bridge admin/signature threshold before adding Safe or module details."
+      ]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "reserves": [

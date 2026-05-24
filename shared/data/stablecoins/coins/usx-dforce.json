@@ -77,6 +77,64 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USX uses dForce's MSD token model: owner-controlled minters can mint directly, and the current Ethereum minter list contains one contract address.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+        "label": "USX MSD token minter registry",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify MSD source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe3ec7de9375bfc22f4481c4605431d67ed5bd260/sources/contracts/msd/MSD.sol"
+          },
+          {
+            "label": "dForce USX docs",
+            "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0xe3ec7de9375bfc22f4481c4605431d67ed5bd260, owner() = 0x17e66B1e0260C930bfA567ff3ab5c71794279b94, proxy admin = 0x4ff0455bcfbb5886607c078e0f43efb5de34def4, and getMinters() = [0x45677a101D70E9910C418D9426bC6c5874CE2Fd7] at block 25166611."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x17e66B1e0260C930bfA567ff3ab5c71794279b94",
+        "label": "USX token owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() returned this contract address; Safe Transaction Service did not verify it as a Safe in this pass."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "dForce USX docs",
+          "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+        },
+        {
+          "label": "Sourcify MSD source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe3ec7de9375bfc22f4481c4605431d67ed5bd260/sources/contracts/msd/MSD.sol"
+        }
+      ],
+      "evidence": "MSD source exposes owner-managed minters and direct mint(address,uint256); Ethereum reads identify current owner, proxy admin, and minter list.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve owner/proxy-admin contract governance and any threshold or timelock."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "reserves": [
     {

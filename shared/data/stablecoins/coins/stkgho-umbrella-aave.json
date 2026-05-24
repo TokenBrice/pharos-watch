@@ -18,6 +18,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "stkGHO.v1 is an ERC-4626-style Umbrella staking receipt over GHO; wrapper minting is deposit/share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls.",
+    "inheritedFrom": "gho-aave",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
+        "label": "stkGHO Umbrella wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Aave Umbrella docs",
+            "url": "https://aave.com/help/umbrella/umbrella"
+          },
+          {
+            "label": "stkGHO token",
+            "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f; parent GHO has reviewed mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Aave Umbrella docs",
+          "url": "https://aave.com/help/umbrella/umbrella"
+        }
+      ],
+      "evidence": "On-chain asset read confirms stkGHO wraps GHO; durable mint authority inherits from reviewed parent GHO.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "variantOf": "gho-aave",
   "variantKind": "risk-absorption",
   "pegReferenceId": "gho-aave",

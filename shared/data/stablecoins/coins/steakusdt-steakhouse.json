@@ -31,6 +31,51 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "steakUSDT is a Morpho ERC-4626 vault over USDT; wrapper minting is deposit/share accounting while durable USDT issuance is inherited from reviewed Tether controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDT mint ability.",
+    "inheritedFrom": "usdt-tether",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
+        "label": "steakUSDT MetaMorpho vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Morpho vault page",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+          },
+          {
+            "label": "MetaMorpho source",
+            "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7; `owner()` returned 0x4D7bd498Bb24098Ca281C05519629c605407f71d and `curator()` returned 0x827e86072B06674a077f592A531dcE4590aDeCdB."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+        },
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        }
+      ],
+      "evidence": "On-chain asset read confirms steakUSDT wraps USDT; durable mint authority inherits from reviewed parent USDT.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "links": [
     {
       "label": "Website",

@@ -18,6 +18,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "scrvUSD is an ERC-4626 savings wrapper over crvUSD; wrapper minting is deposit/share accounting while durable crvUSD mint authority is inherited from the reviewed Curve parent.",
+    "inheritedFrom": "crvusd-curve",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "label": "scrvUSD ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "scrvUSD token",
+            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+          },
+          {
+            "label": "Curve crvUSD resources",
+            "url": "https://resources.curve.finance/crvusd/"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E; parent crvUSD has reviewed mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "scrvUSD token",
+          "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+        }
+      ],
+      "evidence": "On-chain asset read confirms scrvUSD wraps crvUSD; durable mint authority inherits from reviewed parent crvUSD.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "variantOf": "crvusd-curve",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "crvusd-curve",

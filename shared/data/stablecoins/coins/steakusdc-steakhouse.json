@@ -31,6 +31,51 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "steakUSDC is a Morpho ERC-4626 vault over USDC; wrapper minting is deposit/share accounting while durable USDC issuance is inherited from reviewed Circle controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDC mint ability.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeef088055857739c12cd3765f20b7679def0f51",
+        "label": "steakUSDC MetaMorpho vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Morpho vault page",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+          },
+          {
+            "label": "MetaMorpho source",
+            "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; `owner()` returned 0x4D7bd498Bb24098Ca281C05519629c605407f71d and `curator()` returned 0x827e86072B06674a077f592A531dcE4590aDeCdB."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef088055857739c12cd3765f20b7679def0f51/steakhouse-prime-instant"
+        },
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        }
+      ],
+      "evidence": "On-chain asset read confirms steakUSDC wraps USDC; durable mint authority inherits from reviewed parent USDC.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "links": [
     {
       "label": "Website",

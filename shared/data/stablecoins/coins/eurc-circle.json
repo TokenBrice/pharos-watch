@@ -102,6 +102,70 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EURC is issuer-minted by Circle; Ethereum EURC exposes the same MasterMinter-style minter management path used by Circle EVM stablecoins.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x02398771fd1db790ef2B656Ca3BCB3075F27A72c",
+        "label": "Ethereum EURC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Circle EURC docs",
+            "url": "https://developers.circle.com/stablecoins/what-is-eurc"
+          },
+          {
+            "label": "Circle stablecoin EVM source",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "Ethereum EURC masterMinter() returned this address at block 25166591; Circle's EVM source describes MasterMinter as the minter-configuration contract."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3101386a38bEf8B79E49f12DEa12938A30e8AF96",
+        "label": "Ethereum EURC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURC token",
+            "url": "https://etherscan.io/address/0x1abaea1f7c830bd89acc67ec4af516284b1bc33c#readContract"
+          }
+        ],
+        "evidence": "Ethereum EURC owner() returned this address at block 25166591; code read returned no contract bytecode, so no on-chain multisig or Safe was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Circle EURC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-eurc"
+        },
+        {
+          "label": "Circle stablecoin EVM source",
+          "url": "https://github.com/circlefin/stablecoin-evm"
+        }
+      ],
+      "evidence": "Circle docs describe EURC as issuer-operated. Direct Ethereum reads identify the MasterMinter and token owner/admin addresses.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate current configured EURC minters and review non-Ethereum native deployments separately."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [

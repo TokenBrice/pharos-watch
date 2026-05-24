@@ -80,6 +80,51 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "Frankencoin has no owner; minting is performed by minter plugins and positions that pass the protocol's veto-governed minter registry.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+        "label": "Frankencoin minter registry",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Approved minters and their registered positions can mint; new minters are subject to the application period and qualified pool-share holder veto.",
+        "sources": [
+          {
+            "label": "Sourcify Frankencoin source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xb58e61c3098d85632df34eecfb899a1ed80921cb/sources/contracts/Frankencoin.sol"
+          },
+          {
+            "label": "Frankencoin docs",
+            "url": "https://docs.frankencoin.com/"
+          }
+        ],
+        "evidence": "Source review showed suggestMinter, denyMinter, registerPosition, mintWithReserve, and mint guarded by minterOnly; no owner() was present. Contract comments describe arbitrary minting plugins accepted unless qualified pool-share holders veto."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Frankencoin docs",
+          "url": "https://docs.frankencoin.com/"
+        },
+        {
+          "label": "Sourcify Frankencoin source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xb58e61c3098d85632df34eecfb899a1ed80921cb/sources/contracts/Frankencoin.sol"
+        }
+      ],
+      "evidence": "Frankencoin source supports a governed minter-plugin model rather than issuer owner minting.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "notices": [
     {

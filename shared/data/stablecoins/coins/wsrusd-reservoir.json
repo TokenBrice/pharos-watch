@@ -129,6 +129,55 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "wsrUSD is an ERC-4626 style wrapper over srUSD; wrapper shares are minted against srUSD deposits while base mint authority is inherited from reviewed Reservoir rUSD/srUSD controls.",
+    "inheritedFrom": "srusd-reservoir",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+        "label": "wsrUSD wrapper share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "asset() returned srUSD at 0x09D4214C03D01F49544C0448DBE3A27f768F2b34; wrapper minting does not create base rUSD supply.",
+        "sources": [
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          }
+        ],
+        "evidence": "Ethereum read returned asset() = 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 at block 25166611. Existing Pharos srUSD metadata already reviewed inherited Reservoir Savings Module and rUSD controls."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Reservoir docs",
+          "url": "https://docs.reservoir.xyz"
+        },
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        }
+      ],
+      "evidence": "wsrUSD is a wrapper over reviewed srUSD/rUSD controls; no separate base-supply mint authority was resolved.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve Reservoir governance/admin owner and any Safe threshold for the wrapper contract if product metadata should expose wrapper admin risk separately."
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",

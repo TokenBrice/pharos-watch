@@ -56,6 +56,60 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "GRAMG is issuer-minted by Token Teknoloji against physical gold reserves; the Avalanche token owner is an EOA shared with EUROT and GRAMS.",
+    "controls": [
+      {
+        "label": "Token Teknoloji issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Token Teknoloji GRAMG",
+            "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+          }
+        ],
+        "evidence": "Token Teknoloji materials describe issuer-managed reserve-token mint/redeem mechanics for GRAMG."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xff80B391B286887d446B1124820F87D5b049b4fB",
+        "label": "GRAMG Avalanche token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Avalanche GRAMG token",
+            "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+          }
+        ],
+        "evidence": "owner() returned this address at Avalanche block 86270526; code read returned no contract bytecode."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Token Teknoloji GRAMG",
+          "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+        }
+      ],
+      "evidence": "Official Token Teknoloji materials and Avalanche reads identify the issuer route and current token owner.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Polygon owner/roles and whether the owner EOA is backed by MPC, multisig, or institutional custody."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",

@@ -18,6 +18,50 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "sGHO is a savings wrapper over GHO; wrapper minting is share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls.",
+    "inheritedFrom": "gho-aave",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+        "label": "sGHO savings wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Aave GHO facilitators",
+            "url": "https://aave.com/help/gho-stablecoin/facilitators"
+          },
+          {
+            "label": "sGHO token",
+            "url": "https://etherscan.io/address/0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d#readContract"
+          }
+        ],
+        "evidence": "Local metadata marks sGHO as `variantOf: gho-aave` and `variantKind: savings-passthrough`; parent GHO has reviewed facilitator-bucket mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Aave GHO facilitators",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        }
+      ],
+      "evidence": "sGHO should inherit GHO's reviewed facilitator-bucket mint authority; wrapper-specific minting is savings/share accounting.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "ERC-4626 `asset()` reverted on the sGHO contract through public Ethereum RPC; keep confidence at manual-review unless a protocol-specific asset getter is verified."
+      ]
+    }
+  },
   "variantOf": "gho-aave",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "gho-aave",

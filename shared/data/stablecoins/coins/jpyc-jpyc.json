@@ -69,6 +69,93 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "JPYC is a centralized mintable ERC-20. The current Ethereum proxy implementation exposes role-managed minting, and RPC reads resolve a contract minterAdmin plus owner/pauser control surfaces.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB",
+        "label": "JPYC Ethereum proxy mint surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "JPYC whitepaper",
+            "url": "https://www.jpyc.jp/white-paper-en.pdf"
+          },
+          {
+            "label": "Sourcify JPYC implementation source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0xf2fab05f26dc8da5a3f24d015fb043db7a8751cf/metadata.json"
+          },
+          {
+            "label": "Ethereum JPYC contract",
+            "url": "https://etherscan.io/address/0x431d5dff03120afa4bdf332c61a6e1766ef37bdb#code"
+          }
+        ],
+        "evidence": "Implementation 0xf2fab05f26dc8da5a3f24d015fb043db7a8751cf exposes mint/configureMinter/removeMinter/minterAllowance; JPYC whitepaper states the ERC-20 remains mintable."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc6B1Dc6C9fF85e968527f5C755fC07253a084247",
+        "label": "JPYC minterAdmin",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum JPYC contract",
+            "url": "https://etherscan.io/address/0x431d5dff03120afa4bdf332c61a6e1766ef37bdb#readProxyContract"
+          }
+        ],
+        "evidence": "minterAdmin() returned this contract address at Ethereum block 25166585; it has bytecode and did not expose a verified Safe threshold in this pass."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x31735b5DB5850f66082CC0f1a61cA1a8e07A60a5",
+        "label": "JPYC owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum JPYC contract",
+            "url": "https://etherscan.io/address/0x431d5dff03120afa4bdf332c61a6e1766ef37bdb#readProxyContract"
+          }
+        ],
+        "evidence": "owner() returned this address at Ethereum block 25166585; code read returned no contract bytecode."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "JPYC whitepaper",
+          "url": "https://www.jpyc.jp/white-paper-en.pdf"
+        },
+        {
+          "label": "Sourcify JPYC implementation source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0xf2fab05f26dc8da5a3f24d015fb043db7a8751cf/metadata.json"
+        }
+      ],
+      "evidence": "Official JPYC materials describe JPYC as mintable; Ethereum proxy/source/RPC reads identify the role-gated mint implementation and current owner/minterAdmin surfaces.",
+      "reviewer": "Codex mint-authority full-gap batch-3",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Reconstruct current configured minter addresses and allowances from events or explorer-indexed logs.",
+        "Resolve minterAdmin contract internals and signer/threshold model.",
+        "Repeat owner/minterAdmin reads on Polygon, Avalanche, Gnosis, and Astar deployments before applying one multichain profile."
+      ]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

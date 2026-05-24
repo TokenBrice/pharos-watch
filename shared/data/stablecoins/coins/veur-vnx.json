@@ -126,6 +126,65 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "VEUR exposes role-gated minting with per-minter allowances; owner/RBAC controls can configure minters and allowances, but current RBAC bearer membership was not decoded.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
+        "label": "VEUR VNX token minter role",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Verified source requires the caller to satisfy the VNX RBAC minter role and spend no more than its minterAllowed allowance.",
+        "sources": [
+          {
+            "label": "Sourcify VNX token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/sources/project%3A%2Fcontracts%2Fvnxc.sol"
+          },
+          {
+            "label": "VNX platform docs",
+            "url": "https://vnx.gitbook.io/vnx-platform/"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc and owner() = 0xCdB3867935247049e87c38eA270edD305D84c9AE at block 25166611."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xCdB3867935247049e87c38eA270edD305D84c9AE",
+        "label": "VNX owner/RBAC admin path",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() returned this contract address; no Safe threshold, modules, or guard were verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Sourcify VNX token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/sources/project%3A%2Fcontracts%2Fvnxc.sol"
+        }
+      ],
+      "evidence": "VNX source and direct reads show role-gated minting with owner/RBAC controlled minter allowances.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Decode current RBAC manager address and minter role bearers before adding threshold-like claims."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

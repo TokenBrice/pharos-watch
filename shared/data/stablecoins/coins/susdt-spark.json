@@ -50,6 +50,73 @@
       "decimals": 6
     }
   ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply.",
+    "inheritedFrom": "usdt-tether",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe2e7a17dff93280dec073c995595155283e3c372",
+        "label": "Spark Savings USDT vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "ERC-4626 share accounting over deposited USDT; does not mint base USDT.",
+        "sources": [
+          {
+            "label": "Spark docs",
+            "url": "https://docs.spark.fi"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ],
+        "evidence": "Local metadata marks spUSDT as `variantOf: usdt-tether` and `variantKind: savings-passthrough`; collateral text describes USDT deposits into Spark's ERC-4626 savings vault V2."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "label": "Inherited Ethereum USDT token owner multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Tether transparency",
+            "url": "https://tether.to/en/transparency/"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usdt-tether` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        },
+        {
+          "label": "Spark docs",
+          "url": "https://docs.spark.fi"
+        }
+      ],
+      "evidence": "spUSDT is a savings wrapper over reviewed USDT. Wrapper share minting is collateralized by deposited USDT and does not create base USDT supply.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify Spark vault admin/upgrade owner before upgrading confidence."
+      ]
+    }
+  },
   "deploymentModel": "single-chain",
   "collateralQuality": "native",
   "custodyModel": "onchain",

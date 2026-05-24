@@ -57,6 +57,64 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "GBPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner/proxy-admin path resolves to a 4/7 Safe.",
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "label": "Mento GBPm token owner / proxy admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Mento docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "GBPm owner() and EIP-1967 admin slot both returned this Safe at Celo block 67742390. Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mento docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ],
+      "evidence": "Mento docs describe collateralized minting for Mento stables; Celo reads and Safe API resolve the current GBPm token owner/proxy-admin Safe.",
+      "reviewer": "Codex mint-authority full-gap batch-2",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve the current borrower-operations / CDP mint contracts and per-market parameter admins for full system-level coverage."
+      ]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

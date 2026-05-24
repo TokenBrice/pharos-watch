@@ -18,6 +18,51 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "stUSDS is an ERC-4626 risk-capital wrapper over USDS; wrapper minting is deposit/share accounting while durable USDS mint authority is inherited from reviewed Sky governance controls.",
+    "inheritedFrom": "usds-sky",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+        "label": "stUSDS ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sky stUSDS docs",
+            "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+          },
+          {
+            "label": "stUSDS token",
+            "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+          }
+        ],
+        "evidence": "Ethereum RPC `asset()` returned USDS 0xdC035D45d973E3EC169d2276DDab16f1e407384F; parent USDS has reviewed mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sky stUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+        },
+        {
+          "label": "Sky USDS contracts",
+          "url": "https://github.com/sky-ecosystem/usds"
+        }
+      ],
+      "evidence": "On-chain asset read confirms stUSDS wraps USDS; durable mint authority inherits from reviewed parent USDS.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "variantOf": "usds-sky",
   "variantKind": "risk-absorption",
   "pegReferenceId": "usds-sky",

@@ -54,6 +54,79 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USP mints against owner-approved collateral and through the Pareto queue; a 3/8 Safe owner controls collateral lists and emergency/admin parameters.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88",
+        "label": "ParetoDollar collateral mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "mint(collateralToken, amount) mints USP only for allowed collateral and only while queue collateralization checks pass.",
+        "sources": [
+          {
+            "label": "Sourcify ParetoDollar source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x7b70FCA01ab3745e24303B56F72296614768c337/sources/src/ParetoDollar.sol"
+          }
+        ],
+        "evidence": "Ethereum reads returned implementation 0x7b70FCA01ab3745e24303B56F72296614768c337, queue() = 0xA7780086ab732C110E9E71950B9Fb3cb2ea50D89, and owner() = 0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814 at block 25166611. Source review showed mint(), addCollateral(), removeCollateral(), and mintForQueue()."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814",
+        "label": "Pareto owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "version": "1.3.0",
+          "threshold": 3,
+          "enabledModules": [
+            "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
+          ],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xFb3bD022D5DAcF95eE28a6B07825D4Ff9C5b3814/"
+          }
+        ],
+        "evidence": "Safe API returned threshold 3, eight owners, one enabled module, and zero guard on 2026-05-24."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Pareto USP docs",
+          "url": "https://docs.pareto.credit/product/usp"
+        },
+        {
+          "label": "Sourcify ParetoDollar source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x7b70FCA01ab3745e24303B56F72296614768c337/sources/src/ParetoDollar.sol"
+        }
+      ],
+      "evidence": "Pareto source and direct reads identify owner-governed collateral minting plus queue minting for USP.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review the enabled Safe module at 0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134 before final production merge."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",

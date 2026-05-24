@@ -71,6 +71,71 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "OUSG minting is operated through Ondo's qualified-access subscription/redemption path; official docs list the OUSG token and OUSG_InstantManager, and Ethereum AccessControl reads show contract-admin holders, but Safe/module setup is not verified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "label": "OUSG_InstantManager",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ondo smart contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Ondo OUSG product page",
+            "url": "https://ondo.finance/ousg"
+          }
+        ],
+        "evidence": "Ondo docs list OUSG_InstantManager as the contract investors use to instantly buy or redeem OUSG. RPC `DEFAULT_ADMIN_ROLE`/`getRoleMember` on the manager returned admin holder 0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xAEd4caF2E535D964165B4392342F71bac77e8367",
+        "label": "OUSG token default-admin holder",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ondo OUSG token",
+            "url": "https://etherscan.io/address/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92#readContract"
+          }
+        ],
+        "evidence": "RPC `DEFAULT_ADMIN_ROLE`/`getRoleMember` on the OUSG token returned 0xAEd4caF2E535D964165B4392342F71bac77e8367; contract bytecode is present, but Safe threshold/modules/guard were not verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ondo OUSG product page",
+          "url": "https://ondo.finance/ousg"
+        },
+        {
+          "label": "Ondo smart contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        }
+      ],
+      "evidence": "Ondo describes OUSG as a qualified-access product with instant mints/redemptions; official contract docs identify the token and InstantManager, and Ethereum RPC reads identify current AccessControl admin holders.",
+      "reviewer": "Codex mint-authority full-gap batch-4",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify whether the token and manager admin-holder contracts are Safes, and if so record threshold, signerCount, enabled modules, guard, and observed block.",
+        "Verify OUSG-specific minter roles beyond DEFAULT_ADMIN_ROLE before raising confidence above manual-review."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",

@@ -74,6 +74,71 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "sUSN is Noon's staking wrapper over USN. Wrapper share minting is backed by deposited USN and inherits the reviewed USN MinterHandlerV2 plus Noon's 3/6 Safe authority for base supply.",
+    "inheritedFrom": "usn-noon",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe24a3dc889621612422a64e6388927901608b91d",
+        "label": "Noon sUSN wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Staking wrapper over deposited USN; does not mint base USN.",
+        "sources": [
+          {
+            "label": "Noon docs",
+            "url": "https://docs.noon.capital/"
+          },
+          {
+            "label": "Noon proof of reserve",
+            "url": "https://noon.accountable.capital/"
+          }
+        ],
+        "evidence": "Local metadata marks sUSN as `variantOf: usn-noon` and `variantKind: savings-passthrough`; collateral text describes USN deposited into Noon's staking wrapper."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+        "label": "Inherited USN MinterHandlerV2",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "MinterHandlerV2 implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usn-noon` mintAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Noon docs",
+          "url": "https://docs.noon.capital/"
+        },
+        {
+          "label": "MinterHandlerV2 implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+        }
+      ],
+      "evidence": "sUSN is a staking wrapper over reviewed USN. Wrapper share minting is separate from base USN issuance.",
+      "reviewer": "Codex mint-authority full-gap batch-5",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify sUSN wrapper admin/upgrade and non-Ethereum deployment controls before upgrading confidence."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",

@@ -18,6 +18,52 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "yvUSDC-1 is a Yearn vault share over USDC; vault shares mint against deposited USDC while base USDC mint authority is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+        "label": "Yearn v3 USDC vault share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "asset() returned USDC; wrapper minting does not create base USDC supply.",
+        "sources": [
+          {
+            "label": "Yearn v3 vault docs",
+            "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+          },
+          {
+            "label": "Yearn v3 vault page",
+            "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+          }
+        ],
+        "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 and apiVersion() = 3.0.2 at block 25166611."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Yearn v3 vault docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+        },
+        {
+          "label": "Existing USDC mint authority review",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        }
+      ],
+      "evidence": "yvUSDC-1 is a wrapper/strategy vault over reviewed USDC with no separate base-supply mint authority.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "canBeBlacklisted": true,

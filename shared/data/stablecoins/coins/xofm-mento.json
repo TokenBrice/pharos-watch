@@ -55,6 +55,65 @@
     "reviewer": "Codex DefiLlama path addition",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes.",
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+        "label": "XOFm StableTokenV2 mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Verified source restricts mint to broker, validators, or exchange addresses.",
+        "sources": [
+          {
+            "label": "Sourcify Mento StableTokenV2 source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/42220/0x434563b0604be100f04b7ae485bcafe3c9d8850e/sources/lib/mento-core-2.2.0/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Mento V3 addresses",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          }
+        ],
+        "evidence": "Celo reads returned implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e, owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147, broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() = 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() = zero."
+      },
+      {
+        "chain": "celo",
+        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+        "label": "Mento stable token owner",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() returned this contract address; Safe threshold/modules/guard were not verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 addresses",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        }
+      ],
+      "evidence": "Mento token source and Celo reads identify broker/validator-gated minting plus owner-controlled route updates.",
+      "reviewer": "Codex mint-authority full-gap batch-6",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve current Mento owner contract governance and any threshold or timelock."
+      ]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
