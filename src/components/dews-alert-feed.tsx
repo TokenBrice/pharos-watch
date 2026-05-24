@@ -10,7 +10,7 @@ import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getDewsAmplifiers, getTopDewsContributors } from "@/lib/dews-signal-utils";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { CLIENT_PSI_ELIGIBLE_META_BY_ID as PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible-client";
 import type { StressSignalEntry } from "@shared/types";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 

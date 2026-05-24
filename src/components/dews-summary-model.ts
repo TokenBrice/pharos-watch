@@ -1,4 +1,4 @@
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { CLIENT_PSI_ELIGIBLE_META_BY_ID as PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible-client";
 import {
   highestBand,
   scoreToRadius,

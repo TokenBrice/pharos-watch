@@ -87,7 +87,7 @@ Each appendix includes the epitaph for every newly added coin plus a rotating da
 - Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead.
 - Tombstone selection auto-expands the matching obituary and scrolls into view.
 - `StablecoinCemetery` renders collapsible rows with source links and cause badges, using the same order as the tombstone field above.
-- `CemeteryCharts` computes all chart series directly from `CEMETERY_ENTRIES` (no API fetch).
+- `CemeteryCharts` receives server-projected cemetery entries and computes all chart series from that payload (no API fetch).
 
 ## Compare (`/compare` + `/compare/[slug]`)
 

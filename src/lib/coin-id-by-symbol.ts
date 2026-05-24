@@ -1,4 +1,4 @@
-import { TRACKED_REGISTRY_BY_ID } from "@shared/lib/stablecoin-id-registry";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 
 // Reverse index: uppercase symbol → canonical coin id. Only symbols that map
 // unambiguously to a single tracked coin are included; ambiguous symbols
@@ -6,7 +6,7 @@ import { TRACKED_REGISTRY_BY_ID } from "@shared/lib/stablecoin-id-registry";
 // to a generic affordance rather than render the wrong logo.
 const COIN_ID_BY_SYMBOL: ReadonlyMap<string, string> = (() => {
   const collected = new Map<string, string[]>();
-  for (const meta of TRACKED_REGISTRY_BY_ID.values()) {
+  for (const meta of CLIENT_TRACKED_STABLECOINS) {
     const sym = meta.symbol?.toUpperCase();
     if (!sym) continue;
     const list = collected.get(sym) ?? [];

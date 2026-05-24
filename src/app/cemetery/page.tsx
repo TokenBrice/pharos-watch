@@ -108,8 +108,8 @@ export default function CemeteryPage() {
         </p>
       </div>
 
-      <CemeteryClient />
-      <CemeteryCharts />
+      <CemeteryClient entries={DEAD_STABLECOINS} />
+      <CemeteryCharts entries={DEAD_STABLECOINS} />
 
       <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </div>

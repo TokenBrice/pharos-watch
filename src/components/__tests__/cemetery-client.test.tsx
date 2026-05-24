@@ -54,6 +54,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
 }));
 
 import { CemeteryClient } from "../cemetery-client";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 
 describe("CemeteryClient", () => {
   beforeEach(() => {
@@ -70,7 +71,7 @@ describe("CemeteryClient", () => {
   });
 
   it("keeps duplicate-symbol cemetery rows independent by dead-coin id", () => {
-    render(<CemeteryClient />);
+    render(<CemeteryClient entries={DEAD_STABLECOINS} />);
 
     fireEvent.click(screen.getAllByRole("button", { name: /First USDL/ })[0]!);
 
@@ -87,7 +88,7 @@ describe("CemeteryClient", () => {
   });
 
   it("pays respects once when F is pressed on a focused tombstone", () => {
-    render(<CemeteryClient />);
+    render(<CemeteryClient entries={DEAD_STABLECOINS} />);
 
     const tombstone = screen.getAllByRole("button", { name: /First USDL/ })[0]!;
     tombstone.focus();

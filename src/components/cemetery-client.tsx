@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
+import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
 import { type CemeterySortMode, sortCemeteryCoins } from "@/lib/cemetery";
@@ -13,7 +13,7 @@ const SORT_OPTIONS: { value: CemeterySortMode; label: string }[] = [
   { value: "oldest", label: "Oldest first" },
 ];
 
-export function CemeteryClient() {
+export function CemeteryClient({ entries }: { entries: CemeteryEntry[] }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sortMode, setSortMode] = useState<CemeterySortMode>("newest");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function CemeteryClient() {
   // Clear highlight timer on unmount
   useEffect(() => () => { if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current); }, []);
 
-  const orderedCoins = useMemo(() => sortCemeteryCoins(DEAD_STABLECOINS, sortMode), [sortMode]);
+  const orderedCoins = useMemo(() => sortCemeteryCoins(entries, sortMode), [entries, sortMode]);
 
   const handleToggle = useCallback((coinId: string) => {
     setExpanded((prev) => {

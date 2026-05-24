@@ -21,7 +21,7 @@ import { ChartLegendChip } from "@/components/chart-primitives/axes";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
-import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
+import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHART_RED, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
@@ -62,6 +62,8 @@ type CauseOfDeathDonutDatum = {
   value: number;
   cause: CauseOfDeath;
 };
+
+type CemeteryEntries = readonly CemeteryEntry[];
 
 function CauseOfDeathDonutChart({
   title,
@@ -130,10 +132,10 @@ function CauseOfDeathDonutChart({
    1a. Cause of Death (by Count) — Donut Chart
    ══════════════════════════════════════════════════════════════════════ */
 
-function CauseOfDeathByCountChart() {
+function CauseOfDeathByCountChart({ entries }: { entries: CemeteryEntries }) {
   const { data, total } = useMemo(() => {
     const counts = new Map<CauseOfDeath, number>();
-    for (const coin of DEAD_STABLECOINS) {
+    for (const coin of entries) {
       counts.set(coin.causeOfDeath, (counts.get(coin.causeOfDeath) ?? 0) + 1);
     }
     return {
@@ -142,9 +144,9 @@ function CauseOfDeathByCountChart() {
         value: count,
         cause,
       })),
-      total: DEAD_STABLECOINS.length,
+      total: entries.length,
     };
-  }, []);
+  }, [entries]);
 
   return (
     <CauseOfDeathDonutChart
@@ -166,10 +168,10 @@ function CauseOfDeathByCountChart() {
    1b. Cause of Death (by Peak Mcap) — Donut Chart
    ══════════════════════════════════════════════════════════════════════ */
 
-function CauseOfDeathByMcapChart() {
+function CauseOfDeathByMcapChart({ entries }: { entries: CemeteryEntries }) {
   const { data, total } = useMemo(() => {
     const mcaps = new Map<CauseOfDeath, number>();
-    for (const coin of DEAD_STABLECOINS) {
+    for (const coin of entries) {
       if (coin.peakMcap) {
         mcaps.set(coin.causeOfDeath, (mcaps.get(coin.causeOfDeath) ?? 0) + coin.peakMcap);
       }
@@ -182,7 +184,7 @@ function CauseOfDeathByMcapChart() {
       })),
       total: Array.from(mcaps.values()).reduce((sum, value) => sum + value, 0),
     };
-  }, []);
+  }, [entries]);
 
   return (
     <CauseOfDeathDonutChart
@@ -204,10 +206,10 @@ function CauseOfDeathByMcapChart() {
    2. Deaths per Year — Grouped Bar Chart (count + peak mcap)
    ══════════════════════════════════════════════════════════════════════ */
 
-function DeathsByYearChart() {
+function DeathsByYearChart({ entries }: { entries: CemeteryEntries }) {
   const data = useMemo(() => {
     const byYear = new Map<number, { count: number; mcap: number }>();
-    for (const coin of DEAD_STABLECOINS) {
+    for (const coin of entries) {
       const year = Number(coin.deathDate.split("-")[0]);
       const entry = byYear.get(year) ?? { count: 0, mcap: 0 };
       entry.count += 1;
@@ -217,7 +219,7 @@ function DeathsByYearChart() {
     return Array.from(byYear.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([year, d]) => ({ year: String(year), count: d.count, mcap: d.mcap }));
-  }, []);
+  }, [entries]);
 
   return (
     <CemeteryChartCard title="Deaths per Year" ariaLabel="Stablecoin deaths per year">
@@ -305,9 +307,9 @@ function DeathsByYearChart() {
    3. Top 10 Largest Failures — Horizontal Bar Chart
    ══════════════════════════════════════════════════════════════════════ */
 
-function TopFailuresChart() {
+function TopFailuresChart({ entries }: { entries: CemeteryEntries }) {
   const data = useMemo(() => {
-    return DEAD_STABLECOINS.filter((c) => c.peakMcap != null)
+    return entries.filter((c) => c.peakMcap != null)
       .sort((a, b) => (b.peakMcap ?? 0) - (a.peakMcap ?? 0))
       .slice(0, 10)
       .map((c) => ({
@@ -315,7 +317,7 @@ function TopFailuresChart() {
         mcap: c.peakMcap!,
         cause: c.causeOfDeath,
       }));
-  }, []);
+  }, [entries]);
 
   return (
     <CemeteryChartCard title="Largest Failures by Peak Mcap" ariaLabel="Top 10 largest stablecoin failures">
@@ -407,11 +409,11 @@ function filterCollidingInflections(
   return shown.sort((a, b) => a.index - b.index);
 }
 
-function CumulativeDestroyedChart() {
+function CumulativeDestroyedChart({ entries }: { entries: CemeteryEntries }) {
   const [logScale, setLogScale] = useState(false);
 
   const data = useMemo<CumulativePoint[]>(() => {
-    const sorted = DEAD_STABLECOINS.filter((c) => c.peakMcap != null).sort((a, b) => {
+    const sorted = entries.filter((c) => c.peakMcap != null).sort((a, b) => {
       // Sort by date, then by mcap descending for same date
       if (a.deathDate === b.deathDate) return (b.peakMcap ?? 0) - (a.peakMcap ?? 0);
       return a.deathDate.localeCompare(b.deathDate);
@@ -425,7 +427,7 @@ function CumulativeDestroyedChart() {
       acc.push({ date: label, cumulative, symbol: c.symbol, added: c.peakMcap!, index });
       return acc;
     }, []);
-  }, []);
+  }, [entries]);
 
   // Inflection labels: top-N points by `added` (the size of the jump), then
   // collision-filtered so labels don't pile on top of each other on the
@@ -573,7 +575,7 @@ function ScaleToggle({ value, onChange }: { value: "lin" | "log"; onChange: (v: 
    Combined export
    ══════════════════════════════════════════════════════════════════════ */
 
-export function CemeteryCharts() {
+export function CemeteryCharts({ entries }: { entries: CemeteryEntries }) {
   const mounted = useHydrated();
 
   if (!mounted) {
@@ -595,12 +597,12 @@ export function CemeteryCharts() {
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
-      <CauseOfDeathByCountChart />
-      <CauseOfDeathByMcapChart />
-      <DeathsByYearChart />
-      <TopFailuresChart />
+      <CauseOfDeathByCountChart entries={entries} />
+      <CauseOfDeathByMcapChart entries={entries} />
+      <DeathsByYearChart entries={entries} />
+      <TopFailuresChart entries={entries} />
       <div className="sm:col-span-2">
-        <CumulativeDestroyedChart />
+        <CumulativeDestroyedChart entries={entries} />
       </div>
     </div>
   );
