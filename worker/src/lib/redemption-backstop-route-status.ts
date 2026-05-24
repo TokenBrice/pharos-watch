@@ -4,7 +4,6 @@ import type { RedemptionRouteAvailability } from "./redemption-backstop-availabi
 export const REDEMPTION_ROUTE_STATUS_PRODUCER = {
   model: "live-reserve-adapters-plus-static-policy",
   fetchesDuringRedemptionSync: false,
-  overrideStore: "static-config",
   freshness: "sync-redemption-backstops-snapshot",
 } as const;
 
@@ -25,8 +24,6 @@ export interface MergedRedemptionRouteStatus extends RedemptionRouteStatusEviden
   notes: string[];
 }
 
-const STATIC_ROUTE_STATUS_OVERRIDES: Readonly<Record<string, RedemptionRouteStatusFeedEntry>> = {};
-
 function normalizeEvidence(
   evidence: RedemptionRouteStatusEvidence | null | undefined,
 ): RedemptionRouteStatusEvidence | null {
@@ -39,29 +36,10 @@ function normalizeEvidence(
   };
 }
 
-function getStaticRedemptionRouteStatusFeed(stablecoinId: string): RedemptionRouteStatusFeedEntry | null {
-  return STATIC_ROUTE_STATUS_OVERRIDES[stablecoinId] ?? null;
-}
-
 function isOperatorOverride(
   evidence: RedemptionRouteStatusFeedEntry | null | undefined,
 ): evidence is RedemptionRouteStatusFeedEntry {
   return evidence?.origin === "operator-override";
-}
-
-export function loadStaticRedemptionRouteStatusFeedMap(
-  stablecoinIds: readonly string[],
-): Map<string, RedemptionRouteStatusFeedEntry> {
-  const result = new Map<string, RedemptionRouteStatusFeedEntry>();
-  for (const stablecoinId of stablecoinIds) {
-    const entry = getStaticRedemptionRouteStatusFeed(stablecoinId);
-    if (entry) result.set(stablecoinId, entry);
-  }
-  return result;
-}
-
-export function countStaticRedemptionRouteStatusOverrides(): number {
-  return Object.keys(STATIC_ROUTE_STATUS_OVERRIDES).length;
 }
 
 export function mergeRedemptionRouteStatus(args: {

@@ -11,7 +11,6 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(REDEMPTION_ROUTE_STATUS_PRODUCER).toMatchObject({
       model: "live-reserve-adapters-plus-static-policy",
       fetchesDuringRedemptionSync: false,
-      overrideStore: "static-config",
       freshness: "sync-redemption-backstops-snapshot",
     });
   });

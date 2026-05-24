@@ -26,11 +26,7 @@ import {
   formatRouteAvailabilityReviewedAt,
   loadSevereActiveDepegAvailabilityMap,
 } from "../lib/redemption-backstop-availability";
-import {
-  countStaticRedemptionRouteStatusOverrides,
-  loadStaticRedemptionRouteStatusFeedMap,
-  REDEMPTION_ROUTE_STATUS_PRODUCER,
-} from "../lib/redemption-backstop-route-status";
+import { REDEMPTION_ROUTE_STATUS_PRODUCER } from "../lib/redemption-backstop-route-status";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 const MISSING_CAPACITY_OK_RATIO = 0.01;
@@ -179,7 +175,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   }
 
   const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(db, formatRouteAvailabilityReviewedAt(now));
-  const routeStatusFeedById = loadStaticRedemptionRouteStatusFeedMap(configuredIds);
   const registryMetadata = buildRegistryMetadata(configuredIds, configById);
 
   // Staleness is tracked for operational visibility (degraded-run signal +
@@ -214,7 +209,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
           routeAvailability,
-          routeStatusFeed: routeStatusFeedById.get(stablecoinId) ?? null,
+          routeStatusFeed: null,
         });
       } else {
         const config = configById.get(stablecoinId);
@@ -222,7 +217,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
             routeAvailability,
-            routeStatusFeed: routeStatusFeedById.get(stablecoinId) ?? null,
+            routeStatusFeed: null,
           });
         }
       }
@@ -279,7 +274,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     liquidityStale,
     routeStatusProducer: REDEMPTION_ROUTE_STATUS_PRODUCER.model,
     routeStatusProducerFetches: REDEMPTION_ROUTE_STATUS_PRODUCER.fetchesDuringRedemptionSync,
-    routeStatusOverrideCount: countStaticRedemptionRouteStatusOverrides(),
     preloadDegraded: preloadWarnings.length > 0,
     ...(preloadWarnings.length > 0 ? { preloadWarnings: capStringList(preloadWarnings) } : {}),
     ...registryMetadata,
