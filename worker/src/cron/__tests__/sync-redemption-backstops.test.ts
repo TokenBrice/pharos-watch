@@ -213,6 +213,50 @@ describe("syncRedemptionBackstops", () => {
     expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
   });
 
+  it("aborts before loading inputs when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("manual abort"));
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+
+    await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("manual abort");
+    expect(loadStablecoinsCacheMock).not.toHaveBeenCalled();
+    expect(resolveRedemptionBackstopEntryMock).not.toHaveBeenCalled();
+    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+  });
+
+  it("aborts between configured IDs without writing a partial snapshot", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const controller = new AbortController();
+    resolveRedemptionBackstopEntryMock.mockImplementationOnce((_db: unknown, asset: { id: string }) => {
+      controller.abort(new Error("abort after first row"));
+      return Promise.resolve(makeResolvedSnapshot(asset.id, now));
+    });
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+
+    await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort after first row");
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(1);
+    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+  });
+
+  it("aborts after the final row resolves before writing snapshots", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const controller = new AbortController();
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) => {
+      if (asset.id === "iusd-infinifi") {
+        controller.abort(new Error("abort before write"));
+      }
+      return Promise.resolve(makeResolvedSnapshot(asset.id, now));
+    });
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+
+    await expect(syncRedemptionBackstops(mockD1(), controller.signal)).rejects.toThrow("abort before write");
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
+    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
+  });
+
   it("writes snapshots and summarizes source-mode coverage", async () => {
     resolveRedemptionBackstopEntryMock
       .mockResolvedValueOnce(makeResolvedSnapshot("cusd-cap", 1_700_000_000))
@@ -268,6 +312,18 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.currentMirroredCount).toBe(2);
     expect(typeof metadata.registryHash).toBe("string");
     expect(typeof metadata.v4ScoringParametersHash).toBe("string");
+  });
+
+  it("propagates snapshot write failures without reporting successful metadata", async () => {
+    upsertRedemptionBackstopSnapshotsMock.mockRejectedValueOnce(new Error("snapshot write failed"));
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+
+    await expect(syncRedemptionBackstops(mockD1(), new AbortController().signal)).rejects.toThrow(
+      "snapshot write failed",
+    );
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledTimes(2);
+    expect(updateRedemptionBackstopRunMetadataMock).not.toHaveBeenCalled();
   });
 
   it("continues with degraded static rows when optional DEX preload fails", async () => {

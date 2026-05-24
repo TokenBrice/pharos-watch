@@ -37,6 +37,12 @@ const MISSING_CAPACITY_OK_RATIO = 0.01;
 
 const DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
 
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw signal.reason ?? new Error("sync-redemption-backstops aborted");
+  }
+}
+
 function getAllowedMissingCapacityCount(configuredCount: number): number {
   if (configuredCount <= 0) return 0;
   return Math.max(1, Math.ceil(configuredCount * MISSING_CAPACITY_OK_RATIO));
@@ -126,6 +132,8 @@ async function pruneRemovedRedemptionBackstops(db: D1Database, configuredIds: re
 }
 
 export async function syncRedemptionBackstops(db: D1Database, signal: AbortSignal): Promise<CronResult> {
+  throwIfAborted(signal);
+
   const stablecoinsCache = await loadStablecoinsCache(db, {
     mode: "strict",
     allowLegacyArray: true,
@@ -194,9 +202,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const failedIds: string[] = [];
 
   for (const stablecoinId of configuredIds) {
-    if (signal.aborted) {
-      throw signal.reason ?? new Error("sync-redemption-backstops aborted");
-    }
+    throwIfAborted(signal);
 
     try {
       const asset = stablecoinAssetById.get(stablecoinId);
@@ -231,6 +237,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       }
     }
   }
+  throwIfAborted(signal);
 
   const dynamicCount = snapshots.filter((entry) => entry.sourceMode === "dynamic").length;
   const estimatedCount = snapshots.filter((entry) => entry.sourceMode === "estimated").length;
