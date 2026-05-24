@@ -18,11 +18,13 @@ vi.mock("../live-reserves-store", async (importOriginal) => {
 
 describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildRedemptionBackstopEntry;
+  let buildFailedRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildFailedRedemptionBackstopEntry;
   const now = 1_700_000_000;
 
   beforeAll(async () => {
     const mod = await import("../redemption-backstop-sources");
     buildRedemptionBackstopEntry = mod.buildRedemptionBackstopEntry;
+    buildFailedRedemptionBackstopEntry = mod.buildFailedRedemptionBackstopEntry;
   });
 
   beforeEach(() => {
@@ -110,6 +112,61 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityUsd).toBe(330_000_000);
     expect(entry.immediateCapacityRatio).toBe(0.33);
     expect(entry.score).not.toBeNull();
+  });
+
+  it("uses capacity profile scoring capacity to reduce effective exit score", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-ratio", ratio: 1, dailyLimitUsd: 100_000, confidence: "documented-bound" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      100_000_000,
+      null,
+      now,
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.capacityProfile).toMatchObject({
+      immediateUsd: 100_000_000,
+      dailyLimitUsd: 100_000,
+      scoringUsd: 100_000,
+      modeledExitSizeUsd: 5_000_000,
+      scoringHorizon: "daily",
+    });
+    expect(entry.score).not.toBeNull();
+    expect(entry.effectiveExitScore).not.toBeNull();
+    expect(entry.effectiveExitScore!).toBeLessThan(entry.score!);
+  });
+
+  it("applies explicit total score caps after component scoring", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-ratio", ratio: 1, confidence: "documented-bound" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+        totalScoreCap: 42,
+      },
+      100_000_000,
+      null,
+      now,
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.score).toBe(42);
+    expect(entry.capsApplied).toContain("config-cap");
   });
 
   it("keeps eventual-only queue routes out of current-exit scoring", async () => {
@@ -478,6 +535,54 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capsApplied).toContain("live-route-status-impairment");
   });
 
+  it("treats cohort-limited live route status as an impaired route", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "cusd-cap",
+      {
+        routeFamily: "basket-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 0 },
+      },
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "cusd-cap",
+          fetchedAt: now - 120,
+          source: "cap-vault",
+          metadata: {
+            freshnessMode: "not-applicable",
+            redemption: {
+              capacityUsd: 10_000_000,
+              capacityKind: "live-direct-bounded",
+              freshnessKind: "same-run-onchain",
+              routeStatus: "cohort-limited",
+              routeStatusSource: "protocol-api",
+              routeStatusReason: "Redemptions are limited to a reviewed cohort",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.routeStatus).toBe("cohort-limited");
+    expect(entry.routeStatusSource).toBe("protocol-api");
+    expect(entry.resolutionState).toBe("impaired");
+    expect(entry.score).toBeNull();
+    expect(entry.capsApplied).toContain("live-route-status-impairment");
+  });
+
   it("ignores live route status without source attribution", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
@@ -843,6 +948,39 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.effectiveExitScore).toBeNull();
+  });
+
+  it("preserves reviewed fee and docs metadata on failed reserve-sync routes", () => {
+    const entry = buildFailedRedemptionBackstopEntry(
+      "test-coin",
+      {
+        routeFamily: "queue-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "queued",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata", confidence: "documented-bound" },
+        costModel: {
+          kind: "fee-bps",
+          feeBps: 25,
+          feeDescription: "Reviewed fallback fee is 25 bps",
+        },
+        docs: [{ label: "Reviewed route docs", url: "https://example.com/route", supports: ["route", "fees"] }],
+      },
+      now,
+    );
+
+    expect(entry.resolutionState).toBe("failed");
+    expect(entry.score).toBeNull();
+    expect(entry.capacityConfidence).toBe("dynamic");
+    expect(entry.feeConfidence).toBe("fixed");
+    expect(entry.feeBps).toBe(25);
+    expect(entry.feeDescription).toBe("Reviewed fallback fee is 25 bps");
+    expect(entry.docs).toMatchObject({
+      label: "Reviewed route docs",
+      url: "https://example.com/route",
+      provenance: "config-reviewed",
+    });
   });
 
   it("does not add current-exit uplift for eventual-only redemption", async () => {

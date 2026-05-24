@@ -122,6 +122,9 @@ describe("handleRedemptionBackstops", () => {
 
     const response = await handleRedemptionBackstops(db);
     expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Data not yet available",
+    });
     assertAllD1MatchesUsed(db);
   });
 
@@ -247,31 +250,36 @@ describe("handleRedemptionBackstops", () => {
       {
         match: COMPLETED_RUNS_SQL,
         matchBinds: [5],
-        rows: [{
-          run_id: "run-new-bad",
-          completed_at: 1_700_000_010,
-          expected_count: 2,
-          written_count: 1,
-          min_updated_at: 1_700_000_000,
-          max_updated_at: 1_700_000_000,
-          methodology_version: "1.1",
-        }, {
-          run_id: "run-old-valid",
-          completed_at: 1_700_000_000,
-          expected_count: 1,
-          written_count: 1,
-          min_updated_at: 1_699_999_990,
-          max_updated_at: 1_699_999_990,
-          methodology_version: "1.1",
-        }],
+        rows: [
+          {
+            run_id: "run-new-bad",
+            completed_at: 1_700_000_010,
+            expected_count: 2,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: 1_700_000_000,
+            methodology_version: "1.1",
+          },
+          {
+            run_id: "run-old-valid",
+            completed_at: 1_700_000_000,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_699_999_990,
+            max_updated_at: 1_699_999_990,
+            methodology_version: "1.1",
+          },
+        ],
       },
       {
         match: RUN_ROWS_BY_RUN_ID_SQL,
         matchBinds: ["run-old-valid"],
-        rows: [makeRedemptionRow({
-          snapshot_run_id: "run-old-valid",
-          updated_at: 1_699_999_990,
-        })],
+        rows: [
+          makeRedemptionRow({
+            snapshot_run_id: "run-old-valid",
+            updated_at: 1_699_999_990,
+          }),
+        ],
       },
     ]);
 
@@ -319,6 +327,42 @@ describe("handleRedemptionBackstops", () => {
     expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
     expect(response.headers.get("X-Data-Age")).toBe("60");
     expect(response.headers.get("Warning")).toBeNull();
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("emits stale warning headers when the completed run is outside the freshness budget", async () => {
+    const updatedAt = 1_700_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime((updatedAt + 300_000) * 1000);
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-stale",
+            completed_at: updatedAt,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: updatedAt,
+            max_updated_at: updatedAt,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-stale"],
+        rows: [makeRedemptionRow({ snapshot_run_id: "run-stale", updated_at: updatedAt })],
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Age")).toBe("300000");
+    expect(response.headers.get("Warning")).toContain("Response is stale (300000s old");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     assertAllD1MatchesUsed(db);
   });
 

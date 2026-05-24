@@ -135,6 +135,40 @@ function makeReportCardsDbWithBluechipValue(assets: ReturnType<typeof makeAsset>
   ]);
 }
 
+function makeReportCardsDbWithDexScore(stablecoinId: string, dexScore: number | null) {
+  const cacheValue = JSON.stringify({
+    peggedAssets: [makeAsset({ id: stablecoinId, symbol: "CUSD" })],
+  });
+  return mockD1([
+    {
+      match: "cache",
+      rows: [
+        { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+        { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
+      ],
+      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+    },
+    {
+      match: "dex_liquidity",
+      rows:
+        dexScore == null
+          ? []
+          : [
+              {
+                stablecoin_id: stablecoinId,
+                liquidity_score: dexScore,
+                concentration_hhi: 1,
+                pool_count: 1,
+                chain_count: 1,
+                updated_at: nowSec,
+              },
+            ],
+    },
+    { match: "depeg_events", rows: [] },
+    { match: "supply_history", rows: [] },
+  ]);
+}
+
 describe("buildReportCardsSnapshot", () => {
   beforeEach(() => {
     vi.useFakeTimers({ now: nowSec * 1000 });
@@ -275,9 +309,7 @@ describe("buildReportCardsSnapshot", () => {
 
     expect(card?.rawInputs.dependencyFromLive).toBe(true);
     expect(card?.rawInputs.dependencies).toEqual([]);
-    expect(snapshot.dependencyGraph.edges).not.toContainEqual(
-      expect.objectContaining({ to: "dai-makerdao" }),
-    );
+    expect(snapshot.dependencyGraph.edges).not.toContainEqual(expect.objectContaining({ to: "dai-makerdao" }));
   });
 
   it("matches /api/report-cards response payload", async () => {
@@ -442,6 +474,124 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
     expect(card?.dimensions.liquidity.score).toBe(66);
+  });
+
+  it("excludes low-confidence redemption uplift while keeping DEX liquidity scored", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", 29);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: { "cusd-cap": makeRedemptionEntry({ modelConfidence: "low" }) },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(card?.rawInputs.liquidityScore).toBe(29);
+    expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
+    expect(card?.rawInputs.effectiveExitScore).toBe(29);
+    expect(card?.dimensions.liquidity.detail).toContain("not used for Safety Score uplift (low confidence)");
+  });
+
+  it("reports impaired redemption as unavailable when no DEX liquidity exists", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", null);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          score: null,
+          effectiveExitScore: null,
+          resolutionState: "impaired",
+          routeStatus: "paused",
+          routeStatusReason: "Primary redemption route is paused",
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(card?.rawInputs.liquidityScore).toBeNull();
+    expect(card?.rawInputs.redemptionBackstopScore).toBeNull();
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
+    expect(card?.rawInputs.effectiveExitScore).toBeNull();
+    expect(card?.dimensions.liquidity.grade).toBe("NR");
+    expect(card?.dimensions.liquidity.detail).toContain("currently impaired");
+  });
+
+  it("caps queue redemption uplift before computing effective exit score", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", 29);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          routeFamily: "queue-redeem",
+          settlementModel: "queued",
+          score: 88,
+          modelConfidence: "high",
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
+    expect(card?.rawInputs.effectiveExitScore).toBe(70);
+    expect(card?.dimensions.liquidity.detail).toContain("Queue redeem");
+  });
+
+  it("down-weights tiny executable redemption capacity profiles", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", null);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          modelConfidence: "high",
+          immediateCapacityUsd: null,
+          immediateCapacityRatio: null,
+          capacityProfile: {
+            immediateUsd: 250_000,
+            scoringUsd: 250_000,
+            modeledExitSizeUsd: 25_000_000,
+            scoringHorizon: "immediate",
+            capacityProfileConfidence: "documented-bound",
+          },
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
+    expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.effectiveExitScore).toBe(1);
+    expect(card?.dimensions.liquidity.score).toBe(1);
+  });
+
+  it("keeps redemption scoring bounded when optional runtime capacity metadata is missing", async () => {
+    const db = makeReportCardsDbWithDexScore("cusd-cap", null);
+    loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
+      map: {
+        "cusd-cap": makeRedemptionEntry({
+          modelConfidence: "high",
+          immediateCapacityUsd: null,
+          immediateCapacityRatio: null,
+          capacityProfile: undefined,
+        }),
+      },
+      latestUpdatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "cusd-cap");
+
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
+    expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
+    expect(card?.rawInputs.effectiveExitScore).toBe(88);
+    expect(card?.dimensions.liquidity.score).toBe(88);
   });
 
   it("uses documented offchain issuer eventual redemption only as a DEX-gated bonus", async () => {
