@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-05-18 to 2026-05-24
+
+Design-system overhaul lands, the MiCA tracker goes live, and the yield page gets a ground-up rebuild.
+
+- **Design system & UX overhaul**: Foundational tokens consolidated with a severity AA-contrast fork, then an IA graph, a11y and motion choreography, editorial voice, inline sparklines with linked brushing, and a universal watchlist with palette verbs.
+- **Yield intelligence overhaul**: Yield rebuilt around a scatter and a draggable risk-budget slider, a source sheet showing confidence and depth, a per-factor PYS breakdown, per-coin APY-change attribution, and a public decision ledger (v8.16).
+- **MiCA tracker launch**: A new /mica/ tracker launches and sweeps to full coverage at 25 coins, cross-referenced against the ESMA register, with GUSD ruled non-compliant and the tracker cross-linked from coin and compliance surfaces.
+- **Learn hub & depeg case studies**: A new /learn hub and LEARN nav group launch with a depeg case-studies section; case studies cross-link from coin, cemetery, depeg, and mechanism pages, and chart annotations now link to the case study behind each event.
+- **Guided stablecoin Picker**: A guided stablecoin picker ships at /screener/picker/ on a new selector engine: snapshot endpoint, peg-scope scoring, custody and depeg-watch logic, a mobile form, a homepage callout, and a Telegram follow command.
+- **Navigation & homepage refresh**: An alternate homepage and timeline layout land, with a 9-depeg desktop grid, an optional phosphor CRT reading mode, a unified chain-profile hero, expanded mechanism explainers, and a prominence-ranked command palette.
+- **Pricing integrity & reliability**: DEX price sanity gates and Carbon normalization make DexScreener augmentation opt-in (pricing v6.05), Liquidity Score v5.7 adds price-gating, plus a cron staleness watchdog and an API-key rate-limit fallback.
+- **Broader coverage**: The tracked universe reaches 399 coins with FUSD, sDOLA, GLDT, and Ondo's iAUON and sLVON added and pre-launch gynUSD joining, while reserve adapters climb to 57 and live-reserve coverage to 267.
+
 ## 2026-05-11 to 2026-05-17
 
 Screener launches, detail pages rebuild around verdict, and Yield v8.13 ships multi-currency benchmarks.
