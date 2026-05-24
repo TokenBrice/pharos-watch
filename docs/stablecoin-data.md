@@ -28,7 +28,7 @@ tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 
 Legacy category shards remain only as read-only compatibility shells. Do not add or move entries into `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, or `pre-launch.json`; they should remain empty, and `npm run check:stablecoin-data` guards that source layout.
 
-The client, prevalidated runtime, and legacy redirect projections are also generated from the per-coin catalog. `coins.client.generated.json` powers lightweight browser-facing metadata through `shared/lib/stablecoins/client-registry.ts`; `coins.prevalidated.generated.ts` lets the full registry load checked metadata without validating the entire aggregate on the hot path; `legacy-llama-redirects.generated.json` is the minimal Pages Functions map for old numeric DefiLlama stablecoin URLs. Run `npm run check:generated-artifacts` after metadata edits, and regenerate those projections with the scripts named by that check if they drift.
+The client, prevalidated runtime, and legacy redirect projections are also generated from the per-coin catalog. `coins.client.generated.json` powers lightweight browser-facing metadata through `shared/lib/stablecoins/client-registry.ts`; `coins.prevalidated.generated.ts` lets the full registry load checked metadata without validating the entire aggregate on the hot path or bundling the full Zod registry validator into browser-facing chunks; `legacy-llama-redirects.generated.json` is the minimal Pages Functions map for old numeric DefiLlama stablecoin URLs. Run `npm run check:generated-artifacts` after metadata edits, and regenerate those projections with the scripts named by that check if they drift.
 
 ## Editing Rules
 
