@@ -4,6 +4,96 @@ import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
 
+type RedemptionDocs = NonNullable<RedemptionBackstopRegistryEntry["config"]["docs"]>;
+
+const DOCUMENTED_BOUND_SOURCE_REFS = {
+  "a7a5-old-vector": [
+    sourceRef("A7A5 Official", "https://www.a7a5.io/", ["capacity"]),
+    sourceRef("A7A5 FAQ", "https://docs.a7a5.io/help/faq", ["route", "access"]),
+    sourceRef("A7A5 transparency", "https://docs.a7a5.io/legal/transparency", ["capacity"]),
+  ],
+  "audx-aussie-dollar-token": [
+    sourceRef("AUDX", "https://www.audxtoken.com/", ["route", "capacity", "fees", "settlement"]),
+  ],
+  "brl1-brl1": [sourceRef("BRL1 how it works", "https://brl1.io/en/como_funciona", ["route", "capacity", "access"])],
+  "cetes-etherfuse": [
+    sourceRef("Etherfuse PoR", "https://app.etherfuse.com/legal/proof-of-reserves", ["capacity"]),
+    sourceRef("Etherfuse Stablebonds overview", "https://docs.etherfuse.com/stablebonds/cetes-or-mexico", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+    ]),
+    sourceRef("Etherfuse Ramp orders", "https://docs.etherfuse.com/api-reference/orders/create-a-new-order", [
+      "route",
+      "access",
+      "settlement",
+    ]),
+  ],
+  "cngn-compliant-naira": [
+    sourceRef("cNGN terms and conditions", "https://cngn.co/terms-and-condition", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+    ]),
+  ],
+  "eusd-telcoin": [
+    sourceRef("Telcoin Digital Asset Bank terms", "https://bank.telco.in/terms-of-use", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+      "settlement",
+    ]),
+  ],
+  "gusd-gate": [sourceRef("Gate GUSD", "https://www.gate.com/gusd", ["route", "capacity"])],
+  "reur-royal-euro": [sourceRef("REUR", "https://www.rcoins.digital/REUR.html", ["route", "capacity", "access"])],
+  "rusd-royal-dollar": [sourceRef("RUSD", "https://www.rcoins.digital/RUSD.html", ["route", "capacity", "access"])],
+  "usyc-hashnote": [
+    sourceRef("Hashnote", "https://usyc.hashnote.com/", ["capacity"]),
+    sourceRef(
+      "USYC subscription and redemption",
+      "https://usyc.docs.hashnote.com/overview/subscription-and-redemption",
+      ["route", "access", "settlement"],
+    ),
+    sourceRef("USYC product structuring", "https://usyc.docs.hashnote.com/overview/product-structuring", [
+      "route",
+      "capacity",
+      "access",
+      "settlement",
+    ]),
+    sourceRef("Circle USYC", "https://www.circle.com/usyc", ["capacity", "fees", "access", "settlement"]),
+  ],
+  "wars-argentine-peso": [
+    sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
+      "route",
+      "capacity",
+      "fees",
+      "access",
+    ]),
+  ],
+  "zarp-zarp": [
+    sourceRef("ZARP Stablecoin", "https://www.zarpstablecoin.com/", ["route", "capacity"]),
+    sourceRef("ZARP partners", "https://docs.zarpstablecoin.com/zarp-stablecoin/zarp-partners", ["route", "access"]),
+    sourceRef("ZARP transparency", "https://www.zarpstablecoin.com/transparency/", ["route", "capacity"]),
+  ],
+} satisfies Partial<Record<string, RedemptionDocs>>;
+
+function addDocumentedBoundSourceRefs(entries: RedemptionBackstopRegistryEntry[]): RedemptionBackstopRegistryEntry[] {
+  return entries.map((entry) => {
+    const docs = DOCUMENTED_BOUND_SOURCE_REFS[entry.id];
+    if (!docs) return entry;
+    return {
+      ...entry,
+      config: {
+        ...entry.config,
+        docs,
+      },
+    };
+  });
+}
+
 export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
   ...defineBatch(
     [
@@ -121,45 +211,51 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     },
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
-  ...defineBatch(
-    ["zarp-zarp", "cetes-etherfuse"],
-    {
-      ...issuerBase,
-      ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
-    },
-    { sourceFilePath: SOURCE_FILE_PATH },
+  ...addDocumentedBoundSourceRefs(
+    defineBatch(
+      ["zarp-zarp", "cetes-etherfuse"],
+      {
+        ...issuerBase,
+        ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+      },
+      { sourceFilePath: SOURCE_FILE_PATH },
+    ),
   ).map((entry) => ({
     ...entry,
     overrideReason: "Remediation review upgrades offchain issuer default to documented-bound capacity.",
   })),
-  ...defineBatch(
-    [
-      "audx-aussie-dollar-token",
-      "brl1-brl1",
-      "cngn-compliant-naira",
-      "kgst-kyrgyz-som",
-      "reur-royal-euro",
-      "wars-argentine-peso",
-      "eusd-telcoin",
-      "jpyc-jpyc-v1",
-      "rusd-royal-dollar",
-    ],
-    {
-      ...issuerBase,
-      ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
-    },
-    { sourceFilePath: SOURCE_FILE_PATH },
+  ...addDocumentedBoundSourceRefs(
+    defineBatch(
+      [
+        "audx-aussie-dollar-token",
+        "brl1-brl1",
+        "cngn-compliant-naira",
+        "kgst-kyrgyz-som",
+        "reur-royal-euro",
+        "wars-argentine-peso",
+        "eusd-telcoin",
+        "jpyc-jpyc-v1",
+        "rusd-royal-dollar",
+      ],
+      {
+        ...issuerBase,
+        ...documentedBoundSupplyFull(REVIEWED_NON_USD_BATCH_AT),
+      },
+      { sourceFilePath: SOURCE_FILE_PATH },
+    ),
   ).map((entry) => ({
     ...entry,
     overrideReason: "Non-USD review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
-  ...defineBatch(
-    ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
-    {
-      ...issuerBase,
-      ...reviewedDirectRedemptionSupplyFull,
-    },
-    { sourceFilePath: SOURCE_FILE_PATH },
+  ...addDocumentedBoundSourceRefs(
+    defineBatch(
+      ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
+      {
+        ...issuerBase,
+        ...reviewedDirectRedemptionSupplyFull,
+      },
+      { sourceFilePath: SOURCE_FILE_PATH },
+    ),
   ).map((entry) => ({
     ...entry,
     overrideReason: "Direct-redemption review cohort upgrades issuer defaults to documented-bound capacity.",
