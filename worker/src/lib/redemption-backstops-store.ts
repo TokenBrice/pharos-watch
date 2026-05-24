@@ -525,7 +525,7 @@ async function queryCompletedRedemptionBackstopRunMap(
   };
 }
 
-export async function loadRedemptionBackstopMap(db: D1Database): Promise<RedemptionBackstopMap> {
+export async function loadLegacyRedemptionBackstopCurrentMap(db: D1Database): Promise<RedemptionBackstopMap> {
   // Legacy/current-table reader retained for rollout bootstrap and focused
   // compatibility tests. API/report-card paths should use
   // loadRedemptionBackstopSnapshot() so completed run rows remain authoritative.

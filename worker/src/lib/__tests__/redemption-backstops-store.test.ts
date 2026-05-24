@@ -8,7 +8,7 @@ import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../../test-helpers
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
-  loadRedemptionBackstopMap,
+  loadLegacyRedemptionBackstopCurrentMap,
   loadRedemptionBackstopSnapshot,
   normalizeRedemptionBackstopRunMetadata,
   RedemptionBackstopSnapshotUnavailableError,
@@ -193,7 +193,7 @@ function makeWriteRecord(overrides: Partial<RedemptionBackstopEntry> = {}): Rede
   };
 }
 
-describe("loadRedemptionBackstopMap", () => {
+describe("loadLegacyRedemptionBackstopCurrentMap", () => {
   it("keeps the row and drops malformed details JSON", async () => {
     const db = mockD1([
       {
@@ -210,7 +210,7 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    const result = await loadRedemptionBackstopMap(db);
+    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
 
     expect(result["usdc-circle"]).toMatchObject({
       stablecoinId: "usdc-circle",
@@ -242,7 +242,9 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    await expect(loadRedemptionBackstopMap(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    await expect(loadLegacyRedemptionBackstopCurrentMap(db)).rejects.toBeInstanceOf(
+      RedemptionBackstopSnapshotUnavailableError,
+    );
   });
 
   it("round-trips details JSON fields through serialize → deserialize", async () => {
@@ -253,7 +255,7 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    const result = await loadRedemptionBackstopMap(db);
+    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
     const entry = result["eurc-circle"];
 
     expect(entry).toBeDefined();
@@ -315,7 +317,7 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    const result = await loadRedemptionBackstopMap(db);
+    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
     const entry = result["dai-makerdao"];
 
     expect(entry).toBeDefined();
@@ -346,7 +348,7 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    const result = await loadRedemptionBackstopMap(db);
+    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
     const entry = result["missing-coin"];
 
     expect(entry).toBeDefined();
@@ -369,7 +371,9 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    await expect(loadRedemptionBackstopMap(db)).rejects.toBeInstanceOf(RedemptionBackstopSnapshotUnavailableError);
+    await expect(loadLegacyRedemptionBackstopCurrentMap(db)).rejects.toBeInstanceOf(
+      RedemptionBackstopSnapshotUnavailableError,
+    );
   });
 
   it("prefers the latest completed run when loading a snapshot", async () => {
@@ -693,7 +697,7 @@ describe("loadRedemptionBackstopMap", () => {
       },
     ]);
 
-    const result = await loadRedemptionBackstopMap(db);
+    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
     const entry = result["bad-details"];
 
     expect(entry).toBeDefined();
@@ -856,7 +860,9 @@ describe("loadRedemptionBackstopMap", () => {
     const history = db.getHistory();
     const runStartIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"));
     const runRowIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows"));
-    const historyRowIndex = history.findIndex((entry) => entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history"));
+    const historyRowIndex = history.findIndex((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history"),
+    );
     const completeIndex = history.findIndex((entry) => entry.sql.includes("status = 'completed'"));
     const currentMirrorIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("));
     expect(runStartIndex).toBeGreaterThanOrEqual(0);
@@ -1096,14 +1102,7 @@ describe("loadRedemptionBackstopMap", () => {
         { runId: "latest-completed", startedAt: cutoff - 40, completedAt: cutoff - 30, status: "completed" },
       ];
       for (const run of runs) {
-        insertRun.run(
-          run.runId,
-          run.startedAt,
-          run.completedAt,
-          run.status,
-          run.completedAt,
-          run.completedAt,
-        );
+        insertRun.run(run.runId, run.startedAt, run.completedAt, run.status, run.completedAt, run.completedAt);
         insertRunRow.run(run.runId, `${run.runId}-coin`, run.completedAt ?? run.startedAt);
       }
 
