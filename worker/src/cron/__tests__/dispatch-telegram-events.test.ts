@@ -1,0 +1,165 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildTelegramDispatchEvents } from "../dispatch-telegram-events";
+
+const mocks = vi.hoisted(() => ({
+  buildAlertContextLines: vi.fn(),
+  getCache: vi.fn(),
+}));
+
+vi.mock("../telegram-alert-context", () => ({
+  buildAlertContextLines: mocks.buildAlertContextLines,
+}));
+
+vi.mock("../../lib/db-cache", () => ({
+  getCache: mocks.getCache,
+}));
+
+describe("buildTelegramDispatchEvents", () => {
+  beforeEach(() => {
+    mocks.buildAlertContextLines.mockResolvedValue(new Map([
+      ["coin-dews", "Context: Safety C+ 61"],
+      ["coin-depeg", "Context: Safety F 39"],
+      ["coin-safe", "Context: Safety C+ 61"],
+    ]));
+    mocks.getCache.mockResolvedValue(null);
+  });
+
+  it("uses Reason lines for safety alerts while keeping Context lines on other alert families", async () => {
+    const events = await buildTelegramDispatchEvents(
+      {} as D1Database,
+      {
+        dewsRows: [{
+          stablecoin_id: "coin-dews",
+          score: 42,
+          band: "WARNING",
+          signals_json: null,
+        }],
+        activeDepegRows: [{
+          stablecoin_id: "coin-depeg",
+          symbol: "DPG",
+          direction: "below",
+          peak_deviation_bps: 260,
+          start_price: 0.974,
+          peg_reference: 1,
+          event_id: 1,
+        }],
+      } as never,
+      {
+        currentSafetySnapshot: {
+          "coin-safe": {
+            grade: "C+",
+            score: 61,
+            methodologyVersion: "7.09",
+            explain: {
+              schemaVersion: 1,
+              stages: {
+                baseScore: 61,
+                postPegScore: 61,
+                postNoLiquidityPenaltyScore: 61,
+                activeDepegCapScore: null,
+                postActiveDepegCapScore: 61,
+                scoreBeforeVariantCap: 61,
+                finalScore: 61,
+                noLiquidityPenaltyApplied: false,
+                activeDepegCapApplied: false,
+                variantCapApplied: false,
+              },
+              dimensions: {
+                pegStability: { grade: "A", score: 96 },
+                liquidity: { grade: "C+", score: 61, detail: "DEX liquidity 61/100" },
+                resilience: { grade: "B", score: 72 },
+                decentralization: { grade: "B", score: 72 },
+                dependencyRisk: { grade: "B", score: 72 },
+              },
+              rawInputs: {
+                pegScore: 96,
+                activeDepeg: false,
+                activeDepegBps: null,
+                liquidityScore: 61,
+                effectiveExitScore: 61,
+                redemptionBackstopScore: null,
+                redemptionUsedForLiquidity: false,
+                redemptionRouteFamily: null,
+                redemptionModelConfidence: null,
+                redemptionExclusionReason: null,
+                redemptionImmediateCapacityUsd: null,
+                redemptionImmediateCapacityRatio: null,
+                concentrationHhi: null,
+                canBeBlacklisted: false,
+                collateralFromLive: false,
+                dependencyFromLive: false,
+                dependencyCount: 0,
+                variantParentId: null,
+                navToken: false,
+              },
+            },
+          },
+        },
+        previousSafetySnapshot: null,
+        safeSafetySnapshot: {
+          "coin-safe": {
+            grade: "B",
+            score: 72,
+            methodologyVersion: "7.09",
+            explain: {
+              schemaVersion: 1,
+              stages: {
+                baseScore: 72,
+                postPegScore: 72,
+                postNoLiquidityPenaltyScore: 72,
+                activeDepegCapScore: null,
+                postActiveDepegCapScore: 72,
+                scoreBeforeVariantCap: 72,
+                finalScore: 72,
+                noLiquidityPenaltyApplied: false,
+                activeDepegCapApplied: false,
+                variantCapApplied: false,
+              },
+              dimensions: {
+                pegStability: { grade: "A", score: 96 },
+                liquidity: { grade: "B", score: 72, detail: "DEX liquidity 72/100" },
+                resilience: { grade: "B", score: 72 },
+                decentralization: { grade: "B", score: 72 },
+                dependencyRisk: { grade: "B", score: 72 },
+              },
+              rawInputs: {
+                pegScore: 96,
+                activeDepeg: false,
+                activeDepegBps: null,
+                liquidityScore: 72,
+                effectiveExitScore: 72,
+                redemptionBackstopScore: null,
+                redemptionUsedForLiquidity: false,
+                redemptionRouteFamily: null,
+                redemptionModelConfidence: null,
+                redemptionExclusionReason: null,
+                redemptionImmediateCapacityUsd: null,
+                redemptionImmediateCapacityRatio: null,
+                concentrationHhi: null,
+                canBeBlacklisted: false,
+                collateralFromLive: false,
+                dependencyFromLive: false,
+                dependencyCount: 0,
+                variantParentId: null,
+                navToken: false,
+              },
+            },
+          },
+        },
+        safeDewsAlertable: { "coin-dews": "WATCH" },
+        safeDewsSnapshot: { "coin-dews": "WATCH" },
+        safeDepegSnapshot: {},
+        safetySnapshotNeedsSeed: false,
+        dewsSnapshotNeedsSeed: false,
+        depegSnapshotNeedsSeed: false,
+        launchSnapshotNeedsSeed: false,
+      } as never,
+      (id) => ({ "coin-safe": "SAFE", "coin-dews": "DEWS", "coin-depeg": "DPG" })[id] ?? id,
+    );
+
+    expect(events.dewsChanges[0].contextLine).toBe("Context: Safety C+ 61");
+    expect(events.depegTriggered[0].contextLine).toBe("Context: Safety F 39");
+    expect(events.safetyChanges[0].contextLine).toContain("Reason: Liquidity / Exit fell B -> C+");
+    expect(events.safetyChanges[0].contextLine).not.toContain("Context:");
+  });
+});

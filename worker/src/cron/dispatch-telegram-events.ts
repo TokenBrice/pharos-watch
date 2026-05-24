@@ -9,13 +9,17 @@ import {
   type DepegResolved,
   type DepegWorsening,
 } from "../lib/telegram-alerts";
-import { buildAlertContextLines } from "../api/telegram-webhook-insights";
 import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
+import { buildAlertContextLines } from "./telegram-alert-context";
 import {
   buildDewsChanges,
   buildLaunchPromotions,
   buildSafetyChanges,
 } from "./telegram-alert-changes";
+import {
+  addSafetyReasonLines,
+  type SafetyChangeWithExplain,
+} from "./telegram-alert-safety-reasons";
 import type {
   buildDispatchSnapshotState,
   loadDispatchSourceData,
@@ -29,7 +33,7 @@ export interface TelegramDispatchEvents {
   depegTriggered: DepegAlertPayload[];
   depegResolved: DepegResolved[];
   depegWorsening: DepegWorsening[];
-  safetyChanges: ReturnType<typeof buildSafetyChanges>["changes"];
+  safetyChanges: SafetyChangeWithExplain[];
   launchPromoted: ReturnType<typeof buildLaunchPromotions>;
   suppressedMethodologyChanges: number;
   suppressedSafetyChangesAtSeed: number;
@@ -210,7 +214,7 @@ export async function buildTelegramDispatchEvents(
     }
   }
 
-  const { changes: safetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed
+  const { changes: rawSafetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed
     ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)
     : { changes: [], suppressedMethodologyChanges: 0 };
 
@@ -232,16 +236,21 @@ export async function buildTelegramDispatchEvents(
     ...depegResolved.map((e) => e.stablecoinId),
     ...depegWorsening.map((e) => e.stablecoinId),
   ];
-  const safetyIds = safetyChanges.map((c) => c.stablecoinId);
+  const safetyIds = rawSafetyChanges.map((c) => c.stablecoinId);
   const launchIds = launchPromoted.map((e) => e.stablecoinId);
 
   const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]);
+  const safetyChanges = addSafetyReasonLines(
+    rawSafetyChanges,
+    currentSafetySnapshot,
+    safeSafetySnapshot,
+    contextLines,
+  );
   for (const event of [
     ...dewsChanges,
     ...depegTriggered,
     ...depegResolved,
     ...depegWorsening,
-    ...safetyChanges,
   ]) {
     const contextLine = contextLines.get(event.stablecoinId);
     if (contextLine) {
