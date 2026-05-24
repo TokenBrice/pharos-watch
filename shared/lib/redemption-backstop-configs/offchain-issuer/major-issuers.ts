@@ -17,16 +17,21 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       0,
       "Paxos states it does not charge a PYUSD redemption fee; bank or network fees may still apply",
     ),
+    docs: [sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"])],
   },
   "fdusd-first-digital": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Redeemable 1:1; public fee schedule not disclosed"),
+    docs: [
+      sourceRef("First Digital Labs FDUSD", "https://www.firstdigitallabs.com/fdusd", ["route", "capacity", "access"]),
+    ],
   },
   "rlusd-ripple": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
+    docs: [sourceRef("Ripple USD stablecoin", "https://ripple.com/solutions/stablecoin/", ["route", "capacity"])],
   },
   "usdon-ondo": {
     ...issuerBase,
@@ -155,6 +160,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary"),
+    docs: [
+      sourceRef("Circle Mint", "https://www.circle.com/circle-mint", ["route", "capacity", "access", "settlement"]),
+      sourceRef("Circle EURC", "https://www.circle.com/eurc", ["route", "capacity"]),
+    ],
   },
   "usdc-circle": {
     ...issuerBase,
@@ -198,6 +207,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Paxos states it does not charge a USDG redemption fee"),
+    docs: [
+      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem/", ["route", "capacity", "fees"]),
+      sourceRef("Paxos USDG overview", "https://docs.paxos.com/stablecoin/usdg", ["route", "capacity"]),
+    ],
   },
   "usdx-hex-trust": {
     ...issuerBase,
@@ -270,11 +283,20 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee(),
+    docs: [sourceRef("World Liberty Financial USD1", "https://worldlibertyfinancial.com/usd1", ["route", "capacity"])],
   },
   "ausd-agora": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: undisclosedReviewedFee("Fees may apply; public docs do not publish a fixed redemption rate"),
+    docs: [
+      sourceRef("Agora Bermuda terms of use", "https://static.agora.finance/termsofuse.pdf", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+      ]),
+    ],
   },
   "usdo-openeden": {
     ...issuerBase,
@@ -367,6 +389,15 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve"),
+    docs: [
+      sourceRef("TrueUSD mint and redeem", "https://www.tusd.io/", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+    ],
   },
   "eurs-stasis": {
     ...issuerBase,
@@ -381,6 +412,18 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(100, "Transfero documents a 1% redemption fee in Brazil"),
+    docs: [
+      sourceRef(
+        "Transfero BRZ stablecoin",
+        "https://transferopayments.zendesk.com/hc/en-001/articles/42892203357587-BRZ-The-Brazilian-Real-BRL-Stablecoin",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef(
+        "BRZ deposit and withdrawal fees",
+        "https://brz.zendesk.com/hc/pt-br/articles/1500009567522-Quais-os-limites-e-taxas-para-dep%C3%B3sito-e-retirada",
+        ["route", "fees", "access", "settlement"],
+      ),
+    ],
   },
   "ylds-figure": {
     ...issuerBase,
