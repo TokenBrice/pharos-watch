@@ -323,10 +323,12 @@ export async function loadStablecoinsIntake(
     llamaData.peggedAssets,
     input.signal,
     input.coingeckoApiKey,
+    input.chainRpcs,
+    input.fxFallbackRates,
   );
   if (supplyGapReconciliation.reconciledCount > 0) {
     console.warn(
-      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.reconciledCount} tracked supply gap(s) from history repair: ` +
+      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.reconciledCount} tracked supply gap(s) from gap repair: ` +
       supplyGapReconciliation.reconciledIds.join(", "),
     );
   }

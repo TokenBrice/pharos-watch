@@ -15,11 +15,15 @@ const SOFID_SOFI_ID = "sofid-sofi";
 const CHFAU_ALLUNITY_ID = "chfau-allunity";
 const USBD_BIMA_ID = "usbd-bima";
 const USDQ_QUILL_ID = "usdq-quill";
+const CADD_CAD_DIGITAL_ID = "cadd-cad-digital";
+const JPYM_MENTO_ID = "jpym-mento";
+const ZARM_MENTO_ID = "zarm-mento";
+const XOFM_MENTO_ID = "xofm-mento";
 const BASIS_POINTS_DENOMINATOR = 10_000;
 
 interface ProtocolParConfig {
   id: string;
-  pegType: "peggedUSD" | "peggedCHF";
+  pegType: "peggedUSD" | "peggedCHF" | "peggedCAD" | "peggedJPY" | "peggedZAR" | "peggedXOF";
   feeBps?: number;
 }
 
@@ -28,6 +32,10 @@ const PROTOCOL_PAR_PRICE_CONFIGS: readonly ProtocolParConfig[] = [
   { id: USBD_BIMA_ID, pegType: "peggedUSD" },
   { id: USDQ_QUILL_ID, pegType: "peggedUSD" },
   { id: CHFAU_ALLUNITY_ID, pegType: "peggedCHF" },
+  { id: CADD_CAD_DIGITAL_ID, pegType: "peggedCAD" },
+  { id: JPYM_MENTO_ID, pegType: "peggedJPY" },
+  { id: ZARM_MENTO_ID, pegType: "peggedZAR" },
+  { id: XOFM_MENTO_ID, pegType: "peggedXOF" },
 ];
 
 const PROTOCOL_PAR_PRICE_CONFIGS_BY_ID = new Map<string, ProtocolParConfig>(

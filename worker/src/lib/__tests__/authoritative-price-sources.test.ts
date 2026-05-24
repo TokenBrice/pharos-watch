@@ -422,14 +422,56 @@ describe("authoritative-price-sources", () => {
           symbol: "CHFAU",
           circulating: { peggedCHF: 6_300_000 },
         },
+        {
+          id: "cadd-cad-digital",
+          name: "CAD Digital",
+          symbol: "CADD",
+          circulating: { peggedCAD: 390_000 },
+        },
+        {
+          id: "jpym-mento",
+          name: "Mento Japanese Yen",
+          symbol: "JPYm",
+          circulating: { peggedJPY: 104_000 },
+        },
+        {
+          id: "zarm-mento",
+          name: "Mento South African Rand",
+          symbol: "ZARm",
+          circulating: { peggedZAR: 8_600 },
+        },
+        {
+          id: "xofm-mento",
+          name: "Mento West African CFA Franc",
+          symbol: "XOFm",
+          circulating: { peggedXOF: 32_000 },
+        },
       ],
       undefined,
       {
-        rates: { peggedCHF: 1.27 },
+        rates: {
+          peggedCHF: 1.27,
+          peggedCAD: 0.73,
+          peggedJPY: 0.00628,
+          peggedZAR: 0.0608,
+          peggedXOF: 0.00172,
+        },
         type: "fresh",
         updatedAt: 1_778_000_000,
-        updatedAtByPeg: { peggedCHF: 1_778_000_000 },
-        typeByPeg: { peggedCHF: "fresh" },
+        updatedAtByPeg: {
+          peggedCHF: 1_778_000_000,
+          peggedCAD: 1_778_000_001,
+          peggedJPY: 1_778_000_002,
+          peggedZAR: 1_778_000_003,
+          peggedXOF: 1_778_000_004,
+        },
+        typeByPeg: {
+          peggedCHF: "fresh",
+          peggedCAD: "fresh",
+          peggedJPY: "fresh",
+          peggedZAR: "fresh",
+          peggedXOF: "fresh",
+        },
       },
     );
 
@@ -453,6 +495,34 @@ describe("authoritative-price-sources", () => {
       source: "protocol-redeem",
       confidence: "high",
       observedAt: 1_778_000_000,
+      observedAtMode: "upstream",
+    });
+    expect(overrides.get("cadd-cad-digital")).toMatchObject({
+      price: 0.73,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: 1_778_000_001,
+      observedAtMode: "upstream",
+    });
+    expect(overrides.get("jpym-mento")).toMatchObject({
+      price: 0.00628,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: 1_778_000_002,
+      observedAtMode: "upstream",
+    });
+    expect(overrides.get("zarm-mento")).toMatchObject({
+      price: 0.0608,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: 1_778_000_003,
+      observedAtMode: "upstream",
+    });
+    expect(overrides.get("xofm-mento")).toMatchObject({
+      price: 0.00172,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: 1_778_000_004,
       observedAtMode: "upstream",
     });
   });

@@ -2,11 +2,13 @@ import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { CHAIN_META } from "@shared/lib/chains";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
+import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
 
 const COINGECKO_GAP_THRESHOLD_RATIO = 1.05;
 const COINGECKO_GAP_HISTORY_DAYS = 40;
@@ -44,7 +46,8 @@ interface ZeroSupplyCollapseCandidate {
 
 export type SupplyGapReconciliationReason =
   | "defillama-history-gap-fill"
-  | "coingecko-gap-fill";
+  | "coingecko-gap-fill"
+  | "onchain-total-supply";
 
 export interface SupplyGapReconciliationAsset {
   id: string;
@@ -62,6 +65,14 @@ export interface SupplyGapReconciliationResult {
 }
 
 type SupplyGapCandidate = MissingChainSupplyGapCandidate | ZeroSupplyCollapseCandidate;
+
+function createEmptyReasonCounts(): Record<SupplyGapReconciliationReason, number> {
+  return {
+    "defillama-history-gap-fill": 0,
+    "coingecko-gap-fill": 0,
+    "onchain-total-supply": 0,
+  };
+}
 
 function toPositiveFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
@@ -337,10 +348,67 @@ function applySingleMissingChainRemainder(
   candidate.asset.chainCirculating = chainCirculating;
 }
 
+function getPegReferencePriceUsd(
+  candidate: SupplyGapCandidate,
+  fxFallbackRates?: Record<string, number>,
+): number | null {
+  const meta = ACTIVE_META_BY_ID.get(String(candidate.asset.id));
+  if (meta?.flags.pegCurrency === "USD") return 1;
+
+  const rate = toPositiveFiniteNumber(fxFallbackRates?.[candidate.pegKey]);
+  return rate ?? null;
+}
+
+async function applyCuratedOnChainSupplyGap(input: {
+  candidate: ZeroSupplyCollapseCandidate;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  fxFallbackRates?: Record<string, number>;
+  signal?: AbortSignal;
+}): Promise<number | null> {
+  const meta = ACTIVE_META_BY_ID.get(String(input.candidate.asset.id));
+  if (!meta) return null;
+
+  const priceUsd = getPegReferencePriceUsd(input.candidate, input.fxFallbackRates);
+  if (priceUsd == null) return null;
+
+  const onChainMcap = await fetchCuratedAggregateOnChainMcap(
+    meta,
+    priceUsd,
+    input.chainRpcs,
+    input.signal,
+  );
+  if (!onChainMcap) return null;
+
+  input.candidate.asset.circulating = { [input.candidate.pegKey]: onChainMcap.mcap };
+  input.candidate.asset.circulatingPrevDay = null;
+  input.candidate.asset.circulatingPrevWeek = null;
+  input.candidate.asset.circulatingPrevMonth = null;
+  input.candidate.asset.supplySource = onChainMcap.supplySource;
+  input.candidate.asset.chains = buildKnownDisplayChains(input.candidate.asset.id, input.candidate.asset.chains);
+
+  if (onChainMcap.chainCirculating) {
+    input.candidate.asset.chainCirculating = Object.fromEntries(
+      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, current]) => [
+        chainLabel,
+        {
+          current,
+          circulatingPrevDay: 0,
+          circulatingPrevWeek: 0,
+          circulatingPrevMonth: 0,
+        },
+      ]),
+    );
+  }
+
+  return onChainMcap.mcap;
+}
+
 export async function reconcileTrackedSupplyGaps(
   assets: PeggedAsset[],
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  fxFallbackRates?: Record<string, number>,
 ): Promise<SupplyGapReconciliationResult> {
   const candidateGeckoIds = [...new Set(
     assets.flatMap((asset) => {
@@ -372,7 +440,7 @@ export async function reconcileTrackedSupplyGaps(
       reconciledCount: 0,
       reconciledIds: [],
       totalReconciled: 0,
-      byReason: { "defillama-history-gap-fill": 0, "coingecko-gap-fill": 0 },
+      byReason: createEmptyReasonCounts(),
       assets: [],
     };
   }
@@ -380,28 +448,44 @@ export async function reconcileTrackedSupplyGaps(
   const nowMs = Date.now();
   const reconciledIds: string[] = [];
   const reconciledAssets: SupplyGapReconciliationAsset[] = [];
-  const byReason: Record<SupplyGapReconciliationReason, number> = {
-    "defillama-history-gap-fill": 0,
-    "coingecko-gap-fill": 0,
-  };
+  const byReason = createEmptyReasonCounts();
 
   for (const candidate of candidates) {
     const marketCaps = candidate.kind === "zero-supply-collapse"
       ? await fetchRecentDefiLlamaMarketCaps(candidate.llamaId, candidate.pegKey, signal)
       : await fetchRecentCoinGeckoMarketCaps(candidate.geckoId, signal, coingeckoApiKey);
-    if (marketCaps.length === 0) continue;
+    if (marketCaps.length === 0 && candidate.kind !== "zero-supply-collapse") continue;
 
     const currentFromHistory = findNearestMarketCap(marketCaps, nowMs, MAX_CURRENT_POINT_AGE_MS);
     const day = findNearestMarketCap(marketCaps, nowMs - (24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
     const week = findNearestMarketCap(marketCaps, nowMs - (7 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
     const month = findNearestMarketCap(marketCaps, nowMs - (30 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
 
-    if (currentFromHistory == null || day == null || week == null || month == null) {
+    if (
+      candidate.kind === "zero-supply-collapse" &&
+      (currentFromHistory == null || day == null || week == null || month == null ||
+        currentFromHistory < DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP)
+    ) {
+      const fromSource = candidate.asset.supplySource ?? null;
+      const onChainMcap = await applyCuratedOnChainSupplyGap({
+        candidate,
+        chainRpcs,
+        fxFallbackRates,
+        signal,
+      });
+      if (onChainMcap == null) continue;
+
+      reconciledIds.push(candidate.asset.id);
+      reconciledAssets.push({
+        id: candidate.asset.id,
+        reason: "onchain-total-supply",
+        fromSource,
+        toValue: onChainMcap,
+      });
+      byReason["onchain-total-supply"] += 1;
       continue;
     }
-    if (candidate.kind === "zero-supply-collapse" && currentFromHistory < DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP) {
-      continue;
-    }
+    if (currentFromHistory == null || day == null || week == null || month == null) continue;
 
     const totals = {
       current: currentFromHistory,

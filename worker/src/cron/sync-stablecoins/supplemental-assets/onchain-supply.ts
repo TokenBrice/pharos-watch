@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
+import { CHAIN_META } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import {
@@ -17,7 +18,22 @@ export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; r
   // vault supply plus the guarded protocol-redeem price keeps the asset visible.
   "susdc-spark": { chain: "ethereum" },
 };
+const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<string, readonly { chain: string; rpcUrl?: string; fallbackRpcUrl?: string }[]> = {
+  // DefiLlama currently lists these active assets but intermittently reports a
+  // zero supply row. Use only verified live deployments and fail closed if any
+  // configured chain cannot be read, so this cannot silently undercount.
+  "cadd-cad-digital": [{ chain: "ethereum" }, { chain: "base" }],
+  "jpym-mento": [{ chain: "celo" }],
+  "zarm-mento": [{ chain: "celo" }],
+  "xofm-mento": [{ chain: "celo" }],
+};
 const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
+
+export interface OnChainMcapResult {
+  mcap: number;
+  supplySource: SupplementalOnChainSupplySource;
+  chainCirculating?: Record<string, number>;
+}
 
 function isSupportedOnChainSupplyContract(contract: NonNullable<StablecoinMeta["contracts"]>[number]): boolean {
   return contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron");
@@ -40,6 +56,20 @@ export function selectSupplementalOnChainSupplyContract(
   }
 
   return selectSingleOnChainSupplyContract(meta);
+}
+
+function buildProbeInput(chain: string): LiveReserveInput {
+  return chain === "solana"
+    ? { kind: "onchain-solana" }
+    : { kind: "onchain-evm", chain, rpcMode: "public-rpc" };
+}
+
+function contractDecimals(contract: NonNullable<StablecoinMeta["contracts"]>[number]): number {
+  return contract.decimals ?? (contract.chain === "solana" ? 6 : 18);
+}
+
+function contractChainLabel(contract: NonNullable<StablecoinMeta["contracts"]>[number]): string {
+  return CHAIN_META[contract.chain]?.name ?? contract.chain;
 }
 
 async function adjustOnChainSupplyForExcludedBalances(input: {
@@ -90,13 +120,68 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
   };
 }
 
+async function fetchOnChainSupplyForContract(input: {
+  meta: StablecoinMeta;
+  supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
+  priceUsd: number;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
+}): Promise<{
+  mcap: number;
+  supplySource: SupplementalOnChainSupplySource;
+  chainLabel: string;
+} | null> {
+  const probeInput = buildProbeInput(input.supplyContract.chain);
+  const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
+  const chainRpc = input.supplyContract.chain === "solana"
+    ? undefined
+    : input.chainRpcs?.get(input.supplyContract.chain);
+
+  try {
+    const raw = await probeTrackedTokenSupply(
+      input.meta,
+      probeInput,
+      supplySignal,
+      "fiat-cg",
+      undefined,
+      input.curated?.rpcUrl ?? chainRpc?.rpcUrl,
+      input.curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl,
+    );
+    if (raw <= 0n) return null;
+
+    const adjustment = await adjustOnChainSupplyForExcludedBalances({
+      meta: input.meta,
+      supplyContract: input.supplyContract,
+      totalSupplyRaw: raw,
+      signal: supplySignal,
+      chainRpc,
+      curatedRpc: input.curated,
+    });
+    const supplyRaw = adjustment?.raw ?? raw;
+    const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
+    const supply = Number(supplyRaw) / 10 ** contractDecimals(input.supplyContract);
+    const mcap = supply * input.priceUsd;
+    if (Number.isFinite(mcap) && mcap > 0) {
+      const chainLabel = contractChainLabel(input.supplyContract);
+      console.log(`[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`);
+      return { mcap, supplySource, chainLabel };
+    }
+  } catch (err) {
+    const chainLabel = input.supplyContract.chain === "solana" ? "Solana" : "EVM";
+    console.warn(`[fiat-cg] ${chainLabel} supply probe failed for ${input.meta.symbol}: ${String(err).slice(0, 200)}`);
+  }
+
+  return null;
+}
+
 /** Fetch supply from one unambiguous on-chain contract and return mcap = supply × price. */
 export async function fetchOnChainMcap(
   meta: StablecoinMeta,
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
-): Promise<{ mcap: number; supplySource: SupplementalOnChainSupplySource } | null> {
+): Promise<OnChainMcapResult | null> {
   const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
   const supplyContract = selectSupplementalOnChainSupplyContract(meta);
   if (!supplyContract) {
@@ -106,48 +191,55 @@ export async function fetchOnChainMcap(
     return null;
   }
 
-  const probeInput: LiveReserveInput = supplyContract.chain === "solana"
-    ? { kind: "onchain-solana" }
-    : { kind: "onchain-evm", chain: supplyContract.chain, rpcMode: "public-rpc" };
-  const supplySignal = signal ?? AbortSignal.timeout(10_000);
-  const chainRpc = supplyContract.chain === "solana"
-    ? undefined
-    : chainRpcs?.get(supplyContract.chain);
+  const result = await fetchOnChainSupplyForContract({
+    meta,
+    supplyContract,
+    priceUsd,
+    chainRpcs,
+    signal,
+    curated,
+  });
+  return result ? { mcap: result.mcap, supplySource: result.supplySource } : null;
+}
 
-  try {
-    const raw = await probeTrackedTokenSupply(
-      meta,
-      probeInput,
-      supplySignal,
-      "fiat-cg",
-      undefined,
-      curated?.rpcUrl ?? chainRpc?.rpcUrl,
-      curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl,
-    );
-    if (raw <= 0n) return null;
+export async function fetchCuratedAggregateOnChainMcap(
+  meta: StablecoinMeta,
+  priceUsd: number,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<OnChainMcapResult | null> {
+  const curatedContracts = CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
+  if (!curatedContracts || curatedContracts.length === 0) return null;
 
-    const adjustment = await adjustOnChainSupplyForExcludedBalances({
+  let totalMcap = 0;
+  const chainCirculating: Record<string, number> = {};
+  for (const curated of curatedContracts) {
+    const supplyContract = meta.contracts?.find((entry) => entry.chain === curated.chain);
+    if (!supplyContract || !isSupportedOnChainSupplyContract(supplyContract)) {
+      console.warn(`[fiat-cg] ${meta.symbol}: configured aggregate supply chain ${curated.chain} is missing or unsupported`);
+      return null;
+    }
+
+    const result = await fetchOnChainSupplyForContract({
       meta,
       supplyContract,
-      totalSupplyRaw: raw,
-      signal: supplySignal,
-      chainRpc,
-      curatedRpc: curated,
+      priceUsd,
+      chainRpcs,
+      signal,
+      curated,
     });
-    const supplyRaw = adjustment?.raw ?? raw;
-    const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
-    const decimals = supplyContract.decimals ?? (supplyContract.chain === "solana" ? 6 : 18);
-    const supply = Number(supplyRaw) / 10 ** decimals;
-    const mcap = supply * priceUsd;
-    if (Number.isFinite(mcap) && mcap > 0) {
-      const chainLabel = supplyContract.chain === "solana" ? "Solana" : "On-chain";
-      console.log(`[fiat-cg] ${chainLabel} supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
-      return { mcap, supplySource };
+    if (!result || result.supplySource !== "onchain-total-supply") {
+      return null;
     }
-  } catch (err) {
-    const chainLabel = supplyContract.chain === "solana" ? "Solana" : "EVM";
-    console.warn(`[fiat-cg] ${chainLabel} supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
+
+    totalMcap += result.mcap;
+    chainCirculating[result.chainLabel] = (chainCirculating[result.chainLabel] ?? 0) + result.mcap;
   }
 
-  return null;
+  if (!Number.isFinite(totalMcap) || totalMcap <= 0) return null;
+  return {
+    mcap: totalMcap,
+    supplySource: "onchain-total-supply",
+    chainCirculating,
+  };
 }

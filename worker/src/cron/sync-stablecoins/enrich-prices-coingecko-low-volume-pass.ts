@@ -18,6 +18,8 @@ const COINGECKO_LOW_VOLUME_SOURCE = "coingecko-low-volume";
 // Explicitly scoped to DL-listed assets identified by the May 2026 missing-price
 // audit. This avoids turning every stale CoinGecko row into a fallback price.
 const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
+  "mnee-mnee",
+  "veur-vnx",
   "usp-pareto-credit",
   "tryb-bilira",
 ]);

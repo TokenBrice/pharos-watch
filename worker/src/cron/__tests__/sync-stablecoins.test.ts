@@ -99,6 +99,49 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       flags: { pegCurrency: "CHF", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
+      id: "cadd-cad-digital",
+      name: "CAD Digital",
+      symbol: "CADD",
+      geckoId: "cad-digital",
+      llamaId: "387",
+      detailProvider: "defillama",
+      contracts: [
+        { chain: "ethereum", address: "0x16f93ebc5320c89efc8701577efe49d14a276a06", decimals: 18 },
+        { chain: "base", address: "0x16f93ebc5320c89efc8701577efe49d14a276a06", decimals: 18 },
+      ],
+      flags: { pegCurrency: "CAD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
+    {
+      id: "jpym-mento",
+      name: "Mento Japanese Yen",
+      symbol: "JPYm",
+      geckoId: "celo-japanese-yen",
+      llamaId: "363",
+      detailProvider: "defillama",
+      contracts: [{ chain: "celo", address: "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20", decimals: 18 }],
+      flags: { pegCurrency: "JPY", backing: "crypto-backed", yieldBearing: false, navToken: false, governance: "centralized-dependent" },
+    },
+    {
+      id: "zarm-mento",
+      name: "Mento South African Rand",
+      symbol: "ZARm",
+      geckoId: "celo-south-african-rand",
+      llamaId: "368",
+      detailProvider: "defillama",
+      contracts: [{ chain: "celo", address: "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", decimals: 18 }],
+      flags: { pegCurrency: "ZAR", backing: "crypto-backed", yieldBearing: false, navToken: false, governance: "centralized-dependent" },
+    },
+    {
+      id: "xofm-mento",
+      name: "Mento West African CFA Franc",
+      symbol: "XOFm",
+      geckoId: "celo-west-african-cfa-franc",
+      llamaId: "371",
+      detailProvider: "defillama",
+      contracts: [{ chain: "celo", address: "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08", decimals: 18 }],
+      flags: { pegCurrency: "XOF", backing: "crypto-backed", yieldBearing: false, navToken: false, governance: "centralized-dependent" },
+    },
+    {
       id: "usdk-kast",
       name: "KAST Dollar",
       symbol: "USDK",
@@ -159,6 +202,41 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       geckoId: "allunity-chf",
       cmcSlug: undefined,
       flags: { navToken: false },
+    }],
+    ["cadd-cad-digital", {
+      geckoId: "cad-digital",
+      cmcSlug: undefined,
+      llamaId: "387",
+      detailProvider: "defillama",
+      contracts: [
+        { chain: "ethereum", address: "0x16f93ebc5320c89efc8701577efe49d14a276a06", decimals: 18 },
+        { chain: "base", address: "0x16f93ebc5320c89efc8701577efe49d14a276a06", decimals: 18 },
+      ],
+      flags: { navToken: false, pegCurrency: "CAD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
+    }],
+    ["jpym-mento", {
+      geckoId: "celo-japanese-yen",
+      cmcSlug: undefined,
+      llamaId: "363",
+      detailProvider: "defillama",
+      contracts: [{ chain: "celo", address: "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20", decimals: 18 }],
+      flags: { navToken: false, pegCurrency: "JPY", backing: "crypto-backed", yieldBearing: false, governance: "centralized-dependent" },
+    }],
+    ["zarm-mento", {
+      geckoId: "celo-south-african-rand",
+      cmcSlug: undefined,
+      llamaId: "368",
+      detailProvider: "defillama",
+      contracts: [{ chain: "celo", address: "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", decimals: 18 }],
+      flags: { navToken: false, pegCurrency: "ZAR", backing: "crypto-backed", yieldBearing: false, governance: "centralized-dependent" },
+    }],
+    ["xofm-mento", {
+      geckoId: "celo-west-african-cfa-franc",
+      cmcSlug: undefined,
+      llamaId: "371",
+      detailProvider: "defillama",
+      contracts: [{ chain: "celo", address: "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08", decimals: 18 }],
+      flags: { navToken: false, pegCurrency: "XOF", backing: "crypto-backed", yieldBearing: false, governance: "centralized-dependent" },
     }],
     ["usdk-kast", {
       geckoId: undefined,
@@ -2069,6 +2147,173 @@ describe("syncStablecoins", () => {
     expect(tryb?.circulatingPrevDay).toEqual({ peggedTRY: 15_220_000 });
     expect(tryb?.circulatingPrevWeek).toEqual({ peggedTRY: 15_100_000 });
     expect(tryb?.circulatingPrevMonth).toEqual({ peggedTRY: 14_800_000 });
+  });
+
+  it("repairs curated zero-supply DefiLlama rows from on-chain supply and FX references", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedCAD: 0.73,
+            peggedJPY: 0.00628,
+            peggedZAR: 0.0608,
+            peggedXOF: 0.00172,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+      { match: "cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+    ]);
+    const dlData = makeDlResponse(60);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+    const evmSupplyByAddress = new Map<string, bigint>([
+      ["0x16f93ebc5320c89efc8701577efe49d14a276a06", 270_650_000_000_000_000_000_000n],
+      ["base:0x16f93ebc5320c89efc8701577efe49d14a276a06", 260_100_000_000_000_000_000_000n],
+      ["0xc45ecf20f3cd864b32d9794d6f76814ae8892e20", 16_501_134_892_552_301_307_041_485n],
+      ["0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", 141_426_024_661_407_895_821_776n],
+      ["0x73f93dcc49cb8a239e2032663e9475dd5ef29a08", 19_186_522_679_089_184_899_615_544n],
+    ]);
+    const evmSupplySpy = vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock")
+      .mockImplementation(async (chain, to) => {
+        const address = String(to).toLowerCase();
+        return evmSupplyByAddress.get(`${chain}:${address}`) ?? evmSupplyByAddress.get(address) ?? null;
+      });
+
+    const zeroRows = [
+      {
+        id: "387",
+        canonicalId: "cadd-cad-digital",
+        name: "CAD Digital",
+        symbol: "CADD",
+        geckoId: "cad-digital",
+        pegType: "peggedCAD",
+        pegMechanism: "rwa-backed",
+        chains: ["Ethereum", "Base"],
+        chainCirculating: {
+          Ethereum: { current: { peggedCAD: 0 }, circulatingPrevDay: { peggedCAD: 0 }, circulatingPrevWeek: { peggedCAD: 0 }, circulatingPrevMonth: { peggedCAD: 0 } },
+          Base: { current: { peggedCAD: 0 }, circulatingPrevDay: { peggedCAD: 0 }, circulatingPrevWeek: { peggedCAD: 0 }, circulatingPrevMonth: { peggedCAD: 0 } },
+        },
+      },
+      {
+        id: "363",
+        canonicalId: "jpym-mento",
+        name: "Mento Japanese Yen",
+        symbol: "JPYm",
+        geckoId: "celo-japanese-yen",
+        pegType: "peggedJPY",
+        pegMechanism: "crypto-backed",
+        chains: ["Celo"],
+        chainCirculating: {
+          Celo: { current: { peggedJPY: 0 }, circulatingPrevDay: { peggedJPY: 0 }, circulatingPrevWeek: { peggedJPY: 0 }, circulatingPrevMonth: { peggedJPY: 0 } },
+        },
+      },
+      {
+        id: "368",
+        canonicalId: "zarm-mento",
+        name: "Mento South African Rand",
+        symbol: "ZARm",
+        geckoId: "celo-south-african-rand",
+        pegType: "peggedZAR",
+        pegMechanism: "crypto-backed",
+        chains: ["Celo"],
+        chainCirculating: {
+          Celo: { current: { peggedZAR: 0 }, circulatingPrevDay: { peggedZAR: 0 }, circulatingPrevWeek: { peggedZAR: 0 }, circulatingPrevMonth: { peggedZAR: 0 } },
+        },
+      },
+      {
+        id: "371",
+        canonicalId: "xofm-mento",
+        name: "Mento West African CFA Franc",
+        symbol: "XOFm",
+        geckoId: "celo-west-african-cfa-franc",
+        pegType: "peggedXOF",
+        pegMechanism: "crypto-backed",
+        chains: ["Celo"],
+        chainCirculating: {
+          Celo: { current: { peggedXOF: 0 }, circulatingPrevDay: { peggedXOF: 0 }, circulatingPrevWeek: { peggedXOF: 0 }, circulatingPrevMonth: { peggedXOF: 0 } },
+        },
+      },
+    ];
+    zeroRows.forEach((row, index) => {
+      dlData.peggedAssets[index] = {
+        id: row.id,
+        name: row.name,
+        symbol: row.symbol,
+        geckoId: row.geckoId,
+        price: null,
+        priceSource: "defillama",
+        priceConfidence: null,
+        supplySource: "defillama",
+        pegType: row.pegType,
+        pegMechanism: row.pegMechanism,
+        circulating: { [row.pegType]: 0 },
+        circulatingPrevDay: { [row.pegType]: 0 },
+        circulatingPrevWeek: { [row.pegType]: 0 },
+        circulatingPrevMonth: { [row.pegType]: 0 },
+        chainCirculating: row.chainCirculating,
+        chains: row.chains,
+      } as unknown as (typeof dlData.peggedAssets)[0];
+    });
+    vi.mocked(fetchAuthoritativeLivePriceOverrides).mockResolvedValue(new Map([
+      ["cadd-cad-digital", { price: 0.73, source: "protocol-redeem", confidence: "high", observedAt: nowSec - 60, observedAtMode: "upstream" }],
+      ["jpym-mento", { price: 0.00628, source: "protocol-redeem", confidence: "high", observedAt: nowSec - 60, observedAtMode: "upstream" }],
+      ["zarm-mento", { price: 0.0608, source: "protocol-redeem", confidence: "high", observedAt: nowSec - 60, observedAtMode: "upstream" }],
+      ["xofm-mento", { price: 0.00172, source: "protocol-redeem", confidence: "high", observedAt: nowSec - 60, observedAtMode: "upstream" }],
+    ]));
+
+    mockFetchWithRetry([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoincharts/all", body: [] },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    expect(evmSupplySpy).toHaveBeenCalledWith(
+      "ethereum",
+      "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+      "0x18160ddd",
+      "latest",
+      expect.any(Object),
+    );
+    expect(evmSupplySpy).toHaveBeenCalledWith(
+      "base",
+      "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+      "0x18160ddd",
+      "latest",
+      expect.any(Object),
+    );
+
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const byId = new Map(payload?.peggedAssets.map((asset) => [asset.id, asset]) ?? []);
+    const cadd = byId.get("cadd-cad-digital");
+    const jpym = byId.get("jpym-mento");
+    const zarm = byId.get("zarm-mento");
+    const xofm = byId.get("xofm-mento");
+
+    expect(cadd).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.73 });
+    expect((cadd?.circulating as Record<string, number> | undefined)?.peggedCAD).toBeCloseTo(387_447.5, 6);
+    expect((cadd?.chainCirculating as Record<string, { current: number }> | undefined)?.Ethereum.current).toBeCloseTo(197_574.5, 6);
+    expect((cadd?.chainCirculating as Record<string, { current: number }> | undefined)?.Base.current).toBeCloseTo(189_873, 6);
+    expect(jpym).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.00628 });
+    expect((jpym?.circulating as Record<string, number> | undefined)?.peggedJPY).toBeCloseTo(103_627.12712522845, 6);
+    expect(zarm).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.0608 });
+    expect((zarm?.circulating as Record<string, number> | undefined)?.peggedZAR).toBeCloseTo(8_598.7022994136, 6);
+    expect(xofm).toMatchObject({ supplySource: "onchain-total-supply", priceSource: "protocol-redeem", priceConfidence: "high", price: 0.00172 });
+    expect((xofm?.circulating as Record<string, number> | undefined)?.peggedXOF).toBeCloseTo(33_000.819008033395, 6);
+    expect((xofm?.chainCirculating as Record<string, { current: number }> | undefined)?.Celo.current).toBeCloseTo(33_000.819008033395, 6);
   });
 
   it("adds tracked gold supplemental assets when DefiLlama price data is empty but CoinGecko still has price and market cap", async () => {
