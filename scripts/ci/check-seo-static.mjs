@@ -43,6 +43,20 @@ const RICHNESS_CHECKS = [
 const LOADING_SHELL_PATTERN = /\b(?:loading|placeholder|skeleton|fetching|pending)\b/gi;
 const MAX_LOADING_WORD_RATIO = 0.15;
 const MAX_LOADING_WORD_COUNT = 4;
+const REQUIRED_STATIC_HEADER_RULES = [
+  { route: "/*.txt", header: "X-Robots-Tag", directives: ["noindex", "nofollow"], label: "raw .txt payloads" },
+  { route: "/stablecoin/*/yield/", header: "X-Robots-Tag", directives: ["noindex"], label: "yield detail pages" },
+  { route: "/stablecoin/*/yield/*", header: "X-Robots-Tag", directives: ["noindex"], label: "yield detail assets" },
+  { route: "/openapi.json", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "OpenAPI artifact" },
+  { route: "/datasets/*.json", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "JSON datasets" },
+  { route: "/datasets/*.csv", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "CSV datasets" },
+  { route: "/datasets/*.ndjson", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "NDJSON datasets" },
+  { route: "/sheets/*.csv", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "Sheets CSV exports" },
+  { route: "/postman/*.json", header: "X-Robots-Tag", directives: ["noindex", "follow"], label: "Postman artifacts" },
+];
+const REQUIRED_STATIC_HEADER_RESETS = [
+  { route: "/llms.txt", header: "X-Robots-Tag", label: "LLM-facing index" },
+];
 
 // FAQ structured data is retained as semantic markup for visible Q&A content.
 // Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
@@ -281,6 +295,84 @@ function getRobotsConflicts(robotsTags) {
     conflicts.push("nofollow conflicts with follow");
   }
   return conflicts;
+}
+
+function parseStaticHeadersFile(text) {
+  const blocks = [];
+  let current = null;
+
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    if (/^\S/.test(line)) {
+      current = {
+        route: trimmed,
+        headers: new Map(),
+        resets: new Set(),
+      };
+      blocks.push(current);
+      continue;
+    }
+
+    if (!current) continue;
+    if (trimmed.startsWith("!")) {
+      current.resets.add(trimmed.slice(1).trim().toLowerCase());
+      continue;
+    }
+
+    const match = trimmed.match(/^([^:]+):\s*(.*)$/);
+    if (!match) continue;
+    const name = match[1].trim().toLowerCase();
+    const value = match[2].trim();
+    current.headers.set(name, [...(current.headers.get(name) ?? []), value]);
+  }
+
+  return blocks;
+}
+
+function validateStaticHeaders(outDir, errors) {
+  const headersPath = path.join(outDir, "_headers");
+  if (!fs.existsSync(headersPath)) {
+    errors.push("static headers missing _headers file");
+    return;
+  }
+
+  const blocks = parseStaticHeadersFile(fs.readFileSync(headersPath, "utf8"));
+  const blockByRoute = new Map(blocks.map((block) => [block.route, block]));
+
+  for (const rule of REQUIRED_STATIC_HEADER_RULES) {
+    const block = blockByRoute.get(rule.route);
+    if (!block) {
+      errors.push(`static headers missing ${rule.label} rule for ${rule.route}`);
+      continue;
+    }
+
+    const values = block.headers.get(rule.header.toLowerCase()) ?? [];
+    if (values.length === 0) {
+      errors.push(`static headers missing ${rule.header} on ${rule.label} rule ${rule.route}`);
+      continue;
+    }
+
+    const directives = getRobotsDirectives(values);
+    for (const directive of rule.directives) {
+      if (!directives.has(directive)) {
+        errors.push(`static headers ${rule.label} rule ${rule.route} missing ${rule.header} directive ${directive}`);
+      }
+    }
+  }
+
+  for (const reset of REQUIRED_STATIC_HEADER_RESETS) {
+    const block = blockByRoute.get(reset.route);
+    if (!block) {
+      errors.push(`static headers missing ${reset.label} rule for ${reset.route}`);
+      continue;
+    }
+
+    if (!block.resets.has(reset.header.toLowerCase())) {
+      errors.push(`static headers ${reset.label} rule ${reset.route} must reset ${reset.header}`);
+    }
+  }
 }
 
 function normalizeHref(href) {
@@ -646,6 +738,10 @@ function sitemapRouteFromPharosUrl(loc) {
   return { route };
 }
 
+function canonicalUrlForRoute(route) {
+  return `${PHAROS_ORIGIN}${route === "/" ? "/" : route}`;
+}
+
 // Returns the same-origin path that must exist in `out/` for an og:image / twitter:image
 // reference, or `null` for external URLs (e.g. the dynamic /api/og/* worker route) that
 // are not served by the static export.
@@ -702,6 +798,8 @@ export function collectSeoStaticCheckResult({
     };
   });
 
+  validateStaticHeaders(outDir, errors);
+
   for (const record of pageRecords) {
     if (BAILOUT_PATTERN.test(record.html)) {
       errors.push(`${record.route}: CSR bailout marker found in HTML`);
@@ -711,6 +809,14 @@ export function collectSeoStaticCheckResult({
     if (!record.description) errors.push(`${record.route}: missing meta description`);
     const indexable = isIndexable(record.robotsTags);
     if (indexable && !record.canonical) errors.push(`${record.route}: missing canonical`);
+    if (indexable && record.canonical) {
+      const expectedCanonical = canonicalUrlForRoute(record.route);
+      if (record.canonical !== expectedCanonical) {
+        errors.push(
+          `${record.route}: canonical does not self-match local route: ${record.canonical} (expected ${expectedCanonical})`,
+        );
+      }
+    }
     if (!record.ogTitle) errors.push(`${record.route}: missing og:title`);
     if (!record.ogDescription) errors.push(`${record.route}: missing og:description`);
     if (!record.twitterCard) errors.push(`${record.route}: missing twitter:card`);

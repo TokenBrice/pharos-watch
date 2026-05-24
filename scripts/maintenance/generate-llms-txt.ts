@@ -6,6 +6,10 @@ import { CEMETERY_ENTRIES } from "../../shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
+import { MECHANISM_ARCHETYPE_VALUES } from "../../shared/types/core";
+import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
+import { GLOSSARY_ENTRIES } from "../../src/app/learn/glossary/content";
+import { ARCHETYPE_CONTENT } from "../../src/app/learn/mechanisms/content";
 import type { BackingType, GovernanceType, StablecoinMeta } from "../../shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
@@ -112,6 +116,55 @@ const methodologyLinks = [
   ["Pricing Pipeline Changelog", absolute("/methodology/pricing-pipeline-changelog/"), ""],
 ] as const;
 
+const glossaryHighlights = ["psi", "dews", "pegscore", "safety-score", "liquidity-score", "freezewatch"] as const;
+
+const learnLinks = [
+  [
+    "Learn",
+    absolute("/learn/"),
+    "Stablecoin mechanisms, depeg case studies, and version-pinned Pharos vocabulary.",
+  ],
+  [
+    "Stablecoin Glossary",
+    absolute("/learn/glossary/"),
+    `${GLOSSARY_ENTRIES.length} citation-ready definitions for Pharos stablecoin analytics terminology.`,
+  ],
+  ...glossaryHighlights.map((id) => {
+    const entry = GLOSSARY_ENTRIES.find((candidate) => candidate.id === id);
+    if (!entry) {
+      throw new Error(`Missing glossary highlight: ${id}`);
+    }
+    return [
+      `Glossary: ${entry.term}`,
+      absolute(`/learn/glossary/#${entry.id}`),
+      entry.definition,
+    ] as const;
+  }),
+  [
+    "Stablecoin Mechanisms",
+    absolute("/learn/mechanisms/"),
+    `${MECHANISM_ARCHETYPE_VALUES.length} plain-English explainers for the stablecoin mechanism archetypes Pharos tracks.`,
+  ],
+  ...MECHANISM_ARCHETYPE_VALUES.map((archetype) => {
+    const content = ARCHETYPE_CONTENT[archetype];
+    return [
+      `Mechanism: ${content.headline}`,
+      absolute(`/learn/mechanisms/${archetype}/`),
+      content.subtitle,
+    ] as const;
+  }),
+  [
+    "Stablecoin Case Studies",
+    absolute("/learn/case-studies/"),
+    `${CASE_STUDY_LIST.length} long-form retrospectives on stablecoin depegs, failures, and recoveries.`,
+  ],
+  ...CASE_STUDY_LIST.map((study) => [
+    `Case study: ${study.title}`,
+    absolute(`/learn/case-studies/${study.slug}/`),
+    study.subtitle,
+  ] as const),
+] as const;
+
 const apiLinks = [
   ["API Access", absolute("/api/"), "Email-verified self-serve API key request flow."],
   ["API Reference", absolute("/about/api/"), "Public and ops lanes, auth model, endpoint catalogue."],
@@ -168,6 +221,10 @@ function render(): string {
     "## Methodology",
     "",
     ...renderLinkList(methodologyLinks),
+    "",
+    "## Learn",
+    "",
+    ...renderLinkList(learnLinks),
     "",
     "## API",
     "",

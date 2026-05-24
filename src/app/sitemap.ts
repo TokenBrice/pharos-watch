@@ -356,7 +356,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map((coin) => ({
     url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
-    lastModified: now,
+    lastModified: lastEdited(buildStablecoinUrl(coin.id)),
     changeFrequency: "daily" as const,
     priority: 0.6,
   }));

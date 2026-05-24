@@ -27,6 +27,23 @@ function nullableRef(name: string) {
 const stringOrNull = { type: ["string", "null"] };
 const numberOrNull = { type: ["number", "null"] };
 
+const TAG_DESCRIPTIONS = {
+  Health: "No-key canary and health probes for API availability checks.",
+  Stablecoins: "Current stablecoin registry, per-asset detail, reserves, summaries, and chart surfaces.",
+  "Peg Monitoring": "Peg summaries, depeg incidents, and stress signals for stablecoin peg stability.",
+  Liquidity: "DEX liquidity scores, history, pool quality, and exit-capacity analytics.",
+  Risk: "Safety reports, bluechip ratings, redemption backstops, events, and cross-signal risk surfaces.",
+  Blacklist: "Issuer freeze, blacklist, unblacklist, destroy, and exposure summary data.",
+  Flows: "Mint and burn flow aggregates plus normalized issuance-chain event streams.",
+  Yield: "Yield Intelligence rankings, adapter manifests, and per-stablecoin yield history.",
+  Chains: "Per-chain stablecoin distribution, concentration, quality, and health surfaces.",
+  "Market Structure": "Non-USD peg share, alternate peg composition, and public market-structure snapshots.",
+  History: "Historical and archive endpoints intended for slower polling or point-in-time retrieval.",
+  Digest: "Daily and weekly stablecoin market digest snapshots and archive indexes.",
+  Status: "Public operational status timelines and lightweight product telemetry.",
+  Reserves: "Reserve composition and redemption-support context for supported stablecoins.",
+} as const satisfies Record<(typeof PUBLIC_API_ARTIFACT_TAGS)[number], string>;
+
 function buildParameters(endpoint: PublicApiArtifactEndpoint) {
   return endpoint.parameters?.map((parameter) => ({
     name: parameter.name,
@@ -115,7 +132,7 @@ function render() {
       },
     ],
     security: [{ ApiKeyAuth: [] }],
-    tags: PUBLIC_API_ARTIFACT_TAGS.map((name) => ({ name })),
+    tags: PUBLIC_API_ARTIFACT_TAGS.map((name) => ({ name, description: TAG_DESCRIPTIONS[name] })),
     paths,
     components: {
       securitySchemes: {

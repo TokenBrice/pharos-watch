@@ -31,46 +31,60 @@
   ],
   "tags": [
     {
-      "name": "Health"
+      "name": "Health",
+      "description": "No-key canary and health probes for API availability checks."
     },
     {
-      "name": "Stablecoins"
+      "name": "Stablecoins",
+      "description": "Current stablecoin registry, per-asset detail, reserves, summaries, and chart surfaces."
     },
     {
-      "name": "Peg Monitoring"
+      "name": "Peg Monitoring",
+      "description": "Peg summaries, depeg incidents, and stress signals for stablecoin peg stability."
     },
     {
-      "name": "Liquidity"
+      "name": "Liquidity",
+      "description": "DEX liquidity scores, history, pool quality, and exit-capacity analytics."
     },
     {
-      "name": "Risk"
+      "name": "Risk",
+      "description": "Safety reports, bluechip ratings, redemption backstops, events, and cross-signal risk surfaces."
     },
     {
-      "name": "Blacklist"
+      "name": "Blacklist",
+      "description": "Issuer freeze, blacklist, unblacklist, destroy, and exposure summary data."
     },
     {
-      "name": "Flows"
+      "name": "Flows",
+      "description": "Mint and burn flow aggregates plus normalized issuance-chain event streams."
     },
     {
-      "name": "Yield"
+      "name": "Yield",
+      "description": "Yield Intelligence rankings, adapter manifests, and per-stablecoin yield history."
     },
     {
-      "name": "Chains"
+      "name": "Chains",
+      "description": "Per-chain stablecoin distribution, concentration, quality, and health surfaces."
     },
     {
-      "name": "Market Structure"
+      "name": "Market Structure",
+      "description": "Non-USD peg share, alternate peg composition, and public market-structure snapshots."
     },
     {
-      "name": "History"
+      "name": "History",
+      "description": "Historical and archive endpoints intended for slower polling or point-in-time retrieval."
     },
     {
-      "name": "Digest"
+      "name": "Digest",
+      "description": "Daily and weekly stablecoin market digest snapshots and archive indexes."
     },
     {
-      "name": "Status"
+      "name": "Status",
+      "description": "Public operational status timelines and lightweight product telemetry."
     },
     {
-      "name": "Reserves"
+      "name": "Reserves",
+      "description": "Reserve composition and redemption-support context for supported stablecoins."
     }
   ],
   "paths": {

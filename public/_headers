@@ -10,6 +10,12 @@
 /compare/
   X-Robots-Tag: noindex, follow
 
+/stablecoin/*/yield/
+  X-Robots-Tag: noindex, follow
+
+/stablecoin/*/yield/*
+  X-Robots-Tag: noindex, follow
+
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -43,7 +49,11 @@
   ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 
+/*.txt
+  X-Robots-Tag: noindex, nofollow
+
 /llms.txt
+  ! X-Robots-Tag
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: text/plain; charset=utf-8
@@ -54,29 +64,34 @@
   Content-Type: application/rss+xml; charset=utf-8
 
 /openapi.json
+  X-Robots-Tag: noindex, follow
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: application/json; charset=utf-8
 
 /datasets/*.json
+  X-Robots-Tag: noindex, follow
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: application/json; charset=utf-8
   Access-Control-Allow-Origin: *
 
 /datasets/*.csv
+  X-Robots-Tag: noindex, follow
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: text/csv; charset=utf-8
   Access-Control-Allow-Origin: *
 
 /datasets/*.ndjson
+  X-Robots-Tag: noindex, follow
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: application/x-ndjson; charset=utf-8
   Access-Control-Allow-Origin: *
 
 /sheets/*.csv
+  X-Robots-Tag: noindex, follow
   ! Cache-Control
   Cache-Control: public, max-age=60
   Content-Type: text/csv; charset=utf-8
@@ -84,6 +99,7 @@
   Access-Control-Allow-Origin: *
 
 /postman/*.json
+  X-Robots-Tag: noindex, follow
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: application/json; charset=utf-8

@@ -6,6 +6,36 @@ import { afterEach, describe, expect, it } from "vitest";
 import { collectSeoStaticCheckResult } from "../ci/check-seo-static.mjs";
 
 const roots: string[] = [];
+const BASELINE_HEADERS = `/*.txt
+  X-Robots-Tag: noindex, nofollow
+
+/stablecoin/*/yield/
+  X-Robots-Tag: noindex, follow
+
+/stablecoin/*/yield/*
+  X-Robots-Tag: noindex, follow
+
+/llms.txt
+  ! X-Robots-Tag
+
+/openapi.json
+  X-Robots-Tag: noindex, follow
+
+/datasets/*.json
+  X-Robots-Tag: noindex, follow
+
+/datasets/*.csv
+  X-Robots-Tag: noindex, follow
+
+/datasets/*.ndjson
+  X-Robots-Tag: noindex, follow
+
+/sheets/*.csv
+  X-Robots-Tag: noindex, follow
+
+/postman/*.json
+  X-Robots-Tag: noindex, follow
+`;
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
@@ -14,6 +44,7 @@ afterEach(async () => {
 async function makeOutDir() {
   const root = await mkdtemp(path.join(os.tmpdir(), "pharos-seo-static-"));
   roots.push(root);
+  await writeFile(path.join(root, "_headers"), BASELINE_HEADERS);
   return root;
 }
 
@@ -225,6 +256,63 @@ describe("check-seo-static", () => {
     const result = collectFixtureSeoResult(root);
 
     expect(result.errors.some((error) => error.includes("/404/: missing canonical"))).toBe(false);
+  });
+
+  it("fails when static X-Robots header rules drift", async () => {
+    const root = await makeOutDir();
+    await writeFile(path.join(root, "_headers"), `/llms.txt\n  X-Robots-Tag: noindex, nofollow\n`);
+    await writeBaselinePages(root);
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("static headers missing raw .txt payloads rule for /*.txt"),
+        expect.stringContaining("static headers LLM-facing index rule /llms.txt must reset X-Robots-Tag"),
+      ]),
+    );
+  });
+
+  it("fails indexable pages whose canonical does not match their local route", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"] });
+    await writePage(root, "/stability-index/", {
+      h1: "Stability Index",
+      canonical: "https://pharos.watch/",
+    });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "/stability-index/: canonical does not self-match local route: https://pharos.watch/ (expected https://pharos.watch/stability-index/)",
+        ),
+      ]),
+    );
+  });
+
+  it("requires the homepage canonical to include the root slash", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      canonical: "https://pharos.watch",
+    });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "/: canonical does not self-match local route: https://pharos.watch (expected https://pharos.watch/)",
+        ),
+      ]),
+    );
   });
 
   it("fails conflicting robots directives across robots tags", async () => {
