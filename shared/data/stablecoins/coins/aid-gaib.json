@@ -63,6 +63,118 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "AID uses role-gated issuer minting. Ethereum role reconstruction identified two active MINTER_ROLE contract holders and two default-admin holders, including one verified 3/5 Safe.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x410C19F3f80B64C7486Ae34890Ee9251D0696433",
+        "label": "AID Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          }
+        ],
+        "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 23682560 to 25166950 found this contract-backed address holding MINTER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE2E1424687EB676b3807693CBb439362b8eA908E",
+        "label": "AID Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          }
+        ],
+        "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 23682560 to 25166950 found this contract-backed address holding MINTER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x32793F6B11820Fa9C7039dFa640B751f491A027d",
+        "label": "AID default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "AID default-admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this address holding DEFAULT_ADMIN_ROLE. Safe Transaction Service identified it as a 3/5 Safe with no enabled modules and zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
+        "label": "AID additional default-admin account",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this account holding DEFAULT_ADMIN_ROLE, but signer custody and Safe status were not resolved."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "GAIB AID docs",
+          "url": "https://docs.gaib.ai/how-aid-works"
+        },
+        {
+          "label": "AID Ethereum token",
+          "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+        },
+        {
+          "label": "AID RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x18f52b3fb465118731d9e0d276d4eb3599d57596&fromBlock=23682560&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AID default-admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+        }
+      ],
+      "evidence": "GAIB docs describe AID mint and redeem routes against accepted stablecoins; Ethereum role-event reconstruction identified current MINTER_ROLE holders and default admins for the AID token.",
+      "reviewer": "Codex mint-authority follow-up EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Reconstruct Arbitrum, Base, and BSC role holders before treating AID as fully reviewed across all deployments.",
+        "Identify the two Ethereum MINTER_ROLE contract holders and the additional default-admin account custody model.",
+        "Resolve redemption and bridge route controls before raising confidence above manual-review."
+      ]
+    }
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",

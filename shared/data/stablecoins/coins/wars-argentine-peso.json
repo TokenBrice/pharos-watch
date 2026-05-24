@@ -62,6 +62,45 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WARS is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve the current DEFAULT_ADMIN_ROLE and only current MINTER_ROLE holder to Ripio's shared admin account; non-Ethereum deployments remain unverified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "label": "Ripio shared WARS admin and MINTER_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this account as both DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Prior admin/minter 0x5ca3f8...f20f was revoked at block 24995207; signer custody was not decoded."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WARS contract",
+          "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#events"
+        }
+      ],
+      "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WARS as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+      "reviewer": "Codex mint-authority follow-up Ripio lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+        "Ethereum implementation source for 0xba0030...21b9 remains unresolved.",
+        "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved."
+      ]
+    }
+  },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

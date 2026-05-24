@@ -29,6 +29,75 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "CHFAU is issuer-operated through AllUnity Mint. Ethereum role logs resolve one MINTER_ROLE EOA and a separate default-admin EOA; implementation source and signer custody remain unresolved.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+        "label": "CHFAU Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "CHFAU Ethereum token",
+            "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+          }
+        ],
+        "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 24319783 to 25166971 found this no-code account holding MINTER_ROLE; paused() was false in sampled reads."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+        "label": "CHFAU default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "CHFAU Ethereum token",
+            "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this no-code account holding DEFAULT_ADMIN_ROLE and additional operational roles."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "AllUnity CHFAU launch",
+          "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
+        },
+        {
+          "label": "AllUnity stablecoins",
+          "url": "https://allunity.com/stablecoins"
+        },
+        {
+          "label": "CHFAU Ethereum token",
+          "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+        },
+        {
+          "label": "CHFAU RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25166971&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "Official AllUnity materials identify CHFAU as an issuer-minted, fully reserved MiCAR EMT; Ethereum role reconstruction identifies current MINTER_ROLE and default-admin holders.",
+      "reviewer": "Codex mint-authority follow-up EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review verified implementation source before raising confidence above manual-review; Sourcify source was not found in the lane pass.",
+        "Confirm signer custody or multisig policy for the admin, minter, and additional operational role holders."
+      ]
+    }
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://allunity.com/trust-center/",

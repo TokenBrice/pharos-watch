@@ -70,6 +70,57 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WBRL is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus two current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "label": "Ripio shared WBRL admin and MINTER_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+        "label": "WBRL secondary Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WBRL contract",
+          "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#events"
+        }
+      ],
+      "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WBRL as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+      "reviewer": "Codex mint-authority follow-up Ripio lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+        "Ethereum implementation source for 0xfbab5d...7f9d remains unresolved.",
+        "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+        "Secondary MINTER_ROLE holder identity/source for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 is unresolved."
+      ]
+    }
+  },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

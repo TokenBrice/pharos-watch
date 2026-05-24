@@ -23,6 +23,88 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "AUDF exposes role-gated issuer minting. Ethereum source shows mint functions require MINT_ROLE; current Ethereum role logs resolve one 2/5 Safe as default admin and MINT_ROLE holder, plus one additional MINT_ROLE holder.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x6929Fd915b0755EfDC255eA841B68a263A362C5A",
+        "label": "AUDF default admin / MINT_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "AUDF Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+          },
+          {
+            "label": "AUDF admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this Safe holding DEFAULT_ADMIN_ROLE and MINT_ROLE. Safe Transaction Service identified it as a 2/5 Safe with no enabled modules and zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91",
+        "label": "AUDF additional MINT_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "AUDF Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this address holding MINT_ROLE. Sourcify source shows mint(address,uint256) and mint(uint256) require MINT_ROLE, but this holder's custody model was not identified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Forte AUDF",
+          "url": "https://www.forteaud.com/"
+        },
+        {
+          "label": "Forte AUDF whitepaper",
+          "url": "https://www.forteaud.com/s/Forte-AUDF-Whitepaper-140324.pdf"
+        },
+        {
+          "label": "AUDF Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+        },
+        {
+          "label": "AUDF RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "Sourcify source identifies AUDF mint functions gated by MINT_ROLE; Ethereum role reconstruction identifies the current default admin and MINT_ROLE holders for the AUDF token.",
+      "reviewer": "Codex mint-authority follow-up EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Reconstruct Polygon, Avalanche, and Base role holders before treating AUDF as fully reviewed across all deployments.",
+        "Identify the non-Safe MINT_ROLE holder and the ProxyAdmin owner/custody setup.",
+        "Decide whether burn, pause, and blacklist roles should be separately represented outside mint authority."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "proofOfReserves": {
     "type": "independent-audit",

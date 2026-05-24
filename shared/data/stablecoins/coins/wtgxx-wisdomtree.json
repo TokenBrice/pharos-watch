@@ -94,6 +94,76 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WTGXX token source restricts minting, burning, pause, freeze, and batch mint to REGISTRAR_ROLE. Ethereum role logs resolve one registrar EOA and one default-admin EOA.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x726D3b3e18e301719b383FdE4F99A5d31B9438e5",
+        "label": "WTGXX Ethereum REGISTRAR_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WTGXX Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+          }
+        ],
+        "evidence": "getImplementation() returned 0xC2A8ca84BC363605c36757f9409b214b6ee710c9. Sourcify ERC20ControlledStandard.sol shows mint and batchMint are onlyRole(REGISTRAR_ROLE); role events resolve this no-code account as REGISTRAR_ROLE holder."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6257759edD99f677052727f7Ef3a055029DFA58a",
+        "label": "WTGXX default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WTGXX Ethereum token",
+            "url": "https://etherscan.io/address/0x1fecf3d9d4fee7f2c02917a66028a48c6706c179#readContract"
+          }
+        ],
+        "evidence": "Role events resolve this no-code account as DEFAULT_ADMIN_ROLE. Safe Transaction Service did not identify a Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "WisdomTree WTGXX",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        },
+        {
+          "label": "WisdomTree Connect",
+          "url": "https://www.wisdomtree.com/connect"
+        },
+        {
+          "label": "WTGXX Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+        },
+        {
+          "label": "WTGXX RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x1fecf3d9d4fee7f2c02917a66028a48c6706c179&fromBlock=20750716&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "WisdomTree materials describe issuer-operated fund share issuance; verified Ethereum source and role reconstruction identify REGISTRAR_ROLE mint authority plus the default admin for the WTGXX token.",
+      "reviewer": "Codex mint-authority follow-up EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Reconstruct role holders on Arbitrum, Avalanche, Base, Optimism, and Plume before treating WTGXX as fully reviewed across all deployments.",
+        "Review Stellar issuer controls and signer policy.",
+        "Confirm custody or operational policy for the Ethereum registrar and default-admin EOAs."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

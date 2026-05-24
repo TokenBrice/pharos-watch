@@ -70,6 +70,68 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WCOP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "label": "Ripio shared WCOP admin and MINTER_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+        "label": "WCOP secondary Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+        "label": "WCOP secondary Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WCOP contract",
+          "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76#events"
+        }
+      ],
+      "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCOP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+      "reviewer": "Codex mint-authority follow-up Ripio lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+        "Ethereum implementation source for 0x6f6206...6652 remains unresolved.",
+        "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+        "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+      ]
+    }
+  },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

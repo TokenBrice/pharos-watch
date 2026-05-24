@@ -31,6 +31,76 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "CADD uses an ERC20F implementation with role-gated minting and UUPS upgrades. Ethereum role logs resolve a separate default admin and MINTER_ROLE holder; both appear as EIP-7702-style delegated accounts rather than verified Safes.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9",
+        "label": "CADD Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "CADD Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+          }
+        ],
+        "evidence": "Sourcify ERC20F source shows mint(address,uint256) is onlyRole(MINTER_ROLE); Ethereum role reconstruction found this delegated account holding MINTER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb3a77dd7c30cdf4f30ae515f73d96f3f41593fce",
+        "label": "CADD default admin",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "CADD Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this delegated account holding DEFAULT_ADMIN_ROLE. Current code begins 0xef0100, consistent with an EIP-7702 delegated account, not a verified Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Tetra CADD stablecoin",
+          "url": "https://tetradg.com/cadd-stablecoin/"
+        },
+        {
+          "label": "Tetra supported blockchains",
+          "url": "https://tetradg.com/supported-blockchains/"
+        },
+        {
+          "label": "CADD Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+        },
+        {
+          "label": "CADD RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "Sourcify ERC20F source and Ethereum role reconstruction identify role-gated CADD minting through a current MINTER_ROLE holder plus a separate default-admin account.",
+      "reviewer": "Codex mint-authority follow-up EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Reconstruct Base role holders before treating CADD as fully reviewed across all deployments.",
+        "Classify the EIP-7702 delegated-account custody and executor policy for both admin and minter accounts.",
+        "Review accessRegistry recipient policy and non-mint operational roles separately."
+      ]
+    }
+  },
   "collateralQuality": "rwa",
   "pegMechanism": "Direct 1:1 mint and redemption of CADD for CAD through CAD Digital's regulated issuance framework",
   "mechanismArchetype": "fiat-cash",

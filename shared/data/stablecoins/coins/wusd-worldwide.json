@@ -60,6 +60,110 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WUSD uses issuer-operated role-gated minting. Ethereum role reconstruction identified three current MINTER_ROLE holders and one default-admin EOA; Polygon and Viction controls remain unresolved.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x171AC757879D9f5004992159FC9bF3344f82D5c3",
+        "label": "WUSD Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this contract-backed address holding MINTER_ROLE. Signer policy and admin surface for the contract-backed holder were not decoded."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1a41b5922E926Cca1EAa8afAC55bdDce40FDBe61",
+        "label": "WUSD Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this no-code account holding MINTER_ROLE; Safe Transaction Service did not identify a Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x80c0A17d45049016A02a16D2B77A9003320FB9e0",
+        "label": "WUSD Ethereum MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this contract-backed address holding MINTER_ROLE. Signer policy and admin surface for the contract-backed holder were not decoded."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x731Efdc933464ed81Bf3Ea961e9fDAdC62e83bd1",
+        "label": "WUSD default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          }
+        ],
+        "evidence": "Ethereum role reconstruction found this no-code account holding DEFAULT_ADMIN_ROLE; Safe Transaction Service did not identify a Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "WSPN Mint Account docs",
+          "url": "https://developer.wspn.io/5768563m0"
+        },
+        {
+          "label": "WSPN whitepaper",
+          "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+        },
+        {
+          "label": "WUSD Ethereum token",
+          "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+        },
+        {
+          "label": "WUSD RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=21390703&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "WSPN docs describe qualified-business mint and redemption through WSPN Mint Account; Ethereum role reconstruction identifies current MINTER_ROLE holders and the default admin for the WUSD token.",
+      "reviewer": "Codex mint-authority follow-up EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Review verified implementation source before raising confidence above manual-review; Sourcify source was not found in the lane pass.",
+        "Reconstruct Polygon role holders and Viction owner/minter controls.",
+        "Confirm signer custody or operational policy for the Ethereum admin and minter EOAs."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",

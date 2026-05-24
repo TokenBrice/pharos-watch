@@ -59,6 +59,59 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "sAID is GAIB's ERC-4626 strategy-vault wrapper over AID. Wrapper shares are minted against deposited AID and do not create durable base AID supply; base issuance inherits the reviewed AID mint-authority profile.",
+    "inheritedFrom": "aid-gaib",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+        "label": "sAID ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "asset() returned AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596; wrapper share minting is deposit and NAV accounting and does not mint base AID.",
+        "sources": [
+          {
+            "label": "GAIB sAID docs",
+            "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+          },
+          {
+            "label": "GAIB AID and sAID contracts",
+            "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+          }
+        ],
+        "evidence": "Ethereum RPC on 2026-05-24 returned asset() = 0x18f52b3fb465118731d9e0d276d4eb3599d57596, paused() = false, and nonzero totalAssets/totalSupply."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "GAIB sAID docs",
+          "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+        },
+        {
+          "label": "GAIB AID and sAID contracts",
+          "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+        },
+        {
+          "label": "Ethereum sAID read contract",
+          "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8#readContract"
+        }
+      ],
+      "evidence": "Local variant metadata, official GAIB docs, and Ethereum asset() reads confirm sAID as an AID vault share rather than an independent base-dollar issuer.",
+      "reviewer": "Codex mint-authority follow-up wrapper lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve sAID wrapper upgrade/admin, withdrawal-manager, and portfolio-operator roles before upgrading confidence above manual-review."
+      ]
+    }
+  },
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
