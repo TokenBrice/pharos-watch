@@ -179,8 +179,25 @@ export function documentedVariableFee(
   feeDescription: string,
   confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",
 ): RedemptionCostModel {
-  const resolvedFeeModelKind = confidence === "formula" ? "formula" : "documented-variable";
+  const resolvedFeeModelKind =
+    confidence === "formula" ? "formula" : feeDescriptionLooksUndisclosed(feeDescription)
+      ? "undisclosed-reviewed"
+      : "documented-variable";
   return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind: resolvedFeeModelKind };
+}
+
+function feeDescriptionLooksUndisclosed(feeDescription: string): boolean {
+  const normalized = feeDescription.toLowerCase();
+  return (
+    normalized.includes("not disclosed") ||
+    normalized.includes("not publish") ||
+    normalized.includes("not published") ||
+    normalized.includes("do not publish") ||
+    normalized.includes("does not publish") ||
+    normalized.includes("no separate fixed") ||
+    normalized.includes("no fixed") ||
+    normalized.includes("not identified")
+  );
 }
 
 export function undisclosedReviewedFee(

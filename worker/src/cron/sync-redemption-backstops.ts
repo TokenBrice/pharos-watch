@@ -298,7 +298,16 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     runRowsWrittenCount: writeResult.runRowsWrittenCount,
     historyWrittenCount: writeResult.historyWrittenCount,
     currentMirroredCount: writeResult.currentMirroredCount,
+    ...(writeResult.retentionCutoff != null ? { retentionCutoff: writeResult.retentionCutoff } : {}),
+    ...(writeResult.retentionRunRowsDeletedCount != null
+      ? { retentionRunRowsDeletedCount: writeResult.retentionRunRowsDeletedCount }
+      : {}),
+    ...(writeResult.retentionRunsDeletedCount != null
+      ? { retentionRunsDeletedCount: writeResult.retentionRunsDeletedCount }
+      : {}),
     failedWriteCount: Math.max(0, writeResult.attemptedCount - writeResult.runRowsWrittenCount),
+    writeStatus: writeResult.warnings.length > 0 ? "completed-with-warnings" : "completed",
+    writePhase: "retention",
     ...(writeResult.warnings.length > 0 ? { writeWarnings: writeResult.warnings } : {}),
   });
 

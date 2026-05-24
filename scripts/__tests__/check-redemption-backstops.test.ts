@@ -161,16 +161,34 @@ describe("check-redemption-backstops CLI", () => {
         reviewedAt: "2026-05-12",
         docs: [{ label: "Fixture", url: "https://example.com/frxusd-redemption", supports: ["route", "capacity"] }],
       },
+      "sfrxusd-frax": {
+        ...baseConfig,
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        capacityModel: { kind: "reserve-sync-metadata", fallbackUsd: 1_000_000 },
+        reviewedAt: "2026-05-12",
+        docs: [{ label: "Fixture", url: "https://example.com/sfrxusd-redemption", supports: ["route", "capacity"] }],
+      },
     });
 
-    expect(result.auditRows).toEqual([
-      expect.objectContaining({
-        stablecoinId: "frxusd-frax",
-        resolvedCapacityBasis: "hot-buffer",
-        capacityFallbackSource: "reserve-sync-fallback-ratio",
-        dailyLimitUsd: null,
-      }),
-    ]);
+    expect(result.auditRows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stablecoinId: "frxusd-frax",
+          resolvedCapacityBasis: "live-proxy-buffer",
+          capacityFallbackSource: "reserve-sync-fallback-ratio",
+          dailyLimitUsd: null,
+        }),
+        expect.objectContaining({
+          stablecoinId: "sfrxusd-frax",
+          resolvedCapacityBasis: "live-direct-telemetry",
+          capacityFallbackSource: "reserve-sync-fallback-usd",
+          dailyLimitUsd: null,
+        }),
+      ]),
+    );
   });
 
   it("ratchets active stablecoin redemption config coverage", () => {

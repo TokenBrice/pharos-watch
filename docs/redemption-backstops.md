@@ -26,7 +26,7 @@ Configured coverage is defined statically behind the thin facade in `shared/lib/
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
 
-`npm run check:redemption-backstops -- --report <path>` writes per-config audit rows with both the literal configured `capacityBasis` and the resolved runtime-style `resolvedCapacityBasis`. The report also includes `capacityFallbackSource` for reserve-sync fallback ratios/USD buffers and `dailyLimitUsd` when a static model caps same-day capacity, so review queues can distinguish route-family defaults from explicit fallback or daily-limit constraints.
+`npm run check:redemption-backstops -- --report <path>` writes per-config audit rows with both the literal configured `capacityBasis` and the resolved runtime-style `resolvedCapacityBasis`. Reserve-sync rows use the tracked adapter's direct/proxy redemption-telemetry declaration when resolving that audit basis. The report also includes `capacityFallbackSource` for reserve-sync fallback ratios/USD buffers and `dailyLimitUsd` when a static model caps same-day capacity, so review queues can distinguish route-family defaults from explicit fallback or daily-limit constraints.
 
 ---
 

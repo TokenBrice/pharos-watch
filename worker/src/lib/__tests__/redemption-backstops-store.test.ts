@@ -1118,6 +1118,7 @@ describe("loadRedemptionBackstopMap", () => {
         cutoff,
         runRowsDeletedCount: 3,
         runsDeletedCount: 3,
+        warnings: [],
       });
       const remainingRuns = sqlite
         .prepare("SELECT run_id FROM redemption_backstop_runs ORDER BY run_id ASC")
@@ -1142,6 +1143,11 @@ describe("loadRedemptionBackstopMap", () => {
         first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
       },
       {
+        match: "DELETE FROM redemption_backstop_runs",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
         match: "DELETE FROM redemption_backstop_run_rows",
         rows: [],
         throwError: new Error("retention unavailable"),
@@ -1159,10 +1165,11 @@ describe("loadRedemptionBackstopMap", () => {
       runId: "run-retention-warning",
       runRowsWrittenCount: 1,
       currentMirroredCount: 1,
+      retentionCutoff: 9_000,
       retentionRunRowsDeletedCount: 0,
       retentionRunsDeletedCount: 0,
     });
-    expect(result.warnings).toEqual([expect.stringContaining("Run retention prune failed")]);
+    expect(result.warnings).toEqual([expect.stringContaining("Run-row retention prune failed")]);
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("status = 'completed'"))).toBe(true);
@@ -1174,10 +1181,43 @@ describe("loadRedemptionBackstopMap", () => {
       snapshotRunId: "run-retention-warning",
       writeStatus: "completed-with-warnings",
       writePhase: "retention",
+      retentionCutoff: 9_000,
       retentionRunRowsDeletedCount: 0,
       retentionRunsDeletedCount: 0,
       writeWarnings: [expect.stringContaining("retention unavailable")],
     });
+  });
+
+  it("preserves manifest deletion counts when orphan run-row retention later fails", async () => {
+    const db = mockD1([
+      {
+        match: "DELETE FROM redemption_backstop_runs",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM redemption_backstop_run_rows",
+        rows: [],
+        throwError: new Error("row prune failed"),
+      },
+    ]);
+
+    const result = await pruneRedemptionBackstopRunRetention(db, {
+      nowSec: 10_000,
+      retentionSec: 1_000,
+      preserveRunId: "current-run",
+      batchSize: 2,
+    });
+
+    expect(result).toEqual({
+      cutoff: 9_000,
+      runRowsDeletedCount: 0,
+      runsDeletedCount: 1,
+      warnings: [expect.stringContaining("row prune failed")],
+    });
+    const history = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
+    expect(history[0]?.sql).toContain("DELETE FROM redemption_backstop_runs");
+    expect(history[1]?.sql).toContain("DELETE FROM redemption_backstop_run_rows");
   });
 });
 

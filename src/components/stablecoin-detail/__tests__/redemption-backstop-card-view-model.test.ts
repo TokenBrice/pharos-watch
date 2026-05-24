@@ -81,7 +81,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
 
     expect(viewModel.capacitySummary).toMatchObject({
       title: "Daily Capacity",
-      headline: "$4.3M \u00b7 8.5% of supply",
+      headline: "$1.5M",
     });
     expect(viewModel.capacitySummary.detail).toContain("Live direct redemption telemetry.");
     expect(viewModel.capacitySummary.detail).toContain("Current modeled capacity is daily-limited.");
@@ -148,6 +148,21 @@ describe("buildRedemptionBackstopCardViewModel", () => {
       headline: "baseRate + 50 bps minimum",
       detail: "Protocol or issuer docs publish a fee formula rather than a single fixed bps rate.",
     });
+
+    const liveFormula = buildRedemptionBackstopCardViewModel(
+      entry({
+        feeBps: 52,
+        feeModelKind: "formula",
+        feeConfidence: "formula",
+        feeDescription: "Minimum 50 bps plus live baseRate.",
+      }),
+    );
+    expect(liveFormula.feeSummary).toMatchObject({
+      headline: "52 bps current (0.52%)",
+      detail:
+        "Minimum 50 bps plus live baseRate. Current live telemetry resolved this formula to the displayed bps value.",
+    });
+    expect(liveFormula.scoreBreakdown.cost.suffix).toBe(" (52 bps current)");
 
     expect(
       buildRedemptionBackstopCardViewModel(

@@ -131,6 +131,13 @@ describe("redemption backstop config helpers", () => {
     });
     expect(resolveFeeModelKind(formula)).toBe("formula");
 
+    const legacyUndisclosed = documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed");
+    expect(legacyUndisclosed).toMatchObject({
+      confidence: "undisclosed-reviewed",
+      feeModelKind: "undisclosed-reviewed",
+    });
+    expect(resolveFeeModelKind(legacyUndisclosed)).toBe("undisclosed-reviewed");
+
     const undisclosed = undisclosedReviewedFee();
     expect(undisclosed).toMatchObject({
       kind: "dynamic-or-unclear",

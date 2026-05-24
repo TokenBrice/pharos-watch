@@ -746,6 +746,19 @@ describe("syncRedemptionBackstops", () => {
   });
 
   it("keeps a completed snapshot degraded when pruning stale rows fails", async () => {
+    upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce((_db: unknown, snapshots: unknown[]) =>
+      Promise.resolve({
+        runId: "redemption:test-run",
+        attemptedCount: snapshots.length,
+        runRowsWrittenCount: snapshots.length,
+        historyWrittenCount: snapshots.length,
+        currentMirroredCount: snapshots.length,
+        retentionCutoff: 1_700_000_000,
+        retentionRunRowsDeletedCount: 4,
+        retentionRunsDeletedCount: 2,
+        warnings: [],
+      }),
+    );
     const db = mockD1([
       {
         match: "SELECT stablecoin_id FROM redemption_backstop",
@@ -766,11 +779,18 @@ describe("syncRedemptionBackstops", () => {
         pruneDegraded: true,
         pruneWarning: "prune select failed",
         snapshotRunId: "redemption:test-run",
+        retentionCutoff: 1_700_000_000,
+        retentionRunRowsDeletedCount: 4,
+        retentionRunsDeletedCount: 2,
+        writeStatus: "completed",
+        writePhase: "retention",
       }),
     );
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.pruneDegraded).toBe(true);
     expect(metadata.pruneWarning).toBe("prune select failed");
+    expect(metadata.retentionRunRowsDeletedCount).toBe(4);
+    expect(metadata.retentionRunsDeletedCount).toBe(2);
   });
 
   it("materializes failed rows instead of leaving the coin absent from the new snapshot", async () => {

@@ -144,6 +144,24 @@ function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {
 function getFeeSummary(entry: RedemptionBackstopEntry): FeeSummary {
   if (entry.feeBps != null && Number.isFinite(entry.feeBps)) {
     const feeBps = Math.max(0, entry.feeBps);
+    if (entry.feeModelKind === "formula") {
+      return {
+        headline: `${feeBps} bps current (${formatPercent(feeBps / 100)})`,
+        detail: entry.feeDescription
+          ? `${entry.feeDescription} Current live telemetry resolved this formula to the displayed bps value.`
+          : "Protocol or issuer docs publish a fee formula; current live telemetry resolved it to the displayed bps value.",
+      };
+    }
+
+    if (entry.feeModelKind === "documented-variable") {
+      return {
+        headline: `${feeBps} bps current (${formatPercent(feeBps / 100)})`,
+        detail: entry.feeDescription
+          ? `${entry.feeDescription} Current telemetry resolved this variable fee to the displayed bps value.`
+          : "Protocol or issuer docs publish variable fee logic; current telemetry resolved it to the displayed bps value.",
+      };
+    }
+
     return {
       headline: `${feeBps} bps (${formatPercent(feeBps / 100)})`,
       detail:
@@ -196,12 +214,15 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
     entry.capacityProfile.scoringUsd > 0
       ? formatCurrency(entry.capacityProfile.scoringUsd, 1)
       : null;
-  const capacityUsd =
+  const immediateCapacityUsd =
     entry.immediateCapacityUsd != null && Number.isFinite(entry.immediateCapacityUsd) && entry.immediateCapacityUsd > 0
       ? formatCurrency(entry.immediateCapacityUsd, 1)
-      : scoringCapacityUsd;
+      : null;
+  const usesScoringCapacityHeadline =
+    (scoringHorizon === "daily" || scoringHorizon === "queued") && scoringCapacityUsd != null;
+  const capacityUsd = usesScoringCapacityHeadline ? scoringCapacityUsd : immediateCapacityUsd ?? scoringCapacityUsd;
   const capacityRatio =
-    entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
+    !usesScoringCapacityHeadline && entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
       : null;
 
@@ -388,6 +409,13 @@ function buildFilteredNotes(entry: RedemptionBackstopEntry): string[] {
   );
 }
 
+function feeBpsBreakdownSuffix(entry: RedemptionBackstopEntry): string {
+  if (entry.feeBps == null || !Number.isFinite(entry.feeBps)) return "";
+  if (entry.feeModelKind === "formula") return ` (${entry.feeBps} bps current)`;
+  if (entry.feeModelKind === "documented-variable") return ` (${entry.feeBps} bps current)`;
+  return ` (${entry.feeBps} bps)`;
+}
+
 export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEntry) {
   const docs = entry.docs ?? null;
   return {
@@ -439,7 +467,7 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
         label: "Cost",
         score: entry.costScore,
         textClass: scoreTextClass(entry.costScore),
-        suffix: entry.feeBps != null ? ` (${entry.feeBps} bps)` : "",
+        suffix: feeBpsBreakdownSuffix(entry),
       },
     } satisfies ScoreBreakdownViewModel,
   };

@@ -14,6 +14,7 @@ import {
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   RedemptionBackstopsResponseSchema,
+  type RedemptionCapacityConfidence,
   type RedemptionDocSourceSupport,
   type RedemptionRouteFamily,
 } from "@shared/types/redemption";
@@ -139,6 +140,17 @@ const UNUSED_LIVE_REDEMPTION_TELEMETRY_POLICY_IDS = new Set(
     (entry) => entry.stablecoinId,
   ),
 );
+
+function resolveAuditCapacityConfidence(
+  config: RedemptionBackstopConfig,
+  adapterDefinition: ReturnType<typeof getLiveReserveAdapterDefinition> | null,
+): RedemptionCapacityConfidence {
+  const staticConfidence = resolveCapacityConfidence(config.capacityModel);
+  if (config.capacityModel.kind !== "reserve-sync-metadata") return staticConfidence;
+  if (adapterDefinition?.redemptionTelemetry.capacity === "direct") return "live-direct";
+  if (adapterDefinition?.redemptionTelemetry.capacity === "proxy") return "live-proxy";
+  return staticConfidence;
+}
 
 export function validateRedemptionBackstopRegistry(
   options: RedemptionRegistryValidationOptions = {},
@@ -294,9 +306,10 @@ export function validateRedemptionBackstopRegistry(
       }
     }
 
-    const capacityConfidence = resolveCapacityConfidence(config.capacityModel);
     const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter ?? null;
     const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
+    const capacityConfidence = resolveCapacityConfidence(config.capacityModel);
+    const resolvedCapacityConfidence = resolveAuditCapacityConfidence(config, adapterDefinition);
     return {
       stablecoinId: id,
       family: owner?.name ?? "unknown",
@@ -309,7 +322,8 @@ export function validateRedemptionBackstopRegistry(
       capacityModelKind: config.capacityModel.kind,
       capacityConfidence,
       capacityBasis: config.capacityModel.basis ?? null,
-      resolvedCapacityBasis: resolveCapacityBasis(config.routeFamily, config.capacityModel, capacityConfidence) ?? null,
+      resolvedCapacityBasis:
+        resolveCapacityBasis(config.routeFamily, config.capacityModel, resolvedCapacityConfidence) ?? null,
       capacityFallbackSource: resolveCapacityFallbackSource(config.capacityModel),
       dailyLimitUsd: resolveCapacityDailyLimitUsd(config.capacityModel),
       capacitySemantics: resolveCapacitySemantics(config.capacityModel),

@@ -10,6 +10,7 @@ export interface RedemptionBackstopSnapshotWriteResult {
   runRowsWrittenCount: number;
   historyWrittenCount: number;
   currentMirroredCount: number;
+  retentionCutoff: number | null;
   retentionRunRowsDeletedCount: number;
   retentionRunsDeletedCount: number;
   warnings: string[];
@@ -19,6 +20,7 @@ export interface RedemptionBackstopRunRetentionResult {
   cutoff: number;
   runRowsDeletedCount: number;
   runsDeletedCount: number;
+  warnings: string[];
 }
 
 export const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
@@ -459,17 +461,26 @@ function prunableRedemptionBackstopRunsSubquery(): string {
            LIMIT ?`;
 }
 
-async function deleteRedemptionBackstopRunRowsBatch(
+async function deleteOrphanRedemptionBackstopRunRowsBatch(
   db: D1Database,
-  args: { cutoff: number; preserveRunId: string; batchSize: number },
+  args: { batchSize: number },
 ): Promise<number> {
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `DELETE FROM redemption_backstop_run_rows
-          WHERE snapshot_run_id IN (${prunableRedemptionBackstopRunsSubquery()})`,
+          WHERE snapshot_run_id IN (
+            SELECT snapshot_run_id
+              FROM redemption_backstop_run_rows AS rr
+             WHERE NOT EXISTS (
+               SELECT 1
+                 FROM redemption_backstop_runs AS manifest
+                WHERE manifest.run_id = rr.snapshot_run_id
+             )
+             LIMIT ?
+          )`,
       )
-      .bind(args.cutoff, args.preserveRunId, args.batchSize)
+      .bind(args.batchSize)
       .run(),
   );
   return Number(result.meta?.changes ?? 0);
@@ -506,26 +517,39 @@ export async function pruneRedemptionBackstopRunRetention(
   const cutoff = nowSec - retentionSec;
   let runRowsDeletedCount = 0;
   let runsDeletedCount = 0;
+  const warnings: string[] = [];
 
-  for (;;) {
-    runRowsDeletedCount += await deleteRedemptionBackstopRunRowsBatch(db, {
-      cutoff,
-      preserveRunId: input.preserveRunId,
-      batchSize,
-    });
-    const deletedRuns = await deleteRedemptionBackstopRunsBatch(db, {
-      cutoff,
-      preserveRunId: input.preserveRunId,
-      batchSize,
-    });
-    runsDeletedCount += deletedRuns;
-    if (deletedRuns < batchSize) break;
+  try {
+    for (;;) {
+      const deletedRuns = await deleteRedemptionBackstopRunsBatch(db, {
+        cutoff,
+        preserveRunId: input.preserveRunId,
+        batchSize,
+      });
+      runsDeletedCount += deletedRuns;
+      if (deletedRuns < batchSize) break;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    warnings.push(`Run manifest retention prune failed: ${message}`);
+  }
+
+  try {
+    for (;;) {
+      const deletedRows = await deleteOrphanRedemptionBackstopRunRowsBatch(db, { batchSize });
+      runRowsDeletedCount += deletedRows;
+      if (deletedRows < batchSize) break;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    warnings.push(`Run-row retention prune failed: ${message}`);
   }
 
   return {
     cutoff,
     runRowsDeletedCount,
     runsDeletedCount,
+    warnings,
   };
 }
 
@@ -585,6 +609,7 @@ export async function upsertRedemptionBackstopSnapshots(
       runRowsWrittenCount: 0,
       historyWrittenCount: 0,
       currentMirroredCount: 0,
+      retentionCutoff: null,
       retentionRunRowsDeletedCount: 0,
       retentionRunsDeletedCount: 0,
       warnings: ["No redemption backstop records were supplied"],
@@ -724,6 +749,7 @@ export async function upsertRedemptionBackstopSnapshots(
       retentionCutoff = retention.cutoff;
       retentionRunRowsDeletedCount = retention.runRowsDeletedCount;
       retentionRunsDeletedCount = retention.runsDeletedCount;
+      warnings.push(...retention.warnings);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       warnings.push(`Run retention prune failed after completed snapshot write: ${message}`);
@@ -759,6 +785,7 @@ export async function upsertRedemptionBackstopSnapshots(
       runRowsWrittenCount: rowCount.rowCount,
       historyWrittenCount,
       currentMirroredCount,
+      retentionCutoff,
       retentionRunRowsDeletedCount,
       retentionRunsDeletedCount,
       warnings,
