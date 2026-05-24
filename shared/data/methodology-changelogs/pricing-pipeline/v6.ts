@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.09",
+      title: "Weak address-provider depeg quarantine",
+      date: "2026-05-24",
+      effectiveAt: 1779645688,
+      summary:
+        "Single-source fallback/search-family address quotes can no longer publish fixed-peg depeg-sized prices without corroboration.",
+      impact: [
+        "Exact-address augmentation can still fill or corroborate near-peg prices for thin assets",
+        "A fallback/search-family source such as CoinGecko Onchain address pricing is rejected when it is at least 500 bps from a fixed peg and no stronger source corroborates the move",
+        "Rejected weak address-provider candidates fall through to later enrichment, allowing exact DefiLlama contract fallback to repair assets such as Tangent USG when that contract quote remains near peg",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.08",
       title: "Scoped live-parent wrapper price repair",
       date: "2026-05-24",

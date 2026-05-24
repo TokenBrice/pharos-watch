@@ -140,3 +140,54 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
     expect(decision.accepted).toBe(true);
   });
 });
+
+describe("validatePrimaryPriceCandidate — weak fallback fixed-peg depegs", () => {
+  it("rejects a depeg-sized single-source address-provider quote", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.9459920248,
+      source: "coingecko-onchain-address",
+      confidence: "single-source",
+      agreeSources: ["coingecko-onchain-address"],
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(false);
+    expect(decision.reason).toBe("weak_fallback_depeg_requires_corroboration");
+  });
+
+  it("still accepts a near-peg address-provider quote", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.99967,
+      source: "coingecko-onchain-address",
+      confidence: "single-source",
+      agreeSources: ["coingecko-onchain-address"],
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(true);
+  });
+
+  it("does not block exact DefiLlama contract fallback prices", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.9459920248,
+      source: "defillama-contract",
+      confidence: "single-source",
+      agreeSources: ["defillama-contract"],
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(true);
+  });
+
+  it("allows depeg-sized hard-source quotes", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.9459920248,
+      source: "pyth",
+      confidence: "single-source",
+      agreeSources: ["pyth"],
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(true);
+  });
+});

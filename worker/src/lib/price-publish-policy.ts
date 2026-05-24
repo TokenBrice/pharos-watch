@@ -3,11 +3,12 @@ import {
   isPricingSourceSoftGuardrailExempt,
 } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
+import { getReferencePriceForContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 const WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS = 2_000;
+const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
 
 export interface TrustedPriceReference {
   price: number;
@@ -79,6 +80,21 @@ function sourceLineageFamily(source: string): string | null {
 
 function sourceParts(source: string | null | undefined): string[] {
   return normalizePricingSourceKeys(source);
+}
+
+function isFallbackSearchOnlySource(source: string | null | undefined): boolean {
+  const parts = sourceParts(source);
+  return parts.length > 0 && parts.every((part) => {
+    const trustTier = getPricingSourceRegistryEntry(part)?.trustTier;
+    return trustTier === "fallback_search";
+  });
+}
+
+function fixedPegDeviationBps(input: PublishablePriceInput): number | null {
+  if (!isFixedPegValidationContext(input.validationContext)) return null;
+  const referencePrice = getReferencePriceForContext(input.validationContext, input.validationReferences);
+  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) return null;
+  return Math.abs(input.price - referencePrice) / referencePrice * 10_000;
 }
 
 function countIndependentSevereSourceFamilies(sources: string[]): {
@@ -166,6 +182,15 @@ function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean 
   return hasSevereDownsidePublicationCorroboration(input);
 }
 
+function allowsWeakFallbackFixedPegDepegPublication(input: PublishablePriceInput): boolean {
+  if (!isFallbackSearchOnlySource(input.source)) return true;
+  if (isPricingSourceSoftGuardrailExempt(input.source)) return true;
+  if (hasDepegAuthoritativeSource(input.agreeSources ?? sourceParts(input.source))) return true;
+
+  const deviationBps = fixedPegDeviationBps(input);
+  return deviationBps == null || deviationBps < WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS;
+}
+
 export function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
   if (!isFixedPegValidationContext(input.validationContext)) return false;
   const previousTrustedPrice = input.previousTrustedPrice?.price;
@@ -217,6 +242,10 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
 
   if (!allowsSevereDownsidePublication(input)) {
     return { ...base, accepted: false, reason: "severe_downside_requires_corroboration", gates: ["price-validation", "severe-downside-corroboration"] };
+  }
+
+  if (!allowsWeakFallbackFixedPegDepegPublication(input)) {
+    return { ...base, accepted: false, reason: "weak_fallback_depeg_requires_corroboration", gates: ["price-validation", "fallback-depeg-corroboration"] };
   }
 
   if (shouldQuarantineTemporalJump(input)) {

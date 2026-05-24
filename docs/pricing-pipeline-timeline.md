@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.08` (2026-02-01 -> 2026-05-24).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.09` (2026-02-01 -> 2026-05-24).
+
+---
+
+## v6.09 - Weak address-provider depeg quarantine (May 24, 2026)
+
+- Single-source fallback/search-family address quotes can no longer publish fixed-peg depeg-sized prices without corroboration
+- Exact-address augmentation still fills or corroborates near-peg prices for thin assets
+- A fallback/search-family source such as CoinGecko Onchain address pricing is rejected when it is at least 500 bps from a fixed peg and no stronger source corroborates the move
+- Rejected weak address-provider candidates fall through to later enrichment, allowing exact DefiLlama contract fallback to repair assets such as Tangent USG when that contract quote remains near peg
 
 ---
 

@@ -134,6 +134,16 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     outputDecimals: 18,
     chain: "ethereum",
   },
+  // USG/USDC (factory-stable-ng, ~$2.8M TVL)
+  {
+    stablecoinId: "usg-tangent",
+    poolAddress: "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+    inputIndex: 0,  // USDC
+    outputIndex: 1, // USG
+    inputDecimals: 6,
+    outputDecimals: 18,
+    chain: "ethereum",
+  },
 
   // ── Hop pools (paired against crvUSD or PYUSD, resolved via two-phase pricing) ──
 

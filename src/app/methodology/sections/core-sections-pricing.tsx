@@ -35,7 +35,7 @@ export function PricingPipelineMethodologySection() {
           The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap,
           Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
           profiles attached when those lanes participate. Targeted exact-address augmentation can add DexScreener,
-          DexPaprika, GeckoTerminal, Alchemy Prices, Moralis, and Solana Birdeye quotes for assets with missing prices or
+          DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for assets with missing prices or
           below-target source depth. DEX bridge and address-provider identity are canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices
           only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer
@@ -116,8 +116,10 @@ export function PricingPipelineMethodologySection() {
           preserves trusted continuity from fresh replay-safe{" "}
           <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
           <code className="mx-1 text-xs">N/A</code>. DefiLlama contract fallbacks must now pass the same peg-aware
-          plausibility gates before they can resolve an asset, and DexScreener symbol search is retired so addressless
-          assets are not probed through noisy symbol-only identity. DefiLlama{" "}
+          plausibility gates before they can resolve an asset, and weak fallback/search-family address-provider quotes
+          must stay within 500 bps of a fixed peg unless a stronger source corroborates the move, so a noisy address
+          print falls through to exact-contract enrichment instead of publishing a false depeg. DexScreener symbol search
+          is retired so addressless assets are not probed through noisy symbol-only identity. DefiLlama{" "}
           <code className="mx-1 text-xs">/coins</code> contract-price fallback and DexScreener dex-liquidity and
           dex-discovery paths now record against their own dedicated circuit breakers instead of reusing unrelated
           breaker state, and the same provider diagnostics and GeckoTerminal probe statistics collected during each run
@@ -228,7 +230,7 @@ export function PricingPipelineMethodologySection() {
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, but withheld when overlapping protocol-level DEX bridge data exists</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">GeckoTerminal</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Exact-address providers</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Market / on-chain</td><td className="py-2">Targeted DexScreener, DexPaprika, GeckoTerminal, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing or below-depth assets; exact chain+address only and non-depeg-authoritative on their own</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Exact-address providers</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Market / on-chain</td><td className="py-2">Targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing or below-depth assets; exact chain+address only and non-depeg-authoritative on their own</td></tr>
                 </tbody>
               </table>
             </div>
