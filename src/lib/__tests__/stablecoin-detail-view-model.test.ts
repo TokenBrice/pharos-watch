@@ -151,7 +151,54 @@ describe("stablecoin detail view-model builder", () => {
       addressUrl: "https://etherscan.io/address/0x123400000000000000000000000000000000abcd",
       securitySetupLabel: "Safe, 2/3 threshold",
       thresholdLabel: "2/3 threshold",
+      modulesOrGuardsLabel: "No modules or guards detected",
     });
+  });
+
+  it("only exposes Safe modules and guards labels for Safe-like mint authority controls", () => {
+    const viewModel = buildMintAuthorityDetailViewModel({
+      mintAuthoritySummary: {
+        mintPath: "permissioned-minter",
+        authorityPosture: "partially-bounded-admin",
+        confidence: "manual-review",
+        summary: "Minting has a Safe admin and a role-gated contract.",
+        controls: [
+          {
+            chain: "ethereum",
+            address: "0x123400000000000000000000000000000000abcd",
+            label: "Issuer Safe",
+            role: "minter-admin",
+            authorityType: "safe",
+            directMintAbility: "can-authorize",
+            modulesOrGuardsStatus: "none-detected",
+          },
+          {
+            chain: "ethereum",
+            address: "0x567800000000000000000000000000000000abcd",
+            label: "Minter contract",
+            role: "direct-minter",
+            authorityType: "contract",
+            directMintAbility: "direct",
+            modulesOrGuardsStatus: "not-applicable",
+          },
+          {
+            chain: "ethereum",
+            address: "0x9abc00000000000000000000000000000000abcd",
+            label: "Unresolved admin",
+            role: "minter-admin",
+            authorityType: "unknown",
+            directMintAbility: "can-authorize",
+            modulesOrGuardsStatus: "unknown",
+          },
+        ],
+      },
+    } as never);
+
+    expect(viewModel.controls.map((control) => control.modulesOrGuardsLabel)).toEqual([
+      "No modules or guards detected",
+      null,
+      "Modules or guards unknown",
+    ]);
   });
 
   it("builds a ready view model from fetched inputs", () => {

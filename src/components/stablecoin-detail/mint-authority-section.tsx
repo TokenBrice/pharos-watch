@@ -67,7 +67,7 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
         <ControlMeta label="Mint" value={control.directMintAbilityLabel} />
         <ControlMeta label="Setup" value={control.securitySetupLabel} />
         <ControlMeta label="Delay" value={control.timelockLabel} />
-        <ControlMeta label="Modules" value={control.modulesOrGuardsLabel} />
+        <ControlMeta label="Safe modules/guard" value={control.modulesOrGuardsLabel} />
       </div>
       {control.capDescription ? <p className="mt-2 text-xs text-muted-foreground">{control.capDescription}</p> : null}
     </li>

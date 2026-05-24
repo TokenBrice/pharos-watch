@@ -299,6 +299,8 @@ const MODULES_OR_GUARDS_LABELS: Record<string, string> = {
   "not-applicable": "Not applicable",
 };
 
+const MODULES_OR_GUARDS_AUTHORITY_TYPES = new Set(["safe", "multisig", "unknown"]);
+
 function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
   const pegCurrency = coin.flags.pegCurrency;
   return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
@@ -382,6 +384,14 @@ function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): UnknownReco
   return null;
 }
 
+function formatModulesOrGuardsLabel(authorityType: unknown, modulesOrGuardsStatus: unknown): string | null {
+  const authorityTypeKey = stringValue(authorityType);
+  const modulesOrGuardsStatusKey = stringValue(modulesOrGuardsStatus);
+  if (!authorityTypeKey || !modulesOrGuardsStatusKey || modulesOrGuardsStatusKey === "not-applicable") return null;
+  if (!MODULES_OR_GUARDS_AUTHORITY_TYPES.has(authorityTypeKey)) return null;
+  return labelFromMap(modulesOrGuardsStatusKey, MODULES_OR_GUARDS_LABELS);
+}
+
 function buildMintAuthorityControlViewModel(
   control: UnknownRecord,
   index: number,
@@ -413,9 +423,7 @@ function buildMintAuthorityControlViewModel(
     thresholdLabel,
     timelockLabel: formatTimelock(numberValue(control.timelockDelaySec)),
     capDescription: stringValue(control.capDescription),
-    modulesOrGuardsLabel: control.modulesOrGuardsStatus
-      ? labelFromMap(control.modulesOrGuardsStatus, MODULES_OR_GUARDS_LABELS)
-      : null,
+    modulesOrGuardsLabel: formatModulesOrGuardsLabel(control.authorityType, control.modulesOrGuardsStatus),
   };
 }
 

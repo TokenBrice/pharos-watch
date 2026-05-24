@@ -24,7 +24,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
       thresholdLabel: "3/5 threshold",
       timelockLabel: "1d timelock",
       capDescription: "Facilitator bucket capacity limits minting.",
-      modulesOrGuardsLabel: "Not applicable",
+      modulesOrGuardsLabel: "No modules or guards detected",
     },
   ],
   sources: [
@@ -54,6 +54,8 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Cap-limited");
     expect(html).toContain("Setup");
     expect(html).toContain("DAO governor, 3/5 threshold");
+    expect(html).toContain("Safe modules/guard");
+    expect(html).toContain("No modules or guards detected");
     expect(html).toContain("https://etherscan.io/address/0x123400000000000000000000000000000000abcd");
     expect(html).toContain("1d timelock");
     expect(html).toContain("Facilitator bucket capacity limits minting");
