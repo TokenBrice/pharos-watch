@@ -890,19 +890,12 @@ describe("stablecoin detail hero view-model builder", () => {
     });
   });
 
-  it("derives unavailable peg score and dilutable source states", () => {
+  it("derives unavailable peg score and upstream freeze states", () => {
     const coin = TRACKED_META_BY_ID.get("dai-makerdao");
     expect(coin).toBeDefined();
 
     const hero = buildStablecoinDetailHeroViewModel({
-      coin: {
-        ...coin!,
-        canBeBlacklisted: "dilutable",
-        canBeBlacklistedSource: {
-          label: "Etherscan contract source",
-          url: "https://etherscan.io/address/example#code",
-        },
-      },
+      coin: coin!,
       coinData: {
         id: "dai-makerdao",
         name: "Dai",
@@ -935,7 +928,9 @@ describe("stablecoin detail hero view-model builder", () => {
       liquidityData: undefined,
       yieldRanking: null,
       stressSignal: null,
-      reportCard: null,
+      reportCard: {
+        rawInputs: { canBeBlacklisted: "inherited" },
+      } as never,
       verdict: {
         archetype: "uncategorized",
         label: "Uncategorized",
@@ -947,11 +942,8 @@ describe("stablecoin detail hero view-model builder", () => {
       sub: "3d tracked",
     });
     expect(hero.tertiaryMetrics.find((metric) => metric.key === "blacklistable")?.display).toMatchObject({
-      value: "Dilutable",
-      methodologyTopic: "freezableDilutable",
-      source: {
-        label: "Etherscan contract source",
-      },
+      value: "Upstream Freeze",
+      methodologyTopic: "freezableUpstream",
     });
   });
 });

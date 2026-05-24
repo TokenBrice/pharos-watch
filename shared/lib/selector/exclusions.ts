@@ -289,7 +289,6 @@ export function applyInputDrivenExclusions(
     }
     if (
       row.canBeBlacklisted === true ||
-      row.canBeBlacklisted === "dilutable" ||
       row.canBeBlacklisted === "inherited"
     ) {
       return fail(row.id, "decentralization-required-violation");

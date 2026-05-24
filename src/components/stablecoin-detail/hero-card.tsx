@@ -3,10 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
-import { ExternalLink } from "lucide-react";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
 import type {
-  HeroBlacklistDisplay,
   HeroCardViewModel,
   HeroDewsDisplay,
   HeroTertiaryMetricViewModel,
@@ -24,32 +22,12 @@ interface HeroCardProps {
   onOpenFeedback: () => void;
 }
 
-function isBlacklistDisplay(display: HeroTertiaryMetricViewModel["display"]): display is HeroBlacklistDisplay {
-  return "status" in display;
-}
-
 function isDewsDisplay(display: HeroTertiaryMetricViewModel["display"]): display is HeroDewsDisplay {
   return "band" in display;
 }
 
 function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode {
   const display = metric.display;
-
-  if (isBlacklistDisplay(display) && display.status === "dilutable" && display.source) {
-    return (
-      <a
-        href={display.source.url}
-        target="_blank"
-        rel="noreferrer"
-        className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline-offset-2 hover:underline"
-        title={display.source.label}
-        aria-label={`Dilutable source: ${display.source.label}`}
-      >
-        {display.value}
-        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-      </a>
-    );
-  }
 
   if (isDewsDisplay(display) && display.band) {
     return (

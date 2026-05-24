@@ -2977,8 +2977,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: BD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: BD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -3457,8 +3457,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: BNUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: BNUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -3604,8 +3604,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: BOLD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: BOLD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -7413,22 +7413,12 @@
         "type": "mechanism"
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: crvUSD has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through centralized-custody collateral and tracked freezable stablecoin dependencies.",
+      "evidence": "crvUSD resolves to Upstream through WBTC/cbBTC centralized-custody collateral and pegkeeper/dependency exposure to tracked freezable stablecoins.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "ethereum",
     "deploymentModel": "canonical-bridge",
@@ -8337,22 +8327,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: DAI has no direct holder-balance freeze in the reviewed token source, but resolves to Upstream through PSM stablecoins and RWA/custody exposure.",
+      "evidence": "DAI resolves to Upstream through Maker/Sky PSM exposure to freezable stablecoins plus centralized RWA and custody dependencies.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "deploymentModel": "canonical-bridge",
     "collateralQuality": "rwa",
@@ -8952,7 +8932,7 @@
             "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
           }
         ],
-        "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "DOLA has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -8989,22 +8969,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: DOLA has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through parent and collateral exposure.",
+      "evidence": "DOLA resolves to Upstream through sUSDe/sUSDS collateral and parent stablecoin exposure rather than direct token freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "dao-governance",
@@ -13166,8 +13136,8 @@
     },
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: FIUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: FIUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -13359,22 +13329,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: FPI has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through FRAX reserve exposure.",
+      "evidence": "FPI resolves to Upstream because its backing and Frax-controlled reserve model inherit FRAX/freezable-stablecoin exposure.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
@@ -14387,8 +14347,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: FUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: FUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -14450,8 +14410,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: FXD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: FXD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -18218,8 +18178,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: HYUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: HYUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -18890,8 +18850,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: iUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: iUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -19901,7 +19861,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "JPYT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "JPYT has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -19916,7 +19876,7 @@
               "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
             }
           ],
-          "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "JPYT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -19926,7 +19886,7 @@
             "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
           }
         ],
-        "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "JPYT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -19943,13 +19903,8 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Sourcify Optimism contract source",
-      "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
+      "reviewedStatus": "inherited",
       "sources": [
         {
           "label": "Sourcify Optimism contract source",
@@ -19960,9 +19915,9 @@
           "url": "https://docs.dephaser.com/concept/what-is-jpyt"
         }
       ],
-      "evidence": "Explicit Dilutable review: the verified JPYT source exposes MINTER_ROLE and BURNER_ROLE, with mint(address,uint256) gated by MINTER_ROLE and role administration held by DEFAULT_ADMIN_ROLE. No holder freeze or blacklist function was identified in the reviewed token source.",
-      "reviewer": "Codex Worker C",
-      "reviewedAt": "2026-05-14"
+      "evidence": "Freeze-only re-review: JPYT has no direct holder freeze or blacklist function in the reviewed source; burnFrom remains allowance-gated even when called by BURNER_ROLE. JPYT resolves to Upstream through locked USDT/USDC reserve exposure.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "stage1-l2",
     "deploymentModel": "native-multichain",
@@ -21143,7 +21098,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "KRWO has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "KRWO has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -21158,7 +21113,7 @@
               "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
             }
           ],
-          "evidence": "KRWO already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "KRWO has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -21168,7 +21123,7 @@
             "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
           }
         ],
-        "evidence": "KRWO already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "KRWO has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -21185,13 +21140,9 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "BscScan contract source",
-      "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
-    },
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
+      "reviewedStatus": false,
       "sources": [
         {
           "label": "BscScan contract source",
@@ -21202,9 +21153,9 @@
           "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
         }
       ],
-      "evidence": "Explicit Dilutable review: the verified BSC FiatToken source exposes a privileged MINTER_ADDRESS and mint(address,uint256) guarded by onlyMinter; on-chain reads show nonzero minter addresses on both the BSC and Kaia KRWO deployments. No direct holder freeze or blacklist function was identified in the reviewed BSC token source.",
-      "reviewer": "Codex Worker C",
-      "reviewedAt": "2026-05-14"
+      "evidence": "Freeze-only re-review: the verified BSC FiatToken source exposes privileged mint authority but no holder freeze, blacklist, pause, seize, or arbitrary role-burn function. OV voucher/redemption risk is not a holder-balance FreezeWatch control.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
@@ -21626,7 +21577,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "LUAUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "LUAUSD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -21641,7 +21592,7 @@
               "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
             }
           ],
-          "evidence": "LUAUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "LUAUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -21651,7 +21602,7 @@
             "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
           }
         ],
-        "evidence": "LUAUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "LUAUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -21663,22 +21614,18 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Sourcify UtilityToken.sol",
-      "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
-    },
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
+      "reviewedStatus": false,
       "sources": [
         {
           "label": "Sourcify UtilityToken.sol",
           "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
         }
       ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Freeze-only re-review: the verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no holder freeze, blacklist, pause, seize, or arbitrary burn function.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "stage1-l2",
     "deploymentModel": "single-chain",
@@ -21845,8 +21792,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: LUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: LUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -25854,8 +25801,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: NXUSD resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: NXUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -27288,7 +27235,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "PHT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "PHT has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -27303,7 +27250,7 @@
               "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
             }
           ],
-          "evidence": "PHT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "PHT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -27313,7 +27260,7 @@
             "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
           }
         ],
-        "evidence": "PHT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "PHT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -27335,22 +27282,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: PHT has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through apcxUSDT/USDT collateral exposure.",
+      "evidence": "PHT resolves to Upstream because its backing path includes apcxUSDT/USDT collateral rather than direct token freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
@@ -28362,7 +28299,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "REUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "REUSD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -28377,7 +28314,7 @@
               "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
             }
           ],
-          "evidence": "REUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "REUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -28387,7 +28324,7 @@
             "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
           }
         ],
-        "evidence": "REUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "REUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -28399,22 +28336,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: REUSD has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through lending-vault collateral exposure.",
+      "evidence": "REUSD resolves to Upstream through crvUSD/frxUSD lending vault exposure rather than direct token freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "deploymentModel": "single-chain",
     "collateralQuality": "exotic",
@@ -30728,7 +30655,7 @@
           "url": "https://pharos.watch/stablecoins/dola-inverse-finance/"
         }
       ],
-      "evidence": "sDOLA resolves to Upstream because it is a savings wrapper over DOLA, and DOLA's reviewed status is Dilutable through admin-controlled mint authority.",
+      "evidence": "sDOLA resolves to Upstream because it is a savings wrapper over DOLA, and DOLA now resolves to Upstream through parent stablecoin and collateral exposure.",
       "reviewer": "Codex data addition",
       "reviewedAt": "2026-05-24"
     },
@@ -31881,22 +31808,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: srUSD is a savings wrapper over rUSD and resolves to Upstream through the parent balance sheet and PSM exposure.",
+      "evidence": "srUSD resolves to Upstream through rUSD parent balance sheet and PSM exposure rather than direct wrapper freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "ethereum",
     "deploymentModel": "native-multichain",
@@ -38878,7 +38795,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "USDD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "USDD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -38893,7 +38810,7 @@
               "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
             }
           ],
-          "evidence": "USDD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "USDD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -38903,7 +38820,7 @@
             "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
           }
         ],
-        "evidence": "USDD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "USDD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -38925,22 +38842,12 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: USDD has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through stablecoin reserve and DeFi exposure.",
+      "evidence": "USDD resolves to Upstream through USDT/USDC PSM and stablecoin DeFi exposure rather than direct token freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
@@ -39250,22 +39157,17 @@
         "decimals": 8
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Sourcify USDe.sol",
-      "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
+      "reviewedStatus": "inherited",
       "sources": [
         {
           "label": "Sourcify USDe.sol",
           "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
         }
       ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Freeze-only re-review: USDe's verified token source exposes owner-set minter and mint authority but no holder freeze or blacklist function. USDe resolves to Upstream through liquid stablecoin reserve exposure plus CEX/off-exchange custody rails.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
@@ -41211,7 +41113,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "USDN has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "USDN has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -41226,7 +41128,7 @@
               "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
             }
           ],
-          "evidence": "USDN already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "USDN has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -41236,7 +41138,7 @@
             "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
           }
         ],
-        "evidence": "USDN already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "USDN has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -41248,22 +41150,18 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Sourcify Usdn.sol",
-      "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
-    },
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
+      "reviewedStatus": "possible",
       "sources": [
         {
           "label": "Sourcify Usdn.sol",
           "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
         }
       ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Freeze-only re-review: the verified USDN token source has no confirmed address freeze or blacklist function, but privileged MINTER/REBASER roles plus protocol mint/redemption flow restrictions represent a direct mutable holder-facing control surface. This explicit Possible override also prevents false Upstream inheritance from the unrelated Noble USDN symbol.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "ethereum",
     "deploymentModel": "single-chain",
@@ -43993,7 +43891,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "USDU has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "USDU has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -44008,7 +43906,7 @@
               "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
             }
           ],
-          "evidence": "USDU already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "USDU has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -44018,7 +43916,7 @@
             "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
           }
         ],
-        "evidence": "USDU already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "USDU has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -44035,22 +43933,12 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "BscScan contract source",
-      "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "BscScan contract source",
-          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: USDU has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through centralized off-exchange and operational rails.",
+      "evidence": "USDU resolves to Upstream through Binance off-exchange/perp margin exposure and centralized operational rails rather than direct token freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
@@ -45046,8 +44934,8 @@
     "canBeBlacklisted": false,
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: USG resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: USG resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -45396,8 +45284,8 @@
     ],
     "blacklistabilityReview": {
       "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: USND resolves to No because existing metadata does not identify direct, upstream, possible, or dilutable blacklist exposure.",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: USND resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
@@ -47602,7 +47490,7 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "vCRED has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "vCRED has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
       "controls": [
         {
           "label": "Privileged token mint/admin authority",
@@ -47617,7 +47505,7 @@
               "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
             }
           ],
-          "evidence": "vCRED already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+          "evidence": "vCRED has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
         }
       ],
       "review": {
@@ -47627,7 +47515,7 @@
             "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
           }
         ],
-        "evidence": "vCRED already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "evidence": "vCRED has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -47639,22 +47527,18 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Hemi contract source",
-      "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
-    },
+    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
+      "reviewedStatus": false,
       "sources": [
         {
           "label": "Hemi contract source",
           "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
         }
       ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Freeze-only re-review: the reviewed Hemi source shows admin mint authority but no holder freeze, blacklist, pause, seize, or arbitrary burn function.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
@@ -50734,22 +50618,12 @@
         "type": "collateral"
       }
     ],
-    "canBeBlacklisted": "dilutable",
-    "canBeBlacklistedSource": {
-      "label": "Etherscan contract source",
-      "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
-    },
     "blacklistabilityReview": {
-      "reviewedStatus": "dilutable",
-      "sources": [
-        {
-          "label": "Etherscan contract source",
-          "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
-        }
-      ],
-      "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Freeze-only re-review: XAI has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through USDC collateral exposure.",
+      "evidence": "XAI resolves to Upstream through USDC Silo credit-line collateral rather than direct token freeze authority.",
+      "reviewer": "Codex FreezeWatch review",
+      "reviewedAt": "2026-05-24"
     },
     "chainTier": "ethereum",
     "deploymentModel": "single-chain",

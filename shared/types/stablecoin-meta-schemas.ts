@@ -57,7 +57,7 @@ import {
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
-const BlacklistabilityStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("dilutable")]);
+const BlacklistabilityStatusSchema = z.union([z.boolean(), z.literal("possible")]);
 const BlacklistabilityReviewStatusSchema = z.union([BlacklistabilityStatusSchema, z.literal("inherited")]);
 const ReviewDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const PositiveIntegerSchema = z.number().finite().int().positive();

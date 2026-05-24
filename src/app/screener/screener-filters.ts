@@ -23,14 +23,13 @@ export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C",
 
 /**
  * Blacklistability buckets. Maps to the tri-state `canBeBlacklisted` field on
- * the stablecoin meta (boolean | "possible" | "dilutable") with friendlier
+ * the stablecoin meta (boolean | "possible") with friendlier
  * URL keys.
  *   - "yes"        → canBeBlacklisted === true  (issuer can freeze tokens)
  *   - "no"         → canBeBlacklisted === false (no privileged freeze path)
  *   - "possible"   → canBeBlacklisted === "possible"  (implementation-dependent)
- *   - "dilutable"  → canBeBlacklisted === "dilutable" (issuer can dilute via mint)
  */
-export const BLACKLISTABLE_VALUES = ["yes", "no", "possible", "dilutable"] as const;
+export const BLACKLISTABLE_VALUES = ["yes", "no", "possible"] as const;
 export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
 
 export interface ScreenerFilters {
@@ -360,10 +359,10 @@ export function normalizeScreenerDeepLinkAliases(params: URLSearchParams): boole
 }
 
 /** Project the meta `canBeBlacklisted` tri-state to the screener bucket. */
-export function projectBlacklistable(value: boolean | "possible" | "dilutable" | undefined): BlacklistableValue | null {
+export function projectBlacklistable(value: boolean | "possible" | undefined): BlacklistableValue | null {
   if (value === true) return "yes";
   if (value === false) return "no";
-  if (value === "possible" || value === "dilutable") return value;
+  if (value === "possible") return value;
   return null;
 }
 

@@ -46,22 +46,12 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Etherscan contract source",
-    "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
-    "sources": [
-      {
-        "label": "Etherscan contract source",
-        "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
-      }
-    ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Freeze-only re-review: FPI has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through FRAX reserve exposure.",
+    "evidence": "FPI resolves to Upstream because its backing and Frax-controlled reserve model inherit FRAX/freezable-stablecoin exposure.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

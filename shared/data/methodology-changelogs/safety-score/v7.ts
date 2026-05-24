@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V7: readonly MethodologyChangelogEntry[] = [
     {
+      version: "7.27",
+      title: "FreezeWatch removes Dilutable admin-mint tier",
+      date: "2026-05-24",
+      effectiveAt: 1779580800,
+      summary:
+        "FreezeWatch now uses a four-status freeze model: Yes, Upstream, Possible, and No. Admin mint authority is retained in the descriptive Mint Authority review instead of being mixed into freeze exposure.",
+      impact: [
+        "The `Dilutable` FreezeWatch/report-card status is retired; legacy snapshot reads map it into the current model for compatibility",
+        "Former Dilutable assets are re-reviewed under freeze-only semantics: most now resolve as Upstream through collateral, custody, parent, or reserve exposure; USDN (SMARDEX) resolves as Possible; KRWO, LUAUSD, and vCRED resolve as No",
+        "Mint Authority remains descriptive and unscored, but it is now the explicit home for privileged supply-control risk",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "7.26",
       title: "NAV wrapper peg scoring uses configured peg references first",
       date: "2026-05-21",

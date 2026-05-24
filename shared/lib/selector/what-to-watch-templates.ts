@@ -168,7 +168,6 @@ function roundedBps(value: number): number {
 function hasFreezeControls(row: MergedRow): boolean {
   return (
     row.canBeBlacklisted === true ||
-    row.canBeBlacklisted === "dilutable" ||
     row.canBeBlacklisted === "inherited" ||
     row.canBeBlacklisted === "possible"
   );

@@ -6,9 +6,8 @@ vi.mock("@shared/lib/tracked-blacklist-status", () => ({
 }));
 
 vi.mock("@shared/lib/report-cards", () => ({
-  getBlacklistStatusLabel: (status: boolean | "possible" | "inherited" | "dilutable") => {
+  getBlacklistStatusLabel: (status: boolean | "possible" | "inherited") => {
     if (status === true) return "Yes";
-    if (status === "dilutable") return "Dilutable";
     if (status === "possible") return "Possible";
     if (status === "inherited") return "Upstream";
     return "No";

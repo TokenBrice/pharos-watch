@@ -1,23 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_STABLECOINS } from "../stablecoins/registry";
-import { createBlacklistResolutionContext, resolveBlacklistStatus, resolveBlacklistStatuses } from "../report-cards";
+import {
+  createBlacklistResolutionContext,
+  enrichLiveSlicesForBlacklist,
+  isBlacklistable,
+  resolveBlacklistStatus,
+  resolveBlacklistStatuses,
+} from "../report-cards";
 
-const EXPECTED_DILUTABLE_IDS = [
+const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "crvusd-curve",
   "dai-makerdao",
   "dola-inverse-finance",
   "fpi-frax",
   "jpyt-dephaser",
-  "krwo-gimswap",
-  "luausd-lumi-finance",
   "pht-pht",
   "reusd-resupply",
   "srusd-reservoir",
   "usdd-tron-dao-reserve",
   "usde-ethena",
-  "usdn-smardex",
   "usdu-unitas",
-  "vcred-vcred",
   "xai-silo-finance",
 ] as const;
 
@@ -76,14 +78,13 @@ describe("report-card blacklist authority", () => {
     // (March 2020) moving ~64 accounts' HIVE/HBD balances to @hive.fund —
     // chain-native seizure precedent.
     expect(resolved.get("hbd-hive")).toBe(true);
-    // vCRED: plain Ownable ERC20 with unbounded `mint(...) onlyOwner` on Hemi.
-    // No freeze on existing balances, but owner can dilute holders without
-    // bound — classified as "dilutable".
-    expect(resolved.get("vcred-vcred")).toBe("dilutable");
+    // vCRED: plain Ownable ERC20 with mint authority but no freeze, blacklist,
+    // pause, seize, or arbitrary burn surface under FreezeWatch semantics.
+    expect(resolved.get("vcred-vcred")).toBe(false);
     expect(resolved.get("fusd-freedom-dollar")).toBe(false);
-    // LUAUSD: `UtilityToken` on Arbitrum is Ownable with unbounded `mint`
-    // plus `burnFrom`. Same dilution-risk reasoning as vCRED.
-    expect(resolved.get("luausd-lumi-finance")).toBe("dilutable");
+    // LUAUSD: `UtilityToken` on Arbitrum is Ownable with mint authority and
+    // allowance-based `burnFrom`, but no holder freeze or seizure surface.
+    expect(resolved.get("luausd-lumi-finance")).toBe(false);
     // NXUSD: BoringOwnable with mint rate-limited to 15%/24h and no admin
     // reach into user balances. Bounded enough to remain a defensible "No".
     expect(resolved.get("nxusd-nereus")).toBe(false);
@@ -108,32 +109,30 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("usdq-quill")).toBe(false);
     // Orki USDK on Swellchain: re-audited to non-freezable in the metadata backfill.
     expect(resolved.get("usdk-orki")).toBe(false);
-    // srUSD: AccessControl with DEFAULT_ADMIN_ROLE able to grant MINTER —
-    // no token-level freeze but unbounded mint-grant capability → "dilutable".
-    expect(resolved.get("srusd-reservoir")).toBe("dilutable");
+    // srUSD: wrapper over rUSD; freeze exposure now resolves through the parent
+    // balance sheet and PSM path, while mint authority is assessed separately.
+    expect(resolved.get("srusd-reservoir")).toBe("inherited");
     // BabelFish XUSD: upgradeable mAsset + multisig with pause history;
     // explicit `false` override removed so reserve inheritance (32% bridged
     // USDT, 14% bridged USDC) now flows through.
     expect(resolved.get("xusd-babelfish")).toBe("inherited");
   });
 
-  it("pins the tracked-universe Dilutable admin-mint sweep with source provenance", () => {
+  it("pins the retired Dilutable cohort under freeze-only semantics", () => {
     const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
 
-    for (const id of EXPECTED_DILUTABLE_IDS) {
-      expect(resolved.get(id)).toBe("dilutable");
+    for (const id of EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS) {
+      expect(resolved.get(id)).toBe("inherited");
     }
 
-    const dilutableMeta = TRACKED_STABLECOINS
-      .filter((meta) => meta.canBeBlacklisted === "dilutable")
-      .map((meta) => meta.id)
-      .sort();
-    expect(dilutableMeta).toEqual([...EXPECTED_DILUTABLE_IDS].sort());
+    expect(resolved.get("krwo-gimswap")).toBe(false);
+    expect(resolved.get("luausd-lumi-finance")).toBe(false);
+    expect(resolved.get("usdn-smardex")).toBe("possible");
+    expect(resolved.get("vcred-vcred")).toBe(false);
 
     for (const meta of TRACKED_STABLECOINS) {
-      if (meta.canBeBlacklisted !== "dilutable") continue;
-      expect(meta.canBeBlacklistedSource?.label).toBeTruthy();
-      expect(meta.canBeBlacklistedSource?.url).toMatch(/^https:\/\//);
+      expect(meta.canBeBlacklisted).not.toBe("dilutable");
+      expect("canBeBlacklistedSource" in meta).toBe(false);
     }
   });
 
@@ -184,7 +183,30 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("downstream")).toBe("inherited");
   });
 
-  it("separates variant inheritance for possible, direct, dilutable, and upstream parents", () => {
+  it("keeps singleton helper context and live-slice enrichment aligned", () => {
+    const direct = makeMeta("direct", {
+      symbol: "DRT",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+    });
+    const blacklistableIds = new Set(["direct"]);
+    const enriched = enrichLiveSlicesForBlacklist(
+      [{ name: "DRT sleeve", pct: 1, risk: "low" }],
+      blacklistableIds,
+      new Map([["direct", direct]]),
+    );
+
+    expect(enriched[0].blacklistable).toBe(true);
+    expect(isBlacklistable(makeMeta("downstream"), blacklistableIds, enriched)).toBe("inherited");
+  });
+
+  it("separates variant inheritance for possible, direct, and upstream parents", () => {
     const metas = [
       makeMeta("possible-parent", { canBeBlacklisted: "possible" }),
       makeMeta("possible-child", {
@@ -223,20 +245,6 @@ describe("report-card blacklist authority", () => {
           navToken: true,
         },
       }),
-      makeMeta("dilutable-parent", { canBeBlacklisted: "dilutable" }),
-      makeMeta("dilutable-child", {
-        variantOf: "dilutable-parent",
-        variantKind: "savings-passthrough",
-        pegReferenceId: "dilutable-parent",
-        flags: {
-          backing: "crypto-backed",
-          pegCurrency: "USD",
-          governance: "centralized-dependent",
-          yieldBearing: true,
-          rwa: false,
-          navToken: true,
-        },
-      }),
       makeMeta("upstream-parent", {
         reserves: [{ name: "USDC", pct: 1, risk: "low", coinId: "direct-parent" }],
       }),
@@ -259,7 +267,6 @@ describe("report-card blacklist authority", () => {
 
     expect(resolved.get("possible-child")).toBe("possible");
     expect(resolved.get("direct-child")).toBe("inherited");
-    expect(resolved.get("dilutable-child")).toBe("inherited");
     expect(resolved.get("upstream-child")).toBe("inherited");
   });
 

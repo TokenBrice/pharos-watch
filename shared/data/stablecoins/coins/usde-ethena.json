@@ -189,22 +189,17 @@
       "decimals": 8
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Sourcify USDe.sol",
-    "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sourcify USDe.sol",
         "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
       }
     ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Freeze-only re-review: USDe's verified token source exposes owner-set minter and mint authority but no holder freeze or blacklist function. USDe resolves to Upstream through liquid stablecoin reserve exposure plus CEX/off-exchange custody rails.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",

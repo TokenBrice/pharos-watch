@@ -31,7 +31,6 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
   yes: "Yes",
   no: "No",
   possible: "Possible",
-  dilutable: "Dilutable",
 };
 
 const FILTER_PILL_CLASS_NAME =

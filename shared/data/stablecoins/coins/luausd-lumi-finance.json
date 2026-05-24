@@ -35,28 +35,24 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Sourcify UtilityToken.sol",
-    "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
-  },
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Sourcify UtilityToken.sol",
         "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
       }
     ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Freeze-only re-review: the verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no holder freeze, blacklist, pause, seize, or arbitrary burn function.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "LUAUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "summary": "LUAUSD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
     "controls": [
       {
         "label": "Privileged token mint/admin authority",
@@ -71,7 +67,7 @@
             "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
           }
         ],
-        "evidence": "LUAUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        "evidence": "LUAUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
       }
     ],
     "review": {
@@ -81,7 +77,7 @@
           "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
         }
       ],
-      "evidence": "LUAUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "evidence": "LUAUSD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
       "reviewer": "Codex mint-authority MVP",
       "reviewedAt": "2026-05-24"
     }

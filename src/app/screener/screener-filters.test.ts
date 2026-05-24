@@ -329,9 +329,6 @@ describe("projectBlacklistable", () => {
   it("passes 'possible' through", () => {
     expect(projectBlacklistable("possible")).toBe("possible");
   });
-  it("passes 'dilutable' through", () => {
-    expect(projectBlacklistable("dilutable")).toBe("dilutable");
-  });
   it("returns null for undefined (unspecified blacklistability)", () => {
     expect(projectBlacklistable(undefined)).toBeNull();
   });
@@ -341,21 +338,20 @@ describe("applyFilters — blacklistable", () => {
   const yesRow = makeRow({ id: "yes", blacklistable: "yes" });
   const noRow = makeRow({ id: "no", blacklistable: "no" });
   const possibleRow = makeRow({ id: "possible", blacklistable: "possible" });
-  const dilutableRow = makeRow({ id: "dilutable", blacklistable: "dilutable" });
   const unknownRow = makeRow({ id: "unknown", blacklistable: null });
-  const allRows = [yesRow, noRow, possibleRow, dilutableRow, unknownRow] as const;
+  const allRows = [yesRow, noRow, possibleRow, unknownRow] as const;
 
   it("returns every row when the blacklistable filter is empty", () => {
     const filtered = applyFilters(allRows, SCREENER_FILTER_DEFAULTS);
-    expect(filtered.map((r) => r.id)).toEqual(["yes", "no", "possible", "dilutable", "unknown"]);
+    expect(filtered.map((r) => r.id)).toEqual(["yes", "no", "possible", "unknown"]);
   });
 
   it("keeps only rows whose blacklistable status matches the active filter", () => {
     const filtered = applyFilters(allRows, {
       ...SCREENER_FILTER_DEFAULTS,
-      blacklistable: ["yes", "dilutable"],
+      blacklistable: ["yes", "possible"],
     });
-    expect(filtered.map((r) => r.id).sort()).toEqual(["dilutable", "yes"]);
+    expect(filtered.map((r) => r.id).sort()).toEqual(["possible", "yes"]);
   });
 
   it("excludes rows with unknown blacklistable status when the filter is active", () => {
@@ -390,7 +386,7 @@ describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
       "blacklistable=yes,bogus,dilutable",
       SCREENER_URL_SCHEMA,
     );
-    expect(decoded.blacklistable).toEqual(["yes", "dilutable"]);
+    expect(decoded.blacklistable).toEqual(["yes"]);
   });
 });
 

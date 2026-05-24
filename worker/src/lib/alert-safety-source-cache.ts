@@ -51,7 +51,7 @@ export interface AlertSafetyRawInputSnapshot {
   redemptionImmediateCapacityRatio: number | null;
   concentrationHhi: number | null;
   /** Display-only under the current methodology; never use as a causal reason. */
-  canBeBlacklisted: boolean | "possible" | "inherited" | "dilutable";
+  canBeBlacklisted: boolean | "possible" | "inherited";
   collateralFromLive: boolean;
   dependencyFromLive: boolean;
   dependencyCount: number;
@@ -129,7 +129,8 @@ function truncateDetail(value: string): string {
 
 function parseBlacklistStatus(value: unknown): AlertSafetyRawInputSnapshot["canBeBlacklisted"] | undefined {
   if (typeof value === "boolean") return value;
-  if (value === "possible" || value === "inherited" || value === "dilutable") return value;
+  if (value === "possible" || value === "inherited") return value;
+  if (value === "dilutable") return "possible";
   if (value === "possible-inherited") return "inherited";
   return undefined;
 }

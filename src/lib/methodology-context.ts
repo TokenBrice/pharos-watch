@@ -46,7 +46,6 @@ export type MethodologyContextKey =
   | "freezableUpstream"
   | "freezableNo"
   | "freezablePossible"
-  | "freezableDilutable"
   | "dependencyRisk"
   | "redemptionBackstop"
   | "effectiveExit"
@@ -157,7 +156,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   freezableNo: {
     title: "Freezable",
     summary:
-      "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model. This does not prove the asset is risk-free.",
+      "No direct, upstream, or possible freeze exposure is resolved in the current model. This does not prove the asset is risk-free.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -166,14 +165,6 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     title: "Freezable",
     summary:
       "Mutable, pause-capable, or similar admin surfaces could enable freezing, seizure, or destruction, but active address-level freezing is not confirmed.",
-    methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_VERSION_LABEL,
-    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-  },
-  freezableDilutable: {
-    title: "Freezable",
-    summary:
-      "No direct address freeze is resolved, but an admin can mint without bound. Existing holdings cannot be seized directly, yet uncapped issuance can dilute holders into a functionally equivalent loss of value.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,

@@ -150,8 +150,6 @@ function describeFreezeControl(coin: StablecoinMeta): string {
   switch (status) {
     case true:
       return "issuer or admin freeze controls are recorded";
-    case "dilutable":
-      return "admin mint authority can dilute holders even without a standard freeze path";
     case "possible":
       return "freeze or administrative control exposure is possible but not fully confirmed";
     case "inherited":

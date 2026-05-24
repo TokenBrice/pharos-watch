@@ -96,7 +96,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/freezewatch/",
-      label: "FreezeWatch — Dilutable bucket coverage",
+      label: "FreezeWatch — freeze and upstream intervention coverage",
     },
     {
       href: "/learn/mechanisms/cdp/",

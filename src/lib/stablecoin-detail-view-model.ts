@@ -829,7 +829,6 @@ export function buildStablecoinDetailHeroViewModel({
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
-  const blacklistSource = blacklistStatus === "dilutable" ? coin.canBeBlacklistedSource : undefined;
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage?.benchmarkSymbol ?? null;
@@ -849,7 +848,7 @@ export function buildStablecoinDetailHeroViewModel({
 
   const pegScoreDisplay = buildPegScoreDisplay(isNavToken, pegScoreResult, recordedDepegEventCount);
   const liqDisplay = buildLiquidityDisplay(liquidityData);
-  const blacklistDisplay = buildBlacklistDisplay(blacklistStatus, blacklistSource);
+  const blacklistDisplay = buildBlacklistDisplay(blacklistStatus);
   const excessYieldDisplay = buildExcessYieldDisplay(yieldRanking);
   const performanceVsUsdDisplay = buildPerformanceVsUsdDisplay(performanceVsUsd1y);
   const dewsDisplay = buildDewsDisplay(stressSignal);

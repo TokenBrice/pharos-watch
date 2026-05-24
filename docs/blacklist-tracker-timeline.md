@@ -4,6 +4,12 @@ Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.
 
 ---
 
+## v3.994 — Four-status FreezeWatch exposure model (2026-05-24)
+
+- **Dilutable retired from FreezeWatch** — the exposure summary and report-card-backed surfaces now use `Yes`, `Upstream`, `Possible`, and `No`; pure admin-mint dilution risk moves to the Mint Authority review
+- **Supply meter corrected** — the Freezable Supply Meter no longer counts assets with only privileged mint authority as issuer-freezable market cap
+- **Former Dilutable set re-reviewed** — most former Dilutable assets now resolve through upstream collateral/custody exposure, while SMARDEX USDN is `Possible` and KRWO/LUAUSD/vCRED are `No` under freeze-only semantics
+
 ## v3.993 — FreezeWatch rebrand and primary-nav promotion (2026-05-12)
 
 - **Surface rebrand** — page moved from `/blacklist/` to `/freezewatch/` with a 301 redirect; sitemap priority raised from `0.8` to `0.85` to reflect promotion to a primary navigation hero

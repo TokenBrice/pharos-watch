@@ -147,7 +147,7 @@ describe("StablecoinMeta schema — frozen status", () => {
 });
 
 describe("StablecoinMeta schema — blacklistability review", () => {
-  const explicitStatuses = [true, false, "possible", "dilutable"] as const;
+  const explicitStatuses = [true, false, "possible"] as const;
 
   for (const status of explicitStatuses) {
     it(`rejects explicit canBeBlacklisted=${String(status)} without review evidence`, () => {
@@ -158,17 +158,24 @@ describe("StablecoinMeta schema — blacklistability review", () => {
           symbol: "FXT",
           flags: baseFlags,
           canBeBlacklisted: status,
-          ...(status === "dilutable" ? {
-            canBeBlacklistedSource: {
-              label: "Source",
-              url: "https://example.com/source",
-            },
-          } : {}),
         },
       ];
       expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/blacklistabilityReview/);
     });
   }
+
+  it("rejects the retired Dilutable blacklistability status", () => {
+    const json = [
+      {
+        id: "fixture-blacklist-dilutable",
+        name: "Fixture",
+        symbol: "FXT",
+        flags: baseFlags,
+        canBeBlacklisted: "dilutable",
+      },
+    ];
+    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow();
+  });
 
   it("rejects manual inherited blacklistability metadata", () => {
     const json = [

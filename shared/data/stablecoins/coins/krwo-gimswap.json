@@ -49,13 +49,9 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "BscScan contract source",
-    "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
-  },
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "BscScan contract source",
@@ -66,15 +62,15 @@
         "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
       }
     ],
-    "evidence": "Explicit Dilutable review: the verified BSC FiatToken source exposes a privileged MINTER_ADDRESS and mint(address,uint256) guarded by onlyMinter; on-chain reads show nonzero minter addresses on both the BSC and Kaia KRWO deployments. No direct holder freeze or blacklist function was identified in the reviewed BSC token source.",
-    "reviewer": "Codex Worker C",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Freeze-only re-review: the verified BSC FiatToken source exposes privileged mint authority but no holder freeze, blacklist, pause, seize, or arbitrary role-burn function. OV voucher/redemption risk is not a holder-balance FreezeWatch control.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "KRWO has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "summary": "KRWO has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
     "controls": [
       {
         "label": "Privileged token mint/admin authority",
@@ -89,7 +85,7 @@
             "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
           }
         ],
-        "evidence": "KRWO already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        "evidence": "KRWO has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
       }
     ],
     "review": {
@@ -99,7 +95,7 @@
           "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
         }
       ],
-      "evidence": "KRWO already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "evidence": "KRWO has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
       "reviewer": "Codex mint-authority MVP",
       "reviewedAt": "2026-05-24"
     }

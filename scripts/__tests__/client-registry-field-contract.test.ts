@@ -40,7 +40,6 @@ describe("client registry field contract", () => {
       milestones: [],
       dateHistory: [],
       canBeBlacklisted: true,
-      canBeBlacklistedSource: "issuer docs",
       commodityOunces: null,
       infrastructures: ["circle"],
       mica: null,

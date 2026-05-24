@@ -44,7 +44,6 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   lagging: "lag",
   bootstrapping: "boot",
   yes: "yes",
-  dilutable: "dilute",
   upstream: "upstr",
   possible: "poss",
   no: "no",

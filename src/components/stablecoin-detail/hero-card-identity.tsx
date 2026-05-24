@@ -364,10 +364,6 @@ export function FreezablePill({
       ariaLabel = "Freezable — issuer can freeze, block, or seize balances";
       toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
       break;
-    case "dilutable":
-      ariaLabel = "Dilutable — issuer can mint or dilute balances rather than freeze them";
-      toneClass = "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-400";
-      break;
     case "possible":
       ariaLabel =
         "Possible freeze — admin surfaces could enable freezing but no active address-level freezing is confirmed";

@@ -53,7 +53,7 @@ Status semantics are intentionally user-facing:
 - `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Resolved`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
 - `Yield`: `Ranked`, `—`, or `Data n/a`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Disabled`, `Not Covered`, or `Data n/a`
-- `Freezable Status`: `Live`, `Yes`, `Dilutable`, `Upstream`, `Possible`, `No`, or `Data n/a`
+- `Freezable Status`: `Live`, `Yes`, `Upstream`, `Possible`, `No`, or `Data n/a`
 - `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
 - `Mint Authority`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`
 
@@ -78,7 +78,7 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                                                                                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`, resolved-but-unscored routes render as `Resolved`, impaired routes render as `Impaired`, and low-confidence heuristic routes render as `Heur.`; none count as covered in the headline metric.                              |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                                                                                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                                                                                                                                                                     |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                                                                                                                                                          | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                                                                                                                                                       |
-| `Freezable Status`    | `getResolvedBlacklistStatus(coin.id, reportCard)` from `src/lib/blacklist-status.ts`, combining static metadata and `reportCard.rawInputs.canBeBlacklisted`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket | Resolved freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Dilutable`, `Upstream`, `Possible`, and `No` are resolved status states and all count as available coverage.                                                                                                                                         |
+| `Freezable Status`    | `getResolvedBlacklistStatus(coin.id, reportCard)` from `src/lib/blacklist-status.ts`, combining static metadata and `reportCard.rawInputs.canBeBlacklisted`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket | Resolved freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Upstream`, `Possible`, and `No` are resolved status states and all count as available coverage.                                                                                                                                                       |
 | `Dependency Map`      | `useReportCards().data.cards[].rawInputs.dependencies` plus `useReportCards().data.dependencyGraph.edges`                                                                                                                                                  | `buildDependencyCoverageFacts(...)` filters graph edges to live report-card IDs and classifies each coin as both dependent/upstream, dependent-only, upstream-only, resolved with no tracked dependency, or an unmapped gap when dependency evidence exists but no live edge remains. The coverage page does not fall back to the static graph when report-card data is unavailable; it emits `Data n/a`. |
 | `Mint Authority`      | `coin.mintAuthoritySummary` from the slim client registry projection                                                                                                                                                                                       | Structural coverage of curated mint-authority reviews. Reviewed statuses count as available; `Unknown` does not. The column is descriptive and does not consume Safety Score raw inputs.                                                                                                                                                                                                                  |
 
@@ -113,7 +113,7 @@ For `Redemption Backstop`, the headline metric intentionally emphasizes strong r
 
 For `Price & Depeg`, the headline metric intentionally emphasizes breadth with corroborated pricing. A coin still renders `Tracked` in the matrix with fewer than 3 sources, but the feature snapshot headline only counts rows whose `consensusSources` depth is at least 3.
 
-For `Freezable Status`, the headline metric is resolved-status coverage across the active universe. The breakdown distinguishes `Live` FreezeWatch event-tracked assets from direct `Yes`, `Dilutable`, `Upstream`, `Possible`, and `No` states; it no longer treats only direct-blacklistable assets as the denominator.
+For `Freezable Status`, the headline metric is resolved-status coverage across the active universe. The breakdown distinguishes `Live` FreezeWatch event-tracked assets from direct `Yes`, `Upstream`, `Possible`, and `No` states; it no longer treats only direct-blacklistable assets as the denominator.
 
 Breakdowns are intentionally dense and should stay short:
 
@@ -122,7 +122,7 @@ Breakdowns are intentionally dense and should stay short:
 - Redemption: `heuristic / resolved / configured / impaired / issuer / psm / queue / collateral / stable / basket / data n/a`
 - Flows: `full / partial / lagging / bootstrapping / data n/a`
 - Price: `tracked / price-only`
-- Freezable status: `live / yes / dilutable / upstream / possible / no`
+- Freezable status: `live / yes / upstream / possible / no`
 - Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown`
 
 #### Source count enrichment

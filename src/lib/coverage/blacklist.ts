@@ -52,17 +52,6 @@ function resolveBlacklist(
     );
   }
 
-  if (blacklistStatus === "dilutable") {
-    return createStatus(
-      "dilutable",
-      "Dilutable",
-      "violet",
-      true,
-      4,
-      "No direct address freeze is resolved, but an admin can mint without bound and dilute holders.",
-    );
-  }
-
   if (blacklistStatus === "inherited") {
     return createStatus(
       "upstream",
@@ -91,7 +80,7 @@ function resolveBlacklist(
     "emerald",
     true,
     1,
-    "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model.",
+    "No direct, upstream, or possible freeze exposure is resolved in the current model.",
     "Not blacklistable",
   );
 }
@@ -105,7 +94,6 @@ function formatBlacklist(
   const items: CoverageBreakdownItem[] = [
     breakdownItem("live", "live", get("live")),
     breakdownItem("yes", "yes", get("yes")),
-    breakdownItem("dilutable", "dilutable", get("dilutable")),
     breakdownItem("upstream", "upstream", get("upstream")),
     breakdownItem("possible", "possible", get("possible")),
     breakdownItem("no", "no", get("no")),
@@ -119,7 +107,6 @@ function formatBlacklist(
 const BLACKLIST_KINDS: readonly string[] = [
   "live",
   "yes",
-  "dilutable",
   "upstream",
   "possible",
   "no",
@@ -138,11 +125,6 @@ const BLACKLIST_LEGEND: readonly CoverageLegendItem[] = [
     kinds: ["yes"],
   },
   {
-    term: "Dilutable",
-    description: "No direct address freeze is resolved, but an admin can mint without bound and dilute holders.",
-    kinds: ["dilutable"],
-  },
-  {
     term: "Upstream",
     description: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
     kinds: ["upstream"],
@@ -155,7 +137,7 @@ const BLACKLIST_LEGEND: readonly CoverageLegendItem[] = [
   },
   {
     term: "No",
-    description: "No direct, upstream, possible, or dilutable freeze exposure is resolved in the current model.",
+    description: "No direct, upstream, or possible freeze exposure is resolved in the current model.",
     kinds: ["no"],
   },
 ] as const;

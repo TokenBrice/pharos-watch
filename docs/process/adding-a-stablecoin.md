@@ -179,7 +179,6 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `tradedContracts`
 - `dependencies`
 - `canBeBlacklisted`
-- `canBeBlacklistedSource`
 - `chainTier`
 - `deploymentModel`
 - `collateralQuality`
@@ -246,7 +245,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
-- `canBeBlacklisted` only accepts `true`, `false`, `"possible"`, or `"dilutable"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Use `"dilutable"` only when verified token source shows uncapped admin mint authority without a stronger holder-freeze or arbitrary-burn surface; `"dilutable"` additionally requires `canBeBlacklistedSource`. Do not invent `"inherited"` in metadata; that is computed later.
+- `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
 - `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.

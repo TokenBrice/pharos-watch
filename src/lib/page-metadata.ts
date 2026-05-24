@@ -153,10 +153,6 @@ function getMetadataDifferentiator(coin: StablecoinMeta): string | null {
     return "Freeze risk inherited from upstream collateral.";
   }
 
-  if (blacklistStatus === "dilutable") {
-    return "Admin can mint without bound, diluting existing holders.";
-  }
-
   if (blacklistStatus === "possible") {
     return "Blacklist or freeze exposure is possible.";
   }

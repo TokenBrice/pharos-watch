@@ -55,22 +55,12 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Etherscan contract source",
-    "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
-    "sources": [
-      {
-        "label": "Etherscan contract source",
-        "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
-      }
-    ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Freeze-only re-review: srUSD is a savings wrapper over rUSD and resolves to Upstream through the parent balance sheet and PSM exposure.",
+    "evidence": "srUSD resolves to Upstream through rUSD parent balance sheet and PSM exposure rather than direct wrapper freeze authority.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

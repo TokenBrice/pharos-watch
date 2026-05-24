@@ -67,22 +67,12 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Etherscan contract source",
-    "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
-    "sources": [
-      {
-        "label": "Etherscan contract source",
-        "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
-      }
-    ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Freeze-only re-review: DOLA has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through parent and collateral exposure.",
+    "evidence": "DOLA resolves to Upstream through sUSDe/sUSDS collateral and parent stablecoin exposure rather than direct token freeze authority.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -123,7 +113,7 @@
           "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
         }
       ],
-      "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "evidence": "DOLA has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
       "reviewer": "Codex mint-authority MVP",
       "reviewedAt": "2026-05-24"
     }

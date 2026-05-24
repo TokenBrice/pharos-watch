@@ -12,8 +12,6 @@ export function getFreezableLabel(status: BlacklistStatus): string | null {
   switch (status) {
     case true:
       return "Freezable";
-    case "dilutable":
-      return "Dilutable";
     case "possible":
       return "Possible Freeze";
     case "inherited":
@@ -28,12 +26,6 @@ export function getResolvedBlacklistStatus(
   reportCard?: Pick<ReportCard, "rawInputs"> | null,
 ): BlacklistStatus | null {
   const localValue = getTrackedBlacklistStatus(stablecoinId);
-  // canBeBlacklisted is an authored governance field — the API snapshot just
-  // echoes the worker's view of the meta. During tier rollouts the worker may
-  // be behind the local meta (e.g. the report-card schema didn't yet emit
-  // "dilutable"), so let the local meta win when it explicitly asserts the
-  // new tier. Once the snapshot catches up, both sources agree.
-  if (localValue === "dilutable") return "dilutable";
   return reportCard?.rawInputs.canBeBlacklisted ?? localValue;
 }
 

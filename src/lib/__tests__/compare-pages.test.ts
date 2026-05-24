@@ -9,7 +9,7 @@ import {
 } from "@/lib/compare-pages";
 
 describe("compare page blacklist copy", () => {
-  it("surfaces Dilutable status in static comparison copy", () => {
+  it("surfaces upstream FreezeWatch status in static comparison copy", () => {
     const page = getPrimaryStaticComparisonPageForCoin("usde-ethena");
 
     expect(page).not.toBeNull();
@@ -19,8 +19,8 @@ describe("compare page blacklist copy", () => {
 
     expect(blacklistRow).toBeDefined();
     expect(
-      blacklistRow?.left === "Admin can dilute holders via unbounded mint" ||
-        blacklistRow?.right === "Admin can dilute holders via unbounded mint",
+      blacklistRow?.left === "Upstream freeze exposure" ||
+        blacklistRow?.right === "Upstream freeze exposure",
     ).toBe(true);
   });
 });

@@ -2,7 +2,6 @@ import type {
   DexLiquidityData,
   PegSummaryCoin,
   StablecoinData,
-  StablecoinMeta,
   StressSignalEntry,
   YieldRanking,
 } from "@shared/types";
@@ -25,8 +24,7 @@ export interface HeroDisplayValue {
 
 export interface HeroBlacklistDisplay extends HeroDisplayValue {
   status: ReturnType<typeof getResolvedBlacklistStatus>;
-  source?: StablecoinMeta["canBeBlacklistedSource"];
-  methodologyTopic: "freezable" | "freezableNo" | "freezablePossible" | "freezableDilutable" | "freezableUpstream";
+  methodologyTopic: "freezable" | "freezableNo" | "freezablePossible" | "freezableUpstream";
 }
 
 export interface HeroDewsDisplay {
@@ -93,7 +91,6 @@ export function buildLiquidityDisplay(liquidityData: DexLiquidityData | undefine
 
 export function buildBlacklistDisplay(
   blacklistStatus: ReturnType<typeof getResolvedBlacklistStatus>,
-  blacklistSource: StablecoinMeta["canBeBlacklistedSource"] | undefined,
 ): HeroBlacklistDisplay {
   switch (blacklistStatus) {
     case true:
@@ -102,14 +99,6 @@ export function buildBlacklistDisplay(
         value: getFreezableLabel(blacklistStatus) ?? "Freezable",
         color: HERO_NEGATIVE_TREND_CLASS,
         methodologyTopic: "freezable",
-      };
-    case "dilutable":
-      return {
-        status: blacklistStatus,
-        value: getFreezableLabel(blacklistStatus) ?? "Dilutable",
-        color: "text-purple-700 dark:text-purple-400",
-        source: blacklistSource,
-        methodologyTopic: "freezableDilutable",
       };
     case "possible":
       return {

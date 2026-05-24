@@ -141,12 +141,11 @@ export const FEATURE_ACCENT_CLASSES: Record<
   },
 };
 
-export type BlacklistBreakdownStatusKind = "live" | "yes" | "dilutable" | "upstream" | "possible" | "no";
+export type BlacklistBreakdownStatusKind = "live" | "yes" | "upstream" | "possible" | "no";
 
 const BLACKLIST_BREAKDOWN_CHIP_CLASS: Record<BlacklistBreakdownStatusKind, string> = {
   live: "border-rose-500/30 bg-rose-500/12 text-rose-800 dark:text-rose-200",
   yes: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
-  dilutable: "border-purple-500/30 bg-purple-500/12 text-purple-800 dark:text-purple-200",
   upstream: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
   possible: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
   no: "border-emerald-500/30 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200",
@@ -358,10 +357,6 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
     yes: {
       chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.yes,
       bar: "bg-red-500/90",
-    },
-    dilutable: {
-      chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.dilutable,
-      bar: "bg-purple-400/85",
     },
     upstream: {
       chip: BLACKLIST_BREAKDOWN_CHIP_CLASS.upstream,

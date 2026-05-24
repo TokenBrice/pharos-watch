@@ -12,7 +12,7 @@ export const content: ArchetypeContent = {
   howItWorks: [
     {
       title: "Burn governance token",
-      body: "A user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no 1:1 reserve in a custodian — the only \"backing\" is the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos refers to this redeem-by-dilution surface as the `/freezewatch` Dilutable bucket.",
+      body: "A user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no 1:1 reserve in a custodian — the only \"backing\" is the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
     },
     {
       title: "Mint/burn AMO",
@@ -38,13 +38,13 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Privileged mint authority retained",
-      body: "Most coins currently tagged `algorithmic` on Pharos sit in the `Dilutable` `/freezewatch` bucket: the issuer or DAO retains uncapped or admin-controlled mint authority without an explicit holder-balance freeze surface. That is the failure mode the bucket exists to catch — quiet expansion that erodes the per-token claim rather than a single visible depeg event.",
+      body: "Many coins carrying this archetype retain uncapped or admin-controlled mint authority without an explicit holder-balance freeze surface. That is no longer a FreezeWatch tier; the Mint Authority module carries the supply-control review while FreezeWatch stays focused on freezes, blocks, wipes, pauses, and upstream value blocks.",
     },
   ],
   representativeCoins: [
     {
       coinId: "usdd-tron-dao-reserve",
-      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Structurally a CDP-plus-PSM hybrid today; classified `algorithmic` on Pharos because of the system's depeg history and the retained Dilutable mint authority.",
+      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Structurally a CDP-plus-PSM hybrid today; classified `algorithmic` on Pharos because of the system's depeg history and retained privileged mint authority.",
     },
     {
       coinId: "fpi-frax",
@@ -70,13 +70,13 @@ export const content: ArchetypeContent = {
     },
     {
       title: "CDP-plus-PSM hybrids retained under the label",
-      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module — close to the `cdp` archetype in mechanism, but classified `algorithmic` because of its depeg history and Dilutable status. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
+      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module — close to the `cdp` archetype in mechanism, but classified `algorithmic` because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
     },
   ],
   whatToWatch: [
     "Active depeg cap on the Safety Score. Algorithmic designs that trade meaningfully below peg are hard-capped at D (≥10% deviation) or F (≥25% deviation).",
     "DEWS supply-velocity signal on `/depeg`. Algorithmic designs frequently trigger this sub-signal first; contraction in circulating supply is the on-chain symptom of the burn-and-redeem loop running against the peg.",
-    "`/freezewatch` Dilutable bucket. Most coins under this archetype retain uncapped mint authority; sudden mint bursts and admin-key activity surface in the live tracker before they show up as a peg deviation.",
+    "Mint Authority review. Most coins under this archetype retain privileged mint authority; sudden mint bursts and admin-key activity are supply-control risk rather than holder-freeze events.",
     "PegScore and the 7-day deviation chart on `/stablecoin/[id]/`. The composite peg score caps lower for chronic deviators, and the chart shows whether a depeg actually closed or just went stale at a discount.",
     "PSI Top Contributors table. Chronic depegs decay through the PSI factor floor (0.25 after roughly 120 days), so a long-running algorithmic depeg is downweighted in the system-wide stability index rather than amplified.",
     "Live Reserve view where available. USDD exposes a 4-hourly collateral mix (TRX, sTRX, Smart Allocator, USDT PSM); FPI exposes its FRAX reserve and FPIS-sale state. Quarterly snapshots are too coarse for this design family.",
@@ -99,8 +99,8 @@ export const content: ArchetypeContent = {
       label: "Case study: IRON Finance, the algorithmic prequel",
     },
     {
-      href: "/freezewatch",
-      label: "/freezewatch Dilutable bucket and live mint activity",
+      href: "/coverage/",
+      label: "Mint Authority coverage and reviewed supply controls",
     },
     {
       href: "/cemetery/",

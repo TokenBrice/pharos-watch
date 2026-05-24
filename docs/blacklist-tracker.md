@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.993`
+- **Current methodology version:** `v3.994`
 - **Runtime/version source:** `shared/lib/blacklist-tracker-version.ts`
 - **Public changelog route:** `/methodology/blacklist-tracker-changelog/`
 - **Version timeline:** [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)
@@ -27,10 +27,9 @@ Implementation note: `EURC` is live-supported with mirror-zero suppression. Circ
 
 ## Visible `/freezewatch` Exposure Contract
 
-The public `/freezewatch` exposure summary uses `blacklistStatusBuckets` from `buildBlacklistStatusBuckets()` and the same five-status resolved model as report-card-backed product surfaces:
+The public `/freezewatch` exposure summary uses `blacklistStatusBuckets` from `buildBlacklistStatusBuckets()` and the same four-status resolved model as report-card-backed product surfaces:
 
 - `yes` means direct issuer blacklist, freeze, seizure, or equivalent holder-facing control.
-- `dilutable` means no holder-balance freeze control is known, but an admin can mint without bound and dilute holders.
 - `upstream` means any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure can freeze or block value upstream of the token. This is an any-reserve policy: a matched reserve path does not need to be majority-weighted to resolve as Upstream.
 - `possible` is reserved for curated direct token/vault pause, freeze, blacklist, or mutable holder-facing control surfaces that are not confirmed active direct blacklist controls.
 - `no` means no resolved exposure in the current model.

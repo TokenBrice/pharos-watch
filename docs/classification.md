@@ -56,8 +56,8 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `mica?: MicaProfile` — EU MiCA authorization status, EMT/ART token type, competent authority, issuer entity, significance flag, and sourced register/reference links. See [mica-tracker.md](./mica-tracker.md).
 - `contracts?: ContractDeployment[]` — on-chain contract addresses per chain
 - `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
-- `canBeBlacklisted?: boolean | "possible" | "dilutable"` — freeze/blacklist/dilution capability (reported descriptively)
-- `canBeBlacklistedSource?: StablecoinLink` — required contract-source link when `canBeBlacklisted` is `"dilutable"`
+- `canBeBlacklisted?: boolean | "possible"` — direct freeze/blacklist capability override (reported descriptively); upstream exposure is computed
+- `blacklistabilityReview?: BlacklistabilityReview` — required for every explicit `canBeBlacklisted` value and used for reviewed inherited/No rationale
 - `blacklistabilityReview?: BlacklistabilityReview` — required for every explicit `canBeBlacklisted` value; `reviewedStatus` must match the authored status
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
 - `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.

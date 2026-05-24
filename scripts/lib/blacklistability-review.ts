@@ -9,7 +9,6 @@ export interface BlacklistabilityReviewIssue {
 function cloneWithoutBlacklistOverride(meta: StablecoinMeta): StablecoinMeta {
   const {
     canBeBlacklisted: _canBeBlacklisted,
-    canBeBlacklistedSource: _canBeBlacklistedSource,
     blacklistabilityReview: _blacklistabilityReview,
     ...rest
   } = meta;

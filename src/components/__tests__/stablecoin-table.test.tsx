@@ -297,7 +297,7 @@ describe("StablecoinTable", () => {
     expect(screen.getAllByText("Yes").length).toBeGreaterThan(0);
   });
 
-  it("links Dilutable table status to its source", () => {
+  it("renders upstream FreezeWatch status without source-link affordance", () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "blacklistable"]));
 
     render(
@@ -309,11 +309,8 @@ describe("StablecoinTable", () => {
       />,
     );
 
-    const sourceLink = screen.getByRole("link", { name: "Dilutable source: Etherscan contract source" });
-    expect(sourceLink.textContent).toContain("Dilutable");
-    expect(sourceLink.getAttribute("href")).toBe(
-      "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code",
-    );
+    expect(screen.getByText("Upstream")).toBeTruthy();
+    expect(screen.queryByLabelText(/source/i)).toBeNull();
   });
 
   it("renders a star control when pinning is enabled", () => {

@@ -86,22 +86,12 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Etherscan contract source",
-    "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
-    "sources": [
-      {
-        "label": "Etherscan contract source",
-        "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
-      }
-    ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Freeze-only re-review: crvUSD has no confirmed direct holder-balance freeze in the reviewed token source, but resolves to Upstream through centralized-custody collateral and tracked freezable stablecoin dependencies.",
+    "evidence": "crvUSD resolves to Upstream through WBTC/cbBTC centralized-custody collateral and pegkeeper/dependency exposure to tracked freezable stablecoins.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

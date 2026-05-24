@@ -2220,7 +2220,7 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `redemptionImmediateCapacityRatio` | `number \| null`                                                                            |
 | `concentrationHhi`                 | `number \| null`                                                                            |
 | `bluechipGrade`                    | `BluechipGrade \| null`                                                                     |
-| `canBeBlacklisted`                 | `boolean \| "dilutable" \| "possible" \| "inherited"`                                       |
+| `canBeBlacklisted`                 | `boolean \| "possible" \| "inherited"`                                                       |
 | `chainTier`                        | `ChainTier`                                                                                 |
 | `deploymentModel`                  | `DeploymentModel`                                                                           |
 | `collateralQuality`                | `CollateralQuality`                                                                         |
@@ -2233,7 +2233,7 @@ Report-card generation treats the stablecoins cache and readable redemption-back
 | `navToken`                         | `boolean`                                                                                   |
 | `collateralFromLive`               | `boolean`                                                                                   |
 
-`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the five-status model: `true` -> `Yes`, `"dilutable"` -> `Dilutable`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Raw metadata accepts `"dilutable"` for uncapped admin-mint cases; those entries must include `canBeBlacklistedSource` for source provenance. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
+`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the four-status model: `true` -> `Yes`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Admin mint authority is reviewed separately in Mint Authority and is not a FreezeWatch status. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
 
 `rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
 

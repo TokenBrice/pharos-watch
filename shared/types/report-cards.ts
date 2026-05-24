@@ -62,13 +62,13 @@ export type ReportCardDetailItem = NonNullable<ReportCardDimension["detailItems"
 
 export { DependencyWeightSchema };
 
-// Wire-compatible schema: accepts legacy "possible-inherited" from old snapshots
-// and maps it to the clearer "inherited" label.
+// Wire-compatible schema: accepts legacy "possible-inherited" and "dilutable"
+// from old snapshots, mapping them into the current four-status model.
 const ReportCardBlacklistStatusSchema = z.union([
   z.boolean(),
   z.literal("possible"),
   z.literal("inherited"),
-  z.literal("dilutable"),
+  z.literal("dilutable").transform((): "possible" => "possible"),
   z.literal("possible-inherited").transform((): "inherited" => "inherited"),
 ]);
 

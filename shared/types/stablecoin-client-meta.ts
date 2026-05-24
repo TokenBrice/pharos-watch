@@ -84,7 +84,6 @@ export type StablecoinClientMeta = Pick<
   | "milestones"
   | "dateHistory"
   | "canBeBlacklisted"
-  | "canBeBlacklistedSource"
   | "commodityOunces"
   | "infrastructures"
   | "mica"
@@ -122,7 +121,6 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "milestones",
   "dateHistory",
   "canBeBlacklisted",
-  "canBeBlacklistedSource",
   "commodityOunces",
   "infrastructures",
   "mica",

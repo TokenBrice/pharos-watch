@@ -163,8 +163,7 @@ const StablecoinMetaAssetSchemaShape = {
   contracts: z.array(ContractDeploymentSchema).optional(),
   tradedContracts: z.array(ContractDeploymentSchema).optional(),
   dependencies: z.array(DependencyWeightSchema).optional(),
-  canBeBlacklisted: z.union([z.boolean(), z.literal("possible"), z.literal("dilutable")]).optional(),
-  canBeBlacklistedSource: StablecoinLinkSchema.optional(),
+  canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
   blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
   chainTier: StablecoinMetaEnumSchemas.chainTier.optional(),
   deploymentModel: StablecoinMetaEnumSchemas.deploymentModel.optional(),
@@ -216,13 +215,6 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
     });
   }
 
-  if (meta.canBeBlacklisted === "dilutable" && meta.canBeBlacklistedSource == null) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "dilutable blacklist overrides require canBeBlacklistedSource",
-      path: ["canBeBlacklistedSource"],
-    });
-  }
 }).superRefine((meta, ctx) => {
   if ((meta.variantOf == null) === (meta.variantKind == null)) {
     return;

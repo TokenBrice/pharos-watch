@@ -13,7 +13,7 @@ import {
 } from "@/lib/blacklist-status-buckets";
 import { formatCurrency } from "@shared/lib/format";
 
-const FREEZABLE_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "dilutable", "upstream", "possible"]);
+const FREEZABLE_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "upstream", "possible"]);
 
 interface FreezableSupplyMeterProps {
   buckets: BlacklistStatusBucket[] | null | undefined;
@@ -94,8 +94,7 @@ export function FreezableSupplyMeter({
             {formatCurrency(freezableMarketCap, 0)}
           </h2>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            sits under issuer freeze control — direct, dilutable, upstream, or possible exposure across tracked
-            stablecoins.
+            sits under issuer freeze control — direct, upstream, or possible exposure across tracked stablecoins.
           </p>
         </div>
         <div className="shrink-0 sm:border-l sm:border-border/60 sm:pl-6 lg:pl-8">

@@ -70,7 +70,6 @@ export function lookupNormalizedSubDimension(
       return row.custodyModel != null ? (CUSTODY_LADDER[row.custodyModel] ?? null) : null;
     case "governanceOverride":
       if (row.canBeBlacklisted === true) return 0;
-      if (row.canBeBlacklisted === "dilutable") return 30;
       if (row.canBeBlacklisted === "inherited") return 30;
       if (row.canBeBlacklisted === "possible") return 60;
       return 100;

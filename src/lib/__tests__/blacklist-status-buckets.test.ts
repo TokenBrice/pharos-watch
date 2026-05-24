@@ -13,8 +13,8 @@ const { TRACKED_STATUS_BY_ID } = vi.hoisted(() => ({
     "usdt-tether": true,
     "usdp-parallel": "inherited",
     "lusd-liquity": false,
-    "vcred-vcred": "dilutable",
-  } as Record<string, boolean | "possible" | "inherited" | "dilutable">,
+    "usdn-smardex": "possible",
+  } as Record<string, boolean | "possible" | "inherited">,
 }));
 
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
@@ -23,7 +23,7 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => ({
     ["usdt-tether", {}],
     ["usdp-parallel", {}],
     ["lusd-liquity", {}],
-    ["vcred-vcred", {}],
+    ["usdn-smardex", {}],
   ]),
 }));
 
@@ -36,9 +36,8 @@ vi.mock("@shared/lib/tracked-blacklist-status", () => ({
 }));
 
 vi.mock("@shared/lib/report-cards", () => ({
-  getBlacklistStatusLabel: (status: boolean | "possible" | "inherited" | "dilutable") => {
+  getBlacklistStatusLabel: (status: boolean | "possible" | "inherited") => {
     if (status === true) return "Yes";
-    if (status === "dilutable") return "Dilutable";
     if (status === "possible") return "Possible";
     if (status === "inherited") return "Upstream";
     return "No";
@@ -48,7 +47,6 @@ vi.mock("@shared/lib/report-cards", () => ({
 describe("blacklist status buckets", () => {
   it("maps resolved blacklist statuses into chart bucket keys", () => {
     expect(resolveBlacklistStatusBucket(true)).toBe("yes");
-    expect(resolveBlacklistStatusBucket("dilutable")).toBe("dilutable");
     expect(resolveBlacklistStatusBucket("possible")).toBe("possible");
     expect(resolveBlacklistStatusBucket("inherited")).toBe("upstream");
     expect(resolveBlacklistStatusBucket(false)).toBe("no");
@@ -62,21 +60,12 @@ describe("blacklist status buckets", () => {
     expect(getBlacklistStatusBucketForStablecoin("usdp-parallel", reportCard)).toBe("possible");
   });
 
-  it("keeps local Dilutable precedence over older report-card snapshots", () => {
-    const reportCard = {
-      rawInputs: { canBeBlacklisted: false },
-    } as Pick<ReportCard, "rawInputs">;
-
-    expect(getBlacklistStatusBucketForStablecoin("vcred-vcred", reportCard)).toBe("dilutable");
-  });
-
-  it("always returns all five buckets, including zero market-cap rows", () => {
+  it("always returns all four buckets, including zero market-cap rows", () => {
     const buckets = buildBlacklistStatusBuckets([], {});
 
     expect(buckets.map((bucket) => bucket.key)).toEqual(BLACKLIST_STATUS_BUCKET_ORDER);
-    expect(buckets).toHaveLength(5);
+    expect(buckets).toHaveLength(4);
     expect(buckets.every((bucket) => bucket.marketCap === 0)).toBe(true);
-    expect(buckets.find((bucket) => bucket.key === "dilutable")).toMatchObject({ count: 0, marketCap: 0 });
     expect(buckets.find((bucket) => bucket.key === "possible")).toMatchObject({ count: 0, marketCap: 0 });
   });
 

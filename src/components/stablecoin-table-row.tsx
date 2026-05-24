@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { ExternalLink, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
@@ -113,7 +113,6 @@ function StablecoinVirtualRowBase({
   const variantDisplay = meta?.variantKind ? getVariantDisplay(meta.variantKind) : null;
   const variantContext = meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
-  const blacklistSource = blacklistStatus === "dilutable" ? meta?.canBeBlacklistedSource : undefined;
   const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
   const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
   const supplySparklineValues = [prevWeek, prevDay, circulating];
@@ -363,22 +362,6 @@ function StablecoinVirtualRowBase({
             <span className="text-red-700 dark:text-red-400">Yes</span>
           ) : blacklistStatus === false ? (
             <span className="text-green-700 dark:text-green-400">No</span>
-          ) : blacklistStatus === "dilutable" ? (
-            blacklistSource ? (
-              <a
-                href={blacklistSource.url}
-                target="_blank"
-                rel="noreferrer"
-                className="pharos-focus-ring inline-flex items-center justify-center gap-1 rounded-sm text-purple-700 underline-offset-2 hover:underline dark:text-purple-400"
-                title={blacklistSource.label}
-                aria-label={`Dilutable source: ${blacklistSource.label}`}
-              >
-                Dilutable
-                <ExternalLink className="h-3 w-3" aria-hidden />
-              </a>
-            ) : (
-              <span className="text-purple-700 dark:text-purple-400">Dilutable</span>
-            )
           ) : blacklistStatus === "possible" ? (
             <span className="text-amber-700 dark:text-amber-400">Possible</span>
           ) : blacklistStatus === "inherited" ? (

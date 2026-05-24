@@ -15,7 +15,7 @@ import type { UrlStateSchema } from "@/lib/url-state";
 export type FreezeWatchEventType = "all" | "blacklist" | "unblacklist" | "destroy";
 export type FreezeWatchSortKey = "date" | "stablecoin" | "chain" | "event";
 export type FreezeWatchSortDirection = "asc" | "desc";
-export type FreezeWatchStatusBucket = "" | "yes" | "dilutable" | "upstream" | "possible" | "no";
+export type FreezeWatchStatusBucket = "" | "yes" | "upstream" | "possible" | "no";
 
 export const FREEZEWATCH_EVENT_TYPES = [
   "all",
@@ -39,7 +39,6 @@ export const FREEZEWATCH_SORT_DIRECTIONS = [
 export const FREEZEWATCH_STATUS_BUCKETS = [
   "",
   "yes",
-  "dilutable",
   "upstream",
   "possible",
   "no",

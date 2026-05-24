@@ -533,7 +533,7 @@ export interface MergedRow {
   pegCurrency: PegCurrency;
   lifecycle: "active" | "frozen" | "pre-launch";
   governance: "centralized" | "centralized-dependent" | "decentralized" | null;
-  canBeBlacklisted: boolean | "possible" | "dilutable" | "inherited" | null;
+  canBeBlacklisted: boolean | "possible" | "inherited" | null;
   mechanismArchetype: string | null;
 
   supplyUsd: number;

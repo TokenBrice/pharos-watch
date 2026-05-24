@@ -275,7 +275,6 @@ describe("coverage helpers", () => {
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "YES" }), true).kind).toBe("yes");
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDT" }), "possible").kind).toBe("possible");
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "DAI" }), "inherited").kind).toBe("upstream");
-    expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDS" }), "dilutable").kind).toBe("dilutable");
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDQ" }), false).kind).toBe("no");
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "TBD" }), null).kind).toBe("data-unavailable");
   });
@@ -997,7 +996,6 @@ describe("coverage helpers", () => {
     expect(summary.breakdown).toEqual([
       { key: "live", label: "live", count: 1 },
       { key: "yes", label: "yes", count: 1 },
-      { key: "dilutable", label: "dilutable", count: 0 },
       { key: "upstream", label: "upstream", count: 0 },
       { key: "possible", label: "possible", count: 1 },
       { key: "no", label: "no", count: 1 },
@@ -1219,7 +1217,6 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   // ── blacklist ────────────────────────────────────────────────────────────
   record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDC" }), true).kind); // live
   record("blacklist", resolveBlacklistCoverage(coin({ symbol: "YES" }), true).kind); // yes
-  record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDS" }), "dilutable").kind);
   record("blacklist", resolveBlacklistCoverage(coin({ symbol: "DAI" }), "inherited").kind); // upstream
   record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDT" }), "possible").kind);
   record("blacklist", resolveBlacklistCoverage(coin({ symbol: "USDQ" }), false).kind); // no

@@ -42,7 +42,7 @@ export function BlacklistTrackerMethodologySection() {
                 fallback until remediation catches them up.
               </p>
               <p>
-                Blacklistability uses the report-card five-status model: Yes, Dilutable, Upstream, Possible, and No.
+                Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No.
                 Any reserve, custody, backing, parent-asset, or CEX/custody-rail exposure resolves as Upstream; Possible
                 is reserved for curated direct token or vault controls that are not confirmed direct blacklist controls.
               </p>

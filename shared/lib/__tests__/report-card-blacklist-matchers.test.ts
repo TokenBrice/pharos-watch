@@ -333,8 +333,4 @@ describe("getBlacklistStatusLabel", () => {
   it("formats explicit false as No", () => {
     expect(getBlacklistStatusLabel(false)).toBe("No");
   });
-
-  it("formats dilutable as Dilutable", () => {
-    expect(getBlacklistStatusLabel("dilutable")).toBe("Dilutable");
-  });
 });

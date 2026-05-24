@@ -81,7 +81,7 @@
         "url": "https://pharos.watch/stablecoins/dola-inverse-finance/"
       }
     ],
-    "evidence": "sDOLA resolves to Upstream because it is a savings wrapper over DOLA, and DOLA's reviewed status is Dilutable through admin-controlled mint authority.",
+    "evidence": "sDOLA resolves to Upstream because it is a savings wrapper over DOLA, and DOLA now resolves to Upstream through parent stablecoin and collateral exposure.",
     "reviewer": "Codex data addition",
     "reviewedAt": "2026-05-24"
   },

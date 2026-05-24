@@ -99,14 +99,6 @@ describe("FreezablePill", () => {
     expect(link.textContent).toContain("Freezable");
   });
 
-  it("renders 'Dilutable' when canBeBlacklisted === 'dilutable'", () => {
-    const { getByRole } = render(
-      <FreezablePill coin={COIN} reportCard={makeReportCard("dilutable")} />,
-    );
-    const link = getByRole("link");
-    expect(link.textContent).toContain("Dilutable");
-  });
-
   it("renders 'Possible Freeze' when canBeBlacklisted === 'possible'", () => {
     const { getByRole } = render(
       <FreezablePill coin={COIN} reportCard={makeReportCard("possible")} />,
@@ -141,7 +133,7 @@ describe("FreezablePill", () => {
 
   it("links non-BLACKLIST_STABLECOINS symbols to the canonical FreezeWatch stablecoin filter", () => {
     const { getByRole } = render(
-      <FreezablePill coin={NON_BLACKLIST_COIN} reportCard={makeReportCard("dilutable")} />,
+      <FreezablePill coin={NON_BLACKLIST_COIN} reportCard={makeReportCard("possible")} />,
     );
     const link = getByRole("link");
     expect(link.getAttribute("href")).toBe("/freezewatch/?stablecoin=DAI");

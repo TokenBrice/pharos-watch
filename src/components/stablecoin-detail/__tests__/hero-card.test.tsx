@@ -353,52 +353,6 @@ describe("HeroCard", () => {
     expect(html).not.toContain("No issuer controls");
   });
 
-  it("links Dilutable status to its source", () => {
-    const dilutableCoin: StablecoinMeta = {
-      ...coin,
-      id: "dai-makerdao",
-      name: "Dai",
-      symbol: "DAI",
-      canBeBlacklisted: "dilutable",
-      canBeBlacklistedSource: {
-        label: "Etherscan contract source",
-        url: "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code",
-      },
-      flags: {
-        ...coin.flags,
-        governance: "centralized-dependent",
-      },
-    };
-
-    const html = renderToStaticMarkup(
-      <HeroCardUnderTest
-        coin={dilutableCoin}
-        coinData={{ ...coinData, id: "dai-makerdao", name: "Dai", symbol: "DAI" }}
-        logoSrc="/logos/dai.svg"
-        isNavToken={false}
-        mcap={1_000_000_000}
-        supply={1_000_000_000}
-        prevDay={995_000_000}
-        prevWeek={980_000_000}
-        prevMonth={970_000_000}
-        performanceVsUsd1y={null}
-        pegRef={1}
-        deviationBps={-2}
-        gaugeDeviationBps={2}
-        pegScoreResult={pegScoreResult}
-        liquidityData={liquidityData}
-        yieldRanking={null}
-        stressSignal={null}
-        reportCard={null}
-        onOpenFeedback={() => {}}
-      />,
-    );
-
-    expect(html).toContain("Dilutable");
-    expect(html).toContain("Dilutable source: Etherscan contract source");
-    expect(html).toContain("https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code");
-  });
-
   it("uses shared no-gap copy when excess yield is unavailable", () => {
     const html = renderToStaticMarkup(
       <HeroCardUnderTest

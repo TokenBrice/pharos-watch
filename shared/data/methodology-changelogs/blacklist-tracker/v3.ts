@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.994",
+    title: "Four-status FreezeWatch exposure model",
+    date: "2026-05-24",
+    effectiveAt: 1779580800, // 2026-05-24T00:00:00Z
+    summary:
+      "Removes the Dilutable bucket from FreezeWatch so the surface reports holder-freeze, upstream-block, possible-control, and no-resolved-freeze exposure only. Privileged mint authority remains available through the separate Mint Authority review.",
+    impact: [
+      "The public `/freezewatch` exposure summary now uses Yes, Upstream, Possible, and No",
+      "Freezable market-cap totals no longer include pure admin-mint dilution risk",
+      "Former Dilutable assets are re-reviewed under freeze-only semantics and retain supply-control context in Mint Authority",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.993",
     title: "FreezeWatch rebrand and primary-nav promotion",
     date: "2026-05-12",

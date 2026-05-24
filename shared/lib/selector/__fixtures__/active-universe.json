@@ -592,7 +592,7 @@
     "pegCurrency": "USD",
     "lifecycle": "active",
     "governance": "centralized-dependent",
-    "canBeBlacklisted": "dilutable",
+    "canBeBlacklisted": "inherited",
     "mechanismArchetype": "algorithmic",
     "supplyUsd": 380000000,
     "pegScore": 80,

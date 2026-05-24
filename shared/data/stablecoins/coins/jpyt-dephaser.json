@@ -46,13 +46,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Sourcify Optimism contract source",
-    "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sourcify Optimism contract source",
@@ -63,15 +58,15 @@
         "url": "https://docs.dephaser.com/concept/what-is-jpyt"
       }
     ],
-    "evidence": "Explicit Dilutable review: the verified JPYT source exposes MINTER_ROLE and BURNER_ROLE, with mint(address,uint256) gated by MINTER_ROLE and role administration held by DEFAULT_ADMIN_ROLE. No holder freeze or blacklist function was identified in the reviewed token source.",
-    "reviewer": "Codex Worker C",
-    "reviewedAt": "2026-05-14"
+    "evidence": "Freeze-only re-review: JPYT has no direct holder freeze or blacklist function in the reviewed source; burnFrom remains allowance-gated even when called by BURNER_ROLE. JPYT resolves to Upstream through locked USDT/USDC reserve exposure.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "JPYT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "summary": "JPYT has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
     "controls": [
       {
         "label": "Privileged token mint/admin authority",
@@ -86,7 +81,7 @@
             "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
           }
         ],
-        "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        "evidence": "JPYT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
       }
     ],
     "review": {
@@ -96,7 +91,7 @@
           "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
         }
       ],
-      "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "evidence": "JPYT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
       "reviewer": "Codex mint-authority MVP",
       "reviewedAt": "2026-05-24"
     }

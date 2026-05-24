@@ -104,22 +104,12 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Etherscan contract source",
-    "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
-  },
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
-    "sources": [
-      {
-        "label": "Etherscan contract source",
-        "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
-      }
-    ],
-    "evidence": "Explicit Dilutable retained: cited source provenance identifies uncapped or admin-controlled mint authority without a stronger confirmed holder-balance freeze or arbitrary-burn surface.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Freeze-only re-review: DAI has no direct holder-balance freeze in the reviewed token source, but resolves to Upstream through PSM stablecoins and RWA/custody exposure.",
+    "evidence": "DAI resolves to Upstream through Maker/Sky PSM exposure to freezable stablecoins plus centralized RWA and custody dependencies.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

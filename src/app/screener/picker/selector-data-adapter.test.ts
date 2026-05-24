@@ -486,7 +486,7 @@ describe("buildSelectorRows", () => {
           concentrationHhi: 0.42,
           collateralQuality: "rwa",
           custodyModel: "institutional-regulated",
-          canBeBlacklisted: "dilutable",
+          canBeBlacklisted: "inherited",
           bluechipGrade: "B+",
         }),
       }),
@@ -534,7 +534,7 @@ describe("buildSelectorRows", () => {
     expect(row?.effectiveTvlUsd).toBe(25_000_000);
     expect(row?.collateralQuality).toBe(50);
     expect(row?.custodyModel).toBe("institutional-regulated");
-    expect(row?.canBeBlacklisted).toBe("dilutable");
+    expect(row?.canBeBlacklisted).toBe("inherited");
     expect(row?.bluechipGrade).toBe("B+");
     expect(row?.dewsScore).toBe(18);
     expect(row?.dexTvlAgeSec).toBe(120);

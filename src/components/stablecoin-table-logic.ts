@@ -191,7 +191,6 @@ export function sortStablecoins({
       const status = getResolvedBlacklistStatus(r.id, reportCards?.[r.id]);
       if (status === null) return null;
       if (status === true) return 3;
-      if (status === "dilutable") return 2;
       if (status === "possible" || status === "inherited") return 1;
       return 0;
     },

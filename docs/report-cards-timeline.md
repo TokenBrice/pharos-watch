@@ -2,6 +2,12 @@
 
 Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.26 (2026-02-25 → 2026-05-21). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
 
+## v7.27 — FreezeWatch removes Dilutable admin-mint tier (2026-05-24)
+
+- Removes `Dilutable` from the report-card-backed FreezeWatch/freezability status model, leaving `Yes`, `Upstream`, `Possible`, and `No`
+- Keeps privileged mint and mint-admin risk in the descriptive Mint Authority module rather than treating admin mint authority as holder-freeze exposure
+- Re-reviews the former Dilutable set under freeze-only semantics: crvUSD, DAI, DOLA, FPI, JPYT, PHT, REUSD, srUSD, USDD, USDe, USDU, and XAI now resolve as `Upstream`; SMARDEX USDN resolves as `Possible`; KRWO, LUAUSD, and vCRED resolve as `No`
+
 ## v7.26 — NAV wrapper peg scoring uses configured peg references first (2026-05-21)
 
 - NAV and savings wrappers with a configured peg reference now ignore their own appreciating share price for Safety Score peg scoring and active-depeg caps
