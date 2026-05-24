@@ -1,16 +1,76 @@
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
-import type { ReportCard } from "@shared/types";
+import {
+  DIMENSION_WEIGHTS,
+  NO_LIQUIDITY_PENALTY,
+  PEG_MULTIPLIER_EXPONENT,
+} from "@shared/lib/report-card-core";
+import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
+import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
 const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
 const ALERT_SAFETY_SOURCE_STALE_PRODUCER_INTERVALS = 2;
+const ALERT_SAFETY_EXPLAIN_SCHEMA_VERSION = 1;
+const ALERT_SAFETY_DETAIL_MAX_CHARS = 160;
+
+const DIMENSION_KEYS = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
 export type AlertSafetySourceState = "ok" | "missing" | "corrupt" | "stale" | "wrong-generation";
+
+export interface AlertSafetyDimensionSnapshot {
+  grade: ReportCardGrade | string;
+  score: number | null;
+  detail?: string;
+}
+
+export interface AlertSafetyStageSnapshot {
+  baseScore: number | null;
+  postPegScore: number | null;
+  postNoLiquidityPenaltyScore: number | null;
+  activeDepegCapScore: number | null;
+  postActiveDepegCapScore: number | null;
+  scoreBeforeVariantCap: number | null;
+  finalScore: number | null;
+  noLiquidityPenaltyApplied: boolean;
+  activeDepegCapApplied: boolean;
+  variantCapApplied: boolean;
+}
+
+export interface AlertSafetyRawInputSnapshot {
+  pegScore: number | null;
+  activeDepeg: boolean;
+  activeDepegBps: number | null;
+  liquidityScore: number | null;
+  effectiveExitScore: number | null;
+  redemptionBackstopScore: number | null;
+  redemptionUsedForLiquidity: boolean;
+  redemptionRouteFamily: string | null;
+  redemptionModelConfidence: string | null;
+  redemptionExclusionReason: string | null;
+  redemptionImmediateCapacityUsd: number | null;
+  redemptionImmediateCapacityRatio: number | null;
+  concentrationHhi: number | null;
+  /** Display-only under the current methodology; never use as a causal reason. */
+  canBeBlacklisted: boolean | "possible" | "inherited" | "dilutable";
+  collateralFromLive: boolean;
+  dependencyFromLive: boolean;
+  dependencyCount: number;
+  variantParentId: string | null;
+  navToken: boolean;
+}
+
+export interface AlertSafetyExplainSnapshot {
+  schemaVersion: 1;
+  stages: AlertSafetyStageSnapshot;
+  dimensions: Record<DimensionKey, AlertSafetyDimensionSnapshot>;
+  rawInputs: AlertSafetyRawInputSnapshot;
+}
 
 export interface AlertSafetySourceRow {
   grade: string;
   score: number | null;
   methodologyVersion: string | null;
+  explain?: AlertSafetyExplainSnapshot;
 }
 
 export type AlertSafetySourceSnapshot = Record<string, AlertSafetySourceRow>;
@@ -40,20 +100,231 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function isSnapshotRow(value: unknown): value is AlertSafetySourceRow {
-  const record = asRecord(value);
-  if (!record) return false;
-  return typeof record.grade === "string" &&
-    ("score" in record ? record.score === null || typeof record.score === "number" : false) &&
-    ("methodologyVersion" in record
-      ? record.methodologyVersion === null || typeof record.methodologyVersion === "string"
-      : false);
+function isFiniteNumberOrNull(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
 }
 
-function isSnapshot(value: unknown): value is AlertSafetySourceSnapshot {
+function parseNumberOrNull(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function parseStringOrNull(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  return typeof value === "string" ? value : undefined;
+}
+
+function roundStageScore(value: number | null): number | null {
+  return value == null ? null : Math.round(value * 10) / 10;
+}
+
+function clampAndRoundFinalScore(value: number | null): number | null {
+  return value == null ? null : Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function truncateDetail(value: string): string {
+  if (value.length <= ALERT_SAFETY_DETAIL_MAX_CHARS) return value;
+  return `${value.slice(0, ALERT_SAFETY_DETAIL_MAX_CHARS - 3)}...`;
+}
+
+function parseBlacklistStatus(value: unknown): AlertSafetyRawInputSnapshot["canBeBlacklisted"] | undefined {
+  if (typeof value === "boolean") return value;
+  if (value === "possible" || value === "inherited" || value === "dilutable") return value;
+  return undefined;
+}
+
+function parseDimensionSnapshot(value: unknown): AlertSafetyDimensionSnapshot | null {
   const record = asRecord(value);
-  if (!record) return false;
-  return Object.values(record).every(isSnapshotRow);
+  if (!record || typeof record.grade !== "string" || !isFiniteNumberOrNull(record.score)) {
+    return null;
+  }
+
+  const dimension: AlertSafetyDimensionSnapshot = {
+    grade: record.grade,
+    score: record.score,
+  };
+  if (typeof record.detail === "string") {
+    dimension.detail = truncateDetail(record.detail);
+  }
+  return dimension;
+}
+
+function parseDimensionSnapshots(value: unknown): Record<DimensionKey, AlertSafetyDimensionSnapshot> | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const dimensions = {} as Record<DimensionKey, AlertSafetyDimensionSnapshot>;
+  for (const key of DIMENSION_KEYS) {
+    const dimension = parseDimensionSnapshot(record[key]);
+    if (!dimension) return null;
+    dimensions[key] = dimension;
+  }
+  return dimensions;
+}
+
+function parseStageSnapshot(value: unknown): AlertSafetyStageSnapshot | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const baseScore = parseNumberOrNull(record.baseScore);
+  const postPegScore = parseNumberOrNull(record.postPegScore);
+  const postNoLiquidityPenaltyScore = parseNumberOrNull(record.postNoLiquidityPenaltyScore);
+  const capScore = parseNumberOrNull(record.activeDepegCapScore);
+  const postActiveDepegCapScore = parseNumberOrNull(record.postActiveDepegCapScore);
+  const scoreBeforeVariantCap = parseNumberOrNull(record.scoreBeforeVariantCap);
+  const finalScore = parseNumberOrNull(record.finalScore);
+
+  if (
+    baseScore === undefined ||
+    postPegScore === undefined ||
+    postNoLiquidityPenaltyScore === undefined ||
+    capScore === undefined ||
+    postActiveDepegCapScore === undefined ||
+    scoreBeforeVariantCap === undefined ||
+    finalScore === undefined ||
+    typeof record.noLiquidityPenaltyApplied !== "boolean" ||
+    typeof record.activeDepegCapApplied !== "boolean" ||
+    typeof record.variantCapApplied !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    baseScore,
+    postPegScore,
+    postNoLiquidityPenaltyScore,
+    activeDepegCapScore: capScore,
+    postActiveDepegCapScore,
+    scoreBeforeVariantCap,
+    finalScore,
+    noLiquidityPenaltyApplied: record.noLiquidityPenaltyApplied,
+    activeDepegCapApplied: record.activeDepegCapApplied,
+    variantCapApplied: record.variantCapApplied,
+  };
+}
+
+function parseRawInputSnapshot(value: unknown): AlertSafetyRawInputSnapshot | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const pegScore = parseNumberOrNull(record.pegScore);
+  const activeDepegBps = parseNumberOrNull(record.activeDepegBps);
+  const liquidityScore = parseNumberOrNull(record.liquidityScore);
+  const effectiveExitScore = parseNumberOrNull(record.effectiveExitScore);
+  const redemptionBackstopScore = parseNumberOrNull(record.redemptionBackstopScore);
+  const redemptionImmediateCapacityUsd = parseNumberOrNull(record.redemptionImmediateCapacityUsd);
+  const redemptionImmediateCapacityRatio = parseNumberOrNull(record.redemptionImmediateCapacityRatio);
+  const concentrationHhi = parseNumberOrNull(record.concentrationHhi);
+  const canBeBlacklisted = parseBlacklistStatus(record.canBeBlacklisted);
+  const redemptionRouteFamily = parseStringOrNull(record.redemptionRouteFamily);
+  const redemptionModelConfidence = parseStringOrNull(record.redemptionModelConfidence);
+  const redemptionExclusionReason = parseStringOrNull(record.redemptionExclusionReason);
+  const variantParentId = parseStringOrNull(record.variantParentId);
+
+  if (
+    pegScore === undefined ||
+    activeDepegBps === undefined ||
+    liquidityScore === undefined ||
+    effectiveExitScore === undefined ||
+    redemptionBackstopScore === undefined ||
+    redemptionImmediateCapacityUsd === undefined ||
+    redemptionImmediateCapacityRatio === undefined ||
+    concentrationHhi === undefined ||
+    canBeBlacklisted === undefined ||
+    redemptionRouteFamily === undefined ||
+    redemptionModelConfidence === undefined ||
+    redemptionExclusionReason === undefined ||
+    variantParentId === undefined ||
+    typeof record.activeDepeg !== "boolean" ||
+    typeof record.redemptionUsedForLiquidity !== "boolean" ||
+    typeof record.collateralFromLive !== "boolean" ||
+    typeof record.dependencyFromLive !== "boolean" ||
+    typeof record.dependencyCount !== "number" ||
+    !Number.isInteger(record.dependencyCount) ||
+    record.dependencyCount < 0 ||
+    typeof record.navToken !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    pegScore,
+    activeDepeg: record.activeDepeg,
+    activeDepegBps,
+    liquidityScore,
+    effectiveExitScore,
+    redemptionBackstopScore,
+    redemptionUsedForLiquidity: record.redemptionUsedForLiquidity,
+    redemptionRouteFamily,
+    redemptionModelConfidence,
+    redemptionExclusionReason,
+    redemptionImmediateCapacityUsd,
+    redemptionImmediateCapacityRatio,
+    concentrationHhi,
+    canBeBlacklisted,
+    collateralFromLive: record.collateralFromLive,
+    dependencyFromLive: record.dependencyFromLive,
+    dependencyCount: record.dependencyCount,
+    variantParentId,
+    navToken: record.navToken,
+  };
+}
+
+function parseExplainSnapshot(value: unknown): AlertSafetyExplainSnapshot | undefined {
+  const record = asRecord(value);
+  if (!record || record.schemaVersion !== ALERT_SAFETY_EXPLAIN_SCHEMA_VERSION) return undefined;
+
+  const stages = parseStageSnapshot(record.stages);
+  const dimensions = parseDimensionSnapshots(record.dimensions);
+  const rawInputs = parseRawInputSnapshot(record.rawInputs);
+  if (!stages || !dimensions || !rawInputs) return undefined;
+
+  return {
+    schemaVersion: ALERT_SAFETY_EXPLAIN_SCHEMA_VERSION,
+    stages,
+    dimensions,
+    rawInputs,
+  };
+}
+
+function parseSnapshotRow(value: unknown): AlertSafetySourceRow | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  if (
+    typeof record.grade !== "string" ||
+    !("score" in record) ||
+    !isFiniteNumberOrNull(record.score) ||
+    !("methodologyVersion" in record) ||
+    !(record.methodologyVersion === null || typeof record.methodologyVersion === "string")
+  ) {
+    return null;
+  }
+
+  const row: AlertSafetySourceRow = {
+    grade: record.grade,
+    score: record.score,
+    methodologyVersion: record.methodologyVersion,
+  };
+  const explain = parseExplainSnapshot(record.explain);
+  if (explain) {
+    row.explain = explain;
+  }
+  return row;
+}
+
+function parseSnapshot(value: unknown): AlertSafetySourceSnapshot | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const snapshot: AlertSafetySourceSnapshot = {};
+  for (const [stablecoinId, rowValue] of Object.entries(record)) {
+    const row = parseSnapshotRow(rowValue);
+    if (row) {
+      snapshot[stablecoinId] = row;
+    }
+  }
+  return snapshot;
 }
 
 function parseCachedValue(cached: { value: string; updatedAt: number } | null): unknown | null {
@@ -69,6 +340,91 @@ export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE
   return `safety-${methodologyVersion}-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`;
 }
 
+function buildAlertSafetyExplainSnapshot(card: ReportCard): AlertSafetyExplainSnapshot {
+  const pegScore = card.dimensions.pegStability.score;
+  const baseScore = card.baseScore;
+  let postPegScore: number | null = null;
+
+  if (baseScore != null) {
+    if (pegScore != null) {
+      postPegScore = pegScore === 0
+        ? 0
+        : baseScore * Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
+    } else if (card.rawInputs.navToken) {
+      postPegScore = baseScore;
+    }
+  }
+
+  const noLiquidityPenaltyApplied = postPegScore != null && card.dimensions.liquidity.score === null;
+  const postNoLiquidityPenaltyScore = postPegScore == null
+    ? null
+    : postPegScore * (noLiquidityPenaltyApplied ? NO_LIQUIDITY_PENALTY : 1);
+  const capScore = activeDepegCapScore(card.rawInputs.activeDepegBps ?? null);
+  const activeDepegCapApplied = capScore != null &&
+    postNoLiquidityPenaltyScore != null &&
+    postNoLiquidityPenaltyScore > capScore;
+  const postActiveDepegCapScore = postNoLiquidityPenaltyScore == null
+    ? null
+    : capScore == null
+      ? postNoLiquidityPenaltyScore
+      : Math.min(postNoLiquidityPenaltyScore, capScore);
+  const scoreBeforeVariantCap = card.overallCapped && card.uncappedOverallScore != null
+    ? card.uncappedOverallScore
+    : clampAndRoundFinalScore(postActiveDepegCapScore);
+  const variantCapApplied = card.overallCapped === true &&
+    scoreBeforeVariantCap != null &&
+    card.overallScore != null &&
+    scoreBeforeVariantCap > card.overallScore;
+  const dimensions = {} as Record<DimensionKey, AlertSafetyDimensionSnapshot>;
+
+  for (const key of DIMENSION_KEYS) {
+    const detail = card.dimensions[key].detail;
+    dimensions[key] = {
+      grade: card.dimensions[key].grade,
+      score: card.dimensions[key].score,
+      ...(detail ? { detail: truncateDetail(detail) } : {}),
+    };
+  }
+
+  return {
+    schemaVersion: ALERT_SAFETY_EXPLAIN_SCHEMA_VERSION,
+    stages: {
+      baseScore: roundStageScore(baseScore),
+      postPegScore: roundStageScore(postPegScore),
+      postNoLiquidityPenaltyScore: roundStageScore(postNoLiquidityPenaltyScore),
+      activeDepegCapScore: capScore,
+      postActiveDepegCapScore: roundStageScore(postActiveDepegCapScore),
+      scoreBeforeVariantCap,
+      finalScore: card.overallScore ?? null,
+      noLiquidityPenaltyApplied,
+      activeDepegCapApplied,
+      variantCapApplied,
+    },
+    dimensions,
+    rawInputs: {
+      pegScore: card.rawInputs.pegScore,
+      activeDepeg: card.rawInputs.activeDepeg,
+      activeDepegBps: card.rawInputs.activeDepegBps ?? null,
+      liquidityScore: card.rawInputs.liquidityScore,
+      effectiveExitScore: card.rawInputs.effectiveExitScore,
+      redemptionBackstopScore: card.rawInputs.redemptionBackstopScore,
+      redemptionUsedForLiquidity: card.rawInputs.redemptionUsedForLiquidity,
+      redemptionRouteFamily: card.rawInputs.redemptionRouteFamily,
+      redemptionModelConfidence: card.rawInputs.redemptionModelConfidence,
+      redemptionExclusionReason: null,
+      redemptionImmediateCapacityUsd: card.rawInputs.redemptionImmediateCapacityUsd,
+      redemptionImmediateCapacityRatio: card.rawInputs.redemptionImmediateCapacityRatio,
+      concentrationHhi: card.rawInputs.concentrationHhi,
+      canBeBlacklisted: card.rawInputs.canBeBlacklisted,
+      collateralFromLive: card.rawInputs.collateralFromLive ?? false,
+      dependencyFromLive: card.rawInputs.dependencyFromLive ?? false,
+      dependencyCount: card.rawInputs.dependencies.length,
+      variantParentId: card.rawInputs.variantParentId ?? null,
+      navToken: card.rawInputs.navToken,
+    },
+  };
+}
+
 function buildAlertSafetySourceSnapshot(
   cards: ReportCard[],
   methodologyVersion: string,
@@ -81,6 +437,7 @@ function buildAlertSafetySourceSnapshot(
       grade: card.overallGrade,
       score: card.overallScore ?? null,
       methodologyVersion,
+      explain: buildAlertSafetyExplainSnapshot(card),
     };
   }
 
@@ -110,7 +467,7 @@ function parseAlertSafetySourceEnvelope(
   const generation = typeof record.generation === "string" ? record.generation : null;
   const methodologyVersion = typeof record.methodologyVersion === "string" ? record.methodologyVersion : null;
   const publishedAt = typeof record.publishedAt === "number" ? record.publishedAt : null;
-  const snapshot = isSnapshot(record.snapshot) ? record.snapshot : null;
+  const snapshot = parseSnapshot(record.snapshot);
 
   if (!generation || !methodologyVersion || publishedAt == null || !snapshot) {
     return null;
@@ -193,22 +550,25 @@ export function parseAlertSafetySnapshotEnvelope(
   cached: { value: string; updatedAt: number } | null,
 ): AlertSafetySnapshotEnvelope | null {
   const parsed = parseCachedValue(cached);
-  if (isSnapshot(parsed)) {
-    return {
-      generation: "",
-      snapshot: parsed,
-    };
-  }
-
   const record = asRecord(parsed);
   if (!record) return null;
 
-  const generation = typeof record.generation === "string" ? record.generation : null;
-  const snapshot = isSnapshot(record.snapshot) ? record.snapshot : null;
-  if (generation == null || snapshot == null) return null;
+  if ("generation" in record || "snapshot" in record) {
+    const generation = typeof record.generation === "string" ? record.generation : null;
+    const snapshot = parseSnapshot(record.snapshot);
+    if (generation == null || snapshot == null) return null;
+
+    return {
+      generation,
+      snapshot,
+    };
+  }
+
+  const legacySnapshot = parseSnapshot(record);
+  if (!legacySnapshot) return null;
 
   return {
-    generation,
-    snapshot,
+    generation: "",
+    snapshot: legacySnapshot,
   };
 }
