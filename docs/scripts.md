@@ -100,11 +100,11 @@ The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, a
 
 ## CI-Critical Scripts
 
-These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/safe-browsing-monitor.yml`) directly, or indirectly through `npm run build`:
+These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/safe-browsing-monitor.yml`) directly, or indirectly through `npm run build`:
 
-- `sync-digests.ts` in the reusable Pages-prepare job and the direct production Pages release job before the build artifact is created
-- `sync-depeg-events.ts` in the same Pages prebuild paths so `/depeg/<event>/` static params and feed/static exports use current confirmed events
-- `generate-public-datasets.ts` in the same Pages prebuild paths so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
+- `sync-digests.ts` in the consolidated Pages release job before the build artifact is created
+- `sync-depeg-events.ts` in the same Pages release path so `/depeg/<event>/` static params and feed/static exports use current confirmed events
+- `generate-public-datasets.ts` in the same Pages release path so `/datasets/*` and `/sheets/*` mirrors are generated from the selected API environment before `npm run build`
 - `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `generate-docs-metadata.ts` via the same `prebuild` hook, immediately after `generate-sitemap-dates.ts`
 - `generate-depeg-event-search-data.ts` via the same `prebuild` hook, immediately after `generate-docs-metadata.ts`, so client command-palette search and related-incident rails use compact depeg indexes instead of bundling the full synced depeg archive
@@ -130,7 +130,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `upsert-github-pr-comment.mjs` via `.github/workflows/pharos-change-contract.yml` to keep the PR comment sticky instead of creating duplicates
 - `.github/scripts/wait-for-workflow-job.mjs` via `.github/workflows/deploy-cloudflare.yml` and `.github/workflows/pages-release.yml` to gate production mutation/publish steps on same-run job completion
 - `build-og-editorial.mjs --check` via `check:generated-artifacts` and `build-og-editorial.mjs` via the `prebuild` hook. CI provisions Playwright Firefox through `setup-workspace`; the generator fails with a setup error instead of installing browsers implicitly.
-- `serve-static-export.mjs` via `npm run serve:static-export` in the pre-deploy `smoke-ui` job inside `.github/workflows/pages-prepare.yml` and the direct production Pages release job
+- `serve-static-export.mjs` via `npm run serve:static-export` in the consolidated Pages release job before production publish
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-transport.mjs` via `npm run test:smoke-transport`
@@ -169,7 +169,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Requires an explicit digest API source via `--api-url` or `DIGEST_API_URL`; falls back to `SMOKE_API_BASE` or `API_BASE_URL` when those are already set by CI/local shell context.
 - Sends `X-API-Key` when `DIGEST_API_KEY` is set, which is required once `GET /api/digest-archive` is protected on `api.pharos.watch`.
 - Accepts `--output` so CI can write digest data into an artifact path before the Pages build job runs.
-- The shared Pages prepare workflow and direct production Pages release job run this once before `npm run build`, writing the normalized digest JSON directly to `data/digests.json`.
+- The consolidated Pages release job runs this once before `npm run build`, writing the normalized digest JSON directly to `data/digests.json`.
 
 ### `sync-depeg-events.ts`
 
@@ -179,7 +179,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `generate-public-datasets.ts`
 
-- Runs before every Pages build path with `PUBLIC_DATASETS_API_URL` pointed at the selected API environment. In the direct production deploy workflow this is `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; reusable Pages workflows can still override it via `api_base_url`.
+- Runs before every Pages release build with `PUBLIC_DATASETS_API_URL` pointed at the selected API environment. The deploy workflow defaults this to `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`, and callers can still override it via the `api_base_url` workflow input.
 - Sends `X-API-Key` when `PUBLIC_DATASETS_API_KEY` is set; Pages workflows fall back to `DIGEST_API_KEY` when no dedicated public-datasets credential exists.
 - Pages workflows clear `PUBLIC_DATASETS_API_URL`, `PUBLIC_DATASETS_API_KEY`, `PUBLIC_DATASETS_REQUIRE_API`, `SMOKE_API_BASE`, and `API_BASE_URL` on the following `npm run build` step so the prebuild hook preserves the just-synced mirrors instead of making a second live API fetch.
 - Production Pages paths set `PUBLIC_DATASETS_REQUIRE_API=1`, so missing API configuration fails closed instead of shipping stale mirrors. Local and PR validation builds without a dataset API preserve already checked-in mirrors when `--check` would pass; they fail if those mirrors are missing or below the row floors.
@@ -259,8 +259,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Uses the workspace Playwright package directly. Local runs use the Playwright-managed browser by default, while GitHub Actions uses the system Chrome channel unless `SMOKE_UI_BROWSER_CHANNEL` or `SMOKE_UI_BROWSER_EXECUTABLE_PATH` overrides it. Homepage data/analytics checks run once, then overflow route checks run through deterministic route chunks across `SMOKE_UI_OVERFLOW_WORKERS` browser contexts while preserving the same overflow assertions.
 - In CI deploys and the local merge gate, the browser targets a locally served `out/` export before Pages production deploy; the Pages builds set `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so browser reads on `127.0.0.1` use the production same-origin `/_site-data/*` lane. `npm run serve:static-export` runs `scripts/maintenance/serve-static-export.mjs`, which proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to the explicitly configured `STATIC_EXPORT_SITE_API_BASE` so the smoke still exercises the live website data path against the exact built frontend artifact. Local `validate:pages-smoke` reads `.env.local`, maps `PHAROS_API_KEY` / `SITE_API_SHARED_SECRET` into the static-export proxy when the explicit `STATIC_EXPORT_*` env vars are unset, and falls back to a free localhost port when the default `127.0.0.1:4173` is occupied.
-- The direct production deploy workflow points the local site-data proxy at `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; reusable Pages workflows can still target an explicit `api_base_url` when needed.
-- The shared Pages publish workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host. Production deploys skip live overflow because the full route sweep already ran against the exact local artifact. Pages deploy uses six Wrangler attempts with increasing backoff to absorb transient Cloudflare Pages asset-upload 500s.
+- The production deploy workflow points the local site-data proxy at `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; callers can still target an explicit `api_base_url` when needed.
+- The consolidated Pages release workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host. Combined Worker + Pages deploys additionally rerun local artifact `smoke-ui` after Worker promotion and before Pages publish. Production deploys skip live overflow because the full route sweep already ran against the exact local artifact. Pages deploy uses six Wrangler attempts with increasing backoff to absorb transient Cloudflare Pages asset-upload 500s.
 - Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
 - When `SMOKE_UI_EXPECT_GA_ID` is set, verifies the expected GA script, runtime `window.gtag` setup, dataLayer `page_view`, successful `gtag.js` load, and a GA4 `page_view` collect signal. Live mode requires successful collect delivery; after that success, expected-measurement GA collect `net::ERR_ABORTED` reports are treated as browser beacon noise. Local mode also accepts a Playwright `net::ERR_ABORTED` report for an issued collect URL with the configured measurement id because Chromium can abort the beacon as the local smoke context closes.
 - Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
@@ -302,7 +302,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches Pages runtime paths, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, Pages workflow files, or selected build/static-export scripts.
 - `pages_ui_changed` is a narrower frontend/runtime signal used by production deploys to run the strict mobile rendered smoke only when the diff touches likely UI surfaces (`src/`, `public/`, `shared/`, `functions/`, `data/`, root package/lock, or `next.config.ts`).
 - `deploy_required=false` lets the push workflow skip the heavy deploy path entirely for docs-only or other non-deploy diffs.
-- On `workflow_dispatch`, forces the full deploy path for safety.
+- On `workflow_dispatch`, forces the full deploy path for safety; production dispatches must target the `main` ref.
 
 ### `pharos-change-contract.mjs`
 
@@ -325,11 +325,11 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Skips cleanly when the changed-file set is not deploy-impacting.
 - For deploy-impacting diffs, always runs the same validate core as deploy CI: dependency audit, lint, worker-boundary, blocking cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, doc link/source-path/sync checks, duplicate-export and redemption-backstop checks, unused-code, hotspot-ratchet, non-critical tests, and critical coverage.
-- Adds `npm run build`, `npm run check:feature-flag-inlining`, `npm run seo:check`, and the built-artifact guardrails only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
+- Adds `npm run build`, `npm run test:a11y`, `npm run check:feature-flag-inlining`, `npm run seo:check`, and the built-artifact guardrails only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
 - Adds Worker runtime typecheck only when the changed-file set is worker-impacting.
 - The deploy-impact registry gives each validation command an explicit impact classification (`full`, `pages`, `worker`, or `validation-only`) and derives deploy-impacting guardrail paths from that registry where practical; `scripts/lib/validate-contract.mjs` fails on import if a validate command lacks a classification.
 - After `npm run validate:prebuild` passes, uses `buildCommandPlan` to construct a per-trigger execution plan covering Pages build/SEO, non-critical-test, critical-coverage, and Worker typecheck groups, then runs them **serially by default** to avoid local CPU contention. Set `MERGE_GATE_PARALLEL=1` to opt into parallel execution; when enabled, a failing parallel group aborts siblings and reports the failing command explicitly. CI always runs the parallel matrix via separate runners regardless of this env var.
-- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_PARALLEL=1`. The repo pre-push hook passes Git's exact pushed main ref range through `MERGE_GATE_BASE_REF` and `MERGE_GATE_HEAD_REF` so local classification matches the Cloudflare deploy workflow's push range. Pages smoke runs by default for Pages-impacting diffs; override with `MERGE_GATE_PAGES_SMOKE=0`.
+- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, `MERGE_GATE_PARALLEL=1`, and `MERGE_GATE_PRODUCTION_ENV=1` for opt-in production Pages env rehearsal. The repo pre-push hook passes Git's exact pushed main ref range through `MERGE_GATE_BASE_REF` and `MERGE_GATE_HEAD_REF` so local classification matches the Cloudflare deploy workflow's push range. Pages smoke runs by default for Pages-impacting diffs; override with `MERGE_GATE_PAGES_SMOKE=0`.
 
 ### `generate-agent-code-map.mjs`
 

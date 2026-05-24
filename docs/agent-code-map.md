@@ -616,7 +616,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-fluid.ts` - fetchFluidPools
 - `worker/src/cron/dex-liquidity/fetch-meteora.ts` - fetchMeteoraPools
 - `worker/src/cron/dex-liquidity/fetch-orca.ts` - fetchOrcaPools
-- ... 282 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 284 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -633,7 +633,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/admin-action-audit.ts` - AdminActionLogEntry, DETAILS_MAX_LEN, logAdminAction
 - `worker/src/lib/admin-job.ts` - AdminJobContext, buildAdminJobSummary, noAdminTargetsResponse, readAdminIntegerParam, readAdminStringParam, runAdminJob
 - `worker/src/lib/alchemy-logs.ts` - AlchemyLogEntry, AlchemyLogsFetchResult, AlchemyTransactionEntry, AlchemyTransactionReceipt, PersistentBlockTimestampCache, ResolveBlockTimestampOptions
-- `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment, AlertSafetySourceEnvelope, AlertSafetySourceRow, AlertSafetySourceSnapshot
+- `worker/src/lib/alert-safety-source-cache.ts` - ALERT_SAFETY_SOURCE_CACHE_KEY, AlertSafetyDimensionSnapshot, AlertSafetyExplainSnapshot, AlertSafetyRawInputSnapshot, AlertSafetySnapshotEnvelope, AlertSafetySourceAssessment
 - `worker/src/lib/alerts.ts` - normalizeWebhookUrl, sendAlert
 - `worker/src/lib/api-cache-read.ts` - CachedJsonReadResult, createCacheHandler, getCacheJsonParseFailureCountersForTests, readCachedJson, readCachedJsonOr503, resetCacheJsonParseFailureCountersForTests
 - `worker/src/lib/api-freshness.ts` - CacheFreshnessDiagnostic, CacheStatusFailure, CronTimestampLookupResult, CronTimestampLookupStatus, FreshnessMeta, addFreshnessHeaders

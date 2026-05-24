@@ -4,7 +4,7 @@ How to flip the May 2026 detail-page feature flags on production.
 
 ## Where the build actually happens
 
-The Cloudflare Pages project `stablecoin-dashboard` does **not** use Cloudflare's git integration. Builds run inside GitHub Actions. Scheduled/manual Rebuild Pages uses `.github/workflows/pages-release.yml` in its default `pages-prepare.yml` -> `pages-publish.yml` path; production deploys call the same `pages-release.yml` with `direct_publish: true`, where the `pages-release-direct` job builds `out/` and uploads it with `wrangler pages deploy`.
+The Cloudflare Pages project `stablecoin-dashboard` does **not** use Cloudflare's git integration. Builds run inside GitHub Actions. Scheduled/manual Rebuild Pages and production deploys both call `.github/workflows/pages-release.yml`, whose `pages-release` job builds `out/`, smokes the local artifact, and uploads it with `wrangler pages deploy`.
 
 Consequence: **build-time env vars must live in GitHub Actions, not in the Cloudflare Pages dashboard.** The dashboard's "Environment variables" panel is only readable by Pages Functions at runtime, never inlined into the static bundle. Setting flags there has zero effect on the React app.
 
@@ -34,7 +34,7 @@ For the default-on Hero Verdict rollback, set `NEXT_PUBLIC_PHAROS_HERO_VERDICT=f
 
 ## How the variables reach the build
 
-`pages-prepare.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job and `pages-release.yml`'s `pages-release-direct` production path mirror the same block so PR validation, scheduled/manual rebuilds, and production deploys inline the same flag state.
+`pages-release.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job mirrors the same block so PR validation, scheduled/manual rebuilds, and production deploys inline the same flag state.
 
 No code changes required to add or remove a flag — but if you add a new flag, you must add its line to every build workflow listed above or it will silently stay off on that path.
 
@@ -59,7 +59,7 @@ Setting / changing a repo Variable does **not** trigger a deploy. The flag flips
    gh workflow run "Rebuild Pages" --ref main
    gh run watch  # follow the run
    ```
-   It schedules nightly anyway (08:15 UTC) but `workflow_dispatch` makes it on-demand. It re-runs `pages-prepare` → `pages-publish` end-to-end, picking up current Variables.
+   It schedules nightly anyway (08:15 UTC) but `workflow_dispatch` makes it on-demand. It re-runs the full `pages-release` build/smoke/publish path, picking up current Variables.
 
 ## Verifying a deploy
 
@@ -98,7 +98,7 @@ If you previously set `NEXT_PUBLIC_PHAROS_*` in the Cloudflare Pages **Environme
 ## Common pitfalls
 
 - **Confusing repo Variables with repo Secrets.** These are non-sensitive (`true`/`false`); Variables is the right surface. Secrets get masked and complicate debugging.
-- **Setting at the *environment* level instead of repo level.** GitHub also supports per-environment variables (e.g. `production`); `pages-prepare.yml` doesn't currently use a GH environment, so put them at the **repo** level. If you later add a GH environment, mirror the variables there.
+- **Setting at the *environment* level instead of repo level.** GitHub also supports per-environment variables (e.g. `production`); `pages-release.yml` doesn't currently use a GH environment, so put them at the **repo** level. If you later add a GH environment, mirror the variables there.
 - **Forgetting to trigger a deploy.** Pages won't re-build on a Variable change alone.
 - **Setting value to `True`/`TRUE`/`yes`/`1`.** Default-off flags read `=== "true"` (lowercase string). Anything else evaluates to `false`. Hero Verdict reads `!== "false"`, so only lowercase `false` disables it.
 - **Caching.** Cloudflare CDN can serve cached chunks for ~minutes after a deploy. Hard-reload or wait.
