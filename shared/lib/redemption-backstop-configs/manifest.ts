@@ -76,6 +76,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/sbold-k3-capital.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/scrvusd-curve.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/sdai-sky.ts",
+      "shared/lib/redemption-backstop-configs/stablecoin-redeem/sdola-inverse-finance.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/sfrxusd-frax.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/sgho-aave.ts",
       "shared/lib/redemption-backstop-configs/stablecoin-redeem/shared.ts",

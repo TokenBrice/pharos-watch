@@ -87,6 +87,21 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "GLDY distributes gold-leasing yield, so redemption quality depends on both gold backing and the issuer's leasing/custody program staying current",
     ],
   },
+  "gldt-gold-dao": {
+    ...commodityIssuerBase,
+    ...documentedBoundSupplyFull("2026-05-24"),
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(
+      "Gold DAO materials describe reverse swapping GLDT into GLD NFTs at the published gold-denomination ratio; public materials reviewed do not publish one fixed redemption fee",
+    ),
+    docs: [
+      sourceRef("GLDT website", "https://gldt.org/", ["route", "capacity", "fees", "access", "settlement"]),
+    ],
+    notes: [
+      "Modeled route is GLDT's documented reverse-swap path into GLD NFT gold-denomination backing, not ordinary secondary-market liquidity.",
+      "Physical gold custody and delivery remain upstream of the GLD NFT system, so Pharos keeps the route in the delayed commodity issuer family.",
+    ],
+  },
   "vnxau-vnx": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),

@@ -19,6 +19,7 @@ import { SAID_GAIB_STABLECOIN_REDEEM_CONFIG } from "./said-gaib";
 import { SBOLD_K3_CAPITAL_STABLECOIN_REDEEM_CONFIG } from "./sbold-k3-capital";
 import { SCRVUSD_CURVE_STABLECOIN_REDEEM_CONFIG } from "./scrvusd-curve";
 import { SDAI_SKY_STABLECOIN_REDEEM_CONFIG } from "./sdai-sky";
+import { SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG } from "./sdola-inverse-finance";
 import { SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG } from "./sfrxusd-frax";
 import { SGHO_AAVE_STABLECOIN_REDEEM_CONFIG } from "./sgho-aave";
 import {
@@ -74,6 +75,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "wsrusd-reservoir": WSRUSD_RESERVOIR_STABLECOIN_REDEEM_CONFIG,
   "susds-sky": SUSDS_SKY_STABLECOIN_REDEEM_CONFIG,
   "sdai-sky": SDAI_SKY_STABLECOIN_REDEEM_CONFIG,
+  "sdola-inverse-finance": SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG,
   "sfrxusd-frax": SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG,
   "scrvusd-curve": SCRVUSD_CURVE_STABLECOIN_REDEEM_CONFIG,
   "cusdo-openeden": CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG,
