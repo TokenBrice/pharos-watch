@@ -363,6 +363,24 @@ describe("coverage helpers", () => {
     }
   });
 
+  it("defines coverage snapshot visuals for every redemption breakdown key", () => {
+    for (const key of [
+      "modeled-heuristic",
+      "resolved-unscored",
+      "configured-unrated",
+      "impaired",
+      "offchain-issuer",
+      "psm-swap",
+      "queue-redeem",
+      "collateral-redeem",
+      "stablecoin-redeem",
+      "basket-redeem",
+      "data-unavailable",
+    ]) {
+      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.redemption?.[key]).toBeDefined();
+    }
+  });
+
   it("counts only available features when building rows", () => {
     const row = buildCoverageRow({
       coin: makeCoin({

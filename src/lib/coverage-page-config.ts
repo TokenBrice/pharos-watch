@@ -259,9 +259,18 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       bar: "bg-amber-400/80",
       barText: "text-slate-950",
     },
+    "resolved-unscored": {
+      chip: "border-violet-500/30 bg-violet-500/12 text-violet-800 dark:text-violet-200",
+      bar: "bg-violet-400/80",
+    },
     "configured-unrated": {
       chip: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
       bar: "bg-orange-400/80",
+      barText: "text-slate-950",
+    },
+    impaired: {
+      chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
+      bar: "bg-red-400/80",
       barText: "text-slate-950",
     },
     "offchain-issuer": {

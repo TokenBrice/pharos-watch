@@ -319,7 +319,7 @@ Stored fields:
 - `max_updated_at`
 - `metadata_json`
 
-The sync inserts a `running` row before writing current/history rows and marks it `completed` only after all row batches succeed. If a row batch or completion update fails after the manifest is started, the writer best-effort marks the manifest `failed` with failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior only for current rows that are not tied to any manifested run.
+The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. The legacy current mirror is refreshed only after the completed run exists; mirror failures are recorded as completed-run warnings because readers use immutable run rows as the authoritative snapshot source. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior only for current rows that are not tied to any manifested run.
 
 ---
 
@@ -329,8 +329,8 @@ The sync inserts a `running` row before writing current/history rows and marks i
 
 **File:** `worker/src/api/redemption-backstops.ts`
 
-- Returns `503` with `{ "error": "Data not yet available" }` until at least one 4-hourly sync has written rows
-- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when the current snapshot cannot be read cleanly from D1 or when only partial manifested current rows are available
+- Returns `503` with `{ "error": "Data not yet available" }` until at least one 4-hourly sync has written readable rows
+- Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when no valid completed run can be read cleanly from immutable run rows or a true legacy current snapshot; partial manifested current rows are not treated as authoritative
 - Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run manifest or latest stored snapshot row for true legacy snapshots, and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
