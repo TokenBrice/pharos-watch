@@ -55,6 +55,61 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USDGO is a Token-2022 issuer token whose live mint authority and permanent delegate are the same Solana address; operational custody for that address is not verified.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+        "label": "USDGO Token-2022 mint authority and permanent delegate",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USDGO Solscan token",
+            "url": "https://solscan.io/token/72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"
+          },
+          {
+            "label": "USDGO token metadata",
+            "url": "https://static.anchorage-production.com/stablecoins/USDGO/metadata.json"
+          }
+        ],
+        "evidence": "The USDGO Token-2022 mint reported this address as both mintAuthority and permanent delegate at finalized slot 421873034; metadata identifies USDGO as an Anchorage Digital Bank-issued token for the OSL ecosystem."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USDGO website",
+          "url": "https://www.usdgo.com/"
+        },
+        {
+          "label": "USDGO reserve attestations",
+          "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+        },
+        {
+          "label": "USDGO token metadata",
+          "url": "https://static.anchorage-production.com/stablecoins/USDGO/metadata.json"
+        },
+        {
+          "label": "USDGO Solscan token",
+          "url": "https://solscan.io/token/72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"
+        }
+      ],
+      "evidence": "Solana Token-2022 mint reads verified the same live address for USDGO mint authority and permanent delegate, with issuer metadata linking the token to Anchorage Digital Bank.",
+      "reviewer": "Codex mint-authority top100 batch-a",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify full freeze/config/pauser addresses before metadata entry; gathered notes only retained prefixes for non-mint roles.",
+        "Verify whether Anchorage uses multisig, MPC, HSM, or issuer backend controls for the mint authority."
+      ]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

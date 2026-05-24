@@ -59,6 +59,65 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "MNEE minting is controlled by a validator-style minter set: mint operations require three valid minter signatures and the caller must itself be a minter; the proxy has a separate upgrade/admin path.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        "label": "MNEE minter validator set",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Implementation source has roleHolders = 4 and requiredSignatures = 3; mintBurnPauseUnpause mints only when signers are current minters and msg.sender is a minter."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x00C81F5f28c854F57D83afB894f9385465ee7d85",
+        "label": "MNEE token admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "admin() through the proxy returned this address at Ethereum block 25165886; code length read indicated no contract code."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa3b670f2dd1722c3d4b98f146467840540c2c53e",
+        "label": "MNEE EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25165886; code length read showed contract code, but the contract setup was not resolved."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify MNEE implementation source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x6D2E08839cEc8699565a86D046E64324826039c9/sources/src/MNEEv2.sol"
+        },
+        {
+          "label": "Sourcify MNEE token/proxy verification record",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf"
+        }
+      ],
+      "evidence": "Direct reads at Ethereum block 25165886: EIP-1967 implementation = 0x6d2e08839cec8699565a86d046e64324826039c9, EIP-1967 admin = 0xa3b670f2dd1722c3d4b98f146467840540c2c53e, admin() = 0x00C81F5f28c854F57D83afB894f9385465ee7d85.",
+      "reviewer": "Codex mint-authority top100 batch-b",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate current minter validator addresses and confirm all four active signers.",
+        "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig."
+      ]
+    }
+  },
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

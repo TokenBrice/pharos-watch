@@ -55,6 +55,50 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters and a cap. The owner is an EOA; current allowed minter set was not enumerated in this batch.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a",
+        "label": "USP token owner EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USP implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+          }
+        ],
+        "evidence": "USP.owner() returned this EOA. Sourcify implementation exposes allowedMinters, setMinter, cap, and mint."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Piku docs",
+          "url": "https://docs.piku.co/piku"
+        },
+        {
+          "label": "USP implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+        }
+      ],
+      "evidence": "Owner and implementation evidence identify an EOA-controlled allowedMinters/cap configuration for USP, but the current allowed minter set was not enumerated.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate current MinterSet events and call allowedMinters(address) before finalizing direct-minter controls.",
+        "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained."
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

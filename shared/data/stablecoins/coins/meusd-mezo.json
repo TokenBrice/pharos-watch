@@ -56,6 +56,103 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "bridge-or-oft-synthetic",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "The Ethereum MUSD token has owner-managed mintList entries. The meaningful active minter identified is a Wormhole NTT manager owned by a 5/9 Safe; two other active mintList entries are tiny noOp contracts and remain unresolved placeholders.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
+        "label": "MUSD token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 5,
+          "owners": [
+            "0x3F9bb00672AD7254eBa4be9Fe65860CE298A3AB8",
+            "0x7f043FF8B5Ce02E543eE83fcdec94944D24ebD5d",
+            "0x930b76784C1FB86335ab174dFE321B44eA0ADfdA",
+            "0xAbB0C40DBc7FF3455087888C87217064Ad10a944",
+            "0x9bE76D5aB050aa8c77f6Ad25F25f633B2cB8ed85",
+            "0x696BA87e3Ef864335A9E30Ae4653b516Fb93a1AB",
+            "0x91149ef9449Bd1068346B6098ebB9624c2D3e849",
+            "0xF63bc5326c4d5ab123a20Ec5D5805B365a3355E4",
+            "0x6F016C33e55e40f24239fB9ab96A6e3D75059686"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25165875,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "MUSD token source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186?fields=abi,metadata"
+          },
+          {
+            "label": "MUSD owner Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+          }
+        ],
+        "evidence": "MUSD.owner() returned this Safe; Safe API showed 5/9 with no modules and no guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5293158bf7a81ed05418da497a80f7e6dbf4477e",
+        "label": "MUSD Wormhole NTT manager",
+        "role": "bridge-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "attestorQuorum": "getThreshold() returned 1",
+          "caps": "getCurrentOutboundCapacity() returned a very high capacity; inbound read reverted and needs follow-up"
+        },
+        "sources": [
+          {
+            "label": "MUSD NTT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x075108f275ed81c9cfc01065e6e50ceea81d6363?fields=abi,metadata"
+          },
+          {
+            "label": "MUSD mintList logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186&fromBlock=0&toBlock=latest&topic0=0xb5f5e667e3c69826355d38372c34ea9b6dbe059e935081194d5eea2e8ad2692e"
+          }
+        ],
+        "evidence": "MUSD mintList(address) returned true. The proxy implementation is Wormhole NTT Manager; owner() returned the MUSD 5/9 Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mezo MUSD docs",
+          "url": "https://mezo.org/docs/users/musd"
+        },
+        {
+          "label": "MUSD token source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186?fields=abi,metadata"
+        },
+        {
+          "label": "MUSD owner Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+        }
+      ],
+      "evidence": "Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Core Mezo-side borrower/CDP mint authority was not verified; this recommendation covers the Ethereum token/bridge surface only.",
+        "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo."
+      ]
+    }
+  },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [

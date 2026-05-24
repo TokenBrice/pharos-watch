@@ -86,6 +86,79 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5f0DeE98360d8200b20812e174d139A1a633EDd2",
+        "label": "MIM owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 5,
+          "owners": [
+            "0x6429602699fEC6D205e0b9531C7f33476BA11Fb0",
+            "0x941ec857134B13c255d6EBEeD1623b1904378De9",
+            "0xA7499Aa6464c078EeB940da2fc95C6aCd010c3Cc",
+            "0x740d25cFda3aF381D90B6800C245E670E7841cd8",
+            "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
+            "0xf7f8eeB9BD56E2480b4A5903254B69a83f0c243b",
+            "0x1081246e16c36fb6A9c1F4E6e28B27CeE28c01CA",
+            "0x7897531b47C6dB37570b4d2441a4484Dd5f97133",
+            "0x3c1Cb7D4c0ce0dc72eDc7Ea06acC866e62a8f1d8",
+            "0xfddfE525054efaAD204600d00CA86ADb1Cc2ea8a"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25165875,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "MIM contract source/ABI",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3?fields=abi,metadata"
+          },
+          {
+            "label": "MIM owner Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
+          }
+        ],
+        "evidence": "MIM.owner() returned this Safe. Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Abracadabra docs",
+          "url": "https://docs.abracadabra.money/"
+        },
+        {
+          "label": "MIM contract source/ABI",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3?fields=abi,metadata"
+        },
+        {
+          "label": "MIM owner Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
+        }
+      ],
+      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/10 Safe owner with direct owner-controlled mint functions on the token.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Confirm whether current protocol cauldrons rely on owner minting directly or only through approved borrowing modules; the token-level owner path is still a direct mint surface."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "reserves": [

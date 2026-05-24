@@ -57,6 +57,61 @@
     "reviewer": "Accuratis swarm review",
     "reviewedAt": "2026-05-13"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, so the owner address can directly mint; no Safe, multisig, or timelock setup was verified.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x62b3a0f6ffc5efd7692053A9040fE44F9AC8c5Cb",
+        "label": "USAT owner-only minter",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USAT Ethereum proxy",
+            "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68"
+          },
+          {
+            "label": "USAT Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
+          }
+        ],
+        "evidence": "The USAT proxy owner() returned this address; verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USAT website",
+          "url": "https://usat.io/"
+        },
+        {
+          "label": "USAT reserve attestations",
+          "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
+        },
+        {
+          "label": "USAT Ethereum proxy",
+          "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68"
+        },
+        {
+          "label": "USAT Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
+        }
+      ],
+      "evidence": "Ethereum reads identified the USAT proxy implementation and owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
+      "reviewer": "Codex mint-authority top100 batch-a",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify operational custody for the owner address.",
+        "Check whether additional chain deployments exist and share the same issuer control."
+      ]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

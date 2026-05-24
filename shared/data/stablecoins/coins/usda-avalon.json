@@ -86,6 +86,85 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USDa uses AccessControl roles on Ethereum. Two addresses held MINT_ROLE at the sampled block, and the default/admin role can grant or revoke mint capacity; signer setup is unknown.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x3f390dD6EF69f68f9877aACC086856a200808693",
+        "label": "USDa MINT_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USDa Ethereum source",
+            "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+          }
+        ],
+        "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc",
+        "label": "USDa MINT_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USDa Ethereum source",
+            "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+          }
+        ],
+        "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9",
+        "label": "USDa default/admin role holder",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USDa Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2?fields=sources,abi"
+          }
+        ],
+        "evidence": "At Ethereum block 25165905, owner(), DEFAULT_ADMIN_ROLE, and ADMIN_ROLE resolved to this address; the verified source defines MINT_ROLE and admin-controlled grant/revoke paths."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Avalon docs",
+          "url": "https://docs.avalonfinance.xyz"
+        },
+        {
+          "label": "USDa Ethereum source",
+          "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+        },
+        {
+          "label": "USDa Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2?fields=sources,abi"
+        }
+      ],
+      "evidence": "Verified USDa source defines MINT_ROLE and admin roles; role reads at Ethereum block 25165905 identified two live MINT_ROLE holders plus the default/admin role holder.",
+      "reviewer": "Codex mint-authority top100 batch-a",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify whether role holders are EOAs, Safes, timelocks, or issuer backend contracts.",
+        "Check other chains before applying the same controls globally."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [

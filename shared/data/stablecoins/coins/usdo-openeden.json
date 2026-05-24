@@ -67,6 +67,92 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USDO has AccessControl MINTER_ROLE/BURNER_ROLE/UPGRADE_ROLE. Active mint roles include an EOA default admin, an Express mint/redeem contract, and a CCIP burn/mint token pool.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "label": "USDO default admin and minter EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USDO RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Direct hasRole reads showed this EOA has DEFAULT_ADMIN_ROLE and MINTER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x80e49d1bdce8f80c38e88dd5c4c004ddb9b4e887",
+        "label": "USDOExpressV2",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USDOExpressV2 implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xddea8966f5f33281333b19f7b071fb5b05118451?fields=abi,metadata"
+          }
+        ],
+        "evidence": "Direct hasRole read showed MINTER_ROLE. Sourcify implementation exposes instantMint, mint limits, KYC, and redemption controls."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x500d4882938020e939a5666c1b4200873da7efd3",
+        "label": "USDOBurnMintTokenPool",
+        "role": "bridge-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "CCIP token pool source exposes remote pool and supported chain configuration",
+          "rateLimits": "Token pool exposes inbound/outbound rate-limiter state"
+        },
+        "sources": [
+          {
+            "label": "USDOBurnMintTokenPool",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x500d4882938020e939a5666c1b4200873da7efd3?fields=abi,metadata"
+          }
+        ],
+        "evidence": "Direct hasRole read showed MINTER_ROLE; Sourcify source identifies USDOBurnMintTokenPool."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "OpenEden USDO docs",
+          "url": "https://docs.openeden.com/usdo/introduction"
+        },
+        {
+          "label": "USDO implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x87e3ba929c71c0e28fc1c817d107a888a59c523e?fields=abi,metadata"
+        },
+        {
+          "label": "USDO RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "Direct role reads and Sourcify implementation metadata identify an EOA default-admin/minter, USDOExpressV2, and a CCIP burn/mint token pool as active USDO mint surfaces.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "No Safe/multisig setup was verified for the default-admin EOA.",
+        "Review role revocation/grant history before final metadata insertion if a stricter current-role set is required."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

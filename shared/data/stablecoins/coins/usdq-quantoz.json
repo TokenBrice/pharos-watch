@@ -95,6 +95,64 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDQ is issuer-minted: the Ethereum implementation exposes owner-only mint and redeem functions; Polygon uses a separate upgradeable/access-controlled deployment whose exact roles still need enumeration.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "label": "USDQ Ethereum owner mint",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Verified HadronToken source exposes mint(destination,amount) onlyOwner."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+        "label": "USDQ Ethereum owner",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() returned this address at Ethereum block 25165887."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x84e8d731fCBe186B803DB51e9E58142083417929",
+        "label": "USDQ Polygon owner",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() returned this address at Polygon block 87368488; exact Polygon mint role source needs review."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify USDQ Ethereum HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        },
+        {
+          "label": "Quantoz USDQ product page",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        }
+      ],
+      "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 at block 87368488.",
+      "reviewer": "Codex mint-authority top100 batch-b",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Identify whether owner/proxy-admin addresses are Safes, EOAs, or contracts.",
+        "Enumerate Polygon roles and confirm whether Polygon can independently mint or only bridge."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

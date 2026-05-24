@@ -56,6 +56,44 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "IUSD's receipt token can be minted by addresses holding infiniFi's RECEIPT_TOKEN_MINTER core role; the current core/governor setup was not resolved in this pass.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+        "label": "IUSD receipt-token minter role",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Verified source defines ReceiptToken.mint(address,uint256) guarded by onlyCoreRole(CoreRoles.RECEIPT_TOKEN_MINTER); CoreRoles also defines GOVERNOR and role-management roles."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify IUSD ReceiptToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48F9E38f3070ad8945DFeAe3FA70987722E3d89C/sources/src/tokens/ReceiptToken.sol"
+        },
+        {
+          "label": "Sourcify infiniFi CoreRoles source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48F9E38f3070ad8945DFeAe3FA70987722E3d89C/sources/src/libraries/CoreRoles.sol"
+        }
+      ],
+      "evidence": "Direct read/source verification at Ethereum block 25165886. The token source exposes direct minting through RECEIPT_TOKEN_MINTER; current core address and role holders were not read.",
+      "reviewer": "Codex mint-authority top100 batch-b",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Read the token's current Core contract address.",
+        "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls."
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "reserves": [
     {

@@ -49,6 +49,73 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account; the program upgrade authority is separate and signer setup remains unverified.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4",
+        "label": "USX SPL mint and freeze authority",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USX Solscan token",
+            "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+          },
+          {
+            "label": "Solstice USX program",
+            "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+          }
+        ],
+        "evidence": "The USX Solana mint had this address as both mintAuthority and freezeAuthority at finalized slot 421873034; the account is owned by the Solstice USX program and is not executable."
+      },
+      {
+        "chain": "solana",
+        "address": "BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb",
+        "label": "Solstice USX program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Solstice USX program",
+            "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+          }
+        ],
+        "evidence": "The Solstice USX program is BPF upgradeable; ProgramData 3P5mNf86DSd2CNu1DToPBxbvqQL4V2kNwAQjErCwZxMq reported this upgrade authority at deployed slot 410547056."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Solstice USX",
+          "url": "https://solstice.finance/usx"
+        },
+        {
+          "label": "USX Solscan token",
+          "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+        },
+        {
+          "label": "Solstice USX program",
+          "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+        }
+      ],
+      "evidence": "Solana mint reads found live mint and freeze authority at Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4, while the Solstice program has a separate verified upgrade authority.",
+      "reviewer": "Codex mint-authority top100 batch-a",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Is the upgrade authority controlled by a Safe-like multisig, institutional backend, or EOA?",
+        "Does the Solstice program enforce collateral or KYC limits that bound minting?"
+      ]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "single-entity",

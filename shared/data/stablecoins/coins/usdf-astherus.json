@@ -47,6 +47,54 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDF exposes an AccessControl minter/burner role that can mint directly; role membership was not enumerated in this pass, while the token owner/default-admin path appears to be a timelock/owner address.",
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0x5a110fc00474038f6c02e89c707d638602ea44b5",
+        "label": "USDF token MINTER_AND_BURN_ROLE",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Verified source defines MINTER_AND_BURN_ROLE and mint(address,uint256) guarded by onlyRole(MINTER_AND_BURN_ROLE)."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861",
+        "label": "USDF owner / default-admin path",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "owner() returned this address at BSC block 100175621; source grants DEFAULT_ADMIN_ROLE to the constructor timelock address, but current role membership was not enumerated."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify USDF verified source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x5A110fC00474038f6c02E89C707D638602EA44B5/sources/contracts/oft/USDF.sol"
+        },
+        {
+          "label": "Sourcify USDF verification record",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x5a110fc00474038f6c02e89c707d638602ea44b5"
+        }
+      ],
+      "evidence": "Direct read: owner() = 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 at BSC block 100175621. Source line scan showed ADMIN_ROLE, MINTER_AND_BURN_ROLE, and mint() guarded by MINTER_AND_BURN_ROLE.",
+      "reviewer": "Codex mint-authority top100 batch-b",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate current MINTER_AND_BURN_ROLE holders and DEFAULT_ADMIN_ROLE holders.",
+        "Verify whether 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 is a timelock, Safe, or EOA and whether it can grant/revoke minters."
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "reserves": [

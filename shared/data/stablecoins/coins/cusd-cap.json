@@ -31,6 +31,44 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "cUSD mints through Cap's vault mint path against supported assets; admin-controlled access, asset lists, caps, and UUPS upgrade authority remain material mint-path controls.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "label": "Cap cUSD vault mint path",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Verified implementation source exposes mint(asset,amountIn,minAmountOut,receiver,deadline), mints cUSD to the receiver and fees to the insurance fund, and relies on AccessControl for asset/cap/upgrade-sensitive functions."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify CapToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/token/CapToken.sol"
+        },
+        {
+          "label": "Sourcify Vault source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/vault/Vault.sol"
+        }
+      ],
+      "evidence": "Direct read at Ethereum block 25165886: EIP-1967 implementation = 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. MegaETH address 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc had no code at block 19924084 despite being present in local metadata.",
+      "reviewer": "Codex mint-authority top100 batch-b",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve the AccessControl contract address and current role holders.",
+        "Read current deposit caps, supported assets, upgrade authority, and whether a timelock or Safe controls AccessControl."
+      ]
+    }
+  },
   "liveReservesConfig": {
     "version": 1,
     "adapter": "cap-vault",

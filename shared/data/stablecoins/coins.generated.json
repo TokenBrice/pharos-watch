@@ -1723,6 +1723,79 @@
       "regulator": "BMA",
       "license": "DABA License"
     },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "AUSD uses role-gated EVM mint functions and a Solana Token-2022 mint authority. The Solana mint authority is directly resolved; EVM minter-role holders and signer setups still need enumeration.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+          "label": "AUSD EVM role-gated mint implementation",
+          "role": "other",
+          "authorityType": "contract",
+          "directMintAbility": "unknown",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify AUSD source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x00000000efe302beaa2b3e6e1b18d08d69a9012a?fields=sources,abi"
+            },
+            {
+              "label": "Agora docs",
+              "url": "https://docs.agora.finance/"
+            }
+          ],
+          "evidence": "Verified AgoraDollar source defines MINTER_ROLE, BRIDGE_MINTER_ROLE, ACCESS_CONTROL_MANAGER_ROLE, RATE_LIMIT_MANAGER_ROLE, mint functions for minters/bridge minters, and role-member/rate-limit getters. Current role holders were not enumerated in this pass, so this row records the unresolved role-gated implementation surface rather than a specific direct minter."
+        },
+        {
+          "chain": "solana",
+          "address": "EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP",
+          "label": "AUSD Solana Token-2022 mint authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Solscan AUSD token",
+              "url": "https://solscan.io/token/AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
+            },
+            {
+              "label": "Agora Solana token metadata",
+              "url": "https://raw.githubusercontent.com/agora-finance/public-assets/refs/heads/master/src/token-metadata/solana-ausd.json"
+            }
+          ],
+          "evidence": "Solana finalized getAccountInfo for the local AUSD Token-2022 mint returned this mintAuthority; the same read returned freezeAuthority 6QZAZqTmvvSCNLsJvwtkvk4FjbxstS7p2TQR9duwPSuH and permanent delegate 6HAFLav8Qn2QfeSRVPLwtmPKHMm8f93uWSQMp2n1MyoU."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Agora docs",
+            "url": "https://docs.agora.finance/"
+          },
+          {
+            "label": "Agora GitHub",
+            "url": "https://github.com/agora-finance"
+          },
+          {
+            "label": "Chaos Labs Agora proof of reserves",
+            "url": "https://oracles.chaoslabs.xyz/por-feeds/agora"
+          }
+        ],
+        "evidence": "Batch-A research verified the AUSD EVM role model and Solana Token-2022 mint authority. A follow-up Solana read against the local Pharos AUSD mint confirmed the current Solana mint authority address; EVM role-holder enumeration remains unresolved.",
+        "reviewer": "Codex mint-authority top100 batch-a",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Call getMinterRoleMembers, getBridgeMinterRoleMembers, getAccessControlManagerRoleMembers, and rate-limit getters on the EVM contract.",
+          "Verify signer setup for Solana and EVM role-holder addresses."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -6472,6 +6545,44 @@
         "url": "https://docs.cap.app/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "cUSD mints through Cap's vault mint path against supported assets; admin-controlled access, asset lists, caps, and UUPS upgrade authority remain material mint-path controls.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+          "label": "Cap cUSD vault mint path",
+          "role": "other",
+          "authorityType": "contract",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified implementation source exposes mint(asset,amountIn,minAmountOut,receiver,deadline), mints cUSD to the receiver and fees to the insurance fund, and relies on AccessControl for asset/cap/upgrade-sensitive functions."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify CapToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/token/CapToken.sol"
+          },
+          {
+            "label": "Sourcify Vault source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC/sources/contracts/vault/Vault.sol"
+          }
+        ],
+        "evidence": "Direct read at Ethereum block 25165886: EIP-1967 implementation = 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. MegaETH address 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc had no code at block 19924084 despite being present in local metadata.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve the AccessControl contract address and current role holders.",
+          "Read current deposit caps, supported assets, upgrade authority, and whether a timelock or Safe controls AccessControl."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -16014,6 +16125,44 @@
         "url": "https://stats.infinifi.xyz/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "IUSD's receipt token can be minted by addresses holding infiniFi's RECEIPT_TOKEN_MINTER core role; the current core/governor setup was not resolved in this pass.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+          "label": "IUSD receipt-token minter role",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified source defines ReceiptToken.mint(address,uint256) guarded by onlyCoreRole(CoreRoles.RECEIPT_TOKEN_MINTER); CoreRoles also defines GOVERNOR and role-management roles."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify IUSD ReceiptToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48F9E38f3070ad8945DFeAe3FA70987722E3d89C/sources/src/tokens/ReceiptToken.sol"
+          },
+          {
+            "label": "Sourcify infiniFi CoreRoles source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x48F9E38f3070ad8945DFeAe3FA70987722E3d89C/sources/src/libraries/CoreRoles.sol"
+          }
+        ],
+        "evidence": "Direct read/source verification at Ethereum block 25165886. The token source exposes direct minting through RECEIPT_TOKEN_MINTER; current core address and role holders were not read.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Read the token's current Core contract address.",
+          "Enumerate RECEIPT_TOKEN_MINTER and GOVERNOR/current timelock or Safe controls."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -18234,6 +18383,61 @@
         "url": "https://github.com/lista-dao"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "LISUSD exposes a role-based minter with a supply cap; manager/admin roles can change the cap and role assignments, with a hard-coded default admin timelock address in the verified implementation.",
+      "controls": [
+        {
+          "chain": "bsc",
+          "address": "0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5",
+          "label": "LISUSD MINTER role",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "mint(address,uint256) requires totalSupply + amount <= supplyCap; manager can setSupplyCap at or above current total supply.",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified implementation source defines Role.MINTER, Role.MANAGER, Role.ADMIN; mint is onlyMinter and setSupplyCap is onlyManager."
+        },
+        {
+          "chain": "bsc",
+          "address": "0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253",
+          "label": "LISUSD hard-coded default admin",
+          "role": "minter-admin",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified source comments label DEFAULT_ADMIN as the TimeLock contract and onlyAdmin allows this address to rely/deny role assignments."
+        },
+        {
+          "chain": "bsc",
+          "address": "0x1fa3e4718168077975ff4039304cc2e19ae58c4c",
+          "label": "LISUSD EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "EIP-1967 admin slot returned this address at BSC block 100175656."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify LisUSD source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
+          }
+        ],
+        "evidence": "Direct read at BSC block 100175656: EIP-1967 implementation = 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8 and proxy admin = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. Source shows MINTER/ADMIN/MANAGER roles, cap-limited mint, and DEFAULT_ADMIN = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Enumerate current wards by role.",
+          "Verify the default admin timelock contract and proxy admin setup/threshold."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "bsc",
@@ -19277,6 +19481,103 @@
         "url": "https://mezo.org/docs/users/musd"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "bridge-or-oft-synthetic",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "verified",
+      "summary": "The Ethereum MUSD token has owner-managed mintList entries. The meaningful active minter identified is a Wormhole NTT manager owned by a 5/9 Safe; two other active mintList entries are tiny noOp contracts and remain unresolved placeholders.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
+          "label": "MUSD token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 5,
+          "signerCount": 9,
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x3F9bb00672AD7254eBa4be9Fe65860CE298A3AB8",
+              "0x7f043FF8B5Ce02E543eE83fcdec94944D24ebD5d",
+              "0x930b76784C1FB86335ab174dFE321B44eA0ADfdA",
+              "0xAbB0C40DBc7FF3455087888C87217064Ad10a944",
+              "0x9bE76D5aB050aa8c77f6Ad25F25f633B2cB8ed85",
+              "0x696BA87e3Ef864335A9E30Ae4653b516Fb93a1AB",
+              "0x91149ef9449Bd1068346B6098ebB9624c2D3e849",
+              "0xF63bc5326c4d5ab123a20Ec5D5805B365a3355E4",
+              "0x6F016C33e55e40f24239fB9ab96A6e3D75059686"
+            ],
+            "threshold": 5,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25165875,
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "MUSD token source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186?fields=abi,metadata"
+            },
+            {
+              "label": "MUSD owner Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+            }
+          ],
+          "evidence": "MUSD.owner() returned this Safe; Safe API showed 5/9 with no modules and no guard."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5293158bf7a81ed05418da497a80f7e6dbf4477e",
+          "label": "MUSD Wormhole NTT manager",
+          "role": "bridge-admin",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "attestorQuorum": "getThreshold() returned 1",
+            "caps": "getCurrentOutboundCapacity() returned a very high capacity; inbound read reverted and needs follow-up"
+          },
+          "sources": [
+            {
+              "label": "MUSD NTT implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x075108f275ed81c9cfc01065e6e50ceea81d6363?fields=abi,metadata"
+            },
+            {
+              "label": "MUSD mintList logs",
+              "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186&fromBlock=0&toBlock=latest&topic0=0xb5f5e667e3c69826355d38372c34ea9b6dbe059e935081194d5eea2e8ad2692e"
+            }
+          ],
+          "evidence": "MUSD mintList(address) returned true. The proxy implementation is Wormhole NTT Manager; owner() returned the MUSD 5/9 Safe."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mezo MUSD docs",
+            "url": "https://mezo.org/docs/users/musd"
+          },
+          {
+            "label": "MUSD token source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186?fields=abi,metadata"
+          },
+          {
+            "label": "MUSD owner Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
+          }
+        ],
+        "evidence": "Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Core Mezo-side borrower/CDP mint authority was not verified; this recommendation covers the Ethereum token/bridge surface only.",
+          "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -19698,6 +19999,79 @@
         "url": "https://docs.abracadabra.money/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "verified",
+      "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/10 Safe with no modules or guard detected.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x5f0DeE98360d8200b20812e174d139A1a633EDd2",
+          "label": "MIM owner Safe",
+          "role": "direct-minter",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 5,
+          "signerCount": 10,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x6429602699fEC6D205e0b9531C7f33476BA11Fb0",
+              "0x941ec857134B13c255d6EBEeD1623b1904378De9",
+              "0xA7499Aa6464c078EeB940da2fc95C6aCd010c3Cc",
+              "0x740d25cFda3aF381D90B6800C245E670E7841cd8",
+              "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
+              "0xf7f8eeB9BD56E2480b4A5903254B69a83f0c243b",
+              "0x1081246e16c36fb6A9c1F4E6e28B27CeE28c01CA",
+              "0x7897531b47C6dB37570b4d2441a4484Dd5f97133",
+              "0x3c1Cb7D4c0ce0dc72eDc7Ea06acC866e62a8f1d8",
+              "0xfddfE525054efaAD204600d00CA86ADb1Cc2ea8a"
+            ],
+            "threshold": 5,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "observedBlock": 25165875,
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "MIM contract source/ABI",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3?fields=abi,metadata"
+            },
+            {
+              "label": "MIM owner Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
+            }
+          ],
+          "evidence": "MIM.owner() returned this Safe. Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Abracadabra docs",
+            "url": "https://docs.abracadabra.money/"
+          },
+          {
+            "label": "MIM contract source/ABI",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3?fields=abi,metadata"
+          },
+          {
+            "label": "MIM owner Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
+          }
+        ],
+        "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/10 Safe owner with direct owner-controlled mint functions on the token.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Confirm whether current protocol cauldrons rely on owner minting directly or only through approved borrowing modules; the token-level owner path is still a direct mint surface."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -20105,6 +20479,65 @@
       "regulator": "FSRC",
       "license": "Class A Digital Asset Business License"
     },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "MNEE minting is controlled by a validator-style minter set: mint operations require three valid minter signatures and the caller must itself be a minter; the proxy has a separate upgrade/admin path.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+          "label": "MNEE minter validator set",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "Implementation source has roleHolders = 4 and requiredSignatures = 3; mintBurnPauseUnpause mints only when signers are current minters and msg.sender is a minter."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x00C81F5f28c854F57D83afB894f9385465ee7d85",
+          "label": "MNEE token admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "admin() through the proxy returned this address at Ethereum block 25165886; code length read indicated no contract code."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xa3b670f2dd1722c3d4b98f146467840540c2c53e",
+          "label": "MNEE EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "contract",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25165886; code length read showed contract code, but the contract setup was not resolved."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify MNEE implementation source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x6D2E08839cEc8699565a86D046E64324826039c9/sources/src/MNEEv2.sol"
+          },
+          {
+            "label": "Sourcify MNEE token/proxy verification record",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf"
+          }
+        ],
+        "evidence": "Direct reads at Ethereum block 25165886: EIP-1967 implementation = 0x6d2e08839cec8699565a86d046e64324826039c9, EIP-1967 admin = 0xa3b670f2dd1722c3d4b98f146467840540c2c53e, admin() = 0x00C81F5f28c854F57D83afB894f9385465ee7d85.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Enumerate current minter validator addresses and confirm all four active signers.",
+          "Identify the proxy admin contract type and threshold/modules if it is a Safe or custom multisig."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -20454,6 +20887,61 @@
         "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "MSUSD can be minted by a configured minter or stakedmsUSD contract; the owner can set those addresses and raise the supply limit, with UUPS upgrades gated by the contract's timelock check.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+          "label": "MSUSD configured minter / stakedmsUSD",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified source allows mint(to,amount) only from minter or stakedmsUSD; owner can setMinter, setStakedmsUSD, and setSupplyLimit."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858",
+          "label": "MSUSD Ethereum owner",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "owner() returned this address at Ethereum block 25165887."
+        },
+        {
+          "chain": "sonic",
+          "address": "0x861a58d3DE287196c5546d10c7afFa479E0963e4",
+          "label": "MSUSD Sonic owner",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "owner() returned this address at Sonic block 71320471; Sonic implementation source was not verified in this pass."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify MSUSD implementation source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x96271bEa7A9c4B8eDd6c3A05E548f05F157ADA46/sources/src/v2/msUSDV2.sol"
+          }
+        ],
+        "evidence": "Direct reads: Ethereum implementation = 0x96271bea7a9c4b8edd6c3a05e548f05f157ada46 and owner() = 0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858 at block 25165887; Sonic implementation = 0xfbe86362f4fc7aac3acaf1b36ae211816f2fc478 and owner() = 0x861a58d3DE287196c5546d10c7afFa479E0963e4 at block 71320471.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Read current minter(), stakedmsUSD(), supplyLimit(), and timelock state.",
+          "Identify whether owner addresses are Safes, EOAs, or contracts with threshold/timelock controls.",
+          "Verify Sonic implementation source."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -24386,6 +24874,73 @@
       "country": "British Virgin Islands",
       "regulator": "FSC",
       "license": "BVI Securities and Investment Business Act"
+    },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "bounded-admin",
+      "confidence": "verified",
+      "summary": "reUSD's verified ShareToken source has MINTER_ROLE and UPGRADER_ROLE. No live MINTER_ROLE holder was found in the sampled event-derived scan, but admin/upgrader addresses can restore or alter mint authority.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x69dDEa332723cF5407151aAF68B9b076557FCA93",
+          "label": "reUSD default admin and upgrader",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "reUSD Sourcify source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
+            }
+          ],
+          "evidence": "Role scan at Ethereum block 25165906 found this address holding DEFAULT_ADMIN_ROLE and UPGRADER_ROLE on the verified ShareToken implementation."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x8eec10616802Ef639CA55c98ac856553fAdEfBaD",
+          "label": "reUSD default admin",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "reUSD Ethereum proxy",
+              "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+            }
+          ],
+          "evidence": "Role scan at Ethereum block 25165906 found this address holding DEFAULT_ADMIN_ROLE; a prior MINTER_ROLE holder was revoked by this address at block 25109035."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Re docs",
+            "url": "https://docs.re.xyz"
+          },
+          {
+            "label": "Re transparency",
+            "url": "https://app.re.xyz/transparency"
+          },
+          {
+            "label": "reUSD Ethereum proxy",
+            "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+          },
+          {
+            "label": "reUSD Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
+          }
+        ],
+        "evidence": "Verified ShareToken source defines MINTER_ROLE and UPGRADER_ROLE; sampled role reads found no live MINTER_ROLE holder but identified two default admins and one upgrader that can restore or alter mint authority.",
+        "reviewer": "Codex mint-authority top100 batch-a",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Confirm from full deployment history whether any MINTER_ROLE holder exists outside the scanned events.",
+          "Verify signer setup for admin/upgrader addresses."
+        ]
+      }
     },
     "contracts": [
       {
@@ -31350,6 +31905,61 @@
       "regulator": "OCC",
       "license": "Federal Bank Charter"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, so the owner address can directly mint; no Safe, multisig, or timelock setup was verified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x62b3a0f6ffc5efd7692053A9040fE44F9AC8c5Cb",
+          "label": "USAT owner-only minter",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USAT Ethereum proxy",
+              "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68"
+            },
+            {
+              "label": "USAT Sourcify source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
+            }
+          ],
+          "evidence": "The USAT proxy owner() returned this address; verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "USAT website",
+            "url": "https://usat.io/"
+          },
+          {
+            "label": "USAT reserve attestations",
+            "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
+          },
+          {
+            "label": "USAT Ethereum proxy",
+            "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68"
+          },
+          {
+            "label": "USAT Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
+          }
+        ],
+        "evidence": "Ethereum reads identified the USAT proxy implementation and owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
+        "reviewer": "Codex mint-authority top100 batch-a",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Verify operational custody for the owner address.",
+          "Check whether additional chain deployments exist and share the same issuer control."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -32351,6 +32961,85 @@
         "url": "https://docs.avalonfinance.xyz"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "USDa uses AccessControl roles on Ethereum. Two addresses held MINT_ROLE at the sampled block, and the default/admin role can grant or revoke mint capacity; signer setup is unknown.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x3f390dD6EF69f68f9877aACC086856a200808693",
+          "label": "USDa MINT_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USDa Ethereum source",
+              "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+            }
+          ],
+          "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc",
+          "label": "USDa MINT_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USDa Ethereum source",
+              "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+            }
+          ],
+          "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9",
+          "label": "USDa default/admin role holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USDa Sourcify source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2?fields=sources,abi"
+            }
+          ],
+          "evidence": "At Ethereum block 25165905, owner(), DEFAULT_ADMIN_ROLE, and ADMIN_ROLE resolved to this address; the verified source defines MINT_ROLE and admin-controlled grant/revoke paths."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Avalon docs",
+            "url": "https://docs.avalonfinance.xyz"
+          },
+          {
+            "label": "USDa Ethereum source",
+            "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+          },
+          {
+            "label": "USDa Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2?fields=sources,abi"
+          }
+        ],
+        "evidence": "Verified USDa source defines MINT_ROLE and admin roles; role reads at Ethereum block 25165905 identified two live MINT_ROLE holders plus the default/admin role holder.",
+        "reviewer": "Codex mint-authority top100 batch-a",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Verify whether role holders are EOAs, Safes, timelocks, or issuer backend contracts.",
+          "Check other chains before applying the same controls globally."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -34095,6 +34784,54 @@
         "url": "https://docs.asterdex.com/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDF exposes an AccessControl minter/burner role that can mint directly; role membership was not enumerated in this pass, while the token owner/default-admin path appears to be a timelock/owner address.",
+      "controls": [
+        {
+          "chain": "bsc",
+          "address": "0x5a110fc00474038f6c02e89c707d638602ea44b5",
+          "label": "USDF token MINTER_AND_BURN_ROLE",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified source defines MINTER_AND_BURN_ROLE and mint(address,uint256) guarded by onlyRole(MINTER_AND_BURN_ROLE)."
+        },
+        {
+          "chain": "bsc",
+          "address": "0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861",
+          "label": "USDF owner / default-admin path",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "owner() returned this address at BSC block 100175621; source grants DEFAULT_ADMIN_ROLE to the constructor timelock address, but current role membership was not enumerated."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify USDF verified source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0x5A110fC00474038f6c02E89C707D638602EA44B5/sources/contracts/oft/USDF.sol"
+          },
+          {
+            "label": "Sourcify USDF verification record",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x5a110fc00474038f6c02e89c707d638602ea44b5"
+          }
+        ],
+        "evidence": "Direct read: owner() = 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 at BSC block 100175621. Source line scan showed ADMIN_ROLE, MINTER_AND_BURN_ROLE, and mint() guarded by MINTER_AND_BURN_ROLE.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Enumerate current MINTER_AND_BURN_ROLE holders and DEFAULT_ADMIN_ROLE holders.",
+          "Verify whether 0xe829a87F4Dfa41B032D8B6Feca6C2213d6ee1861 is a timelock, Safe, or EOA and whether it can grant/revoke minters."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "bsc",
@@ -34741,6 +35478,61 @@
       "country": "United States",
       "regulator": "OCC",
       "license": "Federal Bank Charter"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "USDGO is a Token-2022 issuer token whose live mint authority and permanent delegate are the same Solana address; operational custody for that address is not verified.",
+      "controls": [
+        {
+          "chain": "solana",
+          "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+          "label": "USDGO Token-2022 mint authority and permanent delegate",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USDGO Solscan token",
+              "url": "https://solscan.io/token/72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"
+            },
+            {
+              "label": "USDGO token metadata",
+              "url": "https://static.anchorage-production.com/stablecoins/USDGO/metadata.json"
+            }
+          ],
+          "evidence": "The USDGO Token-2022 mint reported this address as both mintAuthority and permanent delegate at finalized slot 421873034; metadata identifies USDGO as an Anchorage Digital Bank-issued token for the OSL ecosystem."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "USDGO website",
+            "url": "https://www.usdgo.com/"
+          },
+          {
+            "label": "USDGO reserve attestations",
+            "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+          },
+          {
+            "label": "USDGO token metadata",
+            "url": "https://static.anchorage-production.com/stablecoins/USDGO/metadata.json"
+          },
+          {
+            "label": "USDGO Solscan token",
+            "url": "https://solscan.io/token/72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"
+          }
+        ],
+        "evidence": "Solana Token-2022 mint reads verified the same live address for USDGO mint authority and permanent delegate, with issuer metadata linking the token to Anchorage Digital Bank.",
+        "reviewer": "Codex mint-authority top100 batch-a",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Verify full freeze/config/pauser addresses before metadata entry; gathered notes only retained prefixes for non-mint roles.",
+          "Verify whether Anchorage uses multisig, MPC, HSM, or issuer backend controls for the mint authority."
+        ]
+      }
     },
     "contracts": [
       {
@@ -36202,6 +36994,92 @@
       "regulator": "BMA",
       "license": "DABA License"
     },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "USDO has AccessControl MINTER_ROLE/BURNER_ROLE/UPGRADE_ROLE. Active mint roles include an EOA default admin, an Express mint/redeem contract, and a CCIP burn/mint token pool.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+          "label": "USDO default admin and minter EOA",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDO RoleGranted logs",
+              "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            }
+          ],
+          "evidence": "Direct hasRole reads showed this EOA has DEFAULT_ADMIN_ROLE and MINTER_ROLE."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x80e49d1bdce8f80c38e88dd5c4c004ddb9b4e887",
+          "label": "USDOExpressV2",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDOExpressV2 implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xddea8966f5f33281333b19f7b071fb5b05118451?fields=abi,metadata"
+            }
+          ],
+          "evidence": "Direct hasRole read showed MINTER_ROLE. Sourcify implementation exposes instantMint, mint limits, KYC, and redemption controls."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x500d4882938020e939a5666c1b4200873da7efd3",
+          "label": "USDOBurnMintTokenPool",
+          "role": "bridge-admin",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "trustedPeerOrRemote": "CCIP token pool source exposes remote pool and supported chain configuration",
+            "rateLimits": "Token pool exposes inbound/outbound rate-limiter state"
+          },
+          "sources": [
+            {
+              "label": "USDOBurnMintTokenPool",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x500d4882938020e939a5666c1b4200873da7efd3?fields=abi,metadata"
+            }
+          ],
+          "evidence": "Direct hasRole read showed MINTER_ROLE; Sourcify source identifies USDOBurnMintTokenPool."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "OpenEden USDO docs",
+            "url": "https://docs.openeden.com/usdo/introduction"
+          },
+          {
+            "label": "USDO implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x87e3ba929c71c0e28fc1c817d107a888a59c523e?fields=abi,metadata"
+          },
+          {
+            "label": "USDO RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Direct role reads and Sourcify implementation metadata identify an EOA default-admin/minter, USDOExpressV2, and a CCIP burn/mint token pool as active USDO mint surfaces.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "No Safe/multisig setup was verified for the default-admin EOA.",
+          "Review role revocation/grant history before final metadata insertion if a stricter current-role set is required."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -36930,6 +37808,64 @@
           "url": "https://www.quantoz.com/products/eurq-usdq"
         }
       ]
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDQ is issuer-minted: the Ethereum implementation exposes owner-only mint and redeem functions; Polygon uses a separate upgradeable/access-controlled deployment whose exact roles still need enumeration.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+          "label": "USDQ Ethereum owner mint",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Verified HadronToken source exposes mint(destination,amount) onlyOwner."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+          "label": "USDQ Ethereum owner",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "owner() returned this address at Ethereum block 25165887."
+        },
+        {
+          "chain": "polygon",
+          "address": "0x84e8d731fCBe186B803DB51e9E58142083417929",
+          "label": "USDQ Polygon owner",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "owner() returned this address at Polygon block 87368488; exact Polygon mint role source needs review."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify USDQ Ethereum HadronToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+          },
+          {
+            "label": "Quantoz USDQ product page",
+            "url": "https://www.quantoz.com/products/eurq-usdq"
+          }
+        ],
+        "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 at block 87368488.",
+        "reviewer": "Codex mint-authority top100 batch-b",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Identify whether owner/proxy-admin addresses are Safes, EOAs, or contracts.",
+          "Enumerate Polygon roles and confirm whether Polygon can independently mint or only bridge."
+        ]
+      }
     },
     "contracts": [
       {
@@ -38746,6 +39682,96 @@
       "regulator": "Companies Registry",
       "license": "TCSP License"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "USDX is an issuer-operated UUPS/OFT token. Active MINTER_ROLE EOAs can mint directly, while the default admin/upgrade-admin EOA can grant roles and upgrade the token.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xf28a91a1fa1f7d59094409a2908cb3754481e6dd",
+          "label": "USDX active MINTER_ROLE EOA",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDX token on Etherscan",
+              "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+            },
+            {
+              "label": "USDX Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+            }
+          ],
+          "evidence": "Direct reads showed this EOA has MINTER_ROLE. Sourcify implementation source exposes mint(address,uint256) gated by MINTER_ROLE."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+          "label": "USDX active MINTER_ROLE EOA",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDX token on Etherscan",
+              "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+            },
+            {
+              "label": "USDX Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+            }
+          ],
+          "evidence": "Direct reads showed this EOA has MINTER_ROLE. Sourcify implementation source exposes mint(address,uint256) gated by MINTER_ROLE."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb8Ce31ad8bAD26e88Db17e68F695C64f67AD31EB",
+          "label": "USDX default admin / upgrade admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDX RoleGranted logs",
+              "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            }
+          ],
+          "evidence": "Direct reads showed this EOA has DEFAULT_ADMIN_ROLE and UPGRADE_ADMIN_ROLE; no Safe setup was verified."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          },
+          {
+            "label": "USDX Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+          },
+          {
+            "label": "USDX RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Sourcify source and direct role reads identify active MINTER_ROLE EOAs plus a default-admin and upgrade-admin EOA for the Ethereum USDX token.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Confirm whether the active minter EOAs are operational backend keys, custody keys, or named issuer treasury wallets.",
+          "Confirm whether any offchain policy or custody approval flow constrains the minter EOAs."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -39435,6 +40461,97 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "verified",
+      "summary": "USN token minting is routed through a MinterHandlerV2 contract. The handler allows MINTER_ROLE minting and whitelisted directMint with onchain per-block/per-day limits; the same 3/6 Safe is token owner, handler default admin, and handler minter.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+          "label": "USN MinterHandlerV2",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "caps": "mintLimitPerBlock and directMintLimitPerDay both read as 10,000,000 USN units at 18 decimals",
+            "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE can set limits, whitelisted users/collateral, price feeds, custody wallet, and sUSN vault"
+          },
+          "sources": [
+            {
+              "label": "MinterHandlerV2 implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+            }
+          ],
+          "evidence": "USN.admin() returned MinterHandlerV2; source shows mint(Order,signature) onlyRole(MINTER_ROLE), mintAndRebase onlyRole(MINTER_ROLE), and directMint for whitelisted users."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f",
+          "label": "Noon admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 6,
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x0649F6Fc279B0EB94d5B15de013B87b0E50D2d88",
+              "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
+              "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
+              "0x7b1187106a3ac9D2602f41224A06e247fC12be37",
+              "0xe8241FACB568E4c880490e8Ab4E015F2572e6976",
+              "0x8B3641db7737fFab752718fcc772161eC09FaD01"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25165875,
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "Noon admin Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+            }
+          ],
+          "evidence": "Direct reads showed this Safe is USN.owner(); handler hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both true for this Safe."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Noon docs",
+            "url": "https://docs.noon.capital"
+          },
+          {
+            "label": "USN implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
+          },
+          {
+            "label": "MinterHandlerV2 implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+          },
+          {
+            "label": "Noon admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+          }
+        ],
+        "evidence": "Direct reads identify MinterHandlerV2 as the token admin/minter path and a 3/6 Safe as token owner, handler default-admin, and handler MINTER_ROLE holder.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "The operational custody wallet 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089 was not classified.",
+          "The offchain signer/signature model in mint(Order,signature) needs final source review before calling the mint path fully attested."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -39782,6 +40899,50 @@
         "url": "https://docs.piku.co/piku"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "probable",
+      "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters and a cap. The owner is an EOA; current allowed minter set was not enumerated in this batch.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a",
+          "label": "USP token owner EOA",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USP implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+            }
+          ],
+          "evidence": "USP.owner() returned this EOA. Sourcify implementation exposes allowedMinters, setMinter, cap, and mint."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Piku docs",
+            "url": "https://docs.piku.co/piku"
+          },
+          {
+            "label": "USP implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+          }
+        ],
+        "evidence": "Owner and implementation evidence identify an EOA-controlled allowedMinters/cap configuration for USP, but the current allowed minter set was not enumerated.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Enumerate current MinterSet events and call allowedMinters(address) before finalizing direct-minter controls.",
+          "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -40521,6 +41682,73 @@
     ],
     "jurisdiction": {
       "country": "Switzerland"
+    },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "probable",
+      "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account; the program upgrade authority is separate and signer setup remains unverified.",
+      "controls": [
+        {
+          "chain": "solana",
+          "address": "Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4",
+          "label": "USX SPL mint and freeze authority",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USX Solscan token",
+              "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+            },
+            {
+              "label": "Solstice USX program",
+              "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+            }
+          ],
+          "evidence": "The USX Solana mint had this address as both mintAuthority and freezeAuthority at finalized slot 421873034; the account is owned by the Solstice USX program and is not executable."
+        },
+        {
+          "chain": "solana",
+          "address": "BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb",
+          "label": "Solstice USX program upgrade authority",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Solstice USX program",
+              "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+            }
+          ],
+          "evidence": "The Solstice USX program is BPF upgradeable; ProgramData 3P5mNf86DSd2CNu1DToPBxbvqQL4V2kNwAQjErCwZxMq reported this upgrade authority at deployed slot 410547056."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Solstice USX",
+            "url": "https://solstice.finance/usx"
+          },
+          {
+            "label": "USX Solscan token",
+            "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+          },
+          {
+            "label": "Solstice USX program",
+            "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+          }
+        ],
+        "evidence": "Solana mint reads found live mint and freeze authority at Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4, while the Solstice program has a separate verified upgrade authority.",
+        "reviewer": "Codex mint-authority top100 batch-a",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Is the upgrade authority controlled by a Safe-like multisig, institutional backend, or EOA?",
+          "Does the Solstice program enforce collateral or KYC limits that bound minting?"
+        ]
+      }
     },
     "contracts": [
       {
@@ -45482,6 +46710,92 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "verified",
+      "summary": "YUSD token minting is delegated to AegisMinting. Normal minting requires a whitelisted user/order plus trusted-signer signature; the same minter contract also has cross-chain mint functions. A 3/5 Safe controls the minter and default-admin role.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+          "label": "AegisMinting",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "routeChecks": {
+            "attestorQuorum": "mint(Order,signature) verifies AegisConfig.trustedSigner() before minting",
+            "caps": "mintLimit exists but current tuple read did not prove an active hard cap; admin can set mint limits",
+            "pausersAdminsUpgraders": "SETTINGS_MANAGER_ROLE can pause mint/redeem/cross-chain flows"
+          },
+          "sources": [
+            {
+              "label": "AegisMinting Sourcify source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+            }
+          ],
+          "evidence": "YUSD.minter() returned AegisMinting. Sourcify source shows yusd.mint(...) in mint(), depositIncome(), and mintForCrossChain()."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+          "label": "Aegis admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0xA09A1319ace58B466D71377b958248265420Cf6c",
+              "0x9bd53dDa93630BA2856CbbD376e3ED04D3D23d21",
+              "0x0b241D2F1A060FEAe6968f7CeD3221D4aB29D865",
+              "0x89CAFfDd8F3ca008aaeAA69BA85332Ca85D18D3e",
+              "0x7eff43566b8c7491a39f81E3BF9E4d9b2D212787"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "observedBlock": 25165875,
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "Aegis admin Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4Fe78eF65BD8EDDED480efaB030BA680646503c8/"
+            }
+          ],
+          "evidence": "AegisMinting.owner() and defaultAdmin() returned this Safe."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Aegis docs",
+            "url": "https://docs.aegis.im/"
+          },
+          {
+            "label": "AegisMinting Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+          },
+          {
+            "label": "Aegis admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4Fe78eF65BD8EDDED480efaB030BA680646503c8/"
+          }
+        ],
+        "evidence": "Direct reads and Sourcify source identify AegisMinting as the active YUSD minter, with owner/default-admin control held by a 3/5 Safe.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Identify the operational owner of trusted signer 0xA4056dE842E9117D3B48cA6509D1dc430698C8a2.",
+          "Confirm current cross-chain operator role holder before finalizing bridge mint posture."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -46417,6 +47731,71 @@
     ],
     "jurisdiction": {
       "country": "Cayman Islands"
+    },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "verified",
+      "summary": "ZeUSD token minting is restricted to a router contract, but an EOA holds DEFAULT_ADMIN_ROLE/ADMIN_ROLE on the token and can set the router and authorize upgrades.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x6283F77Db630D6fe69A454ef6cf626e98B117C9b",
+          "label": "ZeUSD router",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "ZeUSD router implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=abi,metadata"
+            }
+          ],
+          "evidence": "ZeUSD.router() returned this proxy. ZeUSD source shows mint(address,uint256) is onlyRouter; router source exposes mintWithCollateral and mintWithStable routes."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3604582f56565d7060D73829FfB9EBD579218Dca",
+          "label": "ZeUSD token owner/admin EOA",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "ZeUSD token role logs",
+              "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7dc9748da8e762e569f9269f48f69a1a9f8ea761&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            }
+          ],
+          "evidence": "ZeUSD.owner() returned this EOA; hasRole(DEFAULT_ADMIN_ROLE) and hasRole(ADMIN_ROLE) both returned true. RoleGranted logs show this address received both roles during initialization."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Zoth ZeUSD docs",
+            "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+          },
+          {
+            "label": "ZeUSD implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de?fields=sources"
+          },
+          {
+            "label": "ZeUSD token role logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7dc9748da8e762e569f9269f48f69a1a9f8ea761&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Direct reads and Sourcify source identify a router-only token mint path plus an EOA token owner/admin that can set the router and authorize upgrades.",
+        "reviewer": "Codex mint-authority top100 batch-c",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Router admin role grants include additional addresses in logs; final row should review the router's own access-control implementation and current active admin set.",
+          "No multisig setup was verified for the token owner/admin EOA."
+        ]
+      }
     },
     "contracts": [
       {

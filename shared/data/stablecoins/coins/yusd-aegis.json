@@ -65,6 +65,92 @@
     "reviewer": "Opus med-confidence verification",
     "reviewedAt": "2026-05-23"
   },
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "YUSD token minting is delegated to AegisMinting. Normal minting requires a whitelisted user/order plus trusted-signer signature; the same minter contract also has cross-chain mint functions. A 3/5 Safe controls the minter and default-admin role.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+        "label": "AegisMinting",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "attestorQuorum": "mint(Order,signature) verifies AegisConfig.trustedSigner() before minting",
+          "caps": "mintLimit exists but current tuple read did not prove an active hard cap; admin can set mint limits",
+          "pausersAdminsUpgraders": "SETTINGS_MANAGER_ROLE can pause mint/redeem/cross-chain flows"
+        },
+        "sources": [
+          {
+            "label": "AegisMinting Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+          }
+        ],
+        "evidence": "YUSD.minter() returned AegisMinting. Sourcify source shows yusd.mint(...) in mint(), depositIncome(), and mintForCrossChain()."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4Fe78eF65BD8EDDED480efaB030BA680646503c8",
+        "label": "Aegis admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xA09A1319ace58B466D71377b958248265420Cf6c",
+            "0x9bd53dDa93630BA2856CbbD376e3ED04D3D23d21",
+            "0x0b241D2F1A060FEAe6968f7CeD3221D4aB29D865",
+            "0x89CAFfDd8F3ca008aaeAA69BA85332Ca85D18D3e",
+            "0x7eff43566b8c7491a39f81E3BF9E4d9b2D212787"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 25165875,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Aegis admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4Fe78eF65BD8EDDED480efaB030BA680646503c8/"
+          }
+        ],
+        "evidence": "AegisMinting.owner() and defaultAdmin() returned this Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Aegis docs",
+          "url": "https://docs.aegis.im/"
+        },
+        {
+          "label": "AegisMinting Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+        },
+        {
+          "label": "Aegis admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4Fe78eF65BD8EDDED480efaB030BA680646503c8/"
+        }
+      ],
+      "evidence": "Direct reads and Sourcify source identify AegisMinting as the active YUSD minter, with owner/default-admin control held by a 3/5 Safe.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Identify the operational owner of trusted signer 0xA4056dE842E9117D3B48cA6509D1dc430698C8a2.",
+        "Confirm current cross-chain operator role holder before finalizing bridge mint posture."
+      ]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",

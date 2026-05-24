@@ -110,6 +110,79 @@
       "decimals": 6
     }
   ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "AUSD uses role-gated EVM mint functions and a Solana Token-2022 mint authority. The Solana mint authority is directly resolved; EVM minter-role holders and signer setups still need enumeration.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "label": "AUSD EVM role-gated mint implementation",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify AUSD source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x00000000efe302beaa2b3e6e1b18d08d69a9012a?fields=sources,abi"
+          },
+          {
+            "label": "Agora docs",
+            "url": "https://docs.agora.finance/"
+          }
+        ],
+        "evidence": "Verified AgoraDollar source defines MINTER_ROLE, BRIDGE_MINTER_ROLE, ACCESS_CONTROL_MANAGER_ROLE, RATE_LIMIT_MANAGER_ROLE, mint functions for minters/bridge minters, and role-member/rate-limit getters. Current role holders were not enumerated in this pass, so this row records the unresolved role-gated implementation surface rather than a specific direct minter."
+      },
+      {
+        "chain": "solana",
+        "address": "EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP",
+        "label": "AUSD Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Solscan AUSD token",
+            "url": "https://solscan.io/token/AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
+          },
+          {
+            "label": "Agora Solana token metadata",
+            "url": "https://raw.githubusercontent.com/agora-finance/public-assets/refs/heads/master/src/token-metadata/solana-ausd.json"
+          }
+        ],
+        "evidence": "Solana finalized getAccountInfo for the local AUSD Token-2022 mint returned this mintAuthority; the same read returned freezeAuthority 6QZAZqTmvvSCNLsJvwtkvk4FjbxstS7p2TQR9duwPSuH and permanent delegate 6HAFLav8Qn2QfeSRVPLwtmPKHMm8f93uWSQMp2n1MyoU."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Agora docs",
+          "url": "https://docs.agora.finance/"
+        },
+        {
+          "label": "Agora GitHub",
+          "url": "https://github.com/agora-finance"
+        },
+        {
+          "label": "Chaos Labs Agora proof of reserves",
+          "url": "https://oracles.chaoslabs.xyz/por-feeds/agora"
+        }
+      ],
+      "evidence": "Batch-A research verified the AUSD EVM role model and Solana Token-2022 mint authority. A follow-up Solana read against the local Pharos AUSD mint confirmed the current Solana mint authority address; EVM role-holder enumeration remains unresolved.",
+      "reviewer": "Codex mint-authority top100 batch-a",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Call getMinterRoleMembers, getBridgeMinterRoleMembers, getAccessControlManagerRoleMembers, and rate-limit getters on the EVM contract.",
+        "Verify signer setup for Solana and EVM role-holder addresses."
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

@@ -79,6 +79,97 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USN token minting is routed through a MinterHandlerV2 contract. The handler allows MINTER_ROLE minting and whitelisted directMint with onchain per-block/per-day limits; the same 3/6 Safe is token owner, handler default admin, and handler minter.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+        "label": "USN MinterHandlerV2",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "caps": "mintLimitPerBlock and directMintLimitPerDay both read as 10,000,000 USN units at 18 decimals",
+          "pausersAdminsUpgraders": "DEFAULT_ADMIN_ROLE can set limits, whitelisted users/collateral, price feeds, custody wallet, and sUSN vault"
+        },
+        "sources": [
+          {
+            "label": "MinterHandlerV2 implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+          }
+        ],
+        "evidence": "USN.admin() returned MinterHandlerV2; source shows mint(Order,signature) onlyRole(MINTER_ROLE), mintAndRebase onlyRole(MINTER_ROLE), and directMint for whitelisted users."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f",
+        "label": "Noon admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x0649F6Fc279B0EB94d5B15de013B87b0E50D2d88",
+            "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
+            "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
+            "0x7b1187106a3ac9D2602f41224A06e247fC12be37",
+            "0xe8241FACB568E4c880490e8Ab4E015F2572e6976",
+            "0x8B3641db7737fFab752718fcc772161eC09FaD01"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedBlock": 25165875,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Noon admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+          }
+        ],
+        "evidence": "Direct reads showed this Safe is USN.owner(); handler hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both true for this Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Noon docs",
+          "url": "https://docs.noon.capital"
+        },
+        {
+          "label": "USN implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
+        },
+        {
+          "label": "MinterHandlerV2 implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
+        },
+        {
+          "label": "Noon admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+        }
+      ],
+      "evidence": "Direct reads identify MinterHandlerV2 as the token admin/minter path and a 3/6 Safe as token owner, handler default-admin, and handler MINTER_ROLE holder.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "The operational custody wallet 0x365bd6fb4200e422a2b1f7b9Dfb1C00471E6D089 was not classified.",
+        "The offchain signer/signature model in mint(Order,signature) needs final source review before calling the mint path fully attested."
+      ]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

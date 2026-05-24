@@ -56,6 +56,96 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USDX is an issuer-operated UUPS/OFT token. Active MINTER_ROLE EOAs can mint directly, while the default admin/upgrade-admin EOA can grant roles and upgrade the token.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xf28a91a1fa1f7d59094409a2908cb3754481e6dd",
+        "label": "USDX active MINTER_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USDX token on Etherscan",
+            "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+          },
+          {
+            "label": "USDX Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+          }
+        ],
+        "evidence": "Direct reads showed this EOA has MINTER_ROLE. Sourcify implementation source exposes mint(address,uint256) gated by MINTER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6329218fdb55c65a73313a76c20f1b6f0c169691",
+        "label": "USDX active MINTER_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USDX token on Etherscan",
+            "url": "https://etherscan.io/address/0xf8750b54d86be7ae9e32b4a0c826811198d63313"
+          },
+          {
+            "label": "USDX Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+          }
+        ],
+        "evidence": "Direct reads showed this EOA has MINTER_ROLE. Sourcify implementation source exposes mint(address,uint256) gated by MINTER_ROLE."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb8Ce31ad8bAD26e88Db17e68F695C64f67AD31EB",
+        "label": "USDX default admin / upgrade admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USDX RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Direct reads showed this EOA has DEFAULT_ADMIN_ROLE and UPGRADE_ADMIN_ROLE; no Safe setup was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "HT Digital Assets USDX",
+          "url": "https://www.htdigitalassets.com/"
+        },
+        {
+          "label": "USDX Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xce2d107b6046e61a651484b4ee65023d89a42d7b?fields=sources"
+        },
+        {
+          "label": "USDX RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ],
+      "evidence": "Sourcify source and direct role reads identify active MINTER_ROLE EOAs plus a default-admin and upgrade-admin EOA for the Ethereum USDX token.",
+      "reviewer": "Codex mint-authority top100 batch-c",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Confirm whether the active minter EOAs are operational backend keys, custody keys, or named issuer treasury wallets.",
+        "Confirm whether any offchain policy or custody approval flow constrains the minter EOAs."
+      ]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
