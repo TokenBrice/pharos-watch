@@ -1055,10 +1055,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "5.95",
-    "versionLabel": "v5.95",
-    "currentVersion": "5.95",
-    "currentVersionLabel": "v5.95",
+    "version": "6.0",
+    "versionLabel": "v6.0",
+    "currentVersion": "6.0",
+    "currentVersionLabel": "v6.0",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -2963,17 +2963,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "5.95"
+      "methodologyVersion": "6.0"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "5.95",
-    "versionLabel": "v5.95",
-    "currentVersion": "5.95",
-    "currentVersionLabel": "v5.95",
+    "version": "6.0",
+    "versionLabel": "v6.0",
+    "currentVersion": "6.0",
+    "currentVersionLabel": "v6.0",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2994,7 +2994,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "5.95"
+    "methodologyVersion": "6.0"
   },
   "history": [
     {
@@ -3006,15 +3006,15 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
-      "methodologyVersion": "5.95"
+      "methodologyVersion": "6.0"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "5.95",
-    "versionLabel": "v5.95",
-    "currentVersion": "5.95",
-    "currentVersionLabel": "v5.95",
+    "version": "6.0",
+    "versionLabel": "v6.0",
+    "currentVersion": "6.0",
+    "currentVersionLabel": "v6.0",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

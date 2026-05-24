@@ -105,7 +105,7 @@ The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [proce
 
 ### Bluechip rating {#bluechip}
 
-Top-tier classification surfaced on the homepage Bluechip rail and on per-coin detail pages. A coin is rated bluechip only when it meets strict floors across safety, liquidity, and resilience simultaneously — there is no weighted blend that lets a weak factor be averaged away. The runtime gates and current eligibility cohort are documented in [bluechip-ratings.md](bluechip-ratings.md); the methodology page exposes the `#bluechip` anchor so per-card tooltips can link directly into the summary.
+Bluechip has two surfaces: the external Bluechip rating sync documented in [bluechip-ratings.md](bluechip-ratings.md), and the Pharos `/about/bluechip` editorial roster. The active roster includes mapped assets whose synced external Bluechip grade is A-tier and whose Pharos report-card overall grade is A-tier (`A-`, `A`, or `A+`). It is an intersection of two current feeds, not a separate hidden floor model over safety/liquidity/resilience. The methodology page exposes the `#bluechip` anchor so per-card tooltips can link directly into the summary.
 
 ### Proof of Reserves
 

@@ -1,6 +1,6 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.18` (2026-03-01 -> 2026-05-22).
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.17`; this file includes the staged `v8.18` changelog entry, but `v8.18` is not the active methodology version until `shared/lib/methodology-versions/yield-methodology.ts` is bumped.
 
 ---
 

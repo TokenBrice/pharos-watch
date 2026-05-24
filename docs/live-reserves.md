@@ -394,12 +394,12 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `blast-usdb-yield-manager` | `onchain-evm`                                    | `single-asset`                                        | 1                |
 | `btcfi`                    | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `cap-vault`                | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
-| `chainlink-nav`            | `onchain-evm`                                    | `single-asset`                                        | 13               |
+| `chainlink-nav`            | `onchain-evm`                                    | `single-asset`                                        | 18               |
 | `chainlink-por`            | `onchain-evm`                                    | `attestation-mix`                                     | 5                |
 | `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
 | `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 60               |
+| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 59               |
 | `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 32               |
 | `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -424,12 +424,12 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `re-metrics`               | `http-html`                                      | `collateral-mix`                                      | 1                |
 | `resupply-pairs`           | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `reserve-protocol-dtf`     | `http-json` / `onchain-evm`                     | `collateral-mix`                                      | 1                |
-| `reservoir`                | `http-json`                                      | `protocol-reserve`                                    | 2                |
+| `reservoir`                | `http-json`                                      | `protocol-reserve`                                    | 3                |
 | `ripple-transparency`      | `http-html`                                      | `attestation-mix`                                     | 1                |
 | `river-protocol-info`      | `http-json`                                      | `protocol-reserve`                                    | 1                |
 | `sgforge-coinvertible`     | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `sgho-wrapper`             | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `single-asset`             | `http-json` / `onchain-evm`                      | `single-asset`                                        | 50               |
+| `single-asset`             | `http-json` / `onchain-evm`                      | `single-asset`                                        | 51               |
 | `sky-makercore`            | `http-json`                                      | `collateral-mix`                                      | 2                |
 | `solstice-attestation`     | `http-json`                                      | `protocol-reserve`                                    | 1                |
 | `superstate-liquidity`     | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                                        | 1                |
