@@ -61,13 +61,22 @@ interface ParsedRedemptionTelemetry {
   malformed: boolean;
 }
 
+const MALFORMED_REDEMPTION_TELEMETRY_MARKER = "__malformedRedemptionTelemetry";
+
+function isMalformedRedemptionTelemetryMarker(raw: Record<string, unknown>): boolean {
+  return raw[MALFORMED_REDEMPTION_TELEMETRY_MARKER] === true;
+}
+
 function getRedemptionTelemetry(metadata: Record<string, unknown>): ParsedRedemptionTelemetry {
   if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
     return { fields: {}, malformed: false };
   }
   const raw = metadata.redemption;
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    return { fields: raw as Record<string, unknown>, malformed: false };
+    const fields = raw as Record<string, unknown>;
+    return isMalformedRedemptionTelemetryMarker(fields)
+      ? { fields: {}, malformed: true }
+      : { fields, malformed: false };
   }
   return { fields: {}, malformed: true };
 }

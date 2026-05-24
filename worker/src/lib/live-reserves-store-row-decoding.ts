@@ -61,6 +61,7 @@ const VALID_REDEMPTION_ROUTE_STATUS_SOURCES = new Set<LiveReserveRedemptionRoute
   "protocol-api",
   "onchain",
 ]);
+const MALFORMED_REDEMPTION_TELEMETRY_MARKER = "__malformedRedemptionTelemetry";
 const STORED_SLICE_SUM_TOLERANCE = 2;
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -215,6 +216,10 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
       delete redemption.sourceUrls;
     }
     normalized.redemption = redemption;
+  } else if (Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
+    normalized.redemption = {
+      [MALFORMED_REDEMPTION_TELEMETRY_MARKER]: true,
+    };
   } else {
     delete normalized.redemption;
   }

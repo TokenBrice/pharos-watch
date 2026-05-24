@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+import { parseSnapshotMetadata } from "../live-reserves-store-row-decoding";
 
 const now = 1_780_000_000;
 
@@ -172,6 +173,30 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.canUseFee).toBe(false);
     expect(metadata.capacityReason).toBe("Live redemption capacity telemetry is malformed; fresh valid metadata required");
     expect(metadata.feeReason).toBe("Live redemption fee telemetry is malformed; using reviewed fee model instead");
+    expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
+  });
+
+  it("fails closed on malformed nested redemption telemetry after D1 row decoding", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot(
+        "lusd-liquity",
+        parseSnapshotMetadata(
+          JSON.stringify({
+            freshnessMode: "not-applicable",
+            immediateRedeemableUsd: 500_000,
+            redemptionFeeBps: 50,
+            redemption: "malformed",
+          }),
+        ),
+      ),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBeNull();
+    expect(metadata.redemptionFeeBps).toBeNull();
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.canUseFee).toBe(false);
     expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
   });
 
