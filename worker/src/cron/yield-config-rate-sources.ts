@@ -209,6 +209,11 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-04-14",
     note: "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   },
+  "fusd-finchain": {
+    code: "issuer-distributed-yield",
+    since: "2026-05-24",
+    note: "daily reserve-yield rebase has no reliable runtime APY source wired yet",
+  },
   "gldy-streamex": {
     code: "issuer-distributed-yield",
     since: "2026-04-14",

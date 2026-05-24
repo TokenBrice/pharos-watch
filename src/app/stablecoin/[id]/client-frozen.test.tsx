@@ -221,7 +221,7 @@ describe("buildStablecoinDetailMetadata (frozen)", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const frozen: StablecoinMeta = { ...coin, status: "frozen", frozenAt: "2026-04-27", obituary };
     const meta = buildStablecoinDetailMetadata(frozen);
-    expect(typeof meta.title === "string" ? meta.title : "").toContain("Frozen Stablecoin Archive");
+    expect(typeof meta.title === "string" ? meta.title : "").toContain("Failed Stablecoin Archive");
     const ogImages = meta.openGraph?.images;
     const firstImage = Array.isArray(ogImages) ? ogImages[0] : ogImages;
     const imageUrl = typeof firstImage === "object" && firstImage && "url" in firstImage ? firstImage.url : firstImage;
