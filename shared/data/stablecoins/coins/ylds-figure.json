@@ -64,6 +64,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "YLDS issuance is modeled as Figure issuer-operated authority rather than permissionless protocol minting.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "YLDS docs",
+            "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+          }
+        ],
+        "evidence": "Figure/Provenance documentation describes YLDS issuance as an issuer-mediated stablecoin process."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "YLDS docs",
+          "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+        }
+      ],
+      "evidence": "Figure/Provenance documentation describes YLDS issuance as an issuer-mediated stablecoin process.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "reserves": [

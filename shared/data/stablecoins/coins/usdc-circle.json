@@ -312,6 +312,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDC is issuer-minted by Circle; the MVP records Circle-operated mint authority rather than a permissionless protocol mint path.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Circle USDC docs",
+            "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          }
+        ],
+        "evidence": "Circle documentation describes USDC as issued and redeemed by Circle through its stablecoin infrastructure."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        }
+      ],
+      "evidence": "Circle documentation describes USDC as issued and redeemed by Circle through its stablecoin infrastructure.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [

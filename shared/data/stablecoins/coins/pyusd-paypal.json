@@ -85,6 +85,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "PYUSD is issued through Paxos/PayPal issuer operations; minting is not limited to permissionless user collateral mechanics.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Paxos PYUSD",
+            "url": "https://paxos.com/pyusd/"
+          }
+        ],
+        "evidence": "Paxos materials describe PYUSD as an issued fiat-backed stablecoin redeemable through the issuer infrastructure."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Paxos PYUSD",
+          "url": "https://paxos.com/pyusd/"
+        }
+      ],
+      "evidence": "Paxos materials describe PYUSD as an issued fiat-backed stablecoin redeemable through the issuer infrastructure.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-top",
   "reserves": [

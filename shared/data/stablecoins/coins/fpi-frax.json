@@ -63,6 +63,48 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "FPI mint authority is modeled as Frax governance/custodian hybrid authority with privileged mint/admin surfaces already flagged as dilutable by Pharos.",
+    "controls": [
+      {
+        "label": "AMO/custodian or governance-controlled mint authority",
+        "role": "custodian",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          }
+        ],
+        "evidence": "Frax FPI documentation and the existing Pharos dilutable source indicate governed protocol/custodian mint authority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+        }
+      ],
+      "evidence": "Frax FPI documentation and the existing Pharos dilutable source indicate governed protocol/custodian mint authority.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "reserves": [
     {
       "name": "FRAX stablecoin reserves",

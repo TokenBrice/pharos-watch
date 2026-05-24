@@ -56,6 +56,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "apxUSD issuance is modeled as protocol/issuer-operated authority pending deeper on-chain role review.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Apyx docs",
+            "url": "https://docs.apyx.fi"
+          }
+        ],
+        "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Apyx docs",
+          "url": "https://docs.apyx.fi"
+        }
+      ],
+      "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",

@@ -72,6 +72,40 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "srUSD is a savings wrapper whose base mint authority is inherited from Reservoir rUSD plus wrapper share accounting.",
+    "inheritedFrom": "rusd-reservoir",
+    "controls": [
+      {
+        "label": "Wrapper/share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          }
+        ],
+        "evidence": "Reservoir documentation describes srUSD as a savings/yield wrapper over rUSD; base mint authority is inherited from rUSD."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Reservoir docs",
+          "url": "https://docs.reservoir.xyz"
+        }
+      ],
+      "evidence": "Reservoir documentation describes srUSD as a savings/yield wrapper over rUSD; base mint authority is inherited from rUSD.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

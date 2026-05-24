@@ -28,6 +28,7 @@ function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "nam
     flows: status("none", false),
     blacklist: status("none", false),
     dependency: status("tracked", true),
+    mintAuthority: status("unknown", false),
   };
 
   return {
@@ -63,6 +64,7 @@ const rows: CoverageRow[] = [
       flows: status("none", false),
       blacklist: status("none", false),
       dependency: status("tracked", true),
+      mintAuthority: status("unknown", false),
     },
   }),
   makeRow({
@@ -83,6 +85,7 @@ const rows: CoverageRow[] = [
       flows: status("none", false),
       blacklist: status("live", true),
       dependency: status("tracked", true),
+      mintAuthority: status("issuer-or-backend-mint", true),
     },
   }),
   makeRow({
@@ -103,6 +106,7 @@ const rows: CoverageRow[] = [
       flows: status("available", true),
       blacklist: status("none", false),
       dependency: status("tracked", true),
+      mintAuthority: status("unknown", false),
     },
   }),
   makeRow({
@@ -123,6 +127,7 @@ const rows: CoverageRow[] = [
       flows: status("none", false),
       blacklist: status("none", false),
       dependency: status("tracked", true),
+      mintAuthority: status("unknown", false),
     },
   }),
 ];

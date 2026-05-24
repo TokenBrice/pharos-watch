@@ -61,6 +61,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "RLUSD is issuer-operated by Ripple; mint authority is modeled as centralized issuer minting in the MVP.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ripple stablecoin",
+            "url": "https://ripple.com/solutions/stablecoin/"
+          }
+        ],
+        "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ripple stablecoin",
+          "url": "https://ripple.com/solutions/stablecoin/"
+        }
+      ],
+      "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

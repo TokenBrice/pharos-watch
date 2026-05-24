@@ -4,19 +4,19 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 
 ## Source Files
 
-| Surface | Source |
-| --- | --- |
-| Editable catalog source of truth | `shared/data/stablecoins/coins/*.json` |
-| Generated runtime aggregates | `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/coins.client.generated.json`, `shared/data/stablecoins/coins.prevalidated.generated.ts`, `shared/data/stablecoins/legacy-llama-redirects.generated.json` |
-| Legacy compatibility shells | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
-| Canonical display/order list | `shared/data/stablecoins/canonical-order.json` |
-| Full registry and active/pre-launch/frozen splits | `shared/lib/stablecoins/registry.ts` |
-| Client registry projection | `shared/lib/stablecoins/client-registry.ts` |
-| Defunct/cemetery metadata | `shared/data/dead-stablecoins.json`, loaded separately by `shared/lib/dead-stablecoins.ts` |
-| Runtime schema | `shared/lib/stablecoins/schema.ts` |
-| Canonical ID resolver | `shared/lib/stablecoin-id-registry.ts` |
-| PSI-only shadow assets | `shared/lib/shadow-stablecoins.ts` |
-| Local metadata gotchas | `shared/data/stablecoins/AGENTS.md` |
+| Surface                                           | Source                                                                                                                                                                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Editable catalog source of truth                  | `shared/data/stablecoins/coins/*.json`                                                                                                                                                                                            |
+| Generated runtime aggregates                      | `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/coins.client.generated.json`, `shared/data/stablecoins/coins.prevalidated.generated.ts`, `shared/data/stablecoins/legacy-llama-redirects.generated.json` |
+| Legacy compatibility shells                       | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json`                   |
+| Canonical display/order list                      | `shared/data/stablecoins/canonical-order.json`                                                                                                                                                                                    |
+| Full registry and active/pre-launch/frozen splits | `shared/lib/stablecoins/registry.ts`                                                                                                                                                                                              |
+| Client registry projection                        | `shared/lib/stablecoins/client-registry.ts`                                                                                                                                                                                       |
+| Defunct/cemetery metadata                         | `shared/data/dead-stablecoins.json`, loaded separately by `shared/lib/dead-stablecoins.ts`                                                                                                                                        |
+| Runtime schema                                    | `shared/lib/stablecoins/schema.ts`                                                                                                                                                                                                |
+| Canonical ID resolver                             | `shared/lib/stablecoin-id-registry.ts`                                                                                                                                                                                            |
+| PSI-only shadow assets                            | `shared/lib/shadow-stablecoins.ts`                                                                                                                                                                                                |
+| Local metadata gotchas                            | `shared/data/stablecoins/AGENTS.md`                                                                                                                                                                                               |
 
 `ACTIVE_STABLECOINS` excludes pre-launch and frozen entries. `READABLE_STABLECOINS` keeps active + frozen assets for archive/readback surfaces. PSI-only shadow assets are intentionally outside the public tracked registry and exist only for historical PSI replay. Canonical ID resolution is split by scope in `shared/lib/stablecoin-id-registry.ts`: tracked helpers include pre-launch and frozen tracked IDs, readable helpers include only active + frozen tracked IDs, and PSI-inclusive helpers include active tracked IDs + shadow IDs.
 
@@ -42,6 +42,14 @@ The client, prevalidated runtime, and legacy redirect projections are also gener
 - Pre-launch assets are ordinary per-coin catalog files with `status: "pre-launch"` until they have enough live metadata for active public surfaces.
 - Shadow assets belong only in `shared/lib/shadow-stablecoins.ts`, not in the editable per-coin catalog.
 - Duplicate IDs across per-coin files or legacy compatibility shells are invalid and fail validation.
+
+## Mint Authority Review
+
+Mint Authority review is a descriptive metadata track for answering whether durable stablecoin supply can be created by privileged parties, governance modules, bridge routes, proxy/cap admins, backend signers, or only by user/protocol mechanics. Missing review data means `Not reviewed by Pharos`, not safe.
+
+The detail page consumes only a compact presentation summary when available: mint path, descriptive authority posture, confidence, summary, primary controls, and source links. It must not treat this data as a Safety Score input, report-card raw input, selector exclusion, or ranking sort until a separate methodology change ships.
+
+Scanner output is not curated metadata. The local scanner POC writes candidate artifacts under `agents/mint-authority-candidates/` and never updates `shared/data/stablecoins/coins/*.json`, generated registries, or client projections. A reviewer must verify source links, current controls, Safe/multisig threshold and modules/guards when relevant, proxy/cap authority, and unresolved bridge/off-chain route checks before authoring any future `mintAuthority` metadata field.
 
 ## Required Checks
 

@@ -249,6 +249,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDT is issuer-minted by Tether; the MVP records centralized issuer mint authority rather than a permissionless protocol mint path.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Tether transparency",
+            "url": "https://tether.to/en/transparency/"
+          }
+        ],
+        "evidence": "Tether transparency materials describe USDT as an issuer-backed reserve stablecoin operated by Tether."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        }
+      ],
+      "evidence": "Tether transparency materials describe USDT as an issuer-backed reserve stablecoin operated by Tether.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "chainTier": "ethereum",
   "collateralQuality": "rwa",

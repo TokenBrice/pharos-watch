@@ -19,6 +19,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USD0 issuance is modeled as protocol-operated mint authority backed by RWA/custody rails pending deeper role review.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Usual docs",
+            "url": "https://docs.usual.money/"
+          }
+        ],
+        "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Usual docs",
+          "url": "https://docs.usual.money/"
+        }
+      ],
+      "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
   "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
   "llamaId": "195",

@@ -4,21 +4,21 @@ Reference for adding a tracked asset to Pharos.
 
 Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. The older `shared/lib/stablecoins.ts`, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers.
 
-> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Bluechip, and history-backfill branches.
+> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Mint Authority, Bluechip, and history-backfill branches.
 
 ---
 
 ## Source Of Truth
 
-| File | Purpose |
-|------|---------|
-| `shared/data/stablecoins/coins/*.json` | Editable source of truth for active and pre-launch stablecoin metadata |
-| `shared/data/stablecoins/coins.generated.json` | Generated/runtime aggregate; regenerate with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
-| `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries |
-| `shared/data/stablecoins/canonical-order.json` | Canonical tracked order used to build `TRACKED_STABLECOINS` |
-| `shared/data/stablecoins/AGENTS.md` | Agent notes pinned to the registry directory |
-| `data/logos.json` | Static logo map used by the frontend |
-| `data/ai-summaries.json` | Static editorial summaries used on detail and upcoming surfaces |
+| File                                                                                                            | Purpose                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `shared/data/stablecoins/coins/*.json`                                                                          | Editable source of truth for active and pre-launch stablecoin metadata                                       |
+| `shared/data/stablecoins/coins.generated.json`                                                                  | Generated/runtime aggregate; regenerate with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
+| `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries                                                    |
+| `shared/data/stablecoins/canonical-order.json`                                                                  | Canonical tracked order used to build `TRACKED_STABLECOINS`                                                  |
+| `shared/data/stablecoins/AGENTS.md`                                                                             | Agent notes pinned to the registry directory                                                                 |
+| `data/logos.json`                                                                                               | Static logo map used by the frontend                                                                         |
+| `data/ai-summaries.json`                                                                                        | Static editorial summaries used on detail and upcoming surfaces                                              |
 
 Useful repo references before editing:
 
@@ -95,12 +95,12 @@ Every tracked asset, including pre-launch ones, must appear in `shared/data/stab
 
 Before tracking a coin, confirm it belongs on Pharos:
 
-| Question | Guidance |
-|----------|----------|
-| Is it pegged to fiat, a commodity, or a macro reference? | Yes -> proceed |
-| Is it meant to be price-stable or to appreciate from a stable base in a way Pharos explicitly models? | Yes -> proceed |
-| Is supply observable on-chain or through a credible third-party source? | Some supply observability is enough to track metadata; full history can come later |
-| Is circulating supply at least about $5M? | Soft threshold only. Smaller assets need a clear strategic reason |
+| Question                                                                                              | Guidance                                                                           |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Is it pegged to fiat, a commodity, or a macro reference?                                              | Yes -> proceed                                                                     |
+| Is it meant to be price-stable or to appreciate from a stable base in a way Pharos explicitly models? | Yes -> proceed                                                                     |
+| Is supply observable on-chain or through a credible third-party source?                               | Some supply observability is enough to track metadata; full history can come later |
+| Is circulating supply at least about $5M?                                                             | Soft threshold only. Smaller assets need a clear strategic reason                  |
 
 ### 1a. Hard runtime data gate for active assets
 
@@ -108,12 +108,12 @@ Active additions and pre-launch promotions must have both a fetchable current pr
 
 Record one accepted path in the research packet:
 
-| Path | Price requirement | Market-cap / supply requirement |
-|------|-------------------|---------------------------------|
-| DefiLlama stablecoins | `llamaId` resolves to the intended asset and the list/detail data exposes a price | DefiLlama list `circulating` is present; do not multiply list values by price |
-| CoinGecko supplemental fiat | `detailProvider: "coingecko"` plus verified `geckoId` returns a positive price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price` | CoinGecko `usd_market_cap` is positive, or exactly one supported `contracts[]` deployment can support on-chain total-supply fallback |
-| Commodity supplemental | verified `geckoId` returns the commodity token price, with `commodityOunces` set when fractionalized | CoinGecko market cap is positive, or gold/protocol-backed assets have a `protocolSlug` whose DefiLlama protocol data exposes usable `mcap` |
-| Explicit runtime exception | documented source-specific path such as Zephyr Scanner or a maintained low-volume allowlist | same source exposes usable circulating supply or market-cap data |
+| Path                        | Price requirement                                                                                                                                    | Market-cap / supply requirement                                                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| DefiLlama stablecoins       | `llamaId` resolves to the intended asset and the list/detail data exposes a price                                                                    | DefiLlama list `circulating` is present; do not multiply list values by price                                                              |
+| CoinGecko supplemental fiat | `detailProvider: "coingecko"` plus verified `geckoId` returns a positive price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price` | CoinGecko `usd_market_cap` is positive, or exactly one supported `contracts[]` deployment can support on-chain total-supply fallback       |
+| Commodity supplemental      | verified `geckoId` returns the commodity token price, with `commodityOunces` set when fractionalized                                                 | CoinGecko market cap is positive, or gold/protocol-backed assets have a `protocolSlug` whose DefiLlama protocol data exposes usable `mcap` |
+| Explicit runtime exception  | documented source-specific path such as Zephyr Scanner or a maintained low-volume allowlist                                                          | same source exposes usable circulating supply or market-cap data                                                                           |
 
 Do not treat a filled JSON profile, a static route, or `canonical-order.json` inclusion as sufficient. If the active asset cannot satisfy both columns, do not add it as active; track it as pre-launch/watchlist material or document the missing upstream path before continuing.
 
@@ -204,6 +204,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - Is there a meaningful redemption route worth modeling?
 - Is the token itself yield-bearing, or is yield only available through a separate wrapper?
 - Is Ethereum a canonical issuance chain worth tracking for mint/burn?
+- Who can create durable supply or change minting paths: users only, issuer/operator, minter role, facilitator, bridge route, proxy/cap admin, backend signer, DAO, timelock, Safe/multisig, wrapper parent, or unknown?
 - Does Bluechip publish a rating for it?
 - Does it belong to an existing infrastructure cohort such as `liquity-v1`, `liquity-v2`, or `m0`?
 - If the asset is active, what admits it into `/api/stablecoins` runtime cache: `llamaId`, `detailProvider: "coingecko"` with `geckoId`, `detailProvider: "coingecko"` with on-chain total-supply fallback, or commodity `geckoId`?
@@ -223,23 +224,23 @@ These skills do not replace review — they are research scaffolding. Always ver
 
 ### Current enum surface
 
-| Field | Current values |
-|------|----------------|
-| `flags.backing` | `rwa-backed` \| `crypto-backed` \| `algorithmic` |
-| `flags.governance` | `centralized` \| `centralized-dependent` \| `decentralized` |
-| `chainTier` | `ethereum` \| `stage1-l2` \| `mature-alt-l1` \| `established-alt-l1` \| `unproven` |
-| `deploymentModel` | `single-chain` \| `canonical-bridge` \| `third-party-bridge` \| `native-multichain` |
-| `collateralQuality` | `native` \| `rwa` \| `eth-lst` \| `alt-lst-bridged-or-mixed` \| `exotic` |
-| `custodyModel` | `onchain` \| `institutional-top` \| `institutional-regulated` \| `institutional-unregulated` \| `institutional-sanctioned` \| `cex` |
-| `governanceQuality` | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper` |
-| `dependencies[].type` | `wrapper` \| `mechanism` \| `collateral` |
-| `variantKind` | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity` |
-| `yieldConfig.yieldType` | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` |
-| `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
-| `mechanismArchetype` | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund` |
-| `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none` |
-| `proofOfReserves.cadence` | `daily-nav` \| `real-time` \| `daily` \| `weekly` \| `monthly` \| `quarterly` \| `semi-annual` \| `annual` \| `ad-hoc` \| `none` |
-| `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |
+| Field                          | Current values                                                                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `flags.backing`                | `rwa-backed` \| `crypto-backed` \| `algorithmic`                                                                                    |
+| `flags.governance`             | `centralized` \| `centralized-dependent` \| `decentralized`                                                                         |
+| `chainTier`                    | `ethereum` \| `stage1-l2` \| `mature-alt-l1` \| `established-alt-l1` \| `unproven`                                                  |
+| `deploymentModel`              | `single-chain` \| `canonical-bridge` \| `third-party-bridge` \| `native-multichain`                                                 |
+| `collateralQuality`            | `native` \| `rwa` \| `eth-lst` \| `alt-lst-bridged-or-mixed` \| `exotic`                                                            |
+| `custodyModel`                 | `onchain` \| `institutional-top` \| `institutional-regulated` \| `institutional-unregulated` \| `institutional-sanctioned` \| `cex` |
+| `governanceQuality`            | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper`                            |
+| `dependencies[].type`          | `wrapper` \| `mechanism` \| `collateral`                                                                                            |
+| `variantKind`                  | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity`                                                   |
+| `yieldConfig.yieldType`        | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity`     |
+| `infrastructures[]`            | `liquity-v1` \| `liquity-v2` \| `m0`                                                                                                |
+| `mechanismArchetype`           | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund`                                  |
+| `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none`                                                                                 |
+| `proofOfReserves.cadence`      | `daily-nav` \| `real-time` \| `daily` \| `weekly` \| `monthly` \| `quarterly` \| `semi-annual` \| `annual` \| `ad-hoc` \| `none`    |
+| `launchPhase`                  | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon`                                                                |
 
 ### Classification rules that are easy to get wrong
 
@@ -335,12 +336,12 @@ Before writing the per-coin JSON in Phase 4, verify that every editorial field i
 
 Required fields and their conditions:
 
-| Field | Required when | Acceptable waiver |
-|------|---------------|-------------------|
-| `oneLiner` | every active or pre-launch coin | none — frozen coins follow the past-tense rewrite path instead |
-| `mechanismArchetype` | coin enters the editorial cohort (top-60 by canonical rank in `scripts/lib/curation-baseline-caps.json` or market cap ≥ $50M) | record an "intentional gap" line in Phase 5 coverage notes with reason (e.g. "wrapper inherits parent archetype") |
-| `proofOfReserves.attestorTier` | `proofOfReserves.type === "independent-audit"` | none — if the attestor is genuinely unknown, omit the whole `proofOfReserves` block instead and record the reason |
-| `data/ai-summaries.json` entry | every active coin | record skip reason in Phase 5 coverage notes |
+| Field                          | Required when                                                                                                                 | Acceptable waiver                                                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `oneLiner`                     | every active or pre-launch coin                                                                                               | none — frozen coins follow the past-tense rewrite path instead                                                    |
+| `mechanismArchetype`           | coin enters the editorial cohort (top-60 by canonical rank in `scripts/lib/curation-baseline-caps.json` or market cap ≥ $50M) | record an "intentional gap" line in Phase 5 coverage notes with reason (e.g. "wrapper inherits parent archetype") |
+| `proofOfReserves.attestorTier` | `proofOfReserves.type === "independent-audit"`                                                                                | none — if the attestor is genuinely unknown, omit the whole `proofOfReserves` block instead and record the reason |
+| `data/ai-summaries.json` entry | every active coin                                                                                                             | record skip reason in Phase 5 coverage notes                                                                      |
 
 The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phase 3.5 step before saving the per-coin JSON. The maintainer can also run the gate manually by re-checking the four fields against the rubric above.
 
@@ -395,12 +396,8 @@ Add the new object to the asset's per-coin JSON file using current field names a
     { "label": "X", "url": "https://x.com/acme" },
     { "label": "Docs", "url": "https://docs.acme.example" }
   ],
-  "contracts": [
-    { "chain": "ethereum", "address": "0xabc123...", "decimals": 6 }
-  ],
-  "reserves": [
-    { "name": "Short-term U.S. Treasury Bills", "pct": 100, "risk": "very-low" }
-  ]
+  "contracts": [{ "chain": "ethereum", "address": "0xabc123...", "decimals": 6 }],
+  "reserves": [{ "name": "Short-term U.S. Treasury Bills", "pct": 100, "risk": "very-low" }]
 }
 ```
 
@@ -425,7 +422,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
 
 Do not assume every branch applies. Evaluate each one explicitly.
 
-Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Bluechip, price/discovery, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
+Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, Bluechip, price/discovery, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
 
 If the coin is active and reached Pharos through a recent launch (a `pre-launch` → `active` transition within the last 90 days, or DefiLlama first observation within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop picks it up at the next sweep. Pre-launch promotions and historical additions do not need this — they are higher-touch and the maintainer chooses whether to surface them.
 
@@ -522,13 +519,27 @@ Current practice:
 - set a realistic `dustThreshold` (decimals of the coin; see existing entries for scale).
 - add bridge-detection hints (`ccipBridgeDetection`, `cctpBridgeDetection`, `layerZeroOftBridgeDetection`) only when there is a verified reason.
 
-### 5f. Bluechip ratings
+### 5f. Mint Authority review
+
+Mint Authority review is descriptive, not scored. It should answer whether durable supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, bridge/OFT routes, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics.
+
+For new high-value active additions, record either a reviewed authority note or an intentional gap. Missing data is acceptable, but the detail page will show `Mint authority review: Not reviewed by Pharos`; do not imply unknown means safe.
+
+If you use the local scanner POC, run it as a candidate producer only:
+
+```bash
+tsx scripts/maintenance/audit-mint-authority.ts --coin <stablecoin-id>
+```
+
+The scanner writes to `agents/mint-authority-candidates/` and never updates stablecoin metadata. Treat its output as a review queue, not evidence ready for publication.
+
+### 5g. Bluechip ratings
 
 If Bluechip covers the asset, update `shared/lib/bluechip-slugs.ts` (the worker re-exports `BLUECHIP_SLUG_MAP` from there).
 
 Important: the map is `bluechip-slug -> pharos-id`, not the other way around.
 
-### 5g. Price and discovery edge cases
+### 5h. Price and discovery edge cases
 
 Evaluate whether the asset needs any of these metadata fields:
 
@@ -707,8 +718,8 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 ## Phase 9 - Post-Deploy Verification
 
 - [ ] The coin appears in the expected public surface:
-  active -> homepage/table/detail
-  pre-launch -> `/upcoming/` and pre-launch detail
+      active -> homepage/table/detail
+      pre-launch -> `/upcoming/` and pre-launch detail
 - [ ] Logo resolves correctly
 - [ ] Editorial summary renders correctly
 - [ ] The detail page loads without runtime errors

@@ -5,6 +5,7 @@ import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
 import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
 import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
+import { coverageFeature as mintAuthorityFeature } from "@/lib/coverage/mint-authority";
 import { coverageFeature as priceFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
@@ -24,6 +25,7 @@ import type {
   RedemptionBackstopEntry,
   StablecoinMeta,
 } from "@shared/types";
+import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 
 export type {
@@ -41,6 +43,7 @@ export { resolveBlacklistCoverage } from "@/lib/coverage/blacklist";
 export { resolveDependencyCoverage } from "@/lib/coverage/dependency";
 export { resolveDexCoverage } from "@/lib/coverage/dex";
 export { resolveFlowCoverage } from "@/lib/coverage/flows";
+export { resolveMintAuthorityCoverage } from "@/lib/coverage/mint-authority";
 export { resolvePriceCoverage } from "@/lib/coverage/price";
 export { resolveRedemptionCoverage } from "@/lib/coverage/redemption";
 export { resolveReserveCoverage } from "@/lib/coverage/reserves";
@@ -50,7 +53,7 @@ export { resolveYieldCoverage } from "@/lib/coverage/yield";
 export { COVERAGE_FEATURES };
 
 interface BuildCoverageRowInput {
-  coin: StablecoinMeta;
+  coin: StablecoinMeta & { mintAuthoritySummary?: MintAuthorityClientSummary | null };
   marketCapUsd: number;
   hasPegCoverage: boolean;
   consensusSources?: string[];
@@ -169,6 +172,7 @@ export function buildCoverageRow({
     flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
     blacklist: blacklistFeature.resolve(coin, blacklistStatus),
     dependency: dependencyFeature.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
+    mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {
@@ -191,6 +195,7 @@ export function buildCoverageRow({
       "flows",
       "blacklist",
       "dependency",
+      "mintAuthority",
     ]),
     statuses,
   };

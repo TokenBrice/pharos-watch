@@ -769,6 +769,40 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "apxUSD issuance is modeled as protocol/issuer-operated authority pending deeper on-chain role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Apyx docs",
+              "url": "https://docs.apyx.fi"
+            }
+          ],
+          "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Apyx docs",
+            "url": "https://docs.apyx.fi"
+          }
+        ],
+        "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -2948,6 +2982,47 @@
         "url": "https://github.com/liquity/bold"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "immutable-user-collateralized",
+      "authorityPosture": "none-resolved",
+      "confidence": "verified",
+      "summary": "BOLD minting is limited to user borrowing against Liquity v2 collateral markets; no privileged durable mint path is resolved in the curated review.",
+      "controls": [
+        {
+          "label": "Immutable protocol mint path",
+          "role": "other",
+          "authorityType": "none",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Liquity docs",
+              "url": "https://docs.liquity.org/"
+            },
+            {
+              "label": "Liquity BOLD",
+              "url": "https://www.liquity.org/bold"
+            }
+          ],
+          "evidence": "Liquity BOLD documentation describes protocol minting through borrower collateral markets, not an issuer-operated direct mint authority."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Liquity docs",
+            "url": "https://docs.liquity.org/"
+          },
+          {
+            "label": "Liquity BOLD",
+            "url": "https://www.liquity.org/bold"
+          }
+        ],
+        "evidence": "Liquity BOLD documentation describes protocol minting through borrower collateral markets, not an issuer-operated direct mint authority.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -4142,6 +4217,40 @@
       "country": "British Virgin Islands",
       "regulator": "SEC (Reg D)",
       "license": "Regulation D Exemption"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "BUIDL share/token issuance is modeled as fund/transfer-agent operated authority rather than permissionless collateralized minting.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Securitize BUIDL",
+              "url": "https://securitize.io/blackrock/buidl"
+            }
+          ],
+          "evidence": "Securitize BUIDL materials describe issuance/redemption through the tokenized fund administration stack."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          }
+        ],
+        "evidence": "Securitize BUIDL materials describe issuance/redemption through the tokenized fund administration stack.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -5907,6 +6016,48 @@
         "url": "https://dune.com/warshine/crvusd-balance-sheet"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "crvUSD combines user borrowing markets with governed/admin pegkeeper and parameter surfaces that can affect supply.",
+      "controls": [
+        {
+          "label": "Protocol governance/admin authority",
+          "role": "cap-admin",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Curve crvUSD resources",
+              "url": "https://resources.curve.finance/crvusd/"
+            },
+            {
+              "label": "crvUSD contract source",
+              "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+            }
+          ],
+          "evidence": "Curve crvUSD resources and contract evidence show protocol minting plus admin/governed surfaces around pegkeeper and market configuration."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Curve crvUSD resources",
+            "url": "https://resources.curve.finance/crvusd/"
+          },
+          {
+            "label": "crvUSD contract source",
+            "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+          }
+        ],
+        "evidence": "Curve crvUSD resources and contract evidence show protocol minting plus admin/governed surfaces around pegkeeper and market configuration.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -6091,6 +6242,49 @@
     "jurisdiction": {
       "country": "United States",
       "license": "Money Transmitter Licenses (49 states)"
+    },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "ctUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -6597,6 +6791,40 @@
         "url": "https://docs.makerdao.com/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "DAI minting is primarily vault/module based, but Maker governance can authorize modules and ceilings that affect supply creation.",
+      "controls": [
+        {
+          "label": "Protocol governance/admin authority",
+          "role": "cap-admin",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Maker core accounting docs",
+              "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+            }
+          ],
+          "evidence": "Maker core accounting documentation describes module authorization and accounting surfaces that govern DAI creation."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Maker core accounting docs",
+            "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+          }
+        ],
+        "evidence": "Maker core accounting documentation describes module authorization and accounting surfaces that govern DAI creation.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -7245,6 +7473,40 @@
         "url": "https://x.com/InverseFinance"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "DOLA has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Etherscan contract source",
+              "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+            }
+          ],
+          "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Etherscan contract source",
+            "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+          }
+        ],
+        "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -10239,6 +10501,40 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "FDUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "First Digital USD",
+              "url": "https://www.firstdigitallabs.com/fdusd"
+            }
+          ],
+          "evidence": "First Digital materials describe FDUSD as a fiat-backed issued stablecoin."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "First Digital USD",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          }
+        ],
+        "evidence": "First Digital materials describe FDUSD as a fiat-backed issued stablecoin.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -10713,6 +11009,48 @@
     "jurisdiction": {
       "country": "United States"
     },
+    "mintAuthority": {
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "FPI mint authority is modeled as Frax governance/custodian hybrid authority with privileged mint/admin surfaces already flagged as dilutable by Pharos.",
+      "controls": [
+        {
+          "label": "AMO/custodian or governance-controlled mint authority",
+          "role": "custodian",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Frax AMO docs",
+              "url": "https://docs.frax.finance/amo/overview"
+            },
+            {
+              "label": "Frax frxUSD docs",
+              "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            }
+          ],
+          "evidence": "Frax FPI documentation and the existing Pharos dilutable source indicate governed protocol/custodian mint authority."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          }
+        ],
+        "evidence": "Frax FPI documentation and the existing Pharos dilutable source indicate governed protocol/custodian mint authority.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -10808,6 +11146,48 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "mintAuthority": {
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "FRAX mint authority is modeled as an AMO/governance/custodian hybrid rather than immutable user-only minting.",
+      "controls": [
+        {
+          "label": "AMO/custodian or governance-controlled mint authority",
+          "role": "custodian",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Frax AMO docs",
+              "url": "https://docs.frax.finance/amo/overview"
+            },
+            {
+              "label": "Frax frxUSD docs",
+              "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            }
+          ],
+          "evidence": "Frax AMO documentation describes governance-controlled AMO/custodian components that can affect minting and supply allocation."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          }
+        ],
+        "evidence": "Frax AMO documentation describes governance-controlled AMO/custodian components that can affect minting and supply allocation.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -10982,6 +11362,48 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "mintAuthority": {
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "frxUSD mint authority is modeled as a Frax governance/custodian hybrid pending deeper per-contract cap review.",
+      "controls": [
+        {
+          "label": "AMO/custodian or governance-controlled mint authority",
+          "role": "custodian",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Frax AMO docs",
+              "url": "https://docs.frax.finance/amo/overview"
+            },
+            {
+              "label": "Frax frxUSD docs",
+              "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            }
+          ],
+          "evidence": "Frax frxUSD documentation describes issuer/protocol and custodian components rather than immutable user-only minting."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          }
+        ],
+        "evidence": "Frax frxUSD documentation describes issuer/protocol and custodian components rather than immutable user-only minting.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -12131,6 +12553,41 @@
         "url": "https://github.com/aave-dao/gho-origin"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "facilitator-bucket-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "verified",
+      "summary": "GHO minting depends on DAO-approved facilitators and bucket capacity rather than unrestricted issuer minting.",
+      "controls": [
+        {
+          "label": "DAO-approved facilitator capacity",
+          "role": "facilitator",
+          "authorityType": "dao-governor",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Facilitator bucket capacity constrains minting.",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Aave GHO facilitators",
+              "url": "https://aave.com/help/gho-stablecoin/facilitators"
+            }
+          ],
+          "evidence": "Aave documentation describes facilitators as DAO-approved entities that can mint and burn GHO within bucket capacity."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Aave GHO facilitators",
+            "url": "https://aave.com/help/gho-stablecoin/facilitators"
+          }
+        ],
+        "evidence": "Aave documentation describes facilitators as DAO-approved entities that can mint and burn GHO within bucket capacity.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -15913,6 +16370,40 @@
         "url": "https://github.com/0xDephaser"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "JPYT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Optimism contract source",
+              "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+            }
+          ],
+          "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify Optimism contract source",
+            "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+          }
+        ],
+        "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "optimism",
@@ -17073,6 +17564,40 @@
     "jurisdiction": {
       "country": "South Korea"
     },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "KRWO has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "BscScan contract source",
+              "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+            }
+          ],
+          "evidence": "KRWO already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "BscScan contract source",
+            "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+          }
+        ],
+        "evidence": "KRWO already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "klaytn",
@@ -17467,6 +17992,40 @@
         "url": "https://x.com/Lumi_finance"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "LUAUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify UtilityToken.sol",
+              "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+            }
+          ],
+          "evidence": "LUAUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify UtilityToken.sol",
+            "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+          }
+        ],
+        "evidence": "LUAUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "arbitrum",
@@ -17563,6 +18122,47 @@
         "url": "https://docs.liquity.org/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "immutable-user-collateralized",
+      "authorityPosture": "none-resolved",
+      "confidence": "verified",
+      "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity contracts; no privileged durable mint path is resolved in the curated review.",
+      "controls": [
+        {
+          "label": "Immutable protocol mint path",
+          "role": "other",
+          "authorityType": "none",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Liquity docs",
+              "url": "https://docs.liquity.org/"
+            },
+            {
+              "label": "Liquity BOLD",
+              "url": "https://www.liquity.org/bold"
+            }
+          ],
+          "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and governed by immutable protocol contracts rather than an issuer minter."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Liquity docs",
+            "url": "https://docs.liquity.org/"
+          },
+          {
+            "label": "Liquity BOLD",
+            "url": "https://www.liquity.org/bold"
+          }
+        ],
+        "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and governed by immutable protocol contracts rather than an issuer minter.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -17761,6 +18361,49 @@
     ],
     "jurisdiction": {
       "country": "Switzerland"
+    },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "M minting depends on the M0 permissioned minter/validator architecture rather than a public collateralized CDP.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -19765,6 +20408,49 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "MUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -22312,6 +22998,40 @@
     "jurisdiction": {
       "country": "Singapore"
     },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "PHT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Etherscan contract source",
+              "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+            }
+          ],
+          "evidence": "PHT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Etherscan contract source",
+            "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+          }
+        ],
+        "evidence": "PHT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -22771,6 +23491,40 @@
       "regulator": "NYDFS",
       "license": "Limited Purpose Trust Charter"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "PYUSD is issued through Paxos/PayPal issuer operations; minting is not limited to permissionless user collateral mechanics.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Paxos PYUSD",
+              "url": "https://paxos.com/pyusd/"
+            }
+          ],
+          "evidence": "Paxos materials describe PYUSD as an issued fiat-backed stablecoin redeemable through the issuer infrastructure."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Paxos PYUSD",
+            "url": "https://paxos.com/pyusd/"
+          }
+        ],
+        "evidence": "Paxos materials describe PYUSD as an issued fiat-backed stablecoin redeemable through the issuer infrastructure.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -23228,6 +23982,40 @@
         "url": "https://github.com/resupplyfi/resupply"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "REUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Etherscan contract source",
+              "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+            }
+          ],
+          "evidence": "REUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Etherscan contract source",
+            "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+          }
+        ],
+        "evidence": "REUSD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -23498,6 +24286,40 @@
       "regulator": "NYDFS",
       "license": "Trust Charter"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "RLUSD is issuer-operated by Ripple; mint authority is modeled as centralized issuer minting in the MVP.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Ripple stablecoin",
+              "url": "https://ripple.com/solutions/stablecoin/"
+            }
+          ],
+          "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripple stablecoin",
+            "url": "https://ripple.com/solutions/stablecoin/"
+          }
+        ],
+        "evidence": "Ripple stablecoin materials describe RLUSD as an issued reserve-backed stablecoin.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -23701,6 +24523,40 @@
         "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "rUSD mint authority is modeled as Reservoir issuer/protocol-operated authority pending deeper role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Reservoir docs",
+              "url": "https://docs.reservoir.xyz"
+            }
+          ],
+          "evidence": "Reservoir documentation describes rUSD issuance through protocol/issuer rails rather than immutable collateralized borrowing."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          }
+        ],
+        "evidence": "Reservoir documentation describes rUSD issuance through protocol/issuer rails rather than immutable collateralized borrowing.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -25406,6 +26262,48 @@
         "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sfrxUSD is a savings wrapper whose base mint authority is inherited from frxUSD plus wrapper share accounting.",
+      "inheritedFrom": "frxusd-frax",
+      "controls": [
+        {
+          "label": "Wrapper/share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Frax AMO docs",
+              "url": "https://docs.frax.finance/amo/overview"
+            },
+            {
+              "label": "Frax frxUSD docs",
+              "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            }
+          ],
+          "evidence": "sfrxUSD documentation describes a savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          }
+        ],
+        "evidence": "sfrxUSD documentation describes a savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -26172,6 +27070,40 @@
         "url": "https://app.reservoir.xyz/reserves"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "srUSD is a savings wrapper whose base mint authority is inherited from Reservoir rUSD plus wrapper share accounting.",
+      "inheritedFrom": "rusd-reservoir",
+      "controls": [
+        {
+          "label": "Wrapper/share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Reservoir docs",
+              "url": "https://docs.reservoir.xyz"
+            }
+          ],
+          "evidence": "Reservoir documentation describes srUSD as a savings/yield wrapper over rUSD; base mint authority is inherited from rUSD."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          }
+        ],
+        "evidence": "Reservoir documentation describes srUSD as a savings/yield wrapper over rUSD; base mint authority is inherited from rUSD.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -29343,6 +30275,40 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "TUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "TrueUSD",
+              "url": "https://tusd.io/"
+            }
+          ],
+          "evidence": "TrueUSD materials describe TUSD as an issued fiat-backed stablecoin."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "TrueUSD",
+            "url": "https://tusd.io/"
+          }
+        ],
+        "evidence": "TrueUSD materials describe TUSD as an issued fiat-backed stablecoin.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -29474,6 +30440,40 @@
     ],
     "jurisdiction": {
       "country": "British Virgin Islands"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "U is modeled as issuer-operated mint authority pending deeper role verification.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "U website",
+              "url": "https://u.tech/"
+            }
+          ],
+          "evidence": "United Stables presents U as an issued stablecoin rather than a permissionless user-collateralized mint path."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "U website",
+            "url": "https://u.tech/"
+          }
+        ],
+        "evidence": "United Stables presents U as an issued stablecoin rather than a permissionless user-collateralized mint path.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -30007,6 +31007,40 @@
     "jurisdiction": {
       "country": "France"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USD0 issuance is modeled as protocol-operated mint authority backed by RWA/custody rails pending deeper role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Usual docs",
+              "url": "https://docs.usual.money/"
+            }
+          ],
+          "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Usual docs",
+            "url": "https://docs.usual.money/"
+          }
+        ],
+        "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -30165,6 +31199,40 @@
       "country": "United States",
       "regulator": "South Dakota Division of Banking",
       "license": "South Dakota Trust Charter"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USD1 is modeled as an issuer-backed stablecoin with issuer-operated mint authority pending deeper role verification.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USD1 website",
+              "url": "https://worldlibertyfinancial.com/usd1"
+            }
+          ],
+          "evidence": "World Liberty Financial presents USD1 as an issued dollar stablecoin rather than a permissionless collateral protocol."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "USD1 website",
+            "url": "https://worldlibertyfinancial.com/usd1"
+          }
+        ],
+        "evidence": "World Liberty Financial presents USD1 as an issued dollar stablecoin rather than a permissionless collateral protocol.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -30934,6 +32002,49 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDat is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -31233,6 +32344,40 @@
           "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica"
         }
       ]
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDC is issuer-minted by Circle; the MVP records Circle-operated mint authority rather than a permissionless protocol mint path.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Circle USDC docs",
+              "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+            }
+          ],
+          "evidence": "Circle documentation describes USDC as issued and redeemed by Circle through its stablecoin infrastructure."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Circle USDC docs",
+            "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          }
+        ],
+        "evidence": "Circle documentation describes USDC as issued and redeemed by Circle through its stablecoin infrastructure.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -31741,6 +32886,40 @@
     "jurisdiction": {
       "country": "Dominica"
     },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Etherscan contract source",
+              "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+            }
+          ],
+          "evidence": "USDD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Etherscan contract source",
+            "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+          }
+        ],
+        "evidence": "USDD already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "tron",
@@ -31868,6 +33047,48 @@
     ],
     "jurisdiction": {
       "country": "British Virgin Islands"
+    },
+    "mintAuthority": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDe minting is modeled as off-chain order/signature mediated authority with privileged mint surface already flagged as dilutable by Pharos.",
+      "controls": [
+        {
+          "label": "Off-chain order/signature mint authority",
+          "role": "backend-signer",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Ethena mint and redeem docs",
+              "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+            },
+            {
+              "label": "Ethena trust assumptions",
+              "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+            }
+          ],
+          "evidence": "Ethena mint/redeem documentation describes signed order flows and trust assumptions around minting; Pharos also flags USDe as dilutable from token source evidence."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ethena mint and redeem docs",
+            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          },
+          {
+            "label": "Ethena trust assumptions",
+            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+          }
+        ],
+        "evidence": "Ethena mint/redeem documentation describes signed order flows and trust assumptions around minting; Pharos also flags USDe as dilutable from token source evidence.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -32192,6 +33413,40 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDf minting is modeled as Falcon issuer/protocol-operated mint authority pending deeper role verification.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Falcon docs",
+              "url": "https://docs.falcon.finance"
+            }
+          ],
+          "evidence": "Falcon documentation presents USDf as an issued stablecoin managed through Falcon protocol operations."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Falcon docs",
+            "url": "https://docs.falcon.finance"
+          }
+        ],
+        "evidence": "Falcon documentation presents USDf as an issued stablecoin managed through Falcon protocol operations.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -32397,6 +33652,40 @@
           "url": "https://www.paxos.com/newsroom/global-dollar-(usdg)-launches-in-the-eu"
         }
       ]
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDG is an issuer-backed Global Dollar stablecoin; mint authority is modeled as issuer-operated until deeper role evidence is attached.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Global Dollar Network",
+              "url": "https://www.globaldollar.com/"
+            }
+          ],
+          "evidence": "Global Dollar materials describe USDG as an issued reserve-backed stablecoin rather than a permissionless CDP asset."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Global Dollar Network",
+            "url": "https://www.globaldollar.com/"
+          }
+        ],
+        "evidence": "Global Dollar materials describe USDG as an issued reserve-backed stablecoin rather than a permissionless CDP asset.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -33016,6 +34305,49 @@
       "country": "Union of Comoros",
       "regulator": "Anjouan Offshore Finance Authority"
     },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDK is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "solana",
@@ -33543,6 +34875,49 @@
     "jurisdiction": {
       "country": "United States"
     },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "Noble USDN is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "noble",
@@ -33626,6 +35001,40 @@
         "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDN has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Usdn.sol",
+              "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+            }
+          ],
+          "evidence": "USDN already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sourcify Usdn.sol",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+          }
+        ],
+        "evidence": "USDN already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -33750,6 +35159,49 @@
         "url": "https://docs.m0.org/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDnr is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -35113,6 +36565,40 @@
         "url": "https://docs.sky.money/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDS inherits Sky/Maker-style governed mint and module authority; supply creation is not a simple immutable user-only mint path.",
+      "controls": [
+        {
+          "label": "Protocol governance/admin authority",
+          "role": "cap-admin",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sky docs",
+              "url": "https://docs.sky.money/"
+            }
+          ],
+          "evidence": "Sky documentation describes the upgraded Maker/Sky system where governance-controlled modules and parameters affect stablecoin supply."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Sky docs",
+            "url": "https://docs.sky.money/"
+          }
+        ],
+        "evidence": "Sky documentation describes the upgraded Maker/Sky system where governance-controlled modules and parameters affect stablecoin supply.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -35265,6 +36751,49 @@
     ],
     "jurisdiction": {
       "country": "Singapore"
+    },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDSC is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -35480,6 +37009,40 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ]
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDT is issuer-minted by Tether; the MVP records centralized issuer mint authority rather than a permissionless protocol mint path.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Tether transparency",
+              "url": "https://tether.to/en/transparency/"
+            }
+          ],
+          "evidence": "Tether transparency materials describe USDT as an issuer-backed reserve stablecoin operated by Tether."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Tether transparency",
+            "url": "https://tether.to/en/transparency/"
+          }
+        ],
+        "evidence": "Tether transparency materials describe USDT as an issuer-backed reserve stablecoin operated by Tether.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -35758,6 +37321,48 @@
       "regulator": "OCC",
       "license": "Federal Bank Charter"
     },
+    "mintAuthority": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDTB minting is modeled as Ethena issuer/backend-mediated authority pending deeper role and cap review.",
+      "controls": [
+        {
+          "label": "Off-chain order/signature mint authority",
+          "role": "backend-signer",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Ethena mint and redeem docs",
+              "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+            },
+            {
+              "label": "Ethena trust assumptions",
+              "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+            }
+          ],
+          "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ethena mint and redeem docs",
+            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          },
+          {
+            "label": "Ethena trust assumptions",
+            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+          }
+        ],
+        "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -35863,6 +37468,40 @@
     ],
     "jurisdiction": {
       "country": "Singapore"
+    },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDU has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "BscScan contract source",
+              "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+            }
+          ],
+          "evidence": "USDU already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "BscScan contract source",
+            "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          }
+        ],
+        "evidence": "USDU already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -36399,6 +38038,40 @@
     ],
     "jurisdiction": {
       "country": "British Virgin Islands"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDY issuance is modeled as Ondo issuer-operated authority rather than permissionless user collateralized minting.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Ondo docs",
+              "url": "https://docs.ondo.finance/"
+            }
+          ],
+          "evidence": "Ondo documentation describes USDY as a tokenized note/stablecoin product issued through Ondo-controlled processes."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ondo docs",
+            "url": "https://docs.ondo.finance/"
+          }
+        ],
+        "evidence": "Ondo documentation describes USDY as a tokenized note/stablecoin product issued through Ondo-controlled processes.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -37970,6 +39643,40 @@
       "regulator": "BMA",
       "license": "DABA License"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USYC issuance is modeled as fund/issuer-operated authority rather than a permissionless protocol mint path.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USYC docs",
+              "url": "https://usyc.docs.hashnote.com/"
+            }
+          ],
+          "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "USYC docs",
+            "url": "https://usyc.docs.hashnote.com/"
+          }
+        ],
+        "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -38635,6 +40342,40 @@
         "url": "https://x.com/vCred_xyz"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "vCRED has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Hemi contract source",
+              "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+            }
+          ],
+          "evidence": "vCRED already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Hemi contract source",
+            "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+          }
+        ],
+        "evidence": "vCRED already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "hemi",
@@ -39988,6 +41729,48 @@
     "jurisdiction": {
       "country": "Switzerland"
     },
+    "mintAuthority": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "wM is a wrapped M asset; base mint authority is inherited from M0 M plus wrapper accounting.",
+      "inheritedFrom": "m-m0",
+      "controls": [
+        {
+          "label": "Wrapper/share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 extension documentation describes wrappers/extensions around M; this row inherits base M mint authority."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 extension documentation describes wrappers/extensions around M; this row inherits base M mint authority.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -40854,6 +42637,40 @@
         "url": "https://snapshot.org/#/silodao.eth"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "XAI mint authority is modeled as governed CDP/protocol authority with existing Pharos dilutable-source evidence pending deeper role and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Etherscan contract source",
+              "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+            }
+          ],
+          "evidence": "XAI already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Etherscan contract source",
+            "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+          }
+        ],
+        "evidence": "XAI already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -41511,6 +43328,49 @@
       "country": "United States",
       "regulator": "FinCEN / NYDFS / state money transmitter regulators",
       "license": "MoonPay Money Transmitter Licenses (49 states), New York BitLicense, New York Trust Charter"
+    },
+    "mintAuthority": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "XO Cash is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "M0 protocol docs",
+              "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            },
+            {
+              "label": "M0 minter gateway docs",
+              "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            }
+          ],
+          "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {
@@ -42286,6 +44146,40 @@
       "country": "United States",
       "regulator": "SEC",
       "license": "SEC-Registered Security"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "YLDS issuance is modeled as Figure issuer-operated authority rather than permissionless protocol minting.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "YLDS docs",
+              "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+            }
+          ],
+          "evidence": "Figure/Provenance documentation describes YLDS issuance as an issuer-mediated stablecoin process."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "YLDS docs",
+            "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+          }
+        ],
+        "evidence": "Figure/Provenance documentation describes YLDS issuance as an issuer-mediated stablecoin process.",
+        "reviewer": "Codex mint-authority MVP",
+        "reviewedAt": "2026-05-24"
+      }
     },
     "contracts": [
       {

@@ -72,6 +72,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDf minting is modeled as Falcon issuer/protocol-operated mint authority pending deeper role verification.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Falcon docs",
+            "url": "https://docs.falcon.finance"
+          }
+        ],
+        "evidence": "Falcon documentation presents USDf as an issued stablecoin managed through Falcon protocol operations."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Falcon docs",
+          "url": "https://docs.falcon.finance"
+        }
+      ],
+      "evidence": "Falcon documentation presents USDf as an issued stablecoin managed through Falcon protocol operations.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "reserves": [

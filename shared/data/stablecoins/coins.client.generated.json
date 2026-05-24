@@ -404,7 +404,28 @@
       }
     ],
     "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "apxUSD issuance is modeled as protocol/issuer-operated authority pending deeper on-chain role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Apyx docs",
+          "url": "https://docs.apyx.fi"
+        }
+      ]
+    }
   },
   {
     "id": "apyusd-apyx",
@@ -1480,7 +1501,32 @@
       }
     ],
     "collateral": "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
-    "collateralQuality": "eth-lst"
+    "collateralQuality": "eth-lst",
+    "mintAuthoritySummary": {
+      "mintPath": "immutable-user-collateralized",
+      "authorityPosture": "none-resolved",
+      "confidence": "verified",
+      "summary": "BOLD minting is limited to user borrowing against Liquity v2 collateral markets; no privileged durable mint path is resolved in the curated review.",
+      "controls": [
+        {
+          "label": "Immutable protocol mint path",
+          "role": "other",
+          "authorityType": "none",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Liquity docs",
+          "url": "https://docs.liquity.org/"
+        },
+        {
+          "label": "Liquity BOLD",
+          "url": "https://www.liquity.org/bold"
+        }
+      ]
+    }
   },
   {
     "id": "brd-volpon",
@@ -2083,7 +2129,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize"
+    "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "BUIDL share/token issuance is modeled as fund/transfer-agent operated authority rather than permissionless collateralized minting.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Securitize BUIDL",
+          "url": "https://securitize.io/blackrock/buidl"
+        }
+      ]
+    }
   },
   {
     "id": "busd0-usual",
@@ -3038,7 +3105,32 @@
       }
     ],
     "collateral": "WBTC, cbBTC (majority), wstETH, sfrxETH, weETH, tBTC, and ETH deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations; WBTC/cbBTC custody by BitGo/Coinbase introduces centralized dependency",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "crvUSD combines user borrowing markets with governed/admin pegkeeper and parameter surfaces that can affect supply.",
+      "controls": [
+        {
+          "label": "Protocol governance/admin authority",
+          "role": "cap-admin",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Curve crvUSD resources",
+          "url": "https://resources.curve.finance/crvusd/"
+        },
+        {
+          "label": "crvUSD contract source",
+          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+        }
+      ]
+    }
   },
   {
     "id": "ctusd-citrea",
@@ -3096,7 +3188,33 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "ctUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "cusd-cap",
@@ -3438,7 +3556,28 @@
       }
     ],
     "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "DAI minting is primarily vault/module based, but Maker governance can authorize modules and ceilings that affect supply creation.",
+      "controls": [
+        {
+          "label": "Protocol governance/admin authority",
+          "role": "cap-admin",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Maker core accounting docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+        }
+      ]
+    }
   },
   {
     "id": "deuro-deuro",
@@ -3747,7 +3886,28 @@
         "risk": "medium"
       }
     ],
-    "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop"
+    "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "DOLA has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+        }
+      ]
+    }
   },
   {
     "id": "dusd-alto",
@@ -5337,7 +5497,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts"
+    "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "FDUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "First Digital USD",
+          "url": "https://www.firstdigitallabs.com/fdusd"
+        }
+      ]
+    }
   },
   {
     "id": "feusd-felix",
@@ -5629,7 +5810,32 @@
       }
     ],
     "collateral": "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "FPI mint authority is modeled as Frax governance/custodian hybrid authority with privileged mint/admin surfaces already flagged as dilutable by Pharos.",
+      "controls": [
+        {
+          "label": "AMO/custodian or governance-controlled mint authority",
+          "role": "custodian",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+        }
+      ]
+    }
   },
   {
     "id": "frax-frax",
@@ -5698,7 +5904,32 @@
         "risk": "medium"
       }
     ],
-    "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures."
+    "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures.",
+    "mintAuthoritySummary": {
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "FRAX mint authority is modeled as an AMO/governance/custodian hybrid rather than immutable user-only minting.",
+      "controls": [
+        {
+          "label": "AMO/custodian or governance-controlled mint authority",
+          "role": "custodian",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+        }
+      ]
+    }
   },
   {
     "id": "frxusd-frax",
@@ -5772,7 +6003,32 @@
         "coinId": "usdb-bridge"
       }
     ],
-    "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain"
+    "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
+    "mintAuthoritySummary": {
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "frxUSD mint authority is modeled as a Frax governance/custodian hybrid pending deeper per-contract cap review.",
+      "controls": [
+        {
+          "label": "AMO/custodian or governance-controlled mint authority",
+          "role": "custodian",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+        }
+      ]
+    }
   },
   {
     "id": "ftusd-flying-tulip",
@@ -6306,7 +6562,29 @@
       }
     ],
     "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "facilitator-bucket-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "verified",
+      "summary": "GHO minting depends on DAO-approved facilitators and bucket capacity rather than unrestricted issuer minting.",
+      "controls": [
+        {
+          "label": "DAO-approved facilitator capacity",
+          "role": "facilitator",
+          "authorityType": "dao-governor",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Facilitator bucket capacity constrains minting.",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Aave GHO facilitators",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        }
+      ]
+    }
   },
   {
     "id": "ghsm-mento",
@@ -8276,7 +8554,28 @@
       }
     ],
     "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "JPYT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Sourcify Optimism contract source",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+        }
+      ]
+    }
   },
   {
     "id": "jtrsy-anemoy",
@@ -8874,7 +9173,28 @@
       }
     ],
     "collateral": "Open Voucher (OV) KRW vouchers issued by Open Asset and represented on-chain as OV tokens used as collateral for KRWO issuance",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "KRWO has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "BscScan contract source",
+          "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+        }
+      ]
+    }
   },
   {
     "id": "krwq-iq",
@@ -9115,7 +9435,28 @@
         "risk": "very-high"
       }
     ],
-    "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials"
+    "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "LUAUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Sourcify UtilityToken.sol",
+          "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "lusd-liquity",
@@ -9171,7 +9512,32 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest"
+    "collateral": "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",
+    "mintAuthoritySummary": {
+      "mintPath": "immutable-user-collateralized",
+      "authorityPosture": "none-resolved",
+      "confidence": "verified",
+      "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity contracts; no privileged durable mint path is resolved in the curated review.",
+      "controls": [
+        {
+          "label": "Immutable protocol mint path",
+          "role": "other",
+          "authorityType": "none",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Liquity docs",
+          "url": "https://docs.liquity.org/"
+        },
+        {
+          "label": "Liquity BOLD",
+          "url": "https://www.liquity.org/bold"
+        }
+      ]
+    }
   },
   {
     "id": "lvusd-leverup",
@@ -9253,7 +9619,33 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting"
+    "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "M minting depends on the M0 permissioned minter/validator architecture rather than a public collateralized CDP.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "mai-qidao",
@@ -10243,7 +10635,33 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol"
+    "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "MUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "mxnb-juno",
@@ -11601,7 +12019,28 @@
       }
     ],
     "collateral": "MakerDAO-style CDP vaults using approved stablecoin collateral, with USDC/USDT described for the initial stage; APACX transparency currently lists apcxUSDT and planned apcxUSDC beta reserve wallets.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "PHT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+        }
+      ]
+    }
   },
   {
     "id": "pmusd-precious-metals",
@@ -11830,7 +12269,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements"
+    "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "PYUSD is issued through Paxos/PayPal issuer operations; minting is not limited to permissionless user collateral mechanics.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Paxos PYUSD",
+          "url": "https://paxos.com/pyusd/"
+        }
+      ]
+    }
   },
   {
     "id": "qcad-stablecorp",
@@ -12145,7 +12605,28 @@
       }
     ],
     "collateral": "crvUSD and frxUSD lending vault tokens from Curve Lend and Fraxlend",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "REUSD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+        }
+      ]
+    }
   },
   {
     "id": "rgbp-revolut",
@@ -12263,7 +12744,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts"
+    "collateral": "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "RLUSD is issuer-operated by Ripple; mint authority is modeled as centralized issuer minting in the MVP.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripple stablecoin",
+          "url": "https://ripple.com/solutions/stablecoin/"
+        }
+      ]
+    }
   },
   {
     "id": "roughrider-bnd",
@@ -12406,7 +12908,28 @@
       }
     ],
     "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "rUSD mint authority is modeled as Reservoir issuer/protocol-operated authority pending deeper role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Reservoir docs",
+          "url": "https://docs.reservoir.xyz"
+        }
+      ]
+    }
   },
   {
     "id": "rusd-revolut",
@@ -13181,7 +13704,33 @@
       }
     ],
     "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "sfrxUSD is a savings wrapper whose base mint authority is inherited from frxUSD plus wrapper share accounting.",
+      "inheritedFrom": "frxusd-frax",
+      "controls": [
+        {
+          "label": "Wrapper/share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+        }
+      ]
+    }
   },
   {
     "id": "sgho-aave",
@@ -13535,7 +14084,29 @@
       }
     ],
     "collateral": "Yield-bearing Reservoir savings token backed by the Reservoir balance sheet: stablecoin PSM liquidity, RWA allocations, Morpho/Euler lending vaults, and governance-approved credit strategies monitored through Reservoir's on-chain proof-of-reserves endpoint",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "srUSD is a savings wrapper whose base mint authority is inherited from Reservoir rUSD plus wrapper share accounting.",
+      "inheritedFrom": "rusd-reservoir",
+      "controls": [
+        {
+          "label": "Wrapper/share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Reservoir docs",
+          "url": "https://docs.reservoir.xyz"
+        }
+      ]
+    }
   },
   {
     "id": "srusde-strata",
@@ -15231,7 +15802,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Daily Moore Hong Kong / Chainlink-attested TUSD reserves, currently modeled by Pharos as concentrated in opaque First Digital Trust fund investments with a small cash-at-depository-institutions balance."
+    "collateral": "Daily Moore Hong Kong / Chainlink-attested TUSD reserves, currently modeled by Pharos as concentrated in opaque First Digital Trust fund investments with a small cash-at-depository-institutions balance.",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "TUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "TrueUSD",
+          "url": "https://tusd.io/"
+        }
+      ]
+    }
   },
   {
     "id": "u-united-stables",
@@ -15280,7 +15872,28 @@
         "risk": "low"
       }
     ],
-    "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables."
+    "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "U is modeled as issuer-operated mint authority pending deeper role verification.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "U website",
+          "url": "https://u.tech/"
+        }
+      ]
+    }
   },
   {
     "id": "uktbl-spiko",
@@ -15605,7 +16218,28 @@
         "coinId": "usdc-circle"
       }
     ],
-    "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity"
+    "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USD0 issuance is modeled as protocol-operated mint authority backed by RWA/custody rails pending deeper role review.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Usual docs",
+          "url": "https://docs.usual.money/"
+        }
+      ]
+    }
   },
   {
     "id": "usd1-world-liberty-financial",
@@ -15669,7 +16303,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company"
+    "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USD1 is modeled as an issuer-backed stablecoin with issuer-operated mint authority pending deeper role verification.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "USD1 website",
+          "url": "https://worldlibertyfinancial.com/usd1"
+        }
+      ]
+    }
   },
   {
     "id": "usd3-reserve-protocol",
@@ -16076,7 +16731,33 @@
       }
     ],
     "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDat is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "usdb-blast",
@@ -16262,7 +16943,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash"
+    "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDC is issuer-minted by Circle; the MVP records Circle-operated mint authority rather than a permissionless protocol mint path.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        }
+      ]
+    }
   },
   {
     "id": "usdcv-societe-generale-forge",
@@ -16436,7 +17138,28 @@
       }
     ],
     "collateral": "Current reserves are split across Smart Allocator stablecoin deployments, TRX and sTRX CDP vault collateral, and USDT held in PSM/direct vaults; Bitcoin was removed from reserves in August 2024",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDD has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+        }
+      ]
+    }
   },
   {
     "id": "usde-ethena",
@@ -16506,7 +17229,32 @@
       }
     ],
     "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDe minting is modeled as off-chain order/signature mediated authority with privileged mint surface already flagged as dilutable by Pharos.",
+      "controls": [
+        {
+          "label": "Off-chain order/signature mint authority",
+          "role": "backend-signer",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena trust assumptions",
+          "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+        }
+      ]
+    }
   },
   {
     "id": "usdf-astherus",
@@ -16614,7 +17362,28 @@
       }
     ],
     "collateral": "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDf minting is modeled as Falcon issuer/protocol-operated mint authority pending deeper role verification.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Falcon docs",
+          "url": "https://docs.falcon.finance"
+        }
+      ]
+    }
   },
   {
     "id": "usdf-flipcash",
@@ -16722,7 +17491,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "U.S. dollar deposits, short-duration U.S. government securities, and other high-quality liquid assets held in segregated custodial accounts at DBS Bank and Standard Chartered"
+    "collateral": "U.S. dollar deposits, short-duration U.S. government securities, and other high-quality liquid assets held in segregated custodial accounts at DBS Bank and Standard Chartered",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDG is an issuer-backed Global Dollar stablecoin; mint authority is modeled as issuer-operated until deeper role evidence is attached.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Global Dollar Network",
+          "url": "https://www.globaldollar.com/"
+        }
+      ]
+    }
   },
   {
     "id": "usdglo-glo",
@@ -17034,7 +17824,33 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bills held via M0 Protocol's permissioned Minter infrastructure in bankruptcy-remote SPVs; collateral sufficiency cryptographically attested on-chain by independent M0 Validators before USDK mints are authorized. Yield generated by the underlying M token is retained by KAST as fee revenue rather than passed to USDK holders (a separate token, USDKy, exists for yield-seeking users)",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDK is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "usdk-orki",
@@ -17356,7 +18172,33 @@
         "depType": "wrapper"
       }
     ],
-    "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain"
+    "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "Noble USDN is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "usdn-smardex",
@@ -17427,7 +18269,28 @@
       }
     ],
     "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
-    "collateralQuality": "eth-lst"
+    "collateralQuality": "eth-lst",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDN has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Sourcify Usdn.sol",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+        }
+      ]
+    }
   },
   {
     "id": "usdnr-nerona",
@@ -17484,7 +18347,33 @@
       }
     ],
     "collateral": "Backed 1:1 by $M (M0 Protocol's tokenized short-term U.S. Treasury bill exposure, sourced from the M0 Minter MXON). USDnr is a permissioned wrapper minted by Nerona Labs against $M held in M0-managed reserves, with a Stability Reserve buffer maintained on top of circulating supply",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDnr is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "usdo-openeden",
@@ -18227,7 +19116,28 @@
       }
     ],
     "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDS inherits Sky/Maker-style governed mint and module authority; supply creation is not a simple immutable user-only mint path.",
+      "controls": [
+        {
+          "label": "Protocol governance/admin authority",
+          "role": "cap-admin",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Sky docs",
+          "url": "https://docs.sky.money/"
+        }
+      ]
+    }
   },
   {
     "id": "usdsc-startale",
@@ -18280,7 +19190,33 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bills held in bankruptcy-remote SPVs via M0 Protocol's permissioned Minter infrastructure; M0 Validators independently attest collateral sufficiency on-chain before minting",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDSC is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "usdsui-sui",
@@ -18395,7 +19331,28 @@
       }
     ],
     "collateral": "Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDT is issuer-minted by Tether; the MVP records centralized issuer mint authority rather than a permissionless protocol mint path.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/"
+        }
+      ]
+    }
   },
   {
     "id": "usdtb-ethena",
@@ -18450,7 +19407,32 @@
         "risk": "low"
       }
     ],
-    "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash or cash-equivalent redemption reserves; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian"
+    "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash or cash-equivalent redemption reserves; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
+    "mintAuthoritySummary": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDTB minting is modeled as Ethena issuer/backend-mediated authority pending deeper role and cap review.",
+      "controls": [
+        {
+          "label": "Off-chain order/signature mint authority",
+          "role": "backend-signer",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena trust assumptions",
+          "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+        }
+      ]
+    }
   },
   {
     "id": "usdu-unitas",
@@ -18527,7 +19509,28 @@
       }
     ],
     "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "USDU has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "BscScan contract source",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+        }
+      ]
+    }
   },
   {
     "id": "usdu-usdu-finance",
@@ -18805,7 +19808,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits"
+    "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USDY issuance is modeled as Ondo issuer-operated authority rather than permissionless user collateralized minting.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ondo docs",
+          "url": "https://docs.ondo.finance/"
+        }
+      ]
+    }
   },
   {
     "id": "usdz-anzen",
@@ -19585,7 +20609,28 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held for Circle USYC / Hashnote fund shares in segregated brokerage and custody accounts."
+    "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held for Circle USYC / Hashnote fund shares in segregated brokerage and custody accounts.",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "USYC issuance is modeled as fund/issuer-operated authority rather than a permissionless protocol mint path.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "USYC docs",
+          "url": "https://usyc.docs.hashnote.com/"
+        }
+      ]
+    }
   },
   {
     "id": "uty-xsy",
@@ -19947,7 +20992,28 @@
       }
     ],
     "collateral": "Hemi-based credit and crypto collateral backing vCRED",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "unbounded-or-compromised",
+      "confidence": "manual-review",
+      "summary": "vCRED has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Hemi contract source",
+          "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+        }
+      ]
+    }
   },
   {
     "id": "veur-vnx",
@@ -20550,7 +21616,33 @@
       }
     ],
     "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "wM is a wrapped M asset; base mint authority is inherited from M0 M plus wrapper accounting.",
+      "inheritedFrom": "m-m0",
+      "controls": [
+        {
+          "label": "Wrapper/share accounting",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "wmxn-ripio",
@@ -20941,7 +22033,28 @@
       }
     ],
     "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "XAI mint authority is modeled as governed CDP/protocol authority with existing Pharos dilutable-source evidence pending deeper role and cap review.",
+      "controls": [
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+        }
+      ]
+    }
   },
   {
     "id": "xaum-matrixdock",
@@ -21235,7 +22348,33 @@
       }
     ],
     "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "m0-permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "XO Cash is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "controls": [
+        {
+          "label": "M0 permissioned minter and validator rails",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ]
+    }
   },
   {
     "id": "xofm-mento",
@@ -21693,7 +22832,28 @@
       }
     ],
     "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodian UMB Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "YLDS issuance is modeled as Figure issuer-operated authority rather than permissionless protocol minting.",
+      "controls": [
+        {
+          "label": "Issuer-operated mint authority",
+          "role": "direct-minter",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "YLDS docs",
+          "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+        }
+      ]
+    }
   },
   {
     "id": "yousd-yield-optimizer",

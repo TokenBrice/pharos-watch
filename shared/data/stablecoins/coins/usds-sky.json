@@ -81,6 +81,40 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDS inherits Sky/Maker-style governed mint and module authority; supply creation is not a simple immutable user-only mint path.",
+    "controls": [
+      {
+        "label": "Protocol governance/admin authority",
+        "role": "cap-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sky docs",
+            "url": "https://docs.sky.money/"
+          }
+        ],
+        "evidence": "Sky documentation describes the upgraded Maker/Sky system where governance-controlled modules and parameters affect stablecoin supply."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sky docs",
+          "url": "https://docs.sky.money/"
+        }
+      ],
+      "evidence": "Sky documentation describes the upgraded Maker/Sky system where governance-controlled modules and parameters affect stablecoin supply.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",

@@ -61,6 +61,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USYC issuance is modeled as fund/issuer-operated authority rather than a permissionless protocol mint path.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USYC docs",
+            "url": "https://usyc.docs.hashnote.com/"
+          }
+        ],
+        "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USYC docs",
+          "url": "https://usyc.docs.hashnote.com/"
+        }
+      ],
+      "evidence": "USYC documentation describes tokenized yield-bearing fund issuance and redemption through issuer-controlled rails.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
+import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import type { CoverageFeatureKey } from "@/lib/coverage-types";
 import {
   buildCoverageFeatureSummary,
@@ -9,6 +10,7 @@ import {
   resolveDependencyCoverage,
   resolveDexCoverage,
   resolveFlowCoverage,
+  resolveMintAuthorityCoverage,
   resolvePriceCoverage,
   resolveRedemptionCoverage,
   resolveReserveCoverage,
@@ -17,7 +19,9 @@ import {
 } from "@/lib/coverage";
 import { COVERAGE_BREAKDOWN_VISUAL_CLASSES } from "@/lib/coverage-page-config";
 
-function makeCoin(overrides?: Partial<StablecoinMeta>): StablecoinMeta {
+type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityClientSummary };
+
+function makeCoin(overrides?: Partial<TestCoin>): TestCoin {
   return {
     id: "test-usd",
     name: "Test USD",
@@ -314,6 +318,93 @@ describe("coverage helpers", () => {
     }).available).toBe(false);
   });
 
+  it("maps mint-authority summaries into descriptive coverage states", () => {
+    expect(resolveMintAuthorityCoverage(null).kind).toBe("unknown");
+    expect(resolveMintAuthorityCoverage(null).available).toBe(false);
+    expect(
+      resolveMintAuthorityCoverage({
+        mintPath: "immutable-user-collateralized",
+        authorityPosture: "none-resolved",
+        confidence: "verified",
+        summary: "No privileged mint path is resolved.",
+      }).kind,
+    ).toBe("no-privileged-mint");
+    expect(
+      resolveMintAuthorityCoverage({
+        mintPath: "bridge-or-oft-synthetic",
+        authorityPosture: "partially-bounded-admin",
+        confidence: "manual-review",
+        summary: "Minting depends on bridge route configuration.",
+      }).kind,
+    ).toBe("bridge-mint");
+    expect(
+      resolveMintAuthorityCoverage({
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        confidence: "verified",
+        summary: "A Safe can authorize a permissioned minter.",
+        controls: [
+          {
+            label: "Minter admin",
+            role: "minter-admin",
+            authorityType: "safe",
+            directMintAbility: "can-authorize",
+          },
+        ],
+      }).kind,
+    ).toBe("multisig-mint");
+    expect(
+      resolveMintAuthorityCoverage({
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "bounded-admin",
+        confidence: "verified",
+        summary: "Issuer role mints new supply.",
+      }).kind,
+    ).toBe("issuer-or-backend-mint");
+    expect(
+      resolveMintAuthorityCoverage({
+        mintPath: "wrapped-or-variant-inherited",
+        authorityPosture: "bounded-admin",
+        confidence: "probable",
+        summary: "Wrapper authority inherits from the reviewed parent.",
+      }).kind,
+    ).toBe("inherited-authority");
+  });
+
+  it("does not use authority posture as a mint-authority coverage ranking", () => {
+    const bounded = resolveMintAuthorityCoverage({
+      mintPath: "permissioned-minter",
+      authorityPosture: "bounded-admin",
+      confidence: "verified",
+      summary: "A Safe can authorize a permissioned minter.",
+      controls: [
+        {
+          label: "Minter admin",
+          role: "minter-admin",
+          authorityType: "safe",
+          directMintAbility: "can-authorize",
+        },
+      ],
+    });
+    const concentrated = resolveMintAuthorityCoverage({
+      mintPath: "permissioned-minter",
+      authorityPosture: "concentrated-admin",
+      confidence: "verified",
+      summary: "A Safe can authorize a permissioned minter.",
+      controls: [
+        {
+          label: "Minter admin",
+          role: "minter-admin",
+          authorityType: "safe",
+          directMintAbility: "can-authorize",
+        },
+      ],
+    });
+
+    expect(concentrated.kind).toBe(bounded.kind);
+    expect(concentrated.sortRank).toBe(bounded.sortRank);
+  });
+
   it("keeps dependency gaps and dependency data outages separate in summaries", () => {
     const rows = [
       buildCoverageRow({
@@ -363,6 +454,20 @@ describe("coverage helpers", () => {
     }
   });
 
+  it("defines coverage snapshot visuals for every mint-authority breakdown key", () => {
+    for (const key of [
+      "no-privileged-mint",
+      "governed-mint",
+      "multisig-mint",
+      "issuer-or-backend-mint",
+      "bridge-mint",
+      "inherited-authority",
+      "unknown",
+    ]) {
+      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.mintAuthority?.[key]).toBeDefined();
+    }
+  });
+
   it("defines coverage snapshot visuals for every redemption breakdown key", () => {
     for (const key of [
       "modeled-heuristic",
@@ -402,6 +507,7 @@ describe("coverage helpers", () => {
     expect(row.statuses.yield.available).toBe(false);
     expect(row.statuses.blacklist.available).toBe(false);
     expect(row.statuses.redemption.label).toBe("PSM");
+    expect(row.statuses.mintAuthority.available).toBe(false);
   });
 
   it("builds per-feature summaries with breakdown text and market-cap share", () => {
@@ -465,6 +571,60 @@ describe("coverage helpers", () => {
       { key: "sources-3-4", label: "3-4:", count: 1 },
       { key: "sources-1-2", label: "1-2:", count: 0 },
     ]);
+  });
+
+  it("summarizes mint-authority coverage as reviewed authority breadth", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "reviewed",
+          symbol: "REV",
+          mintAuthoritySummary: {
+            mintPath: "issuer-direct-mint",
+            authorityPosture: "concentrated-admin",
+            confidence: "verified",
+            summary: "Issuer minter can create new supply.",
+          },
+        }),
+        marketCapUsd: 800,
+        hasPegCoverage: true,
+        safetyScore: null,
+        dexCoverageClass: null,
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "unknown", symbol: "UNK" }),
+        marketCapUsd: 200,
+        hasPegCoverage: true,
+        safetyScore: null,
+        dexCoverageClass: null,
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((feature) => feature.key === "mintAuthority")!,
+      rows,
+      1_000,
+    );
+
+    expect(summary.countLabel).toBe("Reviewed authority");
+    expect(summary.availableCount).toBe(1);
+    expect(summary.coveragePct).toBe(50);
+    expect(summary.mcapSharePct).toBe(80);
+    expect(summary.coverageLabel).toBe("50% with reviewed mint authority");
+    expect(summary.breakdown).toContainEqual({
+      key: "issuer-or-backend-mint",
+      label: "issuer/backend",
+      count: 1,
+    });
+    expect(summary.breakdown).toContainEqual({ key: "unknown", label: "unknown", count: 1 });
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {
@@ -923,6 +1083,7 @@ describe("coverage status-kind runtime exhaustiveness", () => {
     flows: new Set(),
     blacklist: new Set(),
     dependency: new Set(),
+    mintAuthority: new Set(),
   };
 
   function record(key: CoverageFeatureKey, kind: string) {
@@ -1073,6 +1234,53 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   }).kind);
   record("dependency", resolveDependencyCoverage(false).kind); // unmapped-gap via legacy boolean input
   record("dependency", resolveDependencyCoverage(true, false).kind); // data-unavailable
+
+  // ── mint authority ──────────────────────────────────────────────────────
+  record("mintAuthority", resolveMintAuthorityCoverage(null).kind); // unknown
+  record("mintAuthority", resolveMintAuthorityCoverage({
+    mintPath: "immutable-user-collateralized",
+    authorityPosture: "none-resolved",
+    confidence: "verified",
+    summary: "No privileged mint path is resolved.",
+  }).kind);
+  record("mintAuthority", resolveMintAuthorityCoverage({
+    mintPath: "user-collateralized-governed",
+    authorityPosture: "bounded-admin",
+    confidence: "verified",
+    summary: "Governance can affect minting parameters.",
+  }).kind);
+  record("mintAuthority", resolveMintAuthorityCoverage({
+    mintPath: "permissioned-minter",
+    authorityPosture: "bounded-admin",
+    confidence: "verified",
+    summary: "A Safe can authorize minters.",
+    controls: [
+      {
+        label: "Minter admin",
+        role: "minter-admin",
+        authorityType: "safe",
+        directMintAbility: "can-authorize",
+      },
+    ],
+  }).kind);
+  record("mintAuthority", resolveMintAuthorityCoverage({
+    mintPath: "issuer-direct-mint",
+    authorityPosture: "bounded-admin",
+    confidence: "verified",
+    summary: "Issuer role can mint new supply.",
+  }).kind);
+  record("mintAuthority", resolveMintAuthorityCoverage({
+    mintPath: "bridge-or-oft-synthetic",
+    authorityPosture: "partially-bounded-admin",
+    confidence: "manual-review",
+    summary: "Bridge route controls destination supply.",
+  }).kind);
+  record("mintAuthority", resolveMintAuthorityCoverage({
+    mintPath: "wrapped-or-variant-inherited",
+    authorityPosture: "bounded-admin",
+    confidence: "probable",
+    summary: "Wrapper inherits mint authority from its parent.",
+  }).kind);
 
   it.each(COVERAGE_FEATURES.map((f) => [f.key, f] as const))(
     "every observed kind for feature %s appears in its statusKinds array",

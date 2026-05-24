@@ -70,6 +70,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "BOLD minting is limited to user borrowing against Liquity v2 collateral markets; no privileged durable mint path is resolved in the curated review.",
+    "controls": [
+      {
+        "label": "Immutable protocol mint path",
+        "role": "other",
+        "authorityType": "none",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Liquity docs",
+            "url": "https://docs.liquity.org/"
+          },
+          {
+            "label": "Liquity BOLD",
+            "url": "https://www.liquity.org/bold"
+          }
+        ],
+        "evidence": "Liquity BOLD documentation describes protocol minting through borrower collateral markets, not an issuer-operated direct mint authority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Liquity docs",
+          "url": "https://docs.liquity.org/"
+        },
+        {
+          "label": "Liquity BOLD",
+          "url": "https://www.liquity.org/bold"
+        }
+      ],
+      "evidence": "Liquity BOLD documentation describes protocol minting through borrower collateral markets, not an issuer-operated direct mint authority.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "eth-lst",

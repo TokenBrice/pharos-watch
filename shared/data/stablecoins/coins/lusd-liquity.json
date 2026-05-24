@@ -71,6 +71,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity contracts; no privileged durable mint path is resolved in the curated review.",
+    "controls": [
+      {
+        "label": "Immutable protocol mint path",
+        "role": "other",
+        "authorityType": "none",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Liquity docs",
+            "url": "https://docs.liquity.org/"
+          },
+          {
+            "label": "Liquity BOLD",
+            "url": "https://www.liquity.org/bold"
+          }
+        ],
+        "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and governed by immutable protocol contracts rather than an issuer minter."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Liquity docs",
+          "url": "https://docs.liquity.org/"
+        },
+        {
+          "label": "Liquity BOLD",
+          "url": "https://www.liquity.org/bold"
+        }
+      ],
+      "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and governed by immutable protocol contracts rather than an issuer minter.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "canonical-bridge",
   "governanceQuality": "immutable-code",
   "infrastructures": [

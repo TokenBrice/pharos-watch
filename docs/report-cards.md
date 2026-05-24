@@ -37,16 +37,20 @@ Yield Intelligence source-risk evidence is not a report-card input in the curren
 
 Those reasons are documentation and handoff guards, not hidden penalties. Any future use of yield source-risk that affects Safety Score, Resilience, Dependency Risk, or the overall grade must ship as a report-card methodology change with the corresponding `docs/report-cards.md` and `docs/report-cards-timeline.md` updates.
 
+## Mint Authority Boundary
+
+Mint Authority review is descriptive and not scored in the current methodology. Detail pages may show reviewed mint path, authority posture, confidence, primary controls, and source links, or the missing state `Not reviewed by Pharos`; none of those fields affect Safety Score, raw report-card inputs, selector exclusions, or rankings. Any future use of mint authority data in Resilience, Decentralization, Dependency Risk, or overall grades requires a separate methodology/version change and timeline entry.
+
 ## Dimensions
 
 ### Base dimensions (weighted sum)
 
-| Dimension            | Weight | Source                                       | Scoring                                                                                                                                                                                                                    |
-| -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                 |
-| **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                              |
+| Dimension            | Weight | Source                                       | Scoring                                                                                                                                                                                                                                                                                                                          |
+| -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                       |
+| **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                    |
 | **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based penalty from combined chain infrastructure score |
-| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings              |
+| **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                    |
 
 ### Peg Stability (multiplier)
 
@@ -108,13 +112,13 @@ For tokenized RWA collateral, the custody model follows the ultimate reserve/leg
 
 Blacklist capability is reported descriptively only and does not affect the Resilience score.
 
-| Value    | Condition                                                                                                             |
-| -------- | --------------------------------------------------------------------------------------------------------------------- |
-| Yes      | `canBeBlacklisted: true` (explicit) or `governance === "centralized"`                                                 |
+| Value     | Condition                                                                                                                  |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Yes       | `canBeBlacklisted: true` (explicit) or `governance === "centralized"`                                                      |
 | Dilutable | Explicit `canBeBlacklisted: "dilutable"` override for uncapped admin mint authority without holder-balance freeze controls |
-| Possible | Explicit `canBeBlacklisted: "possible"` override for a direct token/vault freeze, blacklist, or pause surface         |
-| Upstream | Any reserve, backing, custody, or parent-asset path that can freeze or block redemptions upstream of the token itself |
-| No       | None of the above                                                                                                     |
+| Possible  | Explicit `canBeBlacklisted: "possible"` override for a direct token/vault freeze, blacklist, or pause surface              |
+| Upstream  | Any reserve, backing, custody, or parent-asset path that can freeze or block redemptions upstream of the token itself      |
+| No        | None of the above                                                                                                          |
 
 `"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` accepts `boolean | "possible" | "dilutable"`; `canBeBlacklistedSource` is required when the value is `"dilutable"`. The inherited tier is displayed as `Upstream` and covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and tracked parent-asset exposures regardless of weight. This is an any-reserve policy: once a reserve/backing/custody/parent path resolves to a freezeable upstream asset, it is classified as Upstream rather than Possible even if the matched slice is small. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
 
@@ -126,11 +130,11 @@ For coins with curated reserve compositions, collateral quality is computed as a
 
 Three reserve-related labels mean different things:
 
-| Label                    | Meaning                                                                                                                                                | Score impact                                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Reserve view             | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules                        |
+| Label                    | Meaning                                                                                                                                                | Score impact                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Reserve view             | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules                                     |
 | Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality                                         | Can replace curated collateral slices in the Resilience dimension and, when slices carry `coinId`, dependency links |
-| Redemption telemetry     | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status                                                            | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality |
+| Redemption telemetry     | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status                                                            | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality              |
 
 For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
 can use the 4-hourly live snapshot from `reserve_composition` instead of curated
@@ -236,13 +240,13 @@ Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty fo
 
 **Governance Quality Tiers:**
 
-| Tier               | Score | Default for GovernanceType | Examples                                               |
-| ------------------ | ----- | -------------------------- | ------------------------------------------------------ |
-| `immutable-code`   | 100   | — (must be explicit)       | LUSD, BOLD                                             |
-| `dao-governance`   | 85    | `decentralized`            | overrides: crvUSD, USDS, DAI, GHO, FRAX, DOLA          |
-| `multisig`         | 55    | `centralized-dependent`    | Most CeFi-dep coins without explicit override          |
-| `regulated-entity` | 40    | — (auto-promoted)          | Centralized issuers with verified regulatory oversight |
-| `single-entity`    | 20    | `centralized`              | USDT, USDC, PYUSD                                      |
+| Tier               | Score                       | Default for GovernanceType | Examples                                                                   |
+| ------------------ | --------------------------- | -------------------------- | -------------------------------------------------------------------------- |
+| `immutable-code`   | 100                         | — (must be explicit)       | LUSD, BOLD                                                                 |
+| `dao-governance`   | 85                          | `decentralized`            | overrides: crvUSD, USDS, DAI, GHO, FRAX, DOLA                              |
+| `multisig`         | 55                          | `centralized-dependent`    | Most CeFi-dep coins without explicit override                              |
+| `regulated-entity` | 40                          | — (auto-promoted)          | Centralized issuers with verified regulatory oversight                     |
+| `single-entity`    | 20                          | `centralized`              | USDT, USDC, PYUSD                                                          |
 | `wrapper`          | parent-derived, fallback 10 | — (must be explicit)       | yBOLD, sBOLD, sfrxUSD; unresolved wrappers fall back to syrupUSDC-style 10 |
 
 Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.

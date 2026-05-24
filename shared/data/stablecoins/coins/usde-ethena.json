@@ -206,6 +206,48 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "USDe minting is modeled as off-chain order/signature mediated authority with privileged mint surface already flagged as dilutable by Pharos.",
+    "controls": [
+      {
+        "label": "Off-chain order/signature mint authority",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethena mint and redeem docs",
+            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          },
+          {
+            "label": "Ethena trust assumptions",
+            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+          }
+        ],
+        "evidence": "Ethena mint/redeem documentation describes signed order flows and trust assumptions around minting; Pharos also flags USDe as dilutable from token source evidence."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena trust assumptions",
+          "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+        }
+      ],
+      "evidence": "Ethena mint/redeem documentation describes signed order flows and trust assumptions around minting; Pharos also flags USDe as dilutable from token source evidence.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",

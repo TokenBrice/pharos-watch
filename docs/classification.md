@@ -8,21 +8,21 @@ Each tracked stablecoin is defined in the checked-in per-coin data assets under 
 
 Three-tier system reflecting actual dependency on centralized infrastructure:
 
-| Tier | Label | Meaning | Examples |
-|------|-------|---------|----------|
-| `centralized` | CeFi | Fully centralized issuer, custody, and redemption | USDT, USDC, PYUSD, FDUSD |
+| Tier                    | Label    | Meaning                                                                                                               | Examples                                 |
+| ----------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `centralized`           | CeFi     | Fully centralized issuer, custody, and redemption                                                                     | USDT, USDC, PYUSD, FDUSD                 |
 | `centralized-dependent` | CeFi-Dep | Decentralized governance/mechanics but depends on centralized custody, off-chain collateral, or centralized exchanges | DAI, USDS, USDe, GHO, FRAX, crvUSD, sUSD |
-| `decentralized` | DeFi | Fully on-chain collateral, no centralized custody dependency | LUSD, BOLD, BEAN |
+| `decentralized`         | DeFi     | Fully on-chain collateral, no centralized custody dependency                                                          | LUSD, BOLD, BEAN                         |
 
 The key distinction for `centralized-dependent`: these protocols may have on-chain governance and smart contract mechanics, but they ultimately rely on off-chain t-bill deposits, centralized exchange positions (delta-neutral), or significant USDC/USDT collateral. Calling them "decentralized" would be misleading. For example, crvUSD's peg keepers use centralized stablecoins (USDC, USDT, USDP), and sUSD V3 added USDC as core collateral on Base.
 
 ### Backing
 
-| Value | Meaning |
-|-------|---------|
-| `rwa-backed` | Backed by real-world assets (fiat reserves, treasuries, gold) |
-| `crypto-backed` | Backed by on-chain crypto collateral |
-| `algorithmic` | Legacy / shadow-only — still a valid `BACKING_TYPE_VALUES` member but no longer assigned to any tracked coin; retained only for PSI shadow assets (see prose below) |
+| Value           | Meaning                                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rwa-backed`    | Backed by real-world assets (fiat reserves, treasuries, gold)                                                                                                       |
+| `crypto-backed` | Backed by on-chain crypto collateral                                                                                                                                |
+| `algorithmic`   | Legacy / shadow-only — still a valid `BACKING_TYPE_VALUES` member but no longer assigned to any tracked coin; retained only for PSI shadow assets (see prose below) |
 
 Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing bucket. Coins with programmatic peg controls are classified by their actual collateral base instead. Historical shadow assets kept only for PSI continuity can still carry legacy `algorithmic` metadata.
 
@@ -69,6 +69,28 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
 - `tags?: string[]` — freeform tag array for filtering and categorization
+
+### Mint Authority Taxonomy
+
+Mint Authority is a descriptive review taxonomy, not a Safety Score dimension. It focuses on who can create durable supply or alter minting paths through direct minters, minter admins, proxy/cap admins, facilitators, bridges, off-chain signer systems, governance, or wrapper inheritance. Missing data renders as `Not reviewed by Pharos`.
+
+Mint path labels:
+
+| Value                           | Meaning                                                                                                                                      |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `immutable-user-collateralized` | Users can mint only through immutable collateralized protocol rules; no privileged mint, cap, or upgrade path is resolved.                   |
+| `user-collateralized-governed`  | Users mint through protocol mechanics, but governance/admins can alter collateral modules, debt ceilings, rates, or related mint parameters. |
+| `issuer-direct-mint`            | Issuer/operator/minter can create durable supply directly, usually expected to be backed by off-chain reserves.                              |
+| `permissioned-minter`           | On-chain minter roles, registries, or allowlists can mint within authorization.                                                              |
+| `offchain-attested-minter`      | Minting depends on backend signatures, RFQ/order settlement, service roles, or off-chain validation.                                         |
+| `facilitator-bucket-mint`       | Approved facilitators/minters can mint within bucket or route capacity.                                                                      |
+| `amo-or-custodian-hybrid`       | AMOs, custodians, or strategy contracts can mint, move, or allocate supply under governance-defined constraints.                             |
+| `bridge-or-oft-synthetic`       | Destination supply depends on bridge, OFT, lockbox, messenger, or attestation routes.                                                        |
+| `m0-permissioned-minter`        | M0-specific approved minter/validator and extension-wrapper issuance semantics.                                                              |
+| `wrapped-or-variant-inherited`  | Wrapper, staking, savings, or variant asset inherits authority from a parent plus wrapper mechanics.                                         |
+| `unknown`                       | Not reviewed or insufficient evidence.                                                                                                       |
+
+Authority posture labels are descriptive bands only: `none-resolved`, `bounded-admin`, `partially-bounded-admin`, `concentrated-admin`, `unbounded-or-compromised`, and `unknown`. Do not color or rank these like report-card grades.
 
 ### Infrastructure Tagging
 

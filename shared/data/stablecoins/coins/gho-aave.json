@@ -84,6 +84,41 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "facilitator-bucket-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "GHO minting depends on DAO-approved facilitators and bucket capacity rather than unrestricted issuer minting.",
+    "controls": [
+      {
+        "label": "DAO-approved facilitator capacity",
+        "role": "facilitator",
+        "authorityType": "dao-governor",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Facilitator bucket capacity constrains minting.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Aave GHO facilitators",
+            "url": "https://aave.com/help/gho-stablecoin/facilitators"
+          }
+        ],
+        "evidence": "Aave documentation describes facilitators as DAO-approved entities that can mint and burn GHO within bucket capacity."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Aave GHO facilitators",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        }
+      ],
+      "evidence": "Aave documentation describes facilitators as DAO-approved entities that can mint and burn GHO within bucket capacity.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",

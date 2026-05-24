@@ -72,6 +72,7 @@ function buildQueryAvailability(
     flows: hasFlowData,
     blacklist: true,
     dependency: hasReportCardData,
+    mintAuthority: true,
   };
 }
 
@@ -114,7 +115,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     const reportCard = reportCardById.get(coin.id);
     const mcap = asset ? getCirculatingRaw(asset) : 0;
     return buildCoverageRow({
-      coin: coin as StablecoinMeta,
+      coin: coin as StablecoinMeta & Pick<StablecoinClientMeta, "mintAuthoritySummary">,
       marketCapUsd: mcap,
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,

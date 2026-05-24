@@ -95,6 +95,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USD1 is modeled as an issuer-backed stablecoin with issuer-operated mint authority pending deeper role verification.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USD1 website",
+            "url": "https://worldlibertyfinancial.com/usd1"
+          }
+        ],
+        "evidence": "World Liberty Financial presents USD1 as an issued dollar stablecoin rather than a permissionless collateral protocol."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USD1 website",
+          "url": "https://worldlibertyfinancial.com/usd1"
+        }
+      ],
+      "evidence": "World Liberty Financial presents USD1 as an issued dollar stablecoin rather than a permissionless collateral protocol.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

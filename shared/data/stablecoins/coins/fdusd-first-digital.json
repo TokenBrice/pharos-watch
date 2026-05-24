@@ -77,6 +77,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "FDUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "First Digital USD",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          }
+        ],
+        "evidence": "First Digital materials describe FDUSD as a fiat-backed issued stablecoin."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "First Digital USD",
+          "url": "https://www.firstdigitallabs.com/fdusd"
+        }
+      ],
+      "evidence": "First Digital materials describe FDUSD as a fiat-backed issued stablecoin.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

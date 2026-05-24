@@ -89,6 +89,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BUIDL share/token issuance is modeled as fund/transfer-agent operated authority rather than permissionless collateralized minting.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Securitize BUIDL",
+            "url": "https://securitize.io/blackrock/buidl"
+          }
+        ],
+        "evidence": "Securitize BUIDL materials describe issuance/redemption through the tokenized fund administration stack."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Securitize BUIDL",
+          "url": "https://securitize.io/blackrock/buidl"
+        }
+      ],
+      "evidence": "Securitize BUIDL materials describe issuance/redemption through the tokenized fund administration stack.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-top",
   "reserves": [

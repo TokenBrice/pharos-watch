@@ -244,10 +244,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/compare-types.ts` - CoinOption, ComparePreset
 - `src/lib/confidence.ts` - confidenceClass
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
-- `src/lib/contagion-layout.ts` - DEFAULT_NODE_LIMIT, GraphLink, GraphNode, HEIGHT, HUB_LABEL_FONT_SIZE, HubTier
+- `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
 - `src/lib/coverage-matrix-model.ts` - CoverageMatrixModel, CoverageMatrixModelInput, buildCoverageMatrixModel
-- ... 116 more files omitted; use `rg --files src/lib` for the full list.
+- ... 118 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -291,7 +291,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
 - `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
 - `src/components/command-palette.tsx` - CommandPalette
-- ... 329 more files omitted; use `rg --files src/components` for the full list.
+- ... 330 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -364,7 +364,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
 - `shared/lib/depeg-dews-version.ts`
-- `shared/lib/dependency-derivation.ts` - deriveDependencies, deriveEffectiveDependencies
+- `shared/lib/dependency-derivation.ts` - DependencyDerivationBaseSource, DependencyDerivationSource, DerivedDependencySet, deriveDependencies, deriveEffectiveDependencies, deriveEffectiveDependencySet
 - `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, buildDependencyGraphEdgesFromDependencies, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
 - `shared/lib/dews-config.ts` - DEWS_SIGNAL_DESCRIPTIONS, DEWS_SIGNAL_LABELS, DEWS_SIGNAL_SHORT_LABELS, DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS, DewsSignalKey
 - `shared/lib/digest-risk.ts` - ACTIVE_DEPEG_PROMPT_LIMIT, getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk
@@ -376,7 +376,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
 - `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
 - `shared/lib/filter-tags.ts` - COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, GRADE_FILTER_TAGS, OTHER_PEG_TAGS, getFilterTags, gradeMatchesFilter
-- ... 210 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 211 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -390,7 +390,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 21 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 21 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 17 keys
-- `shared/data/stablecoins/coins/apxusd-apyx.json` - 21 keys
+- `shared/data/stablecoins/coins/apxusd-apyx.json` - 22 keys
 - `shared/data/stablecoins/coins/apyusd-apyx.json` - 25 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 20 keys
 - `shared/data/stablecoins/coins/asusdf-astherus.json` - 23 keys
@@ -410,7 +410,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/bfusd-binance.json` - 23 keys
 - `shared/data/stablecoins/coins/bib01-backed.json` - 25 keys
 - `shared/data/stablecoins/coins/bnusd-balanced.json` - 21 keys
-- `shared/data/stablecoins/coins/bold-liquity.json` - 23 keys
+- `shared/data/stablecoins/coins/bold-liquity.json` - 24 keys
 - `shared/data/stablecoins/coins/brd-volpon.json` - 21 keys
 - `shared/data/stablecoins/coins/brl-b3.json` - 22 keys
 - `shared/data/stablecoins/coins/brl-itau.json` - 20 keys
@@ -685,6 +685,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 ## Validation and tooling
 
 - `scripts/__tests__/audit-dia-provider-poc.test.ts`
+- `scripts/__tests__/audit-mint-authority.test.ts`
 - `scripts/__tests__/audit-price-source-depth.test.ts`
 - `scripts/__tests__/audit-pricing-provider-config.test.ts`
 - `scripts/__tests__/blacklistability-review.test.ts`
@@ -709,6 +710,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/fixtures/sql-safety/worker/src/safe-safety-comment.ts` - buildSafeCommentQuery
 - `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
 - `scripts/__tests__/freeze-stablecoin.test.ts`
+- `scripts/__tests__/generate-dependency-coverage-audit.test.ts`
 - `scripts/__tests__/generate-markdown-exports.test.ts`
 - `scripts/__tests__/generate-public-datasets.test.ts`
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
@@ -734,7 +736,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/wait-for-workflow-job.test.ts`
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
-- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectCoin, readCanonicalClientFields, runCli, validateProjection
+- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectCoin, projectMintAuthoritySummary, readCanonicalClientFields, runCli, validateProjection
 - `scripts/ci/check-agent-doc-sync.mjs`
 - `scripts/ci/check-agent-skill-symlinks.mjs`
 - `scripts/ci/check-archetype-explainer-coverage.ts` - ArchetypeExplainerCheckResult, ArchetypeExplainerFinding, validateArchetypeExplainerCoverage
@@ -742,6 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-build-attribution.mjs`
 - `scripts/ci/check-classifier-sensitive-copy.mjs`
 - `scripts/ci/check-client-registry-imports.mjs`
-- `scripts/ci/check-critical-coverage.mjs` - getChangedFilesFromGit, isAllZeroSha, parseChangedFilesFromEnv, runCriticalCoverageCheck
-- `scripts/ci/check-cron-abort-contract.mjs` - main, scanCronAbortContract
-- ... 133 more files omitted; use `rg --files scripts` for the full list.
+- ... 137 more files omitted; use `rg --files scripts` for the full list.

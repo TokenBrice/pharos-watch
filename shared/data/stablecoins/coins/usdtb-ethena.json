@@ -73,6 +73,48 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDTB minting is modeled as Ethena issuer/backend-mediated authority pending deeper role and cap review.",
+    "controls": [
+      {
+        "label": "Off-chain order/signature mint authority",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethena mint and redeem docs",
+            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          },
+          {
+            "label": "Ethena trust assumptions",
+            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+          }
+        ],
+        "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena trust assumptions",
+          "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+        }
+      ],
+      "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

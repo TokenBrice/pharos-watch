@@ -2,6 +2,7 @@ import {
   Activity,
   ArrowUpDown,
   Droplets,
+  KeyRound,
   Landmark,
   LifeBuoy,
   Network,
@@ -55,6 +56,7 @@ export const FEATURE_ICON: Record<CoverageFeatureKey, typeof Activity> = {
   flows: ArrowUpDown,
   blacklist: ShieldBan,
   dependency: Network,
+  mintAuthority: KeyRound,
 };
 
 export const FEATURE_ACCENT_CLASSES: Record<
@@ -129,6 +131,13 @@ export const FEATURE_ACCENT_CLASSES: Record<
     chip: "border-frost-blue/24 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
     tile: "border-frost-blue/18 bg-frost-blue/6",
     title: "text-sky-800 dark:text-sky-100",
+  },
+  mintAuthority: {
+    icon: "text-lime-700 dark:text-lime-300",
+    countBar: "bg-lime-400/85",
+    chip: "border-lime-500/24 bg-lime-500/10 text-lime-800 dark:text-lime-200",
+    tile: "border-lime-500/18 bg-lime-500/6",
+    title: "text-lime-800 dark:text-lime-100",
   },
 };
 
@@ -403,6 +412,41 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
       bar: COVERAGE_GAP_BAR_CLASS,
     },
   },
+  mintAuthority: {
+    "no-privileged-mint": {
+      chip: "border-emerald-500/24 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    "governed-mint": {
+      chip: "border-sky-500/26 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+      bar: "bg-sky-400/85",
+      barText: "text-slate-950",
+    },
+    "multisig-mint": {
+      chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+      bar: "bg-violet-400/80",
+    },
+    "issuer-or-backend-mint": {
+      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/85",
+      barText: "text-slate-950",
+    },
+    "bridge-mint": {
+      chip: "border-cyan-500/28 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200",
+      bar: "bg-cyan-400/85",
+      barText: "text-slate-950",
+    },
+    "inherited-authority": {
+      chip: "border-slate-500/24 bg-slate-500/10 text-slate-700 dark:text-slate-200",
+      bar: "bg-slate-400/75",
+      barText: "text-slate-950",
+    },
+    unknown: {
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
+    },
+  },
 };
 
 export const AUTHORITATIVE_ACCENT = {
@@ -494,7 +538,8 @@ export type LegendCategory =
   | "yield"
   | "flows"
   | "blacklist"
-  | "dependency";
+  | "dependency"
+  | "mintAuthority";
 
 interface LegendItem {
   term: string;
@@ -534,6 +579,7 @@ const LEGEND_CATEGORY_LABELS: Record<LegendCategory, string> = {
   flows: "Flows",
   blacklist: "Blacklist Status",
   dependency: "Dependency",
+  mintAuthority: "Mint Authority",
 };
 
 const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
@@ -547,6 +593,7 @@ const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
   "flows",
   "blacklist",
   "dependency",
+  "mintAuthority",
 ] as const;
 
 // Map each per-feature legend category to its source feature key.
@@ -560,6 +607,7 @@ const FEATURE_KEY_BY_CATEGORY: Record<Exclude<LegendCategory, "general">, Covera
   flows: "flows",
   blacklist: "blacklist",
   dependency: "dependency",
+  mintAuthority: "mintAuthority",
 };
 
 // Assembled at module load: general entries + per-feature entries derived from

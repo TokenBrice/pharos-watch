@@ -112,6 +112,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDY issuance is modeled as Ondo issuer-operated authority rather than permissionless user collateralized minting.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ondo docs",
+            "url": "https://docs.ondo.finance/"
+          }
+        ],
+        "evidence": "Ondo documentation describes USDY as a tokenized note/stablecoin product issued through Ondo-controlled processes."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ondo docs",
+          "url": "https://docs.ondo.finance/"
+        }
+      ],
+      "evidence": "Ondo documentation describes USDY as a tokenized note/stablecoin product issued through Ondo-controlled processes.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [

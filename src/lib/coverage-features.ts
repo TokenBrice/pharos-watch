@@ -2,6 +2,7 @@ import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
 import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
 import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
+import { coverageFeature as mintAuthorityFeature } from "@/lib/coverage/mint-authority";
 import { coverageFeature as priceFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
@@ -107,6 +108,18 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     statusKinds: dependencyFeature.statusKinds,
     formatBreakdown: dependencyFeature.formatBreakdown,
   },
+  {
+    key: "mintAuthority",
+    label: "Mint Authority",
+    shortLabel: "Mint Auth",
+    description:
+      "Curated mint-authority review breadth by mint path. This is descriptive and not a Safety Score input.",
+    headlineCountLabel: "Reviewed authority",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with reviewed mint authority`,
+    headlineShareLabel: "Reviewed mint-authority market-cap reach",
+    statusKinds: mintAuthorityFeature.statusKinds,
+    formatBreakdown: mintAuthorityFeature.formatBreakdown,
+  },
 ] as const;
 
 export const COVERAGE_FEATURE_LEGEND_ITEMS: Record<CoverageFeatureKey, readonly CoverageLegendItem[]> = {
@@ -119,6 +132,7 @@ export const COVERAGE_FEATURE_LEGEND_ITEMS: Record<CoverageFeatureKey, readonly 
   flows: flowsFeature.legendItems,
   blacklist: blacklistFeature.legendItems,
   dependency: dependencyFeature.legendItems,
+  mintAuthority: mintAuthorityFeature.legendItems,
 };
 
 /**

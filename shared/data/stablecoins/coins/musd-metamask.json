@@ -18,6 +18,49 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "m0-permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "MUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+    "controls": [
+      {
+        "label": "M0 permissioned minter and validator rails",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ],
+      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "infrastructures": [
     "m0"
   ],

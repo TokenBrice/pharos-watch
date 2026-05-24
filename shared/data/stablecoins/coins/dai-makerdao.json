@@ -121,6 +121,40 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "DAI minting is primarily vault/module based, but Maker governance can authorize modules and ceilings that affect supply creation.",
+    "controls": [
+      {
+        "label": "Protocol governance/admin authority",
+        "role": "cap-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Maker core accounting docs",
+            "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+          }
+        ],
+        "evidence": "Maker core accounting documentation describes module authorization and accounting surfaces that govern DAI creation."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Maker core accounting docs",
+          "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+        }
+      ],
+      "evidence": "Maker core accounting documentation describes module authorization and accounting surfaces that govern DAI creation.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "canonical-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",

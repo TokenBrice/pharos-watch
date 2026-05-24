@@ -135,6 +135,40 @@
     "reviewer": "Codex metadata review",
     "reviewedAt": "2026-05-22"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "rUSD mint authority is modeled as Reservoir issuer/protocol-operated authority pending deeper role review.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          }
+        ],
+        "evidence": "Reservoir documentation describes rUSD issuance through protocol/issuer rails rather than immutable collateralized borrowing."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Reservoir docs",
+          "url": "https://docs.reservoir.xyz"
+        }
+      ],
+      "evidence": "Reservoir documentation describes rUSD issuance through protocol/issuer rails rather than immutable collateralized borrowing.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

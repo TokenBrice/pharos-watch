@@ -7,9 +7,10 @@
  *
  * The full per-coin asset is ~1.37 MiB (391 entries × ~50 fields). Client
  * surfaces read a curated subset of those fields for routing, labels,
- * filtering, classification, reserve coverage summaries, and portfolio
- * exposure. This generator drops fields that still belong on server-only
- * paths (`contracts`, `dependencies`, `blacklistabilityReview`,
+ * filtering, classification, reserve coverage summaries, mint-authority
+ * summaries, and portfolio exposure. This generator drops fields that still
+ * belong on server-only paths (`contracts`, `dependencies`,
+ * `blacklistabilityReview`, full mint-authority review evidence,
  * `featuredContent`, obituary prose, etc.) and emits an array with
  * deterministic key ordering.
  *
@@ -36,6 +37,7 @@ const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
+const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 
 /**
  * Read the canonical field allowlist from `shared/types/stablecoin-client-meta.ts`.
@@ -104,7 +106,98 @@ export function projectCoin(coin, clientFields) {
       slim[field] = coin[field];
     }
   }
+  const mintAuthoritySummary = projectMintAuthoritySummary(coin);
+  if (mintAuthoritySummary) {
+    slim[MINT_AUTHORITY_SUMMARY_FIELD] = mintAuthoritySummary;
+  }
   return slim;
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function pickPresent(source, fields) {
+  const target = {};
+  for (const field of fields) {
+    if (source[field] !== undefined) {
+      target[field] = source[field];
+    }
+  }
+  return target;
+}
+
+function appendSources(target, sources, seenUrls) {
+  if (!Array.isArray(sources)) {
+    return;
+  }
+  for (const source of sources) {
+    if (!isPlainObject(source) || typeof source.label !== "string" || typeof source.url !== "string") {
+      continue;
+    }
+    const key = source.url;
+    if (seenUrls.has(key)) {
+      continue;
+    }
+    seenUrls.add(key);
+    target.push({
+      label: source.label,
+      url: source.url,
+    });
+  }
+}
+
+export function projectMintAuthoritySummary(coin) {
+  const profile = coin?.mintAuthority;
+  if (!isPlainObject(profile)) {
+    return undefined;
+  }
+
+  const summary = pickPresent(profile, [
+    "mintPath",
+    "authorityPosture",
+    "confidence",
+    "summary",
+    "inheritedFrom",
+  ]);
+
+  const controls = Array.isArray(profile.controls)
+    ? profile.controls
+        .filter(isPlainObject)
+        .map((control) =>
+          pickPresent(control, [
+            "chain",
+            "address",
+            "label",
+            "role",
+            "authorityType",
+            "directMintAbility",
+            "threshold",
+            "signerCount",
+            "timelockDelaySec",
+            "capDescription",
+            "modulesOrGuardsStatus",
+          ]),
+        )
+        .filter((control) => Object.keys(control).length > 0)
+    : [];
+
+  if (controls.length > 0) {
+    summary.controls = controls;
+  }
+
+  const sources = [];
+  const seenUrls = new Set();
+  appendSources(sources, profile.review?.sources, seenUrls);
+  appendSources(sources, profile.sources, seenUrls);
+  for (const control of Array.isArray(profile.controls) ? profile.controls : []) {
+    appendSources(sources, control?.sources, seenUrls);
+  }
+  if (sources.length > 0) {
+    summary.sources = sources;
+  }
+
+  return summary;
 }
 
 export function validateProjection(slim, sourceCoin, index, clientFields) {

@@ -67,6 +67,40 @@
     "reviewer": "Codex Worker C",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "JPYT has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "controls": [
+      {
+        "label": "Privileged token mint/admin authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify Optimism contract source",
+            "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+          }
+        ],
+        "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify Optimism contract source",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+        }
+      ],
+      "evidence": "JPYT already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "stage1-l2",
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

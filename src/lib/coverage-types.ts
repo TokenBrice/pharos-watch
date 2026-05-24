@@ -9,7 +9,8 @@ export type CoverageFeatureKey =
   | "yield"
   | "flows"
   | "blacklist"
-  | "dependency";
+  | "dependency"
+  | "mintAuthority";
 
 export type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";
 

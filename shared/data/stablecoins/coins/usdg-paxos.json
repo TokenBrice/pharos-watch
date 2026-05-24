@@ -88,6 +88,40 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDG is an issuer-backed Global Dollar stablecoin; mint authority is modeled as issuer-operated until deeper role evidence is attached.",
+    "controls": [
+      {
+        "label": "Issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Global Dollar Network",
+            "url": "https://www.globaldollar.com/"
+          }
+        ],
+        "evidence": "Global Dollar materials describe USDG as an issued reserve-backed stablecoin rather than a permissionless CDP asset."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Global Dollar Network",
+          "url": "https://www.globaldollar.com/"
+        }
+      ],
+      "evidence": "Global Dollar materials describe USDG as an issued reserve-backed stablecoin rather than a permissionless CDP asset.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [

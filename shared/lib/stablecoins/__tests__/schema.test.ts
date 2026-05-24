@@ -12,6 +12,60 @@ const baseFlags = {
   navToken: false,
 };
 
+function makeCoin(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "fixture-usd",
+    name: "Fixture USD",
+    symbol: "FUSD",
+    flags: baseFlags,
+    ...overrides,
+  };
+}
+
+const mintAuthoritySource = {
+  label: "Contract docs",
+  url: "https://example.com/mint-authority",
+};
+
+function makeMintAuthority(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    mintPath: "issuer-direct-mint",
+    authorityPosture: "partially-bounded-admin",
+    confidence: "verified",
+    summary: "Issuer minting is controlled by a reviewed Safe.",
+    controls: [
+      {
+        chain: "ethereum",
+        address: "0x1234567890abcdef1234567890abcdef12345678",
+        label: "Issuer mint Safe",
+        role: "direct-minter",
+        authorityType: "safe",
+        directMintAbility: "direct",
+        threshold: 2,
+        signerCount: 3,
+        modulesOrGuardsStatus: "none-detected",
+        safe: {
+          owners: [
+            "0x1111111111111111111111111111111111111111",
+            "0x2222222222222222222222222222222222222222",
+            "0x3333333333333333333333333333333333333333",
+          ],
+          threshold: 2,
+          observedBlock: 123456,
+          source: "onchain",
+        },
+      },
+    ],
+    review: {
+      sources: [mintAuthoritySource],
+      evidence: "The verified contract source and Safe state identify the mint authority.",
+      reviewer: "Fixture Reviewer",
+      reviewedAt: "2026-05-24",
+    },
+    ...overrides,
+  };
+}
+
 describe("StablecoinMeta schema — frozen status", () => {
   it("accepts a well-formed frozen coin", () => {
     const json = [
@@ -184,6 +238,219 @@ describe("StablecoinMeta schema — blacklistability review", () => {
         reviewedAt: "2026-05-12",
       },
     }], "fixture")).toThrow(/sources/);
+  });
+});
+
+describe("StablecoinMeta schema — mint authority", () => {
+  it("accepts a verified Safe mint authority profile", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-safe",
+        mintAuthority: makeMintAuthority(),
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
+  it("requires verified and probable profiles to include a source link", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-source",
+        mintAuthority: makeMintAuthority({
+          review: {
+            sourceFreeRationale: "Internal review found no public source for this fixture.",
+            evidence: "The fixture intentionally omits a source link for confidence validation.",
+            reviewer: "Fixture Reviewer",
+            reviewedAt: "2026-05-24",
+          },
+        }),
+      }),
+    ], "fixture")).toThrow(/source link/);
+  });
+
+  it("requires privileged non-unknown profiles to include controls", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-controls",
+        mintAuthority: makeMintAuthority({
+          controls: [],
+        }),
+      }),
+    ], "fixture")).toThrow(/requires at least one control/);
+  });
+
+  it("validates Safe threshold and signer counts", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-threshold",
+        mintAuthority: makeMintAuthority({
+          controls: [
+            {
+              label: "Broken Safe",
+              role: "direct-minter",
+              authorityType: "safe",
+              directMintAbility: "direct",
+              threshold: 4,
+              signerCount: 3,
+              modulesOrGuardsStatus: "none-detected",
+              safe: {
+                owners: ["owner-1", "owner-2", "owner-3"],
+                threshold: 4,
+                observedBlock: 123456,
+                source: "onchain",
+              },
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).toThrow(/threshold/);
+  });
+
+  it("requires verified Safe controls to include modules or guards status", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-modules",
+        mintAuthority: makeMintAuthority({
+          controls: [
+            {
+              label: "Incomplete Safe",
+              role: "direct-minter",
+              authorityType: "safe",
+              directMintAbility: "direct",
+              threshold: 2,
+              signerCount: 3,
+              safe: {
+                owners: ["owner-1", "owner-2", "owner-3"],
+                threshold: 2,
+                observedBlock: 123456,
+                source: "onchain",
+              },
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).toThrow(/modulesOrGuardsStatus/);
+  });
+
+  it("caps unknown Safe module or guard status below probable confidence", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-unknown-modules",
+        mintAuthority: makeMintAuthority({
+          confidence: "probable",
+          controls: [
+            {
+              label: "Unresolved Safe",
+              role: "direct-minter",
+              authorityType: "safe",
+              directMintAbility: "direct",
+              modulesOrGuardsStatus: "unknown",
+              safe: {
+                source: "manual",
+              },
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).toThrow(/caps confidence/);
+  });
+
+  it("keeps none-resolved posture limited to non-privileged mint paths and controls", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-none",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          confidence: "verified",
+          controls: [
+            {
+              label: "Not actually passive",
+              role: "direct-minter",
+              authorityType: "contract",
+              directMintAbility: "can-authorize",
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved/);
+  });
+
+  it("keeps unknown mint paths paired with unknown posture unless evidence supports compromise", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-unknown",
+        mintAuthority: makeMintAuthority({
+          mintPath: "unknown",
+          authorityPosture: "bounded-admin",
+          confidence: "unknown",
+          controls: undefined,
+          review: {
+            sourceFreeRationale: "No public source was available for this fixture.",
+            evidence: "The fixture intentionally models an unknown mint authority review.",
+            reviewer: "Fixture Reviewer",
+            reviewedAt: "2026-05-24",
+          },
+        }),
+      }),
+    ], "fixture")).toThrow(/mintPath unknown/);
+  });
+
+  it("validates inherited mint authority references at catalog scope", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "parent-usd",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          controls: undefined,
+        }),
+      }),
+      makeCoin({
+        id: "wrapped-usd",
+        variantOf: "parent-usd",
+        variantKind: "savings-passthrough",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "parent-usd",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).not.toThrow();
+
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "other-usd" }),
+      makeCoin({
+        id: "missing-parent-wrapper",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "unknown",
+          confidence: "manual-review",
+          inheritedFrom: "ghost-usd",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/inheritedFrom/);
+  });
+
+  it("requires wrapper none-resolved posture to inherit from a none-resolved parent", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "admin-parent-usd",
+        mintAuthority: makeMintAuthority(),
+      }),
+      makeCoin({
+        id: "wrapped-admin-usd",
+        variantOf: "admin-parent-usd",
+        variantKind: "savings-passthrough",
+        mintAuthority: makeMintAuthority({
+          mintPath: "wrapped-or-variant-inherited",
+          authorityPosture: "none-resolved",
+          inheritedFrom: "admin-parent-usd",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/parent is none-resolved/);
   });
 });
 

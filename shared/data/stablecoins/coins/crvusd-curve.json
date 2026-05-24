@@ -103,6 +103,48 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "crvUSD combines user borrowing markets with governed/admin pegkeeper and parameter surfaces that can affect supply.",
+    "controls": [
+      {
+        "label": "Protocol governance/admin authority",
+        "role": "cap-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Curve crvUSD resources",
+            "url": "https://resources.curve.finance/crvusd/"
+          },
+          {
+            "label": "crvUSD contract source",
+            "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+          }
+        ],
+        "evidence": "Curve crvUSD resources and contract evidence show protocol minting plus admin/governed surfaces around pegkeeper and market configuration."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Curve crvUSD resources",
+          "url": "https://resources.curve.finance/crvusd/"
+        },
+        {
+          "label": "crvUSD contract source",
+          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+        }
+      ],
+      "evidence": "Curve crvUSD resources and contract evidence show protocol minting plus admin/governed surfaces around pegkeeper and market configuration.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "canonical-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",

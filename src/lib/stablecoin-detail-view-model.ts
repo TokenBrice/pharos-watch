@@ -68,11 +68,7 @@ import {
   type HeroDisplayValue,
 } from "@/lib/stablecoin-detail-hero-metrics";
 
-export type {
-  HeroBlacklistDisplay,
-  HeroDewsDisplay,
-  HeroDisplayValue,
-} from "@/lib/stablecoin-detail-hero-metrics";
+export type { HeroBlacklistDisplay, HeroDewsDisplay, HeroDisplayValue } from "@/lib/stablecoin-detail-hero-metrics";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -164,9 +160,280 @@ export type FeatureAvailabilitySnapshot = {
   hasBlacklist: boolean;
 };
 
+export type MintAuthorityDetailStatus = "reviewed" | "not-reviewed";
+
+export interface MintAuthorityDetailSourceViewModel {
+  label: string;
+  url: string;
+}
+
+export interface MintAuthorityDetailControlViewModel {
+  key: string;
+  label: string;
+  roleLabel: string;
+  authorityTypeLabel: string;
+  directMintAbilityLabel: string;
+  locationLabel: string;
+  thresholdLabel: string | null;
+  timelockLabel: string | null;
+  capDescription: string | null;
+  modulesOrGuardsLabel: string | null;
+}
+
+export interface MintAuthorityDetailViewModel {
+  status: MintAuthorityDetailStatus;
+  reviewLabel: string;
+  mintPathLabel: string;
+  authorityPostureLabel: string;
+  confidenceLabel: string;
+  summary: string;
+  inheritedFrom: string | null;
+  controls: MintAuthorityDetailControlViewModel[];
+  sources: MintAuthorityDetailSourceViewModel[];
+}
+
+type UnknownRecord = Record<string, unknown>;
+
+const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
+  status: "not-reviewed",
+  reviewLabel: "Not reviewed by Pharos",
+  mintPathLabel: "Unknown",
+  authorityPostureLabel: "Unknown",
+  confidenceLabel: "Not reviewed",
+  summary:
+    "Pharos has not published a mint authority review for this stablecoin yet. Unknown does not mean no privileged mint authority.",
+  inheritedFrom: null,
+  controls: [],
+  sources: [],
+};
+
+const MINT_PATH_LABELS: Record<string, string> = {
+  "immutable-user-collateralized": "Immutable user-collateralized",
+  "user-collateralized-governed": "User-collateralized, governed",
+  "issuer-direct-mint": "Issuer direct mint",
+  "permissioned-minter": "Permissioned minter",
+  "offchain-attested-minter": "Off-chain attested minter",
+  "facilitator-bucket-mint": "Facilitator bucket mint",
+  "amo-or-custodian-hybrid": "AMO or custodian hybrid",
+  "bridge-or-oft-synthetic": "Bridge or OFT synthetic",
+  "m0-permissioned-minter": "M0 permissioned minter",
+  "wrapped-or-variant-inherited": "Wrapped or inherited",
+  unknown: "Unknown",
+};
+
+const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
+  "none-resolved": "No privileged mint resolved",
+  "bounded-admin": "Bounded admin",
+  "partially-bounded-admin": "Partially bounded admin",
+  "concentrated-admin": "Concentrated admin",
+  "unbounded-or-compromised": "Unbounded or compromised",
+  unknown: "Unknown",
+};
+
+const CONFIDENCE_LABELS: Record<string, string> = {
+  verified: "Verified",
+  probable: "Probable",
+  "manual-review": "Manual review",
+  unknown: "Unknown",
+};
+
+const CONTROL_ROLE_LABELS: Record<string, string> = {
+  "direct-minter": "Direct minter",
+  "minter-admin": "Minter admin",
+  facilitator: "Facilitator",
+  "bucket-admin": "Bucket admin",
+  "cap-admin": "Cap admin",
+  "proxy-admin": "Proxy admin",
+  "bridge-admin": "Bridge admin",
+  timelock: "Timelock",
+  governor: "Governor",
+  "backend-signer": "Backend signer",
+  custodian: "Custodian",
+  wrapper: "Wrapper",
+  other: "Other",
+  unknown: "Unknown",
+};
+
+const AUTHORITY_TYPE_LABELS: Record<string, string> = {
+  safe: "Safe",
+  multisig: "Multisig",
+  eoa: "EOA",
+  timelock: "Timelock",
+  "dao-governor": "DAO governor",
+  contract: "Contract",
+  "issuer-backend": "Issuer backend",
+  bridge: "Bridge",
+  custodian: "Custodian",
+  none: "None",
+  unknown: "Unknown",
+};
+
+const DIRECT_MINT_ABILITY_LABELS: Record<string, string> = {
+  direct: "Direct",
+  "cap-limited": "Cap-limited",
+  "can-authorize": "Can authorize",
+  "upgrade-only": "Upgrade-only",
+  "parameter-only": "Parameter-only",
+  none: "None",
+  unknown: "Unknown",
+};
+
+const MODULES_OR_GUARDS_LABELS: Record<string, string> = {
+  "none-detected": "No modules or guards detected",
+  present: "Modules or guards present",
+  unknown: "Modules or guards unknown",
+  "not-applicable": "Not applicable",
+};
+
 function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
   const pegCurrency = coin.flags.pegCurrency;
   return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function labelFromMap(value: unknown, labels: Readonly<Record<string, string>>): string {
+  const key = stringValue(value);
+  if (!key) return "Unknown";
+  return (
+    labels[key] ??
+    key
+      .split("-")
+      .map((part) => {
+        const upper = part.toUpperCase();
+        if (["AMO", "DAO", "EOA", "M0", "OFT"].includes(upper)) return upper;
+        return `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`;
+      })
+      .join(" ")
+  );
+}
+
+function formatThreshold(threshold: number | null, signerCount: number | null): string | null {
+  if (threshold == null && signerCount == null) return null;
+  if (threshold != null && signerCount != null) return `${threshold}/${signerCount} threshold`;
+  if (threshold != null) return `${threshold} threshold`;
+  return `${signerCount} signers`;
+}
+
+function formatTimelock(seconds: number | null): string | null {
+  if (seconds == null || seconds < 0) return null;
+  if (seconds === 0) return "No timelock";
+  const days = seconds / DAY_SECONDS;
+  if (Number.isInteger(days) && days >= 1) return `${days}d timelock`;
+  const hours = seconds / 3600;
+  if (Number.isInteger(hours) && hours >= 1) return `${hours}h timelock`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes}m timelock`;
+}
+
+function shortenAddress(address: string): string {
+  if (address.length <= 18) return address;
+  return `${address.slice(0, 8)}...${address.slice(-6)}`;
+}
+
+function readSources(value: unknown): MintAuthorityDetailSourceViewModel[] {
+  if (!Array.isArray(value)) return [];
+  const sources: MintAuthorityDetailSourceViewModel[] = [];
+  const seen = new Set<string>();
+
+  for (const item of value) {
+    if (!isRecord(item)) continue;
+    const label = stringValue(item.label);
+    const url = stringValue(item.url);
+    if (!label || !url) continue;
+    const key = `${label}:${url}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sources.push({ label, url });
+  }
+
+  return sources;
+}
+
+function readMintAuthorityCandidate(coin: StablecoinMeta): UnknownRecord | null {
+  const maybeCoin = coin as StablecoinMeta & {
+    mintAuthoritySummary?: unknown;
+    mintAuthority?: unknown;
+  };
+  if (isRecord(maybeCoin.mintAuthoritySummary)) return maybeCoin.mintAuthoritySummary;
+  if (isRecord(maybeCoin.mintAuthority)) return maybeCoin.mintAuthority;
+  return null;
+}
+
+function buildMintAuthorityControlViewModel(
+  control: UnknownRecord,
+  index: number,
+): MintAuthorityDetailControlViewModel | null {
+  const label = stringValue(control.label);
+  if (!label) return null;
+  const chain = stringValue(control.chain);
+  const address = stringValue(control.address);
+  const safe = isRecord(control.safe) ? control.safe : null;
+  const threshold = numberValue(control.threshold) ?? numberValue(safe?.threshold);
+  const signerCount = numberValue(control.signerCount) ?? (Array.isArray(safe?.owners) ? safe.owners.length : null);
+  const locationLabel =
+    [chain, address ? shortenAddress(address) : null].filter(Boolean).join(" / ") || "No address published";
+
+  return {
+    key: `${label}:${chain ?? "no-chain"}:${address ?? index}`,
+    label,
+    roleLabel: labelFromMap(control.role, CONTROL_ROLE_LABELS),
+    authorityTypeLabel: labelFromMap(control.authorityType, AUTHORITY_TYPE_LABELS),
+    directMintAbilityLabel: labelFromMap(control.directMintAbility, DIRECT_MINT_ABILITY_LABELS),
+    locationLabel,
+    thresholdLabel: formatThreshold(threshold, signerCount),
+    timelockLabel: formatTimelock(numberValue(control.timelockDelaySec)),
+    capDescription: stringValue(control.capDescription),
+    modulesOrGuardsLabel: control.modulesOrGuardsStatus
+      ? labelFromMap(control.modulesOrGuardsStatus, MODULES_OR_GUARDS_LABELS)
+      : null,
+  };
+}
+
+export function buildMintAuthorityDetailViewModel(coin: StablecoinMeta): MintAuthorityDetailViewModel {
+  const candidate = readMintAuthorityCandidate(coin);
+  if (!candidate) return NOT_REVIEWED_MINT_AUTHORITY;
+
+  const summary = stringValue(candidate.summary);
+  if (!summary) return NOT_REVIEWED_MINT_AUTHORITY;
+
+  const review = isRecord(candidate.review) ? candidate.review : null;
+  const sources = [...readSources(candidate.sources), ...readSources(review?.sources)];
+  const seenSources = new Set<string>();
+  const dedupedSources = sources.filter((source) => {
+    const key = `${source.label}:${source.url}`;
+    if (seenSources.has(key)) return false;
+    seenSources.add(key);
+    return true;
+  });
+  const controls = Array.isArray(candidate.controls)
+    ? candidate.controls
+        .filter(isRecord)
+        .map(buildMintAuthorityControlViewModel)
+        .filter((control): control is MintAuthorityDetailControlViewModel => control !== null)
+    : [];
+
+  return {
+    status: "reviewed",
+    reviewLabel: "Reviewed by Pharos",
+    mintPathLabel: labelFromMap(candidate.mintPath, MINT_PATH_LABELS),
+    authorityPostureLabel: labelFromMap(candidate.authorityPosture, AUTHORITY_POSTURE_LABELS),
+    confidenceLabel: labelFromMap(candidate.confidence, CONFIDENCE_LABELS),
+    summary,
+    inheritedFrom: stringValue(candidate.inheritedFrom),
+    controls,
+    sources: dedupedSources,
+  };
 }
 
 function computePerformanceVsUsd1y(
@@ -295,9 +562,7 @@ function staleQueryFrom<T>(
   };
 }
 
-export function buildStaleQueryInputs(
-  queries: StablecoinDetailViewModelQueryInputs,
-): StablecoinDetailStaleQuery[] {
+export function buildStaleQueryInputs(queries: StablecoinDetailViewModelQueryInputs): StablecoinDetailStaleQuery[] {
   return [
     staleQueryFrom("stablecoins", queries.stablecoinList, (data) => !!data?.peggedAssets?.length),
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => !!data?.coins?.length),
@@ -368,6 +633,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   supplyError: unknown | null;
   staleQueries: StablecoinDetailStaleQuery[];
   verdict: StablecoinVerdict;
+  mintAuthority: MintAuthorityDetailViewModel;
 }
 
 export interface HeroTertiaryMetricViewModel {
@@ -541,12 +807,7 @@ export function buildStablecoinDetailHeroViewModel({
   const pegScoreAccent = buildPegScoreAccent(pegScoreResult);
   const liqAccent = buildLiquidityAccent(liquidityData);
   const dewsAccent = buildDewsAccent(stressSignal);
-  const limitedDepegCoverageNote = buildLimitedDepegCoverageNote(
-    coinData,
-    isNavToken,
-    pegScoreResult,
-    deviationBps,
-  );
+  const limitedDepegCoverageNote = buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps);
 
   const tertiaryMetrics: HeroTertiaryMetricViewModel[] = [
     {
@@ -724,9 +985,11 @@ export function buildStablecoinDetailViewModel({
   const variantParent = getClientVariantParent(id);
   const childVariants = getClientVariants(id);
   const reserves = supplemental.reserves.live ?? getReserves(coin);
-  const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
-    ? featureAvailability.stressSignal.band
-    : null;
+  const mintAuthority = buildMintAuthorityDetailViewModel(coin);
+  const stressBand =
+    featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
+      ? featureAvailability.stressSignal.band
+      : null;
   const verdict = deriveStablecoinVerdict({
     status: coin.status,
     reportCardGrade: reportCard?.overallGrade ?? null,
@@ -781,5 +1044,6 @@ export function buildStablecoinDetailViewModel({
     supplyError: supplyHistory.error,
     staleQueries: buildStaleQueryInputs(queries),
     verdict,
+    mintAuthority,
   };
 }

@@ -71,6 +71,40 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "USDU has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "controls": [
+      {
+        "label": "Privileged token mint/admin authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "BscScan contract source",
+            "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+          }
+        ],
+        "evidence": "USDU already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "BscScan contract source",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+        }
+      ],
+      "evidence": "USDU already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",

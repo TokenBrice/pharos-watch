@@ -16,6 +16,7 @@ import {
   FeaturedContentSchema,
   JurisdictionSchema,
   LaunchMilestoneSchema,
+  MintAuthorityProfileSchema,
   MicaProfileSchema,
   ProofOfReservesSchema,
   StablecoinFlagsSchema,
@@ -122,6 +123,10 @@ const StablecoinIdSchema = z.string().refine(isSlugLikeId, {
   message: "Invalid stablecoin id",
 });
 
+function isReadableStablecoinStatus(status: StablecoinMeta["status"]): boolean {
+  return status !== "pre-launch";
+}
+
 const obituarySchema = z.object({
   causeOfDeath: z.enum(CAUSE_OF_DEATH_VALUES),
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width date pattern; finite quantifiers, no backtracking risk.
@@ -154,6 +159,7 @@ const StablecoinMetaAssetSchemaShape = {
   links: z.array(StablecoinLinkSchema).optional(),
   jurisdiction: JurisdictionSchema.optional(),
   mica: MicaProfileSchema.optional(),
+  mintAuthority: MintAuthorityProfileSchema.optional(),
   contracts: z.array(ContractDeploymentSchema).optional(),
   tradedContracts: z.array(ContractDeploymentSchema).optional(),
   dependencies: z.array(DependencyWeightSchema).optional(),
@@ -253,7 +259,69 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
   }
 });
 
-export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[]> = z.array(StablecoinMetaAssetSchema);
+function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.RefinementCtx): void {
+  if (stablecoins.length < 2) {
+    return;
+  }
+
+  const catalogById = new Map(stablecoins.map((stablecoin) => [stablecoin.id, stablecoin]));
+
+  for (let index = 0; index < stablecoins.length; index += 1) {
+    const stablecoin = stablecoins[index]!;
+    const mintAuthority = stablecoin.mintAuthority;
+    if (mintAuthority == null) {
+      continue;
+    }
+
+    const inheritedFrom = mintAuthority.inheritedFrom;
+    if (inheritedFrom != null) {
+      const parent = catalogById.get(inheritedFrom);
+      if (parent == null || !isReadableStablecoinStatus(parent.status)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mintAuthority.inheritedFrom must reference an active or frozen tracked stablecoin",
+          path: [index, "mintAuthority", "inheritedFrom"],
+        });
+      }
+    }
+
+    if (mintAuthority.mintPath !== "wrapped-or-variant-inherited") {
+      continue;
+    }
+
+    if (inheritedFrom == null && stablecoin.variantOf == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "wrapped-or-variant-inherited mintAuthority requires inheritedFrom or variantOf",
+        path: [index, "mintAuthority", "inheritedFrom"],
+      });
+    }
+
+    if (inheritedFrom != null && stablecoin.variantOf != null && inheritedFrom !== stablecoin.variantOf) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "mintAuthority.inheritedFrom must match variantOf when both are present",
+        path: [index, "mintAuthority", "inheritedFrom"],
+      });
+    }
+
+    if (mintAuthority.authorityPosture !== "none-resolved") {
+      continue;
+    }
+
+    const parentId = inheritedFrom ?? stablecoin.variantOf;
+    const parent = parentId != null ? catalogById.get(parentId) : undefined;
+    if (parent?.mintAuthority?.authorityPosture !== "none-resolved") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "wrapped mintAuthority can use authorityPosture none-resolved only when the parent is none-resolved",
+        path: [index, "mintAuthority", "authorityPosture"],
+      });
+    }
+  }
+}
+
+export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[]> = z.array(StablecoinMetaAssetSchema).superRefine(refineMintAuthorityCatalog);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
 export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z.object({

@@ -77,6 +77,10 @@ describe("buildCoverageMatrixModel", () => {
           kind: "resolved-none",
           available: true,
         },
+        mintAuthority: {
+          kind: "unknown",
+          available: false,
+        },
       },
     });
     expect(model.sourceDepthProgress).toMatchObject({
@@ -143,5 +147,45 @@ describe("buildCoverageMatrixModel", () => {
     expect(dependencyKindById.get("usdc-circle")).toBe("upstream");
     expect(dependencyKindById.get("dai-makerdao")).toBe("dependent");
     expect(dependencyKindById.get("usdt-tether")).toBe("unmapped-gap");
+  });
+
+  it("passes client mint-authority summaries into coverage rows", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    expect(coin).toBeDefined();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [
+          {
+            id: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            circulating: { peggedUSD: 1_000 },
+          },
+        ],
+      } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource({ cards: [], dependencyGraph: { nodes: [], edges: [] } } as never),
+      activeStablecoins: [
+        {
+          ...coin!,
+          mintAuthoritySummary: {
+            mintPath: "issuer-direct-mint",
+            authorityPosture: "concentrated-admin",
+            confidence: "verified",
+            summary: "Issuer minter can create new supply.",
+          },
+        },
+      ],
+    });
+
+    expect(model.rows[0].statuses.mintAuthority).toMatchObject({
+      kind: "issuer-or-backend-mint",
+      available: true,
+    });
   });
 });

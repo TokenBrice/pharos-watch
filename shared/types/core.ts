@@ -98,6 +98,158 @@ export interface StablecoinLink {
   url: string;
 }
 
+export const MINT_AUTHORITY_MINT_PATH_VALUES = [
+  "immutable-user-collateralized",
+  "user-collateralized-governed",
+  "issuer-direct-mint",
+  "permissioned-minter",
+  "offchain-attested-minter",
+  "facilitator-bucket-mint",
+  "amo-or-custodian-hybrid",
+  "bridge-or-oft-synthetic",
+  "m0-permissioned-minter",
+  "wrapped-or-variant-inherited",
+  "unknown",
+] as const;
+export type MintAuthorityMintPath = (typeof MINT_AUTHORITY_MINT_PATH_VALUES)[number];
+
+export const MINT_AUTHORITY_POSTURE_VALUES = [
+  "none-resolved",
+  "bounded-admin",
+  "partially-bounded-admin",
+  "concentrated-admin",
+  "unbounded-or-compromised",
+  "unknown",
+] as const;
+export type MintAuthorityPosture = (typeof MINT_AUTHORITY_POSTURE_VALUES)[number];
+
+export const MINT_AUTHORITY_CONFIDENCE_VALUES = [
+  "verified",
+  "probable",
+  "manual-review",
+  "unknown",
+] as const;
+export type MintAuthorityConfidence = (typeof MINT_AUTHORITY_CONFIDENCE_VALUES)[number];
+
+export const MINT_AUTHORITY_CONTROL_ROLE_VALUES = [
+  "direct-minter",
+  "minter-admin",
+  "facilitator",
+  "bucket-admin",
+  "cap-admin",
+  "proxy-admin",
+  "bridge-admin",
+  "timelock",
+  "governor",
+  "backend-signer",
+  "custodian",
+  "wrapper",
+  "other",
+  "unknown",
+] as const;
+export type MintAuthorityControlRole = (typeof MINT_AUTHORITY_CONTROL_ROLE_VALUES)[number];
+
+export const MINT_AUTHORITY_TYPE_VALUES = [
+  "safe",
+  "multisig",
+  "eoa",
+  "timelock",
+  "dao-governor",
+  "contract",
+  "issuer-backend",
+  "bridge",
+  "custodian",
+  "none",
+  "unknown",
+] as const;
+export type MintAuthorityType = (typeof MINT_AUTHORITY_TYPE_VALUES)[number];
+
+export const MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES = [
+  "direct",
+  "cap-limited",
+  "can-authorize",
+  "upgrade-only",
+  "parameter-only",
+  "none",
+  "unknown",
+] as const;
+export type MintAuthorityDirectMintAbility = (typeof MINT_AUTHORITY_DIRECT_MINT_ABILITY_VALUES)[number];
+
+export const MINT_AUTHORITY_SAFE_SOURCE_VALUES = ["onchain", "safe-api", "manual"] as const;
+export type MintAuthoritySafeSource = (typeof MINT_AUTHORITY_SAFE_SOURCE_VALUES)[number];
+
+export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
+  "none-detected",
+  "present",
+  "unknown",
+  "not-applicable",
+] as const;
+export type MintAuthorityModulesOrGuardsStatus =
+  (typeof MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES)[number];
+
+export interface MintAuthoritySafeState {
+  version?: string;
+  owners?: string[];
+  threshold?: number;
+  enabledModules?: string[];
+  guard?: string | null;
+  moduleGuard?: string | null;
+  fallbackHandler?: string | null;
+  observedBlock?: number;
+  source: MintAuthoritySafeSource;
+}
+
+export interface MintAuthorityRouteChecks {
+  lockboxOrEscrow?: string;
+  trustedPeerOrRemote?: string;
+  attestorQuorum?: string;
+  signingModel?: string;
+  rateLimits?: string;
+  caps?: string;
+  pausersAdminsUpgraders?: string;
+  onchainAmountBounds?: string;
+  unsupportedReason?: string;
+}
+
+export interface MintAuthorityControl {
+  chain?: string;
+  address?: string;
+  label: string;
+  role: MintAuthorityControlRole;
+  authorityType: MintAuthorityType;
+  directMintAbility: MintAuthorityDirectMintAbility;
+  threshold?: number;
+  signerCount?: number;
+  timelockDelaySec?: number;
+  capDescription?: string;
+  canRaiseCap?: boolean | "unknown";
+  modulesOrGuardsStatus?: MintAuthorityModulesOrGuardsStatus;
+  safe?: MintAuthoritySafeState;
+  routeChecks?: MintAuthorityRouteChecks;
+  bypassSurfaces?: string[];
+  sources?: StablecoinLink[];
+  evidence?: string;
+}
+
+export interface MintAuthorityReview {
+  sources?: StablecoinLink[];
+  sourceFreeRationale?: string;
+  evidence: string;
+  reviewer: string;
+  reviewedAt: string;
+  unresolvedQuestions?: string[];
+}
+
+export interface MintAuthorityProfile {
+  mintPath: MintAuthorityMintPath;
+  authorityPosture: MintAuthorityPosture;
+  confidence: MintAuthorityConfidence;
+  summary: string;
+  inheritedFrom?: string;
+  controls?: MintAuthorityControl[];
+  review: MintAuthorityReview;
+}
+
 export type BlacklistabilityStatus = boolean | "possible" | "dilutable";
 export type BlacklistabilityReviewStatus = BlacklistabilityStatus | "inherited";
 
@@ -321,6 +473,7 @@ export interface StablecoinMeta {
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
   mica?: MicaProfile;
+  mintAuthority?: MintAuthorityProfile;
   contracts?: ContractDeployment[];
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];

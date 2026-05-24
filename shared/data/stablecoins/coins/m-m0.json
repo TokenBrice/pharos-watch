@@ -18,6 +18,49 @@
     "reviewer": "Opus med-confidence verification",
     "reviewedAt": "2026-05-23"
   },
+  "mintAuthority": {
+    "mintPath": "m0-permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "M minting depends on the M0 permissioned minter/validator architecture rather than a public collateralized CDP.",
+    "controls": [
+      {
+        "label": "M0 permissioned minter and validator rails",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ],
+      "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "infrastructures": [
     "m0"
   ],

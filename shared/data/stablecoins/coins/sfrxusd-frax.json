@@ -96,6 +96,48 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "sfrxUSD is a savings wrapper whose base mint authority is inherited from frxUSD plus wrapper share accounting.",
+    "inheritedFrom": "frxusd-frax",
+    "controls": [
+      {
+        "label": "Wrapper/share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          }
+        ],
+        "evidence": "sfrxUSD documentation describes a savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+        }
+      ],
+      "evidence": "sfrxUSD documentation describes a savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",

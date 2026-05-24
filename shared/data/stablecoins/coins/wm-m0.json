@@ -86,6 +86,48 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "wM is a wrapped M asset; base mint authority is inherited from M0 M plus wrapper accounting.",
+    "inheritedFrom": "m-m0",
+    "controls": [
+      {
+        "label": "Wrapper/share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          }
+        ],
+        "evidence": "M0 extension documentation describes wrappers/extensions around M; this row inherits base M mint authority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        }
+      ],
+      "evidence": "M0 extension documentation describes wrappers/extensions around M; this row inherits base M mint authority.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",

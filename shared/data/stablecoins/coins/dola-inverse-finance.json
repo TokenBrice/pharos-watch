@@ -84,6 +84,40 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "DOLA has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "controls": [
+      {
+        "label": "Privileged token mint/admin authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Etherscan contract source",
+            "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+          }
+        ],
+        "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Etherscan contract source",
+          "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+        }
+      ],
+      "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
+      "reviewer": "Codex mint-authority MVP",
+      "reviewedAt": "2026-05-24"
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "governanceQuality": "dao-governance",
   "reserves": [
