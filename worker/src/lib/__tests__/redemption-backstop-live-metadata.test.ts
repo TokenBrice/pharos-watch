@@ -460,11 +460,27 @@ describe("readRedemptionBackstopLiveMetadata", () => {
   });
 
   it.each([
-    ["missing", undefined, "Live redemption freshness is verified-source-timestamp without sourceTimestamp"],
-    ["malformed", "1700000000", "Live redemption source timestamp is malformed and was ignored"],
+    [
+      "missing",
+      undefined,
+      "Live redemption freshness is verified-source-timestamp without sourceTimestamp",
+      "Live redemption capacity claims verified source freshness without a source timestamp",
+    ],
+    [
+      "malformed",
+      "1700000000",
+      "Live redemption source timestamp is malformed and was ignored",
+      "Live redemption capacity claims verified source freshness without a source timestamp",
+    ],
+    [
+      "future-dated",
+      now + 601,
+      "Live redemption source timestamp is 601s in the future and was ignored",
+      "Live redemption capacity claims verified source freshness with a future source timestamp",
+    ],
   ])(
     "fails closed when verified redemption freshness has a %s source timestamp",
-    (_label, redemptionSourceTimestamp, expectedWarning) => {
+    (_label, redemptionSourceTimestamp, expectedWarning, expectedReason) => {
       const redemption: Record<string, unknown> = {
         capacityUsd: 1_000_000,
         capacityKind: "live-direct-bounded",
@@ -488,9 +504,7 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       expect(metadata.freshnessKind).toBe("verified-source-timestamp");
       expect(metadata.sourceTimestamp).toBeNull();
       expect(metadata.canUseCapacity).toBe(false);
-      expect(metadata.capacityReason).toBe(
-        "Live redemption capacity claims verified source freshness without a source timestamp",
-      );
+      expect(metadata.capacityReason).toBe(expectedReason);
       expect(metadata.capacityNotes).toContain(expectedWarning);
     },
   );

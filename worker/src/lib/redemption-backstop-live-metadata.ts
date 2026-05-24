@@ -192,6 +192,7 @@ const SCOREABLE_REDEMPTION_CAPACITY_KINDS = new Set<RedemptionLiveCapacityKind>(
   "live-proxy-validated",
   "documented-bound",
 ]);
+const MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
 
 function isRedemptionFreshnessAllowed(
   stablecoinId: string,
@@ -252,7 +253,7 @@ function resolveCapacityReason(args: {
   capacityTelemetryInvalid: boolean;
   capacityKind: RedemptionLiveCapacityKind | null;
   freshnessKind: RedemptionLiveFreshnessKind | null;
-  verifiedSourceTimestampMissing: boolean;
+  verifiedSourceTimestampIssue: "missing" | "future" | null;
   stablecoinId: string;
   canUseDegradedSyncCapacity: boolean;
 }): string | null {
@@ -269,8 +270,11 @@ function resolveCapacityReason(args: {
   if (args.capacityKind && !SCOREABLE_REDEMPTION_CAPACITY_KINDS.has(args.capacityKind)) {
     return `Live redemption capacity kind ${args.capacityKind} is display-only for scoring`;
   }
-  if (args.freshnessKind === "verified-source-timestamp" && args.verifiedSourceTimestampMissing) {
+  if (args.freshnessKind === "verified-source-timestamp" && args.verifiedSourceTimestampIssue === "missing") {
     return "Live redemption capacity claims verified source freshness without a source timestamp";
+  }
+  if (args.freshnessKind === "verified-source-timestamp" && args.verifiedSourceTimestampIssue === "future") {
+    return "Live redemption capacity claims verified source freshness with a future source timestamp";
   }
   if (!isRedemptionFreshnessAllowed(args.stablecoinId, args.freshnessKind, args.hasScoringEligibleFreshness)) {
     return args.freshnessKind === "unverified"
@@ -394,8 +398,18 @@ export function readRedemptionBackstopLiveMetadata(
   const minRedeemUsd = parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
     min: 0,
   });
-  const verifiedSourceTimestampMissing =
-    freshnessKind === "verified-source-timestamp" && sourceTimestamp.value == null;
+  const sourceTimestampFuture =
+    sourceTimestamp.value != null &&
+    sourceTimestamp.value > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
+  const validSourceTimestamp = sourceTimestampFuture ? null : sourceTimestamp.value;
+  const verifiedSourceTimestampIssue =
+    freshnessKind === "verified-source-timestamp"
+      ? sourceTimestampFuture
+        ? "future"
+        : validSourceTimestamp == null
+          ? "missing"
+          : null
+      : null;
   const hasNestedCapacityTelemetry =
     redemptionTelemetryMalformed || hasTelemetryValue(nestedCapacityUsd) || hasTelemetryValue(nestedCapacityRatio);
   const hasLegacyCapacityTelemetry = hasTelemetryValue(legacyCapacityUsd) || hasTelemetryValue(legacyCapacityRatio);
@@ -431,7 +445,12 @@ export function readRedemptionBackstopLiveMetadata(
   const routeStatusMissingSource = routeStatus != null && routeStatusSource == null;
   const shouldUseSourcedRouteStatus = routeStatus != null && !routeStatusMissingSource;
   const shouldPreserveUnsourcedUnknownRouteStatus = routeStatus === "unknown" && routeStatusMissingSource;
-  if (verifiedSourceTimestampMissing && !sourceTimestamp.invalid) {
+  if (sourceTimestampFuture) {
+    telemetryWarnings.push(
+      `Live redemption source timestamp is ${sourceTimestamp.value! - now}s in the future and was ignored`,
+    );
+  }
+  if (verifiedSourceTimestampIssue === "missing" && !sourceTimestamp.invalid) {
     telemetryWarnings.push("Live redemption freshness is verified-source-timestamp without sourceTimestamp");
   }
   if (routeStatusMissingSource && routeStatus === "unknown") {
@@ -456,7 +475,7 @@ export function readRedemptionBackstopLiveMetadata(
     capacityTelemetryInvalid,
     capacityKind,
     freshnessKind,
-    verifiedSourceTimestampMissing,
+    verifiedSourceTimestampIssue,
     stablecoinId,
     canUseDegradedSyncCapacity,
   });
@@ -503,7 +522,7 @@ export function readRedemptionBackstopLiveMetadata(
         : legacyCapacityRatio.value,
     capacityKind,
     freshnessKind,
-    sourceTimestamp: sourceTimestamp.value,
+    sourceTimestamp: validSourceTimestamp,
     sourceUrls: coerceUrlArray(redemptionTelemetry.sourceUrls),
     settlementDelaySec: settlementDelaySec.value,
     queueDepthUsd: queueDepthUsd.value,
