@@ -5,7 +5,7 @@ export const entry: ChangelogEntry = {
   headline:
     "Design-system overhaul lands, the MiCA tracker goes live, and the yield page gets a ground-up rebuild.",
   fieldNotes:
-    "The busiest week in a while, and most of it is about how Pharos reads. A foundational design-system pass reset the tokens, contrast, and motion under every surface; the yield page was torn down and rebuilt around a draggable risk budget; and two new front doors opened — a MiCA compliance tracker and a Learn hub that connects case studies to the charts. Coverage crossed 399 coins, and the pipeline grew quieter underneath.",
+    "The busiest week in a while, and most of it is about how Pharos reads. A foundational design-system pass reset the tokens, contrast, and motion under every surface; the yield page was torn down and rebuilt around a draggable risk budget; and two new front doors opened — a MiCA compliance tracker and a Learn hub that connects case studies to the charts. Coverage crossed 399 coins, and a late-week push hardened redemption backstops and added a Mint Authority view.",
   summary: [
     {
       label: "Design system & UX overhaul",
@@ -52,13 +52,26 @@ export const entry: ChangelogEntry = {
         "DEX price sanity gates and Carbon normalization make DexScreener augmentation opt-in (pricing v6.05), Liquidity Score v5.7 adds price-gating, plus a cron staleness watchdog and an API-key rate-limit fallback.",
     },
     {
+      label: "Redemption backstop coverage",
+      tag: "coverage",
+      href: "/methodology/#safety-scores-methodology",
+      description:
+        "Redemption backstop scoring (v4.04) gains documented route sources, source-support validation, and expanded confidence scoring, with a coverage matrix that surfaces outage and degraded states; report cards degrade on redemption outages, the data is exposed in stablecoin JSON-LD, and malformed telemetry fails closed.",
+    },
+    {
+      label: "Mint Authority transparency",
+      tag: "feature",
+      description:
+        "A new Mint Authority section on coin pages surfaces who can mint and control supply — control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues — with coverage expanded across the top stablecoins.",
+    },
+    {
       label: "Broader coverage",
       tag: "coverage",
       description:
         "The tracked universe reaches 399 coins with FUSD, sDOLA, GLDT, and Ondo's iAUON and sLVON added and pre-launch gynUSD joining, while reserve adapters climb to 57 and live-reserve coverage to 267.",
     },
   ],
-  stats: { totalCommits: 369 },
+  stats: { totalCommits: 448 },
   commits: [
     { hash: "9d47494f", message: "Update PharosWatchBot safety reason copy" },
     { hash: "3f8e2be9", message: "Improve command palette search ranking" },
