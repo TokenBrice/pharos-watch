@@ -80,7 +80,11 @@ export function SupplyMovesCard(): React.JSX.Element {
       ) : (
         <>
           {peak && (
-            <div className="flex items-baseline gap-2.5">
+            <Link
+              href={buildStablecoinUrl(peak.id)}
+              className="pharos-focus-ring -mx-1 flex items-center gap-2.5 rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-muted/50"
+              aria-label={`${peak.symbol} supply moved ${formatPct(peak.pctChange)} over 7 days`}
+            >
               <span
                 className={`font-mono text-5xl font-bold tabular-nums tracking-tight ${
                   peak.pctChange >= 0
@@ -90,23 +94,27 @@ export function SupplyMovesCard(): React.JSX.Element {
               >
                 {formatPct(peak.pctChange)}
               </span>
-              {logoMap[peak.id] && (
-                <Image
-                  src={logoMap[peak.id]}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 self-center rounded-full"
-                  aria-hidden
-                />
-              )}
-              <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                <span className="font-semibold text-foreground/90">
-                  {peak.symbol}
-                </span>{" "}
-                · peak 7d
+              <span className="flex min-w-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                {logoMap[peak.id] && (
+                  <Image
+                    src={logoMap[peak.id]}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 shrink-0 rounded-full"
+                    aria-hidden
+                  />
+                )}
+                <span className="flex min-w-0 flex-col justify-center leading-none">
+                  <span className="truncate text-sm font-bold tracking-tight text-foreground/90">
+                    {peak.symbol}
+                  </span>
+                  <span className="mt-1 whitespace-nowrap text-[10px] tracking-wider">
+                    Peak 7d
+                  </span>
+                </span>
               </span>
-            </div>
+            </Link>
           )}
           <div className="mt-auto flex flex-col gap-3">
             <MoverList
