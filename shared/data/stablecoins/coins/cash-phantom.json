@@ -48,6 +48,97 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "CASH is a Phantom/Bridge Open Issuance Solana stablecoin. The Token-2022 mint exposes separate mint, freeze, permanent-delegate, confidential-transfer, and close authority keys; signer custody remains unresolved.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7",
+        "label": "CASH Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Phantom CASH docs",
+            "url": "https://docs.phantom.com/cash"
+          },
+          {
+            "label": "Bridge Open Issuance docs",
+            "url": "https://apidocs.bridge.xyz/platform/issuance"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Finalized Solana RPC at slot 421905275 returned this address as mintAuthority for mint CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH. RPC getAccountInfo for the authority returned null, so custody/PDA identity is unresolved."
+      },
+      {
+        "chain": "solana",
+        "address": "E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw",
+        "label": "CASH permanent delegate / close / confidential-transfer authority",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Finalized Solana RPC returned this address as mintCloseAuthority.closeAuthority, permanentDelegate.delegate, and confidentialTransferMint.authority."
+      },
+      {
+        "chain": "solana",
+        "address": "AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5",
+        "label": "CASH freeze authority",
+        "role": "other",
+        "authorityType": "unknown",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "sources": [
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Finalized Solana RPC returned this address as freezeAuthority."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Bridge token metadata",
+          "url": "https://token-metadata.bridge.xyz/solana/cash.json"
+        },
+        {
+          "label": "Bridge Open Issuance overview",
+          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
+        },
+        {
+          "label": "Phantom Cash help",
+          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ],
+      "evidence": "Bridge-hosted token metadata identifies the CASH mint, and Phantom/Bridge materials identify CASH as a Solana stablecoin launched through Bridge Open Issuance. Solana RPC resolves the current Token-2022 authority fields.",
+      "reviewer": "Codex mint-authority follow-up non-EVM lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Map mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 to a Bridge/Phantom signer, PDA, multisig, or MPC policy.",
+        "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions."
+      ]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-regulated",
   "reserves": [
