@@ -13,12 +13,12 @@
     },
     {
       "key": "stablecoin-registry-data",
-      "totalBytes": 1326793,
+      "totalBytes": 1478579,
       "chunkCount": 1
     },
     {
       "key": "methodology-version",
-      "totalBytes": 1235278,
+      "totalBytes": 1236025,
       "chunkCount": 10
     },
     {
@@ -33,7 +33,7 @@
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 721374,
+      "totalBytes": 806774,
       "chunkCount": 1
     },
     {
