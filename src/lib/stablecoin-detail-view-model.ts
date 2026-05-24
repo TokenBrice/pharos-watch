@@ -164,6 +164,8 @@ export type FeatureAvailabilitySnapshot = {
 
 export type MintAuthorityDetailStatus = "reviewed" | "not-reviewed";
 
+export type MintAuthorityPostureTone = "minimized" | "neutral" | "elevated";
+
 export interface MintAuthorityDetailSourceViewModel {
   label: string;
   url: string;
@@ -189,7 +191,9 @@ export interface MintAuthorityDetailViewModel {
   reviewLabel: string;
   mintPathLabel: string;
   authorityPostureLabel: string;
+  authorityPostureTone: MintAuthorityPostureTone;
   confidenceLabel: string;
+  confidenceVerified: boolean;
   summary: string;
   inheritedFrom: string | null;
   controls: MintAuthorityDetailControlViewModel[];
@@ -213,7 +217,9 @@ const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   reviewLabel: "Not reviewed by Pharos",
   mintPathLabel: "Unknown",
   authorityPostureLabel: "Unknown",
+  authorityPostureTone: "neutral",
   confidenceLabel: "Not reviewed",
+  confidenceVerified: false,
   summary:
     "Pharos has not published a mint authority review for this stablecoin yet. Unknown does not mean no privileged mint authority.",
   inheritedFrom: null,
@@ -242,6 +248,15 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "concentrated-admin": "Concentrated admin",
   "unbounded-or-compromised": "Unbounded or compromised",
   unknown: "Unknown",
+};
+
+const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
+  "none-resolved": "minimized",
+  "bounded-admin": "minimized",
+  "partially-bounded-admin": "neutral",
+  "concentrated-admin": "elevated",
+  "unbounded-or-compromised": "elevated",
+  unknown: "neutral",
 };
 
 const CONFIDENCE_LABELS: Record<string, string> = {
@@ -384,6 +399,11 @@ function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): UnknownReco
   return null;
 }
 
+function postureToneFrom(value: unknown): MintAuthorityPostureTone {
+  const key = stringValue(value);
+  return (key ? AUTHORITY_POSTURE_TONES[key] : undefined) ?? "neutral";
+}
+
 function formatModulesOrGuardsLabel(authorityType: unknown, modulesOrGuardsStatus: unknown): string | null {
   const authorityTypeKey = stringValue(authorityType);
   const modulesOrGuardsStatusKey = stringValue(modulesOrGuardsStatus);
@@ -455,7 +475,9 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     reviewLabel: "Reviewed by Pharos",
     mintPathLabel: labelFromMap(candidate.mintPath, MINT_PATH_LABELS),
     authorityPostureLabel: labelFromMap(candidate.authorityPosture, AUTHORITY_POSTURE_LABELS),
+    authorityPostureTone: postureToneFrom(candidate.authorityPosture),
     confidenceLabel: labelFromMap(candidate.confidence, CONFIDENCE_LABELS),
+    confidenceVerified: stringValue(candidate.confidence) === "verified",
     summary,
     inheritedFrom: stringValue(candidate.inheritedFrom),
     controls,

@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { CircleCheck, CircleDashed, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,8 +8,15 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import type {
   MintAuthorityDetailControlViewModel,
   MintAuthorityDetailViewModel,
+  MintAuthorityPostureTone,
 } from "@/lib/stablecoin-detail-view-model";
 import { cn } from "@/lib/utils";
+
+const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
+  minimized: "bg-[var(--brand-accent)]",
+  neutral: "bg-[var(--text-tertiary)]",
+  elevated: "bg-[var(--severity-mild)]",
+};
 
 function DetailBadge({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -36,9 +43,11 @@ function ControlMeta({ label, value }: { label: string; value: string | null }) 
 function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailControlViewModel }) {
   const locationClassName =
     "max-w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 font-mono text-[11px] text-muted-foreground";
+  // Setup only earns the meta slot when it adds detail beyond the authority type already shown in the subtitle.
+  const setupValue = control.securitySetupLabel === control.authorityTypeLabel ? null : control.securitySetupLabel;
 
   return (
-    <li className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+    <li className="px-3 py-2.5">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">{control.label}</p>
@@ -65,7 +74,7 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
         <ControlMeta label="Mint" value={control.directMintAbilityLabel} />
-        <ControlMeta label="Setup" value={control.securitySetupLabel} />
+        <ControlMeta label="Setup" value={setupValue} />
         <ControlMeta label="Delay" value={control.timelockLabel} />
         <ControlMeta label="Safe modules/guard" value={control.modulesOrGuardsLabel} />
       </div>
@@ -89,8 +98,17 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-1.5">
           <DetailBadge>{profile.mintPathLabel}</DetailBadge>
-          <DetailBadge>{profile.authorityPostureLabel}</DetailBadge>
-          <DetailBadge>Confidence: {profile.confidenceLabel}</DetailBadge>
+          <DetailBadge>
+            <span
+              aria-hidden
+              className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[profile.authorityPostureTone])}
+            />
+            {profile.authorityPostureLabel}
+          </DetailBadge>
+          <DetailBadge>
+            {profile.confidenceVerified ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
+            Confidence: {profile.confidenceLabel}
+          </DetailBadge>
           {profile.inheritedFrom ? <DetailBadge>Inherited from {profile.inheritedFrom}</DetailBadge> : null}
         </div>
 
@@ -99,7 +117,7 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
         {profile.controls.length > 0 ? (
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Primary controls</p>
-            <ul className="space-y-2">
+            <ul className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-muted/15">
               {profile.controls.map((control) => (
                 <MintAuthorityControlRow key={control.key} control={control} />
               ))}
