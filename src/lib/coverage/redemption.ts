@@ -1,9 +1,7 @@
 import type { RedemptionBackstopEntry } from "@shared/types";
-import type {
-  CoverageBreakdownItem,
-  CoverageRow,
-  CoverageStatus,
-} from "@/lib/coverage-types";
+import type { RedemptionRouteFamily } from "@shared/types";
+import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
+import { REDEMPTION_MODELED_ROUTE_DISPLAY, REDEMPTION_ROUTE_FAMILY_DISPLAY } from "@/lib/redemption-backstop-labels";
 import {
   breakdownItem,
   createDataUnavailableStatus,
@@ -15,71 +13,37 @@ import {
   type CoverageStatusPreset,
 } from "./shared";
 
+function routeFamilyPreset(kind: RedemptionRouteFamily): CoverageStatusPreset {
+  const display = REDEMPTION_ROUTE_FAMILY_DISPLAY[kind];
+  return {
+    kind,
+    label: display.coverageLabel,
+    tone: display.coverageTone,
+    available: true,
+    sortRank: display.coverageSortRank,
+    detail: display.coverageDetail,
+    ...(display.coverageSpokenLabel ? { spokenLabel: display.coverageSpokenLabel } : {}),
+  };
+}
+
 const REDEMPTION_ROUTE_STATUS_PRESETS = {
-  "offchain-issuer": {
-    kind: "offchain-issuer",
-    label: "Issuer",
-    tone: "amber",
-    available: true,
-    sortRank: 2,
-    detail: "Issuer or institutional redemption path is modeled.",
-  },
-  "psm-swap": {
-    kind: "psm-swap",
-    label: "PSM",
-    tone: "sky",
-    available: true,
-    sortRank: 3,
-    detail: "Protocol swap or PSM-style redemption floor is modeled.",
-  },
-  "queue-redeem": {
-    kind: "queue-redeem",
-    label: "Queue",
-    tone: "violet",
-    available: true,
-    sortRank: 1,
-    detail: "Queued protocol redemption path is modeled.",
-  },
-  "collateral-redeem": {
-    kind: "collateral-redeem",
-    label: "Collat.",
-    tone: "sky",
-    available: true,
-    sortRank: 3,
-    detail: "Direct collateral redemption path is modeled.",
-    spokenLabel: "Collateral redeem",
-  },
-  "stablecoin-redeem": {
-    kind: "stablecoin-redeem",
-    label: "Stable",
-    tone: "emerald",
-    available: true,
-    sortRank: 3,
-    detail: "Direct stablecoin redemption path is modeled.",
-    spokenLabel: "Stablecoin redeem",
-  },
-  "basket-redeem": {
-    kind: "basket-redeem",
-    label: "Basket",
-    tone: "sky",
-    available: true,
-    sortRank: 2,
-    detail: "Basket redemption path is modeled.",
-  },
+  "offchain-issuer": routeFamilyPreset("offchain-issuer"),
+  "psm-swap": routeFamilyPreset("psm-swap"),
+  "queue-redeem": routeFamilyPreset("queue-redeem"),
+  "collateral-redeem": routeFamilyPreset("collateral-redeem"),
+  "stablecoin-redeem": routeFamilyPreset("stablecoin-redeem"),
+  "basket-redeem": routeFamilyPreset("basket-redeem"),
   modeled: {
     kind: "modeled",
-    label: "Modeled",
-    tone: "rose",
+    label: REDEMPTION_MODELED_ROUTE_DISPLAY.coverageLabel,
+    tone: REDEMPTION_MODELED_ROUTE_DISPLAY.coverageTone,
     available: true,
-    sortRank: 1,
-    detail: "Redemption-backstop route is modeled.",
+    sortRank: REDEMPTION_MODELED_ROUTE_DISPLAY.coverageSortRank,
+    detail: REDEMPTION_MODELED_ROUTE_DISPLAY.coverageDetail,
   },
-} satisfies Record<string, CoverageStatusPreset>;
+} satisfies Record<RedemptionRouteFamily | "modeled", CoverageStatusPreset>;
 
-function resolveRedemption(
-  entry: RedemptionBackstopEntry | null | undefined,
-  dataAvailable = true,
-): CoverageStatus {
+function resolveRedemption(entry: RedemptionBackstopEntry | null | undefined, dataAvailable = true): CoverageStatus {
   if (!dataAvailable) {
     return createDataUnavailableStatus("Redemption backstop");
   }
@@ -139,11 +103,7 @@ function resolveRedemption(
     );
   }
 
-  if (
-    entry.capacitySemantics === "eventual-only" ||
-    entry.score == null ||
-    entry.effectiveExitScore == null
-  ) {
+  if (entry.capacitySemantics === "eventual-only" || entry.score == null || entry.effectiveExitScore == null) {
     return createStatus(
       "resolved-unscored",
       "Resolved",
@@ -170,12 +130,32 @@ function formatRedemption(
     breakdownItem("resolved-unscored", "resolved", get("resolved-unscored")),
     breakdownItem("configured-unrated", "configured", get("configured-unrated")),
     breakdownItem("impaired", "impaired", get("impaired")),
-    breakdownItem("offchain-issuer", "issuer", get("offchain-issuer")),
-    breakdownItem("psm-swap", "psm", get("psm-swap")),
-    breakdownItem("queue-redeem", "queue", get("queue-redeem")),
-    breakdownItem("collateral-redeem", "collateral", get("collateral-redeem")),
-    breakdownItem("stablecoin-redeem", "stable", get("stablecoin-redeem")),
-    breakdownItem("basket-redeem", "basket", get("basket-redeem")),
+    breakdownItem(
+      "offchain-issuer",
+      REDEMPTION_ROUTE_FAMILY_DISPLAY["offchain-issuer"].coverageBreakdownLabel,
+      get("offchain-issuer"),
+    ),
+    breakdownItem("psm-swap", REDEMPTION_ROUTE_FAMILY_DISPLAY["psm-swap"].coverageBreakdownLabel, get("psm-swap")),
+    breakdownItem(
+      "queue-redeem",
+      REDEMPTION_ROUTE_FAMILY_DISPLAY["queue-redeem"].coverageBreakdownLabel,
+      get("queue-redeem"),
+    ),
+    breakdownItem(
+      "collateral-redeem",
+      REDEMPTION_ROUTE_FAMILY_DISPLAY["collateral-redeem"].coverageBreakdownLabel,
+      get("collateral-redeem"),
+    ),
+    breakdownItem(
+      "stablecoin-redeem",
+      REDEMPTION_ROUTE_FAMILY_DISPLAY["stablecoin-redeem"].coverageBreakdownLabel,
+      get("stablecoin-redeem"),
+    ),
+    breakdownItem(
+      "basket-redeem",
+      REDEMPTION_ROUTE_FAMILY_DISPLAY["basket-redeem"].coverageBreakdownLabel,
+      get("basket-redeem"),
+    ),
     breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
   ];
 }

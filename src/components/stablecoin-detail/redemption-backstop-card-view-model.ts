@@ -1,11 +1,17 @@
 import {
   REDEMPTION_ACCESS_LABELS,
   REDEMPTION_OUTPUT_ASSET_LABELS,
-  REDEMPTION_ROUTE_FAMILY_LABELS,
   REDEMPTION_SETTLEMENT_LABELS,
 } from "@shared/lib/redemption-backstop-scoring";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { RedemptionBackstopEntry } from "@shared/types";
+import {
+  formatRedemptionDocsProvenance,
+  formatRedemptionModelConfidence,
+  formatRedemptionResolutionState,
+  formatRedemptionRouteFamily,
+  formatRedemptionRouteStatus,
+} from "@/lib/redemption-backstop-labels";
 import { scoreToColorClass } from "@/lib/severity-colors";
 
 type DocSource = NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number];
@@ -75,53 +81,6 @@ function scoreTextClass(score: number | null): string {
     { min: 35, className: "text-orange-700 dark:text-orange-400" },
     { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
   ]);
-}
-
-function formatResolutionState(value: RedemptionBackstopEntry["resolutionState"]): string {
-  switch (value) {
-    case "resolved":
-      return "resolved";
-    case "missing-cache":
-      return "missing cache";
-    case "missing-capacity":
-      return "missing capacity";
-    case "failed":
-      return "failed";
-    case "impaired":
-      return "impaired";
-  }
-  const exhaustiveCheck: never = value;
-  return exhaustiveCheck;
-}
-
-function formatRouteStatus(value: RedemptionBackstopEntry["routeStatus"]): string {
-  switch (value) {
-    case "open":
-      return "open";
-    case "degraded":
-      return "degraded";
-    case "paused":
-      return "paused";
-    case "cohort-limited":
-      return "cohort limited";
-    case "unknown":
-      return "status unknown";
-  }
-  const exhaustiveCheck: never = value;
-  return exhaustiveCheck;
-}
-
-function formatModelConfidence(value: RedemptionBackstopEntry["modelConfidence"]): string {
-  switch (value) {
-    case "high":
-      return "confidence: high";
-    case "medium":
-      return "confidence: medium";
-    case "low":
-      return "confidence: low";
-  }
-  const exhaustiveCheck: never = value;
-  return exhaustiveCheck;
 }
 
 function getResolutionSummary(entry: RedemptionBackstopEntry): string | null {
@@ -220,9 +179,11 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
       : null;
   const usesScoringCapacityHeadline =
     (scoringHorizon === "daily" || scoringHorizon === "queued") && scoringCapacityUsd != null;
-  const capacityUsd = usesScoringCapacityHeadline ? scoringCapacityUsd : immediateCapacityUsd ?? scoringCapacityUsd;
+  const capacityUsd = usesScoringCapacityHeadline ? scoringCapacityUsd : (immediateCapacityUsd ?? scoringCapacityUsd);
   const capacityRatio =
-    !usesScoringCapacityHeadline && entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
+    !usesScoringCapacityHeadline &&
+    entry.immediateCapacityRatio != null &&
+    Number.isFinite(entry.immediateCapacityRatio)
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
       : null;
 
@@ -358,21 +319,6 @@ function buildConfidenceContext(entry: RedemptionBackstopEntry): OptionalMetricI
   return items;
 }
 
-function formatDocsProvenance(value: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["provenance"]>): string {
-  switch (value) {
-    case "config-reviewed":
-      return "Reviewed route source";
-    case "live-reserve-display":
-      return "Fallback live reserve source";
-    case "proof-of-reserves":
-      return "Fallback proof-of-reserves source";
-    case "preferred-link":
-      return "Fallback project link";
-  }
-  const exhaustiveCheck: never = value;
-  return exhaustiveCheck;
-}
-
 function formatDocSupports(source: DocSource): string | null {
   if (!source.supports || source.supports.length === 0) return null;
   return source.supports.join(", ");
@@ -423,13 +369,13 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     heroScoreLabel: entry.score != null ? `${entry.score}/100` : "NR",
     showExitScore: entry.effectiveExitScore != null,
     exitScoreLabel: entry.effectiveExitScore != null ? `${entry.effectiveExitScore}/100` : null,
-    routeFamilyLabel: REDEMPTION_ROUTE_FAMILY_LABELS[entry.routeFamily],
+    routeFamilyLabel: formatRedemptionRouteFamily(entry.routeFamily),
     sourceModeLabel: entry.sourceMode,
     showResolutionStateBadge: entry.resolutionState !== "resolved",
-    resolutionStateLabel: formatResolutionState(entry.resolutionState),
+    resolutionStateLabel: formatRedemptionResolutionState(entry.resolutionState),
     showRouteStatusBadge: entry.routeStatus !== "open",
-    routeStatusLabel: formatRouteStatus(entry.routeStatus),
-    modelConfidenceLabel: formatModelConfidence(entry.modelConfidence),
+    routeStatusLabel: formatRedemptionRouteStatus(entry.routeStatus),
+    modelConfidenceLabel: formatRedemptionModelConfidence(entry.modelConfidence),
     resolutionSummary: getResolutionSummary(entry),
     accessLabel: REDEMPTION_ACCESS_LABELS[entry.accessModel],
     settlementLabel: REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel],
@@ -444,7 +390,7 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     filteredNotes: buildFilteredNotes(entry),
     docSources: buildDocSources(entry),
     docsReviewedAt: docs?.reviewedAt ?? null,
-    docsProvenanceLabel: docs?.provenance ? formatDocsProvenance(docs.provenance) : null,
+    docsProvenanceLabel: docs?.provenance ? formatRedemptionDocsProvenance(docs.provenance) : null,
     scoreBreakdown: {
       access: { label: "Access score", score: entry.accessScore, textClass: scoreTextClass(entry.accessScore) },
       settlement: {
