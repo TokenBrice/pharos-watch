@@ -240,6 +240,10 @@ describe("buildRedemptionBackstopCardViewModel", () => {
   });
 
   it("maps route status and docs provenance labels", () => {
+    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "open" }))).toMatchObject({
+      showRouteStatusBadge: false,
+      routeStatusLabel: "open",
+    });
     expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "degraded" }))).toMatchObject({
       showRouteStatusBadge: true,
       routeStatusLabel: "degraded",
