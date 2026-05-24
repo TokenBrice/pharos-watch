@@ -82,7 +82,6 @@ export interface RedemptionCoverageAudit {
 }
 
 const OFFCHAIN_CANDIDATES = new Set(["mmxn-moneta-digital", "vndc-jade-labs", "zkusd-goal3"]);
-const PRE_LAUNCH_WATCHLIST = new Set(["krw1-bdacs", "brd-volpon", "trusd-tori"]);
 const FROZEN_HARD_REJECTS = new Set(["buck-buck-assets", "usnd-nerite"]);
 const WRAPPER_OR_NAV_CANDIDATES = new Set(["iusd-initia", "susd1plus-lorenzo", "witry-brix", "inalpha-nest"]);
 const PROTOCOL_RESEARCH_CANDIDATES = new Set(["hollar-hydrated", "crvusd-curve"]);
@@ -206,9 +205,11 @@ function inferLikelyRouteFamily(coin: AuditCoin): RedemptionRouteFamily | null {
   return null;
 }
 
-function classifyLifecycleExcludedCoin(coin: AuditCoin): CoverageClassification {
-  const lifecycle = lifecycleForCoin(coin);
-  if (lifecycle === "pre-launch" || PRE_LAUNCH_WATCHLIST.has(coin.id)) {
+function classifyLifecycleExcludedCoin(
+  coin: AuditCoin,
+  lifecycle: Extract<RedemptionCoverageLifecycle, "pre-launch" | "frozen">,
+): CoverageClassification {
+  if (lifecycle === "pre-launch") {
     return {
       disposition: "defer",
       reasonCode: "pre-launch",
@@ -233,12 +234,16 @@ function classifyLifecycleExcludedCoin(coin: AuditCoin): CoverageClassification 
   };
 }
 
-function toAuditRow(coin: AuditCoin, classification: CoverageClassification): CoverageAuditRow {
+function toAuditRow(
+  coin: AuditCoin,
+  classification: CoverageClassification,
+  lifecycle: RedemptionCoverageLifecycle = lifecycleForCoin(coin),
+): CoverageAuditRow {
   return {
     id: coin.id,
     name: coin.name,
     symbol: coin.symbol,
-    lifecycle: lifecycleForCoin(coin),
+    lifecycle,
     ...classification,
   };
 }
@@ -270,11 +275,14 @@ export function generateRedemptionCoverageAudit(
       .map((coin) => toAuditRow(coin, classifyActiveUnconfiguredCoin(coin))),
   );
 
-  const lifecycleExcludedUnconfigured = sortById(
-    [...preLaunchCoins, ...frozenCoins]
+  const lifecycleExcludedUnconfigured = sortById([
+    ...preLaunchCoins
       .filter((coin) => !configuredIds.has(coin.id))
-      .map((coin) => toAuditRow(coin, classifyLifecycleExcludedCoin(coin))),
-  );
+      .map((coin) => toAuditRow(coin, classifyLifecycleExcludedCoin(coin, "pre-launch"), "pre-launch")),
+    ...frozenCoins
+      .filter((coin) => !configuredIds.has(coin.id))
+      .map((coin) => toAuditRow(coin, classifyLifecycleExcludedCoin(coin, "frozen"), "frozen")),
+  ]);
 
   const heuristicConfiguredRoutes = sortById(
     Object.entries(configs)

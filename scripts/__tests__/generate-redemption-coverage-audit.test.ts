@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -119,10 +119,69 @@ describe("generate-redemption-coverage-audit", () => {
     ]);
   });
 
+  it("pins curated defer, hard-reject, research, and default backlog rows", () => {
+    const cryptoFlags = {
+      backing: "crypto-backed",
+      pegCurrency: "USD",
+      governance: "decentralized",
+      yieldBearing: false,
+      rwa: false,
+      navToken: false,
+    } satisfies StablecoinMeta["flags"];
+    const activeCoins = [
+      coin({ id: "mim-abracadabra", flags: cryptoFlags }),
+      coin({ id: "frax-frax", flags: cryptoFlags }),
+      coin({ id: "hollar-hydrated", flags: cryptoFlags }),
+      coin({ id: "unreviewed-crypto", flags: cryptoFlags }),
+    ];
+
+    const audit = generateRedemptionCoverageAudit({
+      trackedCoins: activeCoins,
+      activeCoins,
+      configs: {},
+    });
+
+    expect(audit.dispositionCounts).toEqual({
+      add: 0,
+      defer: 1,
+      "hard-reject": 1,
+      "needs-research": 2,
+    });
+    expect(audit.activeUnconfigured).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "mim-abracadabra",
+          disposition: "defer",
+          reasonCode: "no-holder-route",
+          classificationSource: "curated",
+        }),
+        expect.objectContaining({
+          id: "frax-frax",
+          disposition: "hard-reject",
+          reasonCode: "no-holder-route",
+          classificationSource: "curated",
+        }),
+        expect.objectContaining({
+          id: "hollar-hydrated",
+          disposition: "needs-research",
+          reasonCode: "capacity-unpublished",
+          classificationSource: "curated",
+        }),
+        expect.objectContaining({
+          id: "unreviewed-crypto",
+          disposition: "needs-research",
+          reasonCode: "source-review-needed",
+          classificationSource: "default-inferred",
+          allowedRouteFamilyIfProven: "collateral-redeem",
+        }),
+      ]),
+    );
+  });
+
   it("separates pre-launch and frozen unconfigured coins from active gaps", () => {
     const activeCoins = [coin({ id: "usdc-circle" })];
-    const preLaunchCoins = [coin({ id: "krw1-bdacs", status: "pre-launch" })];
-    const frozenCoins = [coin({ id: "buck-buck-assets", status: "frozen" })];
+    const preLaunchCoins = [coin({ id: "krw1-bdacs", status: "pre-launch" }), coin({ id: "brd-volpon" })];
+    const frozenCoins = [coin({ id: "buck-buck-assets", status: "frozen" }), coin({ id: "statusless-frozen" })];
 
     const audit = generateRedemptionCoverageAudit({
       trackedCoins: [...activeCoins, ...preLaunchCoins, ...frozenCoins],
@@ -133,9 +192,29 @@ describe("generate-redemption-coverage-audit", () => {
     });
 
     expect(audit.summary.activeUnconfigured).toBe(0);
-    expect(audit.summary.preLaunchUnconfigured).toBe(1);
-    expect(audit.summary.frozenUnconfigured).toBe(1);
+    expect(audit.summary.preLaunchUnconfigured).toBe(2);
+    expect(audit.summary.frozenUnconfigured).toBe(2);
+    expect(audit.lifecycleExcludedUnconfigured).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "brd-volpon",
+          lifecycle: "pre-launch",
+          disposition: "defer",
+          reasonCode: "pre-launch",
+        }),
+        expect.objectContaining({
+          id: "statusless-frozen",
+          lifecycle: "frozen",
+          disposition: "hard-reject",
+          reasonCode: "frozen",
+        }),
+      ]),
+    );
+    expect(audit.lifecycleExcludedUnconfigured).toHaveLength(4);
     expect(audit.lifecycleExcludedUnconfigured).toEqual([
+      expect.objectContaining({
+        id: "brd-volpon",
+      }),
       expect.objectContaining({
         id: "buck-buck-assets",
         lifecycle: "frozen",
@@ -147,6 +226,9 @@ describe("generate-redemption-coverage-audit", () => {
         lifecycle: "pre-launch",
         disposition: "defer",
         reasonCode: "pre-launch",
+      }),
+      expect.objectContaining({
+        id: "statusless-frozen",
       }),
     ]);
   });
@@ -173,8 +255,18 @@ describe("generate-redemption-coverage-audit", () => {
 
   it("renders the expected reviewer tables", () => {
     const audit = generateRedemptionCoverageAudit({
-      trackedCoins: [coin({ id: "mmxn-moneta-digital" })],
-      activeCoins: [coin({ id: "mmxn-moneta-digital" })],
+      trackedCoins: [
+        coin({
+          id: "mmxn-moneta-digital",
+          links: [{ label: "Docs", url: "https://example.com/source|with-pipe" }],
+        }),
+      ],
+      activeCoins: [
+        coin({
+          id: "mmxn-moneta-digital",
+          links: [{ label: "Docs", url: "https://example.com/source|with-pipe" }],
+        }),
+      ],
       configs: {},
       generatedAt: "2026-05-12T00:00:00.000Z",
     });
@@ -186,6 +278,7 @@ describe("generate-redemption-coverage-audit", () => {
       "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven",
     );
     expect(markdown).toContain("mmxn-moneta-digital | active | needs-research (issuer-terms-missing) | curated");
+    expect(markdown).toContain("https://example.com/source\\|with-pipe");
   });
 
   it("parses CLI format and report options", () => {
@@ -195,6 +288,7 @@ describe("generate-redemption-coverage-audit", () => {
       strictActiveGaps: true,
     });
     expect(() => parseArgs(["--report"])).toThrow("--report requires a path");
+    expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
   });
 
   it("strict CLI mode fails default-inferred active gaps but allows curated active gaps", () => {
@@ -226,5 +320,30 @@ describe("generate-redemption-coverage-audit", () => {
 
     expect(runCli(["--json", "--strict-active-gaps", "--report", "default.json"], cwd, defaultGapAudit)).toBe(1);
     expect(runCli(["--json", "--strict-active-gaps", "--report", "curated.json"], cwd, curatedGapAudit)).toBe(0);
+    const defaultReport = JSON.parse(readFileSync(join(cwd, "default.json"), "utf8")) as {
+      summary: { activeDefaultClassified: number };
+    };
+    expect(defaultReport.summary.activeDefaultClassified).toBe(1);
+  });
+
+  it("writes nested CLI reports with the selected output format", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-report-"));
+    const status = runCli(["--json", "--report", "nested/reports/audit.json"], cwd, () =>
+      generateRedemptionCoverageAudit({
+        trackedCoins: [coin({ id: "usdc-circle" })],
+        activeCoins: [coin({ id: "usdc-circle" })],
+        configs: { "usdc-circle": configuredRoute },
+        generatedAt: "2026-05-12T00:00:00.000Z",
+      }),
+    );
+
+    expect(status).toBe(0);
+    const report = JSON.parse(readFileSync(join(cwd, "nested/reports/audit.json"), "utf8")) as {
+      generatedAt: string;
+      summary: { activeConfigured: number; activeUnconfigured: number };
+    };
+    expect(report.generatedAt).toBe("2026-05-12T00:00:00.000Z");
+    expect(report.summary.activeConfigured).toBe(1);
+    expect(report.summary.activeUnconfigured).toBe(0);
   });
 });
