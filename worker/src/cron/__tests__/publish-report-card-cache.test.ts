@@ -1,4 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
+import {
+  DIMENSION_WEIGHTS,
+  GRADE_THRESHOLDS,
+  METHODOLOGY_VERSION,
+  PEG_MULTIPLIER_EXPONENT,
+} from "@shared/lib/report-cards";
 
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockWriteReportCardCache = vi.fn();
@@ -26,6 +33,7 @@ describe("publishReportCardCache", () => {
   });
 
   it("writes a generation-aware alert safety source cache from the live cards", async () => {
+    const dimension = { grade: "A" as const, score: 91, detail: "test" };
     mockBuildReportCardsSnapshot.mockResolvedValue({
       cards: [
         {
@@ -35,13 +43,25 @@ describe("publishReportCardCache", () => {
           overallGrade: "A",
           overallScore: 91,
           baseScore: 91,
-          dimensions: {},
+          dimensions: {
+            pegStability: dimension,
+            liquidity: dimension,
+            resilience: dimension,
+            decentralization: dimension,
+            dependencyRisk: dimension,
+          },
           ratedDimensions: 5,
-          rawInputs: {},
+          rawInputs: createReportCardRawInputs({ canBeBlacklisted: true }),
           isDefunct: false,
         },
       ],
-      methodology: { version: "7.09" },
+      methodology: {
+        version: METHODOLOGY_VERSION,
+        weights: DIMENSION_WEIGHTS,
+        pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
+        thresholds: GRADE_THRESHOLDS,
+      },
+      dependencyGraph: { edges: [] },
       updatedAt: 1_700_000_000,
       liquidityStale: false,
       redemptionStale: false,
@@ -57,7 +77,7 @@ describe("publishReportCardCache", () => {
     expect(mockSetCache.mock.calls[0]?.[2]).toContain("\"cards\"");
     expect(mockSetCache.mock.calls[1]?.[1]).toBe("alert:safety-source-cache");
     expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"generation\"");
-    expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"methodologyVersion\":\"7.09\"");
+    expect(mockSetCache.mock.calls[1]?.[2]).toContain(`"methodologyVersion":"${METHODOLOGY_VERSION}"`);
     expect(mockSetCache.mock.calls[1]?.[2]).toContain("\"usdc-circle\"");
   });
 });

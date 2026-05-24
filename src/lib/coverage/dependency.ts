@@ -7,6 +7,7 @@ import type { DependencyCoverageFact, DependencyCoverageKind } from "@/lib/depen
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
@@ -128,13 +129,14 @@ function formatDependency(
   const upstream = breakdownMap.get("upstream") ?? 0;
   const resolvedNone = breakdownMap.get("resolved-none") ?? 0;
   const unmappedGap = breakdownMap.get("unmapped-gap") ?? 0;
-  const unavailable = breakdownMap.get("data-unavailable") ?? 0;
+  const unavailable = breakdownMap.get(DATA_UNAVAILABLE_KIND) ?? 0;
   return [
     breakdownItem("both", "both", both),
     breakdownItem("dependent", "dependent", dependent),
     breakdownItem("upstream", "upstream", upstream),
     breakdownItem("resolved-none", "resolved none", resolvedNone),
-    breakdownItem("gaps", "gaps", unmappedGap + unavailable),
+    breakdownItem("gaps", "gaps", unmappedGap),
+    breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", unavailable),
   ];
 }
 
@@ -144,7 +146,7 @@ const DEPENDENCY_KINDS: readonly string[] = [
   "upstream",
   "resolved-none",
   "unmapped-gap",
-  "data-unavailable",
+  DATA_UNAVAILABLE_KIND,
 ] as const;
 
 const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [

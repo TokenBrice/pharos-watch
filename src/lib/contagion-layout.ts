@@ -13,7 +13,7 @@ import {
   filterDependencyGraphEdgesToLive,
   type DependencyGraphEdge,
 } from "@shared/lib/dependency-graph";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { DependencyType, ReportCard } from "@shared/types";
 
 // ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ export function buildGraphData(
   const cardMap = new Map(cards.map((c) => [c.id, c]));
   const liveIds = [...cardMap.keys()].filter((id) => !cardMap.get(id)!.isDefunct);
   const liveIdSet = new Set(liveIds);
-  const sourceEdges = dependencyEdges ?? buildDependencyGraphEdges(ACTIVE_STABLECOINS);
+  const sourceEdges = dependencyEdges ?? buildDependencyGraphEdges(CLIENT_ACTIVE_STABLECOINS);
   const liveEdges = filterDependencyGraphEdgesToLive(sourceEdges, liveIdSet);
 
   const inboundCounts = new Map<string, number>();

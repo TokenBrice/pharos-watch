@@ -366,12 +366,30 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
     },
   },
   dependency: {
-    covered: {
+    both: {
+      chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+      bar: "bg-violet-400/85",
+    },
+    dependent: {
+      chip: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+      bar: "bg-amber-400/85",
+      barText: "text-slate-950",
+    },
+    upstream: {
       chip: "border-frost-blue/28 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
       bar: "bg-frost-blue/85",
       barText: "text-slate-950",
     },
-    uncovered: {
+    "resolved-none": {
+      chip: "border-emerald-500/24 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      bar: "bg-emerald-400/85",
+      barText: "text-slate-950",
+    },
+    gaps: {
+      chip: COVERAGE_GAP_CHIP_CLASS,
+      bar: COVERAGE_GAP_BAR_CLASS,
+    },
+    "data-unavailable": {
       chip: COVERAGE_GAP_CHIP_CLASS,
       bar: COVERAGE_GAP_BAR_CLASS,
     },

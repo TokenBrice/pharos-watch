@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clampGraphPosition, MIN_RADIUS } from "@/lib/contagion-layout";
 
 interface PositionedNode {
@@ -56,6 +56,16 @@ export function useContagionGraphDrag({
   const dragMoved = useRef(false);
   const dragMovedSincePointerDown = useRef(false);
   const dragStart = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
+
+  useEffect(() => {
+    // Reset drag pins when the graph topology key changes; old coordinates do not apply to the new simulation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPinnedState((previous) => (
+      previous.simulationKey === simulationKey
+        ? previous
+        : { simulationKey, positions: new Map() }
+    ));
+  }, [simulationKey]);
 
   const pinnedPositions = pinnedState.simulationKey === simulationKey
     ? pinnedState.positions

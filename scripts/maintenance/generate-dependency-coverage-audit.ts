@@ -608,8 +608,13 @@ function readJsonFile(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
-async function fetchJson(url: string, fetchImpl: typeof fetch, apiKey: string | undefined): Promise<unknown> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+async function fetchJson(
+  url: string,
+  fetchImpl: typeof fetch,
+  apiKey: string | undefined,
+  extraHeaders: Record<string, string> = {},
+): Promise<unknown> {
+  const headers: Record<string, string> = { Accept: "application/json", ...extraHeaders };
   if (apiKey) headers["X-API-Key"] = apiKey;
 
   const response = await fetchImpl(url, { headers });
@@ -624,15 +629,26 @@ function joinUrl(base: string, path: string): string {
   return `${base.replace(/\/+$/, "")}${path}`;
 }
 
+function readRequiredJsonFile(path: string, label: string): unknown {
+  if (!existsSync(path)) {
+    throw new Error(`${label} file not found: ${path}`);
+  }
+  return readJsonFile(path);
+}
+
 async function loadOptionalInputs(
   options: CliOptions,
   cwd: string,
   fetchImpl: typeof fetch,
 ): Promise<Pick<DependencyCoverageAuditInput, "reportCards" | "stablecoins" | "mode">> {
   if (options.prod) {
+    const siteDataHeaders = {
+      Origin: PROD_ORIGIN,
+      Referer: `${PROD_ORIGIN}/coverage/`,
+    };
     const [reportCards, stablecoins] = await Promise.all([
-      fetchJson(PROD_REPORT_CARDS_URL, fetchImpl, undefined),
-      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined),
+      fetchJson(PROD_REPORT_CARDS_URL, fetchImpl, undefined, siteDataHeaders),
+      fetchJson(PROD_STABLECOINS_URL, fetchImpl, undefined, siteDataHeaders),
     ]);
     return { reportCards, stablecoins, mode: "prod" };
   }
@@ -647,6 +663,9 @@ async function loadOptionalInputs(
   }
 
   const inputDir = options.inputDir ? resolve(cwd, options.inputDir) : null;
+  if (inputDir && !existsSync(inputDir)) {
+    throw new Error(`--input directory not found: ${inputDir}`);
+  }
   const reportCardsPath = options.reportCardsPath
     ? resolve(cwd, options.reportCardsPath)
     : inputDir
@@ -657,11 +676,25 @@ async function loadOptionalInputs(
     : inputDir
       ? resolve(inputDir, "stablecoins.json")
       : null;
+  const reportCards = options.reportCardsPath
+    ? readRequiredJsonFile(reportCardsPath!, "--report-cards")
+    : reportCardsPath && existsSync(reportCardsPath)
+      ? readJsonFile(reportCardsPath)
+      : undefined;
+  const stablecoins = options.stablecoinsPath
+    ? readRequiredJsonFile(stablecoinsPath!, "--stablecoins")
+    : stablecoinsPath && existsSync(stablecoinsPath)
+      ? readJsonFile(stablecoinsPath)
+      : undefined;
+
+  if (inputDir && reportCards === undefined && stablecoins === undefined) {
+    throw new Error(`--input directory contains neither report-cards.json nor stablecoins.json: ${inputDir}`);
+  }
 
   return {
-    reportCards: reportCardsPath && existsSync(reportCardsPath) ? readJsonFile(reportCardsPath) : undefined,
-    stablecoins: stablecoinsPath && existsSync(stablecoinsPath) ? readJsonFile(stablecoinsPath) : undefined,
-    mode: reportCardsPath || stablecoinsPath ? "input" : "static",
+    reportCards,
+    stablecoins,
+    mode: reportCards !== undefined || stablecoins !== undefined ? "input" : "static",
   };
 }
 

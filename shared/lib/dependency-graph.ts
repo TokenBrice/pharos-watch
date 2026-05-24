@@ -9,7 +9,7 @@ export interface DependencyGraphEdge {
 }
 
 export function buildDependencyGraphEdges(
-  metas: readonly StablecoinMeta[],
+  metas: readonly Pick<StablecoinMeta, "id" | "variantOf" | "reserves" | "dependencies">[],
   options?: {
     liveReserveSlicesById?: ReadonlyMap<string, readonly ReserveSlice[]>;
   },

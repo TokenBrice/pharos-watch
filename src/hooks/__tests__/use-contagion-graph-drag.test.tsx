@@ -116,6 +116,13 @@ describe("useContagionGraphDrag", () => {
       expect(circle?.getAttribute("cx")).toBe("100");
       expect(circle?.getAttribute("cy")).toBe("100");
     });
+
+    rerender(<DragHarness simulationKey="stable" />);
+
+    await waitFor(() => {
+      expect(circle?.getAttribute("cx")).toBe("100");
+      expect(circle?.getAttribute("cy")).toBe("100");
+    });
   });
 
   it("lets consumers suppress the click that follows a drag", async () => {

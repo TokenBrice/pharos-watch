@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageBaseline,
   parseArgs,
   renderDependencyCoverageAuditMarkdown,
+  runCli,
 } from "../maintenance/generate-dependency-coverage-audit";
 
 function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
@@ -190,5 +191,44 @@ describe("generate-dependency-coverage-audit", () => {
     expect(() => parseArgs(["--prod", "--api-base", "https://api.example.test"])).toThrow(
       "Choose only one of --prod or --api-base.",
     );
+  });
+
+  it("fails on explicit missing input files", async () => {
+    await expect(
+      runCli(["--report-cards", "agents/missing-report-cards.json"], process.cwd()),
+    ).rejects.toThrow("--report-cards file not found");
+    await expect(
+      runCli(["--stablecoins", "agents/missing-stablecoins.json"], process.cwd()),
+    ).rejects.toThrow("--stablecoins file not found");
+  });
+
+  it("sends site-origin headers when fetching prod site-data", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      return new Response(
+        JSON.stringify(href.includes("report-cards")
+          ? { dependencyGraph: { edges: [] } }
+          : { peggedAssets: [] }),
+        { status: 200 },
+      );
+    });
+    const fetchImpl = fetchMock as unknown as typeof fetch;
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    try {
+      await expect(runCli(["--prod", "--json", "--generated-at", "2026-05-24T00:00:00.000Z"], process.cwd(), fetchImpl))
+        .resolves.toBe(0);
+    } finally {
+      stdout.mockRestore();
+    }
+
+    for (const call of fetchMock.mock.calls) {
+      expect(call[1]).toMatchObject({
+        headers: expect.objectContaining({
+          Origin: "https://pharos.watch",
+          Referer: "https://pharos.watch/coverage/",
+        }),
+      });
+    }
   });
 });

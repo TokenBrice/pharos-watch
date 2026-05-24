@@ -15,6 +15,7 @@ import {
   resolveSafetyCoverage,
   resolveYieldCoverage,
 } from "@/lib/coverage";
+import { COVERAGE_BREAKDOWN_VISUAL_CLASSES } from "@/lib/coverage-page-config";
 
 function makeCoin(overrides?: Partial<StablecoinMeta>): StablecoinMeta {
   return {
@@ -311,6 +312,55 @@ describe("coverage helpers", () => {
       rawDependencyCount: 1,
       mappedDependencyWeight: 0,
     }).available).toBe(false);
+  });
+
+  it("keeps dependency gaps and dependency data outages separate in summaries", () => {
+    const rows = [
+      buildCoverageRow({
+        coin: makeCoin({ id: "gap", symbol: "GAP" }),
+        marketCapUsd: 100,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        dependencyCoverage: {
+          kind: "unmapped-gap",
+          upstreamCount: 0,
+          dependentCount: 0,
+          rawDependencyCount: 1,
+          mappedDependencyWeight: 0,
+        },
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "unavailable", symbol: "DNA" }),
+        marketCapUsd: 100,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        dependencyCoverage: null,
+        dataAvailability: { dependency: false },
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(
+      COVERAGE_FEATURES.find((feature) => feature.key === "dependency")!,
+      rows,
+      200,
+    );
+
+    expect(summary.breakdown).toContainEqual({ key: "gaps", label: "gaps", count: 1 });
+    expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
+  });
+
+  it("defines coverage snapshot visuals for every dependency breakdown key", () => {
+    for (const key of ["both", "dependent", "upstream", "resolved-none", "gaps", "data-unavailable"]) {
+      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.dependency?.[key]).toBeDefined();
+    }
   });
 
   it("counts only available features when building rows", () => {
