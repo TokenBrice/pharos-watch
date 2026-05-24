@@ -245,7 +245,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
-- `canBeBlacklisted` only accepts `true`, `false`, `"possible"`, or `"dilutable"`. Use `"dilutable"` only when verified token source shows uncapped admin mint authority without a stronger holder-freeze or arbitrary-burn surface. Add `canBeBlacklistedSource` for every `"dilutable"` override. Do not invent `"inherited"` in metadata; that is computed later.
+- `canBeBlacklisted` only accepts `true`, `false`, `"possible"`, or `"dilutable"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Use `"dilutable"` only when verified token source shows uncapped admin mint authority without a stronger holder-freeze or arbitrary-burn surface; `"dilutable"` additionally requires `canBeBlacklistedSource`. Do not invent `"inherited"` in metadata; that is computed later.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
 - `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
@@ -301,7 +301,7 @@ Mapping cheatsheet:
 - `tbill`: RWA-backed + dominantly Treasury fund or NAV-bearing (USTB, USDtb, USDY)
 - `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
 - `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
-- `algorithmic`: algorithmic backing flag (USDD, historical FRAX)
+- `algorithmic`: mechanism archetype for reflexive/programmatic peg mechanisms; it is not tied to `flags.backing`. Current active entries with this archetype remain classified by actual collateral base.
 
 Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit on the child if uncertain.
 
@@ -714,9 +714,9 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 - [ ] The detail page loads without runtime errors
 - [ ] `coverage/` reflects the expected coverage state
 - [ ] If `infrastructures[]` was set, the correct infrastructure hub includes the coin
-- [ ] If `liveReservesConfig` was added, `GET /api/stablecoin-reserves/:id` works after the next hourly reserve sync
+- [ ] If `liveReservesConfig` was added, `GET /api/stablecoin-reserves/:id` works after the next four-hour reserve/redemption lane
 - [ ] If `yieldConfig` or yield runtime config was added, the asset appears correctly on `/yield/` or in the detail yield section after the next yield sync
-- [ ] If a redemption backstop was added, `GET /api/redemption-backstops` includes the coin after the next hourly reserve lane
+- [ ] If a redemption backstop was added, `GET /api/redemption-backstops` includes the coin after the next four-hour reserve/redemption lane
 - [ ] If mint/burn coverage was added, the coin appears in `/api/mint-burn-flows` / `/api/mint-burn-events` after the next lane run
 - [ ] If the asset is live and backfillable, the market-cap chart is no longer empty after Phase 8
 

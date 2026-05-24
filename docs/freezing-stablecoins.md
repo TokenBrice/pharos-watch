@@ -25,14 +25,14 @@ PHAROS_API_KEY="$PHAROS_API_KEY" npx tsx scripts/maintenance/freeze-stablecoin.t
 The script prints two artifacts:
 
 - A new entry to append to `shared/data/stablecoins/frozen-snapshots.json`.
-- A patch to apply to the coin's existing entry in its source JSON file under `shared/data/stablecoins/`.
+- A patch to apply to the coin's existing per-coin source file at `shared/data/stablecoins/coins/<id>.json`.
 
 ### 2. Apply the JSON edits
 
 - Append the snapshot entry to `frozen-snapshots.json`.
 - In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, then regenerate the prevalidated registry with `node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs`. Do not edit generated aggregates, prevalidated registry output, or legacy category shells by hand.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, then run `npm run prebuild` or `npm run check:generated-artifacts` to refresh/check the prevalidated registry, legacy redirect map, and client registry projections. Do not edit generated aggregates, prevalidated registry output, client registry output, redirect maps, or legacy category shells by hand.
 
 The schema enforces the invariant: `frozenAt` is required when `status === "frozen"`, and `obituary` is only allowed when `status === "frozen"`.
 
@@ -43,22 +43,22 @@ Some worker subsystems maintain their own per-coin tables. Remove the frozen coi
 - `worker/src/lib/mint-burn-contracts-data.ts` — remove from `MINT_BURN_CONFIG_SPECS` if present.
 - `worker/src/lib/blacklist-contracts.ts` — remove from `CONTRACT_CONFIGS` if present.
 - `shared/lib/bluechip-slugs.ts` — remove from `BLUECHIP_SLUG_MAP` if present.
-- `worker/src/cron/yield-config.ts` — remove from `YIELD_POOL_MAP` if present (the map is defined in `yield-config-pools.ts` and re-exported via `yield-config.ts`).
+- `worker/src/cron/yield-config-pools.ts` — remove from `YIELD_POOL_MAP` if present; `yield-config.ts` derives/re-exports it.
 - `src/lib/compare-pages.ts` — remove from `STATIC_COMPARE_PAIRS` if any pair includes the coin.
 - Any per-coin sync cron (e.g. `sync-usds-status.ts`, `sync-kinesis-supply.ts`) — disable or remove.
 - **`liveReservesConfig` block in the coin's own meta JSON.** If the frozen coin has a `liveReservesConfig` field on its `StablecoinMeta`, **delete that field**. Otherwise the live-reserves cron's `ACTIVE_STABLECOINS.filter(coin.liveReservesConfig)` would still include the coin once the registry filter widens (it is currently safe because `ACTIVE_STABLECOINS` excludes frozen, but removing the config eliminates ambiguity and matches the "no live data sources" intent of the freeze).
 
-The CI guards in `npm run check:frozen-invariants` enforce that frozen coins do not appear in any of the above.
+The CI guard in `npm run check:frozen-invariants` enforces the listed independent registry removals; `liveReservesConfig` and bespoke per-coin crons still require manual review.
 
 ### 3b. Add the cemetery logo
 
-Copy the active logo into the cemetery directory using the symbol-derived filename `frozenToDeadShape` resolves:
+Copy the active logo from the path registered for the coin in `data/logos.json` into the cemetery directory using the symbol-derived filename `frozenToDeadShape` resolves:
 
 ```bash
-cp "public/logos/${LLAMA_ID}-${SYMBOL}.png" "public/logos/cemetery/${SYMBOL_LOWERCASE}.png"
+cp "public/logos/<registered-logo-file>.png" "public/logos/cemetery/${SYMBOL_LOWERCASE}.png"
 ```
 
-(e.g. `public/logos/197-usr.png` → `public/logos/cemetery/usr.png`.) The cemetery tombstone falls back to a single-letter glyph when the file is missing.
+The cemetery tombstone falls back to a single-letter glyph when the file is missing.
 
 ### 4. Validate
 
@@ -76,16 +76,16 @@ npm run prebuild  # regenerates generated registries and the cemetery dataset
 ### 5. Update docs
 
 - Add a changelog entry under `src/data/changelogs/` for the current week.
-- Confirm the count of "tracked stablecoins" in `/about` and any docs is current. The `/about` page reads `ACTIVE_STABLECOINS.length` directly, so the count auto-shifts.
+- Confirm the count of "tracked stablecoins" in `/about` and any docs is current. `/about` reads constants from `src/lib/stablecoin-static-data.ts`; keep those projections synced via the static-data test/prebuild flow.
 - **Per-domain methodology version constants are NOT bumped.** Frozen status is a lifecycle policy, not a scoring change. If the freeze is tied to a specific methodology revision (rare), bump that constant in a separate commit with its own changelog entry.
 
 ### 5b. Leave the AI summary alone
 
 `data/ai-summaries.json` contains the editorial summary rendered on each detail page. **Do not regenerate** the frozen coin's summary — the model has no signal of the freeze beyond what we feed it, and rewriting risks losing nuance. The obituary lives in registry meta and renders via the `<FrozenStateBanner>` component independently of the AI summary. Do NOT run the `write-ai-summaries` skill on a frozen coin.
 
-### 6. Open PR
+### 6. Commit
 
-PR title: `feat(stablecoin): freeze <symbol> (<coin-id>)`. Include a brief obituary in the PR body.
+Commit/push according to current repo guidance. Open a PR only when explicitly requested; if a PR is requested, use title `feat(stablecoin): freeze <symbol> (<coin-id>)` and include a brief obituary in the PR body.
 
 ### 7. Post-deploy verification (within 24h)
 

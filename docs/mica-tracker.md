@@ -24,7 +24,7 @@ A dedicated `mica` object on `StablecoinMeta`, not an overload of `jurisdiction`
 
 ### Types — `shared/types/core.ts`
 
-Add near the existing `Jurisdiction` interface (`core.ts:114`), following the `as const` value-list + derived-type pattern used by `MECHANISM_ARCHETYPE_VALUES`, `CHAIN_TIER_VALUES`, etc.
+MiCA metadata is implemented as `mica?: MicaProfile` on `StablecoinMeta`. Status/type/auth enums and the `MicaProfile` interface live in `shared/types/core.ts`, following the `as const` value-list + derived-type pattern used by `MECHANISM_ARCHETYPE_VALUES`, `CHAIN_TIER_VALUES`, etc.
 
 ```ts
 export const MICA_STATUS_VALUES = [
@@ -53,7 +53,7 @@ export interface MicaProfile {
 }
 ```
 
-Then add to the `StablecoinMeta` interface (alongside `jurisdiction?`):
+`StablecoinMeta` includes the profile alongside `jurisdiction?`:
 
 ```ts
   mica?: MicaProfile;
@@ -61,7 +61,7 @@ Then add to the `StablecoinMeta` interface (alongside `jurisdiction?`):
 
 ### Zod — `shared/types/stablecoin-meta-schemas.ts`
 
-Mirror the `JurisdictionSchema` pattern (`stablecoin-meta-schemas.ts:90`), `.strict()`. A cross-field rule enforces sourcing for the strongest claim:
+Zod validation lives in `shared/types/stablecoin-meta-schemas.ts` and mirrors the `JurisdictionSchema` pattern, `.strict()`. A cross-field rule enforces sourcing for the strongest claim:
 
 ```ts
 export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
@@ -85,7 +85,7 @@ export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
 
 ### Wiring — `shared/lib/stablecoins/schema.ts`
 
-Add one line to `StablecoinMetaAssetSchema` next to `jurisdiction: JurisdictionSchema.optional()` (`schema.ts:154`):
+`StablecoinMetaAssetSchema` wires MiCA through next to `jurisdiction: JurisdictionSchema.optional()`:
 
 ```ts
   mica: MicaProfileSchema.optional(),
@@ -141,11 +141,11 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
-**Navigation:** add one `NavItem` to `NAV_GROUPS` in `src/lib/nav-config.ts`, most naturally under the `monitor` (MONITOR) group, e.g. `{ href: "/mica/", label: "MiCA Tracker", icon: ScrollText | <new>, description: "EU MiCA authorization status across tracked stablecoins" }`. The sidebar and command palette auto-index from `NAV_GROUPS`.
+**Navigation:** `src/lib/nav-config.ts` includes `/mica/` in `NAV_GROUPS.monitor` with the `Landmark` icon and description "EU MiCA authorization status across tracked stablecoins". The sidebar and command palette auto-index from `NAV_GROUPS`.
 
-**Detail-page surfacing:** add a MiCA status badge to `src/components/key-info-card.tsx` next to the existing jurisdiction badges (`key-info-card.tsx:342`). Reuses the established badge styling; no new component required.
+**Detail-page surfacing:** `src/components/key-info-card.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/mica/`. It reuses the established badge styling; no new component is required.
 
-**Static export / SEO:** route is statically pre-rendered; add to sitemap and run `npm run seo:check`. No `next.config.ts` change.
+**Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 
 Verify: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run seo:check`, plus a page render smoke test.
 
@@ -184,21 +184,13 @@ These illustrate the model only — confirm each against the ESMA/EBA/NCA regist
 
 ---
 
-## Phased plan
+## Maintenance
 
-1. **Schema + backfill.** Add `MicaProfile` types + Zod + schema wiring; normalize the ~24–30 obvious coins. → verify: `npm run check:stablecoin-data`, registry tests.
-2. **`/mica/` page + nav + detail badge.** Build the route on the screener pattern, register nav, add the `key-info-card` badge, add status colors to `classification.ts`. → verify: `npm run build`, `npm run lint`, `npm run typecheck`, `npm run seo:check`.
-3. **Timeline layer (optional).** Key-dates strip + per-coin `regulatory` milestones via existing primitives.
-4. **Maintenance skill (optional).** `mica-research` for ongoing refresh.
+`/mica/` is shipped. Labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `mica-research` skill plus normal route/build checks.
 
----
-
-## Docs to update (per `CLAUDE.md`)
-
-- [about-page.md](./about-page.md) — new tracked data category + data sources.
-- [agent-task-router.md](./agent-task-router.md) — extend the *Stablecoin metadata* family (schema + page).
-- [classification.md](./classification.md) — if/when status colors are tokenized.
-- [README.md](./README.md) — register this doc and the route once built.
+- Data refresh: update per-coin `mica` blocks with sourced register references, then run `npm run check:stablecoin-data`.
+- Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.
+- Timeline layer remains optional and can use existing `LaunchMilestone` `type: "regulatory"` and TAPE primitives.
 - **Not a methodology-version bump:** MiCA status is a tracked attribute, not a score. Assignment criteria live in this doc, not in `/methodology` versioning.
 
 ---
