@@ -264,16 +264,16 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 790,
-    "maxFunctionLines": 198,
-    "branchCount": 37,
+    "fileLines": 1099,
+    "maxFunctionLines": 189,
+    "branchCount": 68,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
       "maxFunctionLines": 180,
       "branchCount": 40
     },
-    "notes": "The stablecoin detail page and hero now share this view-model layer after the hero extraction. Split hero-specific signal rail, market metrics, and reserve/detail shaping into focused helpers before expanding the detail surface further."
+    "notes": "The stablecoin detail page and hero share this view-model layer, now with expanded redemption backstop, mint authority, market metric, and reserve/detail shaping. Split those domains into focused helpers before expanding the detail surface further."
   },
   "worker/src/api/api-key-requests.ts": {
     "fileLines": 9,
