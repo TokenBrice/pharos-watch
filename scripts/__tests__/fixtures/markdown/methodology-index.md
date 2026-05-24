@@ -14,7 +14,7 @@ Pharos clusters sources by pairwise agreement, publishes the highest-confidence 
 
 Freshness is explicit. Upstream-observed timestamps are preferred over local collection time, stale sources are excluded or downgraded, and replay-safe cache continuity is used only when it preserves a confirmed signal without inventing a new one.
 
-Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, and other late-stage sources fill gaps for long-tail assets, but each pass has request budgets, circuit breakers, and plausibility checks so weak prices cannot silently become high-confidence consensus.
+Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, exact-address providers, and other late-stage sources fill gaps for long-tail assets, but each pass has request budgets, circuit breakers, corroboration checks, and plausibility gates so weak prices cannot silently become high-confidence consensus or false fixed-peg depegs.
 
 
 ## Stability Index Methodology
