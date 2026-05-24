@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
 - `src/lib/coverage-matrix-model.ts` - CoverageMatrixModel, CoverageMatrixModelInput, buildCoverageMatrixModel
-- ... 119 more files omitted; use `rg --files src/lib` for the full list.
+- ... 120 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 

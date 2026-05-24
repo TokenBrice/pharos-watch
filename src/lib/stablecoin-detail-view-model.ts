@@ -49,6 +49,7 @@ import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/li
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { getClientVariantParent, getClientVariantRelationship, getClientVariants } from "@/lib/client-variant-registry";
 import {
@@ -389,103 +390,6 @@ function readSources(value: unknown): MintAuthorityDetailSourceViewModel[] {
   }
 
   return sources;
-}
-
-type MintAuthorityClientControlSummary = NonNullable<MintAuthorityClientSummary["controls"]>[number];
-type MintAuthorityClientSourceSummary = NonNullable<MintAuthorityClientSummary["sources"]>[number];
-
-function appendMintAuthoritySources(
-  target: MintAuthorityClientSourceSummary[],
-  sources: unknown,
-  seenUrls: Set<string>,
-) {
-  if (!Array.isArray(sources)) return;
-
-  for (const source of sources) {
-    if (!isRecord(source)) continue;
-    const label = stringValue(source.label);
-    const url = stringValue(source.url);
-    if (!label || !url || seenUrls.has(url)) continue;
-    seenUrls.add(url);
-    target.push({ label, url });
-  }
-}
-
-function buildMintAuthorityClientControlSummary(value: unknown): MintAuthorityClientControlSummary | null {
-  if (!isRecord(value)) return null;
-  const control = value;
-  const label = stringValue(control.label);
-  const role = stringValue(control.role);
-  const authorityType = stringValue(control.authorityType);
-  const directMintAbility = stringValue(control.directMintAbility);
-  if (!label || !role || !authorityType || !directMintAbility) return null;
-
-  const summary: MintAuthorityClientControlSummary = {
-    label,
-    role: role as MintAuthorityClientControlSummary["role"],
-    authorityType: authorityType as MintAuthorityClientControlSummary["authorityType"],
-    directMintAbility: directMintAbility as MintAuthorityClientControlSummary["directMintAbility"],
-  };
-
-  const chain = stringValue(control.chain);
-  const address = stringValue(control.address);
-  const threshold = numberValue(control.threshold);
-  const signerCount = numberValue(control.signerCount);
-  const timelockDelaySec = numberValue(control.timelockDelaySec);
-  const capDescription = stringValue(control.capDescription);
-  const modulesOrGuardsStatus = stringValue(control.modulesOrGuardsStatus);
-
-  if (chain) summary.chain = chain;
-  if (address) summary.address = address;
-  if (threshold != null) summary.threshold = threshold;
-  if (signerCount != null) summary.signerCount = signerCount;
-  if (timelockDelaySec != null) summary.timelockDelaySec = timelockDelaySec;
-  if (capDescription) summary.capDescription = capDescription;
-  if (modulesOrGuardsStatus) {
-    summary.modulesOrGuardsStatus = modulesOrGuardsStatus as MintAuthorityClientControlSummary["modulesOrGuardsStatus"];
-  }
-
-  return summary;
-}
-
-function projectMintAuthorityClientSummary(coin: StablecoinMeta): MintAuthorityClientSummary | null {
-  const profile = isRecord(coin.mintAuthority) ? coin.mintAuthority : null;
-  if (!profile) return null;
-
-  const mintPath = stringValue(profile.mintPath);
-  const authorityPosture = stringValue(profile.authorityPosture);
-  const confidence = stringValue(profile.confidence);
-  const summaryText = stringValue(profile.summary);
-  if (!mintPath || !authorityPosture || !confidence || !summaryText) return null;
-
-  const summary: MintAuthorityClientSummary = {
-    mintPath: mintPath as MintAuthorityClientSummary["mintPath"],
-    authorityPosture: authorityPosture as MintAuthorityClientSummary["authorityPosture"],
-    confidence: confidence as MintAuthorityClientSummary["confidence"],
-    summary: summaryText,
-  };
-
-  const inheritedFrom = stringValue(profile.inheritedFrom);
-  if (inheritedFrom) summary.inheritedFrom = inheritedFrom;
-
-  const controls = Array.isArray(profile.controls)
-    ? profile.controls
-        .map(buildMintAuthorityClientControlSummary)
-        .filter((control): control is MintAuthorityClientControlSummary => control !== null)
-    : [];
-  if (controls.length > 0) summary.controls = controls;
-
-  const sources: MintAuthorityClientSourceSummary[] = [];
-  const seenUrls = new Set<string>();
-  const review = isRecord(profile.review) ? profile.review : null;
-  appendMintAuthoritySources(sources, review?.sources, seenUrls);
-  appendMintAuthoritySources(sources, profile.sources, seenUrls);
-  for (const control of Array.isArray(profile.controls) ? profile.controls : []) {
-    if (isRecord(control)) appendMintAuthoritySources(sources, control.sources, seenUrls);
-  }
-  if (sources.length > 0) summary.sources = sources;
-
-  return summary;
 }
 
 function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): UnknownRecord | null {
