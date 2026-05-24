@@ -4,6 +4,7 @@ import {
   collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
 } from "../address-price-providers";
+import { runDexPaprikaAddressProvider } from "../address-price-providers/dexpaprika";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
 import type { AddressPriceTarget } from "../address-price-providers";
 
@@ -90,6 +91,46 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("prioritizes missing prices before low-depth priced rows, then material source-depth gaps", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address"],
+      previousAssetsById: new Map([
+        ["low-depth-large", { id: "low-depth-large", symbol: "LDL", consensusSources: ["coingecko", "defillama-list"] }],
+        ["low-depth-small", { id: "low-depth-small", symbol: "LDS", consensusSources: ["coingecko"] }],
+        ["missing", { id: "missing", symbol: "MISS", consensusSources: ["coingecko", "defillama-list"] }],
+      ]),
+      assets: [
+        {
+          id: "low-depth-small",
+          symbol: "LDS",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+          circulating: { base: 100_000 },
+        },
+        {
+          id: "missing",
+          symbol: "MISS",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: 0,
+          circulating: { base: 10_000 },
+        },
+        {
+          id: "low-depth-large",
+          symbol: "LDL",
+          address: "base:0x0000000000000000000000000000000000000003",
+          price: 1,
+          circulating: { base: 10_000_000 },
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")?.map((target) => target.stablecoinId)).toEqual([
+      "missing",
+      "low-depth-large",
+      "low-depth-small",
+    ]);
+  });
+
   it("keeps Birdeye targeting scoped to Solana deployments", () => {
     const targets = buildAddressPriceTargetsByProvider({
       providers: ["birdeye-address"],
@@ -162,7 +203,37 @@ describe("address price providers", () => {
         success: false,
         rejectionReasonCounts: { "non-ok": 1 },
       },
+      {
+        source: "dexscreener-address",
+        errorClass: "cap",
+        candidateCount: 30,
+      },
     ]);
+  });
+
+  it("reports DexPaprika request-cap skips without raising the cap", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      address: "0x0000000000000000000000000000000000000000",
+      summary: { price_usd: 1, liquidity_usd: 100_000 },
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await runDexPaprikaAddressProvider(
+      Array.from({ length: 61 }, (_, index) => makeDexScreenerTarget(index, {
+        address: `0x${"0".repeat(39)}${(index % 10).toString(16)}`,
+      })),
+      undefined,
+      Date.now() + 60_000,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(60);
+    expect(result.attemptedTargets).toBe(60);
+    expect(result.diagnostics[result.diagnostics.length - 1]).toMatchObject({
+      source: "dexpaprika-address",
+      endpoint: "dexpaprika-address:request-cap",
+      errorClass: "cap",
+      candidateCount: 1,
+    });
   });
 
   it("keeps blocked address providers neutral for circuit-breaker accounting", async () => {

@@ -173,6 +173,10 @@ interface ProbeableSingleSourceAsset {
   id: string;
   price: number;
   priorityUsd: number;
+  contracts: ProbeableContract[];
+}
+
+interface ProbeableContract {
   chain: string;
   address: string;
   gtNetwork: string;
@@ -267,19 +271,21 @@ export async function probeGeckoTerminalPrices(
     const meta = metaById.get(asset.id);
     if (!meta?.contracts?.length) continue;
 
-    const contract = meta.contracts.find(
-      (entry) => entry.chain !== "solana" && entry.chain !== "stellar" && entry.chain !== "tron" && GT_CHAIN_MAP[entry.chain],
-    );
-    if (!contract) continue;
+    const contracts = meta.contracts
+      .filter((entry) => entry.chain !== "solana" && entry.chain !== "stellar" && entry.chain !== "tron" && GT_CHAIN_MAP[entry.chain])
+      .map((entry) => ({
+        chain: entry.chain,
+        address: entry.address,
+        gtNetwork: GT_CHAIN_MAP[entry.chain],
+        cgNetwork: coingeckoApiKey ? CG_CHAIN_MAP[entry.chain] : undefined,
+      }));
+    if (contracts.length === 0) continue;
 
     candidates.push({
       id: asset.id,
       price: asset.price,
       priorityUsd: asset.priorityUsd ?? 0,
-      chain: contract.chain,
-      address: contract.address,
-      gtNetwork: GT_CHAIN_MAP[contract.chain],
-      cgNetwork: coingeckoApiKey ? CG_CHAIN_MAP[contract.chain] : undefined,
+      contracts,
     });
   }
   candidates.sort((left, right) => {
@@ -336,40 +342,54 @@ export async function probeGeckoTerminalPrices(
       try {
         const outcomes: ProbeFetchOutcome[] = [];
         let pricedOutcome: Extract<ProbeFetchOutcome, { kind: "priced" }> | null = null;
+        let pricedContract: ProbeableContract | null = null;
 
-        if (asset.cgNetwork) {
-          const onchainOutcome = await fetchProbeOutcome(
-            "coingecko-onchain",
-            asset.cgNetwork,
-            asset.address,
-            stats,
-            probeSignal,
-            coingeckoApiKey,
-          );
-          if (onchainOutcome.kind === "priced") {
-            pricedOutcome = onchainOutcome;
-          } else {
+        for (const contract of asset.contracts) {
+          if (budgetController.signal.aborted) {
+            markBudgetExhausted(candidates.length - (index + 1));
+            break;
+          }
+
+          if (contract.cgNetwork) {
+            const onchainOutcome = await fetchProbeOutcome(
+              "coingecko-onchain",
+              contract.cgNetwork,
+              contract.address,
+              stats,
+              probeSignal,
+              coingeckoApiKey,
+            );
+            if (onchainOutcome.kind === "priced") {
+              pricedOutcome = onchainOutcome;
+              pricedContract = contract;
+              break;
+            }
             outcomes.push(onchainOutcome);
           }
-        }
 
-        if (!pricedOutcome) {
-          if (asset.cgNetwork) stats.publicFallbacks++;
-          const publicOutcome = await fetchProbeOutcome(
-            "geckoterminal-public",
-            asset.gtNetwork,
-            asset.address,
-            stats,
-            probeSignal,
-          );
-          if (publicOutcome.kind === "priced") {
-            pricedOutcome = publicOutcome;
-          } else {
+          if (!pricedOutcome) {
+            if (contract.cgNetwork) stats.publicFallbacks++;
+            const publicOutcome = await fetchProbeOutcome(
+              "geckoterminal-public",
+              contract.gtNetwork,
+              contract.address,
+              stats,
+              probeSignal,
+            );
+            if (publicOutcome.kind === "priced") {
+              pricedOutcome = publicOutcome;
+              pricedContract = contract;
+              break;
+            }
             outcomes.push(publicOutcome);
           }
         }
 
-        if (!pricedOutcome) {
+        if (budgetController.signal.aborted) {
+          break;
+        }
+
+        if (!pricedOutcome || !pricedContract) {
           if (outcomes.some((outcome) => outcome.kind === "low-tvl")) {
             stats.skippedLowTvl++;
             continue;
@@ -384,7 +404,7 @@ export async function probeGeckoTerminalPrices(
         }
 
         const result = pricedOutcome.result;
-        result.chain = asset.chain;
+        result.chain = pricedContract.chain;
         stats.pricesObtained++;
 
         // Track divergences for logging

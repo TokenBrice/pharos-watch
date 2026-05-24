@@ -22,6 +22,7 @@ export async function runDexPaprikaAddressProvider(
   const rejectedTargets: AddressPriceProviderRunResult["rejectedTargets"] = {};
   let successfulRequests = 0;
   let attemptedRequests = 0;
+  const cappedTargets = Math.max(0, targets.length - DEXPAPRIKA_MAX_REQUESTS);
 
   for (const target of targets.slice(0, DEXPAPRIKA_MAX_REQUESTS)) {
     if (Date.now() >= deadlineMs) break;
@@ -74,6 +75,20 @@ export async function runDexPaprikaAddressProvider(
       diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
     }
     diagnostics.push(diagnostic);
+  }
+
+  if (cappedTargets > 0) {
+    diagnostics.push({
+      source: "dexpaprika-address",
+      stage: "primary",
+      endpoint: "dexpaprika-address:request-cap",
+      status: null,
+      ok: true,
+      success: true,
+      candidateCount: cappedTargets,
+      errorClass: "cap",
+      errorMessage: `Skipped ${cappedTargets} DexPaprika target${cappedTargets === 1 ? "" : "s"} after request cap`,
+    });
   }
 
   return {

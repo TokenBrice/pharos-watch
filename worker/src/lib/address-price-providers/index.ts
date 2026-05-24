@@ -130,18 +130,33 @@ function sumCirculatingUsd(asset: AddressPriceAssetLike): number {
   ), 0);
 }
 
+function readStringHint(asset: AddressPriceAssetLike | undefined, key: "priceConfidence" | "priceSource"): string | null {
+  if (!asset) return null;
+  const value = (asset as unknown as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : null;
+}
+
 function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById?: Map<string, AddressPriceAssetLike>): {
   previousSourceDepth: number;
+  lowConfidencePrice: boolean;
   missingPrice: boolean;
   include: boolean;
 } {
   const previous = previousAssetsById?.get(asset.id);
   const previousSourceDepth = previous?.consensusSources?.length ?? asset.consensusSources?.length ?? 0;
   const missingPrice = asset.price == null || typeof asset.price !== "number" || asset.price <= 0;
+  const priceConfidence = readStringHint(asset, "priceConfidence") ?? readStringHint(previous, "priceConfidence");
+  const priceSource = readStringHint(asset, "priceSource") ?? readStringHint(previous, "priceSource");
+  const lowConfidencePrice =
+    priceConfidence === "fallback" ||
+    priceConfidence === "low" ||
+    priceSource === "cached" ||
+    priceSource === "coingecko-low-volume";
   return {
     previousSourceDepth,
+    lowConfidencePrice,
     missingPrice,
-    include: !previousAssetsById || previousSourceDepth < 3 || missingPrice,
+    include: !previousAssetsById || previousSourceDepth < 3 || missingPrice || lowConfidencePrice,
   };
 }
 
@@ -197,6 +212,18 @@ function buildAssetDeployments(asset: AddressPriceAssetLike): Array<{
   ];
 }
 
+function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPriceTarget): number {
+  if (left.missingPrice !== right.missingPrice) return left.missingPrice ? -1 : 1;
+  const leftLowDepth = left.previousSourceDepth <= 2;
+  const rightLowDepth = right.previousSourceDepth <= 2;
+  if (leftLowDepth !== rightLowDepth) return leftLowDepth ? -1 : 1;
+  if (left.circulatingUsd !== right.circulatingUsd) return right.circulatingUsd - left.circulatingUsd;
+  if (left.previousSourceDepth !== right.previousSourceDepth) {
+    return left.previousSourceDepth - right.previousSourceDepth;
+  }
+  return `${left.stablecoinId}:${left.chain}:${left.address}`.localeCompare(`${right.stablecoinId}:${right.chain}:${right.address}`);
+}
+
 export function buildAddressPriceTargetsByProvider(params: {
   assets: AddressPriceAssetLike[];
   previousAssetsById?: Map<string, AddressPriceAssetLike>;
@@ -239,14 +266,7 @@ export function buildAddressPriceTargetsByProvider(params: {
       }
     }
 
-    targets.sort((left, right) => {
-      if (left.previousSourceDepth !== right.previousSourceDepth) {
-        return left.previousSourceDepth - right.previousSourceDepth;
-      }
-      if (left.missingPrice !== right.missingPrice) return left.missingPrice ? -1 : 1;
-      if (left.circulatingUsd !== right.circulatingUsd) return right.circulatingUsd - left.circulatingUsd;
-      return `${left.stablecoinId}:${left.chain}:${left.address}`.localeCompare(`${right.stablecoinId}:${right.chain}:${right.address}`);
-    });
+    targets.sort(compareAddressPriceTargets);
     result.set(provider, targets);
   }
 

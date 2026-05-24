@@ -1263,6 +1263,94 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("adds bounded Jupiter evidence to low-depth Solana primary prices without replacing the primary source", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos",
+        name: "USDG",
+        symbol: "USDG",
+        price: 1.0001,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        consensusSources: ["coingecko"],
+        agreeSources: ["coingecko"],
+        pegType: "peggedUSD",
+        circulating: { solana: 10_000_000 },
+      },
+    ];
+
+    mockFetch([
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            liquidity: 250_000,
+            decimals: 6,
+            blockId: currentSlot - 20,
+          },
+        },
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "jupiter",
+      stage: "primary",
+      candidateCount: 1,
+      success: true,
+    });
+    expect(assets[0]).toMatchObject({
+      price: 1.0001,
+      priceSource: "coingecko",
+      consensusSources: ["coingecko", "jupiter"],
+      agreeSources: ["coingecko"],
+    });
+  });
+
+  it("does not add Jupiter primary evidence when the quote diverges from the current primary price", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos",
+        name: "USDG",
+        symbol: "USDG",
+        price: 0.97,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        consensusSources: ["coingecko"],
+        agreeSources: ["coingecko"],
+        pegType: "peggedUSD",
+        circulating: { solana: 10_000_000 },
+      },
+    ];
+
+    mockFetch([
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+      {
+        match: "api.jup.ag/price/v3",
+        body: {
+          "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH": {
+            usdPrice: 1.0002,
+            liquidity: 250_000,
+            decimals: 6,
+            blockId: currentSlot - 20,
+          },
+        },
+      },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].consensusSources).toEqual(["coingecko"]);
+    expect(assets[0].agreeSources).toEqual(["coingecko"]);
+  });
+
   it("rejects Jupiter quotes with stale block ids", async () => {
     const currentSlot = 418_913_760;
     const assets: PeggedAsset[] = [

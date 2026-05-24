@@ -37,6 +37,8 @@ vi.mock("@shared/lib/chains", () => ({
   },
   GT_CHAIN_MAP: {
     ethereum: "eth",
+    monad: "monad",
+    plasma: "plasma",
   },
 }));
 
@@ -53,6 +55,13 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
     {
       id: "asset-cg",
       contracts: [{ chain: "ethereum", address: "0xassetcg" }],
+    },
+    {
+      id: "asset-fallthrough",
+      contracts: [
+        { chain: "plasma", address: "0xplasma" },
+        { chain: "monad", address: "0xmonad" },
+      ],
     },
   ],
 }));
@@ -397,6 +406,44 @@ describe("probeGeckoTerminalPrices", () => {
       CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
       true,
     );
+  });
+
+  it("falls through supported contracts until a usable pool is found", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ errors: [{ status: "404", title: "Not Found" }] }), { status: 404 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          data: [
+            makePool({
+              reserveUsd: "705000",
+              basePriceUsd: "1.0004",
+              quotePriceUsd: "1.0000",
+              baseTokenId: "monad_0xmonad",
+              quoteTokenId: "monad_0xquote",
+              dexId: "uniswap",
+            }),
+          ],
+        }), { status: 200 }),
+      );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-fallthrough", price: 1 }],
+      {} as D1Database,
+    );
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("/networks/plasma/tokens/0xplasma/pools");
+    expect(fetchWithRetryMock.mock.calls[1]?.[0]).toContain("/networks/monad/tokens/0xmonad/pools");
+    expect(result.stats.probed).toBe(1);
+    expect(result.stats.lookupMisses).toBe(0);
+    expect(result.stats.transports.geckoTerminalPublic.lookupMisses).toBe(1);
+    expect(result.prices.get("asset-fallthrough")?.metadata).toMatchObject({
+      chain: "monad",
+      transport: "geckoterminal-public",
+      poolAddress: "0xpool",
+    });
   });
 
   it("does not mark the source unhealthy when nothing was probeable", async () => {

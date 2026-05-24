@@ -29,6 +29,7 @@ import {
   collectMissingPriceCandidates,
   type EnrichPassResult,
   SOLANA_MINT_BY_ID,
+  sumCirculatingValue,
 } from "./enrich-prices-pass-common";
 
 const JUPITER_PRICE_API = "https://api.jup.ag/price/v3";
@@ -36,6 +37,8 @@ const JUPITER_MAX_IDS_PER_REQUEST = 50;
 const JUPITER_REQUEST_TIMEOUT_MS = 5_000;
 const JUPITER_MAX_RETRIES = 0;
 const JUPITER_MIN_LIQUIDITY_USD = 50_000;
+const JUPITER_MAX_PRIMARY_AUGMENTATION_TARGETS = 25;
+const JUPITER_PRIMARY_AUGMENTATION_MAX_DIVERGENCE_BPS = 100;
 const JUPITER_MAX_SLOT_LAG = 2_250;
 const JUPITER_MAX_SLOT_LEAD = 250;
 const JUPITER_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
@@ -51,6 +54,14 @@ interface JupiterPriceEntry {
   createdAt?: string | number;
 }
 
+interface JupiterCandidate {
+  asset: PeggedAsset;
+  index: number;
+  mint: string;
+  mode: "fallback" | "primary";
+  priorityUsd: number;
+}
+
 export async function runJupiterPass(
   assets: PeggedAsset[],
   fxRates: Record<string, number> | undefined,
@@ -60,10 +71,16 @@ export async function runJupiterPass(
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
-  const candidates = collectMissingPriceCandidates(assets, (asset) => {
+  const fallbackCandidates: JupiterCandidate[] = collectMissingPriceCandidates(assets, (asset) => {
     const mint = SOLANA_MINT_BY_ID.get(asset.id);
     return mint ? { mint } : null;
-  });
+  }).map((candidate) => ({
+    ...candidate,
+    mode: "fallback" as const,
+    priorityUsd: sumCirculatingValue(candidate.asset),
+  }));
+  const primaryCandidates = collectPrimaryAugmentationCandidates(assets);
+  const candidates = [...fallbackCandidates, ...primaryCandidates];
   if (candidates.length === 0) {
     await recoverProviderOnNoCandidates({
       db,
@@ -110,7 +127,8 @@ export async function runJupiterPass(
     const batch = candidates.slice(index, index + JUPITER_MAX_IDS_PER_REQUEST);
     const ids = batch.map((entry) => entry.mint);
 
-    const { data, diagnostic } = await fetchJupiterPrices(ids, "fallback", signal, jupiterApiKey);
+    const stage = batch.every((entry) => entry.mode === "primary") ? "primary" : "fallback";
+    const { data, diagnostic } = await fetchJupiterPrices(ids, stage, signal, jupiterApiKey);
     diagnostics.push(diagnostic);
     if (!diagnostic.success || !data) {
       console.warn(`[enrich] Jupiter returned ${diagnostic.status ?? "no response"} for batch of ${ids.length}`);
@@ -152,8 +170,12 @@ export async function runJupiterPass(
         continue;
       }
 
-      applyResolvedPrice(assets[entry.index], usdPrice, "jupiter", "fallback");
-      resolved += 1;
+      if (entry.mode === "fallback") {
+        applyResolvedPrice(assets[entry.index], usdPrice, "jupiter", "fallback");
+        resolved += 1;
+      } else if (applyJupiterPrimaryAugmentation(assets[entry.index], usdPrice)) {
+        resolved += 1;
+      }
     }
   }
 
@@ -168,6 +190,59 @@ export async function runJupiterPass(
   }
 
   return { resolved, failures: [], diagnostics };
+}
+
+function collectPrimaryAugmentationCandidates(assets: PeggedAsset[]): JupiterCandidate[] {
+  return assets
+    .map((asset, index): JupiterCandidate | null => {
+      const mint = SOLANA_MINT_BY_ID.get(asset.id);
+      if (!mint || asset.price == null || typeof asset.price !== "number" || asset.price <= 0) {
+        return null;
+      }
+      if (asset.consensusSources?.includes("jupiter")) return null;
+      const sourceDepth = asset.consensusSources?.length ?? 0;
+      const lowConfidence =
+        asset.priceConfidence === "fallback" ||
+        asset.priceConfidence === "low" ||
+        asset.priceConfidence === "single-source";
+      if (sourceDepth > 2 && !lowConfidence) return null;
+      return {
+        asset,
+        index,
+        mint,
+        mode: "primary",
+        priorityUsd: sumCirculatingValue(asset),
+      };
+    })
+    .filter((entry): entry is JupiterCandidate => entry != null)
+    .sort((left, right) => {
+      const leftDepth = left.asset.consensusSources?.length ?? 0;
+      const rightDepth = right.asset.consensusSources?.length ?? 0;
+      if (leftDepth !== rightDepth) return leftDepth - rightDepth;
+      if (left.priorityUsd !== right.priorityUsd) return right.priorityUsd - left.priorityUsd;
+      return left.asset.id.localeCompare(right.asset.id);
+    })
+    .slice(0, JUPITER_MAX_PRIMARY_AUGMENTATION_TARGETS);
+}
+
+function applyJupiterPrimaryAugmentation(asset: PeggedAsset, jupiterPrice: number): boolean {
+  if (asset.price == null || typeof asset.price !== "number" || asset.price <= 0) return false;
+  if (!pricesAgreeWithinBps(asset.price, jupiterPrice, JUPITER_PRIMARY_AUGMENTATION_MAX_DIVERGENCE_BPS)) {
+    return false;
+  }
+  const consensusSources = asset.consensusSources ?? (asset.priceSource ? [asset.priceSource] : []);
+  if (!consensusSources.includes("jupiter")) {
+    asset.consensusSources = [...consensusSources, "jupiter"];
+  }
+  // Deliberately do not add Jupiter to agreeSources or replace priceSource here.
+  // The pass only exposes a bounded soft corroborator for source-depth/UI use.
+  return true;
+}
+
+function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
+  const mid = (left + right) / 2;
+  if (mid <= 0) return false;
+  return (Math.abs(left - right) / mid) * 10_000 <= thresholdBps;
 }
 
 async function fetchJupiterPrices(
