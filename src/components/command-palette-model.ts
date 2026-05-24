@@ -179,6 +179,17 @@ export type CommandPaletteResultKind =
   | "verb-hint"
   | "verb-run";
 
+export type CommandPalettePegStatus = "calm" | "watch" | "alert";
+
+export type CommandPaletteStablecoinHealth =
+  | { kind: "peg"; status: CommandPalettePegStatus }
+  | { kind: "nav" };
+
+export interface CommandPaletteStablecoinLiveMetadata {
+  marketCapUsd?: number;
+  health?: CommandPaletteStablecoinHealth;
+}
+
 export interface CommandPaletteResultDescriptor {
   id: string;
   label: string;
@@ -192,6 +203,8 @@ export interface CommandPaletteResultDescriptor {
   imageSquare?: boolean;
   /** Apply CSS invert in dark mode (used for chain logos with darkInvert). */
   imageDarkInvert?: boolean;
+  marketCapUsd?: number;
+  stablecoinHealth?: CommandPaletteStablecoinHealth;
   frozen?: boolean;
   href?: string;
   external?: boolean;
@@ -288,29 +301,65 @@ function scoreStablecoinSearchMatch(query: string, coin: (typeof COMMAND_PALETTE
   );
 }
 
-// COMMAND_PALETTE_STABLECOINS is maintained in canonical (roughly market-cap)
-// order, so a coin's index is a stable, fetch-free prominence proxy. We fold a
-// small bonus into the lexical score so that, among comparably-matching rows,
-// the canonical asset and its major vaults float above obscure same-substring
-// wrappers (e.g. USD Coin and the large USDC vaults rank above "Movement
-// USDCx"). The bonus is capped well below an exact-symbol hit (100) so an exact
-// match always wins regardless of prominence.
-const PROMINENCE_MAX_BONUS = 30;
-const PROMINENCE_SPAN = 200;
+function isExactStablecoinSymbolMatch(query: string, coin: (typeof COMMAND_PALETTE_STABLECOINS)[number]): boolean {
+  return coin[2].toLowerCase() === query.toLowerCase();
+}
 
-function prominenceBonus(index: number): number {
-  if (index >= PROMINENCE_SPAN) return 0;
-  return Math.round(PROMINENCE_MAX_BONUS * (1 - index / PROMINENCE_SPAN));
+// COMMAND_PALETTE_STABLECOINS is maintained in canonical (roughly market-cap)
+// order, so a coin's index remains a stable, fetch-free fallback prominence
+// proxy. When live metadata is present, market cap becomes the prominence
+// source so displayed cap and result order tell the same story.
+const STATIC_PROMINENCE_MAX_BONUS = 30;
+const STATIC_PROMINENCE_SPAN = 200;
+const LIVE_MARKET_CAP_PROMINENCE_MAX_BONUS = 60;
+const LIVE_MARKET_CAP_LOG_MIN = 6; // $1M and below.
+const LIVE_MARKET_CAP_LOG_MAX = 11; // $100B and above.
+
+function staticProminenceBonus(index: number): number {
+  if (index >= STATIC_PROMINENCE_SPAN) return 0;
+  return Math.round(STATIC_PROMINENCE_MAX_BONUS * (1 - index / STATIC_PROMINENCE_SPAN));
+}
+
+function liveMarketCapProminenceBonus(marketCapUsd: number): number {
+  if (!Number.isFinite(marketCapUsd) || marketCapUsd <= 0) return 0;
+  const log = Math.log10(marketCapUsd);
+  const bounded = Math.min(LIVE_MARKET_CAP_LOG_MAX, Math.max(LIVE_MARKET_CAP_LOG_MIN, log));
+  const ratio = (bounded - LIVE_MARKET_CAP_LOG_MIN) / (LIVE_MARKET_CAP_LOG_MAX - LIVE_MARKET_CAP_LOG_MIN);
+  return Math.round(LIVE_MARKET_CAP_PROMINENCE_MAX_BONUS * ratio);
+}
+
+function stablecoinProminenceBonus(
+  coinId: string,
+  index: number,
+  liveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>,
+): number {
+  const liveMarketCap = liveMetadata?.get(coinId)?.marketCapUsd;
+  if (liveMarketCap != null) return liveMarketCapProminenceBonus(liveMarketCap);
+  return staticProminenceBonus(index);
 }
 
 const STABLECOIN_BY_ID = new Map<string, (typeof COMMAND_PALETTE_STABLECOINS)[number]>(
   COMMAND_PALETTE_STABLECOINS.map((coin) => [coin[0], coin]),
 );
 
-export function rankCommandPaletteResults<T extends { score: number; status?: string }>(
+function projectStablecoinLiveMetadata(
+  stablecoinId: string,
+  liveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>,
+): Pick<CommandPaletteResultDescriptor, "marketCapUsd" | "stablecoinHealth"> {
+  const live = liveMetadata?.get(stablecoinId);
+  return {
+    marketCapUsd: live?.marketCapUsd,
+    stablecoinHealth: live?.health,
+  };
+}
+
+export function rankCommandPaletteResults<T extends { score: number; status?: string; exactSymbol?: boolean }>(
   items: T[],
 ): T[] {
   return [...items].sort((a, b) => {
+    const aExact = a.exactSymbol ? 1 : 0;
+    const bExact = b.exactSymbol ? 1 : 0;
+    if (bExact !== aExact) return bExact - aExact;
     if (b.score !== a.score) return b.score - a.score;
     const aFrozen = a.status === "frozen" ? 1 : 0;
     const bFrozen = b.status === "frozen" ? 1 : 0;
@@ -326,6 +375,7 @@ export function rankCommandPaletteResults<T extends { score: number; status?: st
  */
 export function buildPopularStablecoinDescriptors(
   ids: readonly string[],
+  liveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>,
 ): CommandPaletteResultDescriptor[] {
   const out: CommandPaletteResultDescriptor[] = [];
   for (const id of ids) {
@@ -343,6 +393,7 @@ export function buildPopularStablecoinDescriptors(
       section: "Popular",
       kind: "stablecoin",
       logoId: coinId,
+      ...projectStablecoinLiveMetadata(coinId, liveMetadata),
       frozen: status === "frozen",
       href,
       history: { id: coinId, type: "stablecoin", label: name, sublabel: symbol, href },
@@ -434,11 +485,13 @@ export function buildCommandPaletteResultDescriptors({
   history,
   isDark,
   watchlistCount = 0,
+  stablecoinLiveMetadata,
 }: {
   query: string;
   history: readonly CommandPaletteHistoryItem[];
   isDark: boolean;
   watchlistCount?: number;
+  stablecoinLiveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>;
 }): CommandPaletteResultDescriptor[] {
   const q = query.trim();
   const items: CommandPaletteResultDescriptor[] = [];
@@ -462,13 +515,19 @@ export function buildCommandPaletteResultDescriptors({
       coin: (typeof COMMAND_PALETTE_STABLECOINS)[number];
       score: number;
       status: string;
+      exactSymbol: boolean;
     }> = [];
 
     for (const [index, coin] of COMMAND_PALETTE_STABLECOINS.entries()) {
       const status = coin[3];
       const base = scoreStablecoinSearchMatch(q, coin);
       if (base <= 0) continue;
-      matched.push({ coin, score: base + prominenceBonus(index), status: status ?? "active" });
+      matched.push({
+        coin,
+        score: base + stablecoinProminenceBonus(coin[0], index, stablecoinLiveMetadata),
+        status: status ?? "active",
+        exactSymbol: isExactStablecoinSymbolMatch(q, coin),
+      });
     }
 
     for (const { coin } of rankCommandPaletteResults(matched)) {
@@ -486,6 +545,7 @@ export function buildCommandPaletteResultDescriptors({
         section: "Stablecoins",
         kind: "stablecoin",
         logoId: id,
+        ...projectStablecoinLiveMetadata(id, stablecoinLiveMetadata),
         frozen: status === "frozen",
         href,
         history: { id, type: "stablecoin", label: name, sublabel: symbol, href },

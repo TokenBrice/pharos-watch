@@ -25,7 +25,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { useLogos } from "@/hooks/use-logos";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -35,14 +35,18 @@ import { formatCompactUsd } from "@shared/lib/format";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { deriveDeviationBps } from "@/lib/stablecoin-detail-derive";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   buildCommandPaletteResultDescriptors,
   buildPopularStablecoinDescriptors,
   groupCommandPaletteResults,
   type CommandPaletteActionIcon,
   type CommandPaletteActionId,
+  type CommandPalettePegStatus,
   type CommandPaletteResultDescriptor,
   type CommandPaletteSection,
+  type CommandPaletteStablecoinHealth,
+  type CommandPaletteStablecoinLiveMetadata,
 } from "@/components/command-palette-model";
 import {
   buildCompareHrefFromCoinIds,
@@ -57,22 +61,22 @@ import {
 // Empty-state "Popular" jump list size (ranked live by market cap).
 const POPULAR_STABLECOIN_COUNT = 6;
 
-// Peg-health state for the semantic dot. Calm by default; watch at half the
-// depeg threshold; alert at/above it. Bands come from depeg-config so the dot
-// agrees with the rest of the product.
-type PegStatus = "calm" | "watch" | "alert";
-
-const PEG_STATUS_DOT: Record<PegStatus, string> = {
+const PEG_STATUS_DOT: Record<CommandPalettePegStatus, string> = {
   calm: "bg-emerald-500",
   watch: "bg-amber-500",
   alert: "bg-red-500",
 };
 
-const PEG_STATUS_LABEL: Record<PegStatus, string> = {
+const PEG_STATUS_LABEL: Record<CommandPalettePegStatus, string> = {
   calm: "At peg",
   watch: "Peg watch",
   alert: "Off peg",
 };
+
+function getStablecoinHealthLabel(health: CommandPaletteStablecoinHealth): string {
+  if (health.kind === "nav") return "NAV-priced token";
+  return PEG_STATUS_LABEL[health.status];
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,8 +93,8 @@ interface SearchResult {
   frozen?: boolean;
   /** Live USD market cap, shown right-aligned on stablecoin rows. */
   marketCap?: number;
-  /** Live peg-health state, shown as a semantic dot on stablecoin rows. */
-  pegStatus?: PegStatus;
+  /** Live peg/NAV health state, shown on stablecoin rows. */
+  stablecoinHealth?: CommandPaletteStablecoinHealth;
   /** Render the sublabel in the mono face (tickers, dates — data, not prose). */
   mono?: boolean;
   onSelect: () => void;
@@ -156,8 +160,6 @@ function buildSearchResult(
     toggleTheme,
     watchlistIds,
     setQuery,
-    marketCapById,
-    pegStatusById,
   }: {
     logos: Record<string, string>;
     router: ReturnType<typeof useRouter>;
@@ -172,8 +174,6 @@ function buildSearchResult(
     toggleTheme: () => void;
     watchlistIds: readonly string[];
     setQuery: (next: string) => void;
-    marketCapById: Map<string, number>;
-    pegStatusById: Map<string, PegStatus>;
   },
 ): SearchResult {
   const selectAction = (actionId: CommandPaletteActionId) => {
@@ -261,12 +261,12 @@ function buildSearchResult(
             : undefined,
     frozen: descriptor.frozen,
     marketCap:
-      descriptor.kind === "stablecoin" && descriptor.logoId
-        ? marketCapById.get(descriptor.logoId)
+      descriptor.kind === "stablecoin"
+        ? descriptor.marketCapUsd
         : undefined,
-    pegStatus:
-      descriptor.kind === "stablecoin" && descriptor.logoId
-        ? pegStatusById.get(descriptor.logoId)
+    stablecoinHealth:
+      descriptor.kind === "stablecoin"
+        ? descriptor.stablecoinHealth
         : undefined,
     mono: descriptor.kind === "stablecoin" || descriptor.kind === "depeg-event",
     onSelect,
@@ -287,42 +287,47 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
   const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
 
-  // Live market caps power the right-aligned datum on coin rows and the
-  // empty-state "Popular" jump list. The list query is already cached by the
-  // data surfaces; the palette only mounts after first open, so this never
-  // fetches eagerly.
+  // Live metadata powers both ranking and row facts. The list query is already
+  // cached by data surfaces; the palette only mounts after first open.
   const peggedAssets = stablecoinsData?.peggedAssets;
-  const marketCapById = useMemo(() => {
-    const map = new Map<string, number>();
-    if (peggedAssets) {
-      for (const asset of peggedAssets) map.set(asset.id, getCirculatingRaw(asset));
+  const stablecoinLiveMetadata = useMemo(() => {
+    const map = new Map<string, CommandPaletteStablecoinLiveMetadata>();
+    if (!peggedAssets) return map;
+    const { rates } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, stablecoinsData?.fxFallbackRates);
+    for (const asset of peggedAssets) {
+      const marketCapUsd = getCirculatingRaw(asset);
+      const meta = TRACKED_META_BY_ID.get(asset.id);
+      const peg = asset.pegType;
+      let health: CommandPaletteStablecoinHealth | undefined;
+      if (meta?.flags.navToken) {
+        health = { kind: "nav" };
+      } else if (peg && asset.price != null) {
+        const reference = getPegReference(peg, rates, meta?.commodityOunces);
+        const bps = Math.abs(deriveDeviationBps(asset.price, reference));
+        const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
+        health = { kind: "peg", status: bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm" };
+      }
+      if (marketCapUsd > 0 || health) {
+        map.set(asset.id, {
+          ...(marketCapUsd > 0 ? { marketCapUsd } : {}),
+          ...(health ? { health } : {}),
+        });
+      }
     }
     return map;
-  }, [peggedAssets]);
+  }, [peggedAssets, stablecoinsData?.fxFallbackRates]);
   const popularIds = useMemo(() => {
     if (!peggedAssets) return [];
     return [...peggedAssets]
       .filter((asset) => !asset.frozen)
-      .sort((a, b) => getCirculatingRaw(b) - getCirculatingRaw(a))
+      .sort((a, b) => {
+        const aMarketCap = stablecoinLiveMetadata.get(a.id)?.marketCapUsd ?? 0;
+        const bMarketCap = stablecoinLiveMetadata.get(b.id)?.marketCapUsd ?? 0;
+        return bMarketCap - aMarketCap;
+      })
       .slice(0, POPULAR_STABLECOIN_COUNT)
       .map((asset) => asset.id);
-  }, [peggedAssets]);
-  const pegStatusById = useMemo(() => {
-    const map = new Map<string, PegStatus>();
-    if (!peggedAssets) return map;
-    const { rates } = derivePegRates(peggedAssets, undefined, stablecoinsData?.fxFallbackRates);
-    for (const asset of peggedAssets) {
-      const peg = asset.pegType;
-      // Commodity references need per-token ounce weights we don't carry here,
-      // so skip gold/silver rather than render a misleading dot.
-      if (!peg || asset.price == null || peg === "peggedGOLD" || peg === "peggedSILVER") continue;
-      const reference = getPegReference(peg, rates);
-      const bps = Math.abs(deriveDeviationBps(asset.price, reference));
-      const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
-      map.set(asset.id, bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm");
-    }
-    return map;
-  }, [peggedAssets, stablecoinsData?.fxFallbackRates]);
+  }, [peggedAssets, stablecoinLiveMetadata]);
 
   const closePalette = useCallback(() => {
     onOpenChange(false);
@@ -392,8 +397,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       toggleTheme,
       watchlistIds,
       setQuery,
-      marketCapById,
-      pegStatusById,
     };
 
     const built = buildCommandPaletteResultDescriptors({
@@ -401,13 +404,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       history,
       isDark,
       watchlistCount,
+      stablecoinLiveMetadata,
     }).map((descriptor) => buildSearchResult(descriptor, ctx));
 
     // Empty state: surface a live, market-cap-ranked "Popular" jump list so the
     // prime real estate teaches the interface instead of restating the prompt.
     const popular = query.trim()
       ? []
-      : buildPopularStablecoinDescriptors(popularIds).map((descriptor) =>
+      : buildPopularStablecoinDescriptors(popularIds, stablecoinLiveMetadata).map((descriptor) =>
           buildSearchResult(descriptor, ctx),
         );
 
@@ -440,8 +444,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     watchlistIds,
     verbPreview,
     runVerb,
-    marketCapById,
-    pegStatusById,
+    stablecoinLiveMetadata,
     popularIds,
   ]);
 
@@ -526,6 +529,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         onKeyDown={handleKeyDown}
       >
         <DialogTitle className="sr-only">Command palette</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search stablecoins, pages, chains, recent depegs, and command verbs.
+        </DialogDescription>
         {/* Search input */}
         <div className="relative shrink-0">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -671,12 +677,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         {formatCompactUsd(item.marketCap)}
                       </span>
                     ) : null}
-                    {item.pegStatus ? (
+                    {item.stablecoinHealth?.kind === "peg" ? (
+                      <span className="ml-2 inline-flex shrink-0 items-center" title={getStablecoinHealthLabel(item.stablecoinHealth)}>
+                        <span
+                          className={`size-1.5 rounded-full ${PEG_STATUS_DOT[item.stablecoinHealth.status]}`}
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">{getStablecoinHealthLabel(item.stablecoinHealth)}</span>
+                      </span>
+                    ) : item.stablecoinHealth?.kind === "nav" ? (
                       <span
-                        className={`ml-2 size-1.5 shrink-0 rounded-full ${PEG_STATUS_DOT[item.pegStatus]}`}
-                        title={PEG_STATUS_LABEL[item.pegStatus]}
-                        aria-hidden
-                      />
+                        className="ml-2 shrink-0 rounded border border-sky-500/30 px-1 py-0.5 font-mono text-[10px] leading-none text-sky-500"
+                        title={getStablecoinHealthLabel(item.stablecoinHealth)}
+                      >
+                        NAV<span className="sr-only">-priced token</span>
+                      </span>
                     ) : null}
                   </button>
                 );

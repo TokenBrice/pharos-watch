@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCommandPaletteResultDescriptors,
   buildCommandPaletteActionDefinitions,
+  buildPopularStablecoinDescriptors,
   COMMAND_PALETTE_PAGES,
   fuzzyMatch,
   groupCommandPaletteResults,
@@ -47,6 +48,15 @@ describe("command palette model", () => {
     ]);
 
     expect(ranked.map((item) => item.id)).toEqual(["active-coin", "frozen-coin"]);
+  });
+
+  it("keeps exact ticker matches ahead of higher-prominence fuzzy matches", () => {
+    const ranked = rankCommandPaletteResults([
+      { id: "prefix-match", score: 200, exactSymbol: false },
+      { id: "exact-match", score: 100, exactSymbol: true },
+    ]);
+
+    expect(ranked.map((item) => item.id)).toEqual(["exact-match", "prefix-match"]);
   });
 
   it("builds stablecoin, page, and action descriptors outside the component", () => {
@@ -106,6 +116,40 @@ describe("command palette model", () => {
     expect(sparkVault).toBeGreaterThan(-1);
     expect(movementUsdcx).toBeGreaterThan(-1);
     expect(sparkVault).toBeLessThan(movementUsdcx);
+  });
+
+  it("uses live market cap prominence when live metadata is available", () => {
+    const stablecoinLiveMetadata = new Map([
+      ["syrupusdc-maple", { marketCapUsd: 1_400_000_000 }],
+      ["usdcx-movement", { marketCapUsd: 2_300_000 }],
+    ]);
+    const results = buildCommandPaletteResultDescriptors({
+      query: "USDC",
+      history: [],
+      isDark: false,
+      stablecoinLiveMetadata,
+    }).filter((result) => result.section === "Stablecoins");
+    const order = results.map((result) => result.href ?? "");
+
+    expect(order.indexOf("/stablecoin/syrupusdc-maple/")).toBeLessThan(
+      order.indexOf("/stablecoin/usdcx-movement/"),
+    );
+    expect(results.find((result) => result.href === "/stablecoin/syrupusdc-maple/")).toMatchObject({
+      marketCapUsd: 1_400_000_000,
+    });
+  });
+
+  it("projects live metadata onto popular stablecoin descriptors", () => {
+    const [result] = buildPopularStablecoinDescriptors(
+      ["susds-sky"],
+      new Map([["susds-sky", { marketCapUsd: 6_200_000_000, health: { kind: "nav" } }]]),
+    );
+
+    expect(result).toMatchObject({
+      href: "/stablecoin/susds-sky/",
+      marketCapUsd: 6_200_000_000,
+      stablecoinHealth: { kind: "nav" },
+    });
   });
 
   it("keeps Start Here unique in the command palette route model", () => {
