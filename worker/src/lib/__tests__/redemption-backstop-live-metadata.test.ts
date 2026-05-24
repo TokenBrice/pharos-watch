@@ -154,6 +154,27 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     );
   });
 
+  it("fails closed on malformed nested redemption telemetry instead of falling back to legacy fields", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        immediateRedeemableUsd: 500_000,
+        redemptionFeeBps: 50,
+        redemption: "malformed",
+      }),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBeNull();
+    expect(metadata.redemptionFeeBps).toBeNull();
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.canUseFee).toBe(false);
+    expect(metadata.capacityReason).toBe("Live redemption capacity telemetry is malformed; fresh valid metadata required");
+    expect(metadata.feeReason).toBe("Live redemption fee telemetry is malformed; using reviewed fee model instead");
+    expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
+  });
+
   it("lets valid nested redemption telemetry override malformed legacy fallback fields", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
@@ -227,6 +248,27 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.routeStatus).toBeNull();
     expect(metadata.routeStatusSource).toBeNull();
     expect(metadata.capacityNotes).toContain("Live redemption route status omitted source attribution and was ignored");
+  });
+
+  it("preserves unknown live route status without source so downstream static open cannot win", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 1_000_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "unknown",
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.routeStatus).toBe("unknown");
+    expect(metadata.routeStatusSource).toBeNull();
+    expect(metadata.routeStatusReason).toBeNull();
+    expect(metadata.capacityNotes).toContain("Live redemption route status is unknown without source attribution");
   });
 
   it("drops orphaned route status source and details when the status is invalid", () => {

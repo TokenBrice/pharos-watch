@@ -153,7 +153,12 @@ export async function buildRedemptionBackstopEntry(
     settlementModel: config.settlementModel,
   });
   const staticRouteStatus: RedemptionRouteStatusEvidence = {
-    routeStatus: resolutionState === "resolved" ? (config.routeStatus ?? "open") : "unknown",
+    routeStatus:
+      capacity.routeStatus === "unknown" && !capacity.routeStatusSource
+        ? "unknown"
+        : resolutionState === "resolved"
+          ? (config.routeStatus ?? "open")
+          : "unknown",
     routeStatusSource: "static-config",
   };
   const liveRouteStatus: RedemptionRouteStatusEvidence | null = capacity.routeStatus && capacity.routeStatusSource

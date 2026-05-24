@@ -527,6 +527,57 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capsApplied).not.toContain("live-route-status-impairment");
   });
 
+  it("uses unsourced unknown live route status to suppress optimistic static open status", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
+        reviewedAt: "2026-04-15",
+        docs: [{ label: "Fixture route", url: "https://example.com/redemption" }],
+      },
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "test-coin",
+          fetchedAt: now - 120,
+          source: "fixture",
+          metadata: {
+            freshnessMode: "not-applicable",
+            redemption: {
+              capacityUsd: 10_000_000,
+              capacityKind: "live-proxy-validated",
+              freshnessKind: "same-run-api",
+              routeStatus: "unknown",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.routeStatus).toBe("unknown");
+    expect(entry.routeStatusSource).toBe("static-config");
+    expect(entry.modelConfidence).toBe("low");
+    expect(entry.confidenceDetails?.reasons).toContain(
+      "Route status is unknown without direct live telemetry or a documented capacity bound",
+    );
+    expect(entry.notes).toContain("Live redemption route status is unknown without source attribution");
+  });
+
   it("uses LUSD Liquity v1 system debt as live direct redemption capacity", async () => {
     const config = getRedemptionBackstopConfig("lusd-liquity");
     expect(config).not.toBeNull();

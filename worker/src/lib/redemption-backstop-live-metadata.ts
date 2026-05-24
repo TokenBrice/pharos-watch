@@ -56,10 +56,20 @@ export interface RedemptionBackstopLiveMetadata {
   routeStatusReviewedAt: string | null;
 }
 
-function getRedemptionTelemetry(metadata: Record<string, unknown>): Record<string, unknown> {
-  return metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)
-    ? (metadata.redemption as Record<string, unknown>)
-    : {};
+interface ParsedRedemptionTelemetry {
+  fields: Record<string, unknown>;
+  malformed: boolean;
+}
+
+function getRedemptionTelemetry(metadata: Record<string, unknown>): ParsedRedemptionTelemetry {
+  if (!Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
+    return { fields: {}, malformed: false };
+  }
+  const raw = metadata.redemption;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return { fields: raw as Record<string, unknown>, malformed: false };
+  }
+  return { fields: {}, malformed: true };
 }
 
 interface ParsedTelemetryNumber {
@@ -300,7 +310,9 @@ export function readRedemptionBackstopLiveMetadata(
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopLiveMetadata {
   const metadata = snapshotMetadata?.metadata ?? {};
-  const redemptionTelemetry = getRedemptionTelemetry(metadata);
+  const parsedRedemptionTelemetry = getRedemptionTelemetry(metadata);
+  const redemptionTelemetry = parsedRedemptionTelemetry.fields;
+  const redemptionTelemetryMalformed = parsedRedemptionTelemetry.malformed;
   const updatedAt = snapshotMetadata?.fetchedAt ?? null;
   const trackedMeta = TRACKED_META_BY_ID.get(stablecoinId);
   const adapterKey = trackedMeta?.liveReservesConfig?.adapter ?? null;
@@ -370,14 +382,24 @@ export function readRedemptionBackstopLiveMetadata(
   const minRedeemUsd = parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
     min: 0,
   });
-  const hasNestedCapacityTelemetry = hasTelemetryValue(nestedCapacityUsd) || hasTelemetryValue(nestedCapacityRatio);
+  const hasNestedCapacityTelemetry =
+    redemptionTelemetryMalformed || hasTelemetryValue(nestedCapacityUsd) || hasTelemetryValue(nestedCapacityRatio);
   const hasLegacyCapacityTelemetry = hasTelemetryValue(legacyCapacityUsd) || hasTelemetryValue(legacyCapacityRatio);
-  const capacityTelemetryInvalid = hasNestedCapacityTelemetry
-    ? nestedCapacityUsd.invalid || nestedCapacityRatio.invalid
-    : legacyCapacityUsd.invalid || legacyCapacityRatio.invalid;
-  const hasNestedFeeTelemetry = hasTelemetryValue(nestedFeeBps);
-  const feeTelemetryInvalid = hasNestedFeeTelemetry ? nestedFeeBps.invalid : legacyFeeBps.invalid;
+  const capacityTelemetryInvalid = redemptionTelemetryMalformed
+    ? true
+    : hasNestedCapacityTelemetry
+      ? nestedCapacityUsd.invalid || nestedCapacityRatio.invalid
+      : legacyCapacityUsd.invalid || legacyCapacityRatio.invalid;
+  const hasNestedFeeTelemetry = redemptionTelemetryMalformed || hasTelemetryValue(nestedFeeBps);
+  const feeTelemetryInvalid = redemptionTelemetryMalformed
+    ? true
+    : hasNestedFeeTelemetry
+      ? nestedFeeBps.invalid
+      : legacyFeeBps.invalid;
   const telemetryWarnings = collectTelemetryWarnings([
+    ...(redemptionTelemetryMalformed
+      ? [{ value: null, invalid: true, warning: "Live redemption telemetry is malformed and was ignored" }]
+      : []),
     ...(hasNestedCapacityTelemetry || !hasLegacyCapacityTelemetry
       ? [nestedCapacityUsd, nestedCapacityRatio]
       : [legacyCapacityUsd, legacyCapacityRatio]),
@@ -392,9 +414,12 @@ export function readRedemptionBackstopLiveMetadata(
   ]);
   const routeStatus = coerceRouteStatus(redemptionTelemetry.routeStatus);
   const routeStatusSource = coerceRouteStatusSource(redemptionTelemetry.routeStatusSource);
-  const routeStatusMissingSource = routeStatus != null && routeStatus !== "unknown" && routeStatusSource == null;
-  const shouldUseRouteStatus = routeStatus != null && !routeStatusMissingSource;
-  if (routeStatusMissingSource) {
+  const routeStatusMissingSource = routeStatus != null && routeStatusSource == null;
+  const shouldUseSourcedRouteStatus = routeStatus != null && !routeStatusMissingSource;
+  const shouldPreserveUnsourcedUnknownRouteStatus = routeStatus === "unknown" && routeStatusMissingSource;
+  if (routeStatusMissingSource && routeStatus === "unknown") {
+    telemetryWarnings.push("Live redemption route status is unknown without source attribution");
+  } else if (routeStatusMissingSource) {
     telemetryWarnings.push("Live redemption route status omitted source attribution and was ignored");
   }
   const fallbackCapacityTelemetryAvailable =
@@ -470,9 +495,11 @@ export function readRedemptionBackstopLiveMetadata(
     redemptionFeeBps: feeTelemetryInvalid ? null : hasNestedFeeTelemetry ? nestedFeeBps.value : legacyFeeBps.value,
     buyFeeBpsMin: buyFeeBpsMin.value,
     buyFeeBpsMax: buyFeeBpsMax.value,
-    routeStatus: shouldUseRouteStatus ? routeStatus : null,
-    routeStatusSource: shouldUseRouteStatus ? routeStatusSource : null,
-    routeStatusReason: shouldUseRouteStatus ? coerceString(redemptionTelemetry.routeStatusReason) : null,
-    routeStatusReviewedAt: shouldUseRouteStatus ? coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt) : null,
+    routeStatus: shouldUseSourcedRouteStatus || shouldPreserveUnsourcedUnknownRouteStatus ? routeStatus : null,
+    routeStatusSource: shouldUseSourcedRouteStatus ? routeStatusSource : null,
+    routeStatusReason: shouldUseSourcedRouteStatus ? coerceString(redemptionTelemetry.routeStatusReason) : null,
+    routeStatusReviewedAt: shouldUseSourcedRouteStatus
+      ? coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt)
+      : null,
   };
 }
