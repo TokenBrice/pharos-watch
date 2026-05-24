@@ -421,18 +421,11 @@ describe("validateRedemptionBackstopRegistry", () => {
       },
     ]);
 
-    expect(result.findings).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "documented-bound-missing-route-support",
-          stablecoinId: "usdt-tether",
-        }),
-        expect.objectContaining({
-          code: "documented-bound-missing-capacity-support",
-          stablecoinId: "usdt-tether",
-        }),
-      ]),
+    const supportWarnings = result.findings.filter(
+      (finding) =>
+        finding.stablecoinId === "usdt-tether" && finding.code.startsWith("documented-bound-missing-"),
     );
+    expect(supportWarnings).toEqual([]);
   });
 
   it("rejects invalid review dates and non-positive daily limits", () => {

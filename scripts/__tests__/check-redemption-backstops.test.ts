@@ -70,6 +70,29 @@ describe("check-redemption-backstops CLI", () => {
     });
   });
 
+  it("preserves warning findings in reports while exiting successfully", () => {
+    const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-warnings-")), "report.json");
+
+    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
+      findings: Array<{ severity: string; code: string }>;
+    };
+    expect(report.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          severity: "warning",
+          code: "documented-bound-missing-route-support",
+        }),
+      ]),
+    );
+    expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
+  });
+
   it("rejects non-http docs URLs and invalid calendar review dates", () => {
     const result = validateFixture({
       "usdt-tether": {
