@@ -81,7 +81,7 @@ The pattern already exists for contract addresses in `src/lib/stablecoin-detail-
 
 ## Accessed-date pinning
 
-The "accessed" date in any generated citation artifact must come from deterministic build metadata, not from `new Date()` in the browser. This keeps dates stable across HTML, RSS feeds, and any future PDF artifact for the same build.
+The "accessed" date in any generated citation artifact must come from deterministic build metadata, not from `new Date()` in the browser. This keeps dates stable across HTML, RSS feeds, and generated citation artifacts for the same build.
 
 ---
 

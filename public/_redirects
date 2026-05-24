@@ -29,6 +29,23 @@
 /feed/cemetery/ /feed/cemetery.xml 301
 /feed/cemetery /feed/cemetery.xml 301
 
+# Methodology PDFs were deprecated in favor of canonical HTML methodology pages.
+/methodology/pdf/index.pdf /methodology/ 301
+/methodology/pdf/scoring-v7.26.pdf /methodology/scoring-changelog/ 301
+/methodology/pdf/depeg-dews-v6.0.pdf /methodology/depeg-changelog/ 301
+/methodology/pdf/blacklist-tracker-v3.993.pdf /methodology/blacklist-tracker-changelog/ 301
+/methodology/pdf/liquidity-score-v5.7.pdf /methodology/liquidity-score-changelog/ 301
+/methodology/pdf/stability-index-v3.3.pdf /methodology/stability-index-changelog/ 301
+/methodology/pdf/mint-burn-flow-v6.11.pdf /methodology/mint-burn-flow-changelog/ 301
+/methodology/pdf/yield-v8.17.pdf /methodology/yield-changelog/ 301
+/methodology/pdf/pricing-pipeline-v6.04.pdf /methodology/pricing-pipeline-changelog/ 301
+/methodology/pdf/pricing-pipeline-v6.06.pdf /methodology/pricing-pipeline-changelog/ 301
+/methodology/pdf/pricing-pipeline-v6.07.pdf /methodology/pricing-pipeline-changelog/ 301
+/methodology/pdf/chain-health-v1.2.pdf /methodology/chain-health-changelog/ 301
+/methodology/pdf/* /methodology/ 301
+/methodology/pdf/ /methodology/ 301
+/methodology/pdf /methodology/ 301
+
 /report-cards /safety-scores/ 301
 /report-cards/ /safety-scores/ 301
 /report-cards/* /safety-scores/:splat 301

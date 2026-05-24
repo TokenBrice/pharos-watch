@@ -30,7 +30,7 @@ const route = createMethodologyChangelogRoute({
     label: version,
   })),
   renderContent: () => <ScoringChangelogContent />,
-  citation: { id: "safety-score", versionLabel: SAFETY_SCORE_VERSION_LABEL, pdfKey: "scoring" },
+  citation: { id: "safety-score", versionLabel: SAFETY_SCORE_VERSION_LABEL },
 });
 
 export const metadata = route.metadata;

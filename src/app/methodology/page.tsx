@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { MethodologySections } from "./methodology-sections";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
@@ -276,20 +275,6 @@ export default function MethodologyPage() {
       />
 
       <MethodologySections />
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-        <span className="pharos-kicker text-foreground/80">White paper</span>
-        <a
-          href="/methodology/pdf/index.pdf"
-          className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm font-medium text-foreground hover:underline hover:underline-offset-4"
-        >
-          <Download className="h-3.5 w-3.5" aria-hidden="true" />
-          Download the full Pharos Methodology (PDF)
-        </a>
-        <span className="text-xs text-muted-foreground/80">
-          Per-methodology PDFs are linked from each changelog page.
-        </span>
-      </div>
 
     </div>
   );

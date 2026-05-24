@@ -744,4 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-client-registry-imports.mjs`
 - `scripts/ci/check-critical-coverage.mjs` - getChangedFilesFromGit, isAllZeroSha, parseChangedFilesFromEnv, runCriticalCoverageCheck
 - `scripts/ci/check-cron-abort-contract.mjs` - main, scanCronAbortContract
-- ... 134 more files omitted; use `rg --files scripts` for the full list.
+- ... 133 more files omitted; use `rg --files scripts` for the full list.

@@ -181,11 +181,6 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     paths: ["scripts/ci/check-build-attribution.mjs"],
   },
   {
-    command: "npm run check:methodology-pdfs",
-    deployImpact: "pages",
-    paths: ["scripts/maintenance/generate-methodology-pdfs.ts"],
-  },
-  {
     command: "npm run test:noncritical",
     deployImpact: "full",
     paths: ["scripts/maintenance/run-noncritical-tests.mjs"],

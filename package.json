@@ -95,7 +95,6 @@
     "backfill:ai-summary-provenance": "node scripts/maintenance/backfill-ai-summary-provenance.mjs",
     "generate:pwa-icons": "node scripts/maintenance/generate-pwa-icons.mjs",
     "subset:fonts": "node scripts/maintenance/subset-fonts.mjs",
-    "check:methodology-pdfs": "tsx scripts/maintenance/generate-methodology-pdfs.ts --check",
     "generate:public-datasets": "tsx scripts/maintenance/generate-public-datasets.ts",
     "digest:curation": "node scripts/maintenance/weekly-curation-digest.mjs",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",

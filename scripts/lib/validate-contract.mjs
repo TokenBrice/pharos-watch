@@ -57,7 +57,6 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run check:classifier-sensitive-copy",
   "npm run check:build-size",
   "npm run check:build-attribution",
-  "npm run check:methodology-pdfs",
 ];
 
 export const NONCRITICAL_TEST_SHARD_COUNT = 4;

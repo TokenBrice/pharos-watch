@@ -15,7 +15,7 @@ const route = createStandardMethodologyChangelogRoute({
   versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
   accentClass: "border-l-cyan-500",
   entries: PSI_METHODOLOGY_CHANGELOG,
-  citation: { id: "psi", versionLabel: PSI_METHODOLOGY_VERSION_LABEL, pdfKey: "stability-index" },
+  citation: { id: "psi", versionLabel: PSI_METHODOLOGY_VERSION_LABEL },
 });
 
 export const metadata = route.metadata;

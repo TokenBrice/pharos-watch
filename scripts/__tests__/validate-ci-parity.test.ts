@@ -484,8 +484,6 @@ describe("validate-ci parity", () => {
       "Run local pre-publish checks in parallel",
       "npm run seo:check",
     ]);
-    expect(directPagesReleaseJob).not.toContain("npm run check:methodology-pdfs");
-
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");
     expect(deployWorkflow).not.toContain("  smoke-api:");
@@ -511,7 +509,7 @@ describe("validate-ci parity", () => {
       "npm run generate:public-datasets",
       "npm run build",
     ]);
-    expect(runSteps.slice(0, 8)).toEqual([
+    expect(runSteps.slice(0, 7)).toEqual([
       "npm run build",
       "npm run check:feature-flag-inlining",
       "npm run seo:check",
@@ -519,7 +517,6 @@ describe("validate-ci parity", () => {
       "npm run check:classifier-sensitive-copy",
       "npm run check:build-size",
       "npm run check:build-attribution",
-      "npm run check:methodology-pdfs",
     ]);
   });
 

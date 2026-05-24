@@ -71,7 +71,6 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-docs-metadata.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-markdown-exports.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/generate-methodology-pdfs.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
   });
@@ -193,7 +192,6 @@ describe("hasDeployImpact", () => {
       "scripts/ci/check-build-attribution.mjs",
       "scripts/maintenance/build-world-map-svg.ts",
       "scripts/maintenance/explain-build-chunks.mjs",
-      "scripts/maintenance/generate-methodology-pdfs.ts",
       "scripts/maintenance/report-build-size.mjs",
       "scripts/maintenance/update-build-attribution-baseline.mjs",
     ];
