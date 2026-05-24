@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getTemplate, type SelectorInput, type SelectorOutput, type SelectorRecommendation } from "@shared/lib/selector";
+import { Bot, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CopyButton } from "@/components/copy-button";
 import { useLogos } from "@/hooks/use-logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { SelectorResultSummary } from "@/components/selector/selector-result-summary";
@@ -30,6 +32,7 @@ import {
   stepForAnswerKey,
 } from "./handoff";
 import type { UseSelectorResult } from "./use-selector";
+import { PHAROSWATCHBOT_BOT_URL } from "@/app/pharoswatchbot/telegram-route-constants";
 
 export interface ResultPaneProps {
   selectorResult: UseSelectorResult;
@@ -143,6 +146,7 @@ export function ResultPane({
   const screenerHandoffHref = screenerHandoff.url;
   const compareShortlistHref = buildCompareShortlistHref(output);
   const compareWatchoutsHref = buildCompareWithWatchoutsHref(output, state);
+  const telegramSubscribeCommand = buildTelegramSubscribeCommand(output.recommended);
   const liveComparisonOutput =
     selectorResult.status === "snapshot-found" ? selectorResult.liveOutput : null;
   const snapshotBanner =
@@ -220,6 +224,8 @@ export function ResultPane({
           screenerHandoff,
         })}
       />
+
+      <TelegramSubscribeCommand command={telegramSubscribeCommand} />
 
       {sessionRecovered ? <SessionRecoveredBanner /> : null}
 
@@ -357,6 +363,68 @@ function CompareWatchoutsAction({ href }: { href: string }) {
       Compare shortlist vs watch-outs
     </a>
   );
+}
+
+function TelegramSubscribeCommand({ command }: { command: string }) {
+  return (
+    <section
+      aria-labelledby="selector-telegram-command-heading"
+      className="rounded-xl border border-frost-blue/30 bg-frost-blue/[0.08] p-4 dark:bg-frost-blue/[0.06] sm:p-5"
+    >
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-frost-blue/35 bg-background/60 text-sky-700 dark:text-sky-300">
+              <Bot className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="pharos-kicker text-sky-700 dark:text-sky-300">Telegram follow command</p>
+              <h2
+                id="selector-telegram-command-heading"
+                className="text-sm font-semibold tracking-tight text-foreground"
+              >
+                Follow this shortlist in PharosWatchBot
+              </h2>
+            </div>
+          </div>
+          <a
+            href={PHAROSWATCHBOT_BOT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-foreground/60 bg-foreground px-3.5 text-sm font-medium text-background hover:bg-foreground/90"
+          >
+            Open PharosWatchBot
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+        </div>
+        <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/60 bg-background/85 px-3 py-2.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.04)]">
+          <span aria-hidden="true" className="font-mono text-sm font-semibold text-sky-700 dark:text-sky-300">
+            ▸
+          </span>
+          <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
+            {command}
+          </code>
+          <CopyButton
+            text={command}
+            className="size-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+          />
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Copies a Telegram command for DEWS, depeg, and safety alerts on the shortlisted stablecoins.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function buildTelegramSubscribeCommand(recommendations: readonly SelectorRecommendation[]): string {
+  const targets = Array.from(new Set(recommendations.map((rec) => telegramTargetToken(rec))));
+  return `/subscribe dews, depeg, safety ${targets.join(", ")}`;
+}
+
+function telegramTargetToken(rec: SelectorRecommendation): string {
+  const symbol = rec.symbol.trim();
+  return /^[A-Za-z0-9_-]+$/.test(symbol) ? symbol : rec.id;
 }
 
 function NearMissesDisclosure({

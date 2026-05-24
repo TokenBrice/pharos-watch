@@ -297,6 +297,44 @@ describe("SelectorClient — state machine", () => {
     expect(screen.getByText("Open detail")).toBeTruthy();
   });
 
+  it("offers a Telegram subscribe command for the shortlisted stablecoins", async () => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+      mockSelectorOutput({
+        input,
+        recommended: [
+          { ...baseRecommendation, profile: "treasury", recommendedSource: null, perInputStaleness: null },
+          {
+            ...baseRecommendation,
+            id: "usdt-tether",
+            symbol: "USDT",
+            name: "Tether USDt",
+            rank: 2,
+            profile: "treasury",
+            recommendedSource: null,
+            perInputStaleness: null,
+          },
+          {
+            ...baseRecommendation,
+            id: "dai-makerdao",
+            symbol: "DAI",
+            name: "Dai",
+            rank: 3,
+            profile: "treasury",
+            recommendedSource: null,
+            perInputStaleness: null,
+          },
+        ],
+      }));
+
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+    render(<SelectorClient />);
+
+    expect(await screen.findByText("/subscribe dews, depeg, safety USDC, USDT, DAI")).toBeTruthy();
+    const botLink = screen.getByRole("link", { name: /Open PharosWatchBot/i });
+    expect(botLink.getAttribute("href")).toBe("https://t.me/PharosWatchBot");
+  });
+
   it("shows near misses even when a shortlist is present", async () => {
     const mod = await import("@shared/lib/selector");
     (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
