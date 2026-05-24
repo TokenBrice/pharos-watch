@@ -59,6 +59,46 @@ describe("command palette action helpers", () => {
     expect(pinExecutor.closePalette).toHaveBeenCalledTimes(1);
   });
 
+  it("executes screen, tape, and unpin-all verbs through injected side-effect handlers", () => {
+    const screenExecutor = makeExecutor();
+    expect(
+      executeParsedVerb(
+        {
+          kind: "screen",
+          filters: { dewsMax: "20" },
+          href: "/screener/?dewsMax=20",
+        },
+        screenExecutor,
+      ),
+    ).toBe(true);
+    expect(screenExecutor.push).toHaveBeenCalledWith("/screener/?dewsMax=20");
+    expect(screenExecutor.closePalette).toHaveBeenCalledTimes(1);
+
+    const tapeExecutor = makeExecutor();
+    expect(
+      executeParsedVerb(
+        {
+          kind: "tape",
+          filters: { coin: "usdc-circle" },
+          href: "/timeline/?coin=usdc-circle",
+        },
+        tapeExecutor,
+      ),
+    ).toBe(true);
+    expect(tapeExecutor.push).toHaveBeenCalledWith("/timeline/?coin=usdc-circle");
+    expect(tapeExecutor.closePalette).toHaveBeenCalledTimes(1);
+
+    const unpinExecutor = makeExecutor();
+    expect(
+      executeParsedVerb(
+        { kind: "unpin", coinSymbol: "all", resolvedCoinId: null },
+        unpinExecutor,
+      ),
+    ).toBe(true);
+    expect(unpinExecutor.clearWatchlist).toHaveBeenCalledTimes(1);
+    expect(unpinExecutor.closePalette).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps unresolved or not-yet-backed verbs as no-ops", () => {
     const executor = makeExecutor();
 
