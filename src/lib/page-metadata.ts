@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import {
-  BACKING_BADGE_STYLES,
   PEG_LABELS_SHORT,
   getMechanismArchetypeLabel,
   getMechanismArchetypeOneLiner,
@@ -8,6 +7,7 @@ import {
 } from "@shared/lib/classification";
 import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { BackingType, MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -22,6 +22,19 @@ interface BuildPageMetadataInput {
   ogHeight?: number;
   robots?: Metadata["robots"];
 }
+
+const METHODOLOGY_MARKDOWN_PATHS = new Set([
+  "/methodology/",
+  "/methodology/blacklist-tracker-changelog/",
+  "/methodology/chain-health-changelog/",
+  "/methodology/depeg-changelog/",
+  "/methodology/liquidity-score-changelog/",
+  "/methodology/mint-burn-flow-changelog/",
+  "/methodology/pricing-pipeline-changelog/",
+  "/methodology/scoring-changelog/",
+  "/methodology/stability-index-changelog/",
+  "/methodology/yield-changelog/",
+]);
 
 const GOVERNANCE_METADATA_PHRASES = {
   centralized: "centralized",
@@ -41,6 +54,42 @@ function normalizeWhitespace(text: string): string {
 
 function trimTrailingPunctuation(text: string): string {
   return text.replace(/[.!?]+$/, "");
+}
+
+function canonicalPathname(canonical: string): string | null {
+  try {
+    const url = new URL(canonical, SITE_ORIGIN);
+    return url.origin === new URL(SITE_ORIGIN).origin ? url.pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getMarkdownAlternateForCanonical(canonical: string): string | null {
+  const pathname = canonicalPathname(canonical);
+  if (!pathname) return null;
+
+  if (pathname === "/changelog/" || METHODOLOGY_MARKDOWN_PATHS.has(pathname)) {
+    return `${pathname}index.md`;
+  }
+
+  const stablecoinMatch = pathname.match(/^\/stablecoin\/([^/]+)\/$/);
+  if (stablecoinMatch) {
+    const id = decodeURIComponent(stablecoinMatch[1]);
+    return TRACKED_META_BY_ID.has(id) ? `${pathname}index.md` : null;
+  }
+
+  if (pathname === "/docs/") {
+    return "/docs/index.md";
+  }
+
+  const docMatch = pathname.match(/^\/docs\/([^/]+)\/$/);
+  if (docMatch) {
+    const slug = decodeURIComponent(docMatch[1]);
+    return PUBLIC_DOC_BY_SLUG.has(slug) ? `${pathname}index.md` : null;
+  }
+
+  return null;
 }
 
 export function trimTextAtWordBoundary(text: string, maxLength: number, ellipsis = "…"): string {
@@ -166,7 +215,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       160,
     );
     return buildPageMetadata({
-      title: `${coin.name} (${coin.symbol}) — Frozen Stablecoin Archive`,
+      title: `${coin.name} (${coin.symbol}) Failed Stablecoin Archive`,
       description,
       canonical: buildStablecoinUrl(coin.id),
       // Preserve OG image so social previews render the same card as live coins.
@@ -176,19 +225,15 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
 
   if (coin.status === "pre-launch") {
     return buildPageMetadata({
-      title: `${coin.name} (${coin.symbol}) — Pre-launch Stablecoin Profile`,
+      title: `${coin.name} (${coin.symbol}) Launch Status & Stablecoin Profile`,
       description: buildStablecoinDetailDescription(coin),
       canonical: buildStablecoinUrl(coin.id),
       ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
     });
   }
 
-  const backingLabel = BACKING_BADGE_STYLES[coin.flags.backing]?.label ?? "";
-  const title = backingLabel
-    ? `${coin.name} (${coin.symbol}) — ${backingLabel} Stablecoin Analytics`
-    : `${coin.name} (${coin.symbol}) Stablecoin Analytics`;
   return buildPageMetadata({
-    title,
+    title: `${coin.name} (${coin.symbol}) Stablecoin Risk, Peg & Liquidity`,
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
     ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
@@ -213,11 +258,19 @@ export function buildPageMetadata({
     width: ogWidth,
     height: ogHeight,
   };
+  const markdownAlternate = getMarkdownAlternateForCanonical(canonical);
+  const alternates: Metadata["alternates"] = { canonical };
+
+  if (markdownAlternate) {
+    alternates.types = {
+      "text/markdown": [{ title: `${title} (Markdown)`, url: markdownAlternate }],
+    };
+  }
 
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates,
     openGraph: {
       title,
       description,
@@ -226,6 +279,9 @@ export function buildPageMetadata({
       images: [resolvedImage],
     },
     twitter: {
+      card: "summary_large_image",
+      title,
+      description,
       images: [resolvedImage],
     },
     robots,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { digestDisplay } from "@/lib/fonts/digest";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
@@ -12,10 +13,38 @@ import {
   type GlossaryEntry,
 } from "./content";
 
+const GLOSSARY_METADATA_DESCRIPTION =
+  "The Pharos vocabulary, alphabetized: PSI, DEWS, PegScore, LiquidityScore, FreezeWatch, Bluechip, Tape, Cemetery, PressureShift, and the bands and gates each one refers to. Authored, version-pinned, citable.";
+const GLOSSARY_PAGE_URL = `${SITE_ORIGIN}/learn/glossary/`;
+const GLOSSARY_DEFINED_TERM_SET_ID = `${GLOSSARY_PAGE_URL}#defined-term-set`;
+const GLOSSARY_DEFINED_TERM_SET_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "DefinedTermSet",
+  "@id": GLOSSARY_DEFINED_TERM_SET_ID,
+  name: "Pharos Glossary",
+  description: GLOSSARY_METADATA_DESCRIPTION,
+  url: GLOSSARY_PAGE_URL,
+  inLanguage: "en",
+  publisher: { "@id": `${SITE_ORIGIN}#organization` },
+  hasDefinedTerm: GLOSSARY_ENTRIES.map((entry) => ({
+    "@type": "DefinedTerm",
+    "@id": `${GLOSSARY_PAGE_URL}#${entry.id}`,
+    name: entry.term,
+    termCode: entry.id,
+    description: entry.definition,
+    url: `${GLOSSARY_PAGE_URL}#${entry.id}`,
+    inDefinedTermSet: { "@id": GLOSSARY_DEFINED_TERM_SET_ID },
+    subjectOf: {
+      "@type": "WebPage",
+      name: `${entry.term} methodology reference`,
+      url: `${SITE_ORIGIN}${entry.methodologyAnchor}`,
+    },
+  })),
+} as const;
+
 export const metadata: Metadata = buildPageMetadata({
-  title: "Glossary — Pharos",
-  description:
-    "The Pharos vocabulary, alphabetized: PSI, DEWS, PegScore, LiquidityScore, FreezeWatch, Bluechip, Tape, Cemetery, PressureShift, and the bands and gates each one refers to. Authored, version-pinned, citable.",
+  title: "Glossary",
+  description: GLOSSARY_METADATA_DESCRIPTION,
   canonical: "/learn/glossary/",
   ogImage: `${SITE_ORIGIN}/og-editorial-learn.png`,
 });
@@ -140,6 +169,14 @@ export default function GlossaryPage() {
       title="Pharos Glossary"
       variant="longform"
       leadParagraphs={[GLOSSARY_LEAD]}
+      preface={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd(GLOSSARY_DEFINED_TERM_SET_JSON_LD),
+          }}
+        />
+      }
     >
       <div className="space-y-8">
         <GlossaryJumpRail presentLetters={presentLetters} />

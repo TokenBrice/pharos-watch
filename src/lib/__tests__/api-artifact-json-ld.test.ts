@@ -16,7 +16,12 @@ describe("buildApiArtifactCatalogJsonLd", () => {
             { "@id": "https://pharos.watch/about/api/#openapi-spec" },
             { "@id": "https://pharos.watch/about/api/#postman-collection" },
             { "@id": "https://pharos.watch/about/api/#postman-environment" },
+            { "@id": "https://pharos.watch/coverage/#dataset" },
             { "@id": "https://pharos.watch/cemetery/#dataset" },
+            { "@id": "https://pharos.watch/datasets/top-stablecoins/#dataset" },
+            { "@id": "https://pharos.watch/datasets/scores-latest/#dataset" },
+            { "@id": "https://pharos.watch/datasets/depeg-history/#dataset" },
+            { "@id": "https://pharos.watch/datasets/peg-mechanism-distribution/#dataset" },
           ]),
         }),
         expect.objectContaining({
@@ -48,7 +53,40 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         }),
       ]),
     );
-    const dataset = jsonLd.find((node) => node["@type"] === "Dataset");
-    expect(dataset).not.toHaveProperty("isPartOf");
+    const cemetery = jsonLd.find((node) => node["@id"] === "https://pharos.watch/cemetery/#dataset");
+    expect(cemetery).not.toHaveProperty("isPartOf");
+
+    expect(jsonLd).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          "@type": "Dataset",
+          "@id": "https://pharos.watch/coverage/#dataset",
+          includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+        }),
+        expect.objectContaining({
+          "@type": "Dataset",
+          "@id": "https://pharos.watch/datasets/top-stablecoins/#dataset",
+          url: "https://pharos.watch/datasets/top-stablecoins/latest.json",
+          distribution: expect.arrayContaining([
+            expect.objectContaining({
+              contentUrl: "https://pharos.watch/datasets/top-stablecoins/latest.json",
+              encodingFormat: "application/json",
+            }),
+            expect.objectContaining({
+              contentUrl: "https://pharos.watch/datasets/top-stablecoins/latest.csv",
+              encodingFormat: "text/csv",
+            }),
+            expect.objectContaining({
+              contentUrl: "https://pharos.watch/datasets/top-stablecoins/latest.ndjson",
+              encodingFormat: "application/x-ndjson",
+            }),
+            expect.objectContaining({
+              contentUrl: "https://pharos.watch/sheets/top-stablecoins.csv",
+              encodingFormat: "text/csv",
+            }),
+          ]),
+        }),
+      ]),
+    );
   });
 });

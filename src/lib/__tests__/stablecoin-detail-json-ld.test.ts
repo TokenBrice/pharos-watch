@@ -24,12 +24,41 @@ describe("buildStablecoinDatasetJsonLd", () => {
       propertyID: "Pharos URN",
       value: "urn:pharos:coin:usdt-tether",
     });
+    expect(jsonLd.identifier).toContainEqual({
+      "@type": "PropertyValue",
+      propertyID: "llamaId",
+      value: "1",
+    });
+    expect(jsonLd.identifier).toContainEqual({
+      "@type": "PropertyValue",
+      propertyID: "geckoId",
+      value: "tether",
+    });
     expect(jsonLd).toMatchObject({
       inLanguage: "en",
       mainEntityOfPage: "https://pharos.watch/stablecoin/usdt-tether/",
+      about: {
+        "@type": "Thing",
+        "@id": "https://pharos.watch/stablecoin/usdt-tether/#stablecoin",
+        name: "Tether",
+        alternateName: "USDT",
+      },
     });
     expect(jsonLd).not.toHaveProperty("isPartOf");
-    expect(jsonLd).not.toHaveProperty("distribution");
+    expect(jsonLd.distribution).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          "@type": "DataDownload",
+          encodingFormat: "application/json",
+          contentUrl: "https://api.pharos.watch/api/stablecoin/usdt-tether",
+        }),
+        expect.objectContaining({
+          "@type": "DataDownload",
+          encodingFormat: "text/markdown",
+          contentUrl: "https://pharos.watch/stablecoin/usdt-tether/index.md",
+        }),
+      ]),
+    );
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
 

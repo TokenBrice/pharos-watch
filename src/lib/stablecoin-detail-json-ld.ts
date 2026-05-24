@@ -1,10 +1,76 @@
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { API_ORIGIN, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
 export const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
+const STABLECOIN_IDENTIFIER_FIELD_KEYS = [
+  "llamaId",
+  "geckoId",
+  "cmcSlug",
+  "pythFeedId",
+  "variantOf",
+  "variantKind",
+] as const;
+
+type StablecoinIdentifierFieldKey = (typeof STABLECOIN_IDENTIFIER_FIELD_KEYS)[number];
+
+function compactStrings(values: readonly (string | null | undefined)[]): string[] {
+  return values.filter((value): value is string => Boolean(value));
+}
+
+function buildStablecoinSameAs(coin: StablecoinMeta): string[] {
+  return compactStrings([
+    coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
+    coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
+    coin.cmcSlug ? `https://coinmarketcap.com/currencies/${coin.cmcSlug}/` : null,
+    ...(coin.links?.map((link) => link.url) ?? []),
+  ]);
+}
+
+function buildStablecoinIdentifierProperties(coin: StablecoinMeta): Array<Record<string, unknown>> {
+  const values: Record<StablecoinIdentifierFieldKey, string | undefined> = {
+    llamaId: coin.llamaId,
+    geckoId: coin.geckoId,
+    cmcSlug: coin.cmcSlug,
+    pythFeedId: coin.pythFeedId,
+    variantOf: coin.variantOf,
+    variantKind: coin.variantKind,
+  };
+
+  return STABLECOIN_IDENTIFIER_FIELD_KEYS.flatMap((propertyID) => {
+    const value = values[propertyID];
+    return value ? [{ "@type": "PropertyValue", propertyID, value }] : [];
+  });
+}
+
+function buildStablecoinThingJsonLd({
+  coin,
+  detailUrl,
+  description,
+  sameAs,
+}: {
+  coin: StablecoinMeta;
+  detailUrl: string;
+  description: string;
+  sameAs: readonly string[];
+}): Record<string, unknown> {
+  return {
+    "@type": "Thing",
+    "@id": `${detailUrl}#stablecoin`,
+    name: coin.name,
+    alternateName: coin.symbol,
+    description,
+    url: detailUrl,
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+    identifier: [
+      buildPharosUrnJsonLdIdentifier("coin", coin.id),
+      ...buildStablecoinIdentifierProperties(coin),
+    ],
+  };
+}
 
 export function buildStablecoinDatasetJsonLd(
   coin: StablecoinMeta,
@@ -15,11 +81,7 @@ export function buildStablecoinDatasetJsonLd(
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const datasetSameAs = [
-    coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
-    coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
-    ...(coin.links?.map((link) => link.url) ?? []),
-  ].filter((url): url is string => Boolean(url));
+  const datasetSameAs = buildStablecoinSameAs(coin);
   const contractIdentifiers = (coin.contracts ?? [])
     .slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT)
     .map((contract) => ({
@@ -58,6 +120,12 @@ export function buildStablecoinDatasetJsonLd(
           measurementTechnique:
             "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
         };
+  const stablecoinThing = buildStablecoinThingJsonLd({
+    coin,
+    detailUrl,
+    description: statusCopy.description,
+    sameAs: datasetSameAs,
+  });
 
   return {
     "@context": "https://schema.org",
@@ -68,6 +136,7 @@ export function buildStablecoinDatasetJsonLd(
     url: detailUrl,
     inLanguage: "en",
     mainEntityOfPage: detailUrl,
+    about: stablecoinThing,
     ...(datasetSameAs.length > 0 ? { sameAs: datasetSameAs } : {}),
     creator: { "@id": `${siteUrl}#organization` },
     ...(coin.proofOfReserves?.url ? { citation: [coin.proofOfReserves.url] } : {}),
@@ -86,12 +155,24 @@ export function buildStablecoinDatasetJsonLd(
     ],
     identifier: [
       buildPharosUrnJsonLdIdentifier("coin", coin.id),
-      ...(coin.geckoId ? [{ "@type": "PropertyValue", propertyID: "geckoId", value: coin.geckoId }] : []),
-      ...(coin.variantOf ? [{ "@type": "PropertyValue", propertyID: "variantOf", value: coin.variantOf }] : []),
-      ...(coin.variantKind ? [{ "@type": "PropertyValue", propertyID: "variantKind", value: coin.variantKind }] : []),
+      ...buildStablecoinIdentifierProperties(coin),
       ...contractIdentifiers,
     ],
     variableMeasured: statusCopy.variableMeasured,
+    distribution: [
+      {
+        "@type": "DataDownload",
+        name: `${coin.name} (${coin.symbol}) API response`,
+        encodingFormat: "application/json",
+        contentUrl: `${API_ORIGIN}${API_PATHS.stablecoinDetail(coin.id)}`,
+      },
+      {
+        "@type": "DataDownload",
+        name: `${coin.name} (${coin.symbol}) markdown profile`,
+        encodingFormat: "text/markdown",
+        contentUrl: `${detailUrl}index.md`,
+      },
+    ],
     ...(options.dateModified ? { dateModified: options.dateModified } : {}),
     spatialCoverage: { "@type": "Place", name: "Global" },
     measurementTechnique: statusCopy.measurementTechnique,
@@ -108,11 +189,7 @@ export function buildPreLaunchStablecoinJsonLd(
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const description = `Pre-launch profile for ${coin.name} (${coin.symbol}). Planned ${pegLabel} stablecoin with ${governanceLabel} governance and ${backingLabel} backing. Live market, peg, liquidity, and safety data begin only after launch.`;
-  const sameAs = [
-    coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
-    coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
-    ...(coin.links?.map((link) => link.url) ?? []),
-  ].filter((url): url is string => Boolean(url));
+  const sameAs = buildStablecoinSameAs(coin);
 
   return [
     {

@@ -22,6 +22,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("@/lib/page-metadata", () => ({
+  buildPageMetadata: (input: unknown) => input,
+}));
+
 function parseStaticDocument(html: string) {
   return new JSDOM(html).window.document;
 }
@@ -33,6 +37,30 @@ function extractJsonLd(document: Document) {
 }
 
 describe("AboutPage", () => {
+  it("emits AboutPage JSON-LD tying Pharos to trust and data surfaces", () => {
+    const html = renderToStaticMarkup(<AboutPage />);
+    const aboutJsonLd = extractJsonLd(parseStaticDocument(html)).find((block) => {
+      return Boolean(block && typeof block === "object" && (block as { "@type"?: string })["@type"] === "AboutPage");
+    }) as { mentions: Array<{ "@id": string }> } | undefined;
+
+    expect(aboutJsonLd).toMatchObject({
+      "@type": "AboutPage",
+      "@id": "https://pharos.watch/about/#about-page",
+      about: { "@id": "https://pharos.watch#organization" },
+      mainEntity: { "@id": "https://pharos.watch#organization" },
+      publisher: { "@id": "https://pharos.watch#organization" },
+    });
+    expect(aboutJsonLd?.mentions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ "@id": "https://pharos.watch/about/api/#webapi" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/about/api/#data-catalog" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/docs/data-pipeline/#tech-article" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/about/principles/#principles" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/funding/#funding" }),
+      ]),
+    );
+  });
+
   it("renders visible FAQ content matching the emitted FAQPage JSON-LD", () => {
     const html = renderToStaticMarkup(<AboutPage />);
     const document = parseStaticDocument(html);

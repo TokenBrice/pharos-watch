@@ -36,6 +36,72 @@ const INLINE_EXTERNAL_LINK_CLASS =
   "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
 const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
+const ABOUT_METADATA_TITLE = "About Pharos: Shining a Light on Every Peg";
+const ABOUT_METADATA_DESCRIPTION =
+  "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.";
+const ABOUT_PAGE_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "@id": `${SITE_ORIGIN}/about/#about-page`,
+  name: "About Pharos",
+  url: `${SITE_ORIGIN}/about/`,
+  description: ABOUT_METADATA_DESCRIPTION,
+  inLanguage: "en",
+  isPartOf: { "@id": `${SITE_ORIGIN}#website` },
+  about: { "@id": `${SITE_ORIGIN}#organization` },
+  mainEntity: { "@id": `${SITE_ORIGIN}#organization` },
+  publisher: { "@id": `${SITE_ORIGIN}#organization` },
+  mentions: [
+    {
+      "@type": "WebAPI",
+      "@id": `${SITE_ORIGIN}/about/api/#webapi`,
+      name: "Pharos API",
+      url: `${SITE_ORIGIN}/about/api/`,
+    },
+    {
+      "@type": "DataCatalog",
+      "@id": `${SITE_ORIGIN}/about/api/#data-catalog`,
+      name: "Pharos public data artifacts",
+      url: `${SITE_ORIGIN}/about/api/`,
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_ORIGIN}/coverage/#coverage`,
+      name: "Coverage Matrix",
+      url: `${SITE_ORIGIN}/coverage/`,
+    },
+    {
+      "@type": "TechArticle",
+      "@id": `${SITE_ORIGIN}/docs/data-pipeline/#tech-article`,
+      name: "Data Pipeline",
+      url: `${SITE_ORIGIN}/docs/data-pipeline/`,
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_ORIGIN}/methodology/#methodology`,
+      name: "Methodology",
+      url: `${SITE_ORIGIN}/methodology/`,
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_ORIGIN}/about/principles/#principles`,
+      name: "Pharos Principles",
+      url: `${SITE_ORIGIN}/about/principles/`,
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_ORIGIN}/about/editorial/#editorial-policy`,
+      name: "Editorial Policy",
+      url: `${SITE_ORIGIN}/about/editorial/`,
+    },
+    {
+      "@type": "WebPage",
+      "@id": `${SITE_ORIGIN}/funding/#funding`,
+      name: "Funding",
+      url: `${SITE_ORIGIN}/funding/`,
+    },
+  ],
+} as const;
 
 function PipelineSources() {
   return (
@@ -152,9 +218,8 @@ function AboutFeatureSection({
 }
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "About Pharos: Shining a Light on Every Peg",
-  description:
-    "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+  title: ABOUT_METADATA_TITLE,
+  description: ABOUT_METADATA_DESCRIPTION,
   canonical: "/about/",
   ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
@@ -182,12 +247,20 @@ export default function AboutPage() {
       leadParagraphs={leadParagraphs}
       headerSupplement={<AboutReferenceModule />}
       preface={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: safeJsonLd(buildFaqJsonLd(faqItems)),
-          }}
-        />
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: safeJsonLd(ABOUT_PAGE_JSON_LD),
+            }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: safeJsonLd(buildFaqJsonLd(faqItems)),
+            }}
+          />
+        </>
       }
     >
       <div className="space-y-8">
