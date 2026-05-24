@@ -5816,6 +5816,43 @@
     "collateralQuality": "exotic"
   },
   {
+    "id": "fusd-finchain",
+    "name": "FinChain Dollar",
+    "symbol": "FUSD",
+    "oneLiner": "FUSD is FinChain's BMA-licensed, rebasing dollar stablecoin backed by tokenized U.S. Treasury bills and money-market funds.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "pegMechanism": "Eligible customers mint and redeem through FinChain; FUSD targets a fixed $1 token value while balances rebase daily to distribute reserve yield from the underlying tokenized Treasury and money-market fund portfolio",
+    "mechanismArchetype": "tbill",
+    "yieldConfig": {
+      "yieldSource": "FinChain FUSD daily reserve-yield rebase",
+      "yieldType": "rebase"
+    },
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://fusd.finchain.global/#reserves",
+      "provider": "FinChain reserve dashboard",
+      "attestorTier": "self",
+      "cadence": "real-time",
+      "attestorJurisdiction": "Bermuda"
+    },
+    "reserves": [
+      {
+        "name": "Tokenized U.S. Treasury bill and money-market fund reserves",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "collateral": "Tokenized U.S. Treasury bills and money-market funds, including Taikang Kaitai U.S. Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class), and Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC)",
+    "collateralQuality": "rwa"
+  },
+  {
     "id": "fusd-freedom-dollar",
     "name": "Freedom Dollar",
     "symbol": "FUSD",
@@ -6328,6 +6365,40 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed"
+  },
+  {
+    "id": "gldt-gold-dao",
+    "name": "Gold Token",
+    "symbol": "GLDT",
+    "oneLiner": "GLDT is Gold DAO's fungible gold token: each token represents 0.01 grams of physical gold through locked GLD NFT backing.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
+    "geckoId": "gold-token",
+    "commodityOunces": 0.000321507467,
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://gldt.org/",
+      "provider": "GLDT transparency page",
+      "attestorTier": "self",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Switzerland"
+    },
+    "reserves": [
+      {
+        "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
+    "collateralQuality": "rwa"
   },
   {
     "id": "gldy-streamex",
@@ -7473,6 +7544,38 @@
     ],
     "collateral": "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
     "collateralQuality": "alt-lst-bridged-or-mixed"
+  },
+  {
+    "id": "iauon-ondo",
+    "name": "iShares Gold Trust (Ondo Tokenized)",
+    "symbol": "IAUon",
+    "oneLiner": "IAUon is Ondo's tokenized iShares Gold Trust exposure, a NAV-style ETF tracker for non-U.S. investors rather than a $1 stablecoin.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying IAU economic exposure through Ondo Global Markets and eligible investor flows",
+    "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "provider": "Ondo Global Markets collateral attestations",
+      "attestorTier": "niche",
+      "cadence": "daily-nav"
+    },
+    "reserves": [
+      {
+        "name": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Gold Trust (IAU), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
+    "collateralQuality": "rwa"
   },
   {
     "id": "idrt-rupiah-token",
@@ -12954,6 +13057,41 @@
     "collateralQuality": "rwa"
   },
   {
+    "id": "sdola-inverse-finance",
+    "name": "Inverse Staked DOLA",
+    "symbol": "sDOLA",
+    "oneLiner": "sDOLA is Inverse Finance's ERC-4626 DOLA savings wrapper, compounding FiRM lending revenue into a rising DOLA exchange rate.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegMechanism": "Deposit DOLA to mint sDOLA at the current vault exchange rate; the DOLA:sDOLA exchange rate rises as FiRM lending revenue is converted into DOLA, and holders can unwrap back to DOLA without a lock-up",
+    "mechanismArchetype": "cdp",
+    "geckoId": "sdola",
+    "variantOf": "dola-inverse-finance",
+    "variantKind": "savings-passthrough",
+    "yieldConfig": {
+      "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
+      "yieldSource": "Inverse Finance sDOLA vault",
+      "yieldType": "nav-appreciation"
+    },
+    "reserves": [
+      {
+        "name": "DOLA deposited in the sDOLA savings wrapper",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "dola-inverse-finance",
+        "depType": "wrapper"
+      }
+    ],
+    "collateral": "DOLA deposited into Inverse Finance's ERC-4626 sDOLA wrapper around the DOLA Savings Account; DOLA remains in the smart contract while FiRM DBR revenue is auctioned into DOLA and distributed through the exchange rate",
+    "collateralQuality": "exotic"
+  },
+  {
     "id": "sdusd-dtrinity",
     "name": "dTRINITY Staked dUSD",
     "symbol": "sdUSD",
@@ -13146,6 +13284,38 @@
     ],
     "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
     "collateralQuality": "alt-lst-bridged-or-mixed"
+  },
+  {
+    "id": "slvon-ondo",
+    "name": "iShares Silver Trust (Ondo Tokenized)",
+    "symbol": "SLVon",
+    "oneLiner": "SLVon is Ondo's tokenized iShares Silver Trust exposure, a NAV-style ETF tracker for non-U.S. investors rather than a $1 stablecoin.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": true
+    },
+    "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying SLV economic exposure through Ondo Global Markets and eligible investor flows",
+    "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "provider": "Ondo Global Markets collateral attestations",
+      "attestorTier": "niche",
+      "cadence": "daily-nav"
+    },
+    "reserves": [
+      {
+        "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Silver Trust (SLV), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
+    "collateralQuality": "rwa"
   },
   {
     "id": "sofid-sofi",

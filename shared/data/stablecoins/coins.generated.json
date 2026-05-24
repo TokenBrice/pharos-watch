@@ -11273,6 +11273,121 @@
     ]
   },
   {
+    "id": "fusd-finchain",
+    "llamaId": "390",
+    "detailProvider": "defillama",
+    "name": "FinChain Dollar",
+    "symbol": "FUSD",
+    "oneLiner": "FUSD is FinChain's BMA-licensed, rebasing dollar stablecoin backed by tokenized U.S. Treasury bills and money-market funds.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Tokenized U.S. Treasury bills and money-market funds, including Taikang Kaitai U.S. Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class), and Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC)",
+    "pegMechanism": "Eligible customers mint and redeem through FinChain; FUSD targets a fixed $1 token value while balances rebase daily to distribute reserve yield from the underlying tokenized Treasury and money-market fund portfolio",
+    "mechanismArchetype": "tbill",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://fusd.finchain.global/#reserves",
+      "provider": "FinChain reserve dashboard",
+      "attestorTier": "self",
+      "cadence": "real-time",
+      "attestorJurisdiction": "Bermuda"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://fusd.finchain.global/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+      },
+      {
+        "label": "Reserves",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+      },
+      {
+        "label": "Deployments",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Bermuda",
+      "regulator": "Bermuda Monetary Authority",
+      "license": "Digital asset business license"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
+        "decimals": 9
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Structuring",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring"
+        },
+        {
+          "label": "Deployments",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        }
+      ],
+      "evidence": "FinChain Dollar resolves to Yes because metadata classifies the asset as a centralized, licensed issuer stablecoin and the token is issued through issuer-managed deployments.",
+      "reviewer": "Codex data addition",
+      "reviewedAt": "2026-05-24"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Tokenized U.S. Treasury bill and money-market fund reserves",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Eligible customers only",
+        "message": "FinChain documentation states that FUSD and FUSDLP are available only to eligible customers."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "FinChain FUSD daily reserve-yield rebase",
+      "yieldType": "rebase"
+    }
+  },
+  {
     "id": "fusd-freedom-dollar",
     "detailProvider": "coingecko",
     "name": "Freedom Dollar",
@@ -12242,6 +12357,84 @@
         "type": "info",
         "title": "Peg grouped as Other",
         "message": "GHS is not yet a first-class Pharos peg-currency enum, so GHSm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+      }
+    ]
+  },
+  {
+    "id": "gldt-gold-dao",
+    "detailProvider": "commodity",
+    "name": "Gold Token",
+    "symbol": "GLDT",
+    "oneLiner": "GLDT is Gold DAO's fungible gold token: each token represents 0.01 grams of physical gold through locked GLD NFT backing.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
+    "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
+    "commodityOunces": 0.000321507467,
+    "geckoId": "gold-token",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://gldt.org/",
+      "provider": "GLDT transparency page",
+      "attestorTier": "self",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Switzerland"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://gldt.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/TheGoldDAO"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
+        "decimals": 8
+      },
+      {
+        "chain": "base",
+        "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
+        "decimals": 8
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
+        "decimals": 8
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://gldt.org/"
+        }
+      ],
+      "evidence": "GLDT resolves to Upstream because its backing depends on GLD NFT, vault, and bridge infrastructure; reviewed materials do not document a separate direct holder-balance freeze path for GLDT.",
+      "reviewer": "Codex data addition",
+      "reviewedAt": "2026-05-24"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+        "pct": 100,
+        "risk": "low"
       }
     ]
   },
@@ -14257,6 +14450,109 @@
         }
       }
     }
+  },
+  {
+    "id": "iauon-ondo",
+    "detailProvider": "coingecko",
+    "name": "iShares Gold Trust (Ondo Tokenized)",
+    "symbol": "IAUon",
+    "oneLiner": "IAUon is Ondo's tokenized iShares Gold Trust exposure, a NAV-style ETF tracker for non-U.S. investors rather than a $1 stablecoin.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Gold Trust (IAU), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
+    "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying IAU economic exposure through Ondo Global Markets and eligible investor flows",
+    "geckoId": "ishares-gold-trust-ondo-tokenized-stock",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "provider": "Ondo Global Markets collateral attestations",
+      "attestorTier": "niche",
+      "cadence": "daily-nav"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.ondo.finance/assets/iauon"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/ondofinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Important Notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
+        "decimals": 9
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Ondo Global Markets overview",
+          "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+        },
+        {
+          "label": "Important Notes",
+          "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+        }
+      ],
+      "evidence": "IAUon resolves to Yes because it is a centrally issued Ondo GM tokenized ETF product with eligibility restrictions and issuer-controlled subscription, redemption, and transfer infrastructure.",
+      "reviewer": "Codex data addition",
+      "reviewedAt": "2026-05-24"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Tokenized ETF exposure",
+        "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
+      }
+    ]
   },
   {
     "id": "idrt-rupiah-token",
@@ -24886,6 +25182,108 @@
     }
   },
   {
+    "id": "sdola-inverse-finance",
+    "detailProvider": "coingecko",
+    "name": "Inverse Staked DOLA",
+    "symbol": "sDOLA",
+    "oneLiner": "sDOLA is Inverse Finance's ERC-4626 DOLA savings wrapper, compounding FiRM lending revenue into a rising DOLA exchange rate.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "dola-inverse-finance",
+    "collateral": "DOLA deposited into Inverse Finance's ERC-4626 sDOLA wrapper around the DOLA Savings Account; DOLA remains in the smart contract while FiRM DBR revenue is auctioned into DOLA and distributed through the exchange rate",
+    "pegMechanism": "Deposit DOLA to mint sDOLA at the current vault exchange rate; the DOLA:sDOLA exchange rate rises as FiRM lending revenue is converted into DOLA, and holders can unwrap back to DOLA without a lock-up",
+    "mechanismArchetype": "cdp",
+    "geckoId": "sdola",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.inverse.finance/sDOLA"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/InverseFinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Deployments",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7a1e123e41458aabab8068bfed6010d8f9480898",
+        "decimals": 18
+      },
+      {
+        "chain": "berachain",
+        "address": "0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sources": [
+        {
+          "label": "sDOLA docs",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+        },
+        {
+          "label": "DOLA metadata",
+          "url": "https://pharos.watch/stablecoins/dola-inverse-finance/"
+        }
+      ],
+      "evidence": "sDOLA resolves to Upstream because it is a savings wrapper over DOLA, and DOLA's reviewed status is Dilutable through admin-controlled mint authority.",
+      "reviewer": "Codex data addition",
+      "reviewedAt": "2026-05-24"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "onchain",
+    "governanceQuality": "wrapper",
+    "variantOf": "dola-inverse-finance",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "DOLA deposited in the sDOLA savings wrapper",
+        "pct": 100,
+        "risk": "high",
+        "coinId": "dola-inverse-finance",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
+      "yieldSource": "Inverse Finance sDOLA vault",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "sdusd-dtrinity",
     "detailProvider": "coingecko",
     "name": "dTRINITY Staked dUSD",
@@ -25303,6 +25701,109 @@
       "yieldSource": "SILK basket index appreciation",
       "yieldType": "nav-appreciation"
     }
+  },
+  {
+    "id": "slvon-ondo",
+    "detailProvider": "coingecko",
+    "name": "iShares Silver Trust (Ondo Tokenized)",
+    "symbol": "SLVon",
+    "oneLiner": "SLVon is Ondo's tokenized iShares Silver Trust exposure, a NAV-style ETF tracker for non-U.S. investors rather than a $1 stablecoin.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Silver Trust (SLV), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
+    "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying SLV economic exposure through Ondo Global Markets and eligible investor flows",
+    "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "provider": "Ondo Global Markets collateral attestations",
+      "attestorTier": "niche",
+      "cadence": "daily-nav"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.ondo.finance/assets/slvon"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/ondofinance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Important Notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
+        "decimals": 9
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0xd53d98d13d93c817011645442c2e4d46e499b460",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Ondo Global Markets overview",
+          "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+        },
+        {
+          "label": "Important Notes",
+          "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+        }
+      ],
+      "evidence": "SLVon resolves to Yes because it is a centrally issued Ondo GM tokenized ETF product with eligibility restrictions and issuer-controlled subscription, redemption, and transfer infrastructure.",
+      "reviewer": "Codex data addition",
+      "reviewedAt": "2026-05-24"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
+        "pct": 100,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Tokenized ETF exposure",
+        "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
+      }
+    ]
   },
   {
     "id": "sofid-sofi",
