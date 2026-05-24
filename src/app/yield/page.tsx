@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { YieldLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
@@ -11,7 +12,7 @@ import {
 import type { FaqItem } from "@/lib/faq";
 
 const desc =
-  "Risk-adjusted stablecoin yield rankings across native yield, lending venues, rate-derived sources, and curated opportunities. Compare APY, safety grades, freshness, benchmarks, and the Pharos Yield Score.";
+  "Risk-adjusted stablecoin yield rankings refreshed from the hourly Pharos yield lane across native yield, lending venues, rate-derived sources, and curated opportunities. Compare APY, safety grades, source freshness, benchmarks, and the Pharos Yield Score.";
 
 export const metadata = buildPageMetadata({
   title: "Stablecoin Yield Intelligence",
@@ -65,6 +66,19 @@ const YIELD_STATIC_SECTION = (
   </section>
 );
 
+const YIELD_CTA = (
+  <CalloutBanner>
+    Building a yield shortlist? Start from the yield profile in{" "}
+    <Link
+      href="/screener/picker/?p=yield"
+      className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+    >
+      Stablecoin Picker
+    </Link>{" "}
+    and come back here to verify source freshness and PYS.
+  </CalloutBanner>
+);
+
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),
   loading: <YieldLoadingState />,
@@ -88,6 +102,11 @@ export default createClientFeaturePage({
       </p>
     ),
   },
-  beforeClient: YIELD_STATIC_SECTION,
+  beforeClient: (
+    <>
+      {YIELD_STATIC_SECTION}
+      {YIELD_CTA}
+    </>
+  ),
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
 });

@@ -70,7 +70,9 @@ describe("StablecoinDetailSeoContent", () => {
     expect(headings[0]?.textContent).toContain("Test Dollar (TSTD) stablecoin analytics");
 
     expect(screen.getByRole("heading", { name: "Static stablecoin profile" })).toBeTruthy();
-    expect(screen.getByText(/governance model CeFi-Dependent; backing model Real-World Asset Backed; peg US Dollar/)).toBeTruthy();
+    expect(
+      screen.getByText(/governance model CeFi-Dependent; backing model Real-World Asset Backed; peg US Dollar/),
+    ).toBeTruthy();
 
     expect(screen.getByRole("link", { name: "Browse CeFi-Dependent stablecoins" }).getAttribute("href")).toBe(
       "/stablecoins/governance/cefi-dependent/",
@@ -100,6 +102,18 @@ describe("StablecoinDetailSeoContent", () => {
         "AI summary · drafted by claude-opus-4-7 · reviewed by @TokenBrice on May 2, 2026 · facts as of May 2, 2026",
       ),
     ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Is TSTD safe?" })).toBeTruthy();
+    expect(screen.getByText(/Pharos does not mark TSTD as absolutely safe/)).toBeTruthy();
+    expect(
+      screen.getByText(/Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below/),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Compare TSTD" }).getAttribute("href")).toBe("/compare/?coins=test-dollar");
+    expect(screen.getByRole("link", { name: "Telegram alerts" }).getAttribute("href")).toBe(
+      "/pharoswatchbot/#getting-started",
+    );
+    expect(screen.getByRole("link", { name: "Digest RSS" }).getAttribute("href")).toBe("/feed/digest.xml");
+    expect(screen.getByRole("link", { name: "API access" }).getAttribute("href")).toBe("/api/");
+    expect(screen.getByText("/subscribe dews,depeg,safety test-dollar")).toBeTruthy();
     expect(container.textContent).toContain("Source: checked-in StablecoinMeta profile fields.");
     expect(container.textContent).toContain("the summary above was last updated May 2, 2026");
   });
@@ -109,5 +123,8 @@ describe("StablecoinDetailSeoContent", () => {
     const { container } = render(<StablecoinDetailSeoContent coin={frozenCoin} summary={summary} />);
 
     expect(container.querySelector("h1")?.textContent).toContain("Test Dollar (TSTD) frozen stablecoin archive");
+    expect(screen.getByText(/Test Dollar is a frozen Pharos archive, not a current safety endorsement/)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Telegram alerts" })).toBeNull();
+    expect(screen.getByText(/Frozen archives keep historical context/)).toBeTruthy();
   });
 });

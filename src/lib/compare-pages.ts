@@ -31,6 +31,12 @@ export interface ComparisonFaqItem {
   answer: string;
 }
 
+export interface ComparisonSnippetAnswer {
+  question: string;
+  answer: string;
+  caveat: string;
+}
+
 function getStablecoinOrThrow(id: string): StablecoinMeta {
   const coin = TRACKED_META_BY_ID.get(id);
   if (!coin) {
@@ -80,6 +86,10 @@ function describeReserveSignal(coin: StablecoinMeta): string {
   if (coin.reserves?.[0]?.name) return coin.reserves[0].name.replace(/\s*\([^)]*\)/g, "").trim();
   if (coin.collateral) return coin.collateral.split(/[.;]/)[0]?.trim() ?? "Collateral profile disclosed";
   return "Collateral profile disclosed";
+}
+
+function describeStaticSafetyLens(coin: StablecoinMeta): string {
+  return `${coin.symbol}: ${GOVERNANCE_LABELS[coin.flags.governance]} governance, ${BACKING_LABELS_SHORT[coin.flags.backing]} backing, ${describeBlacklistability(coin)}, ${describeReserveSignal(coin)}.`;
 }
 
 function buildComparisonIntro(left: StablecoinMeta, right: StablecoinMeta): string {
@@ -173,6 +183,18 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
       label: `Open the live ${page.shortTitle} compare tool`,
     },
     {
+      href: "/depeg/",
+      label: "Review peg history and active depegs",
+    },
+    {
+      href: "/flows/",
+      label: "Check mint/burn pressure",
+    },
+    {
+      href: "/yield/",
+      label: "Review yield context",
+    },
+    {
       href: "/safety-scores/",
       label: "Compare live Safety Scores and contagion exposure",
     },
@@ -181,6 +203,20 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
       label: "Check DEX liquidity depth before sizing an exit",
     },
   ];
+}
+
+export function buildComparisonSnippetAnswer(page: StaticComparisonPage): ComparisonSnippetAnswer {
+  const { left, right } = page;
+  const sameBroadLabels =
+    left.flags.governance === right.flags.governance && left.flags.backing === right.flags.backing;
+
+  return {
+    question: `Which is safer, ${left.symbol} or ${right.symbol}?`,
+    answer: sameBroadLabels
+      ? `There is no honest static answer that makes ${left.symbol} or ${right.symbol} categorically safer. They share the same broad Pharos governance and backing labels, so the useful read is in live peg behavior, liquidity depth, reserve freshness, issuer controls, and dependency exposure.`
+      : `The safer choice is context-dependent, not a ticker-level fact. Static metadata frames the tradeoff this way: ${describeStaticSafetyLens(left)} ${describeStaticSafetyLens(right)}`,
+    caveat: `Open the live ${page.shortTitle} compare tool before acting; peg, liquidity, reserve, flow, and Safety Score data can change after this static brief is generated.`,
+  };
 }
 
 export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {

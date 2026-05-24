@@ -1,13 +1,11 @@
 import Link from "next/link";
-import {
-  BACKING_LABELS,
-  GOVERNANCE_LABELS,
-  PEG_LABELS_SHORT,
-  POR_BADGE_STYLES,
-} from "@shared/lib/classification";
+import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -24,9 +22,12 @@ const LINK_PILL_CLASS =
   "pharos-focus-ring inline-flex min-h-9 items-center rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground";
 const STATIC_PILL_CLASS =
   "inline-flex min-h-9 items-center rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground";
+const ACTION_LINK_CLASS =
+  "pharos-focus-ring inline-flex min-h-10 items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-foreground/30 hover:bg-accent";
 
 const FACT_LABEL_CLASS = "text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
+const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -122,6 +123,63 @@ function buildProfileSentence(coin: StablecoinMeta): string {
   return `${coin.name} (${coin.symbol}) static profile: governance model ${governanceLabel}; backing model ${backingLabel}; peg ${pegLabel}.`;
 }
 
+function describeReserveEvidence(coin: StablecoinMeta): string {
+  const proof = coin.proofOfReserves;
+  if (proof?.provider) {
+    const style = POR_BADGE_STYLES[proof.type];
+    const label = style?.label ?? proof.type.replace(/-/g, " ");
+    return `${label} from ${proof.provider}`;
+  }
+  if (proof) {
+    const style = POR_BADGE_STYLES[proof.type];
+    return style?.label ?? proof.type.replace(/-/g, " ");
+  }
+  if (coin.liveReservesConfig) {
+    return "live reserve feed configured";
+  }
+  if (coin.reserves?.length) {
+    return "curated reserve profile";
+  }
+  return "no linked reserve proof in the static profile";
+}
+
+function describeFreezeControl(coin: StablecoinMeta): string {
+  const resolvedStatus = getResolvedBlacklistStatus(coin.id);
+  const status = resolvedStatus ?? coin.canBeBlacklisted ?? null;
+
+  switch (status) {
+    case true:
+      return "issuer or admin freeze controls are recorded";
+    case "dilutable":
+      return "admin mint authority can dilute holders even without a standard freeze path";
+    case "possible":
+      return "freeze or administrative control exposure is possible but not fully confirmed";
+    case "inherited":
+      return "freeze exposure is inherited through upstream collateral, custody, or wrapper dependencies";
+    case false:
+      return "no direct freeze-control signal is recorded";
+    default:
+      return "freeze-control coverage is not conclusive from static metadata alone";
+  }
+}
+
+function buildSafetyAnswer(coin: StablecoinMeta): string {
+  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const reserveEvidence = describeReserveEvidence(coin);
+  const freezeControl = describeFreezeControl(coin);
+
+  if (coin.status === "frozen") {
+    return `${coin.name} is a frozen Pharos archive, not a current safety endorsement. The archived static profile records a ${governanceLabel} governance model, ${backingLabel} backing, ${reserveEvidence}, and notes that ${freezeControl}.`;
+  }
+
+  return `Pharos does not mark ${coin.symbol} as absolutely safe. Static metadata says ${coin.name} uses a ${governanceLabel} governance model and ${backingLabel} backing, with ${reserveEvidence}; the main caveat is that ${freezeControl}. Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.`;
+}
+
+function buildAlertCommand(coin: StablecoinMeta): string {
+  return `/subscribe dews,depeg,safety ${coin.id}`;
+}
+
 function ProofOfReservesValue({ coin }: { coin: StablecoinMeta }) {
   const proof = coin.proofOfReserves;
 
@@ -154,6 +212,8 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const summaryUpdatedAt = summary?.updatedAt ? formatDateLabel(summary.updatedAt) : null;
+  const compareHref = getPrimaryStaticComparisonLinkForCoin(coin.id)?.href ?? buildLiveCompareUrl([coin.id]);
+  const alertCommand = buildAlertCommand(coin);
 
   return (
     <div className="mb-6 space-y-4">
@@ -163,11 +223,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
           : `${coin.name} (${coin.symbol}) stablecoin analytics`}
       </h1>
 
-      {coin.oneLiner ? (
-        <p className="text-base italic leading-relaxed text-muted-foreground">
-          {coin.oneLiner}
-        </p>
-      ) : null}
+      {coin.oneLiner ? <p className="text-base italic leading-relaxed text-muted-foreground">{coin.oneLiner}</p> : null}
 
       <section
         aria-labelledby="stablecoin-static-profile-title"
@@ -258,6 +314,50 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
               <dd className={FACT_VALUE_CLASS}>{buildContractSummary(coin)}</dd>
             </div>
           </dl>
+        </div>
+
+        <div className="mt-4 grid gap-3 border-t border-border/50 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.72fr)]">
+          <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
+            <p className="pharos-kicker">Snippet Answer</p>
+            <h3 className="mt-1 text-base font-semibold tracking-tight text-foreground">Is {coin.symbol} safe?</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{buildSafetyAnswer(coin)}</p>
+          </div>
+
+          <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
+            <p className="pharos-kicker">Next Actions</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href={compareHref} className={ACTION_LINK_CLASS}>
+                <ArrowRight aria-hidden="true" className={ACTION_ICON_CLASS} />
+                Compare {coin.symbol}
+              </Link>
+              {coin.status !== "frozen" ? (
+                <Link href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
+                  <Bell aria-hidden="true" className={ACTION_ICON_CLASS} />
+                  Telegram alerts
+                </Link>
+              ) : null}
+              <Link href="/feed/digest.xml" className={ACTION_LINK_CLASS}>
+                <Rss aria-hidden="true" className={ACTION_ICON_CLASS} />
+                Digest RSS
+              </Link>
+              <Link href="/api/" className={ACTION_LINK_CLASS}>
+                <Code2 aria-hidden="true" className={ACTION_ICON_CLASS} />
+                API access
+              </Link>
+            </div>
+            {coin.status !== "frozen" ? (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Exact bot target:{" "}
+                <code className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+                  {alertCommand}
+                </code>
+              </p>
+            ) : (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Frozen archives keep historical context; live alerts are available for active tracked assets.
+              </p>
+            )}
+          </div>
         </div>
 
         <p className="mt-4 border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">

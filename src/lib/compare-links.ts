@@ -24,6 +24,13 @@ export const STATIC_COMPARE_PAIRS = [
   ["gho-aave", "crvusd-curve"],
   ["usdt-tether", "usd0-usual"],
   ["usdc-circle", "usd0-usual"],
+  ["usde-ethena", "susde-ethena"],
+  ["lusd-liquity", "bold-liquity"],
+  ["paxg-paxos", "xaut-tether"],
+  ["eurc-circle", "eurs-stasis"],
+  ["usdt-tether", "tusd-trueusd"],
+  ["usdt-tether", "usdd-tron-dao-reserve"],
+  ["usdc-circle", "usdg-paxos"],
 ] as const;
 
 export function buildLiveCompareUrl(coinIds: readonly string[]): string {

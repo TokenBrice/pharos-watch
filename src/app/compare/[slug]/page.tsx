@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, Bell, Code2, Rss, Star } from "lucide-react";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -7,9 +8,11 @@ import {
   buildComparisonAtAGlanceRows,
   buildComparisonFaqItems,
   buildComparisonResearchLinks,
+  buildComparisonSnippetAnswer,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
+import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
@@ -29,6 +32,8 @@ export default async function StaticComparisonPage({ params }: { params: Promise
   const comparisonRows = buildComparisonAtAGlanceRows(page);
   const faqItems = buildComparisonFaqItems(page);
   const researchLinks = buildComparisonResearchLinks(page);
+  const snippetAnswer = buildComparisonSnippetAnswer(page);
+  const liveCompareHref = buildLiveCompareUrl([page.left.id, page.right.id]);
   const pegSlug = PEG_SLUGS[page.left.flags.pegCurrency];
   const taxonomyLinks = [
     {
@@ -61,29 +66,62 @@ export default async function StaticComparisonPage({ params }: { params: Promise
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
     >
-      <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-        <p className="pharos-kicker">Comparison Brief</p>
-        <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">{page.summary}</p>
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <Link
-            href="/depeg/"
-            className="pharos-focus-ring rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Peg history
-          </Link>
-          <Link
-            href="/flows/"
-            className="pharos-focus-ring rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Mint/burn pressure
-          </Link>
-          <Link
-            href="/yield/"
-            className="pharos-focus-ring rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Yield context
-          </Link>
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.58fr)]">
+        <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+          <p className="pharos-kicker">Comparison Brief</p>
+          <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">{page.summary}</p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <Link
+              href={liveCompareHref}
+              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+              Open live compare
+            </Link>
+            <Link
+              href="/pharoswatchbot/#getting-started"
+              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <Bell aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+              Telegram alerts
+            </Link>
+            <Link
+              href="/feed/digest.xml"
+              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <Rss aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+              Digest RSS
+            </Link>
+            <Link
+              href="/api/"
+              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <Code2 aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+              API access
+            </Link>
+            <Link
+              href="/compare/"
+              className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <Star aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground" />
+              Watchlist preset
+            </Link>
+          </div>
         </div>
+
+        <aside
+          className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4"
+          aria-labelledby="comparison-short-answer-title"
+        >
+          <p className="pharos-kicker">Short Answer</p>
+          <h2 id="comparison-short-answer-title" className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+            {snippetAnswer.question}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{snippetAnswer.answer}</p>
+          <p className="mt-3 border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
+            {snippetAnswer.caveat}
+          </p>
+        </aside>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

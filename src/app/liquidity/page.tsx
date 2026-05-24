@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { LiquidityLoadingState } from "@/app/liquidity/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
@@ -11,7 +12,7 @@ import {
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/liquidity-score-version";
 
-const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${ACTIVE_STABLECOIN_COUNT} stablecoins across Curve, Uniswap, Fluid, and more.`;
+const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${ACTIVE_STABLECOIN_COUNT} stablecoins, refreshed from the Pharos DEX liquidity lane across Curve, Uniswap, Fluid, and more.`;
 export const metadata = buildPageMetadata({
   title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
   description: liquidityDescription,
@@ -83,6 +84,19 @@ const LIQUIDITY_STATIC_SECTION = (
   </section>
 );
 
+const LIQUIDITY_CTA = (
+  <CalloutBanner>
+    Planning an exit route? Pair this liquidity screen with{" "}
+    <Link
+      href="/compare/"
+      className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+    >
+      Compare
+    </Link>{" "}
+    to inspect peg, safety, and liquidity side by side.
+  </CalloutBanner>
+);
+
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.LiquidityClient })),
   loading: <LiquidityLoadingState />,
@@ -105,6 +119,11 @@ export default createClientFeaturePage({
       </p>
     ),
   },
-  beforeClient: LIQUIDITY_STATIC_SECTION,
+  beforeClient: (
+    <>
+      {LIQUIDITY_STATIC_SECTION}
+      {LIQUIDITY_CTA}
+    </>
+  ),
   afterClient: <FaqSection items={LIQUIDITY_FAQ_ITEMS} includeJsonLd />,
 });

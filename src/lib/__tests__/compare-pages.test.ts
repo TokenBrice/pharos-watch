@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   buildComparisonAtAGlanceRows,
+  buildComparisonSnippetAnswer,
   getPrimaryStaticComparisonPageForCoin,
   STATIC_COMPARE_PAIRS,
   STATIC_COMPARISON_PAGES,
@@ -29,6 +30,13 @@ describe("STATIC_COMPARISON_PAGES", () => {
     expect(STATIC_COMPARE_PAIRS.length).toBeLessThanOrEqual(30);
   });
 
+  it("includes bounded high-intent non-core comparisons without generating every pair", () => {
+    expect(STATIC_COMPARE_PAIRS).toContainEqual(["usde-ethena", "susde-ethena"]);
+    expect(STATIC_COMPARE_PAIRS).toContainEqual(["lusd-liquity", "bold-liquity"]);
+    expect(STATIC_COMPARE_PAIRS).toContainEqual(["paxg-paxos", "xaut-tether"]);
+    expect(STATIC_COMPARE_PAIRS).toContainEqual(["eurc-circle", "eurs-stasis"]);
+  });
+
   it("does not define any pair containing a frozen coin", () => {
     for (const [leftId, rightId] of STATIC_COMPARE_PAIRS) {
       expect(FROZEN_IDS.has(leftId)).toBe(false);
@@ -50,5 +58,17 @@ describe("STATIC_COMPARISON_PAGES", () => {
 
   it("generates a page for each static pair", () => {
     expect(STATIC_COMPARISON_PAGES).toHaveLength(STATIC_COMPARE_PAIRS.length);
+  });
+
+  it("builds a visible short-answer module with live-data caveats", () => {
+    const page = getPrimaryStaticComparisonPageForCoin("usdt-tether");
+
+    expect(page).not.toBeNull();
+
+    const snippet = buildComparisonSnippetAnswer(page!);
+
+    expect(snippet.question).toBe("Which is safer, USDT or USDC?");
+    expect(snippet.answer).toContain("categorically safer");
+    expect(snippet.caveat).toContain("Open the live USDT vs USDC compare tool");
   });
 });

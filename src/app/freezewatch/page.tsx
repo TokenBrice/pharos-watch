@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import FreezeWatchClient from "./client";
 
 const FREEZEWATCH_DESCRIPTION =
-  "Live view of issuer control over your stablecoin balance — freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported contracts and chains.";
+  "Live view of issuer control over your stablecoin balance from the Pharos blacklist-sync lane: freezes, unfreezes, blocks, pauses, denylist changes, and token wipes across supported contracts and chains.";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "FreezeWatch",

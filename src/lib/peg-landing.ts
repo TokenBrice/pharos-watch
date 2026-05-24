@@ -107,5 +107,35 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
   VAR: `CPI-pegged stablecoins (variable pegs) are designed to preserve purchasing power by tracking inflation indices rather than a fixed fiat price. Their target price appreciates over time as inflation accrues. Pharos monitors their peg performance relative to their variable target.`,
 };
 
+export const PEG_MARKET_CONTEXT: Partial<Record<PegCurrency, string>> = {
+  USD: "USD pegs are the deepest settlement layer in DeFi, so the useful question is less whether the unit is liquid and more which issuer, collateral stack, blacklist surface, and redemption path you are accepting.",
+  EUR: "EUR pegs sit at the intersection of eurozone payment demand, EU issuer regulation, and still-thin on-chain venue depth, so MiCA status and redemption access matter as much as headline supply.",
+  GBP: "GBP pegs are a niche market for UK treasury, payments, and FX exposure, where issuer durability and venue coverage often matter more than raw token count.",
+  CHF: "CHF pegs target users who want non-USD store-of-value exposure, but the cohort remains narrow enough that reserve transparency and exit liquidity should be checked coin by coin.",
+  BRL: "BRL pegs are tied to Latin American payment and exchange use cases, where banking partner quality, local redemption rails, and issuer concentration can dominate day-to-day peg risk.",
+  JPY: "JPY pegs bridge Japanese currency exposure into DeFi, but the cohort should be read against local licensing, low-yield fiat benchmarks, and limited secondary liquidity.",
+  KRW: "KRW pegs are early on-chain won exposure; treat them as local-market payment infrastructure first and verify venue coverage before assuming global liquidity.",
+  SGD: "SGD pegs lean on Singapore's role as a regional settlement hub, making regulatory posture and institutional redemption paths central to the risk read.",
+  MYR: "MYR pegs are thinly represented on-chain, so the page is mainly a discovery surface for issuer provenance, chain coverage, and live market availability.",
+  TRY: "TRY pegs serve a high-inflation local currency context, where the appeal of on-chain access should be balanced against issuer, banking, and liquidity risk.",
+  AUD: "AUD pegs are built for Oceanian payment, treasury, and FX use cases, with most risk review starting from issuer backing quality and redemption availability.",
+  ZAR: "ZAR pegs serve African market access and payment rails, but the cohort remains small enough that each asset's liquidity and reserve evidence need direct inspection.",
+  CAD: "CAD pegs provide North American non-USD exposure; the practical risk lens is issuer regulation, reserve composition, and whether on-chain exits are deep enough.",
+  PHP: "PHP pegs are often tied to remittance and payment use cases, where local fiat rails and operational coverage can be more important than broad DeFi composability.",
+  RUB: "RUB pegs need extra attention to jurisdiction, sanctions exposure, issuer continuity, and where reliable secondary liquidity actually exists.",
+  CNH: "CNH pegs reference offshore yuan rather than onshore CNY, so Pharos treats them as cross-border settlement assets with distinct FX and policy context.",
+  MXN: "MXN pegs connect remittance, payment, and local treasury use cases; compare issuer rails and liquidity before treating them as generic dollar alternatives.",
+  VND: "VND pegs are thinly represented and should be read as early local-currency infrastructure where source provenance and exchange access are the first checks.",
+  ARS: "ARS pegs serve a high-inflation currency context, making live peg behavior, issuer controls, and redemption options especially important.",
+  KGS: "KGS pegs are early Central Asian payment rails; use the page to verify whether tracked supply, chain coverage, and market data are deep enough for the intended use.",
+  NGN: "NGN pegs connect African settlement and remittance demand to on-chain rails, where local banking access and liquidity depth are core risk inputs.",
+  XOF: "XOF pegs map West African CFA franc exposure on-chain, so local redemption design and issuer operating jurisdiction are central to the review.",
+  IDR: "IDR pegs provide Indonesian rupiah exposure; assess issuer licensing, local rails, and venue depth before relying on them for treasury flows.",
+  GOLD: "Gold pegs are commodity exposure, not fiat cash equivalents; review custody, bar allocation, redemption terms, and tracking against spot gold rather than a fixed 1.00 target.",
+  SILVER: "Silver pegs inherit commodity-market volatility and custody questions, so peg accuracy means tracking spot silver rather than holding a fiat unit.",
+  VAR: "CPI and index pegs intentionally move with a reference index, so the key question is whether the target definition, oracle path, and redemption mechanism remain credible.",
+  OTHER: "Other peg designs fall outside the main fiat and commodity buckets; start with the target definition, oracle source, collateral model, and whether Pharos has enough live evidence.",
+};
+
 // Re-export for convenience
 export { PEG_LABELS, PEG_LABELS_SHORT };

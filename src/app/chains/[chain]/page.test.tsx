@@ -21,6 +21,10 @@ describe("ChainProfilePage", () => {
       await ChainProfilePage({ params: Promise.resolve({ chain: "ethereum" }) }),
     );
 
+    expect(html).toContain("Stablecoins on Ethereum: Supply, Market Share &amp; Risk");
+    expect(html).toContain("Ethereum has");
+    expect(html).toContain("Compare cohort");
+    expect(html).toContain("Set up alerts");
     expect(html).toContain("chain client ethereum");
     expect(html).toContain('href="/stablecoins"');
     expect(html).toContain('href="/safety-scores"');

@@ -13,7 +13,11 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
-import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl, buildInfrastructureTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
+import {
+  buildBackingTaxonomyUrl,
+  buildGovernanceTaxonomyUrl,
+  buildInfrastructureTaxonomyUrl,
+} from "@/lib/stablecoin-taxonomy-urls";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CASE_STUDY_BY_COIN_ID } from "@/app/learn/case-studies/content";
@@ -50,12 +54,7 @@ function CompactLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-export function ExploreNextSection({
-  coin,
-  related,
-  staticComparisonPages,
-  logos,
-}: ExploreNextSectionProps) {
+export function ExploreNextSection({ coin, related, staticComparisonPages, logos }: ExploreNextSectionProps) {
   const firstInfrastructure = coin.infrastructures?.[0];
   const infrastructureLabel = firstInfrastructure ? getInfrastructureLabel(firstInfrastructure) : null;
   const pegSlug = PEG_SLUGS[coin.flags.pegCurrency];
@@ -97,10 +96,22 @@ export function ExploreNextSection({
       label: `See all ${getMechanismArchetypeCtaNoun(resolvedArchetype)} stablecoins`,
     });
   }
+  const actionLinks: Array<{ href: string; label: string }> = [
+    { href: buildLiveCompareUrl([coin.id]), label: `Open ${coin.symbol} in live compare` },
+    { href: "/compare/", label: "Use the My Watchlist compare preset" },
+    { href: "/digest/", label: "Read the daily digest" },
+    { href: "/api/", label: "Use the Pharos API" },
+  ];
+  if (coin.status !== "frozen") {
+    actionLinks.splice(1, 0, {
+      href: "/pharoswatchbot/#getting-started",
+      label: `Set ${coin.symbol} Telegram alerts`,
+    });
+  }
 
   const caseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
   const hasPeers = related.length > 0 || staticComparisonPages.length > 0;
-  const hasBrowse = taxonomyLinks.length > 0 || trackerLinks.length > 0;
+  const hasBrowse = taxonomyLinks.length > 0 || trackerLinks.length > 0 || actionLinks.length > 0;
   if (!hasPeers && !hasBrowse && !caseStudy) {
     return null;
   }
@@ -114,7 +125,8 @@ export function ExploreNextSection({
       <div className="space-y-1.5">
         <DetailSectionTitle id="explore-next-heading">Explore Next</DetailSectionTitle>
         <p className="text-sm text-muted-foreground">
-          Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add context to what you just read.
+          Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add
+          context to what you just read.
         </p>
       </div>
 
@@ -125,9 +137,7 @@ export function ExploreNextSection({
         >
           <span className="min-w-0">
             <span className="pharos-kicker block text-frost-blue">Case study</span>
-            <span className="mt-0.5 block text-sm font-medium text-foreground">
-              {caseStudy.title}
-            </span>
+            <span className="mt-0.5 block text-sm font-medium text-foreground">{caseStudy.title}</span>
           </span>
           <ArrowRight
             aria-hidden="true"
@@ -169,9 +179,7 @@ export function ExploreNextSection({
 
           {staticComparisonPages.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Side-by-side comparisons with structural context.
-              </p>
+              <p className="text-xs text-muted-foreground">Side-by-side comparisons with structural context.</p>
               <div className="grid gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 sm:grid-cols-2 xl:grid-cols-3">
                 {staticComparisonPages.map((page) => (
                   <Link
@@ -199,7 +207,7 @@ export function ExploreNextSection({
       ) : null}
 
       {hasBrowse ? (
-        <div className="grid gap-x-8 gap-y-5 border-t border-border/40 pt-5 sm:grid-cols-2">
+        <div className="grid gap-x-8 gap-y-5 border-t border-border/40 pt-5 sm:grid-cols-2 xl:grid-cols-3">
           {taxonomyLinks.length > 0 ? (
             <div className="space-y-2">
               <p className="pharos-kicker">Taxonomy</p>
@@ -216,6 +224,17 @@ export function ExploreNextSection({
               <p className="pharos-kicker">Trackers</p>
               <div className="-my-1 flex flex-col">
                 {trackerLinks.map((link) => (
+                  <CompactLink key={link.href} href={link.href} label={link.label} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {actionLinks.length > 0 ? (
+            <div className="space-y-2">
+              <p className="pharos-kicker">Actions</p>
+              <div className="-my-1 flex flex-col">
+                {actionLinks.map((link) => (
                   <CompactLink key={link.href} href={link.href} label={link.label} />
                 ))}
               </div>

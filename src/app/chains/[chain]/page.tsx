@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
+import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChainProfileClient } from "./client";
@@ -13,6 +14,7 @@ import {
   getTrackedDeploymentsForChain,
   type ChainFeatureLink,
   type ChainTaxonomyLink,
+  type ChainTrackedDeployment,
 } from "../static-chain-content";
 
 export function generateStaticParams() {
@@ -33,14 +35,49 @@ export async function generateMetadata({
     };
   }
   return buildPageMetadata({
-    title: `${meta.name} Stablecoin Analytics`,
-    description: `Stablecoin supply, composition, health score, and activity on ${meta.name}. Explore which stablecoins are deployed on ${meta.name} and their market share.`,
+    title: chainPageTitle(meta.name),
+    description: `Stablecoin supply, market share, Chain Health, risk context, and tracked deployments on ${meta.name}. Compare which stablecoins are deployed on ${meta.name} and where concentration risk sits.`,
     canonical: `/chains/${chain}/`,
   });
 }
 
 function stablecoinCountLabel(count: number): string {
   return `${count} stablecoin${count === 1 ? "" : "s"}`;
+}
+
+function chainPageTitle(chainName: string): string {
+  return `Stablecoins on ${chainName}: Supply, Market Share & Risk`;
+}
+
+function deploymentCountLabel(count: number): string {
+  return `${count} tracked deployment${count === 1 ? "" : "s"}`;
+}
+
+function formatDeploymentList(deployments: readonly Pick<ChainTrackedDeployment, "name" | "symbol">[]): string {
+  if (deployments.length === 0) return "tracked stablecoins";
+  if (deployments.length === 1) return `${deployments[0].name} (${deployments[0].symbol})`;
+  if (deployments.length === 2) {
+    return `${deployments[0].name} (${deployments[0].symbol}) and ${deployments[1].name} (${deployments[1].symbol})`;
+  }
+
+  return `${deployments[0].name} (${deployments[0].symbol}), ${deployments[1].name} (${deployments[1].symbol}), and ${deployments[2].name} (${deployments[2].symbol})`;
+}
+
+function buildChainEditorialIntro({
+  chainName,
+  deployments,
+}: {
+  chainName: string;
+  deployments: readonly ChainTrackedDeployment[];
+}): string {
+  const topDeployments = deployments.slice(0, 3);
+  const trackedDeploymentCount = deployments.reduce((sum, deployment) => sum + deployment.contractCount, 0);
+
+  if (trackedDeploymentCount === 0) {
+    return `${chainName} is part of the Pharos chain map, but no active tracked stablecoin contract has been mapped to this profile yet. Use the live Chain Health card to verify whether market supply appears before relying on this route for deployment-level risk review.`;
+  }
+
+  return `${chainName} has ${deploymentCountLabel(trackedDeploymentCount)} in the checked-in Pharos registry, led by ${formatDeploymentList(topDeployments)}. Use this page to compare live stablecoin supply, global market share, concentration, peg health, and backing mix before treating ${chainName} liquidity as interchangeable with the same assets on other chains.`;
 }
 
 function RelatedLinkCard({ link }: { link: ChainTaxonomyLink | ChainFeatureLink }) {
@@ -58,6 +95,46 @@ function RelatedLinkCard({ link }: { link: ChainTaxonomyLink | ChainFeatureLink 
         {detail}
       </span>
     </Link>
+  );
+}
+
+function ChainRouteCta({
+  chainName,
+  deployments,
+}: {
+  chainName: string;
+  deployments: readonly ChainTrackedDeployment[];
+}) {
+  const compareIds = deployments.slice(0, 4).map((deployment) => deployment.id);
+
+  return (
+    <section className="rounded-xl border border-border/60 bg-muted/20 px-4 py-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="pharos-kicker">Next Check</p>
+          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            Compare the leading {chainName} stablecoins side by side, then subscribe to depeg and safety alerts for the
+            assets you actually hold.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {compareIds.length >= 2 ? (
+            <Link
+              href={buildLiveCompareUrl(compareIds)}
+              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent sm:min-h-9"
+            >
+              Compare cohort
+            </Link>
+          ) : null}
+          <Link
+            href="/pharoswatchbot#bot"
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:min-h-9"
+          >
+            Set up alerts
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -132,7 +209,8 @@ export default async function ChainProfilePage({
         { name: "Chains", url: "/chains/" },
         { name: meta.name, url: `/chains/${chain}/` },
       ]}
-      title={`${meta.name} Stablecoins`}
+      title={chainPageTitle(meta.name)}
+      leadParagraphs={[buildChainEditorialIntro({ chainName: meta.name, deployments })]}
       preface={
         <script
           type="application/ld+json"
@@ -143,6 +221,7 @@ export default async function ChainProfilePage({
       }
     >
       <ChainProfileClient chainId={chain} />
+      <ChainRouteCta chainName={meta.name} deployments={deployments} />
       <ChainRelatedHubs chainId={chain} taxonomyLinks={taxonomyLinks} />
       <ChainResearchSurfaces chainName={meta.name} />
     </FeaturePageShell>

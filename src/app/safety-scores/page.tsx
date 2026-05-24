@@ -14,7 +14,7 @@ import {
 } from "@shared/lib/safety-score-version";
 
 const reportCardsDescription =
-  "Transparent stablecoin safety grades and contagion simulation. Four weighted base dimensions plus a peg-stability multiplier map into one letter grade, with stress tests for major stablecoin failures.";
+  "Transparent stablecoin safety grades from the 15-minute Pharos report-card cache and contagion simulation. Four weighted base dimensions plus a peg-stability multiplier map into one letter grade, with stress tests for major stablecoin failures.";
 
 export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
