@@ -214,7 +214,7 @@ Each row also carries:
   - `undisclosed-reviewed` when docs were reviewed but only descriptive fee information is available
 - `feeModelKind`:
   - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
-  - `modelConfidence`:
+- `modelConfidence`:
   - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
   - `low` for heuristic-capacity routes, unresolved rows, impaired rows, unclear holder eligibility, stale docs without current route-status evidence, or unknown route status without direct live telemetry or source-reviewed documented-bound capacity
   - `confidenceDetails` can expose the component evidence scores and rollup reasons

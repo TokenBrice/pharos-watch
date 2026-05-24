@@ -3,11 +3,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { CoverageMobileResults } from "./coverage-page-sections";
+import { CoverageMatrixCard, CoverageMobileResults } from "./coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import type { StablecoinMeta } from "@shared/types";
 
-function makeCoverageRow(index: number) {
+function makeCoverageRow(index: number, overrides: Partial<Parameters<typeof buildCoverageRow>[0]> = {}) {
   return buildCoverageRow({
     coin: {
       id: `coin-${index}`,
@@ -29,7 +29,28 @@ function makeCoverageRow(index: number) {
     flowCoverageStatus: "complete",
     hasDependencyCoverage: true,
     liveReserveFresh: true,
+    ...overrides,
   });
+}
+
+function makeMatrixModel(overrides: Partial<Parameters<typeof CoverageMatrixCard>[0]> = {}) {
+  const rows = [makeCoverageRow(1)];
+  return {
+    logos: {},
+    rows,
+    filter: "all",
+    setFilter: () => {},
+    sort: "market-cap",
+    setSort: () => {},
+    search: "",
+    setSearch: () => {},
+    filteredRows: rows,
+    hasActiveFilters: false,
+    resetFilters: () => {},
+    unavailableFeatures: [],
+    dataUpdatedAt: 1_700_000_000_000,
+    ...overrides,
+  } satisfies Parameters<typeof CoverageMatrixCard>[0];
 }
 
 describe("CoverageMobileResults", () => {
@@ -51,5 +72,49 @@ describe("CoverageMobileResults", () => {
 
     expect(screen.getByText("Showing 24 of 30 matching coins")).toBeTruthy();
     expect(screen.queryByText("C30")).toBeNull();
+  });
+});
+
+describe("CoverageMatrixCard", () => {
+  it("renders unavailable feed warnings without counting them as ordinary gaps", () => {
+    render(<CoverageMatrixCard {...makeMatrixModel({ unavailableFeatures: ["redemption"] })} />);
+
+    expect(screen.getByRole("status").textContent).toContain("Data n/a");
+    expect(screen.getByRole("status").textContent).toContain("Backstop");
+  });
+
+  it("renders the empty-result state and reset affordance", () => {
+    render(
+      <CoverageMatrixCard
+        {...makeMatrixModel({
+          search: "nomatch",
+          filteredRows: [],
+          hasActiveFilters: true,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("No stablecoins match your search or filters.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Clear all filters" })).toBeTruthy();
+  });
+
+  it("renders the desktop comparison table with per-feature badges", () => {
+    render(<CoverageMatrixCard {...makeMatrixModel()} />);
+
+    expect(screen.getAllByRole("table", { name: /Per-coin feature availability/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Coin 1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("C1").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("columnheader", { name: /Backstop/ }).length).toBeGreaterThan(0);
+  });
+
+  it("renders the impaired redemption legend entry", () => {
+    render(<CoverageMatrixCard {...makeMatrixModel()} />);
+
+    expect(screen.getAllByText("Impaired").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
+      ).length,
+    ).toBeGreaterThan(0);
   });
 });
