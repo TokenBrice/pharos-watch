@@ -1,6 +1,14 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.06` (2026-02-01 -> 2026-05-22).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.07` (2026-02-01 -> 2026-05-24).
+
+---
+
+## v6.07 - Curated production price-gap closure (May 24, 2026)
+
+- `mnee-mnee` and `veur-vnx` now use the allowlisted CoinGecko low-volume fallback when DefiLlama supplies circulation but no usable price
+- `cadd-cad-digital`, `jpym-mento`, `zarm-mento`, and `xofm-mento` can publish scoped `protocol-redeem` FX-par prices when the relevant CAD/JPY/ZAR/XOF reference is fresh or static
+- CADD and the Mento JPY/ZAR/XOF stables can repair DefiLlama zero-supply rows from verified deployments and current FX references when DL chart history is absent or below the tracked repair floor
 
 ---
 

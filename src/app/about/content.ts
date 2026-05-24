@@ -67,7 +67,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Chainlink NAV reserve telemetry, Superstate NAV/liquidity telemetry, Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, Zephyr Scanner, and direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; CoinGecko also repairs total supply for tracked DefiLlama-backed assets when known deployments are missing from DefiLlama chain coverage",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Chainlink NAV reserve telemetry, Superstate NAV/liquidity telemetry, Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, Zephyr Scanner, direct protocol redemption or FX-par quotes, and curated fail-closed on-chain supply-gap repairs",
   },
   {
     label: "Reserve Transparency",

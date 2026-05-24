@@ -2,6 +2,20 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.07",
+      title: "Curated production price-gap closure",
+      date: "2026-05-24",
+      effectiveAt: 1779608084,
+      summary:
+        "Audited production gaps now recover through scoped CoinGecko, FX-par, and curated on-chain repair paths.",
+      impact: [
+        "MNEE and VEUR join the allowlisted `coingecko-low-volume` fallback",
+        "CADD and Mento JPY/ZAR/XOF stables can use FX-par `protocol-redeem` pricing plus fail-closed on-chain zero-supply repair",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.06",
       title: "DexScreener symbol-search retirement",
       date: "2026-05-22",

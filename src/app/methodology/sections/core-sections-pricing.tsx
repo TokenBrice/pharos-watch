@@ -260,6 +260,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">USDai:</span> inherits tracked <code className="text-xs">PYUSD</code> pricing because base USDAI is treated as an instantly redeemable PYUSD wrapper</li>
               <li><span className="text-foreground font-medium">iUSD (Initia) / USDCx:</span> inherit tracked <code className="text-xs">AUSD</code> or <code className="text-xs">USDC</code> pricing when the parent rail is fresh and replay-safe</li>
               <li><span className="text-foreground font-medium">USDK / XO / USDnr:</span> inherit tracked <code className="text-xs">wM</code> pricing because Pharos treats them as instantly redeemable M0 extension units rather than free-floating market-priced assets</li>
+              <li><span className="text-foreground font-medium">Scoped par references:</span> source-reviewed USD and FX redeemables can use fresh/static FX references when active supply is observable</li>
               <li><span className="text-foreground font-medium">ERC-4626 NAV wrappers:</span> audited vaults such as Spark Savings, Gauntlet, Steakhouse, Yearn, Avant, Noon, Yuzu, and Aave Umbrella use <code className="text-xs">convertToAssets()</code> multiplied by a trusted tracked parent price</li>
               <li><span className="text-foreground font-medium">sGHO / Idle tranches:</span> protocol-specific <code className="text-xs">previewRedeem()</code> or <code className="text-xs">virtualPrice()</code> reads price assets whose executable value is not represented by thin secondary markets</li>
               <li><span className="text-foreground font-medium">crvUSD (Curve):</span> <code className="text-xs">PriceAggregator.price()</code> enters primary consensus as a live market voice, not a protocol override</li>
@@ -276,7 +277,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, and peg-aware)</li>
               <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools only; the older unique-symbol search fallback is retired, and the pass remains capped at 10 actual exact-address requests per run</li>
-              <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery for selected DefiLlama-listed assets that still have no price, published only with fallback confidence</li>
+              <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery for selected DefiLlama-listed assets, published only with fallback confidence</li>
             </ol>
           </div>
 

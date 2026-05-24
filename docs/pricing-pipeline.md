@@ -21,8 +21,8 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.06`
-- **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
+- **Current methodology version:** `v6.07`
+- **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
 
@@ -223,6 +223,10 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `usbd-bima`              | direct USD redemption-par reference for observable DefiLlama supply             |
 | `usdq-quill`             | direct USD redemption-par reference for observable DefiLlama supply             |
 | `chfau-allunity`         | direct CHF redemption-par reference using fresh/static CHF/USD FX               |
+| `cadd-cad-digital`       | direct CAD redemption-par reference using fresh/static CAD/USD FX               |
+| `jpym-mento`             | direct JPY redemption-par reference using fresh/static JPY/USD FX               |
+| `zarm-mento`             | direct ZAR redemption-par reference using fresh/static ZAR/USD FX               |
+| `xofm-mento`             | direct XOF redemption-par reference using fresh/static XOF/USD FX               |
 | `susdt-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
 | `susdc-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `steakusdt-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
@@ -275,6 +279,10 @@ Scoped redemption-par references cover active assets with observable runtime sup
 - `usbd-bima` at USD parity
 - `usdq-quill` at USD parity
 - `chfau-allunity` at CHF parity converted through the live CHF/USD reference
+- `cadd-cad-digital` at CAD parity converted through the live CAD/USD reference
+- `jpym-mento` at JPY parity converted through the live JPY/USD reference
+- `zarm-mento` at ZAR parity converted through the live ZAR/USD reference
+- `xofm-mento` at XOF parity converted through the live XOF/USD reference
 
 These authoritative overrides are pre-applied before fallback enrichment and then applied again after the GeckoTerminal single-source probe. The early pass keeps known redeemable wrappers and extension assets out of unnecessary fallback-source probes, while the final pass preserves the existing rule that a later market cross-check cannot overwrite a validated redemption price.
 
@@ -293,9 +301,11 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Each accepted quote preserves `quote.USD.last_updated` as upstream provenance and must be fresh; schema-invalid OK responses, malformed JSON, non-OK responses, and apparent category truncation record CMC breaker failures. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — calls the official V3 gateway with `JUPITER_API_KEY` when configured, accepts documented sparse no-quote rows as healthy empty coverage, accepts quoted payloads without `liquidity`, checks `blockId` freshness against Solana current slot when a quote exists, applies optional liquidity gating only when liquidity is present, and remains subject to peg-aware validation
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Exact-address recoveries publish `dexscreener-exact`. The older last-resort symbol-search path is retired, so addressless assets no longer call `/latest/dex/search` and remain explicitly missing unless another fallback resolves them. The pass walks the full sorted missing set and stops after 10 actual DexScreener exact-address requests. The legacy `dexscreener-search` breaker can still appear in health payloads while stale production state ages out, but new sync runs recover it through the no-candidates path instead of probing the search endpoint.
-6. **Pass 5:** CoinGecko low-volume allowlisted fallback for selected DefiLlama-listed assets whose DL row supplies circulation but no price. It currently targets `usp-pareto-credit` and `tryb-bilira`, runs after DefiLlama contract, CMC, Jupiter, and DexScreener recovery fail, and only fills still-missing price fields with `priceConfidence: "fallback"`.
+6. **Pass 5:** CoinGecko low-volume allowlisted fallback for selected DefiLlama-listed assets whose DL row supplies circulation but no price. It currently targets `mnee-mnee`, `veur-vnx`, `usp-pareto-credit`, and `tryb-bilira`, runs after DefiLlama contract, CMC, Jupiter, and DexScreener recovery fail, and only fills still-missing price fields with `priceConfidence: "fallback"`.
 
 The DefiLlama `/coins` contract-address fallback and the DexScreener lookups used outside primary consensus (the `dex-liquidity` and `dex-discovery` crawls) now gate on and record against their own circuit breakers. `CIRCUIT_SOURCE.DL_COINS` wraps the `coins.llama.fi/prices/current/...` path so a DL regional outage opens the breaker instead of hammering the host, and `dexscreener-prices` wraps the exact-address DexScreener pricing lane. Discovery records one aggregate DexScreener outcome per coin crawl, so a handful of optional token-target failures inside a partially successful crawl do not count as multiple source-wide failures.
+
+Tracked DefiLlama rows that collapse to zero supply are repaired before pricing when the row has no usable chart-history repair or its chart-history value is below the tracked repair floor. The repair remains scoped to source-reviewed deployments for CADD and the Mento JPY/ZAR/XOF stables, reads every configured chain successfully before publishing, converts total supply through the current fresh/static FX reference, and tags the result `supplySource = "onchain-total-supply"`.
 
 Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes, self-stops once its 3-minute budget is exhausted, and protocol overrides still apply after that probe.
 
@@ -320,7 +330,7 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
 1. Try `resolveSupplementalPrice` first (the standard 15-minute gate).
 2. If that returns null but `cgData[geckoId].usd` is a positive finite number, build a resolution with `source: "coingecko-low-volume"`, `priceConfidence: "fallback"`, and `priceObservedAtMode: "upstream"` when CG returned `last_updated_at` (otherwise `"local_fetch"`).
 
-The fallback enrichment pipeline also has a narrow `coingecko-low-volume` pass for selected DefiLlama-listed assets whose DL row supplies circulation but no price. That pass runs only after DefiLlama contract, CMC, Jupiter, and DexScreener fallback recovery fail. It is explicitly allowlisted for audited low-volume gaps, keeps the DefiLlama supply row intact, and can only fill missing price fields; it cannot overwrite a price that primary consensus or an earlier fallback already accepted.
+The fallback enrichment pipeline also has a narrow `coingecko-low-volume` pass for selected DefiLlama-listed assets whose DL row supplies circulation but no price. That pass runs only after DefiLlama contract, CMC, Jupiter, and DexScreener fallback recovery fail. It is explicitly allowlisted for audited low-volume gaps (`mnee-mnee`, `veur-vnx`, `usp-pareto-credit`, and `tryb-bilira`), keeps the DefiLlama supply row intact, and can only fill missing price fields; it cannot overwrite a price that primary consensus or an earlier fallback already accepted.
 
 The lane is registered in `shared/lib/pricing-source-registry-aggregators.ts` with a 7-day `maxTrustedAgeSec` and `defaultWeight: 0.5`. Downstream treatment is intentionally weaker than primary `coingecko`:
 
@@ -422,5 +432,5 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 | `worker/src/lib/price-validation.ts`                        | Peg-aware reasonableness validation                                                                                                                                                                      |
 | `worker/src/lib/pricing-circuit-map.ts`                     | Canonical `PRICING_SOURCE_TO_CIRCUIT` map plus CI contract test asserting every registry source has a declared breaker (or is explicitly null for synthesized / composite / cached sources)              |
 | `shared/lib/pricing-pipeline-constants.ts`                  | Shared numeric constants for primary pricing (currently `DIVERGENCE_THRESHOLD_BPS = 50`)                                                                                                                 |
-| `shared/lib/pricing-pipeline-version.ts`                    | Methodology version metadata and changelog route                                                                                                                                                         |
+| `shared/lib/methodology-versions/pricing-pipeline.ts`       | Methodology version metadata and changelog route                                                                                                                                                         |
 | `src/app/methodology/sections/core-sections-pricing.tsx`    | Public longform pricing-pipeline methodology copy                                                                                                                                                        |
