@@ -216,6 +216,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveMintAuthorityCoverage = coverageFeature.resolve;
-export const formatMintAuthorityBreakdown = coverageFeature.formatBreakdown;
-export const MINT_AUTHORITY_STATUS_KINDS = coverageFeature.statusKinds;
-export const MINT_AUTHORITY_LEGEND_ITEMS = coverageFeature.legendItems;

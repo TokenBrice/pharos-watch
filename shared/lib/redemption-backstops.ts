@@ -3,12 +3,6 @@ import { REDEMPTION_BACKSTOP_CONFIGS } from "./redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/shared";
 
 export { REDEMPTION_BACKSTOP_CONFIGS };
-export {
-  resolveCapacityBasis,
-  resolveCapacityDailyLimitUsd,
-  resolveCapacityFallbackSource,
-  type RedemptionCapacityFallbackSource,
-} from "./redemption-backstop-capacity";
 export type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,

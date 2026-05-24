@@ -157,7 +157,7 @@ export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
   }
 });
 
-export const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z.object({
+const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z.object({
   version: z.string().min(1).optional(),
   owners: z.array(z.string().min(1)).optional(),
   threshold: PositiveIntegerSchema.optional(),
@@ -177,7 +177,7 @@ export const MintAuthoritySafeStateSchema: z.ZodType<MintAuthoritySafeState> = z
   }
 });
 
-export const MintAuthorityRouteChecksSchema: z.ZodType<MintAuthorityRouteChecks> = z.object({
+const MintAuthorityRouteChecksSchema: z.ZodType<MintAuthorityRouteChecks> = z.object({
   lockboxOrEscrow: z.string().min(1).optional(),
   trustedPeerOrRemote: z.string().min(1).optional(),
   attestorQuorum: z.string().min(1).optional(),
@@ -189,7 +189,7 @@ export const MintAuthorityRouteChecksSchema: z.ZodType<MintAuthorityRouteChecks>
   unsupportedReason: z.string().min(1).optional(),
 }).strict();
 
-export const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z.object({
+const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z.object({
   chain: z.string().min(1).optional(),
   address: z.string().min(1).optional(),
   label: z.string().min(1),
@@ -241,7 +241,7 @@ export const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z.obj
   }
 });
 
-export const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z.object({
+const MintAuthorityReviewSchema: z.ZodType<MintAuthorityReview> = z.object({
   sources: z.array(StablecoinLinkSchema).min(1).optional(),
   sourceFreeRationale: z.string().min(1).optional(),
   evidence: z.string().min(24),

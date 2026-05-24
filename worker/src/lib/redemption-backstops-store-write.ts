@@ -4,18 +4,6 @@ import { runWithOverloadRetry } from "./cron-lease";
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
-export interface RedemptionBackstopSnapshotWriteResult {
-  runId: string;
-  attemptedCount: number;
-  runRowsWrittenCount: number;
-  historyWrittenCount: number;
-  currentMirroredCount: number;
-  retentionCutoff: number | null;
-  retentionRunRowsDeletedCount: number;
-  retentionRunsDeletedCount: number;
-  warnings: string[];
-}
-
 export interface RedemptionBackstopRunRetentionResult {
   cutoff: number;
   runRowsDeletedCount: number;
@@ -23,7 +11,7 @@ export interface RedemptionBackstopRunRetentionResult {
   warnings: string[];
 }
 
-export const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
+const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
 const REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE = 100;
 
 const SNAPSHOT_ROW_COLUMNS = [
@@ -529,7 +517,7 @@ export async function upsertRedemptionBackstopSnapshots(
     retentionSec?: number;
     nowSec?: number;
   },
-): Promise<RedemptionBackstopSnapshotWriteResult> {
+) {
   if (records.length === 0) {
     return {
       runId: options?.runId ?? "",

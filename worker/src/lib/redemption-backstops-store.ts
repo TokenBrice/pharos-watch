@@ -56,7 +56,6 @@ import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 export {
   upsertRedemptionBackstopSnapshots,
   updateRedemptionBackstopRunMetadata,
-  type RedemptionBackstopSnapshotWriteResult,
 } from "./redemption-backstops-store-write";
 
 interface RedemptionBackstopRow {

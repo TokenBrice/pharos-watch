@@ -1,10 +1,6 @@
 import ts from "typescript";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import {
-  resolveCapacityBasis,
-  resolveCapacityDailyLimitUsd,
-  resolveCapacityFallbackSource,
-} from "@shared/lib/redemption-backstop-capacity";
+import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
 import {
   resolveCapacityConfidence,
   resolveCapacitySemantics,
@@ -23,7 +19,10 @@ import {
   getBackstopRegistryOverrideReasons,
   getBackstopRegistrySourceFilePaths,
 } from "@shared/lib/redemption-backstop-configs/factory";
-import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
+import type {
+  RedemptionBackstopConfig,
+  RedemptionCapacityModel,
+} from "@shared/lib/redemption-backstop-configs/shared";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
@@ -43,6 +42,22 @@ export interface RedemptionRegistryFinding {
   family?: string;
   filePath?: string;
   message: string;
+}
+
+type RedemptionCapacityFallbackSource = "none" | "reserve-sync-fallback-ratio" | "reserve-sync-fallback-usd";
+
+function resolveCapacityFallbackSource(model: RedemptionCapacityModel): RedemptionCapacityFallbackSource {
+  if (model.kind !== "reserve-sync-metadata") return "none";
+  if (model.fallbackRatio != null) return "reserve-sync-fallback-ratio";
+  if (model.fallbackUsd != null) return "reserve-sync-fallback-usd";
+  return "none";
+}
+
+function resolveCapacityDailyLimitUsd(model: RedemptionCapacityModel): number | null {
+  if (model.kind === "fixed-usd" || model.kind === "supply-ratio") {
+    return model.dailyLimitUsd ?? null;
+  }
+  return null;
 }
 
 export interface RedemptionRegistryAuditRow {
