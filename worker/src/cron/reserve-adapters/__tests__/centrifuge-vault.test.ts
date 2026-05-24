@@ -193,6 +193,7 @@ describe("fetchCentrifugeVaultReserves", () => {
     ]);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.1, 2);
     expect(result.metadata?.redemption?.routeStatus).toBe("degraded");
+    expect(result.metadata?.redemption?.routeStatusSource).toBe("onchain");
   });
 
   it("falls back to ERC-20 totalSupply liveness when totalAssets is unavailable", async () => {

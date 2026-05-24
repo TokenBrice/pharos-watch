@@ -224,6 +224,7 @@ export async function fetchCentrifugeVaultReserves(
         capacityKind: "documented-eventual" as const,
         freshnessKind: "same-run-onchain" as const,
         routeStatus: warnings.length > 0 ? "degraded" as const : "unknown" as const,
+        ...(warnings.length > 0 ? { routeStatusSource: "onchain" as const } : {}),
       },
     },
   };

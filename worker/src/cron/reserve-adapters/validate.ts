@@ -246,6 +246,30 @@ function validateRedemptionTelemetry(
       reserveFatalWarning("invalid-redemption-freshness-kind", `Redemption freshness kind is invalid${adapterLabel}`),
     );
   }
+  const redemptionSourceTimestamp = getMetadataNumberField(redemption ?? undefined, "sourceTimestamp");
+  if (
+    redemptionSourceTimestamp.invalid ||
+    (redemptionSourceTimestamp.value != null && redemptionSourceTimestamp.value < 0)
+  ) {
+    warnings.push(
+      reserveFatalWarning(
+        "invalid-redemption-source-timestamp",
+        `Redemption source timestamp is invalid${adapterLabel}`,
+      ),
+    );
+  }
+  if (
+    freshnessKind === "verified-source-timestamp" &&
+    !redemptionSourceTimestamp.invalid &&
+    redemptionSourceTimestamp.value == null
+  ) {
+    warnings.push(
+      reserveFatalWarning(
+        "missing-redemption-source-timestamp",
+        `Redemption freshness is verified-source-timestamp without sourceTimestamp${adapterLabel}`,
+      ),
+    );
+  }
   // Skip the redemption-capacity-unverified degrade when the adapter's policy
   // already restricts freshness to "unverified" only — in that case the output
   // is expected to be unverified and re-degrading on top of that policy would
@@ -265,22 +289,17 @@ function validateRedemptionTelemetry(
   }
 
   const routeStatus = redemption?.routeStatus;
-  if (
-    typeof routeStatus === "string" &&
-    !LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES.includes(
-      routeStatus as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES)[number],
-    )
-  ) {
+  const hasKnownRouteStatus = isKnownValue(LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_VALUES, routeStatus);
+  if (routeStatus != null && !hasKnownRouteStatus) {
     warnings.push(reserveFatalWarning("invalid-redemption-route-status", `Redemption route status is invalid${adapterLabel}`));
   }
 
   const routeStatusSource = redemption?.routeStatusSource;
-  if (
-    typeof routeStatusSource === "string" &&
-    !LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES.includes(
-      routeStatusSource as (typeof LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES)[number],
-    )
-  ) {
+  const hasKnownRouteStatusSource = isKnownValue(
+    LIVE_RESERVE_REDEMPTION_ROUTE_STATUS_SOURCE_VALUES,
+    routeStatusSource,
+  );
+  if (routeStatusSource != null && !hasKnownRouteStatusSource) {
     warnings.push(
       reserveFatalWarning(
         "invalid-redemption-route-status-source",
@@ -288,7 +307,7 @@ function validateRedemptionTelemetry(
       ),
     );
   }
-  if (routeStatus != null && routeStatus !== "unknown" && routeStatusSource == null) {
+  if (hasKnownRouteStatus && routeStatus !== "unknown" && !hasKnownRouteStatusSource) {
     warnings.push(
       reserveFatalWarning(
         "missing-redemption-route-status-source",

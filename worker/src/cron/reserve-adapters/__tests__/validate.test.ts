@@ -211,6 +211,78 @@ describe("validateAdapterOutput redemption telemetry", () => {
     );
   });
 
+  it("rejects verified redemption freshness without a valid source timestamp", () => {
+    const adapter = getReserveAdapter("gho");
+    const missingTimestamp = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          redemption: {
+            capacityUsd: 1_000_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "verified-source-timestamp",
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+    const malformedTimestamp = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          redemption: {
+            capacityUsd: 1_000_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "verified-source-timestamp",
+            sourceTimestamp: "1700000000",
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+
+    expect(missingTimestamp.valid).toBe(false);
+    expect(missingTimestamp.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "missing-redemption-source-timestamp",
+        effect: "fatal",
+      }),
+    );
+    expect(malformedTimestamp.valid).toBe(false);
+    expect(malformedTimestamp.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "invalid-redemption-source-timestamp",
+        effect: "fatal",
+      }),
+    );
+  });
+
+  it("rejects non-string live route status source attribution", () => {
+    const adapter = getReserveAdapter("gho");
+    const result = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          redemption: {
+            capacityUsd: 1_000_000,
+            capacityKind: "live-direct-bounded",
+            routeStatus: "paused",
+            routeStatusSource: 123,
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "invalid-redemption-route-status-source",
+        effect: "fatal",
+      }),
+    );
+  });
+
   it("rejects invalid holder, capacity, and freshness kinds", () => {
     const adapter = getReserveAdapter("ethena");
     const result = validateAdapterOutput(
