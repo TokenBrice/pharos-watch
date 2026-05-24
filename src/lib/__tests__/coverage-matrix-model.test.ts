@@ -188,4 +188,97 @@ describe("buildCoverageMatrixModel", () => {
       available: true,
     });
   });
+
+  it("marks redemption coverage as Data n/a when the redemption feed is unavailable", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    expect(coin).toBeDefined();
+    const error = new Error("redemption feed unavailable");
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [
+          {
+            id: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            circulating: { peggedUSD: 1_000 },
+          },
+        ],
+      } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource<never>(undefined, { error }),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource({ cards: [], dependencyGraph: { nodes: [], edges: [] } } as never),
+      activeStablecoins: [coin!],
+    });
+
+    expect(model.rows[0].statuses.redemption).toMatchObject({
+      kind: "data-unavailable",
+      label: "Data n/a",
+      available: false,
+    });
+    expect(model.unavailableFeatures).toEqual(["redemption"]);
+    expect(model.isInitialDataLoading).toBe(false);
+    expect(model.staleQueries.find((query) => query.preset === "redemptionBackstops")).toMatchObject({
+      error,
+      hasData: false,
+    });
+  });
+
+  it("keeps impaired redemption rows out of strong coverage", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    expect(coin).toBeDefined();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [
+          {
+            id: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            circulating: { peggedUSD: 1_000 },
+          },
+        ],
+      } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({
+        coins: {
+          "usdc-circle": {
+            stablecoinId: "usdc-circle",
+            resolutionState: "impaired",
+            routeStatus: "paused",
+            routeStatusReason: "Issuer paused primary redemption while reserves are reconciled.",
+            routeFamily: "offchain-issuer",
+            modelConfidence: "low",
+            capacitySemantics: "immediate-bounded",
+            score: null,
+            effectiveExitScore: null,
+          },
+        },
+      } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource({ cards: [], dependencyGraph: { nodes: [], edges: [] } } as never),
+      activeStablecoins: [coin!],
+    });
+
+    expect(model.rows[0].statuses.redemption).toMatchObject({
+      kind: "impaired",
+      label: "Impaired",
+      available: false,
+      detail: "Issuer paused primary redemption while reserves are reconciled.",
+    });
+    const redemptionSummary = model.featureSummaries.find((summary) => summary.feature.key === "redemption");
+    expect(redemptionSummary).toMatchObject({
+      availableCount: 0,
+      coveragePct: 0,
+    });
+    expect(redemptionSummary?.breakdown.find((item) => item.key === "impaired")).toMatchObject({
+      label: "impaired",
+      count: 1,
+    });
+  });
 });
