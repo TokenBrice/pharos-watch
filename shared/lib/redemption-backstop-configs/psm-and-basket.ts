@@ -227,6 +227,13 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       20,
       "Alto docs describe a 0.20% (20 bps) fee on both PSM swap directions; PSM capacity is capped at 5M USDC which currently exceeds total DUSD supply",
     ),
+    docs: [
+      sourceRef("Alto DUSD Peg Stability Module", "https://docs.alto.money/alto-protocol/psm", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
+    ],
   },
   "silk-shade-protocol": {
     ...basketRedeemBase,

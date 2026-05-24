@@ -92,10 +92,7 @@ const mentoLocalFxCdpRedeemConfig: RedemptionBackstopConfig = {
       "settlement",
       "fees",
     ]),
-    sourceRef("Mento V3 addresses", "https://docs.mento.org/mento-v3/build/deployments/addresses", [
-      "route",
-      "access",
-    ]),
+    sourceRef("Mento V3 addresses", "https://docs.mento.org/mento-v3/build/deployments/addresses", ["route", "access"]),
     sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
   ],
   notes: [
@@ -111,16 +108,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     sourceFilePath: SOURCE_FILE_PATH,
   }),
   ...defineBatch(
-    [
-      "audm-mento",
-      "brlm-mento",
-      "cadm-mento",
-      "copm-mento",
-      "ghsm-mento",
-      "kesm-mento",
-      "phpm-mento",
-      "zarm-mento",
-    ],
+    ["audm-mento", "brlm-mento", "cadm-mento", "copm-mento", "ghsm-mento", "kesm-mento", "phpm-mento", "zarm-mento"],
     mentoLocalFxCdpRedeemConfig,
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
@@ -216,13 +204,11 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
       docs: [
-        sourceRef("Flare Enosys Loans launch update", "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare", [
-          "route",
-          "capacity",
-          "fees",
-          "access",
-          "settlement",
-        ]),
+        sourceRef(
+          "Flare Enosys Loans launch update",
+          "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
       ],
       notes: [
         "Modeled as a Liquity V2-style collateral redemption route on Flare; lowest-rate troves are redeemed first when CDP trades below peg.",
@@ -318,6 +304,18 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       costModel: documentedVariableFee(
         "Parallelizer module: dynamic minting/burning fees adjust to correct peg deviations; depeg penalty applied proportionally",
       ),
+      docs: [
+        sourceRef(
+          "Parallelizer Module",
+          "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module",
+          ["route", "capacity", "fees"],
+        ),
+        sourceRef(
+          "Parallelizer Module integration",
+          "https://docs.parallel.best/developers-hub/parallel-v3/build-on-parallel/parallelizer-module-integration",
+          ["route", "capacity"],
+        ),
+      ],
     },
     "hyusd-hylo": {
       ...collateralRedeemBase,
@@ -505,6 +503,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       notes: [
         "HBD is modeled as a protocol conversion route rather than a fiat issuer rail: holders can convert HBD through Hive mechanics, but the output and haircut behavior depend on protocol debt-ratio conditions",
       ],
+      docs: [sourceRef("Hive HBD", "https://hive.io/hbd/", ["route", "capacity", "fees", "settlement"])],
     },
     "djed-coti": {
       ...collateralRedeemBase,

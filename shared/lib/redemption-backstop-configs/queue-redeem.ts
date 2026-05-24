@@ -109,13 +109,18 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef(
         "Maple syrupUSDC / syrupUSDT withdrawals",
         "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
-        ["route", "settlement", "fees"],
+        ["route", "capacity", "settlement", "fees"],
       ),
       sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
         "route",
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "Maple WithdrawalManager queue",
+        "https://docs.maple.finance/technical-resources/withdrawal-managers/withdrawal-manager-queue",
+        ["route", "capacity", "settlement"],
+      ),
     ],
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
@@ -133,13 +138,18 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef(
         "Maple syrupUSDC / syrupUSDT withdrawals",
         "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
-        ["route", "settlement", "fees"],
+        ["route", "capacity", "settlement", "fees"],
       ),
       sourceRef("Maple Pools technical reference", "https://docs.maple.finance/technical-resources/pools/pools", [
         "route",
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "Maple WithdrawalManager queue",
+        "https://docs.maple.finance/technical-resources/withdrawal-managers/withdrawal-manager-queue",
+        ["route", "capacity", "settlement"],
+      ),
     ],
     notes: [
       "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
@@ -207,16 +217,14 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Lorenzo states it does not charge user deposit or withdrawal fees; yield is distributed net of protocol and execution service fees",
     ),
     docs: [
-      sourceRef(
-        "Lorenzo USD1+ OTF launch",
-        "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-      sourceRef("Lorenzo OTF app", "https://app.lorenzo-protocol.xyz/otf", [
+      sourceRef("Lorenzo USD1+ OTF launch", "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed", [
         "route",
+        "capacity",
+        "fees",
         "access",
         "settlement",
       ]),
+      sourceRef("Lorenzo OTF app", "https://app.lorenzo-protocol.xyz/otf", ["route", "access", "settlement"]),
       sourceRef("Lorenzo website", "https://lorenzo-protocol.xyz/home", ["capacity"]),
     ],
     notes: [
@@ -560,7 +568,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: fixedFee(25, "OnRe docs list a 25 bps redemption fee"),
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
     docs: [
-      sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("OnRe redemptions", "https://docs.onre.finance/for-capital-providers/redemptions", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("OnRe transparency", "https://app.onre.finance/earn/transparency", ["capacity"]),
     ],
     notes: [
@@ -574,9 +588,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     totalScoreCap: 65,
-    costModel: documentedVariableFee("apyUSD unlocks to apxUSD over roughly 30 days, then apxUSD primary redemption depends on eligible participants"),
+    costModel: documentedVariableFee(
+      "apyUSD unlocks to apxUSD over roughly 30 days, then apxUSD primary redemption depends on eligible participants",
+    ),
     docs: [
-      sourceRef("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("apyUSD overview", "https://docs.apyx.fi/product-overview/apyusd-overview", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Apyx smart contract addresses", "https://docs.apyx.fi/resources/smart-contract-addresses", ["route"]),
     ],
   },
@@ -585,10 +607,20 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee("Avant docs describe savAsset unstaking with a one-day cooldown before receiving the underlying avAsset"),
+    costModel: documentedVariableFee(
+      "Avant docs describe savAsset unstaking with a one-day cooldown before receiving the underlying avAsset",
+    ),
     docs: [
-      sourceRef("Avant staking avAssets", "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Avant unstaking savAssets", "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets", ["settlement", "capacity"]),
+      sourceRef(
+        "Avant staking avAssets",
+        "https://docs.avantprotocol.com/overview/using-the-avant-protocol/staking-avtokens-avusd-avbtc",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Avant unstaking savAssets",
+        "https://docs.avantprotocol.com/overview/using-the-avant-protocol/unstaking-savassets",
+        ["settlement", "capacity"],
+      ),
     ],
   },
   "srusde-strata": {
@@ -600,7 +632,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     totalScoreCap: 65,
     costModel: fixedFee(2.5, "Strata docs list a 2.5 bps senior redemption fee"),
     docs: [
-      sourceRef("Strata srUSDe docs", "https://docs.strata.money/using-strata/srusde", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Strata srUSDe docs", "https://docs.strata.money/using-strata/srusde", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Strata FAQ", "https://docs.strata.markets/resources/faqs", ["settlement"]),
     ],
   },
@@ -610,7 +648,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     costModel: documentedVariableFee("Rings docs describe scAsset redemption after a three-day cooldown"),
     docs: [
-      sourceRef("Rings backing", "https://docs.rings.money/backing", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Rings backing", "https://docs.rings.money/backing", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Rings docs", "https://docs.rings.money/", ["route", "settlement"]),
     ],
   },
@@ -619,9 +663,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee("Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within three working days with no fee"),
+    costModel: documentedVariableFee(
+      "Hyperbeat docs describe instant redemption to USDT0 with a 0.5% fee when liquidity exists, or classic redemption within three working days with no fee",
+    ),
     docs: [
-      sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Hyperbeat USDT vault", "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Hyperbeat addresses", "https://docs.hyperbeat.org/resources/addresses", ["route"]),
     ],
   },
@@ -632,9 +684,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee("Nest docs describe nTBILL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    costModel: documentedVariableFee(
+      "Nest docs describe nTBILL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
+    ),
     docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: ["Nest docs list an expected nTBILL redemption window of 1-3 business days."],
   },
@@ -649,8 +709,18 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Nest docs describe nALPHA/inALPHA redemption requests through the app and atomic queue; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("Nest liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "settlement"]),
+      sourceRef("Nest liquidity and redemptions", "https://docs.nest.credit/about/liquidity-and-redemptions", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
       sourceRef(
         "Nest nALPHA vault integration",
         "https://docs.nest.credit/developers/evm-integration-guides/nalpha-vault",
@@ -669,9 +739,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee("Nest docs describe nBASIS redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    costModel: documentedVariableFee(
+      "Nest docs describe nBASIS redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
+    ),
     docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: ["Nest docs list an expected nBASIS redemption window of 3-5 business days."],
   },
@@ -682,9 +760,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee("Nest docs describe nOPAL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    costModel: documentedVariableFee(
+      "Nest docs describe nOPAL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
+    ),
     docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: ["Nest docs list an expected nOPAL redemption window from minutes to 7 business days."],
   },
@@ -695,9 +781,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee("Nest docs describe nWISDOM redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee"),
+    costModel: documentedVariableFee(
+      "Nest docs describe nWISDOM redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
+    ),
     docs: [
-      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: ["Nest docs list an expected nWISDOM redemption window from minutes to 7 business days."],
   },
