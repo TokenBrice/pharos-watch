@@ -25,7 +25,7 @@ function makeCollected(overrides: Partial<PrimaryCollectedQuotes> = {}): Primary
 }
 
 describe("buildPrimarySourceCandidates", () => {
-  it("rejects a single promoted DEX protocol when only a soft aggregator agrees", () => {
+  it("restores aggregate DEX promotion when a single protocol candidate lacks hard corroboration", () => {
     const collected = makeCollected({
       cgPrice: 1.0,
       cgObservedAt: 1_700_000_000,
@@ -38,17 +38,30 @@ describe("buildPrimarySourceCandidates", () => {
           chain: "ethereum",
         },
       ],
+      dexAggregateQuote: {
+        dex_price_usd: 1.0,
+        updated_at: 1_700_000_000,
+        source_pool_count: 3,
+        source_total_tvl: 500_000,
+      },
     });
 
-    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry } = buildPrimarySourceCandidates(
-      { id: "dusd-test", symbol: "DUSD" },
-      collected,
-      { nowSec: 1_700_000_030 },
-    );
+    const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
+      buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
 
     expect(hasPromotedDexProtocolSource).toBe(true);
     expect(sources.some((s) => s.source.endsWith("-dex"))).toBe(false);
-    expect(sources.map((s) => s.source)).toEqual(["coingecko"]);
+    expect(sources.map((s) => s.source)).toEqual(["coingecko", "dex-promoted"]);
+    expect(sources.find((s) => s.source === "dex-promoted")?.metadata).toMatchObject({
+      restorationReason: "dex_promoted_restored_after_protocol_exclusion",
+      rejectedProtocolSources: [
+        {
+          protocol: "balancer",
+          sourceKey: "balancer-dex",
+          reason: "lacked_corroboration",
+        },
+      ],
+    });
     expect(dexCandidateTelemetry).toMatchObject([
       {
         stablecoinId: "dusd-test",
@@ -57,9 +70,14 @@ describe("buildPrimarySourceCandidates", () => {
         reason: "lacked_corroboration",
       },
     ]);
+    expect(priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 0,
+      freshestDexLaneAgeSec: 30,
+      aggregateLaneOnly: true,
+    });
   });
 
-  it("accepts a single promoted DEX protocol when a hard CEX source agrees", () => {
+  it("accepts a single promoted DEX protocol when a hard CEX source agrees and withholds the aggregate", () => {
     const collected = makeCollected({
       binancePrice: 1.0,
       binanceObservedAt: 1_700_000_000,
@@ -72,13 +90,19 @@ describe("buildPrimarySourceCandidates", () => {
           chain: "ethereum",
         },
       ],
+      dexAggregateQuote: {
+        dex_price_usd: 1.0,
+        updated_at: 1_700_000_000,
+        source_pool_count: 4,
+        source_total_tvl: 900_000,
+      },
     });
 
     const { sources, hasPromotedDexProtocolSource, dexCandidateTelemetry, priceSourceConfidenceProfile } =
       buildPrimarySourceCandidates({ id: "dusd-test", symbol: "DUSD" }, collected, { nowSec: 1_700_000_030 });
 
     expect(hasPromotedDexProtocolSource).toBe(true);
-    expect(sources.some((s) => s.source === "balancer-dex")).toBe(true);
+    expect(sources.map((s) => s.source)).toEqual(["binance", "balancer-dex"]);
     expect(dexCandidateTelemetry).toMatchObject([
       {
         stablecoinId: "dusd-test",
@@ -88,6 +112,94 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
     expect(priceSourceConfidenceProfile).toEqual({
       activeDexLanes: 1,
+      freshestDexLaneAgeSec: 30,
+      aggregateLaneOnly: false,
+    });
+  });
+
+  it("admits mapped Uniswap DEX protocol lanes and withholds the aggregate", () => {
+    const collected = makeCollected({
+      pythQuote: {
+        price: 1.0,
+        confidenceBps: 5,
+        publishTime: 1_700_000_000,
+      },
+      protocolSources: [
+        {
+          protocol: "uniswap-v4",
+          price: 1.0001,
+          tvl: 55_000_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+      ],
+      dexAggregateQuote: {
+        dex_price_usd: 1.0001,
+        updated_at: 1_700_000_000,
+        source_pool_count: 6,
+        source_total_tvl: 55_000_000,
+      },
+    });
+
+    const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
+      { id: "susde-ethena", symbol: "sUSDe" },
+      collected,
+      { nowSec: 1_700_000_030 },
+    );
+
+    expect(sources.map((source) => source.source)).toEqual(["pyth", "uniswap-v4-dex"]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      {
+        sourceKey: "uniswap-v4-dex",
+        status: "accepted",
+      },
+    ]);
+    expect(priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 1,
+      freshestDexLaneAgeSec: 30,
+      aggregateLaneOnly: false,
+    });
+  });
+
+  it("accepts multiple promoted DEX protocols and withholds the aggregate", () => {
+    const collected = makeCollected({
+      protocolSources: [
+        {
+          protocol: "balancer",
+          price: 1.0001,
+          tvl: 500_000,
+          updatedAt: 1_700_000_000,
+          chain: "ethereum",
+        },
+        {
+          protocol: "uniswap-v3",
+          price: 1.0002,
+          tvl: 1_500_000,
+          updatedAt: 1_700_000_000,
+          chain: "base",
+        },
+      ],
+      dexAggregateQuote: {
+        dex_price_usd: 1.00015,
+        updated_at: 1_700_000_000,
+        source_pool_count: 7,
+        source_total_tvl: 2_000_000,
+      },
+    });
+
+    const { sources, dexCandidateTelemetry, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
+      { id: "usdc-circle", symbol: "USDC" },
+      collected,
+      { nowSec: 1_700_000_030 },
+    );
+
+    expect(sources.map((source) => source.source)).toEqual(["balancer-dex", "uniswap-v3-dex"]);
+    expect(dexCandidateTelemetry).toMatchObject([
+      { sourceKey: "balancer-dex", status: "accepted" },
+      { sourceKey: "uniswap-v3-dex", status: "accepted" },
+    ]);
+    expect(priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 2,
       freshestDexLaneAgeSec: 30,
       aggregateLaneOnly: false,
     });
@@ -193,7 +305,7 @@ describe("buildPrimarySourceCandidates", () => {
     });
   });
 
-  it("does not add aggregate DEX promotion when it overlaps an admitted Binance market source", () => {
+  it("preserves Binance overlap suppression even without an accepted protocol DEX lane", () => {
     const collected = makeCollected({
       binancePrice: 0.9995,
       binanceObservedAt: 1_700_000_000,
@@ -214,11 +326,17 @@ describe("buildPrimarySourceCandidates", () => {
       },
     });
 
-    const { sources } = buildPrimarySourceCandidates({ id: "bfusd-binance", symbol: "BFUSD" }, collected, {
-      nowSec: 1_700_000_100,
-    });
+    const { sources, hasPromotedDexProtocolSource, priceSourceConfidenceProfile } = buildPrimarySourceCandidates(
+      { id: "bfusd-binance", symbol: "BFUSD" },
+      collected,
+      {
+        nowSec: 1_700_000_100,
+      },
+    );
 
     expect(sources.map((source) => source.source)).toEqual(["binance"]);
+    expect(hasPromotedDexProtocolSource).toBe(false);
+    expect(priceSourceConfidenceProfile).toBeNull();
   });
 
   it("admits fresh reserve NAV telemetry as a hard protocol source", () => {

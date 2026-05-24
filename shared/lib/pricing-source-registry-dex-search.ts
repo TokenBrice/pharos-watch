@@ -35,6 +35,22 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     defaultWeight: 3,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "uniswap-v3-dex",
+    label: "Uniswap V3",
+    shortLabel: "Uniswap V3",
+    depegSourceFamily: "dex:uniswap-v3",
+    maxTrustedAgeSec: 35 * 60,
+    defaultWeight: 2,
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "uniswap-v4-dex",
+    label: "Uniswap V4",
+    shortLabel: "Uniswap V4",
+    depegSourceFamily: "dex:uniswap-v4",
+    maxTrustedAgeSec: 35 * 60,
+    defaultWeight: 2,
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "raydium-dex",
     label: "Raydium",
     shortLabel: "Raydium",

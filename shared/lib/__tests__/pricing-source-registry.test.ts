@@ -44,6 +44,8 @@ describe("pricing source registry", () => {
       "fluid-dex",
       "balancer-dex",
       "curve-dex",
+      "uniswap-v3-dex",
+      "uniswap-v4-dex",
       "raydium-dex",
       "orca-dex",
       "meteora-dex",
@@ -164,6 +166,24 @@ describe("pricing source registry", () => {
       isListAggregator: true,
       canBeDepegAuthoritative: false,
       depegSourceFamily: "defillama",
+    });
+
+    expect(getPricingSourceRegistryEntry("uniswap-v3-dex")).toMatchObject({
+      key: "uniswap-v3-dex",
+      trustTier: "soft_dex",
+      depegSourceFamily: "dex:uniswap-v3",
+      maxTrustedAgeSec: 35 * 60,
+      defaultWeight: 2,
+      requiresObservedAt: true,
+    });
+
+    expect(getPricingSourceRegistryEntry("uniswap-v4-dex")).toMatchObject({
+      key: "uniswap-v4-dex",
+      trustTier: "soft_dex",
+      depegSourceFamily: "dex:uniswap-v4",
+      maxTrustedAgeSec: 35 * 60,
+      defaultWeight: 2,
+      requiresObservedAt: true,
     });
   });
 

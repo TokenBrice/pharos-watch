@@ -22,6 +22,8 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "fluid-dex",
   "balancer-dex",
   "curve-dex",
+  "uniswap-v3-dex",
+  "uniswap-v4-dex",
   "raydium-dex",
   "orca-dex",
   "meteora-dex",

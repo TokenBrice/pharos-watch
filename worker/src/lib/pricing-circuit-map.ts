@@ -51,6 +51,12 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   "fluid-dex": producer(CIRCUIT_SOURCE.FLUID_DEX_API, "Protocol DEX producer circuit."),
   "balancer-dex": producer(CIRCUIT_SOURCE.BALANCER_API, "Protocol DEX producer circuit."),
   "curve-dex": producer(CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, "Protocol DEX producer circuit."),
+  "uniswap-v3-dex": synthesized(
+    "Synthesized from DEX liquidity producer output; no dedicated Uniswap V3 breaker is registered.",
+  ),
+  "uniswap-v4-dex": synthesized(
+    "Synthesized from DEX liquidity producer output; no dedicated Uniswap V4 breaker is registered.",
+  ),
   "raydium-dex": producer(CIRCUIT_SOURCE.RAYDIUM_API, "Protocol DEX producer circuit."),
   "orca-dex": producer(CIRCUIT_SOURCE.ORCA_API, "Protocol DEX producer circuit."),
   "meteora-dex": producer(CIRCUIT_SOURCE.METEORA_API, "Protocol DEX producer circuit."),

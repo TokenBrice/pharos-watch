@@ -2257,7 +2257,7 @@ describe("fetchPrimaryPrices", () => {
     ]);
   }
 
-  it("suppresses uncorroborated promoted DEX sources and overlapping dex-promoted aggregate", async () => {
+  it("restores dex-promoted aggregate when an uncorroborated protocol source is rejected", async () => {
     const assets: PeggedAsset[] = [
       { id: "usr-resolv", name: "Resolv USD", symbol: "USR", geckoId: "resolv-usr", pegType: "peggedUSD", circulating: {} },
     ];
@@ -2295,13 +2295,18 @@ describe("fetchPrimaryPrices", () => {
 
     const result = results.get("usr-resolv");
     expect(result).toBeDefined();
-    expect(result!.candidateSources).toEqual(["coingecko", "defillama-list"]);
+    expect(result!.candidateSources).toEqual(["coingecko", "defillama-list", "dex-promoted"]);
     expect(result!.confidence).toBe("low");
     expect(result!.source).toBe("defillama-list");
     expect(result!.price).toBe(0.549146);
+    expect(result!.priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 0,
+      freshestDexLaneAgeSec: expect.any(Number),
+      aggregateLaneOnly: true,
+    });
   });
 
-  it("suppresses promoted DEX protocol sources when only a soft aggregator corroborates (no hard source)", async () => {
+  it("suppresses promoted DEX protocol sources when only a soft aggregator corroborates but keeps aggregate DEX", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdc-circle", name: "USD Coin", symbol: "USDC", geckoId: "usd-coin", pegType: "peggedUSD", circulating: {} },
     ];
@@ -2338,9 +2343,69 @@ describe("fetchPrimaryPrices", () => {
 
     const result = results.get("usdc-circle");
     expect(result).toBeDefined();
-    // CG alone is a soft aggregator — not enough to corroborate the DEX source.
-    expect(result!.candidateSources).toEqual(["coingecko"]);
-    expect(result!.confidence).toBe("single-source");
+    // CG alone is a soft aggregator, so it cannot corroborate the protocol lane.
+    expect(result!.candidateSources).toEqual(["coingecko", "dex-promoted"]);
+    expect(result!.agreeSources).toEqual(["coingecko", "dex-promoted"]);
+    expect(result!.confidence).toBe("high");
+    expect(result!.priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 0,
+      freshestDexLaneAgeSec: expect.any(Number),
+      aggregateLaneOnly: true,
+    });
+  });
+
+  it("withholds dex-promoted aggregate when a corroborated Uniswap protocol lane is accepted", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "bfusd-binance",
+        name: "Binance BFUSD",
+        symbol: "BFUSD",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("binance")) {
+        return new Response(JSON.stringify([
+          { symbol: "USDTUSD", price: "1.0000" },
+          { symbol: "BFUSDUSDT", price: "1.0000" },
+        ]), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDexBridgeDb({
+      dexRows: [{
+        stablecoin_id: "bfusd-binance",
+        dex_price_usd: 1.0001,
+        deviation_from_primary_bps: null,
+        source_pool_count: 2,
+        source_total_tvl: 3_000_000,
+        updated_at: nowSec - 60,
+      }],
+      poolSources: [{
+        stablecoin_id: "bfusd-binance",
+        price_sources_json: JSON.stringify([
+          { protocol: "uniswap-v3", chain: "ethereum", price: 1.0001, tvl: 3_000_000 },
+        ]),
+        updated_at: nowSec - 60,
+      }],
+    });
+
+    const { results } = await fetchPrimaryPrices(assets, db);
+
+    const result = results.get("bfusd-binance");
+    expect(result).toBeDefined();
+    expect(result!.candidateSources).toEqual(["binance", "uniswap-v3-dex"]);
+    expect(result!.candidateSources).not.toContain("dex-promoted");
+    expect(result!.agreeSources).toEqual(["binance", "uniswap-v3-dex"]);
+    expect(result!.priceSourceConfidenceProfile).toEqual({
+      activeDexLanes: 1,
+      freshestDexLaneAgeSec: expect.any(Number),
+      aggregateLaneOnly: false,
+    });
   });
 
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {

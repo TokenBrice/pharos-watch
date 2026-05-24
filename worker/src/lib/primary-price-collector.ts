@@ -377,7 +377,7 @@ export function buildPrimarySourceCandidates(
   }
 
   const dexCandidateTelemetry: PrimaryDexCandidateTelemetry[] = [];
-  const promotedDexProtocolSources: SourcePrice[] = [];
+  const promotedDexProtocolCandidates: SourcePrice[] = [];
   for (const protocolSource of collected.protocolSources ?? []) {
     const sourceKey = `${protocolSource.protocol}-dex`;
     const telemetryBase = {
@@ -445,20 +445,20 @@ export function buildPrimarySourceCandidates(
       continue;
     }
 
-    promotedDexProtocolSources.push(source);
+    promotedDexProtocolCandidates.push(source);
   }
 
-  const hasPromotedDexProtocolSource = promotedDexProtocolSources.length > 0;
+  const hasPromotedDexProtocolSource = promotedDexProtocolCandidates.length > 0;
   const hardTrustTiers = new Set(["hard_market", "hard_oracle", "hard_protocol"]);
   const hasHardCorroborator = sources.some((source) => {
     const tier = getPricingSourceRegistryEntry(source.source)?.trustTier;
     return tier != null && hardTrustTiers.has(tier);
   });
   const hasDexCorroboration =
-    promotedDexProtocolSources.length > 1 ||
+    promotedDexProtocolCandidates.length > 1 ||
     sources.length === 0 ||
     (hasHardCorroborator &&
-      promotedDexProtocolSources.some((dexSource) =>
+      promotedDexProtocolCandidates.some((dexSource) =>
         sources.some((source) => {
           const tier = getPricingSourceRegistryEntry(source.source)?.trustTier;
           return (
@@ -468,10 +468,12 @@ export function buildPrimarySourceCandidates(
           );
         }),
       ));
+  const acceptedPromotedDexProtocolSources =
+    hasPromotedDexProtocolSource && hasDexCorroboration ? promotedDexProtocolCandidates : [];
 
-  if (hasPromotedDexProtocolSource && hasDexCorroboration) {
-    sources.push(...promotedDexProtocolSources);
-    for (const source of promotedDexProtocolSources) {
+  if (acceptedPromotedDexProtocolSources.length > 0) {
+    sources.push(...acceptedPromotedDexProtocolSources);
+    for (const source of acceptedPromotedDexProtocolSources) {
       const sourceProtocol = source.source.replace(/-dex$/, "");
       const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
       dexCandidateTelemetry.push(
@@ -479,7 +481,7 @@ export function buildPrimarySourceCandidates(
       );
     }
   } else if (hasPromotedDexProtocolSource) {
-    for (const source of promotedDexProtocolSources) {
+    for (const source of promotedDexProtocolCandidates) {
       const sourceProtocol = source.source.replace(/-dex$/, "");
       const matchingInput = (collected.protocolSources ?? []).find((entry) => entry.protocol === sourceProtocol);
       dexCandidateTelemetry.push(
@@ -492,7 +494,21 @@ export function buildPrimarySourceCandidates(
     }
   }
 
-  if (collected.dexAggregateQuote && !hasPromotedDexProtocolSource && !hasBinanceDexBridgeOverlap(collected)) {
+  const rejectedPromotedDexProtocolTelemetry = dexCandidateTelemetry.filter(
+    (candidate) => candidate.status === "excluded" && candidate.sourceKey.endsWith("-dex"),
+  );
+  const shouldRestoreAggregateAfterProtocolExclusion =
+    collected.dexAggregateQuote != null &&
+    hasPromotedDexProtocolSource &&
+    acceptedPromotedDexProtocolSources.length === 0 &&
+    rejectedPromotedDexProtocolTelemetry.length > 0 &&
+    !hasBinanceDexBridgeOverlap(collected);
+
+  if (
+    collected.dexAggregateQuote &&
+    acceptedPromotedDexProtocolSources.length === 0 &&
+    !hasBinanceDexBridgeOverlap(collected)
+  ) {
     const dexAggregateSource = buildSourcePrice({
       source: "dex-promoted",
       price: collected.dexAggregateQuote.dex_price_usd,
@@ -501,6 +517,16 @@ export function buildPrimarySourceCandidates(
       metadata: {
         poolCount: collected.dexAggregateQuote.source_pool_count,
         tvl: collected.dexAggregateQuote.source_total_tvl,
+        ...(shouldRestoreAggregateAfterProtocolExclusion
+          ? {
+              restorationReason: "dex_promoted_restored_after_protocol_exclusion",
+              rejectedProtocolSources: rejectedPromotedDexProtocolTelemetry.map((candidate) => ({
+                protocol: candidate.protocol,
+                sourceKey: candidate.sourceKey,
+                reason: candidate.reason,
+              })),
+            }
+          : {}),
       },
     });
     if (dexAggregateSource) {
