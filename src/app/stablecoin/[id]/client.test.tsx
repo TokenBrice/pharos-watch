@@ -55,6 +55,16 @@ vi.mock("@/components/stablecoin-detail/overview-section", () => ({
   OverviewSection: () => null,
 }));
 
+vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
+  PriceTransparencyCard: () => <div data-testid="price-transparency-card" />,
+}));
+
+vi.mock("@/components/stablecoin-detail/redemption-backstop-card", () => ({
+  RedemptionBackstopCard: ({ entry }: { entry: { stablecoinId: string } }) => (
+    <section data-testid="redemption-backstop-card">{entry.stablecoinId}</section>
+  ),
+}));
+
 vi.mock("@/components/ai-summary", () => ({
   AiSummary: () => null,
 }));
@@ -237,5 +247,37 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByText("Underlying Asset")).toBeTruthy();
     expect(overviewSections[0]?.contains(screen.getByText("Underlying Asset"))).toBe(false);
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
+  });
+
+  it("mounts redemption backstop data in the liquidity zone", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      redemptionBackstop: {
+        stablecoinId: coin.id,
+      },
+    }));
+
+    const { container } = render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const liquidityZone = container.querySelector("#liquidity")?.parentElement?.parentElement;
+    const redemptionCard = screen.getByTestId("redemption-backstop-card");
+    expect(liquidityZone?.contains(redemptionCard)).toBe(true);
+    expect(screen.getByTestId("price-transparency-card")).toBeTruthy();
+  });
+
+  it("keeps the liquidity price panel when redemption backstop data is absent", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      redemptionBackstop: undefined,
+    }));
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    expect(screen.getByTestId("price-transparency-card")).toBeTruthy();
+    expect(screen.queryByTestId("redemption-backstop-card")).toBeNull();
   });
 });
