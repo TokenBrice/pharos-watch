@@ -330,7 +330,7 @@ describe("handleRedemptionBackstops", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("emits stale warning headers when the completed run is outside the freshness budget", async () => {
+  it("emits stale warning headers from the completed run max row timestamp", async () => {
     const updatedAt = 1_700_000_000;
     vi.useFakeTimers();
     vi.setSystemTime((updatedAt + 300_000) * 1000);
@@ -341,10 +341,10 @@ describe("handleRedemptionBackstops", () => {
         rows: [
           {
             run_id: "run-stale",
-            completed_at: updatedAt,
+            completed_at: updatedAt + 10,
             expected_count: 1,
             written_count: 1,
-            min_updated_at: updatedAt,
+            min_updated_at: updatedAt - 60,
             max_updated_at: updatedAt,
             methodology_version: "1.1",
           },

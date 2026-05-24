@@ -519,7 +519,7 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.liquidity.detail).toContain("currently impaired");
   });
 
-  it("caps queue redemption uplift before computing effective exit score", async () => {
+  it("caps queue redemption uplift before confidence scaling", async () => {
     const db = makeReportCardsDbWithDexScore("cusd-cap", 29);
     loadRedemptionBackstopSnapshotMock.mockResolvedValueOnce({
       map: {
@@ -527,7 +527,7 @@ describe("buildReportCardsSnapshot", () => {
           routeFamily: "queue-redeem",
           settlementModel: "queued",
           score: 88,
-          modelConfidence: "high",
+          modelConfidence: "medium",
         }),
       },
       latestUpdatedAt: nowSec,
@@ -538,7 +538,7 @@ describe("buildReportCardsSnapshot", () => {
 
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(card?.rawInputs.effectiveExitScore).toBe(70);
+    expect(card?.rawInputs.effectiveExitScore).toBe(53);
     expect(card?.dimensions.liquidity.detail).toContain("Queue redeem");
   });
 

@@ -981,6 +981,7 @@ describe("buildRedemptionBackstopEntry", () => {
       url: "https://example.com/route",
       provenance: "config-reviewed",
     });
+    expect(entry.docs?.sources[0]?.supports).toEqual(["route", "fees"]);
   });
 
   it("does not add current-exit uplift for eventual-only redemption", async () => {
