@@ -870,6 +870,14 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     expect(historyRowIndex).toBeGreaterThan(runRowIndex);
     expect(completeIndex).toBeGreaterThan(historyRowIndex);
     expect(currentMirrorIndex).toBeGreaterThan(completeIndex);
+    const runRowInsert = history.find(
+      (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
+    );
+    const currentMirrorInsert = history.find(
+      (entry) => entry.sql.includes("INSERT INTO redemption_backstop (") && entry.binds.includes("run-test"),
+    );
+    expect(runRowInsert?.binds).toHaveLength(25);
+    expect(currentMirrorInsert?.binds).toHaveLength(25);
     expect(
       history.some(
         (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),

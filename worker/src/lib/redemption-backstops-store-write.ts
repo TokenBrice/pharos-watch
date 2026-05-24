@@ -26,6 +26,47 @@ export interface RedemptionBackstopRunRetentionResult {
 export const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
 const REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE = 100;
 
+const SNAPSHOT_ROW_COLUMNS = [
+  "stablecoin_id",
+  "score",
+  "effective_exit_score",
+  "dex_liquidity_score",
+  "access_score",
+  "settlement_score",
+  "execution_certainty_score",
+  "capacity_score",
+  "output_asset_quality_score",
+  "cost_score",
+  "route_family",
+  "access_model",
+  "settlement_model",
+  "execution_model",
+  "output_asset_type",
+  "provider",
+  "source_mode",
+  "immediate_capacity_usd",
+  "immediate_capacity_ratio",
+  "fee_bps",
+  "queue_enabled",
+  "updated_at",
+  "methodology_version",
+  "details_json",
+] as const;
+
+const SNAPSHOT_ROW_UPDATE_COLUMNS = SNAPSHOT_ROW_COLUMNS.filter((column) => column !== "stablecoin_id");
+
+function formatColumnList(columns: readonly string[]): string {
+  return columns.map((column) => `         ${column}`).join(",\n");
+}
+
+function formatUpdateAssignments(columns: readonly string[]): string {
+  return columns.map((column) => `         ${column} = excluded.${column}`).join(",\n");
+}
+
+function placeholderList(count: number): string {
+  return Array.from({ length: count }, () => "?").join(", ");
+}
+
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
     RedemptionBackstopDetailsSchema.parse({
@@ -71,93 +112,51 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   );
 }
 
+function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unknown[] {
+  return [
+    record.stablecoinId,
+    record.score,
+    record.effectiveExitScore,
+    record.dexLiquidityScore,
+    record.accessScore,
+    record.settlementScore,
+    record.executionCertaintyScore,
+    record.capacityScore,
+    record.outputAssetQualityScore,
+    record.costScore,
+    record.routeFamily,
+    record.accessModel,
+    record.settlementModel,
+    record.executionModel,
+    record.outputAssetType,
+    record.provider,
+    record.sourceMode,
+    record.immediateCapacityUsd,
+    record.immediateCapacityRatio,
+    record.feeBps,
+    record.queueEnabled ? 1 : 0,
+    record.updatedAt,
+    record.methodologyVersion,
+    buildDetailsJson(record),
+  ];
+}
+
 function buildCurrentUpsert(
   db: D1Database,
   record: RedemptionBackstopSnapshotRecord,
   runId?: string | null,
 ): D1PreparedStatement {
+  const columns = [...SNAPSHOT_ROW_COLUMNS, "snapshot_run_id"];
   return db
     .prepare(
       `INSERT INTO redemption_backstop (
-         stablecoin_id,
-         score,
-         effective_exit_score,
-         dex_liquidity_score,
-         access_score,
-         settlement_score,
-         execution_certainty_score,
-         capacity_score,
-         output_asset_quality_score,
-         cost_score,
-         route_family,
-         access_model,
-         settlement_model,
-         execution_model,
-         output_asset_type,
-         provider,
-         source_mode,
-         immediate_capacity_usd,
-         immediate_capacity_ratio,
-         fee_bps,
-         queue_enabled,
-         updated_at,
-         methodology_version,
-         details_json,
-         snapshot_run_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+${formatColumnList(columns)}
+       ) VALUES (${placeholderList(columns.length)})
        ON CONFLICT(stablecoin_id) DO UPDATE SET
-         score = excluded.score,
-         effective_exit_score = excluded.effective_exit_score,
-         dex_liquidity_score = excluded.dex_liquidity_score,
-         access_score = excluded.access_score,
-         settlement_score = excluded.settlement_score,
-         execution_certainty_score = excluded.execution_certainty_score,
-         capacity_score = excluded.capacity_score,
-         output_asset_quality_score = excluded.output_asset_quality_score,
-         cost_score = excluded.cost_score,
-         route_family = excluded.route_family,
-         access_model = excluded.access_model,
-         settlement_model = excluded.settlement_model,
-         execution_model = excluded.execution_model,
-         output_asset_type = excluded.output_asset_type,
-         provider = excluded.provider,
-         source_mode = excluded.source_mode,
-         immediate_capacity_usd = excluded.immediate_capacity_usd,
-         immediate_capacity_ratio = excluded.immediate_capacity_ratio,
-         fee_bps = excluded.fee_bps,
-         queue_enabled = excluded.queue_enabled,
-         updated_at = excluded.updated_at,
-         methodology_version = excluded.methodology_version,
-         details_json = excluded.details_json,
+${formatUpdateAssignments(SNAPSHOT_ROW_UPDATE_COLUMNS)},
          snapshot_run_id = excluded.snapshot_run_id`,
     )
-    .bind(
-      record.stablecoinId,
-      record.score,
-      record.effectiveExitScore,
-      record.dexLiquidityScore,
-      record.accessScore,
-      record.settlementScore,
-      record.executionCertaintyScore,
-      record.capacityScore,
-      record.outputAssetQualityScore,
-      record.costScore,
-      record.routeFamily,
-      record.accessModel,
-      record.settlementModel,
-      record.executionModel,
-      record.outputAssetType,
-      record.provider,
-      record.sourceMode,
-      record.immediateCapacityUsd,
-      record.immediateCapacityRatio,
-      record.feeBps,
-      record.queueEnabled ? 1 : 0,
-      record.updatedAt,
-      record.methodologyVersion,
-      buildDetailsJson(record),
-      runId ?? null,
-    );
+    .bind(...buildSnapshotRowValues(record), runId ?? null);
 }
 
 function buildRunRowUpsert(
@@ -165,87 +164,16 @@ function buildRunRowUpsert(
   record: RedemptionBackstopSnapshotRecord,
   runId: string,
 ): D1PreparedStatement {
+  const columns = ["snapshot_run_id", ...SNAPSHOT_ROW_COLUMNS];
   return db
     .prepare(
       `INSERT INTO redemption_backstop_run_rows (
-         snapshot_run_id,
-         stablecoin_id,
-         score,
-         effective_exit_score,
-         dex_liquidity_score,
-         access_score,
-         settlement_score,
-         execution_certainty_score,
-         capacity_score,
-         output_asset_quality_score,
-         cost_score,
-         route_family,
-         access_model,
-         settlement_model,
-         execution_model,
-         output_asset_type,
-         provider,
-         source_mode,
-         immediate_capacity_usd,
-         immediate_capacity_ratio,
-         fee_bps,
-         queue_enabled,
-         updated_at,
-         methodology_version,
-         details_json
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+${formatColumnList(columns)}
+       ) VALUES (${placeholderList(columns.length)})
        ON CONFLICT(snapshot_run_id, stablecoin_id) DO UPDATE SET
-         score = excluded.score,
-         effective_exit_score = excluded.effective_exit_score,
-         dex_liquidity_score = excluded.dex_liquidity_score,
-         access_score = excluded.access_score,
-         settlement_score = excluded.settlement_score,
-         execution_certainty_score = excluded.execution_certainty_score,
-         capacity_score = excluded.capacity_score,
-         output_asset_quality_score = excluded.output_asset_quality_score,
-         cost_score = excluded.cost_score,
-         route_family = excluded.route_family,
-         access_model = excluded.access_model,
-         settlement_model = excluded.settlement_model,
-         execution_model = excluded.execution_model,
-         output_asset_type = excluded.output_asset_type,
-         provider = excluded.provider,
-         source_mode = excluded.source_mode,
-         immediate_capacity_usd = excluded.immediate_capacity_usd,
-         immediate_capacity_ratio = excluded.immediate_capacity_ratio,
-         fee_bps = excluded.fee_bps,
-         queue_enabled = excluded.queue_enabled,
-         updated_at = excluded.updated_at,
-         methodology_version = excluded.methodology_version,
-         details_json = excluded.details_json`,
+${formatUpdateAssignments(SNAPSHOT_ROW_UPDATE_COLUMNS)}`,
     )
-    .bind(
-      runId,
-      record.stablecoinId,
-      record.score,
-      record.effectiveExitScore,
-      record.dexLiquidityScore,
-      record.accessScore,
-      record.settlementScore,
-      record.executionCertaintyScore,
-      record.capacityScore,
-      record.outputAssetQualityScore,
-      record.costScore,
-      record.routeFamily,
-      record.accessModel,
-      record.settlementModel,
-      record.executionModel,
-      record.outputAssetType,
-      record.provider,
-      record.sourceMode,
-      record.immediateCapacityUsd,
-      record.immediateCapacityRatio,
-      record.feeBps,
-      record.queueEnabled ? 1 : 0,
-      record.updatedAt,
-      record.methodologyVersion,
-      buildDetailsJson(record),
-    );
+    .bind(runId, ...buildSnapshotRowValues(record));
 }
 
 function buildHistoryUpsert(
@@ -670,9 +598,7 @@ export async function upsertRedemptionBackstopSnapshots(
     const rowCount = await countRunRows(db, runId);
     runRowsWrittenCount = rowCount.rowCount;
     if (rowCount.rowCount !== records.length) {
-      throw new Error(
-        `Redemption backstop run ${runId} wrote ${rowCount.rowCount}/${records.length} immutable rows`,
-      );
+      throw new Error(`Redemption backstop run ${runId} wrote ${rowCount.rowCount}/${records.length} immutable rows`);
     }
 
     writePhase = "history";
