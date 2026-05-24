@@ -4,13 +4,13 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
-import { CURVE_POOL_CONFIGS } from "../../worker/src/lib/curve-pool-configs";
 
 const MATERIAL_DEX_TVL_USD = 500_000;
 const HIGH_PRIORITY_DEX_TVL_USD = 5_000_000;
 const HIGH_PRIORITY_MCAP_USD = 50_000_000;
 const LOW_SOURCE_DEPTH = 2;
 const PROTOCOL_SOURCE_MIN_TVL_USD = 50_000;
+const DEFAULT_CURVE_CONFIG_PATH = "worker/src/lib/curve-pool-configs.ts";
 
 interface UnknownRecord {
   [key: string]: unknown;
@@ -234,6 +234,26 @@ function parseProtocolSources(row: DexGapDexPriceRow, warnings: string[]): DexPr
   }
 }
 
+export function extractConfiguredCurveStablecoinIds(source: string): Set<string> {
+  const ids = new Set<string>();
+  const stablecoinIdPattern = /stablecoinId:\s*"([^"]+)"/g;
+  for (const match of source.matchAll(stablecoinIdPattern)) {
+    ids.add(match[1]);
+  }
+  return ids;
+}
+
+function loadConfiguredCurveStablecoinIds(warnings: string[]): Set<string> {
+  try {
+    return extractConfiguredCurveStablecoinIds(readFileSync(resolve(DEFAULT_CURVE_CONFIG_PATH), "utf8"));
+  } catch (err) {
+    warnings.push(
+      `Unable to read ${DEFAULT_CURVE_CONFIG_PATH}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return new Set();
+  }
+}
+
 function hasDexPrimarySource(sources: string[], protocols: DexProtocolSourceSnapshot[]): boolean {
   if (sources.includes("dex-promoted")) return true;
   return protocols.some((source) => sources.includes(`${source.protocol}-dex`));
@@ -250,7 +270,7 @@ export function buildDexPricingSourceGapAudit(input: BuildAuditInput): DexPricin
   const stableById = new Map(input.stablecoins.map((row) => [row.id, row]));
   const dexLiquidityById = new Map((input.dexLiquidity ?? []).map((row) => [row.stablecoin_id, row]));
   const configuredCurveStablecoinIds =
-    input.configuredCurveStablecoinIds ?? new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
+    input.configuredCurveStablecoinIds ?? loadConfiguredCurveStablecoinIds(warnings);
 
   const registryGaps: RegistryGapRow[] = [];
   const dexAdmissionGaps: DexAdmissionGapRow[] = [];
@@ -661,4 +681,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exitCode = 1;
   });
 }
-

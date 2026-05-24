@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDexPricingSourceGapAudit,
+  extractConfiguredCurveStablecoinIds,
   renderDexPricingSourceGapMarkdown,
   type CurvePoolCandidate,
   type DexGapDexPriceRow,
@@ -36,6 +37,15 @@ function stablecoinRow(overrides: Partial<DexGapStablecoinRow>): DexGapStablecoi
 }
 
 describe("audit-dex-pricing-source-gaps", () => {
+  it("extracts configured Curve ids from the source file without importing Worker code", () => {
+    expect(extractConfiguredCurveStablecoinIds(`
+      export const CURVE_POOL_CONFIGS = [
+        { stablecoinId: "usdat-saturn" },
+        { stablecoinId: "dola-inverse-finance" },
+      ];
+    `)).toEqual(new Set(["usdat-saturn", "dola-inverse-finance"]));
+  });
+
   it("reports material protocol rows whose DEX source key is missing from the registry", () => {
     const audit = buildDexPricingSourceGapAudit({
       generatedAt: "2026-05-24T00:00:00.000Z",
@@ -148,4 +158,3 @@ describe("audit-dex-pricing-source-gaps", () => {
     expect(renderDexPricingSourceGapMarkdown(audit)).toContain("## DEX Admission Gaps");
   });
 });
-

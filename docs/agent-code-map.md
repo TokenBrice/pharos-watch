@@ -684,7 +684,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Validation and tooling
 
-- `scripts/__tests__/audit-dex-pricing-source-gaps.test.ts`
+- `scripts/__tests__/audit-dex-pricing-source-gaps.test.ts` - CURVE_POOL_CONFIGS
 - `scripts/__tests__/audit-dia-provider-poc.test.ts`
 - `scripts/__tests__/audit-mint-authority.test.ts`
 - `scripts/__tests__/audit-price-source-depth.test.ts`
