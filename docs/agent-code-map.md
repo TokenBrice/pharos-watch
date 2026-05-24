@@ -387,11 +387,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 22 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 25 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 25 keys
-- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 21 keys
+- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 22 keys
 - `shared/data/stablecoins/coins/aid-gaib.json` - 21 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 17 keys
 - `shared/data/stablecoins/coins/apxusd-apyx.json` - 22 keys
-- `shared/data/stablecoins/coins/apyusd-apyx.json` - 25 keys
+- `shared/data/stablecoins/coins/apyusd-apyx.json` - 26 keys
 - `shared/data/stablecoins/coins/arc-anq.json` - 20 keys
 - `shared/data/stablecoins/coins/asusdf-astherus.json` - 23 keys
 - `shared/data/stablecoins/coins/audd-novatti.json` - 21 keys
