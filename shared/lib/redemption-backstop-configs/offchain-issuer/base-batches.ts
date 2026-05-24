@@ -6,7 +6,7 @@ const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer
 
 type RedemptionDocs = NonNullable<RedemptionBackstopRegistryEntry["config"]["docs"]>;
 
-const DOCUMENTED_BOUND_SOURCE_REFS = {
+const DOCUMENTED_BOUND_SOURCE_REFS: Partial<Record<string, RedemptionDocs>> = {
   "a7a5-old-vector": [
     sourceRef("A7A5 Official", "https://www.a7a5.io/", ["capacity"]),
     sourceRef("A7A5 FAQ", "https://docs.a7a5.io/help/faq", ["route", "access"]),

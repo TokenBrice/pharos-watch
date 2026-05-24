@@ -415,9 +415,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "satusd-river": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
-      costModel: documentedVariableFee(
-        "Redemption fee = baseRate + 50 bps, with baseRate dynamically adjusted by prior redemption activity",
-        "formula",
+      costModel: undisclosedReviewedFee(
+        "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
       ),
       docs: [
         sourceRef("River satUSD redemption docs", "https://docs.river.inc/products/editor/redemption", [

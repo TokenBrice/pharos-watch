@@ -8,8 +8,17 @@ import type {
 } from "@shared/types";
 
 type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";
+type RedemptionRouteFamilyDisplay = {
+  label: string;
+  coverageLabel: string;
+  coverageBreakdownLabel: string;
+  coverageTone: CoverageTone;
+  coverageSortRank: number;
+  coverageDetail: string;
+  coverageSpokenLabel?: string;
+};
 
-export const REDEMPTION_ROUTE_FAMILY_DISPLAY = {
+export const REDEMPTION_ROUTE_FAMILY_DISPLAY: Record<RedemptionRouteFamily, RedemptionRouteFamilyDisplay> = {
   "offchain-issuer": {
     label: REDEMPTION_ROUTE_FAMILY_LABELS["offchain-issuer"],
     coverageLabel: "Issuer",
@@ -60,18 +69,7 @@ export const REDEMPTION_ROUTE_FAMILY_DISPLAY = {
     coverageSortRank: 2,
     coverageDetail: "Basket redemption path is modeled.",
   },
-} as const satisfies Record<
-  RedemptionRouteFamily,
-  {
-    label: string;
-    coverageLabel: string;
-    coverageBreakdownLabel: string;
-    coverageTone: CoverageTone;
-    coverageSortRank: number;
-    coverageDetail: string;
-    coverageSpokenLabel?: string;
-  }
->;
+};
 
 export const REDEMPTION_MODELED_ROUTE_DISPLAY = {
   coverageLabel: "Modeled",

@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
 - `src/lib/coverage-matrix-model.ts` - CoverageMatrixModel, CoverageMatrixModelInput, buildCoverageMatrixModel
-- ... 118 more files omitted; use `rg --files src/lib` for the full list.
+- ... 119 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -399,7 +399,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audm-macropod.json` - 25 keys
 - `shared/data/stablecoins/coins/audm-mento.json` - 24 keys
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 22 keys
-- `shared/data/stablecoins/coins/ausd-agora.json` - 21 keys
+- `shared/data/stablecoins/coins/ausd-agora.json` - 22 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 23 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 19 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 18 keys
