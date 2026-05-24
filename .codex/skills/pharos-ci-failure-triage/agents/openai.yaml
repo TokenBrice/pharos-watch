@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pharos CI Failure Triage"
+  short_description: "Diagnose and fix Pharos CI/deploy failures"
+  default_prompt: "Use $pharos-ci-failure-triage to inspect this failed Pharos workflow or merge gate, fix the root cause, and rerun the right checks."

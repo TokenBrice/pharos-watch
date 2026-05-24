@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pharos Docs Sync Audit"
+  short_description: "Verify Pharos docs against source code"
+  default_prompt: "Use $pharos-docs-sync-audit to verify Pharos docs against the codebase, fix drift, and run the right doc checks."
