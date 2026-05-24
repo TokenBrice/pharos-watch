@@ -81,14 +81,18 @@ function coerceFiniteMetadataNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function isPresentMalformedNumber(value: unknown): boolean {
-  return value != null && (typeof value !== "number" || !Number.isFinite(value));
+function hasOwnMetadataKey(record: Record<string, unknown>, key: PropertyKey): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+function isMalformedMetadataNumber(value: unknown): boolean {
+  return typeof value !== "number" || !Number.isFinite(value);
 }
 
 function markMalformedRedemptionTelemetry(redemption: object): void {
   Object.defineProperty(redemption, MALFORMED_REDEMPTION_TELEMETRY, {
     value: true,
-    enumerable: false,
+    enumerable: true,
   });
 }
 
@@ -159,7 +163,8 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     for (const key of knownRedemptionNumberKeys) {
       const value = coerceFiniteMetadataNumber(rawRedemption[key]);
       if (value == null) {
-        hasMalformedRedemptionTelemetry ||= isPresentMalformedNumber(rawRedemption[key]);
+        hasMalformedRedemptionTelemetry ||=
+          hasOwnMetadataKey(rawRedemption, key) && isMalformedMetadataNumber(rawRedemption[key]);
         delete redemption[key];
       } else {
         redemption[key] = value;

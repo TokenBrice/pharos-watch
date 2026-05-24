@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
-import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
+import type { ReserveSnapshotMetadataRecord, ReserveSyncStateRecord } from "../live-reserves-store";
 import { parseReserveCompositionRow } from "../live-reserves-store-row-decoding";
 
 const now = 1_780_000_000;
@@ -36,6 +36,43 @@ function decodedRowMetadata(metadata: Record<string, unknown>): Record<string, u
       adapter_evidence_class: "independent",
     },
     null,
+  );
+
+  expect(decoded.issue).toBeNull();
+  expect(decoded.record).not.toBeNull();
+  return decoded.record!.metadata;
+}
+
+function decodedLegacyRecoveredRowMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const decodedMetadata = decodedRowMetadata(metadata);
+  const syncState: ReserveSyncStateRecord = {
+    stablecoinId: "lusd-liquity",
+    adapterKey: "liquity-v1",
+    breakerKey: "live-reserves:liquity-v1",
+    lastAttemptedAt: now - 60,
+    lastSuccessAt: now - 60,
+    lastStatus: "ok",
+    warningCount: 0,
+    warnings: [],
+    lastError: null,
+    metadata: decodedMetadata,
+    lastAttemptId: null,
+    pendingAttemptId: null,
+    lastSuccessAttemptId: null,
+  };
+  const decoded = parseReserveCompositionRow(
+    {
+      stablecoin_id: "lusd-liquity",
+      slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
+      fetched_at: now - 60,
+      source: "liquity-v1",
+      metadata: null,
+      warning_count: 0,
+      warnings: null,
+      adapter_source_model: "single-bucket",
+      adapter_evidence_class: "independent",
+    },
+    syncState,
   );
 
   expect(decoded.issue).toBeNull();
@@ -206,12 +243,40 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     ["null", null],
     ["array", []],
     ["object-shaped numeric fields", { capacityUsd: "500000", feeBps: "50" }],
+    ["object-shaped null numeric fields", { capacityUsd: null, feeBps: null }],
   ])("fails closed on malformed %s nested redemption telemetry after D1 row decoding", (_label, redemption) => {
     const decodedMetadata = decodedRowMetadata({
       freshnessMode: "not-applicable",
       immediateRedeemableUsd: 500_000,
       redemptionFeeBps: 50,
       redemption,
+    });
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", decodedMetadata),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBeNull();
+    expect(metadata.redemptionFeeBps).toBeNull();
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.canUseFee).toBe(false);
+    expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
+    expect(JSON.stringify(decodedMetadata)).not.toContain("malformedRedemptionTelemetry");
+    expect(Object.keys((decodedMetadata.redemption ?? {}) as Record<string, unknown>)).not.toContain(
+      "__malformedRedemptionTelemetry",
+    );
+  });
+
+  it("preserves malformed decoded redemption telemetry through legacy snapshot recovery", () => {
+    const decodedMetadata = decodedLegacyRecoveredRowMetadata({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 500_000,
+      redemptionFeeBps: 50,
+      redemption: {
+        capacityUsd: "500000",
+        feeBps: null,
+      },
     });
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
