@@ -125,7 +125,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x0d190b74308669E8f4Fe7dbce3466169B285289D",
+        "address": "0x0D190B74308669E8f4fE7DBCe3466169B285289d",
         "label": "USD1 controller default-admin Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -142,7 +142,7 @@
         "sources": [
           {
             "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0d190b74308669E8f4Fe7dbce3466169B285289D/"
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0D190B74308669E8f4fE7DBCe3466169B285289d/"
           }
         ],
         "evidence": "Controller default-admin review resolved this Safe; getThreshold() returned 3 and getOwners() returned 6 owners at Ethereum block 25165911."

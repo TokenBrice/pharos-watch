@@ -9779,7 +9779,7 @@
         },
         {
           "chain": "ethereum",
-          "address": "0xA39739EF8b023dBFA0DcdA07d7e29FAabcf4bb2",
+          "address": "0xA39739EF8b0231dBFA0DcdA07d7e29FAabcf4bb2",
           "label": "Liquity v1 TroveManager",
           "role": "other",
           "authorityType": "contract",
@@ -16201,7 +16201,7 @@
         },
         {
           "chain": "ethereum",
-          "address": "0x93fde11c8107127A80cE95100DF611790E4413c9",
+          "address": "0x93fde11c8107127A80ce95100dF611790E4413c9",
           "label": "TUSD controller owner Safe",
           "role": "minter-admin",
           "authorityType": "safe",
@@ -16222,7 +16222,7 @@
         },
         {
           "label": "Safe transaction service",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80cE95100DF611790E4413c9/"
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80ce95100dF611790E4413c9/"
         }
       ]
     }
@@ -16732,7 +16732,7 @@
         },
         {
           "chain": "ethereum",
-          "address": "0x0d190b74308669E8f4Fe7dbce3466169B285289D",
+          "address": "0x0D190B74308669E8f4fE7DBCe3466169B285289d",
           "label": "USD1 controller default-admin Safe",
           "role": "minter-admin",
           "authorityType": "safe",
@@ -16754,7 +16754,7 @@
         },
         {
           "label": "Safe transaction service",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0d190b74308669E8f4Fe7dbce3466169B285289D/"
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0D190B74308669E8f4fE7DBCe3466169B285289d/"
         }
       ]
     }

@@ -101,7 +101,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xA39739EF8b023dBFA0DcdA07d7e29FAabcf4bb2",
+        "address": "0xA39739EF8b0231dBFA0DcdA07d7e29FAabcf4bb2",
         "label": "Liquity v1 TroveManager",
         "role": "other",
         "authorityType": "contract",

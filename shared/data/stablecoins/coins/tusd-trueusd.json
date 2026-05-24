@@ -118,7 +118,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x93fde11c8107127A80cE95100DF611790E4413c9",
+        "address": "0x93fde11c8107127A80ce95100dF611790E4413c9",
         "label": "TUSD controller owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -134,7 +134,7 @@
         "sources": [
           {
             "label": "Safe transaction service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80cE95100DF611790E4413c9/"
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80ce95100dF611790E4413c9/"
           }
         ],
         "evidence": "Safe getThreshold() returned 2 and getOwners() returned 3 owners at Ethereum block 25165911; worker Safe API review found no modules and zero guard."
