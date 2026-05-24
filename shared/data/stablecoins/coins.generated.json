@@ -327,6 +327,64 @@
       "regulator": "SEC",
       "license": "Securitize-administered feeder; access restricted to qualified purchasers"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "ACRED's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Aptos, Solana, Avalanche, Ink, and Polygon routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+          "label": "ACRED Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Securitize ACRED",
+              "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+            },
+            {
+              "label": "Sourcify DSToken source",
+              "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0xfc8a9000c161e3c6e073e967107ce926a44a06e2 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, issueTokensWithMultipleLocks, and issueTokensWithNoCompliance issuance functions."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "ACRED token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Securitize ACRED",
+            "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+          },
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
+          }
+        ],
+        "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve Aptos, Solana, Avalanche, Ink, and Polygon token or bridge authorities before claiming multichain completeness."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "aptos",
@@ -670,6 +728,118 @@
     ],
     "jurisdiction": {
       "country": "Singapore"
+    },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "AID uses role-gated issuer minting. Ethereum role reconstruction identified two active MINTER_ROLE contract holders and two default-admin holders, including one verified 3/5 Safe.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x410C19F3f80B64C7486Ae34890Ee9251D0696433",
+          "label": "AID Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "AID Ethereum token",
+              "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+            }
+          ],
+          "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 23682560 to 25166950 found this contract-backed address holding MINTER_ROLE."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE2E1424687EB676b3807693CBb439362b8eA908E",
+          "label": "AID Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "AID Ethereum token",
+              "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+            }
+          ],
+          "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 23682560 to 25166950 found this contract-backed address holding MINTER_ROLE."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x32793F6B11820Fa9C7039dFa640B751f491A027d",
+          "label": "AID default-admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "AID default-admin Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this address holding DEFAULT_ADMIN_ROLE. Safe Transaction Service identified it as a 3/5 Safe with no enabled modules and zero guard."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
+          "label": "AID additional default-admin account",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "AID Ethereum token",
+              "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this account holding DEFAULT_ADMIN_ROLE, but signer custody and Safe status were not resolved."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "GAIB AID docs",
+            "url": "https://docs.gaib.ai/how-aid-works"
+          },
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          },
+          {
+            "label": "AID RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x18f52b3fb465118731d9e0d276d4eb3599d57596&fromBlock=23682560&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "AID default-admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+          }
+        ],
+        "evidence": "GAIB docs describe AID mint and redeem routes against accepted stablecoins; Ethereum role-event reconstruction identified current MINTER_ROLE holders and default admins for the AID token.",
+        "reviewer": "Codex mint-authority follow-up EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Reconstruct Arbitrum, Base, and BSC role holders before treating AID as fully reviewed across all deployments.",
+          "Identify the two Ethereum MINTER_ROLE contract holders and the additional default-admin account custody model.",
+          "Resolve redemption and bridge route controls before raising confidence above manual-review."
+        ]
+      }
     },
     "contracts": [
       {
@@ -1477,6 +1647,88 @@
       "regulator": "ASIC",
       "license": "AFSL No. 492490"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "AUDF exposes role-gated issuer minting. Ethereum source shows mint functions require MINT_ROLE; current Ethereum role logs resolve one 2/5 Safe as default admin and MINT_ROLE holder, plus one additional MINT_ROLE holder.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x6929Fd915b0755EfDC255eA841B68a263A362C5A",
+          "label": "AUDF default admin / MINT_ROLE Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 2,
+          "signerCount": 5,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "threshold": 2,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "AUDF Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+            },
+            {
+              "label": "AUDF admin Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this Safe holding DEFAULT_ADMIN_ROLE and MINT_ROLE. Safe Transaction Service identified it as a 2/5 Safe with no enabled modules and zero guard."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91",
+          "label": "AUDF additional MINT_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "AUDF Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this address holding MINT_ROLE. Sourcify source shows mint(address,uint256) and mint(uint256) require MINT_ROLE, but this holder's custody model was not identified."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Forte AUDF",
+            "url": "https://www.forteaud.com/"
+          },
+          {
+            "label": "Forte AUDF whitepaper",
+            "url": "https://www.forteaud.com/s/Forte-AUDF-Whitepaper-140324.pdf"
+          },
+          {
+            "label": "AUDF Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+          },
+          {
+            "label": "AUDF RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Sourcify source identifies AUDF mint functions gated by MINT_ROLE; Ethereum role reconstruction identifies the current default admin and MINT_ROLE holders for the AUDF token.",
+        "reviewer": "Codex mint-authority follow-up EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Reconstruct Polygon, Avalanche, and Base role holders before treating AUDF as fully reviewed across all deployments.",
+          "Identify the non-Safe MINT_ROLE holder and the ProxyAdmin owner/custody setup.",
+          "Decide whether burn, pause, and blacklist roles should be separately represented outside mint authority."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -1684,6 +1936,54 @@
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "AUDm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento AUDm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Mento V3 docs",
+              "url": "https://docs.mento.org/mento-v3"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -3853,6 +4153,54 @@
         "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "BRLm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento BRLm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Mento V3 docs",
+              "url": "https://docs.mento.org/mento-v3"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -4379,6 +4727,86 @@
         "url": "https://docs.bucketprotocol.io/"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "BUCK is minted through Bucket Protocol CDP/PSM functions on Sui. The BUCK TreasuryCap is embedded in the shared BucketProtocol object, while admin caps and the package upgrade cap remain externally owned.",
+      "controls": [
+        {
+          "chain": "sui",
+          "address": "0x9e3dab13212b27f5434416939db5dec6a319d15b89a84fd074d03ece6350d3df",
+          "label": "BucketProtocol shared object holding BUCK TreasuryCap",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Bucket CDP docs",
+              "url": "https://docs.bucketprotocol.io/mechanism/how-cdp-work"
+            },
+            {
+              "label": "Sui fullnode RPC",
+              "url": "https://fullnode.mainnet.sui.io:443"
+            }
+          ],
+          "evidence": "Sui object read returned shared BucketProtocol object version 891923356 with buck_treasury_cap id 0x058715d59eda37c2a1880a3c0972878f4448f48f2ffe8ee43cff7ace6afabcd4 and total_supply 25970988996231740. Normalized module exposes borrow, repay, redeem, flash_borrow_buck, flash_repay_buck, and admin update functions."
+        },
+        {
+          "chain": "sui",
+          "address": "0x169451f78c5f099a57b0126902a7e61a0c9dace2a8e40caa16168e874d0f0156",
+          "label": "Bucket admin cap owner",
+          "role": "cap-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": true,
+          "sources": [
+            {
+              "label": "Sui fullnode RPC",
+              "url": "https://fullnode.mainnet.sui.io:443"
+            }
+          ],
+          "evidence": "Sui reads show both BktAdminCap 0x99a8a71bbf8b533b2aae8dd6b7e0d0b0c7995b2b58db343671b36e294a6f0af1 and AdminCap 0xfa5775562f1df8b70ac72e07138d74c93f0398bf54803283f6beb75781d44979 owned by this address."
+        },
+        {
+          "chain": "sui",
+          "address": "0x938884d43de2bcf13a2f8f5886ea6382994ba49dcf7b3d08203acdd508778b6b",
+          "label": "Bucket package upgrade-cap owner",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
+          "sources": [
+            {
+              "label": "Sui fullnode RPC",
+              "url": "https://fullnode.mainnet.sui.io:443"
+            }
+          ],
+          "evidence": "Sui read for UpgradeCap 0x332cc625c24f8d95a2a8455248aa33fa669bdeeb2e83d7ade6e31a8814d0ec85 returned this owner, policy 0, package 0x127e82577dc4f107454214aa113174cc9769cf6966e1ea0e39e392ff0095ecf8, version 24."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Bucket Protocol docs",
+            "url": "https://docs.bucketprotocol.io/"
+          },
+          {
+            "label": "Sui fullnode RPC",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "Bucket docs describe BUCK minting through collateralized borrowing and redemption mechanics. Sui module/object reads identify the live TreasuryCap holder object and externally owned admin/upgrade authorities.",
+        "reviewer": "Codex mint-authority follow-up non-EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Identify whether 0x169451f78c5f099a57b0126902a7e61a0c9dace2a8e40caa16168e874d0f0156 and 0x938884d43de2bcf13a2f8f5886ea6382994ba49dcf7b3d08203acdd508778b6b are multisigs, governance objects, custodial EOAs, or operational keys.",
+          "Decode current collateral caps and max-mint parameters before raising confidence above manual-review."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "sui",
@@ -4859,6 +5287,76 @@
       "regulator": "Alberta Treasury Board and Finance",
       "license": "Loan and Trust Corporations Act (Alberta)"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "CADD uses an ERC20F implementation with role-gated minting and UUPS upgrades. Ethereum role logs resolve a separate default admin and MINTER_ROLE holder; both appear as EIP-7702-style delegated accounts rather than verified Safes.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9",
+          "label": "CADD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "CADD Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+            }
+          ],
+          "evidence": "Sourcify ERC20F source shows mint(address,uint256) is onlyRole(MINTER_ROLE); Ethereum role reconstruction found this delegated account holding MINTER_ROLE."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb3a77dd7c30cdf4f30ae515f73d96f3f41593fce",
+          "label": "CADD default admin",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "CADD Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this delegated account holding DEFAULT_ADMIN_ROLE. Current code begins 0xef0100, consistent with an EIP-7702 delegated account, not a verified Safe."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Tetra CADD stablecoin",
+            "url": "https://tetradg.com/cadd-stablecoin/"
+          },
+          {
+            "label": "Tetra supported blockchains",
+            "url": "https://tetradg.com/supported-blockchains/"
+          },
+          {
+            "label": "CADD Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+          },
+          {
+            "label": "CADD RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Sourcify ERC20F source and Ethereum role reconstruction identify role-gated CADD minting through a current MINTER_ROLE holder plus a separate default-admin account.",
+        "reviewer": "Codex mint-authority follow-up EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Reconstruct Base role holders before treating CADD as fully reviewed across all deployments.",
+          "Classify the EIP-7702 delegated-account custody and executor policy for both admin and minter accounts.",
+          "Review accessRegistry recipient policy and non-mint operational roles separately."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -4988,6 +5486,54 @@
         "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "CADm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento CADm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Mento V3 docs",
+              "url": "https://docs.mento.org/mento-v3"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -5079,6 +5625,97 @@
       "country": "United States",
       "regulator": "FinCEN / state MTL authorities",
       "license": "Money Services Business (NMLS #2450917)"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "CASH is a Phantom/Bridge Open Issuance Solana stablecoin. The Token-2022 mint exposes separate mint, freeze, permanent-delegate, confidential-transfer, and close authority keys; signer custody remains unresolved.",
+      "controls": [
+        {
+          "chain": "solana",
+          "address": "HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7",
+          "label": "CASH Token-2022 mint authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "sources": [
+            {
+              "label": "Phantom CASH docs",
+              "url": "https://docs.phantom.com/cash"
+            },
+            {
+              "label": "Bridge Open Issuance docs",
+              "url": "https://apidocs.bridge.xyz/platform/issuance"
+            },
+            {
+              "label": "Solana RPC getAccountInfo",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ],
+          "evidence": "Finalized Solana RPC at slot 421905275 returned this address as mintAuthority for mint CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH. RPC getAccountInfo for the authority returned null, so custody/PDA identity is unresolved."
+        },
+        {
+          "chain": "solana",
+          "address": "E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw",
+          "label": "CASH permanent delegate / close / confidential-transfer authority",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
+          "sources": [
+            {
+              "label": "Solana RPC getAccountInfo",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ],
+          "evidence": "Finalized Solana RPC returned this address as mintCloseAuthority.closeAuthority, permanentDelegate.delegate, and confidentialTransferMint.authority."
+        },
+        {
+          "chain": "solana",
+          "address": "AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5",
+          "label": "CASH freeze authority",
+          "role": "other",
+          "authorityType": "unknown",
+          "directMintAbility": "none",
+          "canRaiseCap": false,
+          "sources": [
+            {
+              "label": "Solana RPC getAccountInfo",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ],
+          "evidence": "Finalized Solana RPC returned this address as freezeAuthority."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Bridge token metadata",
+            "url": "https://token-metadata.bridge.xyz/solana/cash.json"
+          },
+          {
+            "label": "Bridge Open Issuance overview",
+            "url": "https://www.bridge.xyz/news/introducing-open-issuance"
+          },
+          {
+            "label": "Phantom Cash help",
+            "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Bridge-hosted token metadata identifies the CASH mint, and Phantom/Bridge materials identify CASH as a Solana stablecoin launched through Bridge Open Issuance. Solana RPC resolves the current Token-2022 authority fields.",
+        "reviewer": "Codex mint-authority follow-up non-EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Map mint authority HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7 to a Bridge/Phantom signer, PDA, multisig, or MPC policy.",
+          "Confirm whether transferHook.programId being null is expected and whether any future hook authority can install transfer restrictions."
+        ]
+      }
     },
     "contracts": [
       {
@@ -5575,6 +6212,64 @@
         "url": "https://github.com/mento-protocol"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "EURm minting on Celo routes through Mento reserve/Broker rails, while token owner controls resolve to a 4/7 Mento Safe.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento EURm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "version": "1.4.1+L2",
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "moduleGuard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "Mento reserve docs",
+              "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+            },
+            {
+              "label": "Safe Transaction Service - Celo",
+              "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Safe at block 67746454, isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento reserve docs",
+            "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "Mento docs describe reserve/Broker minting for reserve-backed stables; 2026-05-24 lane reads resolved the Celo token owner Safe and Broker minter route.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve full reserve, Broker parameter, circuit-breaker, and admin controls before claiming complete Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -5883,6 +6578,75 @@
         }
       ]
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "CHFAU is issuer-operated through AllUnity Mint. Ethereum role logs resolve one MINTER_ROLE EOA and a separate default-admin EOA; implementation source and signer custody remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+          "label": "CHFAU Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "CHFAU Ethereum token",
+              "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+            }
+          ],
+          "evidence": "Ethereum RoleGranted/RoleRevoked reconstruction from block 24319783 to 25166971 found this no-code account holding MINTER_ROLE; paused() was false in sampled reads."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+          "label": "CHFAU default admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "CHFAU Ethereum token",
+              "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this no-code account holding DEFAULT_ADMIN_ROLE and additional operational roles."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "AllUnity CHFAU launch",
+            "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
+          },
+          {
+            "label": "AllUnity stablecoins",
+            "url": "https://allunity.com/stablecoins"
+          },
+          {
+            "label": "CHFAU Ethereum token",
+            "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+          },
+          {
+            "label": "CHFAU RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25166971&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Official AllUnity materials identify CHFAU as an issuer-minted, fully reserved MiCAR EMT; Ethereum role reconstruction identifies current MINTER_ROLE and default-admin holders.",
+        "reviewer": "Codex mint-authority follow-up EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Review verified implementation source before raising confidence above manual-review; Sourcify source was not found in the lane pass.",
+          "Confirm signer custody or multisig policy for the admin, minter, and additional operational role holders."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -5981,6 +6745,64 @@
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "CHFm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to a 4/7 Mento Safe.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento CHFm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "version": "1.4.1+L2",
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "moduleGuard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Safe Transaction Service - Celo",
+              "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Safe at block 67746454, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard. CDP branch parameter and broader Mento admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Safe.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -6299,6 +7121,54 @@
         "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "COPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento COPm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Mento V3 docs",
+              "url": "https://docs.mento.org/mento-v3"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -7023,6 +7893,65 @@
         "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, while token owner controls resolve to a 4/7 Mento Safe; NEAR and Monad routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento USDm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "version": "1.4.1+L2",
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "moduleGuard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "Mento reserve docs",
+              "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+            },
+            {
+              "label": "Safe Transaction Service - Celo",
+              "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Safe at block 67746454, isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento reserve docs",
+            "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "Mento docs describe reserve/Broker minting for reserve-backed stables; 2026-05-24 lane reads resolved the Celo token owner Safe and Broker minter route.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve full reserve, Broker parameter, circuit-breaker, and admin controls before claiming complete Mento system-level coverage.",
+          "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -11121,6 +12050,65 @@
       "regulator": "AMF",
       "license": "French Fonds Professionnel Specialise (FPS) / Alternative Investment Fund"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "EURSPKCC Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Polygon, Arbitrum, Base, Starknet, and Stellar routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x3868d4e336d14d38031cf680329d31e4712e11cc",
+          "label": "EURSPKCC token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Spiko Token source",
+              "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            },
+            {
+              "label": "Spiko docs",
+              "url": "https://docs.spiko.io/"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Spiko docs",
+            "url": "https://docs.spiko.io/"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
+        "evidence": "Verified Ethereum implementation source and direct reads show EURSPKCC mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
+          "Resolve Polygon, Arbitrum, Base, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -11510,6 +12498,65 @@
       "country": "France",
       "regulator": "AMF",
       "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "EUTBL Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+          "label": "EUTBL token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Spiko Token source",
+              "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            },
+            {
+              "label": "Spiko docs",
+              "url": "https://docs.spiko.io/"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Spiko docs",
+            "url": "https://docs.spiko.io/"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
+        "evidence": "Verified Ethereum implementation source and direct reads show EUTBL mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
+          "Resolve Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet mint or bridge authorities before claiming multichain completeness."
+        ]
+      }
     },
     "contracts": [
       {
@@ -16599,6 +17646,64 @@
       "regulator": "SEC",
       "license": "Delaware limited partnership; Rule 506(c) private placement; Investment Company Act Section 3(c)(7) exemption; qualified-purchaser access"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "HLSCOPE's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Polygon and Optimism routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
+          "label": "HLSCOPE Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Securitize HLSCOPE",
+              "url": "https://securitize.io/primary-market/hl-scope"
+            },
+            {
+              "label": "Sourcify DSToken source",
+              "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, issueTokensWithMultipleLocks, and issueTokensWithNoCompliance issuance functions."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "HLSCOPE token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Securitize HLSCOPE",
+            "url": "https://securitize.io/primary-market/hl-scope"
+          },
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+          }
+        ],
+        "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve Polygon and Optimism token or bridge authorities before claiming multichain completeness."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "polygon",
@@ -18544,6 +19649,65 @@
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "JPYm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to a 4/7 Mento Safe; the Monad route remains unresolved.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento JPYm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "version": "1.4.1+L2",
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "moduleGuard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Safe Transaction Service - Celo",
+              "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Safe at block 67746454, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard. CDP branch parameter and broader Mento admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Safe.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage.",
+          "Resolve Monad token or bridge authorities before claiming multichain completeness."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -19458,6 +20622,54 @@
         "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "KESm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento KESm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Mento V3 docs",
+              "url": "https://docs.mento.org/mento-v3"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -25926,6 +27138,54 @@
         "url": "https://www.mento.org/blog/introducing-puso-the-first-decentralized-philippine-peso-stablecoin"
       }
     ],
+    "mintAuthority": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "PHPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento PHPm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Mento V3 stablecoin docs",
+              "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            },
+            {
+              "label": "Mento V3 docs",
+              "url": "https://docs.mento.org/mento-v3"
+            }
+          ],
+          "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "celo",
@@ -28313,6 +29573,59 @@
     "jurisdiction": {
       "country": "Singapore"
     },
+    "mintAuthority": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "sAID is GAIB's ERC-4626 strategy-vault wrapper over AID. Wrapper shares are minted against deposited AID and do not create durable base AID supply; base issuance inherits the reviewed AID mint-authority profile.",
+      "inheritedFrom": "aid-gaib",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+          "label": "sAID ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "asset() returned AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596; wrapper share minting is deposit and NAV accounting and does not mint base AID.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "GAIB sAID docs",
+              "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+            },
+            {
+              "label": "GAIB AID and sAID contracts",
+              "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+            }
+          ],
+          "evidence": "Ethereum RPC on 2026-05-24 returned asset() = 0x18f52b3fb465118731d9e0d276d4eb3599d57596, paused() = false, and nonzero totalAssets/totalSupply."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "GAIB sAID docs",
+            "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+          },
+          {
+            "label": "GAIB AID and sAID contracts",
+            "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+          },
+          {
+            "label": "Ethereum sAID read contract",
+            "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8#readContract"
+          }
+        ],
+        "evidence": "Local variant metadata, official GAIB docs, and Ethereum asset() reads confirm sAID as an AID vault share rather than an independent base-dollar issuer.",
+        "reviewer": "Codex mint-authority follow-up wrapper lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Resolve sAID wrapper upgrade/admin, withdrawal-manager, and portfolio-operator roles before upgrading confidence above manual-review."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -30237,6 +31550,65 @@
       "regulator": "AMF",
       "license": "French Fonds Professionnel Specialise (FPS) / Alternative Investment Fund"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "SPKCC Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Polygon, Arbitrum, Base, Starknet, and Stellar routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+          "label": "SPKCC token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Spiko Token source",
+              "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            },
+            {
+              "label": "Spiko docs",
+              "url": "https://docs.spiko.io/"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Spiko docs",
+            "url": "https://docs.spiko.io/"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
+        "evidence": "Verified Ethereum implementation source and direct reads show SPKCC mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
+          "Resolve Polygon, Arbitrum, Base, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -30750,6 +32122,64 @@
       "country": "British Virgin Islands",
       "regulator": "SEC",
       "license": "BVI Business Company; Rule 506(c) private placement; Investment Company Act Section 3(c)(1) exemption"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "STAC's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; additional DSApp or on-ramp mint routes were not ruled out.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+          "label": "STAC Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Securitize STAC",
+              "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+            },
+            {
+              "label": "Sourcify DSToken source",
+              "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0x77684815f44b28726bc3efa4471b88ef3b93feb0 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, and issueTokensWithMultipleLocks issuance functions."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "STAC token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Securitize STAC",
+            "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+          },
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+          }
+        ],
+        "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Verify whether any additional DSApp or on-ramp mint route should be represented separately."
+        ]
+      }
     },
     "contracts": [
       {
@@ -31777,6 +33207,70 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "mintAuthority": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority account, while the Solayer program remains upgradeable by a separate authority.",
+      "controls": [
+        {
+          "chain": "solana",
+          "address": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG",
+          "label": "Solayer sUSD Token-2022 mint/freeze/rate authority",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Solayer sUSD docs",
+              "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
+            },
+            {
+              "label": "Solana RPC getAccountInfo",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ],
+          "evidence": "Finalized Solana RPC at slot 421905275 returned this address as mintAuthority, freezeAuthority, interestBearingConfig.rateAuthority, and tokenMetadata.updateAuthority for mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X. The authority account is owned by executable program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
+        },
+        {
+          "chain": "solana",
+          "address": "7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru",
+          "label": "Solayer sUSD program upgrade authority",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
+          "sources": [
+            {
+              "label": "Solana RPC getAccountInfo",
+              "url": "https://api.mainnet-beta.solana.com"
+            }
+          ],
+          "evidence": "BPF upgradeable loader ProgramData for s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA resolves to ProgramData 7bzcebKDN8qDkftxobwArKJL8xSGaZ6zBPaY4C4wEhkf with optionByte 1 and this upgrade authority at finalized slot 421905275."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Solayer sUSD FAQ",
+            "url": "https://docs.solayer.org/susd/protocol-info/faqs"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Official Solayer docs state the Solayer sUSD Program mints sUSD after USDC is locked and a qualified liquidity provider fulfills the RWA/T-bill proof path. Solana RPC resolves current Token-2022 authority and program-upgrade surfaces.",
+        "reviewer": "Codex mint-authority follow-up non-EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Identify custody/multisig/MPC controls for upgrade authority 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru.",
+          "Confirm whether the Solayer authority PDA has any additional emergency or cap controls outside the Token-2022 fields."
+        ]
+      }
     },
     "contracts": [
       {
@@ -34782,6 +36276,65 @@
       "country": "France",
       "regulator": "AMF",
       "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "UKTBL Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+          "label": "UKTBL token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Spiko Token source",
+              "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+            },
+            {
+              "label": "Spiko docs",
+              "url": "https://docs.spiko.io/"
+            }
+          ],
+          "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Spiko docs",
+            "url": "https://docs.spiko.io/"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
+        "evidence": "Verified Ethereum implementation source and direct reads show UKTBL mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
+        "reviewer": "Codex mint-authority follow-up family lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
+          "Resolve Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
+        ]
+      }
     },
     "contracts": [
       {
@@ -46880,6 +48433,45 @@
     "jurisdiction": {
       "country": "Argentina"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WARS is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve the current DEFAULT_ADMIN_ROLE and only current MINTER_ROLE holder to Ripio's shared admin account; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WARS admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as both DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Prior admin/minter 0x5ca3f8...f20f was revoked at block 24995207; signer custody was not decoded."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ethereum WARS contract",
+            "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#events"
+          }
+        ],
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WARS as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "reviewer": "Codex mint-authority follow-up Ripio lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+          "Ethereum implementation source for 0xba0030...21b9 remains unresolved.",
+          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -46998,6 +48590,57 @@
     "jurisdiction": {
       "country": "Brazil"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WBRL is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus two current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WBRL admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WBRL secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ethereum WBRL contract",
+            "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#events"
+          }
+        ],
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WBRL as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "reviewer": "Codex mint-authority follow-up Ripio lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+          "Ethereum implementation source for 0xfbab5d...7f9d remains unresolved.",
+          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+          "Secondary MINTER_ROLE holder identity/source for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 is unresolved."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -47093,6 +48736,68 @@
     ],
     "jurisdiction": {
       "country": "Chile"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WCLP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WCLP admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WCLP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WCLP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ethereum WCLP contract",
+            "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#events"
+          }
+        ],
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCLP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "reviewer": "Codex mint-authority follow-up Ripio lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+          "Ethereum implementation source for 0x889878...d6ba remains unresolved.",
+          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+        ]
+      }
     },
     "contracts": [
       {
@@ -47202,6 +48907,68 @@
     ],
     "jurisdiction": {
       "country": "Colombia"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WCOP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WCOP admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WCOP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WCOP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ethereum WCOP contract",
+            "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76#events"
+          }
+        ],
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCOP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "reviewer": "Codex mint-authority follow-up Ripio lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+          "Ethereum implementation source for 0x6f6206...6652 remains unresolved.",
+          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+        ]
+      }
     },
     "contracts": [
       {
@@ -47754,6 +49521,68 @@
     "jurisdiction": {
       "country": "Mexico"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WMXN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WMXN admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WMXN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WMXN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ethereum WMXN contract",
+            "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#events"
+          }
+        ],
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WMXN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "reviewer": "Codex mint-authority follow-up Ripio lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+          "Ethereum implementation source for 0x425abe...bbf7 remains unresolved.",
+          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -47849,6 +49678,68 @@
     ],
     "jurisdiction": {
       "country": "Peru"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WPEN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WPEN admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WPEN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WPEN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          },
+          {
+            "label": "Ethereum WPEN contract",
+            "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe#events"
+          }
+        ],
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WPEN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "reviewer": "Codex mint-authority follow-up Ripio lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
+          "Ethereum implementation source for 0x9d6266...7969 remains unresolved.",
+          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
+          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+        ]
+      }
     },
     "contracts": [
       {
@@ -48213,6 +50104,76 @@
       "regulator": "SEC",
       "license": "Investment Company Act of 1940 (registered money market fund)"
     },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WTGXX token source restricts minting, burning, pause, freeze, and batch mint to REGISTRAR_ROLE. Ethereum role logs resolve one registrar EOA and one default-admin EOA.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x726D3b3e18e301719b383FdE4F99A5d31B9438e5",
+          "label": "WTGXX Ethereum REGISTRAR_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WTGXX Sourcify implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+            }
+          ],
+          "evidence": "getImplementation() returned 0xC2A8ca84BC363605c36757f9409b214b6ee710c9. Sourcify ERC20ControlledStandard.sol shows mint and batchMint are onlyRole(REGISTRAR_ROLE); role events resolve this no-code account as REGISTRAR_ROLE holder."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6257759edD99f677052727f7Ef3a055029DFA58a",
+          "label": "WTGXX default admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WTGXX Ethereum token",
+              "url": "https://etherscan.io/address/0x1fecf3d9d4fee7f2c02917a66028a48c6706c179#readContract"
+            }
+          ],
+          "evidence": "Role events resolve this no-code account as DEFAULT_ADMIN_ROLE. Safe Transaction Service did not identify a Safe."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "WisdomTree WTGXX",
+            "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+          },
+          {
+            "label": "WisdomTree Connect",
+            "url": "https://www.wisdomtree.com/connect"
+          },
+          {
+            "label": "WTGXX Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+          },
+          {
+            "label": "WTGXX RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x1fecf3d9d4fee7f2c02917a66028a48c6706c179&fromBlock=20750716&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "WisdomTree materials describe issuer-operated fund share issuance; verified Ethereum source and role reconstruction identify REGISTRAR_ROLE mint authority plus the default admin for the WTGXX token.",
+        "reviewer": "Codex mint-authority follow-up EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Reconstruct role holders on Arbitrum, Avalanche, Base, Optimism, and Plume before treating WTGXX as fully reviewed across all deployments.",
+          "Review Stellar issuer controls and signer policy.",
+          "Confirm custody or operational policy for the Ethereum registrar and default-admin EOAs."
+        ]
+      }
+    },
     "contracts": [
       {
         "chain": "arbitrum",
@@ -48359,6 +50320,110 @@
       "country": "British Virgin Islands",
       "regulator": "FinCEN (USA)",
       "license": "MSB registration (USA); VASP license application (BVI)"
+    },
+    "mintAuthority": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WUSD uses issuer-operated role-gated minting. Ethereum role reconstruction identified three current MINTER_ROLE holders and one default-admin EOA; Polygon and Viction controls remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x171AC757879D9f5004992159FC9bF3344f82D5c3",
+          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "WUSD Ethereum token",
+              "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this contract-backed address holding MINTER_ROLE. Signer policy and admin surface for the contract-backed holder were not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1a41b5922E926Cca1EAa8afAC55bdDce40FDBe61",
+          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WUSD Ethereum token",
+              "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this no-code account holding MINTER_ROLE; Safe Transaction Service did not identify a Safe."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x80c0A17d45049016A02a16D2B77A9003320FB9e0",
+          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "WUSD Ethereum token",
+              "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this contract-backed address holding MINTER_ROLE. Signer policy and admin surface for the contract-backed holder were not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x731Efdc933464ed81Bf3Ea961e9fDAdC62e83bd1",
+          "label": "WUSD default admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "WUSD Ethereum token",
+              "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+            }
+          ],
+          "evidence": "Ethereum role reconstruction found this no-code account holding DEFAULT_ADMIN_ROLE; Safe Transaction Service did not identify a Safe."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "WSPN Mint Account docs",
+            "url": "https://developer.wspn.io/5768563m0"
+          },
+          {
+            "label": "WSPN whitepaper",
+            "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+          },
+          {
+            "label": "WUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+          },
+          {
+            "label": "WUSD RoleGranted logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=21390703&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "WSPN docs describe qualified-business mint and redemption through WSPN Mint Account; Ethereum role reconstruction identifies current MINTER_ROLE holders and the default admin for the WUSD token.",
+        "reviewer": "Codex mint-authority follow-up EVM lane",
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Review verified implementation source before raising confidence above manual-review; Sourcify source was not found in the lane pass.",
+          "Reconstruct Polygon role holders and Viction owner/minter controls.",
+          "Confirm signer custody or operational policy for the Ethereum admin and minter EOAs."
+        ]
+      }
     },
     "contracts": [
       {

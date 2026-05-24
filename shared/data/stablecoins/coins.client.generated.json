@@ -198,7 +198,43 @@
       }
     ],
     "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "ACRED's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Aptos, Solana, Avalanche, Ink, and Polygon routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+          "label": "ACRED Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "ACRED token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Securitize ACRED",
+          "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "aeur-anchored-coins",
@@ -366,7 +402,71 @@
       }
     ],
     "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "AID uses role-gated issuer minting. Ethereum role reconstruction identified two active MINTER_ROLE contract holders and two default-admin holders, including one verified 3/5 Safe.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x410C19F3f80B64C7486Ae34890Ee9251D0696433",
+          "label": "AID Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE2E1424687EB676b3807693CBb439362b8eA908E",
+          "label": "AID Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x32793F6B11820Fa9C7039dFa640B751f491A027d",
+          "label": "AID default-admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
+          "label": "AID additional default-admin account",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "GAIB AID docs",
+          "url": "https://docs.gaib.ai/how-aid-works"
+        },
+        {
+          "label": "AID Ethereum token",
+          "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+        },
+        {
+          "label": "AID RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x18f52b3fb465118731d9e0d276d4eb3599d57596&fromBlock=23682560&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AID default-admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+        }
+      ]
+    }
   },
   {
     "id": "alusd-alchemix",
@@ -744,7 +844,57 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Australian dollar reserves and cash-equivalent reserve assets held separately from Forte's operational funds"
+    "collateral": "Australian dollar reserves and cash-equivalent reserve assets held separately from Forte's operational funds",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "AUDF exposes role-gated issuer minting. Ethereum source shows mint functions require MINT_ROLE; current Ethereum role logs resolve one 2/5 Safe as default admin and MINT_ROLE holder, plus one additional MINT_ROLE holder.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x6929Fd915b0755EfDC255eA841B68a263A362C5A",
+          "label": "AUDF default admin / MINT_ROLE Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 2,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91",
+          "label": "AUDF additional MINT_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Forte AUDF",
+          "url": "https://www.forteaud.com/"
+        },
+        {
+          "label": "Forte AUDF whitepaper",
+          "url": "https://www.forteaud.com/s/Forte-AUDF-Whitepaper-140324.pdf"
+        },
+        {
+          "label": "AUDF Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+        },
+        {
+          "label": "AUDF RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AUDF admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+        }
+      ]
+    }
   },
   {
     "id": "audm-macropod",
@@ -861,7 +1011,35 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard)",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "AUDm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento AUDm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ]
+    }
   },
   {
     "id": "audx-aussie-dollar-token",
@@ -1949,7 +2127,35 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "BRLm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento BRLm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ]
+    }
   },
   {
     "id": "brlv-crown",
@@ -2215,7 +2421,54 @@
       }
     ],
     "collateral": "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "BUCK is minted through Bucket Protocol CDP/PSM functions on Sui. The BUCK TreasuryCap is embedded in the shared BucketProtocol object, while admin caps and the package upgrade cap remain externally owned.",
+      "controls": [
+        {
+          "chain": "sui",
+          "address": "0x9e3dab13212b27f5434416939db5dec6a319d15b89a84fd074d03ece6350d3df",
+          "label": "BucketProtocol shared object holding BUCK TreasuryCap",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "sui",
+          "address": "0x169451f78c5f099a57b0126902a7e61a0c9dace2a8e40caa16168e874d0f0156",
+          "label": "Bucket admin cap owner",
+          "role": "cap-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "chain": "sui",
+          "address": "0x938884d43de2bcf13a2f8f5886ea6382994ba49dcf7b3d08203acdd508778b6b",
+          "label": "Bucket package upgrade-cap owner",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Bucket Protocol docs",
+          "url": "https://docs.bucketprotocol.io/"
+        },
+        {
+          "label": "Sui fullnode RPC",
+          "url": "https://fullnode.mainnet.sui.io:443"
+        },
+        {
+          "label": "Bucket CDP docs",
+          "url": "https://docs.bucketprotocol.io/mechanism/how-cdp-work"
+        }
+      ]
+    }
   },
   {
     "id": "buidl-blackrock",
@@ -2478,7 +2731,51 @@
       }
     ],
     "collateral": "Canadian dollar reserves held 1:1 in trust for token holders by Tetra Trust",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "CADD uses an ERC20F implementation with role-gated minting and UUPS upgrades. Ethereum role logs resolve a separate default admin and MINTER_ROLE holder; both appear as EIP-7702-style delegated accounts rather than verified Safes.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9",
+          "label": "CADD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb3a77dd7c30cdf4f30ae515f73d96f3f41593fce",
+          "label": "CADD default admin",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Tetra CADD stablecoin",
+          "url": "https://tetradg.com/cadd-stablecoin/"
+        },
+        {
+          "label": "Tetra supported blockchains",
+          "url": "https://tetradg.com/supported-blockchains/"
+        },
+        {
+          "label": "CADD Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+        },
+        {
+          "label": "CADD RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ]
+    }
   },
   {
     "id": "cadm-mento",
@@ -2534,7 +2831,35 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "CADm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento CADm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ]
+    }
   },
   {
     "id": "cash-phantom",
@@ -2594,7 +2919,65 @@
         "risk": "low"
       }
     ],
-    "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts"
+    "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "CASH is a Phantom/Bridge Open Issuance Solana stablecoin. The Token-2022 mint exposes separate mint, freeze, permanent-delegate, confidential-transfer, and close authority keys; signer custody remains unresolved.",
+      "controls": [
+        {
+          "chain": "solana",
+          "address": "HJT2TXrhbWta2ax7V86vcnmX7ZmAVzua4v2yrGwchXB7",
+          "label": "CASH Token-2022 mint authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct"
+        },
+        {
+          "chain": "solana",
+          "address": "E7JdFMP5AqdndJKstZV2mHdekLwAQbNWRHMpoozyB3qw",
+          "label": "CASH permanent delegate / close / confidential-transfer authority",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "parameter-only"
+        },
+        {
+          "chain": "solana",
+          "address": "AyCP3oW19DHZKvx8oU6mvseW2qn7XfmQ5STrXPa6prY5",
+          "label": "CASH freeze authority",
+          "role": "other",
+          "authorityType": "unknown",
+          "directMintAbility": "none"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Bridge token metadata",
+          "url": "https://token-metadata.bridge.xyz/solana/cash.json"
+        },
+        {
+          "label": "Bridge Open Issuance overview",
+          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
+        },
+        {
+          "label": "Phantom Cash help",
+          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Phantom CASH docs",
+          "url": "https://docs.phantom.com/cash"
+        },
+        {
+          "label": "Bridge Open Issuance docs",
+          "url": "https://apidocs.bridge.xyz/platform/issuance"
+        }
+      ]
+    }
   },
   {
     "id": "cdp-enosys",
@@ -2895,7 +3278,36 @@
       }
     ],
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "EURm minting on Celo routes through Mento reserve/Broker rails, while token owner controls resolve to a 4/7 Mento Safe.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento EURm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento reserve docs",
+          "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ]
+    }
   },
   {
     "id": "cgo-comtech",
@@ -3060,7 +3472,51 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "CHF-denominated reserves held 1:1 at CRR credit institutions within the EU in segregated accounts; not used for lending or investment"
+    "collateral": "CHF-denominated reserves held 1:1 at CRR credit institutions within the EU in segregated accounts; not used for lending or investment",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "CHFAU is issuer-operated through AllUnity Mint. Ethereum role logs resolve one MINTER_ROLE EOA and a separate default-admin EOA; implementation source and signer custody remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+          "label": "CHFAU Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+          "label": "CHFAU default admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "AllUnity CHFAU launch",
+          "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
+        },
+        {
+          "label": "AllUnity stablecoins",
+          "url": "https://allunity.com/stablecoins"
+        },
+        {
+          "label": "CHFAU Ethereum token",
+          "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+        },
+        {
+          "label": "CHFAU RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25166971&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ]
+    }
   },
   {
     "id": "chfm-mento",
@@ -3119,7 +3575,36 @@
       }
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "CHFm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to a 4/7 Mento Safe.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento CHFm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ]
+    }
   },
   {
     "id": "cjpy-yamato",
@@ -3276,7 +3761,35 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "COPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento COPm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ]
+    }
   },
   {
     "id": "crvusd-curve",
@@ -3717,7 +4230,36 @@
       }
     ],
     "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, while token owner controls resolve to a 4/7 Mento Safe; NEAR and Monad routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento USDm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento reserve docs",
+          "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ]
+    }
   },
   {
     "id": "cusdo-openeden",
@@ -5920,7 +6462,43 @@
       }
     ],
     "collateral": "Euro share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "EURSPKCC Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Polygon, Arbitrum, Base, Starknet, and Stellar routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x3868d4e336d14d38031cf680329d31e4712e11cc",
+          "label": "EURSPKCC token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Spiko docs",
+          "url": "https://docs.spiko.io/"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        }
+      ]
+    }
   },
   {
     "id": "eusd-electronic-usd",
@@ -6154,7 +6732,43 @@
       }
     ],
     "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "EUTBL Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+          "label": "EUTBL token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Spiko docs",
+          "url": "https://docs.spiko.io/"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        }
+      ]
+    }
   },
   {
     "id": "fdusd-first-digital",
@@ -8935,7 +9549,43 @@
       }
     ],
     "collateral": "Tokenized feeder exposure to Hamilton Lane Senior Credit Opportunities Fund (SCOPE), targeting floating-rate senior secured loans to private borrowers in sectors such as healthcare, information technology, and business services.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "HLSCOPE's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Polygon and Optimism routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
+          "label": "HLSCOPE Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "HLSCOPE token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Securitize HLSCOPE",
+          "url": "https://securitize.io/primary-market/hl-scope"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "hlusd-hela",
@@ -9957,7 +10607,36 @@
       }
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "JPYm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to a 4/7 Mento Safe; the Monad route remains unresolved.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+          "label": "Mento JPYm token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "none-detected"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ]
+    }
   },
   {
     "id": "jpysc-sbi-startale",
@@ -10428,7 +11107,35 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "KESm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento KESm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ]
+    }
   },
   {
     "id": "kgst-kyrgyz-som",
@@ -13870,7 +14577,35 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "mintAuthoritySummary": {
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "PHPm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+      "controls": [
+        {
+          "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+          "label": "Mento PHPm token owner Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ]
+    }
   },
   {
     "id": "pht-pht",
@@ -15162,7 +15897,40 @@
       }
     ],
     "collateral": "AID staked into GAIB's ERC-4626 sAID vault, representing a NAV share of AI infrastructure financing positions plus stable reserve buffers",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "sAID is GAIB's ERC-4626 strategy-vault wrapper over AID. Wrapper shares are minted against deposited AID and do not create durable base AID supply; base issuance inherits the reviewed AID mint-authority profile.",
+      "inheritedFrom": "aid-gaib",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+          "label": "sAID ERC-4626 wrapper",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "asset() returned AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596; wrapper share minting is deposit and NAV accounting and does not mint base AID.",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "GAIB sAID docs",
+          "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+        },
+        {
+          "label": "GAIB AID and sAID contracts",
+          "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+        },
+        {
+          "label": "Ethereum sAID read contract",
+          "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "satusd-river",
@@ -16113,7 +16881,43 @@
       }
     ],
     "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "SPKCC Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Polygon, Arbitrum, Base, Starknet, and Stellar routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+          "label": "SPKCC token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Spiko docs",
+          "url": "https://docs.spiko.io/"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        }
+      ]
+    }
   },
   {
     "id": "spusd-soulpeg",
@@ -16387,7 +17191,43 @@
       }
     ],
     "collateral": "Tokenized fund shares in Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, with BNY as custodian and BNY Investments as sub-advisor.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "STAC's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; additional DSApp or on-ramp mint routes were not ruled out.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+          "label": "STAC Securitize DSToken issuance surface",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+          "label": "STAC token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Securitize STAC",
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+        }
+      ]
+    }
   },
   {
     "id": "stcusd-cap",
@@ -16994,7 +17834,46 @@
       }
     ],
     "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "permissioned-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority account, while the Solayer program remains upgradeable by a separate authority.",
+      "controls": [
+        {
+          "chain": "solana",
+          "address": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG",
+          "label": "Solayer sUSD Token-2022 mint/freeze/rate authority",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "solana",
+          "address": "7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru",
+          "label": "Solayer sUSD program upgrade authority",
+          "role": "proxy-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "upgrade-only"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Solayer sUSD FAQ",
+          "url": "https://docs.solayer.org/susd/protocol-info/faqs"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solayer sUSD docs",
+          "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
+        }
+      ]
+    }
   },
   {
     "id": "susd-synthetix",
@@ -18639,7 +19518,43 @@
       }
     ],
     "collateral": "GBP-denominated UK Treasury bill money-market exposure administered through Spiko fund rails.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "partially-bounded-admin",
+      "confidence": "manual-review",
+      "summary": "UKTBL Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar routes remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+          "label": "UKTBL token restricted mint/burn",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x344278aff344d6fb960705dc18a4912221608472",
+          "label": "Spiko authority policy contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Spiko docs",
+          "url": "https://docs.spiko.io/"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        }
+      ]
+    }
   },
   {
     "id": "usat-tether",
@@ -25110,7 +26025,34 @@
       }
     ],
     "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WARS is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve the current DEFAULT_ADMIN_ROLE and only current MINTER_ROLE holder to Ripio's shared admin account; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WARS admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WARS contract",
+          "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#events"
+        }
+      ]
+    }
   },
   {
     "id": "wbrl-ripio",
@@ -25145,7 +26087,43 @@
       }
     ],
     "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WBRL is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus two current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WBRL admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WBRL secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WBRL contract",
+          "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#events"
+        }
+      ]
+    }
   },
   {
     "id": "wclp-ripio",
@@ -25172,7 +26150,52 @@
       }
     ],
     "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WCLP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WCLP admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WCLP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WCLP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WCLP contract",
+          "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#events"
+        }
+      ]
+    }
   },
   {
     "id": "wcop-ripio",
@@ -25207,7 +26230,52 @@
       }
     ],
     "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WCOP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WCOP admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WCOP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WCOP secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WCOP contract",
+          "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76#events"
+        }
+      ]
+    }
   },
   {
     "id": "wemix-dollar-wemix",
@@ -25459,7 +26527,52 @@
       }
     ],
     "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WMXN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WMXN admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WMXN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WMXN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WMXN contract",
+          "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#events"
+        }
+      ]
+    }
   },
   {
     "id": "wpen-ripio",
@@ -25486,7 +26599,52 @@
       }
     ],
     "collateral": "Peruvian-sol cash and liquid local-currency instruments backing Ripio wPEN at a one Peruvian sol target",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WPEN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+          "label": "Ripio shared WPEN admin and MINTER_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+          "label": "WPEN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
+          "label": "WPEN secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        }
+      ],
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WPEN contract",
+          "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe#events"
+        }
+      ]
+    }
   },
   {
     "id": "wsrusd-reservoir",
@@ -25679,7 +26837,55 @@
       }
     ],
     "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WTGXX token source restricts minting, burning, pause, freeze, and batch mint to REGISTRAR_ROLE. Ethereum role logs resolve one registrar EOA and one default-admin EOA.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x726D3b3e18e301719b383FdE4F99A5d31B9438e5",
+          "label": "WTGXX Ethereum REGISTRAR_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6257759edD99f677052727f7Ef3a055029DFA58a",
+          "label": "WTGXX default admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "WisdomTree WTGXX",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        },
+        {
+          "label": "WisdomTree Connect",
+          "url": "https://www.wisdomtree.com/connect"
+        },
+        {
+          "label": "WTGXX Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+        },
+        {
+          "label": "WTGXX RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x1fecf3d9d4fee7f2c02917a66028a48c6706c179&fromBlock=20750716&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "WTGXX Ethereum token",
+          "url": "https://etherscan.io/address/0x1fecf3d9d4fee7f2c02917a66028a48c6706c179#readContract"
+        }
+      ]
+    }
   },
   {
     "id": "wusd-worldwide",
@@ -25732,7 +26938,69 @@
       }
     ],
     "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "mintAuthoritySummary": {
+      "mintPath": "issuer-direct-mint",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "WUSD uses issuer-operated role-gated minting. Ethereum role reconstruction identified three current MINTER_ROLE holders and one default-admin EOA; Polygon and Viction controls remain unresolved.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x171AC757879D9f5004992159FC9bF3344f82D5c3",
+          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x1a41b5922E926Cca1EAa8afAC55bdDce40FDBe61",
+          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x80c0A17d45049016A02a16D2B77A9003320FB9e0",
+          "label": "WUSD Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x731Efdc933464ed81Bf3Ea961e9fDAdC62e83bd1",
+          "label": "WUSD default admin",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
+        }
+      ],
+      "sources": [
+        {
+          "label": "WSPN Mint Account docs",
+          "url": "https://developer.wspn.io/5768563m0"
+        },
+        {
+          "label": "WSPN whitepaper",
+          "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+        },
+        {
+          "label": "WUSD Ethereum token",
+          "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41#readContract"
+        },
+        {
+          "label": "WUSD RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7cd017ca5ddb86861fa983a34b5f495c6f898c41&fromBlock=21390703&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        }
+      ]
+    }
   },
   {
     "id": "xagm-matrixdock",
