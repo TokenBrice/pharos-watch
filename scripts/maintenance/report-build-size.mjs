@@ -17,7 +17,9 @@ const DEFAULT_BUDGETS = {
   // includes reserve and portfolio exposure fields, while several static
   // pages still legitimately consume the full registry at build time.
   totalJsBytes: 14_500_000,
-  largestJsBytes: 1_200_000,
+  // Mint-authority coverage metadata expanded the generated client registry.
+  // Keep this tight so future registry growth still has to justify itself.
+  largestJsBytes: 1_350_000,
   totalCssBytes: 650_000,
   totalStaticMediaBytes: 2_000_000,
   largestHtmlBytes: 2_200_000,
