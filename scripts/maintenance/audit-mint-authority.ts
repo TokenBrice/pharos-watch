@@ -1,12 +1,14 @@
 #!/usr/bin/env tsx
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
 
 const DEFAULT_OUTPUT_DIR = "agents/mint-authority-candidates";
 const DEFAULT_LIMIT = 25;
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 export interface MintAuthorityProviderCapabilities {
   directRpc: {
@@ -253,8 +255,15 @@ function resolveSelectedCoins(options: AuditMintAuthorityOptions): StablecoinMet
 
 function assertSafeOutputDir(cwd: string, outputDir: string): string {
   const target = resolve(cwd, outputDir);
-  const stablecoinDataRoot = resolve(cwd, "shared/data/stablecoins");
-  if (target === stablecoinDataRoot || target.startsWith(`${stablecoinDataRoot}/`)) {
+  const stablecoinDataRoot = resolve(REPO_ROOT, "shared/data/stablecoins");
+  const pathFromStablecoinDataRoot = relative(stablecoinDataRoot, target);
+  const isStablecoinDataPath =
+    pathFromStablecoinDataRoot === "" ||
+    (!!pathFromStablecoinDataRoot &&
+      !pathFromStablecoinDataRoot.startsWith("..") &&
+      !isAbsolute(pathFromStablecoinDataRoot));
+
+  if (isStablecoinDataPath) {
     throw new Error("audit-mint-authority writes candidate artifacts only; use agents/mint-authority-candidates.");
   }
   return target;

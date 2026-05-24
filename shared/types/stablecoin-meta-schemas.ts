@@ -271,8 +271,13 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z.obj
 }).strict().superRefine((profile, ctx) => {
   const controls = profile.controls ?? [];
   const profileHasSourceLinks = hasSourceLinks(profile.review.sources);
+  const controlsHaveSourceLinks = controls.some((control) => hasSourceLinks(control.sources));
 
-  if ((profile.confidence === "verified" || profile.confidence === "probable") && !profileHasSourceLinks) {
+  if (
+    (profile.confidence === "verified" || profile.confidence === "probable") &&
+    !profileHasSourceLinks &&
+    !controlsHaveSourceLinks
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "verified or probable mintAuthority confidence requires at least one source link",

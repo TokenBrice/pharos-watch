@@ -60,6 +60,7 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
 
 export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetailViewModel | null }) {
   const isReviewed = profile?.status === "reviewed";
+  if (!isReviewed || !profile) return null;
 
   return (
     <Card id="mint-authority" className="rounded-xl">
@@ -70,67 +71,49 @@ export function MintAuthoritySection({ profile }: { profile?: MintAuthorityDetai
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!isReviewed ? (
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
-            <p className="text-sm font-medium text-foreground">
-              Mint authority review: <span className="text-muted-foreground">Not reviewed by Pharos</span>
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Pharos has not published a mint authority review for this stablecoin yet. Unknown does not mean no
-              privileged mint authority.
-            </p>
+        <div className="flex flex-wrap gap-1.5">
+          <DetailBadge>{profile.mintPathLabel}</DetailBadge>
+          <DetailBadge>{profile.authorityPostureLabel}</DetailBadge>
+          <DetailBadge>Confidence: {profile.confidenceLabel}</DetailBadge>
+          {profile.inheritedFrom ? <DetailBadge>Inherited from {profile.inheritedFrom}</DetailBadge> : null}
+        </div>
+
+        <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
+
+        {profile.controls.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Primary controls</p>
+            <ul className="space-y-2">
+              {profile.controls.map((control) => (
+                <MintAuthorityControlRow key={control.key} control={control} />
+              ))}
+            </ul>
           </div>
         ) : (
-          <>
-            <div className="flex flex-wrap gap-1.5">
-              <DetailBadge>{profile.mintPathLabel}</DetailBadge>
-              <DetailBadge>{profile.authorityPostureLabel}</DetailBadge>
-              <DetailBadge>Confidence: {profile.confidenceLabel}</DetailBadge>
-              {profile.inheritedFrom ? <DetailBadge>Inherited from {profile.inheritedFrom}</DetailBadge> : null}
-            </div>
-
-            <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
-
-            {profile.controls.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Primary controls
-                </p>
-                <ul className="space-y-2">
-                  {profile.controls.map((control) => (
-                    <MintAuthorityControlRow key={control.key} control={control} />
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                No primary control rows are published in the compact review summary.
-              </div>
-            )}
-
-            {profile.sources.length > 0 ? (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Evidence sources
-                </p>
-                <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
-                  {profile.sources.map((source) => (
-                    <a
-                      key={`${source.label}:${source.url}`}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
-                    >
-                      {source.label}
-                      <ExternalLink aria-hidden className="h-3 w-3" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </>
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+            No primary control rows are published in the compact review summary.
+          </div>
         )}
+
+        {profile.sources.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Evidence sources</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
+              {profile.sources.map((source) => (
+                <a
+                  key={`${source.label}:${source.url}`}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                >
+                  {source.label}
+                  <ExternalLink aria-hidden className="h-3 w-3" />
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

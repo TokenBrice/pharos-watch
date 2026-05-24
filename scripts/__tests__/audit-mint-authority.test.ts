@@ -109,4 +109,13 @@ describe("audit-mint-authority", () => {
       runCli(["--coin", "usdc-circle", "--out-dir", "shared/data/stablecoins"], process.cwd()),
     ).rejects.toThrow("writes candidate artifacts only");
   });
+
+  it("refuses stablecoin metadata paths even when invoked outside the repo root", async () => {
+    await expect(
+      runCli(
+        ["--coin", "usdc-circle", "--out-dir", "../shared/data/stablecoins/coins"],
+        join(process.cwd(), "scripts"),
+      ),
+    ).rejects.toThrow("writes candidate artifacts only");
+  });
 });

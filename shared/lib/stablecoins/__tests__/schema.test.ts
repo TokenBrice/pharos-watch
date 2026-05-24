@@ -267,6 +267,46 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/source link/);
   });
 
+  it("accepts verified profiles whose public source links live on controls", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-control-source",
+        mintAuthority: makeMintAuthority({
+          review: {
+            sourceFreeRationale: "Profile source links are attached to the reviewed control row.",
+            evidence: "The fixture keeps source links at control level for validation.",
+            reviewer: "Fixture Reviewer",
+            reviewedAt: "2026-05-24",
+          },
+          controls: [
+            {
+              chain: "ethereum",
+              address: "0x1234567890abcdef1234567890abcdef12345678",
+              label: "Issuer mint Safe",
+              role: "direct-minter",
+              authorityType: "safe",
+              directMintAbility: "direct",
+              threshold: 2,
+              signerCount: 3,
+              modulesOrGuardsStatus: "none-detected",
+              sources: [mintAuthoritySource],
+              safe: {
+                owners: [
+                  "0x1111111111111111111111111111111111111111",
+                  "0x2222222222222222222222222222222222222222",
+                  "0x3333333333333333333333333333333333333333",
+                ],
+                threshold: 2,
+                observedBlock: 123456,
+                source: "onchain",
+              },
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
   it("requires privileged non-unknown profiles to include controls", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({

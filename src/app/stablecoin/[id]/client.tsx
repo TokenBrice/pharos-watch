@@ -37,11 +37,11 @@ import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/ho
 import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
-import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
+import { buildStablecoinDetailHeroViewModel, type StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import type { BlacklistStablecoin, StablecoinMeta } from "@shared/types";
+import type { BlacklistStablecoin } from "@shared/types";
 import { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
 
 const FeedbackModal = dynamic(() => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal), {
@@ -173,7 +173,7 @@ function DetailLoadingShell({
 
 interface StablecoinDetailClientProps {
   id: string;
-  coin: StablecoinMeta;
+  coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;

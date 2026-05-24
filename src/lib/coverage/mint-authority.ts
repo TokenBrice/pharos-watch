@@ -97,6 +97,15 @@ function hasActiveMultisigMintControl(summary: MintAuthorityClientSummary): bool
   );
 }
 
+function hasDirectNonMultisigMintControl(summary: MintAuthorityClientSummary): boolean {
+  return (summary.controls ?? []).some(
+    (control) =>
+      control.directMintAbility === "direct" &&
+      control.authorityType !== "safe" &&
+      control.authorityType !== "multisig",
+  );
+}
+
 function resolveMintAuthority(summary?: MintAuthorityClientSummary | null): CoverageStatus {
   if (!summary) {
     return createStatus(
@@ -130,7 +139,8 @@ function resolveMintAuthority(summary?: MintAuthorityClientSummary | null): Cove
 
   if (
     summary.mintPath === "issuer-direct-mint" ||
-    summary.mintPath === "offchain-attested-minter"
+    summary.mintPath === "offchain-attested-minter" ||
+    hasDirectNonMultisigMintControl(summary)
   ) {
     return createPresetStatus(MINT_AUTHORITY_PRESETS["issuer-or-backend-mint"]);
   }

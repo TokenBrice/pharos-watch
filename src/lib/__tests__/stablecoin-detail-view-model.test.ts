@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
+import {
+  buildMintAuthorityDetailViewModel,
+  buildStablecoinDetailClientCoin,
+  buildStablecoinDetailHeroViewModel,
+  buildStablecoinDetailViewModel,
+} from "../stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
 
@@ -107,6 +112,17 @@ function makeBuildStablecoinDetailViewModelParams(
 }
 
 describe("stablecoin detail view-model builder", () => {
+  it("uses only compact mint-authority summaries for client detail presentation", () => {
+    const fullCoin = TRACKED_META_BY_ID.get("usdc-circle");
+    expect(fullCoin?.mintAuthority).toBeDefined();
+    const clientCoin = buildStablecoinDetailClientCoin(fullCoin!);
+
+    expect(buildMintAuthorityDetailViewModel(fullCoin!).status).toBe("not-reviewed");
+    expect("mintAuthority" in clientCoin).toBe(false);
+    expect(clientCoin.mintAuthoritySummary).toBeDefined();
+    expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
+  });
+
   it("builds a ready view model from fetched inputs", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

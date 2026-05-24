@@ -363,6 +363,22 @@ describe("coverage helpers", () => {
     ).toBe("issuer-or-backend-mint");
     expect(
       resolveMintAuthorityCoverage({
+        mintPath: "permissioned-minter",
+        authorityPosture: "unbounded-or-compromised",
+        confidence: "manual-review",
+        summary: "A direct permissioned minter can create new supply.",
+        controls: [
+          {
+            label: "Direct minter",
+            role: "direct-minter",
+            authorityType: "unknown",
+            directMintAbility: "direct",
+          },
+        ],
+      }).kind,
+    ).toBe("issuer-or-backend-mint");
+    expect(
+      resolveMintAuthorityCoverage({
         mintPath: "wrapped-or-variant-inherited",
         authorityPosture: "bounded-admin",
         confidence: "probable",

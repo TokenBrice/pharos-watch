@@ -59,7 +59,7 @@ Status semantics are intentionally user-facing:
 
 ### Mint Authority Coverage
 
-Mint Authority coverage counts curated review breadth, not safety quality. `Unknown` means no compact mint-authority review is available and links users to the detail page's explicit `Not reviewed by Pharos` state.
+Mint Authority coverage counts curated review breadth, not safety quality. `Unknown` means no compact mint-authority review is available; stablecoin detail pages omit the Mint Authority section until reviewed data exists.
 
 Authority posture bands belong in detail text/tooltips only; do not add posture buckets to the coverage headline, risk ranking, or default sort.
 

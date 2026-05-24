@@ -523,7 +523,7 @@ Current practice:
 
 Mint Authority review is descriptive, not scored. It should answer whether durable supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, bridge/OFT routes, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics.
 
-For new high-value active additions, record either a reviewed authority note or an intentional gap. Missing data is acceptable, but the detail page will show `Mint authority review: Not reviewed by Pharos`; do not imply unknown means safe.
+For new high-value active additions, record either a reviewed authority note or an intentional gap. Missing data is acceptable, but the detail page omits the Mint Authority section until reviewed data exists; do not imply unknown means safe.
 
 If you use the local scanner POC, run it as a candidate producer only:
 

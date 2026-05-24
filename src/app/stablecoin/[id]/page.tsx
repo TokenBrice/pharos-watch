@@ -20,6 +20,7 @@ import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stab
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-view-model";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
@@ -184,6 +185,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const staticCoin = buildStablecoinStaticMeta(coin, {
     hasCollateralUsage: collateralUsageEntries.length > 0,
   });
+  const clientCoin = buildStablecoinDetailClientCoin(coin);
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
 
   return (
@@ -201,7 +203,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       }>
         <StablecoinDetailClient
           id={id}
-          coin={coin}
+          coin={clientCoin}
           summary={summary}
           staticCoin={staticCoin}
           logoSrc={logosById[coin.id]}

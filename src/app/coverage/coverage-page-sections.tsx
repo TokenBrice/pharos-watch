@@ -477,7 +477,7 @@ export function CoverageMatrixCard(
             ) : (
               <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
                 <div className="overflow-auto">
-                  <table className="min-w-[54rem] w-full table-fixed caption-bottom text-sm">
+                  <table className="min-w-[64rem] w-full table-fixed caption-bottom text-sm">
                     <TableCaption className="sr-only">
                       Per-coin feature availability across {model.rows.length} active stablecoins.
                     </TableCaption>

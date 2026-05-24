@@ -34,14 +34,10 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
 };
 
 describe("MintAuthoritySection", () => {
-  it("renders the explicit missing-review state", () => {
+  it("hides the section until a compact review is available", () => {
     const html = renderToStaticMarkup(<MintAuthoritySection profile={undefined} />);
 
-    expect(html).toContain("Mint Authority");
-    expect(html).toContain("Mint authority review:");
-    expect(html).toContain("Not reviewed by Pharos");
-    expect(html).toContain("descriptive, not scored");
-    expect(html).toContain("Unknown does not mean no privileged mint authority");
+    expect(html).toBe("");
   });
 
   it("renders reviewed mint authority summary, controls, and sources", () => {

@@ -45,7 +45,7 @@ The client, prevalidated runtime, and legacy redirect projections are also gener
 
 ## Mint Authority Review
 
-Mint Authority review is a descriptive metadata track for answering whether durable stablecoin supply can be created by privileged parties, governance modules, bridge routes, proxy/cap admins, backend signers, or only by user/protocol mechanics. Missing review data means `Not reviewed by Pharos`, not safe.
+Mint Authority review is a descriptive metadata track for answering whether durable stablecoin supply can be created by privileged parties, governance modules, bridge routes, proxy/cap admins, backend signers, or only by user/protocol mechanics. Missing review data means no reviewed Mint Authority section is shown on the detail page; it does not mean safe.
 
 The detail page consumes only a compact presentation summary when available: mint path, descriptive authority posture, confidence, summary, primary controls, and source links. It must not treat this data as a Safety Score input, report-card raw input, selector exclusion, or ranking sort until a separate methodology change ships.
 

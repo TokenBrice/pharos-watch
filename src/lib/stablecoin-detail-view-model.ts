@@ -22,6 +22,7 @@ import type {
   YieldRankingsResponse,
 } from "@shared/types";
 import type { BlacklistStablecoin } from "@shared/types";
+import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
@@ -194,6 +195,16 @@ export interface MintAuthorityDetailViewModel {
 
 type UnknownRecord = Record<string, unknown>;
 
+export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, "mintAuthority"> & {
+  mintAuthoritySummary?: MintAuthorityClientSummary | null;
+};
+
+export function buildStablecoinDetailClientCoin(coin: StablecoinMeta): StablecoinDetailCoinMeta {
+  const { mintAuthority: _serverOnlyMintAuthority, ...clientCoin } = coin;
+  const mintAuthoritySummary = CLIENT_TRACKED_META_BY_ID.get(coin.id)?.mintAuthoritySummary;
+  return mintAuthoritySummary ? { ...clientCoin, mintAuthoritySummary } : clientCoin;
+}
+
 const NOT_REVIEWED_MINT_AUTHORITY: MintAuthorityDetailViewModel = {
   status: "not-reviewed",
   reviewLabel: "Not reviewed by Pharos",
@@ -360,13 +371,11 @@ function readSources(value: unknown): MintAuthorityDetailSourceViewModel[] {
   return sources;
 }
 
-function readMintAuthorityCandidate(coin: StablecoinMeta): UnknownRecord | null {
-  const maybeCoin = coin as StablecoinMeta & {
+function readMintAuthorityCandidate(coin: StablecoinDetailCoinMeta): UnknownRecord | null {
+  const maybeCoin = coin as StablecoinDetailCoinMeta & {
     mintAuthoritySummary?: unknown;
-    mintAuthority?: unknown;
   };
   if (isRecord(maybeCoin.mintAuthoritySummary)) return maybeCoin.mintAuthoritySummary;
-  if (isRecord(maybeCoin.mintAuthority)) return maybeCoin.mintAuthority;
   return null;
 }
 
@@ -400,7 +409,7 @@ function buildMintAuthorityControlViewModel(
   };
 }
 
-export function buildMintAuthorityDetailViewModel(coin: StablecoinMeta): MintAuthorityDetailViewModel {
+export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta): MintAuthorityDetailViewModel {
   const candidate = readMintAuthorityCandidate(coin);
   if (!candidate) return NOT_REVIEWED_MINT_AUTHORITY;
 
@@ -594,7 +603,7 @@ interface NotFoundViewModel extends BaseViewModel {
 interface StablecoinDetailReadyViewModel extends BaseViewModel {
   status: "ready";
   id: string;
-  coin: StablecoinMeta;
+  coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   reportCard: ReportCard | undefined;
@@ -707,7 +716,7 @@ export type StablecoinDetailViewModel =
 
 interface StablecoinDetailViewModelCoreInputs {
   id: string;
-  coin: StablecoinMeta;
+  coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   handleRetryAll: () => void;
