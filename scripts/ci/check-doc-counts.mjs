@@ -10,6 +10,7 @@
  *   - Reserve adapters (LIVE_RESERVE_ADAPTER_DEFINITIONS)
  *   - Bluechip slugs (BLUECHIP_SLUG_MAP)
  *   - Live-enabled stablecoins (liveReservesConfig declarations)
+ *   - Cemetery entries (DEAD_STABLECOINS)
  *
  * Usage: node scripts/ci/check-doc-counts.mjs
  * Exits 0 if all counts match, 1 if any are stale.
@@ -165,6 +166,12 @@ const CHECKS = [
     pattern: /(\d+) pre-launch entries/,
     expected: preLaunchCount,
     label: "pre-launch",
+  },
+  {
+    file: "README.md",
+    pattern: /(\d+) curated dead stablecoins/,
+    expected: cemeteryCount,
+    label: "cemetery",
   },
   {
     file: "docs/supply-snapshot.md",

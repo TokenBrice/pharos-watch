@@ -31,7 +31,7 @@ Public-facing analytics dashboard tracking 394 stablecoins in repo metadata: 364
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 91 curated dead stablecoins plus 4 frozen archives documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 88 curated dead stablecoins plus 4 frozen archives documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 306 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
@@ -168,7 +168,7 @@ src/                              Frontend (Next.js static export)
 │   ├── feed/                     Static JSON/XML route handlers for digest, depeg, cemetery, and methodology feeds
 │   ├── flows/                    Mint/burn flow tracker
 │   ├── funding/                  Static public-good funding ledger
-│   ├── learn/mechanisms/         Stablecoin mechanism explainer hub + archetype pages
+│   ├── learn/                    Learning center: mechanisms, case studies, glossary
 │   ├── api/                      Public API access and self-serve key request flow
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
@@ -193,9 +193,10 @@ src/                              Frontend (Next.js static export)
 │   ├── status/                   Public system-status dashboard (read-only, indexable)
 │   ├── timeline/                 Cross-class event tape
 │   ├── pharoswatchbot/           Telegram alerts + digest landing page (+ pharoswatchbot/app/)
+│   ├── sitemap-tree/             Crawlable all-pages route directory
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
-│   └── about/                    About / product overview (+ about/api/, about/editorial/, about/principles/)
+│   └── about/                    About / product overview (+ about/api/, about/editorial/, about/principles/, about/style/, about/bluechip/)
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)

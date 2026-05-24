@@ -31,7 +31,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
 - [scripts.md](./scripts.md) - operational and CI helper script inventory
-- [og-images.md](./og-images.md) - the three OG-image classes (static screenshots, mechanism explainer cards, dynamic Worker cards), how/when to renew, and CI guardrails
+- [og-images.md](./og-images.md) - the six OG-image classes (static screenshots, editorial cards, mechanism cards, case-study cards, selector cards, dynamic Worker cards), how/when to renew, and CI guardrails
 - [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) - repeatable checklist for adding active and pre-launch stablecoins
 - [freezing-stablecoins.md](./freezing-stablecoins.md) - operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase
 - [security-governance.md](./security-governance.md) - durable security rules (token-in-URL discipline, inline-script policy) and reactive-playbook routing
@@ -83,6 +83,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [api-page.md](./api-page.md) - `/api/` self-serve API access page plus `/about/api/` public API reference page, auth summary, and build-time docs rendering contract
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
+- [learn-page.md](./learn-page.md) - `/learn/`, `/learn/case-studies/`, `/learn/case-studies/[slug]/`, and `/learn/glossary/` route contracts
 - [learn-mechanisms-page.md](./learn-mechanisms-page.md) - `/learn/mechanisms/` hub and `/learn/mechanisms/[archetype]/` explainer contract, content schema, and coverage invariant
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
@@ -106,8 +107,10 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/alt-pegs/`                                    | [alt-pegs-page.md](./alt-pegs-page.md)                                                                                                                |
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
+| `/about/bluechip/`                              | [about-page.md](./about-page.md), [bluechip-ratings.md](./bluechip-ratings.md), [report-cards.md](./report-cards.md)                                 |
 | `/about/editorial/`                             | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
 | `/about/principles/`                            | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
+| `/about/style/`                                 | [about-page.md](./about-page.md), [design-language.md](./design-language.md)                                                                          |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex wrapper / Pages redirect alias for `/freezewatch/`                                    |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
@@ -135,6 +138,10 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/feed/methodology.xml/`                        | [architecture.md](./architecture.md), [methodology-page.md](./methodology-page.md)                                                                    |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
+| `/learn/`                                       | [learn-page.md](./learn-page.md)                                                                                                                      |
+| `/learn/case-studies/`                          | [learn-page.md](./learn-page.md)                                                                                                                      |
+| `/learn/case-studies/[slug]/`                   | [learn-page.md](./learn-page.md), [depeg-detection.md](./depeg-detection.md)                                                                          |
+| `/learn/glossary/`                              | [learn-page.md](./learn-page.md), [methodology-page.md](./methodology-page.md)                                                                        |
 | `/learn/mechanisms/`                            | [learn-mechanisms-page.md](./learn-mechanisms-page.md)                                                                                                |
 | `/learn/mechanisms/[archetype]/`                | [learn-mechanisms-page.md](./learn-mechanisms-page.md), [classification.md](./classification.md)                                                      |
 | `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
@@ -144,7 +151,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
 | `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [report-cards.md](./report-cards.md) |
-| `/screener/picker/`                           | [screener-picker-page.md](./screener-picker-page.md)                                                                                              |
+| `/screener/picker/`                             | [screener-picker-page.md](./screener-picker-page.md)                                                                                                  |
+| `/sitemap-tree/`                                | [architecture.md](./architecture.md)                                                                                                                  |
 | `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
 | `/stablecoin/[id]/yield/`                       | [yield-intelligence.md](./yield-intelligence.md), [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                            |
 | `/stability-index/`                             | [stability-index.md](./stability-index.md)                                                                                                            |
