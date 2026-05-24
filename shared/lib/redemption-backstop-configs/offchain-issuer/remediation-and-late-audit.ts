@@ -21,16 +21,37 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   ...expandIds(["kau-kinesis", "kag-kinesis"], {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    docs: [
+      sourceRef("Kinesis fees", "https://kinesis.money/about-us/fees/", ["route", "capacity", "fees"]),
+      sourceRef(
+        "Kinesis physical redemption guide",
+        "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver-bullion",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
   }),
   "cgo-comtech": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: documentedVariableFee("Physical gold coins via ComTech Gold app; minimum 10 grams in 1-gram multiples"),
+    docs: [
+      sourceRef("ComTech Gold digital gold", "https://comtechgold.com/Digitalgold", ["route", "capacity", "fees"]),
+      sourceRef("ComTech Gold terms", "https://comtechgold.com/Termsandconditions", ["route", "capacity", "access"]),
+    ],
   },
   "dgld-gold-token-sa": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
     costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
+    docs: [
+      sourceRef("DGLD homepage", "https://dgld.ch/", ["route", "capacity"]),
+      sourceRef("DGLD Swiss redemptions", "https://dgld.ch/news/dgld-european-swiss-redemptions", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+      ]),
+    ],
   },
   "wusd-worldwide": {
     ...issuerBase,

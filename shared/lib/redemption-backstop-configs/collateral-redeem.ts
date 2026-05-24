@@ -159,11 +159,27 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
       costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
+      docs: [
+        sourceRef("Mezo MUSD overview", "https://mezo.org/docs/users/musd/", ["route", "capacity", "fees"]),
+        sourceRef("Mezo MUSD redemption guide", "https://mezo.org/docs/developers/musd/musd-redemptions", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+        ]),
+      ],
     },
     "nect-beraborrow": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef(
+          "Beraborrow NECT peg docs",
+          "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg",
+          ["route", "capacity", "fees"],
+        ),
+      ],
     },
     "fxusd-f-x-protocol": {
       ...collateralRedeemBase,
@@ -197,6 +213,16 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...reviewedDirectRedemptionSupplyFull,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef("Orki USDK docs", "https://orki-finance.gitbook.io/orki-finance-docs/products/usdusdk", [
+          "route",
+          "capacity",
+        ]),
+        sourceRef("Orki USDK benefits", "https://orki-finance.gitbook.io/orki-finance-docs/products/usdusdk/benefits", [
+          "route",
+          "capacity",
+        ]),
+      ],
     },
     "cdp-enosys": {
       ...collateralRedeemBase,
@@ -248,18 +274,43 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...reviewedDirectRedemptionSupplyFull,
       outputAssetType: "mixed-collateral",
       costModel: undisclosedReviewedFee(),
+      docs: [
+        sourceRef("Ebisu overview", "https://ebisu.gitbook.io/ebisu-money", ["route", "capacity"]),
+        sourceRef(
+          "Ebisu mainnet deployments",
+          "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-mainnet",
+          ["capacity"],
+        ),
+      ],
     },
     "ussd-sonic-labs": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
       outputAssetType: "stable-single",
       costModel: fixedFee(0, "Zero minting and redemption fees per Sonic Labs documentation"),
+      docs: [
+        sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
+          "route",
+          "capacity",
+          "access",
+          "settlement",
+        ]),
+        sourceRef("Sonic USSD page", "https://www.soniclabs.com/ussd", ["route", "capacity", "settlement"]),
+      ],
     },
     "reusd-resupply": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
       outputAssetType: "mixed-collateral",
       costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
+      docs: [
+        sourceRef("Resupply stability mechanics", "https://docs.resupply.fi/resupply-protocol/stability-mechanics", [
+          "route",
+          "capacity",
+          "fees",
+        ]),
+        sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
+      ],
     },
     "cusd-celo": {
       ...collateralRedeemBase,
@@ -364,9 +415,17 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "satusd-river": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
-      costModel: undisclosedReviewedFee(
-        "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
+      costModel: documentedVariableFee(
+        "Redemption fee = baseRate + 50 bps, with baseRate dynamically adjusted by prior redemption activity",
+        "formula",
       ),
+      docs: [
+        sourceRef("River satUSD redemption docs", "https://docs.river.inc/products/editor/redemption", [
+          "route",
+          "capacity",
+          "fees",
+        ]),
+      ],
     },
     "doc-money-on-chain": {
       ...collateralRedeemBase,

@@ -283,6 +283,19 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Reserve Protocol API-backed reserve sync exposes the current basket weights, but redemption scoring remains documented-bound rather than live-direct capacity because the feed does not publish current redeemable capacity or throttle state",
     ],
+    docs: [
+      sourceRef(
+        "Reserve Yield DTF overview",
+        "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview",
+        ["route", "capacity", "access", "settlement"],
+      ),
+      sourceRef("Reserve DTF API", "https://api.reserve.org/discover/dtfs", ["capacity"]),
+      sourceRef(
+        "Reserve USD3 app",
+        "https://app.reserve.org/ethereum/token/0x0d86883faf4ffd7aeb116390af37746f45b6f378/overview",
+        ["capacity"],
+      ),
+    ],
   },
   "xmd-metal-dollar": {
     ...basketRedeemBase,

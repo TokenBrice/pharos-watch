@@ -383,6 +383,14 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: undisclosedReviewedFee(
       "Redeemable at NAV through Securitize; public docs do not publish a separate redemption fee (50 bps annual management fee is charged separately)",
     ),
+    docs: [
+      sourceRef(
+        "BlackRock BUIDL press release",
+        "https://www.blackrock.com/corporate/newsroom/press-releases/article/corporate-one/press-releases/blackrock-introduces-buidl-the-blackrock-usd-institutional-digital-liquidity-fund",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef("Securitize BUIDL", "https://securitize.io/blackrock/buidl", ["route", "capacity", "access"]),
+    ],
     notes: ["Restricted to qualified purchasers under SEC Reg D; redemptions processed through Securitize platform"],
   },
   "tusd-trueusd": {
@@ -431,6 +439,21 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: documentedVariableFee(
       "Fixed $1.00 face-amount certificate; 1:1 mint/redeem through Figure Certificate Company; registered security",
     ),
+    docs: [
+      sourceRef("Figure YLDS overview", "https://www.figuremarkets.com/c/learn/ylds", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Figure Certificate Company disclosures", "https://www.figuremarkets.com/disclosures/", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+    ],
   },
   "usdtb-ethena": {
     ...issuerBase,
