@@ -1,6 +1,5 @@
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReportCard, DimensionKey } from "@shared/types/report-cards";
 import type { DigestInputData } from "@shared/types/digest";
@@ -313,55 +312,4 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
     `<a href="https://pharos.watch/stablecoin/${status.stablecoinId}">Open coin page</a>`,
   ];
   return lines.join("\n");
-}
-
-export async function buildAlertContextLines(
-  db: D1Database,
-  stablecoinIds: readonly string[],
-): Promise<Map<string, string>> {
-  const uniqueIds = Array.from(new Set(stablecoinIds));
-  if (uniqueIds.length === 0) return new Map();
-  const [snapshot, stablecoinsResult, liquidityResult] = await Promise.all([
-    buildReportCardsSnapshot(db).catch(() => null),
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
-    loadLiquidityRows(db, uniqueIds),
-  ]);
-  const cards = new Map((snapshot?.cards ?? []).map((card) => [card.id, card]));
-  const supplies = new Map<string, number>();
-  if (stablecoinsResult?.kind === "ok") {
-    for (const asset of stablecoinsResult.payload.peggedAssets) {
-      if (uniqueIds.includes(asset.id)) {
-        supplies.set(asset.id, getCirculatingRaw(asset));
-      }
-    }
-  }
-  const out = new Map<string, string>();
-  for (const id of uniqueIds) {
-    const parts: string[] = [];
-    const card = cards.get(id);
-    const liq = liquidityResult.get(id);
-    if (card) parts.push(`Safety ${card.overallGrade}${card.overallScore != null ? ` ${card.overallScore}` : ""}`);
-    if (liq) parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);
-    const supply = supplies.get(id);
-    if (supply != null) parts.push(`Supply ${formatUsdCompact(supply)}`);
-    if (parts.length > 0) out.set(id, `Context: ${parts.join(" · ")}`);
-  }
-  return out;
-}
-
-async function loadLiquidityRows(
-  db: D1Database,
-  stablecoinIds: readonly string[],
-): Promise<Map<string, { score: number | null; tvl: number }>> {
-  if (stablecoinIds.length === 0) return new Map();
-  const placeholders = stablecoinIds.map(() => "?").join(",");
-  const result = await db
-    .prepare(`SELECT stablecoin_id, liquidity_score, total_tvl_usd FROM dex_liquidity WHERE stablecoin_id IN (${placeholders})`)
-    .bind(...stablecoinIds)
-    .all<{ stablecoin_id: string; liquidity_score: number | null; total_tvl_usd: number }>()
-    .catch(() => ({ results: [] }));
-  return new Map((result.results ?? []).map((row) => [
-    row.stablecoin_id,
-    { score: row.liquidity_score, tvl: row.total_tvl_usd },
-  ]));
 }
