@@ -7,6 +7,8 @@ import {
   getBackstopRegistrySourceFilePaths,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
+  applyTrackedReviewedDocs,
+  documentedBoundSupplyFull,
   documentedVariableFee,
   expandIds,
   fixedFee,
@@ -91,6 +93,7 @@ describe("redemption backstop config helpers", () => {
   });
 
   it("builds compact source references", () => {
+    const supports = ["route", "capacity"] as const;
     expect(sourceRef("Docs", "https://example.com/docs")).toEqual({
       label: "Docs",
       url: "https://example.com/docs",
@@ -99,7 +102,7 @@ describe("redemption backstop config helpers", () => {
       label: "Docs",
       url: "https://example.com/docs",
     });
-    expect(sourceRef("Docs", "https://example.com/docs", ["route", "capacity"])).toEqual({
+    expect(sourceRef("Docs", "https://example.com/docs", [...supports])).toEqual({
       label: "Docs",
       url: "https://example.com/docs",
       supports: ["route", "capacity"],
@@ -146,6 +149,40 @@ describe("redemption backstop config helpers", () => {
       feeModelKind: "undisclosed-reviewed",
     });
     expect(resolveFeeModelKind(undisclosed)).toBe("undisclosed-reviewed");
+  });
+
+  it("builds documented-bound supply-full fragments with reviewedAt provenance", () => {
+    expect(documentedBoundSupplyFull("2026-05-12")).toEqual({
+      capacityModel: {
+        kind: "supply-full",
+        confidence: "documented-bound",
+      },
+      reviewedAt: "2026-05-12",
+    });
+  });
+
+  it("applies tracked reviewed docs without overwriting existing docs or reviewedAt", () => {
+    const withMissingDocs = createBaseConfig();
+    delete withMissingDocs.docs;
+    const withExistingDocs = {
+      ...createBaseConfig(),
+      reviewedAt: "2026-01-01",
+      docs: [sourceRef("Existing docs", "https://example.com/existing", ["route"])],
+    };
+    const configs = {
+      "usdc-circle": withMissingDocs,
+      "usdt-tether": withExistingDocs,
+    };
+
+    applyTrackedReviewedDocs(configs, ["usdc-circle", "usdt-tether", "missing-id"], "2026-05-12");
+
+    expect(configs["usdc-circle"].reviewedAt).toBe("2026-05-12");
+    expect(configs["usdc-circle"].docs?.length).toBeGreaterThan(0);
+    expect(configs["usdc-circle"].docs?.[0]?.url).toMatch(/^https?:\/\//);
+    expect(configs["usdt-tether"].reviewedAt).toBe("2026-01-01");
+    expect(configs["usdt-tether"].docs).toEqual([
+      sourceRef("Existing docs", "https://example.com/existing", ["route"]),
+    ]);
   });
 
   it("maps access models to default holder eligibility", () => {

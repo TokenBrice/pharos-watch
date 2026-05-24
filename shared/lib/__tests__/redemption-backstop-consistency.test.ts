@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "@shared/lib/redemption-backstop-configs";
+import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
@@ -129,6 +130,10 @@ describe("redemption backstop config consistency", () => {
     expect(seenById.size).toBe(Object.keys(REDEMPTION_BACKSTOP_CONFIGS).length);
   });
 
+  it("manifest registry build matches the exported runtime registry", () => {
+    expect(buildRedemptionBackstopRegistry()).toEqual(REDEMPTION_BACKSTOP_CONFIGS);
+  });
+
   it("family modules only contain their declared route families", () => {
     const violations = familyModules.flatMap((moduleEntry) =>
       Object.entries(moduleEntry.configs)
@@ -237,6 +242,18 @@ describe("redemption backstop config consistency", () => {
           c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0),
       )
       .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt ?? "missing"} docs=${c.docs?.length ?? 0}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("review dates are valid YYYY-MM-DD calendar dates", () => {
+    const violations = entries
+      .filter(([, c]) => {
+        if (!c.reviewedAt) return false;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(c.reviewedAt)) return true;
+        const parsed = new Date(`${c.reviewedAt}T00:00:00.000Z`);
+        return !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== c.reviewedAt;
+      })
+      .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt}`);
     expect(violations).toEqual([]);
   });
 
