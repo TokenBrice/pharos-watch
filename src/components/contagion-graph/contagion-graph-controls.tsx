@@ -4,7 +4,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
 import { DEPENDENCY_TYPE_FILTERS } from "@/components/contagion-graph-model";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
-import { NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
+import { ALL_NODE_LIMIT, NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
 
 interface ContagionGraphControlsProps {
   focusMode: FocusMode;
@@ -125,7 +125,8 @@ export function ContagionGraphControls({
             value={String(nodeLimit)}
             aria-label="Maximum nodes shown"
             onValueChange={(value) => {
-              if (value) onNodeLimitChange(Number(value) as NodeLimitOption);
+              if (!value) return;
+              onNodeLimitChange(value === ALL_NODE_LIMIT ? ALL_NODE_LIMIT : (Number(value) as NodeLimitOption));
             }}
             variant="outline"
             size="sm"
@@ -137,7 +138,7 @@ export function ContagionGraphControls({
                 value={String(limit)}
                 className="font-mono text-[10px] uppercase tracking-[0.08em]"
               >
-                {limit}
+                {limit === ALL_NODE_LIMIT ? "All" : limit}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>

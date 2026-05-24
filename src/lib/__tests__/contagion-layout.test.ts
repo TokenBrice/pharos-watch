@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  ALL_NODE_LIMIT,
   percentile,
   minMaxNormalize,
   deterministicJitter,
@@ -269,6 +270,21 @@ describe("buildGraphData", () => {
     const { cards, mcapMap } = makeCardsAndMcap(allIds);
     const result = buildGraphData(cards, mcapMap);
     expect(result.nodes.length).toBeLessThanOrEqual(MAX_NODES);
+  });
+
+  it("includes the full connected ranked graph for the all node limit", () => {
+    const ids = ["coin-a", "coin-b", "coin-c", "coin-d"];
+    const { cards, mcapMap } = makeCardsAndMcap(ids);
+    const dependencyEdges = [
+      { from: "coin-a", to: "coin-b", weight: 1, type: "collateral" },
+      { from: "coin-a", to: "coin-c", weight: 1, type: "collateral" },
+      { from: "coin-a", to: "coin-d", weight: 1, type: "collateral" },
+    ] as const;
+
+    expect(buildGraphData(cards, mcapMap, dependencyEdges, 2).nodes).toHaveLength(2);
+    expect(buildGraphData(cards, mcapMap, dependencyEdges, ALL_NODE_LIMIT).nodes.map((node) => node.id).sort()).toEqual(
+      ids,
+    );
   });
 
   it("each node has the required shape", () => {

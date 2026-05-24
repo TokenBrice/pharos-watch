@@ -62,8 +62,10 @@ export const WIDTH = 800;
 export const HEIGHT = 600;
 export const PAD = 44;
 export const MAX_NODES = 50;
-export const NODE_LIMIT_OPTIONS = [50, 100, 200] as const;
+export const ALL_NODE_LIMIT = "all";
+export const NODE_LIMIT_OPTIONS = [50, 100, 200, ALL_NODE_LIMIT] as const;
 export type NodeLimitOption = (typeof NODE_LIMIT_OPTIONS)[number];
+export type GraphNodeLimit = number | typeof ALL_NODE_LIMIT;
 export const DEFAULT_NODE_LIMIT: NodeLimitOption = 50;
 export const MIN_RADIUS = 10;
 const MAX_RADIUS = 34;
@@ -209,7 +211,7 @@ export function buildGraphData(
   cards: ReportCard[],
   mcapMap: Map<string, number>,
   dependencyEdges?: readonly DependencyGraphEdge[],
-  maxNodes: number = MAX_NODES,
+  maxNodes: GraphNodeLimit = MAX_NODES,
 ): { nodes: GraphNode[]; links: GraphLink[] } {
   const cardMap = new Map(cards.map((c) => [c.id, c]));
   const liveIds = [...cardMap.keys()].filter((id) => !cardMap.get(id)!.isDefunct);
@@ -236,7 +238,8 @@ export function buildGraphData(
     .filter((id) => (inboundCounts.get(id) ?? 0) > 0 || (outboundCounts.get(id) ?? 0) > 0)
     .sort((a, b) => (mcapMap.get(b) ?? 0) - (mcapMap.get(a) ?? 0));
 
-  let selectedIds = rankedIds.slice(0, maxNodes);
+  const maxSelectedNodes = maxNodes === ALL_NODE_LIMIT ? rankedIds.length : maxNodes;
+  let selectedIds = rankedIds.slice(0, maxSelectedNodes);
   let nextCandidateIdx = selectedIds.length;
   let selectedLinks: RawGraphLink[] = [];
 
@@ -254,7 +257,7 @@ export function buildGraphData(
     const removedCount = selectedIds.length - prunedIds.length;
     selectedIds = prunedIds;
 
-    while (selectedIds.length < maxNodes && nextCandidateIdx < rankedIds.length) {
+    while (selectedIds.length < maxSelectedNodes && nextCandidateIdx < rankedIds.length) {
       selectedIds.push(rankedIds[nextCandidateIdx]);
       nextCandidateIdx++;
     }
