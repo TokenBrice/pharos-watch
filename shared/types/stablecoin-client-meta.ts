@@ -54,6 +54,8 @@ export interface MintAuthorityCoverageSummary {
   controls?: MintAuthorityCoverageControlSummary[];
 }
 
+type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"]>["reviewedStatus"];
+
 /**
  * Slim projection of `StablecoinMeta` for client-side consumers.
  *
@@ -107,6 +109,7 @@ export type StablecoinClientMeta = Pick<
   | "collateral"
   | "collateralQuality"
 > & {
+  blacklistStatus?: BlacklistClientStatus;
   mintAuthoritySummary?: MintAuthorityCoverageSummary;
 };
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   projectCoin,
+  projectBlacklistStatus,
   projectMintAuthoritySummary,
   readCanonicalClientFields,
 } from "../build-data/build-client-registry.mjs";
@@ -117,6 +118,34 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("Control-level evidence");
     expect(JSON.stringify(projected)).not.toContain("Should not ship");
     expect(JSON.stringify(projected)).not.toContain("0x0000000000000000000000000000000000000002");
+  });
+
+  it("projects only the reviewed blacklist status and excludes review evidence", () => {
+    const coin = {
+      id: "freezable-usd",
+      name: "Freezable USD",
+      symbol: "FUSD",
+      flags: {
+        pegCurrency: "USD",
+        backing: "fiat",
+        governance: "centralized",
+      },
+      blacklistabilityReview: {
+        reviewedStatus: "inherited",
+        sources: [{ label: "Docs", url: "https://example.com/blacklist" }],
+        evidence: "Long blacklist review evidence stays server-side.",
+        reviewer: "pharos",
+        reviewedAt: "2026-05-24",
+      },
+    };
+
+    const projected = projectCoin(coin, readCanonicalClientFields());
+
+    expect(projectBlacklistStatus(coin)).toBe("inherited");
+    expect(projected.blacklistStatus).toBe("inherited");
+    expect(JSON.stringify(projected)).not.toContain("Long blacklist review evidence");
+    expect(JSON.stringify(projected)).not.toContain("https://example.com/blacklist");
+    expect(JSON.stringify(projected)).not.toContain("2026-05-24");
   });
 
   it("returns no mint-authority summary when the source profile is absent", () => {

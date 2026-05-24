@@ -1,5 +1,4 @@
 import type { GovernanceType, StablecoinData } from "../types";
-import { TRACKED_META_BY_ID } from "./stablecoins/registry";
 
 /** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */
 const safeNum = (v: number | null | undefined): number =>
@@ -70,17 +69,26 @@ export interface GovernanceBreakdown {
   defiPct: number;
 }
 
+type GovernanceMeta = {
+  flags: {
+    governance: GovernanceType;
+  };
+};
+
 /**
  * Compute market-cap breakdown by governance tier (centralized / centralized-dependent / decentralized).
- * Only coins present in TRACKED_META_BY_ID are included.
+ * Only coins present in `metaById` are included.
  */
-export function computeGovernanceBreakdown(data: StablecoinData[]): GovernanceBreakdown {
+export function computeGovernanceBreakdown(
+  data: StablecoinData[],
+  metaById: ReadonlyMap<string, GovernanceMeta>,
+): GovernanceBreakdown {
   let centralizedMcap = 0;
   let dependentMcap = 0;
   let decentralizedMcap = 0;
 
   for (const coin of data) {
-    const meta = TRACKED_META_BY_ID.get(coin.id);
+    const meta = metaById.get(coin.id);
     if (!meta) continue;
     const mcap = getCirculatingRaw(coin);
     const gov: GovernanceType = meta.flags.governance;

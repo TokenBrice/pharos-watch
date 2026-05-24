@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
 
-vi.mock("@shared/lib/tracked-blacklist-status", () => ({
-  getTrackedBlacklistStatus: (id: string) => (id === "usdp-parallel" ? "inherited" : null),
+vi.mock("@shared/lib/stablecoins/client-registry", () => ({
+  CLIENT_TRACKED_META_BY_ID: new Map([
+    ["usdp-parallel", { blacklistStatus: "inherited" }],
+  ]),
 }));
 
 vi.mock("@shared/lib/report-cards", () => ({

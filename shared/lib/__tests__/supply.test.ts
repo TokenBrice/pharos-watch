@@ -146,7 +146,7 @@ describe("computeGovernanceBreakdown", () => {
       mockCoin({ id: decentralizedId, circulating: { peggedUSD: 25 } }),
     ];
 
-    const result = computeGovernanceBreakdown(data);
+    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
     expect(result.centralizedMcap).toBe(100);
     expect(result.dependentMcap).toBe(50);
     expect(result.decentralizedMcap).toBe(25);
@@ -162,7 +162,7 @@ describe("computeGovernanceBreakdown", () => {
       mockCoin({ id: "999999", circulating: { peggedUSD: 500 } }),
     ];
 
-    const result = computeGovernanceBreakdown(data);
+    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
     expect(result.centralizedMcap).toBe(100);
     expect(result.total).toBe(100);
     expect(result.cefiPct).toBe(100);
@@ -175,7 +175,7 @@ describe("computeGovernanceBreakdown", () => {
       mockCoin({ id: decentralizedId, circulating: { peggedUSD: null as unknown as number } }),
     ];
 
-    const result = computeGovernanceBreakdown(data);
+    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
     expect(result.total).toBe(0);
     expect(result.cefiPct).toBe(0);
     expect(result.depPct).toBe(0);
@@ -208,7 +208,7 @@ describe("computeGovernanceBreakdown", () => {
       }),
     ];
 
-    const result = computeGovernanceBreakdown(data);
+    const result = computeGovernanceBreakdown(data, TRACKED_META_BY_ID);
     expect(result.centralizedMcap).toBe(100);
     expect(result.dependentMcap).toBe(25);
     expect(result.decentralizedMcap).toBe(-5);

@@ -55,7 +55,8 @@
         "risk": "very-high"
       }
     ],
-    "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm"
+    "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
+    "blacklistStatus": true
   },
   {
     "id": "aa-falconx-mev-capital",
@@ -85,7 +86,8 @@
       }
     ],
     "collateral": "USDC base asset in the Pareto FalconX Credit Vault, providing fixed-rate exposure to FalconX institutional credit lines curated by M11 Credit.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "acrdx-anemoy-apollo",
@@ -129,7 +131,8 @@
       }
     ],
     "collateral": "Tokenized feeder exposure to Apollo Diversified Credit Fund through the Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio, investing across corporate direct lending, asset-backed lending, performing credit, and dislocated credit.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "acred-apollo-securitize",
@@ -199,6 +202,7 @@
     ],
     "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -269,6 +273,7 @@
       }
     ],
     "collateral": "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -334,6 +339,7 @@
     ],
     "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -394,7 +400,8 @@
       }
     ],
     "collateral": "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "apxusd-apyx",
@@ -459,6 +466,7 @@
     ],
     "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -535,6 +543,7 @@
     ],
     "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -578,7 +587,8 @@
         "sourceUrl": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/"
       }
     ],
-    "collateral": "1:1 Indian Rupee reserves collateralized by cash, fixed deposits, and Indian government securities; two-tier framework complementing RBI's digital rupee CBDC"
+    "collateral": "1:1 Indian Rupee reserves collateralized by cash, fixed deposits, and Indian government securities; two-tier framework complementing RBI's digital rupee CBDC",
+    "blacklistStatus": true
   },
   {
     "id": "asusdf-astherus",
@@ -612,7 +622,8 @@
       }
     ],
     "collateral": "USDF deposited into the Aster Earn asToken wrapper; upstream USDF is backed by USDT held through Ceffu and delta-neutral Binance / MirrorX strategies.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "audd-novatti",
@@ -666,7 +677,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd"
+    "collateral": "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
+    "blacklistStatus": true
   },
   {
     "id": "audf-forte",
@@ -699,6 +711,7 @@
       }
     ],
     "collateral": "Australian dollar reserves and cash-equivalent reserve assets held separately from Forte's operational funds",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -773,7 +786,8 @@
       }
     ],
     "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "audm-mento",
@@ -830,6 +844,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard)",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -895,7 +910,8 @@
       }
     ],
     "collateral": "Australian-dollar cash and government-backed instruments held 1:1 for AUDX by TAU Pty Ltd trading as AUDX Token",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "ausd-agora",
@@ -955,6 +971,7 @@
       }
     ],
     "collateral": "Cash (USD deposits), short-dated U.S. Treasury bills, and overnight reverse repurchase agreements; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -1040,7 +1057,8 @@
       }
     ],
     "collateral": "Overcollateralized Tether Gold (XAUT) deposited into the Alloy by Tether Ethereum vault; XAUT represents physical gold stored in Swiss vaults",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "avusd-avant",
@@ -1088,7 +1106,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals"
+    "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
+    "blacklistStatus": true
   },
   {
     "id": "axcnh-anchorx",
@@ -1134,7 +1153,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Offshore Chinese yuan (CNH) cash reserves held 1:1 at regulated financial institutions; issuer materials describe AxCNH as fully reserved and redeemable for CNH"
+    "collateral": "Offshore Chinese yuan (CNH) cash reserves held 1:1 at regulated financial institutions; issuer materials describe AxCNH as fully reserved and redeemable for CNH",
+    "blacklistStatus": true
   },
   {
     "id": "aznd-mu-digital",
@@ -1198,7 +1218,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Accountable currently shows the Asset Pool concentrated in short-term cash and liquid bonds; Mu Digital's published mandate still targets an Asia credit portfolio with illiquid private credit capped at 20%, and the muBOND junior tranche overcollateralizes AZND at ~118%"
+    "collateral": "Accountable currently shows the Asset Pool concentrated in short-term cash and liquid bonds; Mu Digital's published mandate still targets an Asia credit portfolio with illiquid private credit capped at 20%, and the muBOND junior tranche overcollateralizes AZND at ~118%",
+    "blacklistStatus": true
   },
   {
     "id": "bc3m-backed",
@@ -1254,7 +1275,8 @@
       }
     ],
     "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "bd-basedollar",
@@ -1297,7 +1319,8 @@
         "sourceUrl": "https://github.com/basedollar/basedollar"
       }
     ],
-    "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers"
+    "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers",
+    "blacklistStatus": false
   },
   {
     "id": "benji-franklin-templeton",
@@ -1364,7 +1387,8 @@
       }
     ],
     "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "bfusd-binance",
@@ -1402,7 +1426,8 @@
       }
     ],
     "collateral": "Binance-owned BFUSD Collateral Pool assets, hedging portfolio positions, and a reserve fund described in Binance BFUSD terms",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "bib01-backed",
@@ -1470,7 +1495,8 @@
       }
     ],
     "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "bnusd-balanced",
@@ -1501,7 +1527,8 @@
       }
     ],
     "collateral": "Overcollateralized loans on ICON against sICX (staked ICX), with cross-chain Hub collateral support for assets bridged in via Balanced's xCall infrastructure",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "bold-liquity",
@@ -1597,6 +1624,7 @@
     ],
     "collateral": "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
     "collateralQuality": "eth-lst",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
@@ -1650,7 +1678,8 @@
       }
     ],
     "collateral": "Brazilian National Treasury bonds (LTN/NTN-B); yield from the Selic-linked rate (currently ~15%) is structured to be shared with token holders",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "brl-b3",
@@ -1681,7 +1710,8 @@
       }
     ],
     "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "brl-itau",
@@ -1724,7 +1754,8 @@
         "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
       }
     ],
-    "collateral": "Pre-launch: Itau is evaluating a BRL- or USD-denominated stablecoin pending Brazil's Consulta Publica 111 framework. The bank already participates in the DREX wholesale CBDC pilot and would source distribution rails and custody from its existing regulated infrastructure, but no reserve composition has been publicly committed."
+    "collateral": "Pre-launch: Itau is evaluating a BRL- or USD-denominated stablecoin pending Brazil's Consulta Publica 111 framework. The bank already participates in the DREX wholesale CBDC pilot and would source distribution rails and custody from its existing regulated infrastructure, but no reserve composition has been publicly committed.",
+    "blacklistStatus": true
   },
   {
     "id": "brl1-brl1",
@@ -1780,7 +1811,8 @@
       }
     ],
     "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian Treasury ETFs, repo agreements, and cash equivalents",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "brla-brla-digital",
@@ -1815,7 +1847,8 @@
       }
     ],
     "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "brlm-mento",
@@ -1872,6 +1905,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -1946,7 +1980,8 @@
       }
     ],
     "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "brz-transfero",
@@ -2000,7 +2035,8 @@
         "risk": "low"
       }
     ],
-    "collateral": "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil"
+    "collateral": "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil",
+    "blacklistStatus": true
   },
   {
     "id": "btcusd-btcfi",
@@ -2051,7 +2087,8 @@
       }
     ],
     "collateral": "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "buck-buck-assets",
@@ -2097,7 +2134,8 @@
       }
     ],
     "collateral": "USDC liquidity reserve for redemptions plus Strategy Inc. perpetual preferred stock (STRC), a BTC-backed equity instrument; treasury reported at 1.79× reserve ratio (Mar 2026 attestation by The Network Firm)",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "buck-bucket-protocol",
@@ -2148,6 +2186,7 @@
     ],
     "collateral": "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -2238,6 +2277,7 @@
       }
     ],
     "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -2286,7 +2326,8 @@
         "depType": "wrapper"
       }
     ],
-    "collateral": "Locked USD0 bond position backed by the Usual USD0 reserve stack; bUSD0 is the fixed-notional bond leg formerly known as USD0++"
+    "collateral": "Locked USD0 bond position backed by the Usual USD0 reserve stack; bUSD0 is the fixed-notional bond leg formerly known as USD0++",
+    "blacklistStatus": "possible"
   },
   {
     "id": "cadc-cad-coin",
@@ -2339,7 +2380,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders"
+    "collateral": "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
+    "blacklistStatus": true
   },
   {
     "id": "cadd-cad-digital",
@@ -2407,6 +2449,7 @@
     ],
     "collateral": "Canadian dollar reserves held 1:1 in trust for token holders by Tetra Trust",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -2477,6 +2520,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -2547,6 +2591,7 @@
       }
     ],
     "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -2611,7 +2656,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions"
+    "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions",
+    "blacklistStatus": "possible"
   },
   {
     "id": "cdxusd-cod3x",
@@ -2655,6 +2701,7 @@
       }
     ],
     "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "facilitator-bucket-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -2730,7 +2777,8 @@
       }
     ],
     "collateral": "Short-term Mexican federal government bonds (CETES — Certificados de la Tesorería de la Federación), BBB- rated sovereign debt with maturities set by government auctions; held in segregated custody through INDEVAL (Instituto para el Depósito de Valores) via participating brokerages",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "ceur-celo",
@@ -2822,6 +2870,7 @@
     ],
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -2863,7 +2912,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold"
+    "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
+    "blacklistStatus": true
   },
   {
     "id": "cgusd-cygnus-finance",
@@ -2926,7 +2976,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest"
+    "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
+    "blacklistStatus": true
   },
   {
     "id": "chfau-allunity",
@@ -2997,6 +3048,7 @@
       }
     ],
     "collateral": "CHF-denominated reserves held 1:1 at CRR credit institutions within the EU in segregated accounts; not used for lending or investment",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -3070,6 +3122,7 @@
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -3132,7 +3185,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest"
+    "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest",
+    "blacklistStatus": false
   },
   {
     "id": "cngn-compliant-naira",
@@ -3180,7 +3234,8 @@
       }
     ],
     "collateral": "Nigerian naira reserves held 1:1 in designated commercial bank accounts by the cNGN issuer consortium",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "copm-mento",
@@ -3237,6 +3292,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -3306,6 +3362,7 @@
     ],
     "collateral": "WBTC, cbBTC (majority), wstETH, sfrxETH, weETH, tBTC, and ETH deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations; WBTC/cbBTC custody by BitGo/Coinbase introduces centralized dependency",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -3378,6 +3435,7 @@
     ],
     "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -3506,6 +3564,7 @@
       }
     ],
     "collateral": "Basket of regulated stablecoins and tokenized MMF shares: USDC, USDT, pyUSD, BUIDL, and WTGXX (WisdomTree Government MMF) (max 40% each)",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -3607,6 +3666,7 @@
     ],
     "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -3676,7 +3736,8 @@
       }
     ],
     "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "dai-makerdao",
@@ -3749,6 +3810,7 @@
     ],
     "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
     "collateralQuality": "rwa",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -3815,7 +3877,8 @@
         "risk": "medium"
       }
     ],
-    "collateral": "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions"
+    "collateral": "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "dgld-gold-token-sa",
@@ -3869,7 +3932,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)"
+    "collateral": "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
+    "blacklistStatus": true
   },
   {
     "id": "djed-coti",
@@ -3896,7 +3960,8 @@
       }
     ],
     "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": false
   },
   {
     "id": "dllr-sovryn",
@@ -3975,7 +4040,8 @@
       }
     ],
     "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "doc-money-on-chain",
@@ -4001,7 +4067,8 @@
         "risk": "medium"
       }
     ],
-    "collateral": "rBTC locked in Money On Chain smart contracts on Rootstock"
+    "collateral": "rBTC locked in Money On Chain smart contracts on Rootstock",
+    "blacklistStatus": "possible"
   },
   {
     "id": "dola-inverse-finance",
@@ -4067,6 +4134,7 @@
       }
     ],
     "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -4128,7 +4196,8 @@
       }
     ],
     "collateral": "Over-collateralized on-chain assets in isolated lending markets on Ethereum: mint markets accept WETH, wstETH (Lido), rETH (Rocket Pool), mETH (Mantle LST), sUSDe (Ethena), and Syrup USDC; borrow markets accept cbBTC, WBTC, tBTC, sUSDe, Syrup USDC, and PAXG; each market is independently isolated with per-asset risk parameters; a Peg Stability Module enables 1:1 USDC↔DUSD swaps capped at 5M USDC",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "dusd-dtrinity",
@@ -4197,7 +4266,8 @@
       }
     ],
     "collateral": "Yield-bearing USD stablecoins held in chain-isolated on-chain reserves; eligible assets vary by chain. Ethereum: USDC, USDT, USDS, sUSDS (Sky/MakerDAO), frxUSD, sfrxUSD (Frax Finance), and Curve AMO positions. Fraxtal: USDC, USDT, DAI, sDAI (bridged via Fraxtal canonical bridge), frxUSD, sfrxUSD (native), and Curve AMO positions. Katana: vbUSDC, vbUSDT (Vault Bridge tokens backed by Ethereum lending vaults), AUSD (Agora), frxUSD, sfrxUSD. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "dusd-fluid",
@@ -4223,7 +4293,8 @@
       }
     ],
     "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "dusd-standx",
@@ -4260,7 +4331,8 @@
       }
     ],
     "collateral": "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "possible"
   },
   {
     "id": "ebusd-ebisu",
@@ -4389,7 +4461,8 @@
       }
     ],
     "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, LBTC, and stcUSD; the live adapter reports current per-branch shares, with WETH and XPL configured as additional dormant branches",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "emxn-telcoin",
@@ -4414,7 +4487,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon"
+    "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
+    "blacklistStatus": true
   },
   {
     "id": "eur-qivalis",
@@ -4492,7 +4566,8 @@
         "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
       }
     ],
-    "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet"
+    "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet",
+    "blacklistStatus": true
   },
   {
     "id": "eur0-usual",
@@ -4521,6 +4596,7 @@
       }
     ],
     "collateral": "Euro-denominated collateral tokens, primarily Spiko EUTBL tokenized Eurozone Treasury-bill fund shares, held through Usual's EUR0 collateral module",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -4604,6 +4680,7 @@
       }
     ],
     "collateral": "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -4693,6 +4770,7 @@
       }
     ],
     "collateral": "Euro-denominated fiat reserves held separately from Circle operating funds at regulated financial institutions in the EEA",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -4777,6 +4855,7 @@
       }
     ],
     "collateral": "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -4863,6 +4942,7 @@
       }
     ],
     "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -4950,6 +5030,7 @@
       }
     ],
     "collateral": "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A.",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -4992,7 +5073,8 @@
       }
     ],
     "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "euroe-membrane",
@@ -5043,7 +5125,8 @@
       }
     ],
     "collateral": "Euro fiat reserves and euro-denominated assets held by Membrane Finance for issued EUROe",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "europ-schuman",
@@ -5116,6 +5199,7 @@
       }
     ],
     "collateral": "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -5173,6 +5257,7 @@
       }
     ],
     "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -5261,6 +5346,7 @@
       }
     ],
     "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -5346,6 +5432,7 @@
       }
     ],
     "collateral": "Cash and cash equivalents held in segregated accounts at European financial institutions",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -5425,7 +5512,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts"
+    "collateral": "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts",
+    "blacklistStatus": true
   },
   {
     "id": "eursafo-spiko",
@@ -5465,7 +5553,8 @@
       }
     ],
     "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "eurspkcc-spiko",
@@ -5511,6 +5600,7 @@
     ],
     "collateral": "Euro share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -5644,7 +5734,8 @@
       }
     ],
     "collateral": "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "eusd-telcoin",
@@ -5688,7 +5779,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token"
+    "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token",
+    "blacklistStatus": "possible"
   },
   {
     "id": "eutbl-spiko",
@@ -5759,6 +5851,7 @@
     ],
     "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -5839,6 +5932,7 @@
       }
     ],
     "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -5950,7 +6044,8 @@
       }
     ],
     "collateral": "HYPE, kHYPE, wstHYPE, and UBTC (feUBTC) via overcollateralized CDPs on Hyperliquid (Liquity V2 fork); the live adapter reports four active branches",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": true
   },
   {
     "id": "fidd-fidelity",
@@ -6007,6 +6102,7 @@
       }
     ],
     "collateral": "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -6101,7 +6197,8 @@
         "sourceUrl": "https://investors.fiserv.com/events/event-details/fiserv-2026-investor-day"
       }
     ],
-    "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure"
+    "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure",
+    "blacklistStatus": false
   },
   {
     "id": "fpi-frax",
@@ -6150,6 +6247,7 @@
     ],
     "collateral": "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
@@ -6233,6 +6331,7 @@
       }
     ],
     "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures.",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
@@ -6321,6 +6420,7 @@
       }
     ],
     "collateral": "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
@@ -6391,6 +6491,7 @@
     ],
     "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -6442,6 +6543,7 @@
     ],
     "collateral": "Tokenized U.S. Treasury bills and money-market funds, including Taikang Kaitai U.S. Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class), and Finloop USD Instant Digital Liquidity Token - Acc (FUIDL-AC)",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -6481,7 +6583,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited"
+    "collateral": "Privacy-chain stable asset collateral and reserve mechanisms on Zano; public reserve details are limited",
+    "blacklistStatus": false
   },
   {
     "id": "fxd-fathom",
@@ -6507,7 +6610,8 @@
       }
     ],
     "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": false
   },
   {
     "id": "fxsave-f-x-protocol",
@@ -6565,7 +6669,8 @@
       }
     ],
     "collateral": "fxUSD deposited into f(x) Protocol's saving/stability strategy; backing inherits fxUSD's WBTC and wstETH collateral base plus strategy execution risk",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "fxusd-f-x-protocol",
@@ -6621,7 +6726,8 @@
         "risk": "low"
       }
     ],
-    "collateral": "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency"
+    "collateral": "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "gbpe-monerium",
@@ -6674,6 +6780,7 @@
     ],
     "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -6747,6 +6854,7 @@
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -6796,7 +6904,8 @@
       }
     ],
     "collateral": "GBP share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "ggbr-goldfish-gold",
@@ -6842,7 +6951,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital"
+    "collateral": "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital",
+    "blacklistStatus": true
   },
   {
     "id": "gho-aave",
@@ -6937,6 +7047,7 @@
     ],
     "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "facilitator-bucket-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -7027,7 +7138,8 @@
       }
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "gldt-gold-dao",
@@ -7061,7 +7173,8 @@
       }
     ],
     "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "gldy-streamex",
@@ -7120,7 +7233,8 @@
       }
     ],
     "collateral": "Physical gold bullion backing with issuer-managed gold leasing through Monetary Metals; Streamex presents one GLDY as one troy ounce of gold exposure with yield paid in additional gold",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "gramg-token-teknoloji",
@@ -7176,6 +7290,7 @@
     ],
     "collateral": "One gram of physical gold per GRAMG, with Token Teknoloji proof pages listing Turkish bank custody at Kuveyt Türk, Ziraat Participation, and central-bank FATSI routes",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -7245,6 +7360,7 @@
     ],
     "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -7319,6 +7435,7 @@
     ],
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho vault on Morpho Blue; the curator allocates across conservative USDC lending markets backed by blue-chip crypto and real-world asset collateral",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -7393,6 +7510,7 @@
     ],
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho V2 vault on Morpho Blue; the curator allocates across permissioned USDC lending markets backed by blue-chip crypto and real-world asset collateral",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -7477,6 +7595,7 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -7565,6 +7684,7 @@
       }
     ],
     "collateral": "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -7634,6 +7754,7 @@
       }
     ],
     "collateral": "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -7692,7 +7813,8 @@
       "yieldSource": "70% of protocol borrow fees distributed to gynUSD Stability Pool depositors",
       "yieldType": "fee-sharing"
     },
-    "collateral": "cbBTC (Coinbase Wrapped Bitcoin); single-collateral CDPs on Base with 110% minimum collateralization ratio, ~90.91% max LTV"
+    "collateral": "cbBTC (Coinbase Wrapped Bitcoin); single-collateral CDPs on Base with 110% minimum collateralization ratio, ~90.91% max LTV",
+    "blacklistStatus": "possible"
   },
   {
     "id": "hbd-hive",
@@ -7719,7 +7841,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Hive protocol value and conversion rules between HBD and HIVE, including haircut logic when HBD debt exceeds protocol thresholds"
+    "collateral": "Hive protocol value and conversion rules between HBD and HIVE, including haircut logic when HBD debt exceeds protocol thresholds",
+    "blacklistStatus": true
   },
   {
     "id": "hbusdt-hyperbeat",
@@ -7807,6 +7930,7 @@
     ],
     "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -7850,7 +7974,8 @@
       }
     ],
     "collateral": "HBAR locked in overcollateralized HLiquity Troves on Hedera, with a 110% minimum collateral ratio and Stability Pool liquidations",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "hkd-hsbc",
@@ -7880,7 +8005,8 @@
         "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
       }
     ],
-    "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements"
+    "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+    "blacklistStatus": true
   },
   {
     "id": "hkdap-anchorpoint",
@@ -7917,7 +8043,8 @@
         "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
       }
     ],
-    "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements"
+    "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
+    "blacklistStatus": true
   },
   {
     "id": "hkdr-rd-technologies",
@@ -7995,7 +8122,8 @@
         "setOn": "2026-05-12"
       }
     ],
-    "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance"
+    "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
+    "blacklistStatus": true
   },
   {
     "id": "hlscope-hamilton-lane",
@@ -8032,6 +8160,7 @@
     ],
     "collateral": "Tokenized feeder exposure to Hamilton Lane Senior Credit Opportunities Fund (SCOPE), targeting floating-rate senior secured loans to private borrowers in sectors such as healthcare, information technology, and business services.",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -8072,7 +8201,8 @@
       }
     ],
     "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "hollar-hydrated",
@@ -8130,7 +8260,8 @@
       }
     ],
     "collateral": "Overcollateralized by DOT, ETH, vDOT, WBTC, tBTC, USDT, USDC, and giga-token variants (GIGADOT, GIGAETH) on the Hydration appchain; built on Aave v3-forked code",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "home-homecoin",
@@ -8184,7 +8315,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process"
+    "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
+    "blacklistStatus": "possible"
   },
   {
     "id": "honey-berachain",
@@ -8294,7 +8426,8 @@
       }
     ],
     "collateral": "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "hyusd-hylo",
@@ -8336,7 +8469,8 @@
       }
     ],
     "collateral": "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "iauon-ondo",
@@ -8368,7 +8502,8 @@
       }
     ],
     "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Gold Trust (IAU), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "idrt-rupiah-token",
@@ -8423,7 +8558,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Indonesian rupiah bank deposits held 1:1 by PT Rupiah Token Indonesia; issuer materials describe full fiat backing with regular bank reporting"
+    "collateral": "Indonesian rupiah bank deposits held 1:1 by PT Rupiah Token Indonesia; issuer materials describe full fiat backing with regular bank reporting",
+    "blacklistStatus": true
   },
   {
     "id": "idrx-idrx",
@@ -8457,7 +8593,8 @@
       }
     ],
     "collateral": "Indonesian rupiah (IDR) fiat reserves and government bonds held 1:1 by PT IDRX Indo Inovasi; CertiK-audited smart contracts with multisig + timelock controls",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "inalpha-nest",
@@ -8519,7 +8656,8 @@
         "risk": "low"
       }
     ],
-    "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token"
+    "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
+    "blacklistStatus": true
   },
   {
     "id": "isc-international-stable-currency",
@@ -8569,7 +8707,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)"
+    "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
+    "blacklistStatus": false
   },
   {
     "id": "ist-agoric",
@@ -8600,7 +8739,8 @@
       }
     ],
     "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "iusd-indigo-protocol",
@@ -8626,7 +8766,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Cardano collateralized debt positions in Indigo Protocol vaults"
+    "collateral": "Cardano collateralized debt positions in Indigo Protocol vaults",
+    "blacklistStatus": false
   },
   {
     "id": "iusd-infinifi",
@@ -8741,6 +8882,7 @@
     ],
     "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -8778,7 +8920,8 @@
       }
     ],
     "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "jaaa-janus-henderson-anemoy",
@@ -8847,7 +8990,8 @@
       }
     ],
     "collateral": "Actively managed AAA-rated CLO tranche portfolio selected by Janus Henderson and tokenized through Anemoy / Centrifuge fund rails.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "jpyc-jpyc-v1",
@@ -8892,7 +9036,8 @@
       }
     ],
     "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "jpyc-jpyc",
@@ -8939,6 +9084,7 @@
       }
     ],
     "collateral": "Japanese yen deposits and Japanese government bonds (100% backed)",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -9016,6 +9162,7 @@
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -9076,7 +9223,8 @@
         "sourceUrl": "https://coinpaper.com/16814/what-is-sbi-holdings-actually-building-with-ripple-xrp-and-rlusd-in-2026"
       }
     ],
-    "collateral": "Planned trust-bank JPY backing through Shinsei Trust & Banking under Japan's Type III Electronic Payment Instrument framework; public reserve composition and attestations are pending launch"
+    "collateral": "Planned trust-bank JPY backing through Shinsei Trust & Banking under Japan's Type III Electronic Payment Instrument framework; public reserve composition and attestations are pending launch",
+    "blacklistStatus": true
   },
   {
     "id": "jpyt-dephaser",
@@ -9104,6 +9252,7 @@
     ],
     "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -9182,7 +9331,8 @@
       }
     ],
     "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "jupusd-jupiter",
@@ -9242,7 +9392,8 @@
         "coinId": "usdc-circle"
       }
     ],
-    "collateral": "90% USDtb (BlackRock BUIDL tokenized U.S. Treasuries issued by Ethena under GENIUS-compliant framework, custodied by Porto/Anchorage Digital) and 10% USDC liquidity buffer"
+    "collateral": "90% USDtb (BlackRock BUIDL tokenized U.S. Treasuries issued by Ethena under GENIUS-compliant framework, custodied by Porto/Anchorage Digital) and 10% USDC liquidity buffer",
+    "blacklistStatus": true
   },
   {
     "id": "jusd-juicedollar",
@@ -9269,7 +9420,8 @@
       }
     ],
     "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions; user collateral is not rehypothecated. Protocol is forked from the d-EURO / Frankencoin architecture.",
-    "collateralQuality": "native"
+    "collateralQuality": "native",
+    "blacklistStatus": false
   },
   {
     "id": "jusd-jusd-stable-token",
@@ -9313,7 +9465,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials"
+    "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
+    "blacklistStatus": true
   },
   {
     "id": "kag-kinesis",
@@ -9368,7 +9521,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)"
+    "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
+    "blacklistStatus": true
   },
   {
     "id": "kau-kinesis",
@@ -9423,7 +9577,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)"
+    "collateral": "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
+    "blacklistStatus": true
   },
   {
     "id": "kesm-mento",
@@ -9481,6 +9636,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -9538,7 +9694,8 @@
       }
     ],
     "collateral": "Kyrgyz som fiat reserves and cash equivalents held in licensed banks and custodial institutions to back KGST 1:1 against the Kyrgyz som",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "klarnausd-klarna",
@@ -9594,7 +9751,8 @@
         "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
       }
     ],
-    "collateral": "Planned USD-denominated reserve assets managed through Bridge Open Issuance; public reserve composition and attestations are pending mainnet launch"
+    "collateral": "Planned USD-denominated reserve assets managed through Bridge Open Issuance; public reserve composition and attestations are pending mainnet launch",
+    "blacklistStatus": true
   },
   {
     "id": "krw-imbank",
@@ -9624,7 +9782,8 @@
         "sourceUrl": "https://www.prnewswire.com/news-releases/btq-technologies-qssn-selected-as-core-security-infrastructure-for-south-koreas-first-bank-led-krw-stablecoin-proof-of-concept-302763840.html"
       }
     ],
-    "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain"
+    "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain",
+    "blacklistStatus": true
   },
   {
     "id": "krw1-bdacs",
@@ -9690,7 +9849,8 @@
       }
     ],
     "collateral": "1:1 South Korean won held in escrow at Woori Bank with real-time banking-API proof of reserves",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "krwo-gimswap",
@@ -9718,6 +9878,7 @@
     ],
     "collateral": "Open Voucher (OV) KRW vouchers issued by Open Asset and represented on-chain as OV tokens used as collateral for KRWO issuance",
     "collateralQuality": "rwa",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -9779,7 +9940,8 @@
       }
     ],
     "collateral": "Mixed reserves transitioning from USDC-only toward a target mix dominated by short-term Korean Treasury Bonds. Current composition includes USDC (Circle), Frax frxUSD, and tokenized Korean Treasury Bonds issued via Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "lisusd-lista",
@@ -9917,6 +10079,7 @@
     ],
     "collateral": "BNB, ETH, and LSTs via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -9983,6 +10146,7 @@
       }
     ],
     "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -10049,6 +10213,7 @@
       }
     ],
     "collateral": "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
@@ -10094,7 +10259,8 @@
       }
     ],
     "collateral": "USDC and MON collateral supporting LeverUp's liquidity-layer stablecoin for perpetuals and margin trading",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "possible"
   },
   {
     "id": "m-m0",
@@ -10145,6 +10311,7 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -10202,7 +10369,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets"
+    "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets",
+    "blacklistStatus": true
   },
   {
     "id": "mapollo-midas",
@@ -10263,7 +10431,8 @@
       }
     ],
     "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "meusd-mezo",
@@ -10319,6 +10488,7 @@
     ],
     "collateral": "Bitcoin only; minimum 110% collateral ratio",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "bridge-or-oft-synthetic",
       "authorityPosture": "partially-bounded-admin",
@@ -10394,7 +10564,8 @@
       }
     ],
     "collateral": "Fasanara F-ONE strategy exposure through Midas tokenized certificate rails, including fintech receivables, SME lending, real-estate-backed credit, and digital-asset strategies.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "mglobal-midas-fasanara",
@@ -10432,7 +10603,8 @@
       }
     ],
     "collateral": "Fasanara Global strategy exposure through Midas tokenized certificate rails.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "mhyper-midas",
@@ -10493,7 +10665,8 @@
       }
     ],
     "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "mim-abracadabra",
@@ -10590,6 +10763,7 @@
     ],
     "collateral": "Interest-bearing tokens and crypto collateral deposited into active Abracadabra cauldrons, currently concentrated in yvDAI and WBTC with smaller yvWETH/WETH positions",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -10660,7 +10834,8 @@
       }
     ],
     "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "mmxn-moneta-digital",
@@ -10710,7 +10885,8 @@
       }
     ],
     "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "mnee-mnee",
@@ -10770,6 +10946,7 @@
       }
     ],
     "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian under the issuer's Antigua & Barbuda FSRC license",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -10830,7 +11007,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Overcollateralized loan collateral accepted by defi.money markets on supported networks, including assets such as WBTC and ETH rather than a fixed USDC reserve portfolio"
+    "collateral": "Overcollateralized loan collateral accepted by defi.money markets on supported networks, including assets such as WBTC and ETH rather than a fixed USDC reserve portfolio",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "moveusd-cfx",
@@ -10856,7 +11034,8 @@
       }
     ],
     "collateral": "U.S. dollar deposits held 1:1 in beneficiary accounts at participating FDIC-insured banks for approved CFX customers.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "mre7yield-midas",
@@ -10910,7 +11089,8 @@
       }
     ],
     "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "msusd-main-street",
@@ -10959,6 +11139,7 @@
     ],
     "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
     "collateralQuality": "rwa",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -11025,7 +11206,8 @@
       }
     ],
     "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75–85%",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "msy-main-street",
@@ -11086,6 +11268,7 @@
     ],
     "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -11170,7 +11353,8 @@
       }
     ],
     "collateral": "Short-duration U.S. Treasury Bills (maturity <3 months) via BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01); physical custody by Maerki Baumann & Co. AG (Switzerland); security ring-fencing by ATG Azimut Treuhandgesellschaft mbH; target return = 8-week U.S. T-Bill yield minus ~50 bps",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "musd-metamask",
@@ -11227,6 +11411,7 @@
       }
     ],
     "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -11277,7 +11462,8 @@
       }
     ],
     "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions; beginning April 8, 2026, MXNB is issued by Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "mxne-real-mxn",
@@ -11303,7 +11489,8 @@
         "coinId": "cetes-etherfuse"
       }
     ],
-    "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure"
+    "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
+    "blacklistStatus": true
   },
   {
     "id": "myrc-blox",
@@ -11338,7 +11525,8 @@
       }
     ],
     "collateral": "Malaysian Ringgit cash deposits held in a ring-fenced bank account at Maybank (Malayan Banking Berhad) under the custody and trustee services of Universal Trustee (Malaysia) Bhd (UTMB)",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "nbasis-nest",
@@ -11396,7 +11584,8 @@
       }
     ],
     "collateral": "Basis-trade strategy book combining tokenised T-bill collateral (Superstate USTB / USCC) on Plume with perpetual short positions; risk-managed and rebalanced by Nest",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "nect-beraborrow",
@@ -11603,7 +11792,8 @@
       }
     ],
     "collateral": "Berachain-native Collateral Vault branches: iBGT (Infrared liquid staked BGT), iBERA, WBERA, pumpBTC, solvBTC, solvBTC.bbn, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "nopal-nest",
@@ -11666,7 +11856,8 @@
       }
     ],
     "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "ntbill-nest",
@@ -11730,7 +11921,8 @@
       }
     ],
     "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Janus Henderson JTRSY and Superstate USTB positions, plus a small stablecoin liquidity buffer",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "nusd-neutrl",
@@ -11809,7 +12001,8 @@
       }
     ],
     "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "nusd-nexus",
@@ -11849,7 +12042,8 @@
       }
     ],
     "collateral": "Synapse stable-swap pool assets backed by DAI, USDC, and USDT liquidity across supported bridge deployments",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "nwisdom-nest",
@@ -11917,7 +12111,8 @@
       }
     ],
     "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "nxusd-nereus",
@@ -11960,7 +12155,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Overcollateralized Nereus Finance lending positions, primarily Avalanche ecosystem crypto collateral"
+    "collateral": "Overcollateralized Nereus Finance lending positions, primarily Avalanche ecosystem crypto collateral",
+    "blacklistStatus": false
   },
   {
     "id": "okrw-hashed",
@@ -11990,7 +12186,8 @@
         "sourceUrl": "https://www.benzinga.com/pressreleases/26/05/52366344/hashed-open-finance-launch-testnet-of-maroo-first-sovereign-l1-blockchain-for-krw-stablecoins-and-a"
       }
     ],
-    "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain"
+    "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain",
+    "blacklistStatus": true
   },
   {
     "id": "onyc-onre",
@@ -12041,7 +12238,8 @@
       }
     ],
     "collateral": "Tokenized exposure to OnRe-managed structured insurance and reinsurance yield products, designed to hold stable value while distributing real-world insurance-market returns through NAV appreciation",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "ousd-origin-protocol",
@@ -12111,7 +12309,8 @@
       }
     ],
     "collateral": "USDC deployed into DeFi strategies (Morpho, Curve)",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "ousg-ondo-finance",
@@ -12187,6 +12386,7 @@
     ],
     "collateral": "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -12235,7 +12435,8 @@
       }
     ],
     "collateral": "Bridge-managed reserve assets for Tempo pathUSD, including cash, short-dated Treasuries, overnight Treasury repo, and money-market-fund exposure",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "paxg-paxos",
@@ -12291,6 +12492,7 @@
       }
     ],
     "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -12331,7 +12533,8 @@
       }
     ],
     "collateral": "Senior secured term notes tied to a North American rent-financing platform and tokenized through Tradable private-credit issuance rails.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "pc0000033-tradable",
@@ -12358,7 +12561,8 @@
       }
     ],
     "collateral": "Senior secured term notes linked to an APAC diversified finance provider and tokenized through Tradable private-credit issuance rails.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "pc0000089-tradable",
@@ -12385,7 +12589,8 @@
       }
     ],
     "collateral": "Latin American residential-lending private-credit exposure tokenized as a Tradable private-credit instrument.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "pc0000101-tradable",
@@ -12412,7 +12617,8 @@
       }
     ],
     "collateral": "Post-settlement legal-financing receivables tokenized as a Tradable private-credit instrument.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "pgold-pleasing",
@@ -12466,7 +12672,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support"
+    "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
+    "blacklistStatus": true
   },
   {
     "id": "pgold-polaris",
@@ -12517,7 +12724,8 @@
       }
     ],
     "canBeBlacklisted": false,
-    "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian"
+    "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian",
+    "blacklistStatus": false
   },
   {
     "id": "phpm-mento",
@@ -12575,6 +12783,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -12636,6 +12845,7 @@
     ],
     "collateral": "MakerDAO-style CDP vaults using approved stablecoin collateral, with USDC/USDT described for the initial stage; APACX transparency currently lists apcxUSDT and planned apcxUSDC beta reserve wallets.",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -12676,7 +12886,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "TokenBlender (TB) base token held on-chain in RAAC's RWf(x) Treasury; TB is minted against I-ON Digital's ION.au token held in the TokenBlender contract, and ION.au represents a gold-backed digital security and in-situ gold claim"
+    "collateral": "TokenBlender (TB) base token held on-chain in RAAC's RWf(x) Treasury; TB is minted against I-ON Digital's ION.au token held in the TokenBlender contract, and ION.au represents a gold-backed digital security and in-situ gold claim",
+    "blacklistStatus": true
   },
   {
     "id": "pusd-plume",
@@ -12724,7 +12935,8 @@
         "depType": "collateral"
       }
     ],
-    "collateral": "1:1 backed by USDC and USDT deposited into a Nucleus BoringVault; USD1 and AUSD also approved as collateral"
+    "collateral": "1:1 backed by USDC and USDT deposited into a Nucleus BoringVault; USD1 and AUSD also approved as collateral",
+    "blacklistStatus": true
   },
   {
     "id": "pusd-polaris",
@@ -12768,7 +12980,8 @@
       }
     ],
     "canBeBlacklisted": false,
-    "collateral": "pETH / ETH-derived collateral posted in Polaris CDPs, with protocol revenue and liquidation flows routed to pUSD Stability Pool participants rather than offchain reserve yield"
+    "collateral": "pETH / ETH-derived collateral posted in Polaris CDPs, with protocol revenue and liquidation flows routed to pUSD Stability Pool participants rather than offchain reserve yield",
+    "blacklistStatus": false
   },
   {
     "id": "pusd-polymarket",
@@ -12814,7 +13027,8 @@
         "blacklistable": true
       }
     ],
-    "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances"
+    "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
+    "blacklistStatus": "possible"
   },
   {
     "id": "pyusd-paypal",
@@ -12875,6 +13089,7 @@
       }
     ],
     "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -12955,7 +13170,8 @@
       }
     ],
     "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "reur-royal-euro",
@@ -13010,7 +13226,8 @@
       }
     ],
     "collateral": "Euro cash reserves held through top-tier international banks to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "reusd-re-protocol",
@@ -13083,6 +13300,7 @@
     ],
     "collateral": "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "bounded-admin",
@@ -13213,6 +13431,7 @@
     ],
     "collateral": "crvUSD and frxUSD lending vault tokens from Curve Lend and Fraxlend",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -13280,7 +13499,8 @@
         "sourceUrl": "https://invezz.com/news/2026/05/19/bank-of-england-weighs-stablecoin-guardrail-alternatives-ahead-of-draft-rules/"
       }
     ],
-    "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal"
+    "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
+    "blacklistStatus": true
   },
   {
     "id": "rlusd-ripple",
@@ -13341,6 +13561,7 @@
       }
     ],
     "collateral": "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -13400,7 +13621,8 @@
         "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
       }
     ],
-    "collateral": "Planned Bank of North Dakota / Fiserv reserve backing with deposits and U.S. Treasury notes with maturities no longer than 93 days, maintained 1:1 with the stablecoin during the bank-to-bank beta"
+    "collateral": "Planned Bank of North Dakota / Fiserv reserve backing with deposits and U.S. Treasury notes with maturities no longer than 93 days, maintained 1:1 with the stablecoin during the bank-to-bank beta",
+    "blacklistStatus": true
   },
   {
     "id": "rusd-reservoir",
@@ -13494,6 +13716,7 @@
     ],
     "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -13551,7 +13774,8 @@
         "sourceUrl": "https://paymentexpert.com/2026/02/26/fca-revolut-stablecoin-payment-test/"
       }
     ],
-    "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced."
+    "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced.",
+    "blacklistStatus": true
   },
   {
     "id": "rusd-royal-dollar",
@@ -13595,7 +13819,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials"
+    "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
+    "blacklistStatus": "possible"
   },
   {
     "id": "rwausdi-multipli",
@@ -13653,7 +13878,8 @@
       }
     ],
     "collateral": "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "safo-spiko-usd",
@@ -13692,7 +13918,8 @@
       }
     ],
     "collateral": "USD share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "said-gaib",
@@ -13754,6 +13981,7 @@
     ],
     "collateral": "AID staked into GAIB's ERC-4626 sAID vault, representing a NAV share of AI infrastructure financing positions plus stable reserve buffers",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -13823,7 +14051,8 @@
       }
     ],
     "collateral": "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "savusd-avant",
@@ -13886,7 +14115,8 @@
       }
     ],
     "collateral": "avUSD staked into Avant's savings vault, with yield sourced from Avant's actively managed market-neutral and DeFi strategy framework",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "sbc-brale",
@@ -13942,7 +14172,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions"
+    "collateral": "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions",
+    "blacklistStatus": true
   },
   {
     "id": "sbold-k3-capital",
@@ -14007,6 +14238,7 @@
     ],
     "collateral": "BOLD deposited into K3's ERC-4626 sBOLD vault and allocated across Liquity V2 Stability Pools to earn interest and liquidation gains",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "none-resolved",
@@ -14077,6 +14309,7 @@
     ],
     "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -14123,7 +14356,8 @@
       }
     ],
     "collateral": "Stablecoin deposits routed through Rings/Veda BoringVault infrastructure into curated DeFi strategies; supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "sdai-sky",
@@ -14184,6 +14418,7 @@
     ],
     "collateral": "DAI deposited into the sDAI savings vault; the wrapper remains fully backed by DAI while the exchange rate compounds with the Dai Savings Rate",
     "collateralQuality": "rwa",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -14229,6 +14464,7 @@
     ],
     "collateral": "DOLA deposited into Inverse Finance's ERC-4626 sDOLA wrapper around the DOLA Savings Account; DOLA remains in the smart contract while FiRM DBR revenue is auctioned into DOLA and distributed through the exchange rate",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "unbounded-or-compromised",
@@ -14271,7 +14507,8 @@
       }
     ],
     "collateral": "dUSD deposited into dTRINITY dSTAKE vaults and supplied into dLEND; deployments are chain-isolated and non-fungible across networks.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "sfrxusd-frax",
@@ -14333,6 +14570,7 @@
     ],
     "collateral": "frxUSD deposited into Frax's savings vault; the wrapper remains fully backed by frxUSD while protocol income and custodian yield accrue through the vault exchange rate",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -14406,6 +14644,7 @@
     ],
     "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
     "collateralQuality": "native",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -14456,7 +14695,8 @@
       }
     ],
     "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "slvon-ondo",
@@ -14488,7 +14728,8 @@
       }
     ],
     "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Silver Trust (SLV), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "sofid-sofi",
@@ -14554,7 +14795,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders"
+    "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
+    "blacklistStatus": "possible"
   },
   {
     "id": "spkcc-spiko",
@@ -14599,6 +14841,7 @@
     ],
     "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -14656,7 +14899,8 @@
         "depType": "collateral"
       }
     ],
-    "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position"
+    "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "srusd-reservoir",
@@ -14720,6 +14964,7 @@
     ],
     "collateral": "Yield-bearing Reservoir savings token backed by the Reservoir balance sheet: stablecoin PSM liquidity, RWA allocations, Morpho/Euler lending vaults, and governance-approved credit strategies monitored through Reservoir's on-chain proof-of-reserves endpoint",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -14796,6 +15041,7 @@
     ],
     "collateral": "Senior tranche token over a Strata risk-tranched USDe yield strategy; junior tranche capital absorbs first-loss or underperformance before senior holders",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "unbounded-or-compromised",
@@ -14844,6 +15090,7 @@
     ],
     "collateral": "Tokenized fund shares in Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, with BNY as custodian and BNY Investments as sub-advisor.",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -14918,6 +15165,7 @@
     ],
     "collateral": "ERC-4626 staked cUSD shares backed by Cap's reserve basket and operator-lending framework; yield comes from reserve yield and overcollateralized operator borrowing",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -14988,6 +15236,7 @@
     ],
     "collateral": "USDC deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -15059,6 +15308,7 @@
     ],
     "collateral": "USDT deposited into a Steakhouse-curated Morpho vault that allocates across Morpho lending markets backed by blue-chip crypto and real-world asset collateral",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -15127,6 +15377,7 @@
     ],
     "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -15170,7 +15421,8 @@
       }
     ],
     "collateral": "USDC and yield-bearing USDC positions routed through StoneYield's protocol contracts and Venus-linked strategy layer",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "possible"
   },
   {
     "id": "stusds-sky",
@@ -15229,6 +15481,7 @@
     ],
     "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
     "collateralQuality": "exotic",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -15265,7 +15518,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Ethena whitelabel synthetic-dollar backing using digital-asset collateral and short futures exposure for the Sui deployment"
+    "collateral": "Ethena whitelabel synthetic-dollar backing using digital-asset collateral and short futures exposure for the Sui deployment",
+    "blacklistStatus": true
   },
   {
     "id": "susd-hedgecore",
@@ -15316,7 +15570,8 @@
       }
     ],
     "collateral": "USDC deposited into HedgeCore and routed through Venus Protocol yield strategies on BSC",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "possible"
   },
   {
     "id": "susd-solayer",
@@ -15363,6 +15618,7 @@
     ],
     "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -15418,7 +15674,8 @@
       }
     ],
     "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "susd1plus-lorenzo",
@@ -15472,6 +15729,7 @@
     ],
     "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -15551,7 +15809,8 @@
       }
     ],
     "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "susdc-spark",
@@ -15611,6 +15870,7 @@
     ],
     "collateral": "USDC deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDC-denominated yield",
     "collateralQuality": "native",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -15684,6 +15944,7 @@
     ],
     "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "unbounded-or-compromised",
@@ -15759,6 +16020,7 @@
     ],
     "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "unbounded-or-compromised",
@@ -15834,6 +16096,7 @@
     ],
     "collateral": "USDS deposited into Sky's ERC-4626 savings vault; the wrapper remains fully backed by USDS while the exchange rate compounds with the Sky Savings Rate",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -15907,6 +16170,7 @@
     ],
     "collateral": "USDT deposited into Spark's ERC-4626 savings vault V2, routed through Sky's PSM and savings rate to generate USDT-denominated yield",
     "collateralQuality": "native",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -15989,6 +16253,7 @@
     ],
     "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
     "collateralQuality": "exotic",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -16070,7 +16335,8 @@
       }
     ],
     "collateral": "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "syrupusdt-maple",
@@ -16138,7 +16404,8 @@
       }
     ],
     "collateral": "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "syusd-aegis",
@@ -16199,6 +16466,7 @@
     ],
     "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -16279,7 +16547,8 @@
       }
     ],
     "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "tbill-openeden",
@@ -16348,7 +16617,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Short-term U.S. Treasury bills (weighted-average maturity <3 months) managed by BNY Investment Management, custodied by BNY; small USD cash buffer"
+    "collateral": "Short-term U.S. Treasury bills (weighted-average maturity <3 months) managed by BNY Investment Management, custodied by BNY; small USD cash buffer",
+    "blacklistStatus": true
   },
   {
     "id": "tgbp-tokenised",
@@ -16394,7 +16664,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "GBP reserves held in regulated financial institutions and/or backed by short-term UK government paper."
+    "collateral": "GBP reserves held in regulated financial institutions and/or backed by short-term UK government paper.",
+    "blacklistStatus": true
   },
   {
     "id": "thbill-theo",
@@ -16446,7 +16717,8 @@
       }
     ],
     "collateral": "Basket of institutional-grade tokenized U.S. Treasury bills; currently 100% tULTRA, a wrapped representation of Standard Chartered Libeara's ULTRA fund (Delta Wellington Ultra Short Treasury On-Chain Fund), managed by Wellington Management, custodied by Standard Chartered, fund administration by FundBridge Capital",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "trusd-tori",
@@ -16507,7 +16779,8 @@
       "cadence": "real-time"
     },
     "collateral": "Delta-neutral trading positions across global markets: hedged money markets, futures arbitrage, calendar spreads, and options strategies; all positions backed by USDC and USDT deposits with real-time verification via Accountable DVN",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "tryb-bilira",
@@ -16561,7 +16834,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Turkish lira cash reserves held 1:1 by BiLira; issuer materials describe full fiat backing for minted TRYB across supported chains"
+    "collateral": "Turkish lira cash reserves held 1:1 by BiLira; issuer materials describe full fiat backing for minted TRYB across supported chains",
+    "blacklistStatus": true
   },
   {
     "id": "tusd-trueusd",
@@ -16630,6 +16904,7 @@
       }
     ],
     "collateral": "Daily Moore Hong Kong / Chainlink-attested TUSD reserves, currently modeled by Pharos as concentrated in opaque First Digital Trust fund investments with a small cash-at-depository-institutions balance.",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -16693,6 +16968,7 @@
       }
     ],
     "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -16748,6 +17024,7 @@
     ],
     "collateral": "GBP-denominated UK Treasury bill money-market exposure administered through Spiko fund rails.",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -16822,6 +17099,7 @@
       }
     ],
     "collateral": "Cash and reverse repurchase agreements collateralized by U.S. Treasuries, held for USAT reserves under Anchorage Digital Bank issuance.",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -16920,7 +17198,8 @@
       }
     ],
     "collateral": "Bitcoin liquid staking/restaking derivatives and other approved BTC wrappers deposited into BIMA vaults; the Peg Stability Module can also hold approved stablecoins such as USDC, USDP, and GUSD for peg operations",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usd-nubank",
@@ -16949,7 +17228,8 @@
         "sourceUrl": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions"
       }
     ],
-    "collateral": "Pre-launch: backing not disclosed. Nubank vice-chair Roberto Campos Neto announced a USD-pegged stablecoin pilot at Meridian 2025, framed inside a broader plan to tokenize deposits and issue credit against tokenized assets. Whether Nubank issues its own dollar token or routes through an existing stablecoin (USDC/PYUSD/other) is undecided."
+    "collateral": "Pre-launch: backing not disclosed. Nubank vice-chair Roberto Campos Neto announced a USD-pegged stablecoin pilot at Meridian 2025, framed inside a broader plan to tokenize deposits and issue credit against tokenized assets. Whether Nubank issues its own dollar token or routes through an existing stablecoin (USDC/PYUSD/other) is undecided.",
+    "blacklistStatus": true
   },
   {
     "id": "usd0-usual",
@@ -17052,6 +17332,7 @@
       }
     ],
     "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -17126,6 +17407,7 @@
       }
     ],
     "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -17255,7 +17537,8 @@
         "blacklistable": true
       }
     ],
-    "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure"
+    "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usda-alpha-partner",
@@ -17298,7 +17581,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Alpha Partners protocol collateral and managed liquidity reserves on BSC"
+    "collateral": "Alpha Partners protocol collateral and managed liquidity reserves on BSC",
+    "blacklistStatus": true
   },
   {
     "id": "usda-anzens",
@@ -17328,7 +17612,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)"
+    "collateral": "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
+    "blacklistStatus": true
   },
   {
     "id": "usda-avalon",
@@ -17367,6 +17652,7 @@
     ],
     "collateral": "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -17462,7 +17748,8 @@
       }
     ],
     "collateral": "wBTC, tBTC, sUSDS, sfrxUSD, scrvUSD, and ysyBOLD in immutable overcollateralized CDP markets on Ethereum",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdai-usd-ai",
@@ -17511,7 +17798,8 @@
         "risk": "low"
       }
     ],
-    "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai."
+    "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai.",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdat-saturn",
@@ -17565,6 +17853,7 @@
     ],
     "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -17634,7 +17923,8 @@
       }
     ],
     "collateral": "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdb-bridge",
@@ -17684,7 +17974,8 @@
         "sourceUrl": "https://thedefiant.io/news/tradfi-and-fintech/visa-and-stripe-owned-bridge-roll-out-stablecoin-linked-cards-to-100-countries"
       }
     ],
-    "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter"
+    "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter",
+    "blacklistStatus": true
   },
   {
     "id": "usdc-circle",
@@ -17765,6 +18056,7 @@
       }
     ],
     "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -17848,7 +18140,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "U.S. dollar cash deposits and high-quality liquid assets held 1:1 in segregated accounts at Bank of New York Mellon (BNY), managed by independent fiduciaries and bankruptcy-remote from SG-FORGE; daily public disclosure of reserve composition"
+    "collateral": "U.S. dollar cash deposits and high-quality liquid assets held 1:1 in segregated accounts at Bank of New York Mellon (BNY), managed by independent fiduciaries and bankruptcy-remote from SG-FORGE; daily public disclosure of reserve composition",
+    "blacklistStatus": true
   },
   {
     "id": "usdcx-movement",
@@ -17876,7 +18169,8 @@
       }
     ],
     "collateral": "1:1 USDC held in a Circle-deployed xReserve smart contract; the underlying reserve is Circle USDC, whose backing is short-duration U.S. Treasuries and cash held by regulated custodians.",
-    "collateralQuality": "native"
+    "collateralQuality": "native",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdd-tron-dao-reserve",
@@ -17948,6 +18242,7 @@
     ],
     "collateral": "Current reserves are split across Smart Allocator stablecoin deployments, TRX and sTRX CDP vault collateral, and USDT held in PSM/direct vaults; Bitcoin was removed from reserves in August 2024",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -18023,6 +18318,7 @@
     ],
     "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -18075,6 +18371,7 @@
     ],
     "collateral": "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -18159,6 +18456,7 @@
     ],
     "collateral": "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -18198,7 +18496,8 @@
         "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
       }
     ],
-    "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure"
+    "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdg-paxos",
@@ -18277,6 +18576,7 @@
       }
     ],
     "collateral": "U.S. dollar deposits, short-duration U.S. government securities, and other high-quality liquid assets held in segregated custodial accounts at DBS Bank and Standard Chartered",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -18352,7 +18652,8 @@
       }
     ],
     "collateral": "Cash, cash equivalents, and U.S. government-backed debt held by Brale in segregated, unencumbered accounts",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "usdgo-osl",
@@ -18411,6 +18712,7 @@
       }
     ],
     "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -18453,7 +18755,8 @@
       }
     ],
     "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; collateral custodied through institutional off-exchange settlement providers",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "usdh-hubble",
@@ -18480,7 +18783,8 @@
       }
     ],
     "collateral": "Overcollateralized basket of Solana-native crypto assets (SOL, mSOL, BTC, ETH, and other Hubble-whitelisted tokens) deposited into Hubble Protocol CDP vaults at a minimum 150% collateralization ratio",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "usdh-native-markets",
@@ -18560,7 +18864,8 @@
         "coinId": "ustb-superstate"
       }
     ],
-    "collateral": "Cash, short-term U.S. Treasuries, repo agreements, treasury-focused funds (e.g., BlackRock TTTXX), and tokenized treasury products (e.g., BlackRock BUIDL, Superstate USTB); cash custodied at US-regulated banks, TradFi assets custodied at JP Morgan Chase; on-chain reserves managed by Superstate and custodied in Bridge's MPC infrastructure via Fireblocks; designed by Native Markets, issued by Bridge Building Inc (a Stripe company)"
+    "collateral": "Cash, short-term U.S. Treasuries, repo agreements, treasury-focused funds (e.g., BlackRock TTTXX), and tokenized treasury products (e.g., BlackRock BUIDL, Superstate USTB); cash custodied at US-regulated banks, TradFi assets custodied at JP Morgan Chase; on-chain reserves managed by Superstate and custodied in Bridge's MPC infrastructure via Fireblocks; designed by Native Markets, issued by Bridge Building Inc (a Stripe company)",
+    "blacklistStatus": true
   },
   {
     "id": "usdk-kast",
@@ -18613,6 +18918,7 @@
     ],
     "collateral": "Short-term U.S. Treasury bills held via M0 Protocol's permissioned Minter infrastructure in bankruptcy-remote SPVs; collateral sufficiency cryptographically attested on-chain by independent M0 Validators before USDK mints are authorized. Yield generated by the underlying M token is retained by KAST as fee revenue rather than passed to USDK holders (a separate token, USDKy, exists for yield-seeking users)",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -18746,7 +19052,8 @@
       }
     ],
     "collateral": "WETH, weETH, rswETH, and swETH in overcollateralized Liquity v2-style CDP markets on Swellchain; the configured SWELL branch is currently shut down in live on-chain telemetry",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "usdkg-gold-dollar",
@@ -18779,7 +19086,8 @@
       }
     ],
     "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "usdm-mega",
@@ -18837,7 +19145,8 @@
         "coinId": "usdt-tether"
       }
     ],
-    "collateral": "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions"
+    "collateral": "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdm-moneta",
@@ -18891,7 +19200,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts"
+    "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
+    "blacklistStatus": true
   },
   {
     "id": "usdn-noble",
@@ -18949,6 +19259,7 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -19030,6 +19341,7 @@
     ],
     "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
     "collateralQuality": "eth-lst",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -19097,6 +19409,7 @@
     ],
     "collateral": "Backed 1:1 by $M (M0 Protocol's tokenized short-term U.S. Treasury bill exposure, sourced from the M0 Minter MXON). USDnr is a permissioned wrapper minted by Nerona Labs against $M held in M0-managed reserves, with a Stability Reserve buffer maintained on top of circulating supply",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -19182,6 +19495,7 @@
       }
     ],
     "collateral": "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -19255,7 +19569,8 @@
       }
     ],
     "collateral": "U.S. dollar cash or cash equivalents held in Ondo Global Markets brokerage accounts at regulated U.S. custodial broker-dealers",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "usdp-parallel",
@@ -19324,7 +19639,8 @@
       }
     ],
     "collateral": "Overcollateralized basket of correlated USD stablecoins and yield-bearing wrappers routed through the Parallelizer Module: frxUSD, sfrxUSD, USDe, sUSDe on Ethereum; USDS, sUSDS on Base; USDe, sUSDe on HyperEVM; USDC and ygamiUSDC on Avalanche. Composition and exposure limits set by sPRL holders via DAO vote.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdp-paxos",
@@ -19386,6 +19702,7 @@
       }
     ],
     "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -19485,7 +19802,8 @@
         "setOn": "2026-05-03"
       }
     ],
-    "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents"
+    "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
+    "blacklistStatus": true
   },
   {
     "id": "usdq-quantoz",
@@ -19561,6 +19879,7 @@
       }
     ],
     "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -19689,7 +20008,8 @@
       }
     ],
     "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "usdr-ring",
@@ -19732,7 +20052,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system"
+    "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
+    "blacklistStatus": true
   },
   {
     "id": "usdr-stablr",
@@ -19803,7 +20124,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Cash and short-term government bonds held with regulated European financial institutions"
+    "collateral": "Cash and short-term government bonds held with regulated European financial institutions",
+    "blacklistStatus": true
   },
   {
     "id": "usdrif-rif",
@@ -19830,7 +20152,8 @@
       }
     ],
     "collateral": "RIF tokens locked in the RIF On Chain protocol on Rootstock",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "usds-sky",
@@ -19904,6 +20227,7 @@
     ],
     "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -19971,6 +20295,7 @@
     ],
     "collateral": "Short-term U.S. Treasury bills held in bankruptcy-remote SPVs via M0 Protocol's permissioned Minter infrastructure; M0 Validators independently attest collateral sufficiency on-chain before minting",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -20019,7 +20344,8 @@
       }
     ],
     "collateral": "Bridge Open Issuance USD reserves backed at least 1:1 by equivalent fiat value, including short-dated U.S. Treasuries, overnight Treasury repos, government money-market funds, and cash in segregated bankruptcy-remote accounts",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "usdt-tether",
@@ -20100,6 +20426,7 @@
     ],
     "collateral": "Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -20165,6 +20492,7 @@
       }
     ],
     "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash or cash-equivalent redemption reserves; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
@@ -20247,6 +20575,7 @@
     ],
     "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -20292,7 +20621,8 @@
       }
     ],
     "collateral": "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdv-solomon",
@@ -20340,7 +20670,8 @@
       }
     ],
     "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdx-hex-trust",
@@ -20392,6 +20723,7 @@
       }
     ],
     "collateral": "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -20435,7 +20767,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token"
+    "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdxl-last",
@@ -20478,7 +20811,8 @@
       }
     ],
     "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "usdy-ondo-finance",
@@ -20553,6 +20887,7 @@
       }
     ],
     "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -20622,7 +20957,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "Primarily diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT) underwritten by Percent (U.S.-licensed broker-dealer), alongside a Superstate USTB/USCC tokenized-Treasury sleeve and a cash buffer"
+    "collateral": "Primarily diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT) underwritten by Percent (U.S.-licensed broker-dealer), alongside a Superstate USTB/USCC tokenized-Treasury sleeve and a cash buffer",
+    "blacklistStatus": true
   },
   {
     "id": "usg-tangent",
@@ -20686,6 +21022,7 @@
       }
     ],
     "collateral": "Over-collateralized productive DeFi collateral, including Curve Finance LP tokens, Pendle PTs, and other yield-bearing or LP positions from protocols such as Curve, Convex, Stake DAO, and Spectra.",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -20787,6 +21124,7 @@
     ],
     "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
     "collateralQuality": "exotic",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -20851,7 +21189,8 @@
       }
     ],
     "collateral": "tBTC, WETH, wstETH, rETH, rsETH, weETH, ARB, and COMP in immutable overcollateralized CDP markets on Arbitrum",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": false
   },
   {
     "id": "usp-pareto-credit",
@@ -20913,6 +21252,7 @@
     ],
     "collateral": "USDC and USDS collateral deployed into Pareto credit vaults (private-credit lending pools), liquid buffers, and a stability fund",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -20974,6 +21314,7 @@
     ],
     "collateral": "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",
     "collateralQuality": "exotic",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -21041,7 +21382,8 @@
       }
     ],
     "collateral": "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "ussd-sonic-labs",
@@ -21104,7 +21446,8 @@
       }
     ],
     "collateral": "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "ustb-superstate",
@@ -21169,6 +21512,7 @@
     ],
     "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -21253,6 +21597,7 @@
     ],
     "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -21310,6 +21655,7 @@
       }
     ],
     "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -21377,6 +21723,7 @@
     ],
     "collateral": "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -21451,6 +21798,7 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held for Circle USYC / Hashnote fund shares in segregated brokerage and custody accounts.",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -21544,7 +21892,8 @@
       }
     ],
     "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "possible"
   },
   {
     "id": "uusd-anything-labs",
@@ -21587,7 +21936,8 @@
         "risk": "high"
       }
     ],
-    "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol"
+    "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "uusd-youves",
@@ -21629,7 +21979,8 @@
       }
     ],
     "collateral": "Overcollateralized by XTZ, tzBTC, USDt, or SIRS (tez/tzBTC LP); target ratios vary by collateral (200% for XTZ, 115% for stablecoins); 300% applied only to legacy v1/v2 vaults",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "vbill-vaneck",
@@ -21700,6 +22051,7 @@
     ],
     "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -21785,6 +22137,7 @@
       }
     ],
     "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -21847,6 +22200,7 @@
     ],
     "collateral": "Hemi-based credit and crypto collateral backing vCRED",
     "collateralQuality": "exotic",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -21928,6 +22282,7 @@
       }
     ],
     "collateral": "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -22012,7 +22367,8 @@
         "risk": "very-low"
       }
     ],
-    "collateral": "GBP deposits held in bank accounts in Switzerland and Liechtenstein, confirmed 1:1 by Areva General Auditing and Trust Company Limited (December 2024)"
+    "collateral": "GBP deposits held in bank accounts in Switzerland and Liechtenstein, confirmed 1:1 by Areva General Auditing and Trust Company Limited (December 2024)",
+    "blacklistStatus": true
   },
   {
     "id": "vndc-jade-labs",
@@ -22064,7 +22420,8 @@
       }
     ],
     "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "vnxau-vnx",
@@ -22138,6 +22495,7 @@
     ],
     "collateral": "Allocated physical gold bars stored in Liechtenstein vaults, with VNX materials describing token-holder ownership and segregated custody",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -22178,7 +22536,8 @@
       }
     ],
     "collateral": "Overcollateralized IOTA and stIOTA positions backing VUSD debt inside the Virtue Money protocol",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "possible"
   },
   {
     "id": "wars-argentine-peso",
@@ -22235,6 +22594,7 @@
     ],
     "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22280,6 +22640,7 @@
     ],
     "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22321,6 +22682,7 @@
     ],
     "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22374,6 +22736,7 @@
     ],
     "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22417,7 +22780,8 @@
         "risk": "low"
       }
     ],
-    "collateral": "USDC and fiat reserve assets held for WEMIX Dollar on WEMIX3.0; issuer materials describe full collateralization by secure on-chain and off-chain assets."
+    "collateral": "USDC and fiat reserve assets held for WEMIX Dollar on WEMIX3.0; issuer materials describe full collateralization by secure on-chain and off-chain assets.",
+    "blacklistStatus": true
   },
   {
     "id": "weusd-picwe",
@@ -22445,7 +22809,8 @@
       }
     ],
     "collateral": "100% USDT-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "witry-brix",
@@ -22492,7 +22857,8 @@
       }
     ],
     "collateral": "iTRY deposited into the Brix staking wrapper, backed by a BVI-regulated Turkish-lira money-market fund and related TRY cash/liquidity instruments",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": true
   },
   {
     "id": "wm-m0",
@@ -22548,6 +22914,7 @@
     ],
     "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -22601,6 +22968,7 @@
     ],
     "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22646,6 +23014,7 @@
     ],
     "collateral": "Peruvian-sol cash and liquid local-currency instruments backing Ripio wPEN at a one Peruvian sol target",
     "collateralQuality": "rwa",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22753,6 +23122,7 @@
     ],
     "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -22838,6 +23208,7 @@
     ],
     "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22905,6 +23276,7 @@
     ],
     "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -22983,6 +23355,7 @@
     ],
     "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -23048,6 +23421,7 @@
     ],
     "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -23113,6 +23487,7 @@
       }
     ],
     "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -23183,6 +23558,7 @@
       }
     ],
     "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -23226,6 +23602,7 @@
       }
     ],
     "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
@@ -23275,7 +23652,8 @@
       }
     ],
     "collateral": "Reserve basket of dollar stablecoins used by Metal Dollar, including USDC, PYUSD, and Paxos-dollar components such as USDP / XPAX",
-    "collateralQuality": "rwa"
+    "collateralQuality": "rwa",
+    "blacklistStatus": "possible"
   },
   {
     "id": "xnk-kinka",
@@ -23332,6 +23710,7 @@
     ],
     "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -23404,6 +23783,7 @@
     ],
     "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -23455,6 +23835,7 @@
     ],
     "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -23532,6 +23913,7 @@
     ],
     "collateral": "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -23575,7 +23957,8 @@
         "risk": "very-high"
       }
     ],
-    "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited"
+    "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
+    "blacklistStatus": true
   },
   {
     "id": "xusd-babelfish",
@@ -23719,7 +24102,8 @@
       }
     ],
     "collateral": "Rootstock basket of accepted stablecoins, dominated by DLLR with bridged USDT, USDC, DAI variants, and small DOC exposure",
-    "collateralQuality": "alt-lst-bridged-or-mixed"
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "xusd-straitsx",
@@ -23781,6 +24165,7 @@
     ],
     "collateral": "Cash, cash equivalents, and short-term U.S. government securities held at regulated financial institutions (DBS, Standard Chartered, UOB), segregated from corporate assets in custody accounts maintained with MAS-licensed custodians",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -23862,6 +24247,7 @@
     ],
     "collateral": "BOLD deposited into Yearn's tokenized Liquity V2 Stability Pool strategy, allocated across Liquity V2 Stability Pools to earn liquidation fees and protocol interest",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "none-resolved",
@@ -23936,6 +24322,7 @@
     ],
     "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodian UMB Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -24047,7 +24434,8 @@
       }
     ],
     "collateral": "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "yusd-aegis",
@@ -24120,6 +24508,7 @@
     ],
     "collateral": "Bitcoin held in institutional custody (Fireblocks, Copper, CEFFU); delta-neutral hedge via COIN-M perpetual futures; funded by user deposits of USDT, USDC, or DAI converted to BTC",
     "collateralQuality": "exotic",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -24195,6 +24584,7 @@
     ],
     "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
     "collateralQuality": "exotic",
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -24265,6 +24655,7 @@
     ],
     "collateral": "USDC allocated by Yearn v3 strategy allocator across whitelisted yield strategies (Aave, Compound, Morpho, Sky and similar protocols) selected by Yearn governance",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -24461,7 +24852,8 @@
       }
     ],
     "collateral": "Overcollateralized by diversified on-chain DeFi yield strategies (leveraged loops, Pendle liquidity, Euler lending markets) deployed on Plasma chain; backed by >$1 in on-chain assets per yzUSD",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": "inherited"
   },
   {
     "id": "zarm-mento",
@@ -24519,6 +24911,7 @@
     ],
     "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -24589,6 +24982,7 @@
     ],
     "collateral": "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
     "collateralQuality": "rwa",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "partially-bounded-admin",
@@ -24691,6 +25085,7 @@
     ],
     "collateral": "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "bounded-admin",
@@ -24755,6 +25150,7 @@
       }
     ],
     "collateral": "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -24793,7 +25189,8 @@
       }
     ],
     "collateral": "Collateralized assets held within the Goal3 sportsbook on ZKsync Era; backing is asserted as algorithmically over-collateralized and provable on-chain, but the exact composition of accepted collateral is not publicly itemized.",
-    "collateralQuality": "exotic"
+    "collateralQuality": "exotic",
+    "blacklistStatus": true
   },
   {
     "id": "zsd-zephyr-protocol",
@@ -24844,6 +25241,7 @@
     ],
     "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
     "collateralQuality": "exotic",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
@@ -24895,6 +25293,7 @@
     ],
     "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
     "collateralQuality": "exotic",
+    "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "none-resolved",

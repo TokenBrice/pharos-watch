@@ -36,6 +36,7 @@ const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
+const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 
 /**
@@ -105,11 +106,28 @@ export function projectCoin(coin, clientFields) {
       slim[field] = coin[field];
     }
   }
+  const blacklistStatus = projectBlacklistStatus(coin);
+  if (blacklistStatus !== undefined) {
+    slim[BLACKLIST_STATUS_FIELD] = blacklistStatus;
+  }
   const mintAuthoritySummary = projectMintAuthoritySummary(coin);
   if (mintAuthoritySummary) {
     slim[MINT_AUTHORITY_SUMMARY_FIELD] = mintAuthoritySummary;
   }
   return slim;
+}
+
+export function projectBlacklistStatus(coin) {
+  const reviewedStatus = coin?.blacklistabilityReview?.reviewedStatus;
+  if (
+    typeof reviewedStatus === "boolean"
+    || reviewedStatus === "possible"
+    || reviewedStatus === "inherited"
+  ) {
+    return reviewedStatus;
+  }
+
+  return undefined;
 }
 
 function isPlainObject(value) {

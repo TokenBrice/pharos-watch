@@ -10,7 +10,9 @@ function isRecord(value: unknown): value is UnknownRecord {
 }
 
 function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function numberValue(value: unknown): number | null {

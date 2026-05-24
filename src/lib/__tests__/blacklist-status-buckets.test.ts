@@ -20,19 +20,15 @@ const { TRACKED_STATUS_BY_ID } = vi.hoisted(() => ({
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
   CLIENT_ACTIVE_STABLECOINS: [{ id: "usdt-tether" }, { id: "usdp-parallel" }, { id: "lusd-liquity" }],
   CLIENT_TRACKED_META_BY_ID: new Map([
-    ["usdt-tether", {}],
-    ["usdp-parallel", {}],
-    ["lusd-liquity", {}],
-    ["usdn-smardex", {}],
+    ["usdt-tether", { blacklistStatus: TRACKED_STATUS_BY_ID["usdt-tether"] }],
+    ["usdp-parallel", { blacklistStatus: TRACKED_STATUS_BY_ID["usdp-parallel"] }],
+    ["lusd-liquity", { blacklistStatus: TRACKED_STATUS_BY_ID["lusd-liquity"] }],
+    ["usdn-smardex", { blacklistStatus: TRACKED_STATUS_BY_ID["usdn-smardex"] }],
   ]),
 }));
 
 vi.mock("@shared/lib/supply", () => ({
   getCirculatingRaw: (coin: StablecoinData) => coin.circulating ?? 0,
-}));
-
-vi.mock("@shared/lib/tracked-blacklist-status", () => ({
-  getTrackedBlacklistStatus: (id: string) => TRACKED_STATUS_BY_ID[id] ?? null,
 }));
 
 vi.mock("@shared/lib/report-cards", () => ({

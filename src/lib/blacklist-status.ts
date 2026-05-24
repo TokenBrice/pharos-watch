@@ -2,7 +2,7 @@ import {
   getBlacklistStatusLabel,
   type BlacklistStatus,
 } from "@shared/lib/report-cards";
-import { getTrackedBlacklistStatus } from "@shared/lib/tracked-blacklist-status";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCard } from "@shared/types";
 
 // Shared label vocabulary for the hero pill and the mobile tertiary chip.
@@ -25,7 +25,7 @@ export function getResolvedBlacklistStatus(
   stablecoinId: string,
   reportCard?: Pick<ReportCard, "rawInputs"> | null,
 ): BlacklistStatus | null {
-  const localValue = getTrackedBlacklistStatus(stablecoinId);
+  const localValue = CLIENT_TRACKED_META_BY_ID.get(stablecoinId)?.blacklistStatus ?? null;
   return reportCard?.rawInputs.canBeBlacklisted ?? localValue;
 }
 

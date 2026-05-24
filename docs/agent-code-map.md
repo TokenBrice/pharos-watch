@@ -737,7 +737,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/wait-for-workflow-job.test.ts`
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
-- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectCoin, projectMintAuthoritySummary, readCanonicalClientFields, runCli, validateProjection
+- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectMintAuthoritySummary, readCanonicalClientFields, runCli
 - `scripts/ci/check-agent-doc-sync.mjs`
 - `scripts/ci/check-agent-skill-symlinks.mjs`
 - `scripts/ci/check-archetype-explainer-coverage.ts` - ArchetypeExplainerCheckResult, ArchetypeExplainerFinding, validateArchetypeExplainerCoverage
