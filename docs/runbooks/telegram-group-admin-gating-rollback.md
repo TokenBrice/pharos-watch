@@ -6,7 +6,7 @@ The group admin gate is too aggressive in production: legitimate group admins ar
 
 The gate's enforcement mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
 
-- **Hard (default, env unset):** non-admin invocations are refused; the dispatch does not run.
+- **Hard (current code default):** non-admin invocations are refused; the dispatch does not run.
 - **Soft (emergency rollback):** non-admin invocations get the same warning copy but the command still runs.
 
 Both modes emit a `group_admin_denial` usage event in `telegram_usage_daily` with `outcome = "denied"` (hard) or `outcome = "warned"` (soft) so the rollback toggle is observable from the audit log.

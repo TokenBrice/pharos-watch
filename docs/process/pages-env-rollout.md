@@ -4,7 +4,7 @@ How to flip the May 2026 detail-page feature flags on production.
 
 ## Where the build actually happens
 
-The Cloudflare Pages project `stablecoin-dashboard` does **not** use Cloudflare's git integration. Builds run inside GitHub Actions (`.github/workflows/pages-prepare.yml` → `npm run build`), and the static `out/` directory is uploaded via `wrangler pages deploy` (`.github/workflows/pages-publish.yml`).
+The Cloudflare Pages project `stablecoin-dashboard` does **not** use Cloudflare's git integration. Builds run inside GitHub Actions. Scheduled/manual Rebuild Pages uses `.github/workflows/pages-release.yml` in its default `pages-prepare.yml` -> `pages-publish.yml` path; production deploys call the same `pages-release.yml` with `direct_publish: true`, where the `pages-release-direct` job builds `out/` and uploads it with `wrangler pages deploy`.
 
 Consequence: **build-time env vars must live in GitHub Actions, not in the Cloudflare Pages dashboard.** The dashboard's "Environment variables" panel is only readable by Pages Functions at runtime, never inlined into the static bundle. Setting flags there has zero effect on the React app.
 
@@ -34,7 +34,7 @@ For the default-on Hero Verdict rollback, set `NEXT_PUBLIC_PHAROS_HERO_VERDICT=f
 
 ## How the variables reach the build
 
-`pages-prepare.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job and the production Pages build job in `deploy-cloudflare.yml` mirror the same block so PR validation, rebuilds, and production deploys inline the same flag state.
+`pages-prepare.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job and `pages-release.yml`'s `pages-release-direct` production path mirror the same block so PR validation, scheduled/manual rebuilds, and production deploys inline the same flag state.
 
 No code changes required to add or remove a flag — but if you add a new flag, you must add its line to every build workflow listed above or it will silently stay off on that path.
 

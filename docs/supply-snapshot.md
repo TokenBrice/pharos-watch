@@ -12,7 +12,7 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
 
 - **Primary schedule:** chained after each `*/15 * * * *` `sync-stablecoins` run (same-day upsert path after a safe stablecoins-cache write)
 - **Safety-net fallback:** `0 8 * * *` (daily at 08:00 UTC)
-- **Function:** `snapshotSupply(db: D1Database): Promise<CronResult>`
+- **Function:** `snapshotSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult>`
 - **File:** `worker/src/cron/snapshot-supply.ts`
 - **Registration:** declared in `worker/wrangler.toml`; executed from both `worker/src/handlers/scheduled/quarter-hourly.ts` and `worker/src/handlers/scheduled/daily-0800.ts`
 

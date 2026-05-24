@@ -9,7 +9,7 @@ The subsystem has four moving parts:
 - `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token`, and stores subscriber state in D1.
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, and safety-grade snapshots against cached prior snapshots, then fans out consolidated messages to matching subscribers.
 - `worker/src/cron/daily-digest.ts` appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
-- `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, `worker/src/lib/telegram-presets.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, ticker parsing, preset resolution, message formatting, diffing, and HTML escaping.
+- `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, `worker/src/lib/telegram-presets.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, alert import stability, preset resolution, message formatting, and digest appendices. `worker/src/lib/telegram-alerts.ts` remains the stable import barrel: ticker parsing lives in `telegram-alerts-parser.ts`, alert/message formatting lives in `telegram-alerts-formatting.ts`, Bot API sends and HTML escaping live in `telegram.ts`, and event diffing lives in the dispatch cron modules.
 
 The delivery system is worker-owned. The frontend exposes a static `/pharoswatchbot/` landing page plus a lightweight public telemetry strip sourced from `/_site-data/telegram-pulse`, which proxies `GET /api/telegram-pulse` through the website-internal lane; it does not call any mutating bot APIs directly. Direct `https://api.pharos.watch/api/telegram-pulse` requests remain API-key protected like other non-exempt public reads. `/pharoswatchbot/` is the canonical public route, and the legacy `/telegram` and `/telegram/*` aliases redirect there.
 
@@ -639,9 +639,9 @@ Additional Telegram bot status metrics now include:
 
 ### Alerting on degraded delivery
 
-`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reads fresh dispatch metadata and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any of three conditions hold; each condition emits a single "recovered" alert and clears its cache flag when it clears:
+`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reads fresh dispatch metadata and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any degraded-delivery condition holds; each condition emits a single "recovered" alert and clears its cache flag when it clears:
 
-- `telegram_pending_alerts` row count exceeds 500 sustained for more than 20 minutes (cache key `telegram:degradation:pending-since`).
+- Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, or any row is inside the 15-minute near-TTL window. Count/age/drain breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
 - `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).
 - The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0` but `messagesSent == 0` for three consecutive runs (cache key `telegram:degradation:zero-send-streak`).
 

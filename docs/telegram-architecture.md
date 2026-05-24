@@ -92,6 +92,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-callbacks.ts`
+- `worker/src/api/webhook-callbacks/` (`index.ts` owns the handler registry; per-action files own action implementation)
 - `worker/src/api/telegram-webhook-setup.ts` (setup wizard state machine — invoked by both Callback routing for `setup:*` taps and by Ingress for `awaiting-ticker` text input)
 - `worker/src/api/telegram-webhook-settings.ts`, `telegram-webhook-settings-render.ts`, `telegram-webhook-settings-mutations.ts`, `telegram-webhook-settings-shared.ts` (settings inline keyboard sub-system)
 
@@ -144,8 +145,9 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
 - `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, durable job manifests, per-target audit)
 - `worker/src/cron/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
-- `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery)
-- `worker/src/cron/telegram-inactive-cleanup.ts`, `telegram-retention-cleanup.ts` (housekeeping crons on the same lane)
+- `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)
+- `worker/src/handlers/scheduled/five-minute-telegram.ts` (five-minute lane after dispatch/watchdog: expired disambiguation cleanup and Telegram pulse snapshot publication via `worker/src/api/telegram-pulse.ts`)
+- `worker/src/cron/telegram-inactive-cleanup.ts`, `telegram-retention-cleanup.ts` (daily 03:00 UTC housekeeping jobs)
 - `worker/src/api/admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`, `admin-telegram-chat.ts` (operator inputs that *write to the pending queue*; they are Dispatch-side because they share queue/TTL semantics, not Ingress)
 
 **Allowed inbound dependencies.** Worker scheduled-event router, Worker admin route entrypoints. Not Ingress, not Callback routing.

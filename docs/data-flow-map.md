@@ -35,7 +35,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/cron-jobs.ts`, and orchestrated by `worker/src/handlers/scheduled.ts`. `docs/worker-infrastructure.md` is the maintained schedule reference; this section is a compact flow map.
 
 - `*/15 * * * *`: sync-fx-rates (cooldown-gated to 30 min) first, then sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / report-card cache publish
-- `9,24,39,54 * * * *`: isolated status self-check
+- `9,24,39,54 * * * *`: isolated status self-check, then cron-staleness-watchdog freshness alerting
 - `3 */6 * * *`: blacklist sync (every 6h)
 - `4,34 * * * *`: mint/burn critical lane (every 30 minutes)
 - `6 */2 * * *`: DEX discovery staging (every 2h)
@@ -46,7 +46,7 @@ Cron schedules are declared in `worker/wrangler.toml`, mirrored in `shared/lib/c
 - `20 * * * *`: core yield publication
 - `25 */4 * * *`: supplemental yield-source refresh
 - `11 */4 * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then collateral-drift checks/alerts (every 4h)
-- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, and launch promotions), degradation watchdog, and expired disambiguation cleanup
+- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram command/profile/webhook reconciliation, subscriber alerts (DEWS, depeg, safety, and launch promotions), degradation watchdog, expired disambiguation cleanup, and Telegram pulse snapshot publication
 - `*/5 * * * *`: manual digest trigger poll (`POST /api/trigger-digest` flag consumer)
 - `0 3 * * *`: status-probe TTL prune + cron-history TTL prune + Telegram inactive cleanup + Telegram retention cleanup (daily housekeeping)
 - `0 8 * * *`: snapshot-supply fallback, safety-grade snapshot, PSI daily snapshot, snapshot-public-dataset after its DB inputs pass freshness gates, plus T-bill rate then USDS status

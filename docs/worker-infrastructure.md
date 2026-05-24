@@ -250,17 +250,23 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 3. **Cache store:** `ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(...))` — successful cacheable responses are cloned **without** CORS headers before caching. CORS headers are added per-request after cache lookup to avoid caching origin-specific headers. The Worker skips edge-cache writes for responses whose `Cache-Control` contains `no-store`, `no-cache`, or `private`; those responses are intentionally not persisted in `caches.default`.
 
-4. **Cache-Control profiles** (set by individual API handlers):
+4. **Cache-Control profiles** (centralized in `shared/lib/api-cache-profiles.ts`; set by individual API handlers, with a small number of route-local special cases):
 
 | Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
 | -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                 |
 | Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
-| Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |
 | Slow     | `public, s-maxage=3600, max-age=300`   | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, non-usd-share                                                        |
 | Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot, snapshots-index                                                                                                                                   |
-| Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`) |
+| Public status | `public, max-age=60`             | public status history                                                                                                                                              |
+| OG image | `public, max-age=900, s-maxage=900`    | dynamic Worker OG images (`/api/og/*`)                                                                                                                             |
+| Reserve live | `public, s-maxage=3600, max-age=300` | `/api/stablecoin-reserves/:id` when live reserve rows are fresh enough for the requested presentation mode                                                       |
+| Reserve live stale | `public, s-maxage=1800, max-age=120` | `/api/stablecoin-reserves/:id` when live reserve rows are stale but still usable for stale presentation                                                          |
+| Reserve fallback | `public, s-maxage=300, max-age=60` | `/api/stablecoin-reserves/:id` fallback/static presentation mode                                                                                                  |
+| No-store | `no-store`                            | admin GETs, bypassed status/control routes, and per-coin stale fallback responses                                                                                   |
+| Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | route-local dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`) |
 
 Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 
@@ -611,7 +617,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 | Budget row | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
 | ---------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
-| 1       | `*/15 * * * *`     |       3 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained)       |    3     |
+| 1       | `*/15 * * * *`     |       4 (sync-fx-rates -> sync-stablecoins -> DB-only snapshot/report-card jobs are chained; sync-stablecoins is the peak)       |    2     |
 | 2       | `9,24,39,54 * * * *` |                       1 (status self-check probes -> staleness watchdog alert)                    |    5     |
 | 3       | `3 */6 * * *`      |                                  1 (rate-limited sequential blacklist scans)                       |    5     |
 | 4       | `4,34 * * * *`     |                                        1 (Alchemy JSON-RPC)                                        |    5     |

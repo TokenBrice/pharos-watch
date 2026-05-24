@@ -58,4 +58,4 @@ What must be true before turning each flag on in production:
 
 ## Spec source
 
-The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-prepare.yml`, `.github/workflows/validate-ci.yml`, and `.github/workflows/deploy-cloudflare.yml`.
+The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-prepare.yml`, `.github/workflows/validate-ci.yml`, and `.github/workflows/pages-release.yml` (the production deploy workflow calls `pages-release.yml` for Pages builds).

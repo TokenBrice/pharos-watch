@@ -33,7 +33,7 @@ The full inventory of launch entrypoints and their reconciliation paths is docum
 
 ## Payload Scheme
 
-Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. Both parsers — the worker `?start=` deep-link parser in `worker/src/api/telegram-webhook-parsing.ts` and the frontend `?startapp=` parser in `src/app/pharoswatchbot/app/client.tsx` — import the same registry from `shared/lib/telegram-mini-app-payloads.ts` so drift between the bot and the Mini App is impossible.
+Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. The frontend `?startapp=` surface uses the shared parser from `shared/lib/telegram-mini-app-payloads.ts`. The worker `/start <payload>` parser in `worker/src/api/telegram-webhook-parsing.ts` shares the same charset/length constants but intentionally supports only bot-command payload schemes: `sub_*`, `status_*`, `why_*`, `coverage_*`, `setup`, and `app`/`home`.
 
 Recognized payloads:
 
