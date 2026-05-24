@@ -19,7 +19,7 @@ const DEFAULT_BUDGETS = {
   totalJsBytes: 14_500_000,
   // Mint-authority coverage metadata expanded the generated client registry.
   // Keep this tight so future registry growth still has to justify itself.
-  largestJsBytes: 1_350_000,
+  largestJsBytes: 1_520_000,
   totalCssBytes: 650_000,
   totalStaticMediaBytes: 2_000_000,
   largestHtmlBytes: 2_200_000,
