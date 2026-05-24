@@ -376,7 +376,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
 - `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
 - `shared/lib/filter-tags.ts` - COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, GRADE_FILTER_TAGS, OTHER_PEG_TAGS, getFilterTags, gradeMatchesFilter
-- ... 209 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 210 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
