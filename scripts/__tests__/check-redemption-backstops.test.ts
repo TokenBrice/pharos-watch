@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
@@ -40,6 +40,23 @@ function validateFixture(
 }
 
 describe("check-redemption-backstops CLI", () => {
+  it("prints machine-readable JSON when --json is passed", () => {
+    const stdout = execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--json"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const report = JSON.parse(stdout) as {
+      summary: { configuredCount: number };
+      findings: Array<{ severity: string }>;
+      auditRows: unknown[];
+    };
+    expect(report.summary.configuredCount).toBe(311);
+    expect(report.auditRows).toHaveLength(311);
+    expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
+  });
+
   it("writes deterministic JSON report data", () => {
     const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-")), "report.json");
 
@@ -91,6 +108,33 @@ describe("check-redemption-backstops CLI", () => {
       ]),
     );
     expect(report.findings.some((finding) => finding.severity === "error")).toBe(false);
+  });
+
+  it("creates parent directories for nested JSON reports", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "redemption-backstops-nested-"));
+    const reportPath = join(cwd, "nested", "reports", "report.json");
+
+    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
+      summary: { configuredCount: number };
+    };
+    expect(report.summary.configuredCount).toBe(311);
+  });
+
+  it("rejects unknown CLI arguments", () => {
+    const result = spawnSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--bad-arg"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Unknown argument: --bad-arg");
   });
 
   it("rejects non-http docs URLs and invalid calendar review dates", () => {
