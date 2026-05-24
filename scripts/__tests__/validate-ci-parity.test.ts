@@ -190,6 +190,7 @@ describe("validate-ci parity", () => {
       "npm run check:hotspot-ratchet",
       "npm run check:migrations",
       "npm run check:redemption-backstops",
+      "npm run check:redemption-coverage-audit",
       "npm run check:reserve-fixture-freshness",
       "npm run check:selector-banned-phrases",
       "npm run check:script-entrypoints",
