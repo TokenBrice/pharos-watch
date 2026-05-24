@@ -66,6 +66,64 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "STAC's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; additional DSApp or on-ramp mint routes were not ruled out.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "label": "STAC Securitize DSToken issuance surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Securitize STAC",
+            "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+          },
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+          }
+        ],
+        "evidence": "Ethereum lane reads returned implementation 0x77684815f44b28726bc3efa4471b88ef3b93feb0 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, and issueTokensWithMultipleLocks issuance functions."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "label": "STAC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Securitize STAC",
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x77684815f44b28726bc3efa4471b88ef3b93feb0/sources/contracts/token/DSToken.sol"
+        }
+      ],
+      "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
+      "reviewer": "Codex mint-authority follow-up family lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Verify whether any additional DSApp or on-ramp mint route should be represented separately."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",

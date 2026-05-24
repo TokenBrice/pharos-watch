@@ -69,6 +69,64 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "HLSCOPE's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Polygon and Optimism routes remain unresolved.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
+        "label": "HLSCOPE Securitize DSToken issuance surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Securitize HLSCOPE",
+            "url": "https://securitize.io/primary-market/hl-scope"
+          },
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+          }
+        ],
+        "evidence": "Ethereum lane reads returned implementation 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, issueTokensWithMultipleLocks, and issueTokensWithNoCompliance issuance functions."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "label": "HLSCOPE token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Securitize HLSCOPE",
+          "url": "https://securitize.io/primary-market/hl-scope"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xa2f6ef3144753f31fcd728910b96a92bbbb462c9/sources/contracts/token/DSToken.sol"
+        }
+      ],
+      "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
+      "reviewer": "Codex mint-authority follow-up family lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve Polygon and Optimism token or bridge authorities before claiming multichain completeness."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",

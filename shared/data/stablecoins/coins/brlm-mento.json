@@ -52,6 +52,54 @@
     "reviewer": "Codex coverage expansion",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "BRLm is minted through Mento's collateralized FX stablecoin system, while the Celo token owner resolves to the Mento Timelock with a 2-day delay.",
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+        "label": "Mento BRLm token owner Timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento V3 docs",
+            "url": "https://docs.mento.org/mento-v3"
+          }
+        ],
+        "evidence": "Lane Celo owner reads returned this Timelock at block 67746454, and getMinDelay() returned 172800 seconds. Borrower-operations, Broker, circuit-breaker, and parameter-admin coverage was not fully decoded."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento V3 docs",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "evidence": "Mento V3 docs describe collateralized minting for Mento stables; 2026-05-24 lane reads resolved the Celo token owner to the Mento Timelock with a 2-day delay.",
+      "reviewer": "Codex mint-authority follow-up family lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve borrower-operations, CDP branch parameter admins, Broker, and circuit-breaker controls before claiming full Mento system-level coverage."
+      ]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

@@ -88,6 +88,64 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "ACRED's reviewed Ethereum Securitize DSToken surface exposes issueTokens functions and the Ethereum owner resolves to an EOA; Aptos, Solana, Avalanche, Ink, and Polygon routes remain unresolved.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "label": "ACRED Securitize DSToken issuance surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Securitize ACRED",
+            "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+          },
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
+          }
+        ],
+        "evidence": "Ethereum lane reads returned implementation 0xfc8a9000c161e3c6e073e967107ce926a44a06e2 and owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee. Partial Sourcify DSToken source exposes issueTokens, issueTokensCustom, issueTokensWithMultipleLocks, and issueTokensWithNoCompliance issuance functions."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "label": "ACRED token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Lane code read returned no contract bytecode for this owner, so no on-chain multisig threshold or Safe policy was verified."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Securitize ACRED",
+          "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xfc8a9000c161e3c6e073e967107ce926a44a06e2/sources/contracts/token/DSToken.sol"
+        }
+      ],
+      "evidence": "Securitize materials and Ethereum DSToken source/direct reads identify an issuer-operated issueTokens path and EOA owner for the reviewed Ethereum deployment.",
+      "reviewer": "Codex mint-authority follow-up family lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve Aptos, Solana, Avalanche, Ink, and Polygon token or bridge authorities before claiming multichain completeness."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",

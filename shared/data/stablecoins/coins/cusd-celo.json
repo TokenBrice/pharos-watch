@@ -62,6 +62,65 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, while token owner controls resolve to a 4/7 Mento Safe; NEAR and Monad routes remain unresolved.",
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "label": "Mento USDm token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 7,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Mento reserve docs",
+            "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "Lane Celo owner reads returned this Safe at block 67746454, isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true, and the Celo Safe API returned threshold 4, seven owners, no modules, zero guard, and zero moduleGuard."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mento reserve docs",
+          "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ],
+      "evidence": "Mento docs describe reserve/Broker minting for reserve-backed stables; 2026-05-24 lane reads resolved the Celo token owner Safe and Broker minter route.",
+      "reviewer": "Codex mint-authority follow-up family lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve full reserve, Broker parameter, circuit-breaker, and admin controls before claiming complete Mento system-level coverage.",
+        "Resolve NEAR and Monad token or bridge authorities before claiming multichain completeness."
+      ]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",

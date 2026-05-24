@@ -88,6 +88,65 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "SPKCC Ethereum mint/burn is restricted by Spiko's verified Token.sol implementation and shared authority policy contract; Polygon, Arbitrum, Base, Starknet, and Stellar routes remain unresolved.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "label": "SPKCC token restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          },
+          {
+            "label": "Spiko docs",
+            "url": "https://docs.spiko.io/"
+          }
+        ],
+        "evidence": "Ethereum lane reads returned implementation 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, owner() = 0x0000000000000000000000000000000000000000, and authority() = 0x344278aff344d6fb960705dc18a4912221608472. Source review showed mint and burn are restricted() calls."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "label": "Spiko authority policy contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Token authority() returned this shared policy contract; current policy rules, signer custody, and admin setup were not decoded in this lane."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Spiko docs",
+          "url": "https://docs.spiko.io/"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        }
+      ],
+      "evidence": "Verified Ethereum implementation source and direct reads show SPKCC mint/burn routed through Spiko's restricted authority contract rather than an owner EOA.",
+      "reviewer": "Codex mint-authority follow-up family lane",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Decode the shared Spiko authority policy contract signer/admin setup before adding Safe-like details.",
+        "Resolve Polygon, Arbitrum, Base, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
