@@ -355,6 +355,86 @@ describe("validateRedemptionBackstopRegistry", () => {
     );
   });
 
+  it("warns when documented-bound configs lack route or capacity source support", () => {
+    const result = validateFixture([
+      {
+        name: "issuer",
+        filePath: "issuer.ts",
+        configs: {
+          "usdt-tether": {
+            ...baseConfig,
+            capacityModel: {
+              kind: "supply-ratio",
+              ratio: 0.1,
+              confidence: "documented-bound",
+            },
+            reviewedAt: "2026-05-12",
+            docs: [{ label: "Fixture fee docs", url: "https://example.com/fees", supports: ["fees"] }],
+          },
+        },
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+    ]);
+
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          severity: "warning",
+          code: "documented-bound-missing-route-support",
+          stablecoinId: "usdt-tether",
+          filePath: "issuer.ts",
+        }),
+        expect.objectContaining({
+          severity: "warning",
+          code: "documented-bound-missing-capacity-support",
+          stablecoinId: "usdt-tether",
+          filePath: "issuer.ts",
+        }),
+      ]),
+    );
+  });
+
+  it("accepts documented-bound configs with explicit route and capacity source support", () => {
+    const result = validateFixture([
+      {
+        name: "issuer",
+        filePath: "issuer.ts",
+        configs: {
+          "usdt-tether": {
+            ...baseConfig,
+            capacityModel: {
+              kind: "supply-ratio",
+              ratio: 0.1,
+              confidence: "documented-bound",
+            },
+            reviewedAt: "2026-05-12",
+            docs: [
+              {
+                label: "Fixture redemption docs",
+                url: "https://example.com/redemption",
+                supports: ["route", "capacity", "fees"],
+              },
+            ],
+          },
+        },
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+    ]);
+
+    expect(result.findings).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "documented-bound-missing-route-support",
+          stablecoinId: "usdt-tether",
+        }),
+        expect.objectContaining({
+          code: "documented-bound-missing-capacity-support",
+          stablecoinId: "usdt-tether",
+        }),
+      ]),
+    );
+  });
+
   it("rejects invalid review dates and non-positive daily limits", () => {
     const result = validateFixture([
       {

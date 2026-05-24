@@ -228,6 +228,7 @@ Each row also carries:
 - `docs.provenance` distinguishes reviewed route docs from fallback live-reserve, proof-of-reserves, or generic project-link sources so detail pages do not overstate evidence quality
 - `docs.reviewedAt` is the route-review date, not a claim that the rendered fallback link itself was the reviewed source; the detail card now shows review date and provenance together
 - `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
+- The registry check ratchets aggregate source-support coverage and emits per-config warnings when a `documented-bound` capacity route lacks explicit `route` or `capacity` support. These warnings are backlog controls, not hard CI errors, until the remaining documented-bound source-support gaps are cleaned up.
 - `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
 - `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
 - `capsApplied` records any score caps triggered during scoring

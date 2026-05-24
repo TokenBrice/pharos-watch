@@ -305,6 +305,7 @@ export function validateRedemptionBackstopRegistry(
         missingSupportKindCounts.set(supportKind, (missingSupportKindCounts.get(supportKind) ?? 0) + 1);
       }
     }
+    validateDocumentedBoundSourceSupport(id, config, coveredSupportKinds, owner, sourceFilePath, findings);
 
     const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter ?? null;
     const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
@@ -382,6 +383,38 @@ export function validateRedemptionBackstopRegistry(
       unconfiguredActiveIds,
     },
   };
+}
+
+function validateDocumentedBoundSourceSupport(
+  id: string,
+  config: RedemptionBackstopConfig,
+  coveredSupportKinds: ReadonlySet<RedemptionDocSourceSupport>,
+  owner: RedemptionBackstopConfigManifestEntry | undefined,
+  sourceFilePath: string | undefined,
+  findings: RedemptionRegistryFinding[],
+): void {
+  if (resolveCapacityConfidence(config.capacityModel) !== "documented-bound") return;
+  const context = { stablecoinId: id, family: owner?.name, filePath: sourceFilePath ?? owner?.filePath };
+
+  if (!coveredSupportKinds.has("route")) {
+    addFinding(
+      findings,
+      "warning",
+      "documented-bound-missing-route-support",
+      `${id}: documented-bound capacity requires at least one docs[] source with supports:["route"].`,
+      context,
+    );
+  }
+
+  if (!coveredSupportKinds.has("capacity")) {
+    addFinding(
+      findings,
+      "warning",
+      "documented-bound-missing-capacity-support",
+      `${id}: documented-bound capacity requires at least one docs[] source with supports:["capacity"].`,
+      context,
+    );
+  }
 }
 
 function validateConfigInvariants(
