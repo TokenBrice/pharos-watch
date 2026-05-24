@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.07`
+- **Current methodology version:** `v6.08`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -215,8 +215,8 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `iusd-initia`            | inherits tracked `ausd-agora` pricing as an AUSD-backed Initia wrapper          |
 | `usdcx-movement`         | inherits tracked `usdc-circle` pricing as a Circle xReserve-backed USDC wrapper |
 | `m-m0`                   | inherits tracked `wm-m0` pricing as the underlying M0 unit                      |
-| `usdk-kast`              | inherits tracked `wm-m0` pricing as a Solana M0 extension unit                  |
-| `xo-exodus`              | inherits tracked `wm-m0` pricing as a Solana M0 extension unit                  |
+| `usdk-kast`              | inherits fresh tracked `wm-m0` pricing as a Solana M0 extension unit            |
+| `xo-exodus`              | inherits fresh tracked `wm-m0` pricing as a Solana M0 extension unit            |
 | `usdnr-nerona`           | inherits tracked `wm-m0` pricing as an M0 extension unit                        |
 | `weusd-picwe`            | inherits tracked `usdc-circle` pricing with PicWe's documented 1% redemption-fee haircut |
 | `sofid-sofi`             | direct USD redemption-par reference for observable on-chain supply              |
@@ -285,6 +285,8 @@ Scoped redemption-par references cover active assets with observable runtime sup
 - `xofm-mento` at XOF parity converted through the live XOF/USD reference
 
 These authoritative overrides are pre-applied before fallback enrichment and then applied again after the GeckoTerminal single-source probe. The early pass keeps known redeemable wrappers and extension assets out of unnecessary fallback-source probes, while the final pass preserves the existing rule that a later market cross-check cannot overwrite a validated redemption price.
+
+Live parent-derived overrides normally require a replay-safe parent source. A narrow audited exception lets `sbold-k3-capital`, `ybold-yearn`, `usdk-kast`, and `xo-exodus` use a fresh high-confidence same-run parent consensus even when that parent composite includes address-derived providers; cached parents are still rejected, and historical replay still uses only replay-safe provider paths.
 
 The same registry also supports historical replay for backfills where a provider can replay the same source safely, so admin rebuilds do not silently downgrade back to weaker market sources.
 

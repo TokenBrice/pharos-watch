@@ -26,6 +26,7 @@ export interface Erc4626NavVaultConfig {
   vaultDecimals: number;
   assetDecimals: number;
   rpcUrls?: readonly string[];
+  allowFreshNonReplaySafeParent?: boolean;
 }
 
 const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;
@@ -151,7 +152,11 @@ function normalizeFreshSyncedAt(value: number | null | undefined, nowSec: number
   return nowSec - syncedAt <= INHERITED_PARENT_SYNC_MAX_AGE_SEC ? syncedAt : null;
 }
 
-function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number): {
+interface LiveParentTrustOptions {
+  allowFreshNonReplaySafeParent?: boolean;
+}
+
+function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, options?: LiveParentTrustOptions): {
   price: number;
   observedAt: number;
   observedAtMode: PriceObservedAtMode | null;
@@ -168,7 +173,12 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number): {
   if (!confidenceTrusted) return null;
 
   const replaySafe = isReplaySafePriceSource(parentSource);
-  if (!replaySafe) return null;
+  if (!replaySafe) {
+    const sourceParts = splitCompositePriceSource(parentSource);
+    if (!options?.allowFreshNonReplaySafeParent || sourceParts.includes("cached")) {
+      return null;
+    }
+  }
 
   const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
   const observedAtMode = asset.priceObservedAtMode ?? null;
@@ -220,11 +230,12 @@ export function resolveTrustedOverrideParent(
   context: LivePriceContext,
   parentId: string,
   untrustedParentMessage: () => string,
+  options?: LiveParentTrustOptions,
 ): TrustedOverrideParent | null {
   const parentAsset = context.assetsById.get(parentId);
   if (!parentAsset) return null;
 
-  const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
+  const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000), options);
   if (!trustedParent) {
     console.warn(untrustedParentMessage());
     return null;

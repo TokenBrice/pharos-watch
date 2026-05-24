@@ -1,6 +1,14 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.07` (2026-02-01 -> 2026-05-24).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.08` (2026-02-01 -> 2026-05-24).
+
+---
+
+## v6.08 - Scoped live-parent wrapper price repair (May 24, 2026)
+
+- `sbold-k3-capital` and `ybold-yearn` can publish ERC-4626 NAV prices from `convertToAssets(1 share)` multiplied by fresh high-confidence BOLD live pricing
+- `usdk-kast` and `xo-exodus` can inherit fresh high-confidence `wm-m0` pricing as Solana M0 extension units
+- The relaxation is scoped to these audited wrappers and does not change historical replay rules or cached-parent eligibility
 
 ---
 

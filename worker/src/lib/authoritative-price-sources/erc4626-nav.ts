@@ -134,6 +134,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vault: "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
     vaultDecimals: 18,
     assetDecimals: 18,
+    allowFreshNonReplaySafeParent: true,
   },
   {
     id: "ybold-yearn",
@@ -142,6 +143,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vault: "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
     vaultDecimals: 18,
     assetDecimals: 18,
+    allowFreshNonReplaySafeParent: true,
   },
 ];
 
@@ -198,6 +200,7 @@ export const erc4626NavProvider: PriceSourceProvider = {
       config.parentId,
       () =>
         `[authoritative-price-sources] ${asset.id}: skipped ERC-4626 NAV price because parent ${config.parentId} provenance is not trusted`,
+      { allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent },
     );
     if (!parent) return null;
 

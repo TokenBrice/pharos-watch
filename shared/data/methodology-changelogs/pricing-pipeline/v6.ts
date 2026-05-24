@@ -2,6 +2,20 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.08",
+      title: "Scoped live-parent wrapper price repair",
+      date: "2026-05-24",
+      effectiveAt: 1779616228,
+      summary:
+        "Audited wrapper assets can use fresh high-confidence live parent prices even when the parent consensus includes address-derived providers.",
+      impact: [
+        "sBOLD and yBOLD can publish ERC-4626 NAV prices from BOLD when BOLD's same-run consensus is fresh and high-confidence",
+        "KAST USDK and XO Cash can inherit fresh high-confidence wM pricing as scoped M0 extension units",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.07",
       title: "Curated production price-gap closure",
       date: "2026-05-24",

@@ -27,6 +27,7 @@ const WEUSD_PICWE_ID = "weusd-picwe";
 interface InheritedTrackedPriceConfig {
   parentId: string;
   multiplier?: number;
+  allowFreshNonReplaySafeParent?: boolean;
 }
 
 const INHERITED_TRACKED_PRICE_CONFIGS = {
@@ -34,8 +35,8 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
   "iusd-initia": { parentId: AUSD_AGORA_ID },
   "usdcx-movement": { parentId: USDC_CIRCLE_ID },
   [M_M0_ID]: { parentId: WM_M0_ID },
-  [USDK_KAST_ID]: { parentId: WM_M0_ID },
-  [XO_EXODUS_ID]: { parentId: WM_M0_ID },
+  [USDK_KAST_ID]: { parentId: WM_M0_ID, allowFreshNonReplaySafeParent: true },
+  [XO_EXODUS_ID]: { parentId: WM_M0_ID, allowFreshNonReplaySafeParent: true },
   [USDNR_NERONA_ID]: { parentId: WM_M0_ID },
   [WEUSD_PICWE_ID]: { parentId: USDC_CIRCLE_ID, multiplier: 0.99 },
 } as const satisfies Record<string, InheritedTrackedPriceConfig>;
@@ -82,6 +83,7 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
       config.parentId,
       () =>
         `[authoritative-price-sources] ${asset.id}: skipped inherited ${config.parentId} price because parent provenance is not trusted`,
+      { allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent },
     );
     if (!parent) return null;
 

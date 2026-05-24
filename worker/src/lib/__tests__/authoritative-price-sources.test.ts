@@ -1045,6 +1045,60 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("allows scoped M0 wrappers to inherit a fresh high-confidence address-composite parent", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdk-kast",
+        name: "KAST Dollar",
+        symbol: "USDK",
+        circulating: { peggedUSD: 24_000_000 },
+      },
+      {
+        id: "xo-exodus",
+        name: "XO Cash",
+        symbol: "XO",
+        circulating: { peggedUSD: 2_400_000 },
+      },
+      {
+        id: "m-m0",
+        name: "M",
+        symbol: "M",
+        circulating: { peggedUSD: 300_000_000 },
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.9998,
+        priceSource: "alchemy-address+coingecko+coingecko-onchain-address+moralis-address",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+    ]);
+
+    expect(overrides.get("usdk-kast")).toMatchObject({
+      price: 0.9998,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: false,
+      },
+    });
+    expect(overrides.get("xo-exodus")).toMatchObject({
+      price: 0.9998,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: false,
+      },
+    });
+    expect(overrides.has("m-m0")).toBe(false);
+  });
+
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
@@ -1253,6 +1307,66 @@ describe("authoritative-price-sources", () => {
       });
       expect(overrides.get(testCase.id)?.price).toBeCloseTo(testCase.expectedRatio, 6);
     }
+  });
+
+  it("allows scoped BOLD ERC-4626 wrappers to use a fresh high-confidence address-composite parent", async () => {
+    const outputRaw = 1_062_000_000_000_000_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${outputRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "gtusdc-gauntlet",
+        name: "Gauntlet USDC Core",
+        symbol: "gtUSDC",
+        circulating: { peggedUSD: 128_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+      {
+        id: "sbold-k3-capital",
+        name: "sBOLD by K3 Capital",
+        symbol: "sBOLD",
+        circulating: { peggedUSD: 8_000_000 },
+      },
+      {
+        id: "bold-liquity",
+        name: "Liquity BOLD",
+        symbol: "BOLD",
+        price: 1.0001,
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.any(Object),
+    );
+    expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    expect(overrides.get("sbold-k3-capital")).toMatchObject({
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "bold-liquity",
+        parentReplaySafe: false,
+      },
+    });
+    expect(overrides.get("sbold-k3-capital")?.price).toBeCloseTo(1.062 * 1.0001, 6);
   });
 
   it("prices legacy Aave sGHO from previewRedeem() x tracked GHO price", async () => {
