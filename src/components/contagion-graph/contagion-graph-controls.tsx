@@ -2,15 +2,9 @@
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
+import { DEPENDENCY_TYPE_FILTERS } from "@/components/contagion-graph-model";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
 import { NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
-
-const TYPE_FILTERS: readonly { value: EdgeTypeFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "collateral", label: "Collateral" },
-  { value: "mechanism", label: "Mechanism" },
-  { value: "wrapper", label: "Wrapper" },
-];
 
 interface ContagionGraphControlsProps {
   focusMode: FocusMode;
@@ -110,7 +104,7 @@ export function ContagionGraphControls({
             size="sm"
             className="inline-flex h-9 min-w-max rounded-md md:h-7"
           >
-            {TYPE_FILTERS.map((filter) => (
+            {DEPENDENCY_TYPE_FILTERS.map((filter) => (
               <ToggleGroupItem
                 key={filter.value}
                 value={filter.value}

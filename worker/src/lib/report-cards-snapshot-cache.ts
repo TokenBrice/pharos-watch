@@ -74,10 +74,20 @@ export async function writePublishedReportCardsSnapshot(
   db: D1Database,
   snapshot: ReportCardsResponse,
 ): Promise<void> {
+  const result = ReportCardsResponseSchema.safeParse(snapshot);
+  if (!result.success) {
+    throw new Error(`Invalid report-cards snapshot payload: ${result.error.message}`);
+  }
+  if (result.data.methodology.version !== METHODOLOGY_VERSION) {
+    throw new Error(
+      `Report-cards snapshot methodology ${result.data.methodology.version} does not match ${METHODOLOGY_VERSION}`,
+    );
+  }
+
   const envelope: ReportCardsSnapshotCacheEnvelope = {
     generation: REPORT_CARDS_SNAPSHOT_CACHE_GENERATION,
     methodologyVersion: METHODOLOGY_VERSION,
-    payload: snapshot,
+    payload: result.data,
   };
   await setCache(db, REPORT_CARDS_SNAPSHOT_CACHE_KEY, JSON.stringify(envelope));
 }

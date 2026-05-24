@@ -1,5 +1,9 @@
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { deriveEffectiveDependencies } from "@shared/lib/dependency-derivation";
+import {
+  deriveEffectiveDependencies,
+  deriveEffectiveDependencySet,
+  type DerivedDependencySet,
+} from "@shared/lib/dependency-derivation";
 import { buildDependencyGraphEdgesFromDependencies, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import {
   scorePegStability,
@@ -257,31 +261,40 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
   };
 }
 
-function buildEffectiveDependenciesById(
+function buildEffectiveDependencySetsById(
   metas: readonly StablecoinMeta[],
   liveReserveMap: ReadonlyMap<string, ReserveSlice[]>,
-): Map<string, DependencyWeight[]> {
-  const dependenciesById = new Map<string, DependencyWeight[]>();
+): Map<string, DerivedDependencySet> {
+  const dependencySetsById = new Map<string, DerivedDependencySet>();
 
   for (const meta of metas) {
     const liveReserveSlices = liveReserveMap.get(meta.id);
-    dependenciesById.set(
+    dependencySetsById.set(
       meta.id,
-      deriveEffectiveDependencies(
+      deriveEffectiveDependencySet(
         meta,
         liveReserveSlices != null ? { liveReserveSlices } : undefined,
       ),
     );
   }
 
-  return dependenciesById;
+  return dependencySetsById;
+}
+
+function collectDependenciesById(
+  dependencySetsById: ReadonlyMap<string, DerivedDependencySet>,
+): Map<string, DependencyWeight[]> {
+  return new Map(
+    [...dependencySetsById.entries()].map(([id, set]) => [id, set.dependencies]),
+  );
 }
 
 export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiveReportCardsResult {
-  const dependenciesById = buildEffectiveDependenciesById(
+  const dependencySetsById = buildEffectiveDependencySetsById(
     ACTIVE_STABLECOINS as StablecoinMeta[],
     input.liveReserveMap,
   );
+  const dependenciesById = collectDependenciesById(dependencySetsById);
   const sortedMetas = topologicalOrder([...ACTIVE_STABLECOINS], { dependenciesById });
   const overallScores = new Map<string, number>();
   const decentralizationScores = new Map<string, number>();
@@ -300,7 +313,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       blacklistStatus: input.resolvedBlacklistStatuses.get(meta.id) ?? false,
       liveReserveMap: input.liveReserveMap,
       dependencies: dependenciesById.get(meta.id) ?? [],
-      dependencyFromLive: input.liveReserveMap.has(meta.id),
+      dependencyFromLive: dependencySetsById.get(meta.id)?.dependencyFromLive ?? false,
     });
     liveCards.push(card);
     if (card.overallScore !== null) {
@@ -331,7 +344,7 @@ export function topologicalOrder(
   const metaMap = new Map(metas.map((meta) => [meta.id, meta]));
   const dependenciesById = options?.dependenciesById
     ?? (options?.liveReserveMap != null
-      ? buildEffectiveDependenciesById(metas, options.liveReserveMap)
+      ? collectDependenciesById(buildEffectiveDependencySetsById(metas, options.liveReserveMap))
       : null);
   const visited = new Set<string>();
   const result: StablecoinMeta[] = [];

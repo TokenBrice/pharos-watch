@@ -35,7 +35,7 @@ const COVERAGE_VARIABLES = [
   },
   {
     name: "dependencyMapCoverage",
-    description: "Whether each active stablecoin participates in the live dependency graph used by Pharos.",
+    description: "Resolved dependency-map role for each active stablecoin, including upstream hubs, dependents, resolved no-dependency rows, and unmapped gaps.",
   },
 ] as const;
 

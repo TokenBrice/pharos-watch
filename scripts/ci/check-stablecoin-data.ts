@@ -185,6 +185,19 @@ function getDependencyReserveAlignmentIssues(coin: StablecoinMeta): string[] {
   return issues;
 }
 
+function getReserveDependencyTypeLinkIssues(coin: StablecoinMeta): string[] {
+  const issues: string[] = [];
+
+  (coin.reserves ?? []).forEach((reserve, index) => {
+    if (!reserve.depType || reserve.coinId) return;
+    issues.push(
+      `reserves[${index}] "${reserve.name}" sets depType="${reserve.depType}" without coinId; depType only applies to stablecoin-linked reserve slices`,
+    );
+  });
+
+  return issues;
+}
+
 function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>): string[] {
   const issues: string[] = [];
 
@@ -416,6 +429,10 @@ if (errorCount === 0) {
 
     for (const alignmentIssue of getDependencyReserveAlignmentIssues(entry.coin)) {
       reportError(`${entry.file} (${entry.coin.id}): ${alignmentIssue}`);
+    }
+
+    for (const reserveDependencyTypeLinkIssue of getReserveDependencyTypeLinkIssues(entry.coin)) {
+      reportError(`${entry.file} (${entry.coin.id}): ${reserveDependencyTypeLinkIssue}`);
     }
 
     const runtimeAdmissionIssue = getRuntimeAdmissionIssue(entry.coin);

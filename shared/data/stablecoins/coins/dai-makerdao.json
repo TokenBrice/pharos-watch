@@ -134,8 +134,7 @@
     {
       "name": "Stablecoins (PSM)",
       "pct": 32,
-      "risk": "very-low",
-      "depType": "mechanism"
+      "risk": "very-low"
     },
     {
       "name": "Grove (RWA)",

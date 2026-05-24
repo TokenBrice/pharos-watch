@@ -72,6 +72,12 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.rows[0]).toMatchObject({
       id: "usdc-circle",
       marketCapUsd: 1_000,
+      statuses: {
+        dependency: {
+          kind: "resolved-none",
+          available: true,
+        },
+      },
     });
     expect(model.sourceDepthProgress).toMatchObject({
       totalCount: 1,
@@ -89,5 +95,53 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.isStablecoinDataUnavailable).toBe(false);
     expect(model.dataUpdatedAt).toBe(7);
     expect(model.staleQueries.every((query) => query.hasData)).toBe(true);
+  });
+
+  it("classifies dependency-map roles from live report-card graph edges", () => {
+    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
+    const dai = TRACKED_META_BY_ID.get("dai-makerdao");
+    const usdt = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(usdc).toBeDefined();
+    expect(dai).toBeDefined();
+    expect(usdt).toBeDefined();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({ peggedAssets: [] } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource({
+        cards: [
+          { id: "usdc-circle", overallScore: 90, isDefunct: false, rawInputs: { dependencies: [] } },
+          {
+            id: "dai-makerdao",
+            overallScore: 80,
+            isDefunct: false,
+            rawInputs: { dependencies: [{ id: "usdc-circle", weight: 0.5, type: "mechanism" }] },
+          },
+          {
+            id: "usdt-tether",
+            overallScore: 85,
+            isDefunct: false,
+            rawInputs: { dependencies: [{ id: "untracked", weight: 0.2, type: "collateral" }] },
+          },
+        ],
+        dependencyGraph: {
+          edges: [
+            { from: "usdc-circle", to: "dai-makerdao", weight: 0.5, type: "mechanism" },
+          ],
+        },
+      } as never),
+      activeStablecoins: [usdc!, dai!, usdt!],
+    });
+
+    const dependencyKindById = new Map(
+      model.rows.map((row) => [row.id, row.statuses.dependency.kind]),
+    );
+    expect(dependencyKindById.get("usdc-circle")).toBe("upstream");
+    expect(dependencyKindById.get("dai-makerdao")).toBe("dependent");
+    expect(dependencyKindById.get("usdt-tether")).toBe("unmapped-gap");
   });
 });

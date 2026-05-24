@@ -49,11 +49,11 @@ Status semantics are intentionally user-facing:
 - `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `Not Covered`, `Unknown`, or `Data n/a`
 - `Reserve View`: `Score-grade`, `Configured`, `Checking`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
 - query-backed columns can also emit `Data n/a` while an upstream dataset is unavailable
-- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
+- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Resolved`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
 - `Yield`: `Ranked`, `—`, or `Data n/a`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Disabled`, `Not Covered`, or `Data n/a`
 - `Freezable Status`: `Live`, `Yes`, `Dilutable`, `Upstream`, `Possible`, `No`, or `Data n/a`
-- `Dependency Map`: `Node`, `—`, or `Data n/a`
+- `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
 
 ---
 
@@ -67,11 +67,11 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Safety Score`        | `useReportCards().data.cards[].overallScore`                                                                                                                                                                          | Coverage is `Rated` only when the report card has a non-null overall score.                                                                                                                                                                                                                                                                                                    |
 | `DEX Price`           | `useDexLiquidity().data[id].coverageClass`                                                                                                                                                                            | User-facing badge labels are mapped from liquidity `coverageClass`.                                                                                                                                                                                                                                                                                                            |
 | `Reserve View`        | `ACTIVE_STABLECOINS[*].liveReservesConfig.adapter` mapped through `shared/lib/live-reserve-display.ts`; `reportCard.rawInputs.collateralFromLive`; otherwise `getReserves(coin)` from `@shared/lib/reserve-templates` | Detail-page reserve views are split from score-grade live reserve inputs. The row shows `Score-grade` only when the current report-card snapshot used fresh independent live reserves for collateral scoring; configured live adapters that did not qualify render as `Configured`.                                                                                            |
-| `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                                                                                                             | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`; low-confidence heuristic routes render as `Heur.`; neither counts as covered in the headline metric.                                                                                               |
+| `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                                                                                                             | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`, low-confidence heuristic routes render as `Heur.`, resolved eventual-only or otherwise unscored routes render as `Resolved`, and route-availability failures render as `Impaired`; none of those states count as covered in the headline metric.                                                                                               |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                                                                                                               | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                                                                                                                                          |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                                                                                                                     | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                                                                                                                            |
 | `Freezable Status`    | `getResolvedBlacklistStatus(coin.id, reportCard)` from `src/lib/blacklist-status.ts`, combining static metadata and `reportCard.rawInputs.canBeBlacklisted`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket | Resolved freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Dilutable`, `Upstream`, `Possible`, and `No` are resolved status states and all count as available coverage. |
-| `Dependency Map`      | `useReportCards().data.dependencyGraph.edges`, falling back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` when the live graph is absent                                                                          | Edges are filtered through `filterDependencyGraphEdgesToLive(...)` with live report-card IDs, then collected with `collectDependencyGraphIds(...)`. This mirrors the live dependency graph rather than deriving visibility directly from static reserve templates.                                                                                                             |
+| `Dependency Map`      | `useReportCards().data.cards[].rawInputs.dependencies` plus `useReportCards().data.dependencyGraph.edges`                                                                                                             | `buildDependencyCoverageFacts(...)` filters graph edges to live report-card IDs and classifies each coin as both dependent/upstream, dependent-only, upstream-only, resolved with no tracked dependency, or an unmapped gap when dependency evidence exists but no live edge remains. The coverage page does not fall back to the static graph when report-card data is unavailable; it emits `Data n/a`. |
 
 Additional page-level sources:
 
@@ -100,7 +100,7 @@ Every row shows:
 
 For `Reserve View`, the headline metric intentionally emphasizes score-grade live reserve inputs only. `Configured`, `Curated-Validated`, `Proof`, curated, and estimated reserve views still appear in the breakdown so the row distinguishes detail-page reserve coverage from live reserve data that actually entered report-card collateral scoring.
 
-For `Redemption Backstop`, the headline metric intentionally emphasizes strong redemption coverage only. Low-confidence heuristic routes and configured-but-unrated routes still appear in the breakdown so the row does not imply the modeled registry disappeared.
+For `Redemption Backstop`, the headline metric intentionally emphasizes strong redemption coverage only: resolved, scored, non-low-confidence, immediate routes. Low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, and impaired routes still appear in the breakdown so the row does not imply the modeled registry disappeared or that a missing score is the same as no route.
 
 For `Price & Depeg`, the headline metric intentionally emphasizes breadth with corroborated pricing. A coin still renders `Tracked` in the matrix with fewer than 3 sources, but the feature snapshot headline only counts rows whose `consensusSources` depth is at least 3.
 
@@ -110,7 +110,7 @@ Breakdowns are intentionally dense and should stay short:
 
 - DEX: `primary / mixed / fallback`
 - Reserve view: `score-grade / configured / checking / curated-validated / proof / curated / estimated`
-- Redemption: `heuristic / configured / issuer / psm / queue / collateral / stable / basket`
+- Redemption: `heuristic / resolved / configured / impaired / issuer / psm / queue / collateral / stable / basket`
 - Flows: `full / partial / lagging / bootstrapping / data n/a`
 - Price: `tracked / price-only`
 - Freezable status: `live / yes / dilutable / upstream / possible / no`
@@ -128,7 +128,8 @@ If a feature gains richer user-facing states, update the relevant resolver under
 - The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
 - The pricing-source card renders after the feature snapshot when consensus-source data is available.
 - Search filters by name and ticker.
-- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`).
+- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`). `No Dependency` now means unresolved dependency-map coverage (`Gap` or `Data n/a`), not "no upstream dependency."
+- The `Redemption` quick filter matches configured or resolved redemption states (`Heur.`, `Resolved`, `Config.`, `Impaired`, and scored route families) and intentionally excludes `Not Covered` plus `Data n/a` feed-unavailable rows.
 - The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
 - Default sort is descending live market cap.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states. Mobile renders the result set in batches with explicit "show next" and collapse controls so large filtered sets do not mount hundreds of cards before the user asks for them.
@@ -142,7 +143,7 @@ The page should continue to render meaningfully when some live datasets are temp
 
 ## Structured Data Contract
 
-The `/coverage/` page emits a conservative `Dataset` JSON-LD node for the visible coverage matrix. The descriptor is static and methodological: it names the coverage fields, links the page to the public API documentation/catalog, and intentionally omits live metric values, `DataDownload` entries, `dateModified`, and `/_site-data/*` proxy URLs.
+The `/coverage/` page emits a conservative `Dataset` JSON-LD node for the visible coverage matrix. The descriptor is static and methodological: it names the coverage fields, including `redemptionBackstopCoverage`, links the page to the public API documentation/catalog, and intentionally omits live metric values, `DataDownload` entries, `dateModified`, and `/_site-data/*` proxy URLs.
 
 ---
 

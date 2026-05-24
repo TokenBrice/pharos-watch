@@ -32,7 +32,7 @@ beforeAll(() => {
   });
 });
 
-function DragHarness() {
+function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const {
     positions,
@@ -44,7 +44,7 @@ function DragHarness() {
     svgRef,
     nodeMap: new Map([["node-1", { r: 12 }]]),
     basePositions: new Map([["node-1", { x: 100, y: 100 }]]),
-    simulationKey: "stable",
+    simulationKey,
   });
   const pos = positions.get("node-1");
 
@@ -92,6 +92,29 @@ describe("useContagionGraphDrag", () => {
     await waitFor(() => {
       expect(circle?.getAttribute("cx")).not.toBe("100");
       expect(circle?.getAttribute("cy")).not.toBe("100");
+    });
+  });
+
+  it("resets pinned positions when the simulation key changes", async () => {
+    const { container, rerender } = render(<DragHarness simulationKey="stable" />);
+    const node = screen.getByTestId("drag-node");
+    const svg = screen.getByTestId("drag-svg");
+    const circle = container.querySelector("circle");
+
+    fireEvent.pointerDown(node, { pointerId: 1, clientX: 100, clientY: 100, isPrimary: true });
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 140, clientY: 150 });
+    fireEvent.pointerUp(svg, { pointerId: 1 });
+
+    await waitFor(() => {
+      expect(circle?.getAttribute("cx")).not.toBe("100");
+      expect(circle?.getAttribute("cy")).not.toBe("100");
+    });
+
+    rerender(<DragHarness simulationKey="expanded" />);
+
+    await waitFor(() => {
+      expect(circle?.getAttribute("cx")).toBe("100");
+      expect(circle?.getAttribute("cy")).toBe("100");
     });
   });
 

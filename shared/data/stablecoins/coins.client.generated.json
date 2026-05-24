@@ -3409,8 +3409,7 @@
       {
         "name": "Stablecoins (PSM)",
         "pct": 32,
-        "risk": "very-low",
-        "depType": "mechanism"
+        "risk": "very-low"
       },
       {
         "name": "Grove (RWA)",
@@ -8923,8 +8922,7 @@
       {
         "name": "Tokenized Korean Treasury Bonds (Etherfuse Stablebond / Shinhan custody)",
         "pct": 25,
-        "risk": "low",
-        "depType": "collateral"
+        "risk": "low"
       }
     ],
     "collateral": "Mixed reserves transitioning from USDC-only toward a target mix dominated by short-term Korean Treasury Bonds. Current composition includes USDC (Circle), Frax frxUSD, and tokenized Korean Treasury Bonds issued via Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities.",
@@ -18195,8 +18193,7 @@
       {
         "name": "Stablecoins (PSM)",
         "pct": 38,
-        "risk": "very-low",
-        "depType": "mechanism"
+        "risk": "very-low"
       },
       {
         "name": "Spark (lending)",

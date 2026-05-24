@@ -206,6 +206,39 @@ describe("buildGraphData", () => {
     expect(Array.isArray(result.links)).toBe(true);
   });
 
+  it("uses static dependency edges when dependencyEdges is omitted", () => {
+    const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
+    const mcapMap = new Map<string, number>([
+      ["usds-sky", 5_000_000_000],
+      ["susds-sky", 2_000_000_000],
+    ]);
+
+    const result = buildGraphData(cards, mcapMap);
+
+    expect(result.nodes.map((node) => node.id).sort()).toEqual(["susds-sky", "usds-sky"]);
+    expect(result.links).toEqual([
+      expect.objectContaining({
+        source: "susds-sky",
+        target: "usds-sky",
+        weight: 1,
+        type: "wrapper",
+      }),
+    ]);
+  });
+
+  it("treats an explicit empty dependencyEdges array as no graph edges", () => {
+    const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
+    const mcapMap = new Map<string, number>([
+      ["usds-sky", 5_000_000_000],
+      ["susds-sky", 2_000_000_000],
+    ]);
+
+    const result = buildGraphData(cards, mcapMap, []);
+
+    expect(result.nodes).toEqual([]);
+    expect(result.links).toEqual([]);
+  });
+
   it("does not include defunct stablecoins", () => {
     const { cards, mcapMap } = makeCardsAndMcap(realIds);
     cards[0] = { ...cards[0], isDefunct: true };

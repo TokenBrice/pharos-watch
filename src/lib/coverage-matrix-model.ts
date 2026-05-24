@@ -1,7 +1,3 @@
-import {
-  collectDependencyGraphIds,
-  filterDependencyGraphEdgesToLive,
-} from "@shared/lib/dependency-graph";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
@@ -26,6 +22,7 @@ import {
   COVERAGE_FEATURES,
   type CoverageFeatureKey,
 } from "@/lib/coverage";
+import { buildDependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
 
 const FEATURE_QUERY_AVAILABLE_KEYS = [
   "price",
@@ -107,15 +104,9 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const yieldIds = new Set((input.yieldRankings.data?.rankings ?? []).map((row) => row.id));
   const flowById = new Map((input.mintBurnFlows.data?.coins ?? []).map((row) => [row.stablecoinId, row]));
   const reportCardById = new Map((input.reportCards.data?.cards ?? []).map((card) => [card.id, card]));
-  const liveIds = new Set(
-    (input.reportCards.data?.cards ?? []).filter((card) => !card.isDefunct).map((card) => card.id),
-  );
-  const dependencyIds = collectDependencyGraphIds(
-    filterDependencyGraphEdgesToLive(
-      input.reportCards.data?.dependencyGraph?.edges ?? [],
-      liveIds,
-    ),
-  );
+  const dependencyFacts = input.reportCards.data
+    ? buildDependencyCoverageFacts(activeStablecoins as StablecoinMeta[], input.reportCards.data)
+    : new Map();
 
   const rows = activeStablecoins.map((coin) => {
     const pegCoin = pegCoinById.get(coin.id);
@@ -133,7 +124,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       redemptionEntry: input.redemptionBackstops.data?.coins?.[coin.id] ?? null,
       hasYieldCoverage: yieldIds.has(coin.id),
       flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
-      hasDependencyCoverage: dependencyIds.has(coin.id),
+      dependencyCoverage: dependencyFacts.get(coin.id) ?? null,
       blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCard),
       liveReserveFresh: queryAvailability.reserves ? (reportCard?.rawInputs.collateralFromLive ?? false) : null,
       dataAvailability: queryAvailability,

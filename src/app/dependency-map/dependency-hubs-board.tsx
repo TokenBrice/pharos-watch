@@ -4,15 +4,8 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { formatCurrency } from "@shared/lib/format";
-import { TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
+import { DEPENDENCY_TYPE_PRESENTATION, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { DependencyHub, DependencyHubsModel } from "./dependency-hubs-model";
-import type { DependencyType } from "@shared/types";
-
-const EDGE_TYPE_LABELS: Record<DependencyType, string> = {
-  collateral: "Collateral",
-  mechanism: "Mechanism",
-  wrapper: "Wrapper",
-};
 
 function DependencyMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
@@ -75,7 +68,7 @@ function DependencyHubRow({
                   strokeDasharray={TYPE_DASH[entry.type]}
                 />
               </svg>
-              <span>{EDGE_TYPE_LABELS[entry.type]}</span>
+              <span>{DEPENDENCY_TYPE_PRESENTATION[entry.type].label}</span>
               <span className="font-mono tabular-nums text-foreground">
                 {entry.edgeCount} / {entry.summedDirectDependencyWeight.toFixed(2)}
               </span>

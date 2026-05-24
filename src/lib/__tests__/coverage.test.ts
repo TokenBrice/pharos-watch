@@ -236,10 +236,25 @@ describe("coverage helpers", () => {
       }),
     );
 
-    expect(status.kind).toBe("configured-unrated");
+    expect(status.kind).toBe("impaired");
     expect(status.available).toBe(false);
     expect(status.label).toBe("Impaired");
     expect(status.detail).toContain("Active severe depeg");
+  });
+
+  it("treats resolved eventual-only redemption rows as unscored coverage", () => {
+    const status = resolveRedemptionCoverage(
+      makeRedemptionEntry({
+        score: 65,
+        effectiveExitScore: 60,
+        modelConfidence: "medium",
+        capacitySemantics: "eventual-only",
+      }),
+    );
+
+    expect(status.kind).toBe("resolved-unscored");
+    expect(status.available).toBe(false);
+    expect(status.label).toBe("Resolved");
   });
 
   it("maps mint/burn coverage states into visible labels", () => {
@@ -258,6 +273,44 @@ describe("coverage helpers", () => {
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDS" }), "dilutable").kind).toBe("dilutable");
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "USDQ" }), false).kind).toBe("no");
     expect(resolveBlacklistCoverage(makeCoin({ symbol: "TBD" }), null).kind).toBe("data-unavailable");
+  });
+
+  it("emits role-aware dependency coverage states", () => {
+    expect(resolveDependencyCoverage({
+      kind: "both",
+      upstreamCount: 2,
+      dependentCount: 1,
+      rawDependencyCount: 2,
+      mappedDependencyWeight: 0.9,
+    }).kind).toBe("both");
+    expect(resolveDependencyCoverage({
+      kind: "dependent",
+      upstreamCount: 1,
+      dependentCount: 0,
+      rawDependencyCount: 1,
+      mappedDependencyWeight: 0.5,
+    }).kind).toBe("dependent");
+    expect(resolveDependencyCoverage({
+      kind: "upstream",
+      upstreamCount: 0,
+      dependentCount: 2,
+      rawDependencyCount: 0,
+      mappedDependencyWeight: 0,
+    }).kind).toBe("upstream");
+    expect(resolveDependencyCoverage({
+      kind: "resolved-none",
+      upstreamCount: 0,
+      dependentCount: 0,
+      rawDependencyCount: 0,
+      mappedDependencyWeight: 0,
+    }).available).toBe(true);
+    expect(resolveDependencyCoverage({
+      kind: "unmapped-gap",
+      upstreamCount: 0,
+      dependentCount: 0,
+      rawDependencyCount: 1,
+      mappedDependencyWeight: 0,
+    }).available).toBe(false);
   });
 
   it("counts only available features when building rows", () => {
@@ -561,6 +614,37 @@ describe("coverage helpers", () => {
         hasDependencyCoverage: false,
       }),
       buildCoverageRow({
+        coin: makeCoin({ id: "eventual", symbol: "EVT" }),
+        marketCapUsd: 75,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: makeRedemptionEntry({
+          routeFamily: "offchain-issuer",
+          capacitySemantics: "eventual-only",
+        }),
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({ id: "impaired", symbol: "IMP" }),
+        marketCapUsd: 25,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: makeRedemptionEntry({
+          score: null,
+          effectiveExitScore: null,
+          resolutionState: "impaired",
+          routeStatus: "degraded",
+          modelConfidence: "low",
+        }),
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
         coin: makeCoin({ id: "none", symbol: "NON" }),
         marketCapUsd: 50,
         hasPegCoverage: true,
@@ -581,14 +665,16 @@ describe("coverage helpers", () => {
 
     expect(summary.countLabel).toBe("Strong coverage");
     expect(summary.availableCount).toBe(2);
-    expect(summary.totalCount).toBe(4);
-    expect(summary.coveragePct).toBe(50);
+    expect(summary.totalCount).toBe(6);
+    expect(summary.coveragePct).toBeCloseTo(33.333, 3);
     expect(summary.mcapSharePct).toBe(80);
-    expect(summary.coverageLabel).toBe("50% with strong redemption coverage");
+    expect(summary.coverageLabel).toBe("33% with strong redemption coverage");
     expect(summary.shareLabel).toBe("Strong redemption market-cap reach");
     expect(summary.breakdown).toEqual([
       { key: "modeled-heuristic", label: "heuristic", count: 1 },
+      { key: "resolved-unscored", label: "resolved", count: 1 },
       { key: "configured-unrated", label: "configured", count: 0 },
+      { key: "impaired", label: "impaired", count: 1 },
       { key: "offchain-issuer", label: "issuer", count: 1 },
       { key: "psm-swap", label: "psm", count: 1 },
       { key: "queue-redeem", label: "queue", count: 0 },
@@ -836,7 +922,7 @@ describe("coverage status-kind runtime exhaustiveness", () => {
     resolveRedemptionCoverage(
       redemption({ resolutionState: "impaired", modelConfidence: "low" }),
     ).kind,
-  ); // configured-unrated (impaired)
+  ); // impaired
   record(
     "redemption",
     resolveRedemptionCoverage(redemption({ resolutionState: "missing-capacity" })).kind,
@@ -845,6 +931,10 @@ describe("coverage status-kind runtime exhaustiveness", () => {
     "redemption",
     resolveRedemptionCoverage(redemption({ modelConfidence: "low" })).kind,
   ); // modeled-heuristic
+  record(
+    "redemption",
+    resolveRedemptionCoverage(redemption({ capacitySemantics: "eventual-only" })).kind,
+  ); // resolved-unscored
   for (const family of [
     "offchain-issuer",
     "psm-swap",
@@ -891,8 +981,29 @@ describe("coverage status-kind runtime exhaustiveness", () => {
   record("blacklist", resolveBlacklistCoverage(coin({ symbol: "X" }), null).kind); // data-unavailable
 
   // ── dependency ───────────────────────────────────────────────────────────
-  record("dependency", resolveDependencyCoverage(true).kind); // node
-  record("dependency", resolveDependencyCoverage(false).kind); // none
+  record("dependency", resolveDependencyCoverage({
+    kind: "both",
+    upstreamCount: 1,
+    dependentCount: 1,
+    rawDependencyCount: 1,
+    mappedDependencyWeight: 1,
+  }).kind);
+  record("dependency", resolveDependencyCoverage(true).kind); // dependent via legacy boolean input
+  record("dependency", resolveDependencyCoverage({
+    kind: "upstream",
+    upstreamCount: 0,
+    dependentCount: 1,
+    rawDependencyCount: 0,
+    mappedDependencyWeight: 0,
+  }).kind);
+  record("dependency", resolveDependencyCoverage({
+    kind: "resolved-none",
+    upstreamCount: 0,
+    dependentCount: 0,
+    rawDependencyCount: 0,
+    mappedDependencyWeight: 0,
+  }).kind);
+  record("dependency", resolveDependencyCoverage(false).kind); // unmapped-gap via legacy boolean input
   record("dependency", resolveDependencyCoverage(true, false).kind); // data-unavailable
 
   it.each(COVERAGE_FEATURES.map((f) => [f.key, f] as const))(

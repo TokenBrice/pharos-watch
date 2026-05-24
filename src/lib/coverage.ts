@@ -24,6 +24,7 @@ import type {
   RedemptionBackstopEntry,
   StablecoinMeta,
 } from "@shared/types";
+import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 
 export type {
   CoverageBreakdownItem,
@@ -59,7 +60,8 @@ interface BuildCoverageRowInput {
   redemptionEntry?: RedemptionBackstopEntry | null | undefined;
   hasYieldCoverage: boolean;
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined;
-  hasDependencyCoverage: boolean;
+  dependencyCoverage?: DependencyCoverageFact | null;
+  hasDependencyCoverage?: boolean;
   blacklistStatus?: BlacklistStatus | null;
   liveReserveFresh?: boolean | null;
   dataAvailability?: Partial<Record<CoverageFeatureKey, boolean>>;
@@ -150,6 +152,7 @@ export function buildCoverageRow({
   redemptionEntry,
   hasYieldCoverage,
   flowCoverageStatus,
+  dependencyCoverage,
   hasDependencyCoverage,
   blacklistStatus = null,
   liveReserveFresh = true,
@@ -165,7 +168,7 @@ export function buildCoverageRow({
     yield: yieldFeature.resolve(hasYieldCoverage, hasData("yield")),
     flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
     blacklist: blacklistFeature.resolve(coin, blacklistStatus),
-    dependency: dependencyFeature.resolve(hasDependencyCoverage, hasData("dependency")),
+    dependency: dependencyFeature.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {

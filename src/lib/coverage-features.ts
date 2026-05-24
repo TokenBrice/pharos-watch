@@ -102,7 +102,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     key: "dependency",
     label: "Dependency Map",
     shortLabel: "Dependency",
-    description: "Reserve or mechanism dependency edges in the report-card graph.",
+    description: "Resolved dependency role from the report-card graph and dependency inputs.",
     href: "/dependency-map/",
     statusKinds: dependencyFeature.statusKinds,
     formatBreakdown: dependencyFeature.formatBreakdown,

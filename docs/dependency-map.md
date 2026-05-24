@@ -31,7 +31,7 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 
 - Filters out `isDefunct` report cards.
 - Uses `reportData.dependencyGraph?.edges` from `/api/report-cards` as the primary dependency edge source, then filters to live source/target IDs with `filterDependencyGraphEdgesToLive()`.
-- `buildGraphData()` falls back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` only when no `dependencyEdges` prop is provided.
+- `buildGraphData()` falls back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` only when `dependencyEdges` is omitted or `undefined`; an explicit empty edge array means “render no dependency edges.”
 - The mobile hub summary is built from `reportData.dependencyGraph?.edges ?? []` and does not use the static fallback.
 - Removes coins with no incoming and no outgoing live dependency edges.
 - Sorts remaining coins by market cap descending.

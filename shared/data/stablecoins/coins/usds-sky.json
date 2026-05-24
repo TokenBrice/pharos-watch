@@ -89,8 +89,7 @@
     {
       "name": "Stablecoins (PSM)",
       "pct": 38,
-      "risk": "very-low",
-      "depType": "mechanism"
+      "risk": "very-low"
     },
     {
       "name": "Spark (lending)",

@@ -1,6 +1,10 @@
-import { TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
+import {
+  DEPENDENCY_TYPE_ORDER,
+  DEPENDENCY_TYPE_PRESENTATION,
+  TYPE_COLORS,
+  TYPE_DASH,
+} from "@/components/contagion-graph-model";
 import { GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
-import type { DependencyType } from "@shared/types";
 
 const GRADE_LEGEND_ITEMS = [
   { label: "Grade A", color: GRADE_RADAR_COLORS.A },
@@ -9,12 +13,6 @@ const GRADE_LEGEND_ITEMS = [
   { label: "Grade D", color: GRADE_RADAR_COLORS.D },
   { label: "Grade F", color: GRADE_RADAR_COLORS.F },
 ];
-
-const DEPENDENCY_TYPES: DependencyType[] = ["collateral", "mechanism", "wrapper"];
-
-function formatDependencyType(type: DependencyType): string {
-  return type[0].toUpperCase() + type.slice(1);
-}
 
 export function ContagionGraphLegend() {
   return (
@@ -26,12 +24,12 @@ export function ContagionGraphLegend() {
         </span>
       ))}
       <span className="mx-1 text-border">|</span>
-      {DEPENDENCY_TYPES.map((type) => (
+      {DEPENDENCY_TYPE_ORDER.map((type) => (
         <span key={type} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <svg width="16" height="6" className="shrink-0">
             <line x1="0" y1="3" x2="16" y2="3" stroke={TYPE_COLORS[type]} strokeWidth={2} strokeDasharray={TYPE_DASH[type]} />
           </svg>
-          {formatDependencyType(type)}
+          {DEPENDENCY_TYPE_PRESENTATION[type].label}
         </span>
       ))}
     </div>

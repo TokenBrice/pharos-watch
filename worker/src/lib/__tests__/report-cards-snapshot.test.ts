@@ -256,6 +256,30 @@ describe("buildReportCardsSnapshot", () => {
     );
   });
 
+  it("keeps live-unmapped reserve dependencies from falling back to curated dependencies", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "dai-makerdao", symbol: "DAI" })]);
+    loadFreshIndependentLiveReserveMapMock.mockResolvedValueOnce(
+      new Map([
+        [
+          "dai-makerdao",
+          [
+            { name: "Cash and bills", pct: 80, risk: "very-low" },
+            { name: "Tokenized treasuries", pct: 20, risk: "low" },
+          ],
+        ],
+      ]),
+    );
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "dai-makerdao");
+
+    expect(card?.rawInputs.dependencyFromLive).toBe(true);
+    expect(card?.rawInputs.dependencies).toEqual([]);
+    expect(snapshot.dependencyGraph.edges).not.toContainEqual(
+      expect.objectContaining({ to: "dai-makerdao" }),
+    );
+  });
+
   it("matches /api/report-cards response payload", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     const snapshot = await buildReportCardsSnapshot(db);

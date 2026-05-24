@@ -86,6 +86,7 @@
     "check:sql-safety": "node scripts/ci/check-sql-interpolation-safety.mjs",
     "check:stale-flags": "node scripts/ci/check-stale-flags.mjs",
     "check:stablecoin-data": "tsx scripts/ci/check-stablecoin-data.ts",
+    "check:dependency-coverage": "tsx scripts/maintenance/generate-dependency-coverage-audit.ts --check",
     "check:attestor-tier-coverage": "tsx scripts/ci/check-attestor-tier-coverage.ts",
     "check:glossary-coverage": "tsx scripts/ci/check-glossary-coverage.ts",
     "check:one-liner-coverage": "tsx scripts/ci/check-one-liner-coverage.ts",

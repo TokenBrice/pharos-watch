@@ -1,8 +1,6 @@
+import { compareDependencyTypes } from "@/components/contagion-graph-model";
 import { filterDependencyGraphEdgesToLive, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type { DependencyType, ReportCard } from "@shared/types";
-
-const EDGE_TYPE_ORDER: readonly DependencyType[] = ["collateral", "mechanism", "wrapper"];
-const EDGE_TYPE_RANK = new Map<DependencyType, number>(EDGE_TYPE_ORDER.map((type, index) => [type, index]));
 
 export interface DependencyHubCard {
   id: ReportCard["id"];
@@ -136,12 +134,7 @@ export function buildDependencyHubsModel({
         (sum, dependentId) => sum + getFiniteMcap(mcapMap, dependentId),
         0,
       );
-      const edgeTypeBreakdown = [...hub.typeBreakdown.values()].sort((a, b) => {
-        const typeRank = (EDGE_TYPE_RANK.get(a.type) ?? Number.MAX_SAFE_INTEGER)
-          - (EDGE_TYPE_RANK.get(b.type) ?? Number.MAX_SAFE_INTEGER);
-        if (typeRank !== 0) return typeRank;
-        return a.type.localeCompare(b.type);
-      });
+      const edgeTypeBreakdown = [...hub.typeBreakdown.values()].sort((a, b) => compareDependencyTypes(a.type, b.type));
 
       return {
         id,

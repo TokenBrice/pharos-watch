@@ -40,6 +40,7 @@ npm run check:postman # Verify generated public Postman collection/environment a
 npm run check:world-map # Verify generated static world map SVG is current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
+npm run check:dependency-coverage # Advisory dependency-map coverage audit; enforces a light ratchet only when a baseline exists
 npm run check:build-size # Report and enforce static-export JS/CSS/media/HTML/TXT size budgets after `npm run build`
 npm run check:feature-flag-inlining # Verify configured NEXT_PUBLIC_PHAROS_* flags are build-time inlined after `npm run build`
 npm run check:phishing-signatures # Scan built `out/` HTML for inline-script patterns that match credential-harvesting phishing kits

@@ -123,8 +123,7 @@
     {
       "name": "Tokenized Korean Treasury Bonds (Etherfuse Stablebond / Shinhan custody)",
       "pct": 25,
-      "risk": "low",
-      "depType": "collateral"
+      "risk": "low"
     }
   ],
   "notices": [
