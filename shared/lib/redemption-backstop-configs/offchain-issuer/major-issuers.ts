@@ -7,9 +7,7 @@ import {
   issuerBase,
   sourceRef,
 } from "../shared";
-import {
-  reviewedDirectRedemptionSupplyFull,
-} from "./shared";
+import { reviewedDirectRedemptionSupplyFull } from "./shared";
 
 export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "pyusd-paypal": {
@@ -34,13 +32,22 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-20"),
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Ondo Global Markets docs describe 1:1 USDC <-> USDon platform conversion when swapper liquidity is available; public materials reviewed do not publish a standalone fixed USDon redemption fee",
     ),
     docs: [
-      sourceRef("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets", ["route", "capacity"]),
-      sourceRef("Ondo investing and redeeming", "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming", ["route", "settlement"]),
-      sourceRef("Ondo trust and transparency", "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency", ["capacity"]),
+      sourceRef("Ondo available assets", "https://docs.ondo.finance/ondo-global-markets/available-assets", [
+        "route",
+        "capacity",
+      ]),
+      sourceRef(
+        "Ondo investing and redeeming",
+        "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
+        ["route", "settlement"],
+      ),
+      sourceRef("Ondo trust and transparency", "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency", [
+        "capacity",
+      ]),
     ],
     notes: [
       "Modeled as a whitelisted Ondo Global Markets settlement-cash route; current instant USDC output can depend on swapper liquidity, so this remains documented-bound eventual capacity rather than live immediate liquidity",
@@ -50,13 +57,18 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-20"),
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Bridge Open Issuance docs describe mint/burn rails and reserve redemption; public materials reviewed do not publish a USDsui-specific fixed redemption fee schedule",
     ),
     docs: [
       sourceRef("Sui Dollar launch", "https://blog.sui.io/sui-dollar-launch-bridge/", ["route"]),
-      sourceRef("Bridge issuance overview", "https://apidocs.bridge.xyz/platform/issuance/overview", ["route", "capacity"]),
-      sourceRef("Bridge reserve management", "https://apidocs.bridge.xyz/platform/issuance/reserve-management", ["capacity"]),
+      sourceRef("Bridge issuance overview", "https://apidocs.bridge.xyz/platform/issuance/overview", [
+        "route",
+        "capacity",
+      ]),
+      sourceRef("Bridge reserve management", "https://apidocs.bridge.xyz/platform/issuance/reserve-management", [
+        "capacity",
+      ]),
     ],
     notes: [
       "Bridge reserve docs describe API-gated issuer redemption and reserve management; Pharos models current support as documented eventual primary-market redeemability, not an independently measured instant buffer",
@@ -87,7 +99,10 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "Brale pricing includes 1:1 stablecoin swaps for platform users; bank payout rails can still carry fixed processing fees",
     ),
     docs: [
-      sourceRef("Glo Dollar contracts and reserves", "https://www.glodollar.org/articles/smart-contract-addresses", ["route", "capacity"]),
+      sourceRef("Glo Dollar contracts and reserves", "https://www.glodollar.org/articles/smart-contract-addresses", [
+        "route",
+        "capacity",
+      ]),
       sourceRef("Brale USDGLO", "https://brale.xyz/stablecoins/USDGLO", ["capacity"]),
       sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
     ],
@@ -118,14 +133,18 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...documentedBoundSupplyFull("2026-04-21"),
     settlementModel: "days",
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Forte documents 1:1 AUDF issuance and redemption for eligible users, but the reviewed public materials do not publish a standalone numeric redemption fee schedule",
     ),
     docs: [
       sourceRef("Forte home", "https://www.forteaud.com/", ["route"]),
       sourceRef("Forte reserve reports", "https://www.forteaud.com/new-page", ["capacity"]),
       sourceRef("Forte PDS", "https://www.forteaud.com/s/AUDF_PDS.pdf", ["route", "capacity", "fees"]),
-      sourceRef("Forte terms", "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf", ["route", "access", "fees"]),
+      sourceRef("Forte terms", "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf", [
+        "route",
+        "access",
+        "fees",
+      ]),
     ],
     notes: [
       "Forte documents 1:1 minting and redemption into Australian dollars for approved account holders, with payouts directed to verified bank accounts rather than through an instant onchain rail",
@@ -145,7 +164,12 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
     docs: [
       sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
-      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", ["route", "capacity", "access", "fees"]),
+      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", [
+        "route",
+        "capacity",
+        "access",
+        "fees",
+      ]),
     ],
     notes: [
       "Tracked USDC metadata records a 7% cash-deposit reserve slice; Pharos uses that cash slice as the documented hot-buffer lower bound and does not promote the unvalidated 20% proposal.",
@@ -155,9 +179,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Paxos states it does not charge a USDP redemption fee"),
-    docs: [
-      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem", ["route", "capacity", "fees"]),
-    ],
+    docs: [sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem", ["route", "capacity", "fees"])],
   },
   "gusd-gemini": {
     ...issuerBase,
@@ -180,7 +202,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdx-hex-trust": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("Redeemable through approved parties; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee("Redeemable through approved parties; public fee schedule not disclosed"),
     docs: [
       sourceRef("HT Digital Assets USDX", "https://www.htdigitalassets.com/", ["route", "capacity"]),
       sourceRef("HT Digital Assets disclaimer", "https://www.htdigitalassets.com/disclaimer", ["route", "access"]),
@@ -216,13 +238,15 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     costModel: fixedFee(0, "Issuer docs describe EURI redemption as fee-free at par"),
     docs: [
-      sourceRef(
-        "EURI white paper",
-        "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
-        ["route", "capacity", "fees"],
-      ),
+      sourceRef("EURI white paper", "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
     ],
-    notes: ["Banking Circle documents redemption at par within five business days after the request and required checks"],
+    notes: [
+      "Banking Circle documents redemption at par within five business days after the request and required checks",
+    ],
   },
   "usdq-quantoz": {
     ...issuerBase,
@@ -250,22 +274,20 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "ausd-agora": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("Fees may apply; public docs do not publish a fixed redemption rate"),
+    costModel: undisclosedReviewedFee("Fees may apply; public docs do not publish a fixed redemption rate"),
   },
   "usdo-openeden": {
     ...issuerBase,
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(10, "OpenEden docs list a 10 bps redemption fee"),
     reviewedAt: "2026-03-22",
-    docs: [
-      sourceRef("OpenEden Transparency", "https://openeden.com/usdo/transparency", ["route", "capacity", "fees"]),
-    ],
+    docs: [sourceRef("OpenEden Transparency", "https://openeden.com/usdo/transparency", ["route", "capacity", "fees"])],
   },
   "usdm-moneta": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee("Eligible users can redeem USDM 1:1 for USD; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee("Eligible users can redeem USDM 1:1 for USD; public fee schedule not disclosed"),
     docs: [
       sourceRef("USDM litepaper", "https://moneta.global/resources/litepaper/", ["route", "capacity"]),
       sourceRef("USDM retail launch", "https://moneta.global/retail-launch/", ["route", "settlement"]),
@@ -275,7 +297,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "ustb-superstate": {
     ...issuerBase,
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: documentedVariableFee("Daily NAV redemption through Superstate; public materials do not publish one universal fixed redemption fee"),
+    costModel: undisclosedReviewedFee(
+      "Daily NAV redemption through Superstate; public materials do not publish one universal fixed redemption fee",
+    ),
     reviewedAt: "2026-04-15",
     docs: [
       sourceRef("Superstate USTB", "https://superstate.com/assets/ustb", ["route", "capacity"]),
@@ -299,19 +323,26 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "fidd-fidelity": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Eligible Fidelity clients can buy, sell, and redeem FIDD at a guaranteed $1 price; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("Fidelity Digital Dollar overview", "https://www.fidelitydigitalassets.com/stablecoin", ["route", "capacity"]),
-      sourceRef("FIDD terms and conditions", "https://www.fidelitydigitalassets.com/fidd-terms", ["route", "capacity", "access"]),
+      sourceRef("Fidelity Digital Dollar overview", "https://www.fidelitydigitalassets.com/stablecoin", [
+        "route",
+        "capacity",
+      ]),
+      sourceRef("FIDD terms and conditions", "https://www.fidelitydigitalassets.com/fidd-terms", [
+        "route",
+        "capacity",
+        "access",
+      ]),
     ],
   },
   "usdcv-societe-generale-forge": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Redeemable 1:1 in USD directly with SG-FORGE; public fee schedule not disclosed",
     ),
     docs: [
@@ -327,7 +358,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "buidl-blackrock": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Redeemable at NAV through Securitize; public docs do not publish a separate redemption fee (50 bps annual management fee is charged separately)",
     ),
     notes: ["Restricted to qualified purchasers under SEC Reg D; redemptions processed through Securitize platform"],
@@ -340,7 +371,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "eurs-stasis": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("1:1 redemption through STSS (Malta) Limited; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee("1:1 redemption through STSS (Malta) Limited; public fee schedule not disclosed"),
     docs: [
       sourceRef("STASIS transparency", "https://stasis.net/transparency", ["route", "capacity"]),
       sourceRef("STASIS website", "https://stasis.net/", ["route"]),
@@ -368,7 +399,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     reviewedAt: "2026-05-17",
     docs: [
       sourceRef("USDtb docs", "https://docs.usdtb.money/", ["route", "capacity"]),
-      sourceRef("USDtb reserve attestations", "https://www.anchorage.com/platform/usdtb-reserve-attestations", ["capacity"]),
+      sourceRef("USDtb reserve attestations", "https://www.anchorage.com/platform/usdtb-reserve-attestations", [
+        "capacity",
+      ]),
     ],
     notes: [
       "Tracked USDtb metadata records a 10% USDC redemption reserve; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 30% proposal.",
@@ -389,9 +422,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "gyen-gyen": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
-      "Direct 1:1 redemption through GMO Trust; public fee schedule not disclosed",
-    ),
+    costModel: undisclosedReviewedFee("Direct 1:1 redemption through GMO Trust; public fee schedule not disclosed"),
     docs: [
       sourceRef("GMO Trust stablecoin docs", "https://stablecoin.z.com/what-are-gyen-and-zusd/", ["route", "capacity"]),
       sourceRef("GMO Trust attestation", "https://stablecoin.z.com/attestation/", ["capacity"]),

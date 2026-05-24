@@ -2,6 +2,7 @@ import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   expandIds,
   fixedFee,
   issuerBase,
@@ -17,13 +18,10 @@ import {
 } from "./shared";
 
 export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig> = {
-  ...expandIds(
-    ["kau-kinesis", "kag-kinesis"],
-    {
-      ...commodityIssuerBase,
-      ...reviewedDirectRedemptionSupplyFull,
-    },
-  ),
+  ...expandIds(["kau-kinesis", "kag-kinesis"], {
+    ...commodityIssuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+  }),
   "cgo-comtech": {
     ...commodityIssuerBase,
     ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
@@ -73,7 +71,11 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ),
     docs: [
       sourceRef("AUDD home", "https://www.audd.digital/", ["route", "capacity"]),
-      sourceRef("AUDD product disclosure statement", "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf", ["route", "capacity", "fees"]),
+      sourceRef(
+        "AUDD product disclosure statement",
+        "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf",
+        ["route", "capacity", "fees"],
+      ),
     ],
   },
   "usdr-stablr": {
@@ -93,23 +95,24 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       "Physical gold redemption requires KYC and compliance checks, with additional fees, minimums, and logistics that vary by jurisdiction and program terms",
     ),
     docs: [
-      sourceRef(
-        "PGOLD token features",
-        "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features",
-        ["route", "capacity", "access", "fees"],
-      ),
-      sourceRef(
-        "Pleasing AML/CFT policy",
-        "https://pleasing.gitbook.io/docs/legal/aml-cft-and-sanctions-policy",
-        ["access"],
-      ),
+      sourceRef("PGOLD token features", "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features", [
+        "route",
+        "capacity",
+        "access",
+        "fees",
+      ]),
+      sourceRef("Pleasing AML/CFT policy", "https://pleasing.gitbook.io/docs/legal/aml-cft-and-sanctions-policy", [
+        "access",
+      ]),
     ],
-    notes: ["The modeled backstop is the documented physical-delivery redemption rail; spot trading and secondary transfers remain separate, faster paths that do not exercise issuer redemption"],
+    notes: [
+      "The modeled backstop is the documented physical-delivery redemption rail; spot trading and secondary transfers remain separate, faster paths that do not exercise issuer redemption",
+    ],
   },
   "dusd-standx": {
     ...issuerBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
     ),
     reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
@@ -125,7 +128,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "brla-brla-digital": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Avenia (formerly BRLA Digital) documents 1:1 BRLA mint and redemption against BRL after KYC; public docs reviewed do not publish a fixed numeric redemption fee",
     ),
     docs: [
@@ -138,7 +141,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Moneta/TruBit terms govern MMXN purchase and redemption for verified users; public materials reviewed do not publish one fixed MMXN redemption fee",
     ),
     docs: [
@@ -157,21 +160,19 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "ctusd-citrea": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Citrea documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate Citrea protocol redemption fee",
     ),
     docs: [
       sourceRef("Citrea", "https://citrea.xyz/", ["route", "capacity"]),
       sourceRef("Citrea documentation", "https://docs.citrea.xyz/", ["route"]),
     ],
-    notes: [
-      "Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting",
-    ],
+    notes: ["Fiat-backed via MoonPay; reserves cryptographically attested on-chain by M0 Validators before minting"],
   },
   "xo-exodus": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Exodus XO documents 1:1 fiat mint and redemption via MoonPay using M0 Protocol infrastructure; MoonPay fiat-ramp fees apply while public docs reviewed do not publish a separate XO protocol redemption fee",
     ),
     docs: [
@@ -192,34 +193,28 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       sourceRef("KAST documentation", "https://docs.kast.finance/", ["route", "capacity"]),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
-    notes: [
-      "Solana SPL Token-2022 wrapper around M (M0); mint/redeem gated by KAST app and licensed payment partners",
-    ],
+    notes: ["Solana SPL Token-2022 wrapper around M (M0); mint/redeem gated by KAST app and licensed payment partners"],
   },
   "usdm-mega": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "USDM is issued on Ethena's USDtb rails; primary redemption follows USDtb's documented issuer rail and is KYC-gated; public USDM-specific redemption fees are not published",
     ),
     docs: [
       sourceRef("MegaETH", "https://www.megaeth.com/", ["route"]),
       sourceRef("Ethena USDtb", "https://ethena.fi/usdtb", ["route", "capacity"]),
     ],
-    notes: [
-      "USDM reuses Ethena's USDtb issuer redemption rail; reserve yield funds MegaETH sequencer costs",
-    ],
+    notes: ["USDM reuses Ethena's USDtb issuer redemption rail; reserve yield funds MegaETH sequencer costs"],
   },
   "usdkg-gold-dollar": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Gold Dollar documents 1:1 USDKG mint and redemption against USD, KGS, physical gold, or approved cryptocurrencies after KYC/AML; public docs reviewed do not publish a fixed numeric redemption fee",
     ),
-    docs: [
-      sourceRef("Gold Dollar USDKG", "https://usdkg.com/", ["route", "capacity"]),
-    ],
+    docs: [sourceRef("Gold Dollar USDKG", "https://usdkg.com/", ["route", "capacity"])],
     notes: [
       "Licensed under Kyrgyz Republic Law on Virtual Assets (2022) / Cabinet Resolution No. 514; multiple redemption outputs supported (USD, KGS, physical gold, or approved crypto)",
     ],
@@ -227,7 +222,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "usat-tether": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "USA₮ issuer materials state issued tokens are redeemable 1:1 in U.S. dollars pursuant to Anchorage Digital Bank's terms; public redemption fee schedule is not disclosed",
     ),
     docs: [
@@ -247,11 +242,7 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       "CFX documents 1:1 MOVEUSD redemption through designated channels; fees, currency conversions, and account-maintenance charges may apply, and no single fixed public redemption fee is published",
     ),
     docs: [
-      sourceRef("MoveUSD overview", "https://docs.moveusd.com/docs/what-is-moveusd", [
-        "route",
-        "capacity",
-        "access",
-      ]),
+      sourceRef("MoveUSD overview", "https://docs.moveusd.com/docs/what-is-moveusd", ["route", "capacity", "access"]),
       sourceRef("MoveUSD disclosures", "https://docs.moveusd.com/docs/disclosures-disclaimers", [
         "route",
         "access",

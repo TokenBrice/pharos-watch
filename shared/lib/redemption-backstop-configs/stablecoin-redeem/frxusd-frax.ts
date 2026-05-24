@@ -1,34 +1,23 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
 
 export const FRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   ...reviewedDirectRedemptionSupplyFull,
   capacityModel: { kind: "reserve-sync-metadata" },
-  costModel: documentedVariableFee(
+  costModel: undisclosedReviewedFee(
     "Direct Ethereum mint and redeem contracts support 1:1 conversion between frxUSD and USDC; public docs do not publish a fixed redemption fee",
   ),
   docs: [
-    sourceRef(
-      "frxUSD mint and redeem overview",
-      "https://docs.frax.com/frxusd/mint-and-redeem-overview",
-      ["route", "capacity"],
-    ),
-    sourceRef(
-      "frxUSD USDC quickstart",
-      "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc",
-      ["route"],
-    ),
-    sourceRef(
-      "FraxNetDeposit contract",
-      "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit",
-      ["route", "capacity"],
-    ),
+    sourceRef("frxUSD mint and redeem overview", "https://docs.frax.com/frxusd/mint-and-redeem-overview", [
+      "route",
+      "capacity",
+    ]),
+    sourceRef("frxUSD USDC quickstart", "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc", ["route"]),
+    sourceRef("FraxNetDeposit contract", "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit", [
+      "route",
+      "capacity",
+    ]),
   ],
   notes: [
     "Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail",

@@ -2,6 +2,7 @@ import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   issuerBase,
   sourceRef,
 } from "../shared";
@@ -31,7 +32,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
     docs: [
       sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
-      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", ["route", "capacity", "access", "fees"]),
+      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", [
+        "route",
+        "capacity",
+        "access",
+        "fees",
+      ]),
     ],
   },
   "bfusd-binance": {
@@ -64,12 +70,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
     settlementModel: "same-day",
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Bridge-supported pathUSD exchange/redemption uses Bridge rails; public materials reviewed do not publish one fixed pathUSD redemption fee",
     ),
     docs: [
       sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/pathUSD", ["route", "access", "fees"]),
-      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["capacity", "settlement", "fees"]),
+      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
+        "capacity",
+        "settlement",
+        "fees",
+      ]),
     ],
     notes: [
       "Modeled as verified Bridge/Tempo primary-market redeemability into USDC rather than independently measured instant on-chain liquidity",
@@ -79,11 +89,17 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Pareto docs describe verified-user USP mint/redeem flow; public materials reviewed do not publish a single fixed redemption fee",
     ),
     docs: [
-      sourceRef("Pareto USP docs", "https://docs.pareto.credit/product/usp", ["route", "access", "capacity", "fees", "settlement"]),
+      sourceRef("Pareto USP docs", "https://docs.pareto.credit/product/usp", [
+        "route",
+        "access",
+        "capacity",
+        "fees",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled for verified primary-market users; unverified secondary-market holders still depend on market liquidity or onboarding before direct redemption",
@@ -92,9 +108,17 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "gbpe-monerium": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    costModel: documentedVariableFee("Monerium fee schedule and terms govern bank-transfer redemption; public materials reviewed do not publish a single fixed GBPe redemption fee"),
+    costModel: undisclosedReviewedFee(
+      "Monerium fee schedule and terms govern bank-transfer redemption; public materials reviewed do not publish a single fixed GBPe redemption fee",
+    ),
     docs: [
-      sourceRef("Monerium financial information", "https://monerium.com/financial-information/", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Monerium financial information", "https://monerium.com/financial-information/", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
     ],
     notes: ["Modeled as regulated e-money redemption for onboarded Monerium customers through bank-transfer rails"],
@@ -102,10 +126,20 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "qcad-stablecorp": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    costModel: documentedVariableFee("Stablecorp/authorized-partner redemption terms govern QCAD redemption; public materials reviewed do not publish one fixed redemption fee"),
+    costModel: undisclosedReviewedFee(
+      "Stablecorp/authorized-partner redemption terms govern QCAD redemption; public materials reviewed do not publish one fixed redemption fee",
+    ),
     docs: [
-      sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", ["capacity"]),
+      sourceRef("Stablecorp transparency", "https://stablecorp.ca/transparency", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", [
+        "capacity",
+      ]),
     ],
     notes: ["Modeled as issuer redemption for qualified holders under QCAD Digital Trust and authorized partner rails"],
   },
@@ -114,12 +148,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Fluid materials describe bank-account mint/redeem flows for DUSD; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
       sourceRef("Fluid DUSD", "https://fluid.ch/dusd/", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Fluid app mint/redeem guide", "https://medium.com/fluidfi/how-to-use-the-web-app-and-mint-redeem-digitaldollar-dusd-5183c8dcfb6", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef(
+        "Fluid app mint/redeem guide",
+        "https://medium.com/fluidfi/how-to-use-the-web-app-and-mint-redeem-digitaldollar-dusd-5183c8dcfb6",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
     ],
     notes: [
       "Modeled as verified-user bank-rail redemption, not as an on-chain permissionless stablecoin swap; reserve visibility still depends on Fluid's self-reported on-chain treasury balance.",
@@ -130,12 +168,21 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mRe7YIELD redemption fee",
     ),
     docs: [
-      sourceRef("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas smart contracts", "https://docs.midas.app/protocol-mechanics/smart-contracts", ["route", "access"]),
+      sourceRef("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Midas smart contracts", "https://docs.midas.app/protocol-mechanics/smart-contracts", [
+        "route",
+        "access",
+      ]),
     ],
     notes: [
       "mRe7YIELD is a NAV-accreting strategy token, so the route is modeled as issuer/platform NAV redemption rather than same-day stablecoin par liquidity.",
@@ -146,16 +193,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull("2026-05-14"),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mF-ONE redemption fee",
     ),
     docs: [
       sourceRef("Midas mF-ONE", "https://midas.app/mfone", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
-        "route",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
     ],
     notes: [
       "mF-ONE is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
@@ -166,22 +209,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull("2026-05-14"),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mGLOBAL redemption fee",
     ),
     docs: [
-      sourceRef("Midas mGLOBAL", "https://midas.app/mglobal", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
-        "route",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Midas mGLOBAL", "https://midas.app/mglobal", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
     ],
     notes: [
       "mGLOBAL is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
@@ -192,16 +225,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull("2026-05-14"),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mHYPER redemption fee",
     ),
     docs: [
       sourceRef("Midas mHYPER", "https://midas.app/mhyper", ["route", "capacity", "fees", "access", "settlement"]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
-        "route",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
     ],
     notes: [
       "mHYPER is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
@@ -212,7 +241,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull("2026-05-14"),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mMEV redemption fee",
     ),
     docs: [
@@ -223,11 +252,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
-        "route",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
     ],
     notes: [
       "mMEV is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
@@ -238,22 +263,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull("2026-05-14"),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mAPOLLO redemption fee",
     ),
     docs: [
-      sourceRef("Midas mAPOLLO", "https://midas.app/mapollo", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
-      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
-        "route",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Midas mAPOLLO", "https://midas.app/mapollo", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", ["route", "access", "settlement"]),
     ],
     notes: [
       "mAPOLLO is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
@@ -263,7 +278,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Franklin Templeton materials describe BENJI redemptions through the Benji app/platform; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -287,7 +302,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "WisdomTree Connect supports subscriptions and redemptions through USD wires or stablecoin conversion; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -298,11 +313,10 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
-      sourceRef(
-        "WTGXX fund page",
-        "https://www.wisdomtree.com/investments/digital-funds/money-market/wtgxx",
-        ["capacity", "fees"],
-      ),
+      sourceRef("WTGXX fund page", "https://www.wisdomtree.com/investments/digital-funds/money-market/wtgxx", [
+        "capacity",
+        "fees",
+      ]),
     ],
     notes: [
       "Same-day settlement depends on U.S. trading-day cutoffs; 24/7 dealer settlement is modeled as platform primary-market access, not independent on-chain liquidity.",
@@ -312,7 +326,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Securitize materials describe VBILL subscription and redemption at fund NAV; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -337,7 +351,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Centrifuge materials describe whitelisted pool investment and redemption flows; public materials reviewed do not publish one fixed JTRSY redemption fee",
     ),
     docs: [
@@ -362,7 +376,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Anemoy materials describe subscriptions and redemptions in stablecoins; public materials reviewed do not publish one fixed JAAA redemption fee",
     ),
     docs: [
@@ -388,7 +402,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "queued",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Anemoy / Centrifuge materials describe qualified-investor ACRDX subscriptions and redemptions; public materials reviewed do not publish one fixed ACRDX redemption fee",
     ),
     docs: [
@@ -420,7 +434,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed USTBL redemption fee",
     ),
     docs: [
@@ -434,11 +448,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
         ["route", "access", "settlement"],
       ),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -449,7 +464,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SAFO redemption fee",
     ),
     docs: [
@@ -464,11 +479,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         ["route", "access", "settlement"],
       ),
       sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -479,7 +495,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SPKCC redemption fee",
     ),
     docs: [
@@ -498,11 +514,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "fees",
         "access",
       ]),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -513,7 +530,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed UKTBL redemption fee",
     ),
     docs: [
@@ -532,11 +549,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "fees",
         "access",
       ]),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -547,7 +565,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed GBPSAFO redemption fee",
     ),
     docs: [
@@ -562,11 +580,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         ["route", "access", "settlement"],
       ),
       sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
@@ -577,7 +596,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EUTBL redemption fee",
     ),
     docs: [
@@ -591,11 +610,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
         ["route", "access", "settlement"],
       ),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
@@ -606,7 +626,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSAFO redemption fee",
     ),
     docs: [
@@ -621,11 +641,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         ["route", "access", "settlement"],
       ),
       sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
@@ -636,7 +657,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSPKCC redemption fee",
     ),
     docs: [
@@ -655,11 +676,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "fees",
         "access",
       ]),
-      sourceRef(
-        "Spiko SICAV prospectus",
-        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
-        ["capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("Spiko SICAV prospectus", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", [
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
     ],
     notes: [
       "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
@@ -670,7 +692,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "queued",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Securitize materials describe STAC subscriptions and redemptions at fund NAV; public materials reviewed do not publish one fixed STAC redemption fee",
     ),
     docs: [
@@ -696,7 +718,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "queued",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Securitize / Hamilton Lane materials describe SCOPE feeder-fund redemption features; public materials reviewed do not publish one fixed HLSCOPE redemption fee",
     ),
     docs: [
@@ -722,20 +744,18 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Backed documents bToken redemption into stablecoins or cash within T+3; public materials reviewed do not publish one fixed bIB01 redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Backed redemption docs",
-        "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-      sourceRef("Backed bIB01 product", "https://assets.backed.fi/products/bib01", [
+      sourceRef("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption", [
+        "route",
         "capacity",
         "fees",
         "access",
+        "settlement",
       ]),
+      sourceRef("Backed bIB01 product", "https://assets.backed.fi/products/bib01", ["capacity", "fees", "access"]),
       sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]),
     ],
     notes: [
@@ -747,20 +767,18 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Backed documents bToken redemption into stablecoins or cash within T+3; public materials reviewed do not publish one fixed bC3M redemption fee",
     ),
     docs: [
-      sourceRef(
-        "Backed redemption docs",
-        "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
-      sourceRef("Backed bC3M product", "https://assets.backed.fi/products/bc3m", [
+      sourceRef("Backed redemption docs", "https://docs.backed.fi/backed-platform/issuance-and-redemption/redemption", [
+        "route",
         "capacity",
         "fees",
         "access",
+        "settlement",
       ]),
+      sourceRef("Backed bC3M product", "https://assets.backed.fi/products/bc3m", ["capacity", "fees", "access"]),
       sourceRef("Backed product structure", "https://assets.backed.fi/structure", ["capacity", "access"]),
     ],
     notes: [
@@ -771,7 +789,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "CADD trust terms define 1:1 CAD redemption less any administrative fee; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -782,10 +800,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
-      sourceRef("CADD reserve attestations", "https://tetradg.com/cadd-reserve-attestations/", [
-        "capacity",
-        "fees",
-      ]),
+      sourceRef("CADD reserve attestations", "https://tetradg.com/cadd-reserve-attestations/", ["capacity", "fees"]),
       sourceRef("CADD stablecoin page", "https://tetradg.com/cadd-stablecoin/", ["route", "access"]),
     ],
     notes: [
@@ -797,17 +812,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Blox materials describe 1:1 MYRC redemption for Malaysian Ringgit; product terms leave issuance and redemption subject to Blox terms and do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("Blox MYRC", "https://www.blox.my/myrc", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("Blox MYRC", "https://www.blox.my/myrc", ["route", "capacity", "fees", "access", "settlement"]),
       sourceRef("Blox MYRC transparency", "https://www.blox.my/myrc/transparency", ["route", "capacity"]),
       sourceRef("Blox product term sheet", "https://www.blox.my/policies/product-term-sheet", [
         "route",
@@ -824,23 +833,13 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
     executionModel: "opaque",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "KRWQ materials expose a Mint/Redeem flow and KYC-gated institutional controls; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
-      sourceRef("KRWQ homepage", "https://www.krwq.cash/", [
-        "route",
-        "capacity",
-        "fees",
-        "access",
-        "settlement",
-      ]),
+      sourceRef("KRWQ homepage", "https://www.krwq.cash/", ["route", "capacity", "fees", "access", "settlement"]),
       sourceRef("KRWQ mint/redeem", "https://www.krwq.cash/mint", ["route", "access"]),
-      sourceRef("KRWQ whitepaper", "https://www.krwq.cash/whitepaper.pdf", [
-        "capacity",
-        "fees",
-        "access",
-      ]),
+      sourceRef("KRWQ whitepaper", "https://www.krwq.cash/whitepaper.pdf", ["capacity", "fees", "access"]),
     ],
     notes: [
       "Modeled as KYC-gated KRWQ platform redemption; public materials still point to future formal attestations, so reserve transparency remains separate from route existence.",
@@ -850,7 +849,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     routeStatus: "open",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "BitGo Mint supports native SoFiUSD minting and redemption for institutions; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -872,8 +871,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         ["route", "capacity", "access"],
       ),
     ],
-    notes: [
-      "Modeled as institutional BitGo/SoFi issuer redemption, not a retail self-service on-chain burn path.",
-    ],
+    notes: ["Modeled as institutional BitGo/SoFi issuer redemption, not a retail self-service on-chain burn path."],
   },
 };

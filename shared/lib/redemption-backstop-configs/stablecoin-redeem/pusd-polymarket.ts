@@ -1,6 +1,6 @@
 import {
   documentedBoundSupplyFull,
-  documentedVariableFee,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   stablecoinRedeemBase,
 } from "../shared";
@@ -10,7 +10,7 @@ export const PUSD_POLYMARKET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig 
   ...stablecoinRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_BATCH_AT),
   outputAssetType: "stable-basket",
-  costModel: documentedVariableFee(
+  costModel: undisclosedReviewedFee(
     "Polymarket docs describe PUSD as redeemable through Polymarket withdrawal rails into supported stablecoin balances; public docs reviewed do not publish a standalone fixed redemption fee",
   ),
   notes: [

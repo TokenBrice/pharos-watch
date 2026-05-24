@@ -1,6 +1,6 @@
 import {
   documentedBoundSupplyFull,
-  documentedVariableFee,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -12,10 +12,17 @@ export const YUSD_YIELDFI_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   settlementModel: "queued",
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee("YieldFi docs describe yToken redemption requests processed after a cooldown by keeper automation; public docs reviewed do not publish one fixed redemption fee"),
+  costModel: undisclosedReviewedFee(
+    "YieldFi docs describe yToken redemption requests processed after a cooldown by keeper automation; public docs reviewed do not publish one fixed redemption fee",
+  ),
   docs: [
     sourceRef("YieldFi yUSD", "https://docs.yield.fi/technical-docs/ytokens/yusd", ["route", "capacity"]),
-    sourceRef("YieldFi smart contract interaction", "https://docs.yield.fi/technical-docs/smart-contract-interaction", ["route", "capacity", "access", "settlement"]),
+    sourceRef("YieldFi smart contract interaction", "https://docs.yield.fi/technical-docs/smart-contract-interaction", [
+      "route",
+      "capacity",
+      "access",
+      "settlement",
+    ]),
     sourceRef("YieldFi fees", "https://docs.yield.fi/fees", ["fees"]),
   ],
   notes: [

@@ -102,7 +102,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Maple docs describe FIFO queued withdrawal requests for syrupUSDC and do not publish a separate protocol redemption fee",
     ),
     docs: [
@@ -131,7 +131,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Maple docs describe FIFO queued withdrawal requests for syrupUSDT and do not publish a separate protocol redemption fee",
     ),
     docs: [
@@ -173,7 +173,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "susdai-usd-ai": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull("2026-04-04"),
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "USD.AI documents sUSDai unstaking as a queued withdrawal into USDai with fixed 30-day processing windows; public docs reviewed do not publish a numeric redemption fee or a quantified instant-liquidity bound",
     ),
     docs: [
@@ -283,7 +283,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Brix protocol materials describe standard wiTRY unstaking through a 3-day cooldown plus a fast-withdraw option with an additional fee; public materials reviewed do not publish one global fixed fee",
     ),
     docs: [
@@ -465,7 +465,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
     capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Saturn documents KYC-gated 1:1 USDC mint and redeem through the M0 Swap Facility (Uniswap V3 1bps tier); public docs reviewed do not publish a separate USDAT protocol redemption fee",
     ),
     reviewedAt: "2026-04-16",
@@ -483,7 +483,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Nerona documents permissioned 1:1 USDnr mint and redeem against underlying M; public docs reviewed do not publish a separate numeric redemption fee",
     ),
     reviewedAt: "2026-04-16",
@@ -498,7 +498,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Hermetica documents KYC-gated USDH mint and redemption against a delta-neutral BTC position; public docs reviewed do not publish a fixed redemption fee",
     ),
     reviewedAt: "2026-04-16",
@@ -542,7 +542,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Neutrl redemption is available to whitelisted KYC participants and supports instant or queued execution depending on AssetReserve liquidity; public fee schedule is not disclosed",
     ),
     docs: [
@@ -684,7 +684,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Nest docs describe nTBILL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -705,7 +705,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Nest docs describe nALPHA/inALPHA redemption requests through the app and atomic queue; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -739,7 +739,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Nest docs describe nBASIS redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -760,7 +760,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Nest docs describe nOPAL redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -781,7 +781,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Nest docs describe nWISDOM redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -799,7 +799,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "queued",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Usual docs describe permissionless bUSD0 redemption into USD0: early par exit requires the matching rt-bUSD0 token, while bUSD0 alone redeems at maturity; public docs reviewed do not publish a separate redemption fee",
     ),
     docs: [

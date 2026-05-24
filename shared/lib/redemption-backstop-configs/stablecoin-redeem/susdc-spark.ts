@@ -1,15 +1,12 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
 
 export const SUSDC_SPARK_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee("Spark savings vault withdrawals redeem spUSDC for USDC at the live vault exchange rate; no separate fixed protocol fee was identified in reviewed public docs"),
+  costModel: undisclosedReviewedFee(
+    "Spark savings vault withdrawals redeem spUSDC for USDC at the live vault exchange rate; no separate fixed protocol fee was identified in reviewed public docs",
+  ),
   reviewedAt: "2026-05-17",
   docs: [
     sourceRef("Spark docs", "https://docs.spark.fi/", ["route", "capacity", "fees", "access", "settlement"]),

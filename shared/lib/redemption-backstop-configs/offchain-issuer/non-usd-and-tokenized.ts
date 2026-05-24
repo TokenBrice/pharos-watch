@@ -2,6 +2,7 @@ import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   fixedFee,
   issuerBase,
   sourceRef,
@@ -16,7 +17,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "cadc-cad-coin": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption for CAD through Loon / PayTrie; public fee schedule not disclosed",
     ),
     docs: [
@@ -27,7 +28,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "veur-vnx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
     ),
     docs: [
@@ -38,7 +39,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "vchf-vnx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
     ),
     docs: [
@@ -49,7 +50,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "vgbp-vnx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
     ),
     docs: [
@@ -60,18 +61,16 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "tryb-bilira": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 issuance and redemption through BiLira; public fee schedule not disclosed",
     ),
-    docs: [
-      sourceRef("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin", ["route", "capacity"]),
-    ],
+    docs: [sourceRef("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin", ["route", "capacity"])],
   },
   "tgbp-tokenised": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption through BCP Technologies Ltd; public fee schedule not disclosed",
     ),
     docs: [
@@ -82,32 +81,26 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "jpyc-jpyc": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption through JPYC EX after KYC and bank transfer verification; public fee schedule not disclosed",
     ),
-    docs: [
-      sourceRef("JPYC website", "https://jpyc.co.jp/", ["route", "capacity"]),
-    ],
+    docs: [sourceRef("JPYC website", "https://jpyc.co.jp/", ["route", "capacity"])],
   },
   "axcnh-anchorx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; public fee schedule not disclosed",
     ),
-    docs: [
-      sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"]),
-    ],
+    docs: [sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"])],
   },
   "idrt-rupiah-token": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; public fee schedule not disclosed",
     ),
-    docs: [
-      sourceRef("Rupiah Token website", "https://www.rupiahtoken.com/", ["route", "capacity"]),
-    ],
+    docs: [sourceRef("Rupiah Token website", "https://www.rupiahtoken.com/", ["route", "capacity"])],
   },
   "idrx-idrx": {
     ...issuerBase,
@@ -116,7 +109,11 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "IDRX redemption fees are flat IDR charges that depend on redemption size (Rp5,000 up to Rp250,000,000; Rp35,000 above that during office hours), so the effective bps varies by ticket size",
     ),
     docs: [
-      sourceRef("IDRX redeem IDR guide", "https://docs.idrx.co/services/redeem-idr", ["route", "capacity", "settlement"]),
+      sourceRef("IDRX redeem IDR guide", "https://docs.idrx.co/services/redeem-idr", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
       sourceRef(
         "IDRX redeem request API",
         "https://docs.idrx.co/api/transaction-api/post-api-transaction-redeem-request",
@@ -132,7 +129,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "mxnb-juno": {
     ...issuerBase,
     ...reviewedIssuerApiExpansionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Juno documents quote-based MXNB conversions into USDC or USDT with pair-specific min/max limits, but it does not publish a fixed redemption or conversion fee schedule",
     ),
     docs: [
@@ -152,7 +149,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Moneta/TruBit terms govern MMXN purchase and redemption for verified users; public materials reviewed do not publish one fixed MMXN redemption fee",
     ),
     docs: [
@@ -171,20 +168,21 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "europ-schuman": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct 1:1 redemption through Schuman Financial; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf", ["route", "capacity"]),
+      sourceRef("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf", [
+        "route",
+        "capacity",
+      ]),
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-audits/", ["capacity"]),
     ],
   },
   "eurau-allunity": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
-      "Direct 1:1 redemption through AllUnity; public fee schedule not disclosed",
-    ),
+    costModel: undisclosedReviewedFee("Direct 1:1 redemption through AllUnity; public fee schedule not disclosed"),
     docs: [
       sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
       sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
@@ -193,9 +191,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "chfau-allunity": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
-      "Direct 1:1 redemption through AllUnity; public fee schedule not disclosed",
-    ),
+    costModel: undisclosedReviewedFee("Direct 1:1 redemption through AllUnity; public fee schedule not disclosed"),
     docs: [
       sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
       sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
@@ -205,23 +201,27 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Tracked issuer materials describe direct 1:1 USDA redemption into USD through KYC-verified banking rails; public fee schedule not disclosed",
     ),
-    docs: [
-      sourceRef("Anzens website", "https://www.anzens.com/", ["route", "capacity", "settlement"]),
+    docs: [sourceRef("Anzens website", "https://www.anzens.com/", ["route", "capacity", "settlement"])],
+    notes: [
+      "Tracked metadata describes redemption through bank transfers rather than an instant onchain stablecoin withdrawal rail",
     ],
-    notes: ["Tracked metadata describes redemption through bank transfers rather than an instant onchain stablecoin withdrawal rail"],
   },
   "cash-phantom": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "CASH is minted 1:1 from USD deposits via Bridge and redeemed into USD or supported stablecoins; public issuer fee schedule not disclosed",
     ),
     docs: [
       sourceRef("CASH overview", "https://www.usecash.xyz/", ["route", "capacity"]),
-      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["route", "capacity", "fees"]),
+      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
     ],
   },
   "mnee-mnee": {
@@ -230,9 +230,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: documentedVariableFee(
       "Fiat and in-kind redemptions require at least US$100,000 and charge the greater of US$5,000 or 0.5%, with additional bank or network fees possible",
     ),
-    docs: [
-      sourceRef("MNEE terms", "https://www.mnee.io/terms", ["route", "capacity", "fees"]),
-    ],
+    docs: [sourceRef("MNEE terms", "https://www.mnee.io/terms", ["route", "capacity", "fees"])],
   },
   "sbc-brale": {
     ...issuerBase,
@@ -255,13 +253,15 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("M0 FAQ", "https://www.m0.org/faq", ["route", "capacity", "access"]),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
-    notes: ["Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption"],
+    notes: [
+      "Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption",
+    ],
   },
   "fusd-finchain": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-05-24"),
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Eligible FinChain customers mint and redeem FUSD through the issuer against a tokenized Treasury and money-market fund reserve portfolio; public docs reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -285,15 +285,21 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "musd-metamask": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "MetaMask USD is issued 1:1 by Bridge on top of M0 reserve infrastructure; public redemption fees are not disclosed",
     ),
     docs: [
       sourceRef("MetaMask USD introduction", "https://musd.to/blog", ["route", "capacity"]),
-      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["route", "capacity", "fees"]),
+      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
       sourceRef("M0 FAQ", "https://www.m0.org/faq", ["capacity", "access"]),
     ],
-    notes: ["Modeled as MetaMask's documented Bridge issuer rail on top of M0 reserve infrastructure rather than as a continuously measured live cash-buffer route"],
+    notes: [
+      "Modeled as MetaMask's documented Bridge issuer rail on top of M0 reserve infrastructure rather than as a continuously measured live cash-buffer route",
+    ],
   },
   "mtbill-midas": {
     ...issuerBase,
@@ -303,8 +309,14 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
     reviewedAt: "2026-05-17",
     docs: [
-      sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", ["route", "capacity", "settlement"]),
-      sourceRef("Midas prospectus documents", "https://docs.midas.app/resources/legal-documents/prospectus-documents", ["fees"]),
+      sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
+      sourceRef("Midas prospectus documents", "https://docs.midas.app/resources/legal-documents/prospectus-documents", [
+        "fees",
+      ]),
       sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
     ],
     notes: [
@@ -317,7 +329,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedDirectRedemptionSupplyFull,
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
-    costModel: documentedVariableFee("Bank wire redemption at NAV-based price; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee("Bank wire redemption at NAV-based price; public fee schedule not disclosed"),
     reviewedAt: "2026-05-17",
     docs: [
       sourceRef("Ondo USDY", "https://ondo.finance/usdy", ["route", "capacity"]),
@@ -333,7 +345,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Ondo Global Markets subscriptions and redemptions follow the tokenized IAU economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -364,7 +376,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     settlementModel: "days",
     executionModel: "rules-based-nav",
     outputAssetType: "nav",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Ondo Global Markets subscriptions and redemptions follow the tokenized SLV economic exposure for eligible investors; public materials reviewed do not publish one fixed redemption fee",
     ),
     docs: [
@@ -403,7 +415,9 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         ["route", "settlement"],
       ),
     ],
-    notes: ["Direct minting and redemption require KYC; Theo describes optimistic issuance against USDC while issuer settlement completes asynchronously"],
+    notes: [
+      "Direct minting and redemption require KYC; Theo describes optimistic issuance against USDC while issuer settlement completes asynchronously",
+    ],
   },
   "rwausdi-multipli": {
     ...issuerBase,
@@ -413,16 +427,26 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "NAV-based valuation; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     ),
     docs: [
-      sourceRef("Multipli unwind and peg module", "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module", ["route", "capacity"]),
-      sourceRef("Multipli issuer, custody & operational risk", "https://docs.multipli.fi/risks/issuer-custody-and-operational-risk", ["access", "settlement", "capacity"]),
+      sourceRef(
+        "Multipli unwind and peg module",
+        "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
+        ["route", "capacity"],
+      ),
+      sourceRef(
+        "Multipli issuer, custody & operational risk",
+        "https://docs.multipli.fi/risks/issuer-custody-and-operational-risk",
+        ["access", "settlement", "capacity"],
+      ),
       sourceRef("AFI verification", "https://verification.afiprotocol.xyz/multipli", ["capacity"]),
     ],
-    notes: ["Multipli documents an institution-only primary redemption rail into underlying liquidity-class assets, so the route remains a delayed issuer exit rather than an instant public stablecoin off-ramp"],
+    notes: [
+      "Multipli documents an institution-only primary redemption rail into underlying liquidity-class assets, so the route remains a delayed issuer exit rather than an instant public stablecoin off-ramp",
+    ],
   },
   "usdn-noble": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "USDN users mint and redeem via USDC through Noble Express; public redemption fees are not disclosed",
     ),
     docs: [
@@ -430,30 +454,37 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "capacity"]),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
     ],
-    notes: ["Current model scores the documented Noble Express USDC mint-and-redeem rail as eventual issuer redemption rather than a separately measured live cash buffer"],
+    notes: [
+      "Current model scores the documented Noble Express USDC mint-and-redeem rail as eventual issuer redemption rather than a separately measured live cash buffer",
+    ],
   },
   "aeur-anchored-coins": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Direct redemption is available through Anchored Coins AG for amounts of at least AEUR 250,000; public fee schedule not disclosed",
     ),
     docs: [
-      sourceRef("Anchored Coins AEUR redemption", "https://www.anchoredcoins.com/en/landing/aeur", ["route", "capacity"]),
+      sourceRef("Anchored Coins AEUR redemption", "https://www.anchoredcoins.com/en/landing/aeur", [
+        "route",
+        "capacity",
+      ]),
       sourceRef(
         "Anchored Coins white paper",
         "https://static.anchoredcoins.com/static/cloud/anchoredcoins/static/images/admin_mgs_image_upload/whitepaper_for_launch.pdf",
         ["route", "capacity"],
       ),
     ],
-    notes: ["Redemption timing depends on customer due diligence, banking-partner review, and payment-processing timelines"],
+    notes: [
+      "Redemption timing depends on customer due diligence, banking-partner review, and payment-processing timelines",
+    ],
   },
   "eurcv-societe-generale-forge": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Redeemable 1:1 in EUR directly with SG-FORGE; public fee schedule not disclosed",
     ),
     docs: [

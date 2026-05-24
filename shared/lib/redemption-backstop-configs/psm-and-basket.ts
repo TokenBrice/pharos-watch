@@ -4,6 +4,7 @@ import {
   basketRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   fixedFee,
   psmSwapBase,
   sourceRef,
@@ -22,7 +23,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: documentedVariableFee("Fixed redemption fee, but public docs do not publish the current rate"),
+    costModel: undisclosedReviewedFee("Fixed redemption fee, but public docs do not publish the current rate"),
     docs: [
       sourceRef("Cap introduction", "https://docs.cap.app/", ["route", "capacity"]),
       sourceRef("Cap cUSD mechanics", "https://docs.cap.app/protocol-overview/cusd-mechanics", ["route", "capacity"]),
@@ -99,7 +100,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
     outputAssetType: "mixed-collateral",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Usual docs describe EUR0 redemption into eligible euro RWA collateral through the dApp; public materials reviewed do not publish one fixed EUR0 redemption fee",
     ),
     docs: [
@@ -145,7 +146,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "ist-agoric": {
     ...psmSwapBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.6, confidence: "documented-bound", basis: "psm-balance-share" },
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Inter Protocol docs describe 1:1 PSM trades between IST and approved external stable tokens, but public docs reviewed do not publish a numeric redemption fee",
     ),
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
@@ -239,7 +240,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...documentedBoundSupplyFull("2026-04-16"),
     outputAssetType: "mixed-collateral",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
     ),
     docs: [sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"])],
@@ -276,7 +277,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...documentedBoundSupplyFull(REVIEWED_RESERVE_PROTOCOL_DTF_AT),
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    costModel: documentedVariableFee(
+    costModel: undisclosedReviewedFee(
       "Reserve Protocol DTF redemptions return the backing basket subject to protocol throttles and basket mechanics; public docs reviewed do not publish a separate fixed USD3 redemption fee",
     ),
     notes: [

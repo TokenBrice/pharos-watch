@@ -1,6 +1,6 @@
 import {
   documentedBoundSupplyFull,
-  documentedVariableFee,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -10,7 +10,7 @@ export const USDZ_ANZEN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   ...documentedBoundSupplyFull("2026-04-16"),
   accessModel: "whitelisted-onchain",
-  costModel: documentedVariableFee(
+  costModel: undisclosedReviewedFee(
     "Qualified Market Makers mint and redeem 1:1 USDz/USDC against SPCT collateral; public docs reviewed do not publish a fixed retail redemption fee",
   ),
   docs: [

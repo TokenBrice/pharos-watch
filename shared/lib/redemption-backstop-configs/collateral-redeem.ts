@@ -48,7 +48,7 @@ const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_MENTO_CDP_AT),
   outputAssetType: "stable-single",
-  costModel: documentedVariableFee(
+  costModel: undisclosedReviewedFee(
     "Mento CDP redemption/repayment path burns the FX stablecoin against USDm collateral at oracle value; public docs reviewed do not publish one global fixed redemption fee",
   ),
   docs: [
@@ -74,7 +74,7 @@ const mentoLocalFxCdpRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
   outputAssetType: "stable-single",
-  costModel: documentedVariableFee(
+  costModel: undisclosedReviewedFee(
     "Mento CDP redemptions follow Liquity v2-style mechanics against USDm collateral with FX oracle pricing; public docs reviewed do not publish one global fixed redemption fee",
   ),
   docs: [
@@ -321,7 +321,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
       outputAssetType: "bluechip-collateral",
-      costModel: documentedVariableFee(
+      costModel: undisclosedReviewedFee(
         "Hylo docs describe hyUSD burns/redemptions against the SOL LST collateral pool through protocol pricing; public materials reviewed do not publish one fixed redemption fee",
       ),
       docs: [
@@ -345,7 +345,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
       executionModel: "rules-based-nav",
       outputAssetType: "bluechip-collateral",
-      costModel: documentedVariableFee(
+      costModel: undisclosedReviewedFee(
         "Freedom Dollar materials describe protocol conversion between fUSD and ZANO at the target dollar value; public materials reviewed do not publish one fixed redemption fee",
       ),
       docs: [
@@ -364,14 +364,14 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "satusd-river": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
-      costModel: documentedVariableFee(
+      costModel: undisclosedReviewedFee(
         "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
       ),
     },
     "doc-money-on-chain": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull("2026-04-21"),
-      costModel: documentedVariableFee(
+      costModel: undisclosedReviewedFee(
         "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
       ),
       docs: [
@@ -497,7 +497,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(
+      costModel: undisclosedReviewedFee(
         "Hive conversions settle over the protocol conversion window and can be affected by HBD debt-ratio haircut mechanics; public docs reviewed do not publish a fixed redemption fee",
       ),
       notes: [
@@ -510,7 +510,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
       outputAssetType: "mixed-collateral",
       executionModel: "rules-based-nav",
-      costModel: documentedVariableFee(
+      costModel: undisclosedReviewedFee(
         "Djed app/docs describe burning DJED against ADA reserves subject to reserve-ratio rules; public materials reviewed do not publish one global fixed redemption fee",
       ),
       docs: [

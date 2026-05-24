@@ -1,6 +1,6 @@
 import {
   documentedBoundSupplyFull,
-  documentedVariableFee,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -10,7 +10,7 @@ export const SDOLA_INVERSE_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopC
   ...stablecoinRedeemBase,
   ...documentedBoundSupplyFull("2026-05-24"),
   totalScoreCap: 70,
-  costModel: documentedVariableFee(
+  costModel: undisclosedReviewedFee(
     "sDOLA docs describe deposits and redemptions through the ERC-4626 wrapper at the vault exchange rate; public materials reviewed do not publish a separate withdrawal fee",
   ),
   docs: [

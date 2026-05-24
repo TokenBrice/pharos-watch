@@ -1,16 +1,13 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  sourceRef,
-  stablecoinRedeemBase,
-} from "../shared";
+import { undisclosedReviewedFee, type RedemptionBackstopConfig, sourceRef, stablecoinRedeemBase } from "../shared";
 import { REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 
 export const YUSD_AEGIS_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   accessModel: "whitelisted-onchain",
   capacityModel: { kind: "supply-ratio", ratio: 0.15 },
-  costModel: documentedVariableFee("Aegis documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee"),
+  costModel: undisclosedReviewedFee(
+    "Aegis documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee",
+  ),
   reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
   docs: [
     sourceRef("Aegis liquidity", "https://docs.aegis.im/overview/liquidity", ["route", "capacity", "access"]),
