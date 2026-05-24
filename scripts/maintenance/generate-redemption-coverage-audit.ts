@@ -348,7 +348,7 @@ export function generateRedemptionCoverageAudit(
 }
 
 function markdownValue(value: string | null): string {
-  return value && value.length > 0 ? value.replaceAll("|", "\\|") : "TBD";
+  return value && value.length > 0 ? value.replace(/[\r\n]+/g, " ").replaceAll("|", "\\|") : "TBD";
 }
 
 export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageAudit): string {

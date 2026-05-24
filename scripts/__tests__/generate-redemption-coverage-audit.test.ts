@@ -258,17 +258,18 @@ describe("generate-redemption-coverage-audit", () => {
   });
 
   it("renders the expected reviewer tables", () => {
+    const sourceLinkWithTableSyntax = "https://example.com/source|with-pipe\nhttps://example.com/next";
     const audit = generateRedemptionCoverageAudit({
       trackedCoins: [
         coin({
           id: "mmxn-moneta-digital",
-          links: [{ label: "Docs", url: "https://example.com/source|with-pipe" }],
+          links: [{ label: "Docs", url: sourceLinkWithTableSyntax }],
         }),
       ],
       activeCoins: [
         coin({
           id: "mmxn-moneta-digital",
-          links: [{ label: "Docs", url: "https://example.com/source|with-pipe" }],
+          links: [{ label: "Docs", url: sourceLinkWithTableSyntax }],
         }),
       ],
       configs: {},
@@ -282,7 +283,8 @@ describe("generate-redemption-coverage-audit", () => {
       "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven",
     );
     expect(markdown).toContain("mmxn-moneta-digital | active | needs-research (issuer-terms-missing) | curated");
-    expect(markdown).toContain("https://example.com/source\\|with-pipe");
+    expect(markdown).toContain("https://example.com/source\\|with-pipe https://example.com/next");
+    expect(markdown).not.toContain("with-pipe\nhttps://example.com/next");
   });
 
   it("parses CLI format and report options", () => {

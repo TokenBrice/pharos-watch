@@ -355,6 +355,38 @@ describe("validateRedemptionBackstopRegistry", () => {
     );
   });
 
+  it("rejects duplicate support tags on a redemption document source", () => {
+    const result = validateFixture([
+      {
+        name: "issuer",
+        filePath: "issuer.ts",
+        configs: {
+          "usdt-tether": {
+            ...baseConfig,
+            docs: [
+              {
+                label: "Fixture docs",
+                url: "https://example.com/docs",
+                supports: ["route", "route"],
+              },
+            ],
+          } as unknown as RedemptionBackstopConfig,
+        },
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+    ]);
+
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "schema-validation",
+          stablecoinId: "usdt-tether",
+          message: expect.stringContaining('Duplicate doc support "route"'),
+        }),
+      ]),
+    );
+  });
+
   it("warns when documented-bound configs lack route or capacity source support", () => {
     const result = validateFixture([
       {
@@ -422,8 +454,7 @@ describe("validateRedemptionBackstopRegistry", () => {
     ]);
 
     const supportWarnings = result.findings.filter(
-      (finding) =>
-        finding.stablecoinId === "usdt-tether" && finding.code.startsWith("documented-bound-missing-"),
+      (finding) => finding.stablecoinId === "usdt-tether" && finding.code.startsWith("documented-bound-missing-"),
     );
     expect(supportWarnings).toEqual([]);
   });

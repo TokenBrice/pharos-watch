@@ -107,6 +107,9 @@ describe("redemption backstop config helpers", () => {
       url: "https://example.com/docs",
       supports: ["route", "capacity"],
     });
+    expect(() => sourceRef("Docs", "https://example.com/docs", ["route", "route"])).toThrow(
+      'Duplicate redemption doc support "route" for "Docs".',
+    );
   });
 
   it("separates fixed, documented variable, formula, and undisclosed reviewed fee helpers", () => {

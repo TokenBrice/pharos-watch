@@ -180,9 +180,11 @@ export function documentedVariableFee(
   confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",
 ): RedemptionCostModel {
   const resolvedFeeModelKind =
-    confidence === "formula" ? "formula" : feeDescriptionLooksUndisclosed(feeDescription)
-      ? "undisclosed-reviewed"
-      : "documented-variable";
+    confidence === "formula"
+      ? "formula"
+      : feeDescriptionLooksUndisclosed(feeDescription)
+        ? "undisclosed-reviewed"
+        : "documented-variable";
   return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind: resolvedFeeModelKind };
 }
 
@@ -200,9 +202,7 @@ function feeDescriptionLooksUndisclosed(feeDescription: string): boolean {
   );
 }
 
-export function undisclosedReviewedFee(
-  feeDescription: string = NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
-): RedemptionCostModel {
+export function undisclosedReviewedFee(feeDescription: string = NO_PUBLIC_NUMERIC_REDEMPTION_FEE): RedemptionCostModel {
   return {
     kind: "dynamic-or-unclear",
     feeDescription,
@@ -212,6 +212,14 @@ export function undisclosedReviewedFee(
 }
 
 export function sourceRef(label: string, url: string, supports?: RedemptionDocSourceSupport[]): RedemptionDocSource {
+  const seen = new Set<RedemptionDocSourceSupport>();
+  for (const support of supports ?? []) {
+    if (seen.has(support)) {
+      throw new Error(`Duplicate redemption doc support "${support}" for "${label}".`);
+    }
+    seen.add(support);
+  }
+
   return supports && supports.length > 0 ? { label, url, supports } : { label, url };
 }
 

@@ -39,10 +39,24 @@ const ReviewedAtSchema = z
   }, "Expected a valid calendar date")
   .refine((value) => value <= currentUtcDate(), "reviewedAt cannot be in the future");
 
+const RedemptionDocSourceSupportsSchema = z.array(RedemptionDocSourceSupportSchema).superRefine((supports, ctx) => {
+  const seen = new Set<string>();
+  for (const [index, support] of supports.entries()) {
+    if (seen.has(support)) {
+      ctx.addIssue({
+        code: "custom",
+        path: [index],
+        message: `Duplicate doc support "${support}"`,
+      });
+    }
+    seen.add(support);
+  }
+});
+
 const RedemptionDocSourceSchema = z.strictObject({
   label: z.string().min(1),
   url: HttpUrlSchema,
-  supports: z.array(RedemptionDocSourceSupportSchema).optional(),
+  supports: RedemptionDocSourceSupportsSchema.optional(),
 });
 
 const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
@@ -229,10 +243,7 @@ export const RedemptionBackstopConfigSchema = z
         });
       }
 
-      if (
-        config.costModel.feeModelKind === "formula" &&
-        config.costModel.confidence !== "formula"
-      ) {
+      if (config.costModel.feeModelKind === "formula" && config.costModel.confidence !== "formula") {
         ctx.addIssue({
           code: "custom",
           path: ["costModel", "confidence"],
