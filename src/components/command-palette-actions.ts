@@ -89,7 +89,7 @@ export function buildVerbPreview(parsedVerb: ParsedVerb): CommandPaletteVerbPrev
       if (keys.length === 0) {
         return {
           label: "Screen —",
-          sublabel: "e.g. screen safety>=80 dews<20 peg=USD",
+          sublabel: "Fields: safety, dews, supply, peg, mechanism, type · operators >= <= =",
           runnable: false,
         };
       }

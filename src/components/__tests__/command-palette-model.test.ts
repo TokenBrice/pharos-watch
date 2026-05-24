@@ -87,6 +87,27 @@ describe("command palette model", () => {
     }
   });
 
+  it("floats the canonical asset and major vaults above obscure same-substring wrappers", () => {
+    const order = buildCommandPaletteResultDescriptors({
+      query: "USDC",
+      history: [],
+      isDark: false,
+    })
+      .filter((result) => result.section === "Stablecoins")
+      .map((result) => result.href ?? "");
+
+    const usdCoin = order.indexOf("/stablecoin/usdc-circle/");
+    const sparkVault = order.indexOf("/stablecoin/susdc-spark/");
+    const movementUsdcx = order.indexOf("/stablecoin/usdcx-movement/");
+
+    expect(usdCoin).toBe(0);
+    // Prominence keeps the large Spark USDC vault above the negligible
+    // "Movement USDCx" wrapper even though the wrapper scores a symbol prefix.
+    expect(sparkVault).toBeGreaterThan(-1);
+    expect(movementUsdcx).toBeGreaterThan(-1);
+    expect(sparkVault).toBeLessThan(movementUsdcx);
+  });
+
   it("keeps Start Here unique in the command palette route model", () => {
     expect(COMMAND_PALETTE_PAGES.filter((page) => page.href === "/start")).toHaveLength(1);
 

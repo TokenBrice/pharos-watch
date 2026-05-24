@@ -29,8 +29,15 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useWatchlist } from "@/hooks/use-watchlist";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import { getCirculatingRaw } from "@shared/lib/supply";
+import { formatCompactUsd } from "@shared/lib/format";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { deriveDeviationBps } from "@/lib/stablecoin-detail-derive";
+import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import {
   buildCommandPaletteResultDescriptors,
+  buildPopularStablecoinDescriptors,
   groupCommandPaletteResults,
   type CommandPaletteActionIcon,
   type CommandPaletteActionId,
@@ -47,6 +54,26 @@ import {
   executeParsedVerb,
 } from "@/components/command-palette-actions";
 
+// Empty-state "Popular" jump list size (ranked live by market cap).
+const POPULAR_STABLECOIN_COUNT = 6;
+
+// Peg-health state for the semantic dot. Calm by default; watch at half the
+// depeg threshold; alert at/above it. Bands come from depeg-config so the dot
+// agrees with the rest of the product.
+type PegStatus = "calm" | "watch" | "alert";
+
+const PEG_STATUS_DOT: Record<PegStatus, string> = {
+  calm: "bg-emerald-500",
+  watch: "bg-amber-500",
+  alert: "bg-red-500",
+};
+
+const PEG_STATUS_LABEL: Record<PegStatus, string> = {
+  calm: "At peg",
+  watch: "Peg watch",
+  alert: "Off peg",
+};
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface SearchResult {
@@ -60,6 +87,12 @@ interface SearchResult {
   imageDarkInvert?: boolean;
   icon?: React.ReactNode;
   frozen?: boolean;
+  /** Live USD market cap, shown right-aligned on stablecoin rows. */
+  marketCap?: number;
+  /** Live peg-health state, shown as a semantic dot on stablecoin rows. */
+  pegStatus?: PegStatus;
+  /** Render the sublabel in the mono face (tickers, dates — data, not prose). */
+  mono?: boolean;
   onSelect: () => void;
   keywords?: string[];
 }
@@ -123,6 +156,8 @@ function buildSearchResult(
     toggleTheme,
     watchlistIds,
     setQuery,
+    marketCapById,
+    pegStatusById,
   }: {
     logos: Record<string, string>;
     router: ReturnType<typeof useRouter>;
@@ -137,6 +172,8 @@ function buildSearchResult(
     toggleTheme: () => void;
     watchlistIds: readonly string[];
     setQuery: (next: string) => void;
+    marketCapById: Map<string, number>;
+    pegStatusById: Map<string, PegStatus>;
   },
 ): SearchResult {
   const selectAction = (actionId: CommandPaletteActionId) => {
@@ -223,6 +260,15 @@ function buildSearchResult(
             ? <FileText className="h-4 w-4" />
             : undefined,
     frozen: descriptor.frozen,
+    marketCap:
+      descriptor.kind === "stablecoin" && descriptor.logoId
+        ? marketCapById.get(descriptor.logoId)
+        : undefined,
+    pegStatus:
+      descriptor.kind === "stablecoin" && descriptor.logoId
+        ? pegStatusById.get(descriptor.logoId)
+        : undefined,
+    mono: descriptor.kind === "stablecoin" || descriptor.kind === "depeg-event",
     onSelect,
   };
 }
@@ -237,8 +283,46 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const { isDark, toggleTheme } = useThemeToggle();
   const { data: logos } = useLogos();
+  const { data: stablecoinsData } = useStablecoins();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
   const { ids: watchlistIds, add: addToWatchlist, remove: removeFromWatchlist, clear: clearWatchlist, count: watchlistCount } = useWatchlist();
+
+  // Live market caps power the right-aligned datum on coin rows and the
+  // empty-state "Popular" jump list. The list query is already cached by the
+  // data surfaces; the palette only mounts after first open, so this never
+  // fetches eagerly.
+  const peggedAssets = stablecoinsData?.peggedAssets;
+  const marketCapById = useMemo(() => {
+    const map = new Map<string, number>();
+    if (peggedAssets) {
+      for (const asset of peggedAssets) map.set(asset.id, getCirculatingRaw(asset));
+    }
+    return map;
+  }, [peggedAssets]);
+  const popularIds = useMemo(() => {
+    if (!peggedAssets) return [];
+    return [...peggedAssets]
+      .filter((asset) => !asset.frozen)
+      .sort((a, b) => getCirculatingRaw(b) - getCirculatingRaw(a))
+      .slice(0, POPULAR_STABLECOIN_COUNT)
+      .map((asset) => asset.id);
+  }, [peggedAssets]);
+  const pegStatusById = useMemo(() => {
+    const map = new Map<string, PegStatus>();
+    if (!peggedAssets) return map;
+    const { rates } = derivePegRates(peggedAssets, undefined, stablecoinsData?.fxFallbackRates);
+    for (const asset of peggedAssets) {
+      const peg = asset.pegType;
+      // Commodity references need per-token ounce weights we don't carry here,
+      // so skip gold/silver rather than render a misleading dot.
+      if (!peg || asset.price == null || peg === "peggedGOLD" || peg === "peggedSILVER") continue;
+      const reference = getPegReference(peg, rates);
+      const bps = Math.abs(deriveDeviationBps(asset.price, reference));
+      const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
+      map.set(asset.id, bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm");
+    }
+    return map;
+  }, [peggedAssets, stablecoinsData?.fxFallbackRates]);
 
   const closePalette = useCallback(() => {
     onOpenChange(false);
@@ -300,22 +384,32 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // ── Build results ──────────────────────────────────────────────────────
 
   const results = useMemo((): SearchResult[] => {
+    const ctx = {
+      logos,
+      router,
+      closePalette,
+      addToHistory,
+      toggleTheme,
+      watchlistIds,
+      setQuery,
+      marketCapById,
+      pegStatusById,
+    };
+
     const built = buildCommandPaletteResultDescriptors({
       query,
       history,
       isDark,
       watchlistCount,
-    }).map((descriptor) =>
-      buildSearchResult(descriptor, {
-        logos,
-        router,
-        closePalette,
-        addToHistory,
-        toggleTheme,
-        watchlistIds,
-        setQuery,
-      }),
-    );
+    }).map((descriptor) => buildSearchResult(descriptor, ctx));
+
+    // Empty state: surface a live, market-cap-ranked "Popular" jump list so the
+    // prime real estate teaches the interface instead of restating the prompt.
+    const popular = query.trim()
+      ? []
+      : buildPopularStablecoinDescriptors(popularIds).map((descriptor) =>
+          buildSearchResult(descriptor, ctx),
+        );
 
     // Prepend a "Run command" row when the input parses to a verb. Clicking
     // it (or pressing Enter while it's selected) runs the side-effect.
@@ -330,9 +424,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           if (verbPreview.runnable) runVerb();
         },
       };
-      return [verbRow, ...built];
+      return [verbRow, ...popular, ...built];
     }
-    return built;
+    return [...popular, ...built];
   }, [
     query,
     logos,
@@ -346,6 +440,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     watchlistIds,
     verbPreview,
     runVerb,
+    marketCapById,
+    pegStatusById,
+    popularIds,
   ]);
 
   // ── Grouped results for rendering ──────────────────────────────────────
@@ -475,17 +572,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             </div>
           )}
 
-          {!query.trim() && history.length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-              Start typing to search stablecoins and pages
-            </div>
-          )}
-
           {groupedResults.map((group) => (
             <div key={group.section}>
               <div className="flex items-center justify-between px-4 py-1.5">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {group.section}
+                  {group.section === "Stablecoins" && (
+                    <span className="ml-2 font-mono text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70">
+                      {group.items.length}
+                    </span>
+                  )}
                 </span>
                 {group.section === "Recent" && history.length > 0 && (
                   <button
@@ -511,7 +607,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     data-selected={isSelected}
                     className={`pharos-focus-ring mx-2 flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm text-foreground transition-all duration-150 sm:min-h-0 ${
                       isSelected
-                        ? "border-border/70 bg-muted/55 shadow-sm"
+                        ? "border-ring/55 bg-ring/10 shadow-sm"
                         : "border-transparent hover:border-border/55 hover:bg-muted/45"
                     }`}
                     style={{ width: "calc(100% - 16px)" }}
@@ -565,11 +661,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         ) : null}
                       </span>
                       {item.sublabel && (
-                        <span className="text-muted-foreground text-xs truncate block">
+                        <span className={`text-muted-foreground text-xs truncate block ${item.mono ? "font-mono" : ""}`}>
                           {item.sublabel}
                         </span>
                       )}
                     </div>
+                    {typeof item.marketCap === "number" && item.marketCap > 0 ? (
+                      <span className="shrink-0 pl-3 text-right font-mono text-xs text-muted-foreground">
+                        {formatCompactUsd(item.marketCap)}
+                      </span>
+                    ) : null}
+                    {item.pegStatus ? (
+                      <span
+                        className={`ml-2 size-1.5 shrink-0 rounded-full ${PEG_STATUS_DOT[item.pegStatus]}`}
+                        title={PEG_STATUS_LABEL[item.pegStatus]}
+                        aria-hidden
+                      />
+                    ) : null}
                   </button>
                 );
               })}
@@ -578,8 +686,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground sm:hidden">
-          <span>Tap a result to open it.</span>
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground sm:hidden">
           <button
             type="button"
             onClick={closePalette}

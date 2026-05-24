@@ -24,6 +24,7 @@ import depegEventSearchData from "@/generated/depeg-event-search-data.json";
 export type CommandPaletteSection =
   | "Run command"
   | "Recent"
+  | "Popular"
   | "Stablecoins"
   | "Pages"
   | "Chains"
@@ -211,6 +212,7 @@ export interface CommandPaletteResultDescriptor {
 const COMMAND_PALETTE_SECTION_ORDER: readonly CommandPaletteSection[] = [
   "Run command",
   "Recent",
+  "Popular",
   "Stablecoins",
   "Pages",
   "Chains",
@@ -286,6 +288,25 @@ function scoreStablecoinSearchMatch(query: string, coin: (typeof COMMAND_PALETTE
   );
 }
 
+// COMMAND_PALETTE_STABLECOINS is maintained in canonical (roughly market-cap)
+// order, so a coin's index is a stable, fetch-free prominence proxy. We fold a
+// small bonus into the lexical score so that, among comparably-matching rows,
+// the canonical asset and its major vaults float above obscure same-substring
+// wrappers (e.g. USD Coin and the large USDC vaults rank above "Movement
+// USDCx"). The bonus is capped well below an exact-symbol hit (100) so an exact
+// match always wins regardless of prominence.
+const PROMINENCE_MAX_BONUS = 30;
+const PROMINENCE_SPAN = 200;
+
+function prominenceBonus(index: number): number {
+  if (index >= PROMINENCE_SPAN) return 0;
+  return Math.round(PROMINENCE_MAX_BONUS * (1 - index / PROMINENCE_SPAN));
+}
+
+const STABLECOIN_BY_ID = new Map<string, (typeof COMMAND_PALETTE_STABLECOINS)[number]>(
+  COMMAND_PALETTE_STABLECOINS.map((coin) => [coin[0], coin]),
+);
+
 export function rankCommandPaletteResults<T extends { score: number; status?: string }>(
   items: T[],
 ): T[] {
@@ -295,6 +316,39 @@ export function rankCommandPaletteResults<T extends { score: number; status?: st
     const bFrozen = b.status === "frozen" ? 1 : 0;
     return aFrozen - bFrozen;
   });
+}
+
+/**
+ * Build descriptors for the empty-state "Popular" jump list from a caller-
+ * supplied, ordered list of coin ids (the palette ranks these live by market
+ * cap). Unknown ids are skipped. Kept pure: the id ordering is the component's
+ * concern, the static name/symbol projection is this module's.
+ */
+export function buildPopularStablecoinDescriptors(
+  ids: readonly string[],
+): CommandPaletteResultDescriptor[] {
+  const out: CommandPaletteResultDescriptor[] = [];
+  for (const id of ids) {
+    const coin = STABLECOIN_BY_ID.get(id);
+    if (!coin) continue;
+    const [coinId, name, symbol, status, frozenAt] = coin;
+    const href = buildStablecoinUrl(coinId);
+    out.push({
+      id: `popular-${coinId}`,
+      label: name,
+      sublabel:
+        status === "frozen"
+          ? `${symbol} · Frozen${frozenAt ? ` ${frozenAt}` : ""}`
+          : symbol,
+      section: "Popular",
+      kind: "stablecoin",
+      logoId: coinId,
+      frozen: status === "frozen",
+      href,
+      history: { id: coinId, type: "stablecoin", label: name, sublabel: symbol, href },
+    });
+  }
+  return out;
 }
 
 export function buildCommandPaletteActionDefinitions(
@@ -410,11 +464,11 @@ export function buildCommandPaletteResultDescriptors({
       status: string;
     }> = [];
 
-    for (const coin of COMMAND_PALETTE_STABLECOINS) {
-      const [, , , status] = coin;
-      const score = scoreStablecoinSearchMatch(q, coin);
-      if (score <= 0) continue;
-      matched.push({ coin, score, status: status ?? "active" });
+    for (const [index, coin] of COMMAND_PALETTE_STABLECOINS.entries()) {
+      const status = coin[3];
+      const base = scoreStablecoinSearchMatch(q, coin);
+      if (base <= 0) continue;
+      matched.push({ coin, score: base + prominenceBonus(index), status: status ?? "active" });
     }
 
     for (const { coin } of rankCommandPaletteResults(matched)) {
