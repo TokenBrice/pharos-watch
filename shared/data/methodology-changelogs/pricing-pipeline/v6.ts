@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.1",
+      title: "DEX pricing source utilization expansion",
+      date: "2026-05-24",
+      effectiveAt: 1779648809,
+      summary:
+        "Primary pricing now uses more of the existing DEX surface through additional hard Curve routes, Uniswap V3/V4 protocol lanes, restored aggregate fallback behavior, and low-depth exact-address/Jupiter augmentation.",
+      impact: [
+        "Hard Curve on-chain coverage now includes audited direct pools plus explicit opt-in one-hop and chained-hop routes that fail closed on missing dependencies or cycles",
+        "`uniswap-v3-dex` and `uniswap-v4-dex` can enter consensus as soft DEX lanes when `dex_prices.price_sources_json` publishes corroborated protocol evidence",
+        "`dex-promoted` is withheld only when a promoted protocol DEX lane is actually admitted, so rejected lone protocol candidates no longer suppress the aggregate DEX voice",
+        "Exact-address providers prioritize missing and low-depth priced assets, report request-cap skips, and Jupiter can append bounded soft evidence to agreeing low-depth Solana prices without replacing the primary price",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.09",
       title: "Weak address-provider depeg quarantine",
       date: "2026-05-24",

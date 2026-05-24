@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.09` (2026-02-01 -> 2026-05-24).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.1` (2026-02-01 -> 2026-05-24).
+
+---
+
+## v6.1 - DEX pricing source utilization expansion (May 24, 2026)
+
+- Hard Curve on-chain coverage now includes audited direct pools plus explicit opt-in one-hop and chained-hop routes that fail closed on missing dependencies or cycles
+- `uniswap-v3-dex` and `uniswap-v4-dex` can enter consensus as soft DEX lanes when `dex_prices.price_sources_json` publishes corroborated protocol evidence
+- `dex-promoted` is withheld only when a promoted protocol DEX lane is actually admitted, so rejected lone protocol candidates no longer suppress the aggregate DEX voice
+- Exact-address providers prioritize missing and low-depth priced assets, report request-cap skips, and Jupiter can append bounded soft evidence to agreeing low-depth Solana prices without replacing the primary price
 
 ---
 

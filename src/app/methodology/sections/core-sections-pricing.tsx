@@ -32,13 +32,14 @@ export function PricingPipelineMethodologySection() {
         <p>
           <strong className="text-foreground">Source diversity.</strong>{" "}
           Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns.
-          The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap,
-          Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
+          The primary promoted DEX bridge now spans Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca,
+          Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream, with structured source-filter telemetry and DEX lane confidence
           profiles attached when those lanes participate. Targeted exact-address augmentation can add DexScreener,
           DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for assets with missing prices or
-          below-target source depth. DEX bridge and address-provider identity are canonical-only at runtime, so
+          below-target source depth or weak confidence. DEX bridge and address-provider identity are canonical-only at runtime, so
           addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices
-          only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer
+          only enter consensus when they are corroborated or no non-DEX voices exist, rejected protocol lanes no longer
+          suppress a valid aggregate DEX fallback, and direct-API quote legs prefer
           tracked live stablecoin prices instead of unconditional{" "}
           <code className="mx-1 text-xs">$1</code> symbol assumptions.
         </p>
@@ -225,12 +226,12 @@ export function PricingPipelineMethodologySection() {
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Bitstamp</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">CEX</td><td className="py-2">Lower-weight corroboration via the all-tickers endpoint</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Coinbase</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Per-symbol spot prices</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">RedStone</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Oracle</td><td className="py-2">Per-venue breakdown; requires at least 2 venues and 60% agreement</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve on-chain</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">StableSwap implied prices via <code className="text-xs">get_dy()</code></td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve on-chain</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve oracle</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, but withheld when overlapping protocol-level DEX bridge data exists</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream when the protocol lane survives registry, TVL, freshness, and corroboration gates.</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">GeckoTerminal</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Exact-address providers</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Market / on-chain</td><td className="py-2">Targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing or below-depth assets; exact chain+address only and non-depeg-authoritative on their own</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Exact-address providers</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Market / on-chain</td><td className="py-2">Targeted DexScreener, DexPaprika, CoinGecko Onchain, Alchemy Prices, Moralis, and Solana Birdeye quotes for missing, below-depth, or low-confidence assets; exact chain+address only and non-depeg-authoritative on their own</td></tr>
                 </tbody>
               </table>
             </div>
@@ -277,7 +278,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">Pass 1:</span> Canonical tracked contract identity &rarr; DefiLlama coins API, but only prices that pass peg-aware validation can resolve the asset</li>
               <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing; same validation gate as pass 1)</li>
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
-              <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, and peg-aware)</li>
+              <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, peg-aware, and able to add bounded soft evidence to agreeing low-depth Solana prices)</li>
               <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools only; the older unique-symbol search fallback is retired, and the pass remains capped at 10 actual exact-address requests per run</li>
               <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery for selected DefiLlama-listed assets, published only with fallback confidence</li>
             </ol>
