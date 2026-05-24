@@ -684,6 +684,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Validation and tooling
 
+- `scripts/__tests__/audit-dex-pricing-source-gaps.test.ts`
 - `scripts/__tests__/audit-dia-provider-poc.test.ts`
 - `scripts/__tests__/audit-mint-authority.test.ts`
 - `scripts/__tests__/audit-price-source-depth.test.ts`
@@ -743,5 +744,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-attestor-tier-coverage.ts`
 - `scripts/ci/check-build-attribution.mjs`
 - `scripts/ci/check-classifier-sensitive-copy.mjs`
-- `scripts/ci/check-client-registry-imports.mjs`
-- ... 137 more files omitted; use `rg --files scripts` for the full list.
+- ... 139 more files omitted; use `rg --files scripts` for the full list.
