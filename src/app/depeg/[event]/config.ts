@@ -17,11 +17,13 @@ export const MIN_DEPEG_PAGE_DEVIATION_BPS = 500;
 
 /**
  * Only the event pages linked from the server-rendered `/depeg/` archive are
- * crawl targets. Older event pages stay permanent and followable for citations
- * and direct links, but they are noindexed so the static SEO gate does not
- * require every historical event to be reachable from the homepage.
+ * crawl targets. The full event table remains available through the API and
+ * live tracker; the static export keeps a bounded editorial subset so the
+ * Cloudflare Pages direct-upload file count stays below its hard cap.
  */
 export const INDEXABLE_DEPEG_EVENT_LIMIT = 12;
+
+export const PINNED_DEPEG_EVENT_SLUGS = ["usdc-2023-03-11"] as const;
 
 interface DepegEventIndexCandidate {
   slug: string;
@@ -31,6 +33,8 @@ interface DepegEventIndexCandidate {
 interface DepegEventPageCandidate {
   peakDeviationBps: number;
 }
+
+interface DepegEventStaticPageCandidate extends DepegEventIndexCandidate, DepegEventPageCandidate {}
 
 export function getPeakDeviationMagnitudeBps(event: DepegEventPageCandidate): number {
   return Math.abs(event.peakDeviationBps);
@@ -51,4 +55,22 @@ export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
   events: readonly T[],
 ): readonly T[] {
   return sortNewestDeterministic(events).slice(0, INDEXABLE_DEPEG_EVENT_LIMIT);
+}
+
+export function selectStaticDepegEventPages<T extends DepegEventStaticPageCandidate>(
+  events: readonly T[],
+): readonly T[] {
+  const eligible = events.filter(hasDedicatedDepegEventPage);
+  const bySlug = new Map(eligible.map((event) => [event.slug, event] as const));
+  const selected = new Map<string, T>();
+
+  for (const event of selectIndexableDepegEvents(eligible)) {
+    selected.set(event.slug, event);
+  }
+  for (const slug of PINNED_DEPEG_EVENT_SLUGS) {
+    const event = bySlug.get(slug);
+    if (event) selected.set(slug, event);
+  }
+
+  return sortNewestDeterministic([...selected.values()]);
 }

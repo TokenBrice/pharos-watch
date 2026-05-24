@@ -3,8 +3,8 @@ import { join } from "node:path";
 import type { DepegEvent } from "@shared/types/market";
 import {
   MIN_DEPEG_PAGE_DEVIATION_BPS,
-  hasDedicatedDepegEventPage,
   selectIndexableDepegEvents,
+  selectStaticDepegEventPages,
 } from "./config";
 
 /**
@@ -24,7 +24,7 @@ function readDepegEventEntries(): readonly DepegEventEntry[] {
 
 const ALL_ENTRIES = readDepegEventEntries();
 
-export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = ALL_ENTRIES.filter(hasDedicatedDepegEventPage);
+export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = selectStaticDepegEventPages(ALL_ENTRIES);
 
 export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] =
   selectIndexableDepegEvents(DEPEG_EVENT_ENTRIES);

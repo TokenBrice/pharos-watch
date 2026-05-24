@@ -19,8 +19,8 @@ import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 import {
-  hasDedicatedDepegEventPage,
   selectIndexableDepegEvents,
+  selectStaticDepegEventPages,
 } from "@/app/depeg/[event]/config";
 
 export const dynamic = "force-static";
@@ -45,7 +45,7 @@ function readDepegEventEntries(): readonly DepegEventSitemapEntry[] {
   return JSON.parse(readFileSync(filePath, "utf8")) as DepegEventSitemapEntry[];
 }
 
-const depegEventEntries = readDepegEventEntries().filter(hasDedicatedDepegEventPage);
+const depegEventEntries = selectStaticDepegEventPages(readDepegEventEntries());
 const indexableDepegEventEntries = selectIndexableDepegEvents(depegEventEntries);
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */

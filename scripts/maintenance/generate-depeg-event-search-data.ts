@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DepegEvent } from "../../shared/types/market";
-import { hasDedicatedDepegEventPage } from "../../src/app/depeg/[event]/config";
+import { selectStaticDepegEventPages } from "../../src/app/depeg/[event]/config";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,8 +33,7 @@ function readDepegEvents(): readonly DepegEventEntry[] {
 }
 
 function buildClientEntries(events: readonly DepegEventEntry[]): DepegEventSearchEntry[] {
-  return events
-    .filter(hasDedicatedDepegEventPage)
+  return [...selectStaticDepegEventPages(events)]
     .sort((a, b) => {
       if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
       return a.slug.localeCompare(b.slug);

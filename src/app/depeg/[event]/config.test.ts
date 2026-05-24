@@ -3,6 +3,7 @@ import {
   INDEXABLE_DEPEG_EVENT_LIMIT,
   hasDedicatedDepegEventPage,
   selectIndexableDepegEvents,
+  selectStaticDepegEventPages,
 } from "./config";
 
 describe("depeg event indexing policy", () => {
@@ -44,5 +45,26 @@ describe("depeg event indexing policy", () => {
     expect(hasDedicatedDepegEventPage({ peakDeviationBps: 500 })).toBe(true);
     expect(hasDedicatedDepegEventPage({ peakDeviationBps: -500 })).toBe(true);
     expect(hasDedicatedDepegEventPage({ peakDeviationBps: -499 })).toBe(false);
+  });
+
+  it("keeps static event pages bounded while preserving pinned editorials", () => {
+    const events = Array.from({ length: INDEXABLE_DEPEG_EVENT_LIMIT + 3 }, (_, index) => ({
+      slug: `event-${String(index).padStart(2, "0")}`,
+      startedAt: 1_700_000_000 + index,
+      peakDeviationBps: 500,
+    }));
+    events.unshift({
+      slug: "usdc-2023-03-11",
+      startedAt: 1_678_492_800,
+      peakDeviationBps: 1300,
+    });
+
+    const selected = selectStaticDepegEventPages(events);
+
+    expect(selected).toHaveLength(INDEXABLE_DEPEG_EVENT_LIMIT + 1);
+    expect(selected.map((event) => event.slug)).toContain("usdc-2023-03-11");
+    expect(selected.map((event) => event.slug)).not.toContain("event-00");
+    expect(selected.map((event) => event.slug)).not.toContain("event-01");
+    expect(selected.map((event) => event.slug)).not.toContain("event-02");
   });
 });

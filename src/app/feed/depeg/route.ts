@@ -3,7 +3,7 @@ import path from "node:path";
 import { renderRss20, toRfc822, type RssItem } from "@/lib/rss";
 import {
   getPeakDeviationMagnitudeBps,
-  hasDedicatedDepegEventPage,
+  selectStaticDepegEventPages,
 } from "@/app/depeg/[event]/config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
@@ -38,6 +38,7 @@ function loadEvents(): DepegFeedEvent[] {
 }
 
 function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {
+  const staticPageSlugs = new Set(selectStaticDepegEventPages(events).map((event) => event.slug));
   return events
     .slice()
     .sort((a, b) => b.startedAt - a.startedAt)
@@ -49,7 +50,7 @@ function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {
       const title = `${event.symbol} depeg ${sign}${peakBps} bps`;
       const status = event.endedAt ? "Resolved" : "Active";
       const eventLink =
-        hasDedicatedDepegEventPage(event)
+        staticPageSlugs.has(event.slug)
           ? `${SITE_URL}/depeg/${event.slug}/`
           : `${SITE_URL}/stablecoin/${event.stablecoinId}/#depeg-history`;
       return {

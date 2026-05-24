@@ -27,9 +27,8 @@ function severityClass(bps: number): string {
 }
 
 /**
- * Server-rendered list of confirmed depeg events that have earned a dedicated
- * `/depeg/<slug>/` static page (absolute peak deviation ≥ MIN_DEPEG_PAGE_DEVIATION_BPS).
- * Sorted by `startedAt` desc; capped to the indexable archive set.
+ * Server-rendered list of confirmed depeg events that are in the bounded
+ * static-page subset and indexable archive set.
  */
 export function DepegEventArchive() {
   const events: readonly DepegEventEntry[] = INDEXABLE_DEPEG_EVENT_ENTRIES;
