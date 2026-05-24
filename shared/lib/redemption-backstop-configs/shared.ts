@@ -212,14 +212,6 @@ export function undisclosedReviewedFee(feeDescription: string = NO_PUBLIC_NUMERI
 }
 
 export function sourceRef(label: string, url: string, supports?: RedemptionDocSourceSupport[]): RedemptionDocSource {
-  const seen = new Set<RedemptionDocSourceSupport>();
-  for (const support of supports ?? []) {
-    if (seen.has(support)) {
-      throw new Error(`Duplicate redemption doc support "${support}" for "${label}".`);
-    }
-    seen.add(support);
-  }
-
   return supports && supports.length > 0 ? { label, url, supports } : { label, url };
 }
 
