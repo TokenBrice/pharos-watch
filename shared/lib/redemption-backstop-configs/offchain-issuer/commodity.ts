@@ -17,6 +17,14 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: undisclosedReviewedFee(
       "1:1 physical gold or cash equivalent through Paxos Trust Company; public fee schedule not disclosed",
     ),
+    docs: [
+      sourceRef("Paxos Pax Gold", "https://www.paxos.com/pax-gold", ["route", "capacity"]),
+      sourceRef(
+        "Paxos PAXG buy/sell/redeem",
+        "https://help.paxos.com/hc/en-us/articles/360041903332-How-to-Buy-Sell-Redeem-PAX-Gold",
+        ["route", "fees", "access", "settlement"],
+      ),
+    ],
   },
   "xaut-tether": {
     ...commodityIssuerBase,
@@ -24,6 +32,10 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
     costModel: documentedVariableFee(
       "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
     ),
+    docs: [
+      sourceRef("Tether Gold FAQ", "https://gold.tether.to/faq", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Tether Gold terms", "https://gold.tether.to/legal", ["route", "access"]),
+    ],
   },
   "xnk-kinka": {
     ...commodityIssuerBase,
