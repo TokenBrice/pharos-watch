@@ -2,10 +2,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import {
-  REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
-  REDEMPTION_BACKSTOP_CONFIGS,
-} from "../../shared/lib/redemption-backstop-configs";
+import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "../../shared/lib/redemption-backstop-configs/manifest";
 import {
   validateRedemptionBackstopRegistry,
   type RedemptionRegistryValidationResult,
@@ -69,7 +66,6 @@ const sourceTextByPath = new Map(
 
 const result = validateRedemptionBackstopRegistry({
   manifest: REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
-  mergedConfigs: REDEMPTION_BACKSTOP_CONFIGS,
   docsText: readRepoFile("docs/redemption-backstops.md"),
   apiDocsText: readRepoFile("docs/api-reference.md"),
   sourceTextByPath,

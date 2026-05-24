@@ -21,7 +21,6 @@ import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-c
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
-  buildRedemptionBackstopRegistry,
   type RedemptionBackstopConfigManifestEntry,
 } from "@shared/lib/redemption-backstop-configs/manifest";
 import {
@@ -137,7 +136,7 @@ export function validateRedemptionBackstopRegistry(
   options: RedemptionRegistryValidationOptions = {},
 ): RedemptionRegistryValidationResult {
   const manifest = options.manifest ?? REDEMPTION_BACKSTOP_CONFIG_MANIFEST;
-  const mergedConfigs = options.mergedConfigs ?? buildRedemptionBackstopRegistry(manifest);
+  const mergedConfigs = options.mergedConfigs ?? mergeManifestConfigsForValidation(manifest);
   const overrideReasonById = new Map<string, string>();
   for (const moduleEntry of manifest) {
     for (const [id, reason] of getBackstopRegistryOverrideReasons(moduleEntry.configs)) {
@@ -1025,6 +1024,12 @@ function isValidReviewedAt(value: string): boolean {
 
 function currentUtcDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function mergeManifestConfigsForValidation(
+  manifest: readonly RedemptionBackstopConfigManifestEntry[],
+): Record<string, RedemptionBackstopConfig> {
+  return Object.assign({}, ...manifest.map((entry) => entry.configs));
 }
 
 function addFinding(

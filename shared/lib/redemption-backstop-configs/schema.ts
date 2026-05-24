@@ -231,7 +231,6 @@ export const RedemptionBackstopConfigSchema = z
 
       if (
         config.costModel.feeModelKind === "formula" &&
-        config.costModel.confidence != null &&
         config.costModel.confidence !== "formula"
       ) {
         ctx.addIssue({

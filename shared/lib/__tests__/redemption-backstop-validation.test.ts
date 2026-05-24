@@ -130,6 +130,33 @@ describe("validateRedemptionBackstopRegistry", () => {
     );
   });
 
+  it("reports duplicate IDs when using the default merged registry path", () => {
+    const result = validateRedemptionBackstopRegistry({
+      manifest: [
+        {
+          name: "issuer-a",
+          filePath: "issuer-a.ts",
+          configs: { "usdt-tether": baseConfig },
+          allowedRouteFamilies: ["offchain-issuer"],
+        },
+        {
+          name: "issuer-b",
+          filePath: "issuer-b.ts",
+          configs: { "usdt-tether": baseConfig },
+          allowedRouteFamilies: ["offchain-issuer"],
+        },
+      ],
+    });
+
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        severity: "error",
+        code: "duplicate-id",
+        stablecoinId: "usdt-tether",
+      }),
+    );
+  });
+
   it("fails fast when the runtime registry builder sees duplicate shard IDs", () => {
     expect(() =>
       buildRedemptionBackstopRegistry([
@@ -293,6 +320,36 @@ describe("validateRedemptionBackstopRegistry", () => {
         expect.objectContaining({
           code: "schema-validation",
           message: expect.stringContaining("formula fee confidence requires feeModelKind=formula"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects formula fee model kind without formula confidence", () => {
+    const result = validateFixture([
+      {
+        name: "issuer",
+        filePath: "issuer.ts",
+        configs: {
+          "usdt-tether": {
+            ...baseConfig,
+            costModel: {
+              kind: "dynamic-or-unclear",
+              feeDescription: "Formula fee is documented.",
+              feeModelKind: "formula",
+            },
+          } as unknown as RedemptionBackstopConfig,
+        },
+        allowedRouteFamilies: ["offchain-issuer"],
+      },
+    ]);
+
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "schema-validation",
+          stablecoinId: "usdt-tether",
+          message: expect.stringContaining("feeModelKind=formula requires formula fee confidence"),
         }),
       ]),
     );
