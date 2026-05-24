@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { CoverageMatrixCard, CoverageMobileResults } from "./coverage-page-sections";
@@ -77,10 +77,17 @@ describe("CoverageMobileResults", () => {
 
 describe("CoverageMatrixCard", () => {
   it("renders unavailable feed warnings without counting them as ordinary gaps", () => {
-    render(<CoverageMatrixCard {...makeMatrixModel({ unavailableFeatures: ["redemption"] })} />);
+    const rows = [makeCoverageRow(1, { dataAvailability: { redemption: false } })];
+    const { container } = render(
+      <CoverageMatrixCard {...makeMatrixModel({ rows, filteredRows: rows, unavailableFeatures: ["redemption"] })} />,
+    );
+    const view = within(container);
 
-    expect(screen.getByRole("status").textContent).toContain("Data n/a");
-    expect(screen.getByRole("status").textContent).toContain("Backstop");
+    expect(view.getByRole("status").textContent).toContain("Data n/a");
+    expect(view.getByRole("status").textContent).toContain("Backstop");
+    expect(view.getAllByLabelText(/Data unavailable\. Redemption backstop coverage data is unavailable/).length)
+      .toBeGreaterThan(0);
+    expect(view.queryByLabelText(/Not covered\. No modeled redemption-backstop route is currently configured/)).toBeNull();
   });
 
   it("renders the empty-result state and reset affordance", () => {

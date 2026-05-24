@@ -303,12 +303,14 @@ describe("StablecoinDetailClient", () => {
       },
     }));
 
-    render(
+    const { container } = render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
     expect(screen.queryByTestId("price-transparency-card")).toBeNull();
-    expect(screen.getByTestId("redemption-backstop-card")).toBeTruthy();
+    const redemptionCard = screen.getByTestId("redemption-backstop-card");
+    const liquiditySection = container.querySelector("#dex-liquidity");
+    expect(liquiditySection?.parentElement?.contains(redemptionCard)).toBe(true);
   });
 
   it("omits the liquidity detail grid when price transparency and redemption data are absent", () => {
