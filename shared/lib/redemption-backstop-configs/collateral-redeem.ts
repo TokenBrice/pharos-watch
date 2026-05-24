@@ -5,9 +5,9 @@ import {
   collateralRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   fixedFee,
   LIQUITY_STYLE_REDEMPTION_FEE,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   sourceRef,
 } from "./shared";
 
@@ -261,7 +261,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
       outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+      costModel: undisclosedReviewedFee(),
     },
     "ussd-sonic-labs": {
       ...collateralRedeemBase,

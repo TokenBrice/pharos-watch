@@ -2,9 +2,9 @@ import type { RedemptionBackstopConfig } from "../shared";
 import {
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   fixedFee,
   issuerBase,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   sourceRef,
 } from "../shared";
 import {
@@ -23,12 +23,12 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "fdusd-first-digital": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee("Redeemable 1:1; public fee schedule not disclosed"),
   },
   "rlusd-ripple": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
+    costModel: undisclosedReviewedFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
   },
   "usdon-ondo": {
     ...issuerBase,
@@ -245,7 +245,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usd1-world-liberty-financial": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    costModel: undisclosedReviewedFee(),
   },
   "ausd-agora": {
     ...issuerBase,

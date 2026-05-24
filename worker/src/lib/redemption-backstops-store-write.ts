@@ -10,8 +10,19 @@ export interface RedemptionBackstopSnapshotWriteResult {
   runRowsWrittenCount: number;
   historyWrittenCount: number;
   currentMirroredCount: number;
+  retentionRunRowsDeletedCount: number;
+  retentionRunsDeletedCount: number;
   warnings: string[];
 }
+
+export interface RedemptionBackstopRunRetentionResult {
+  cutoff: number;
+  runRowsDeletedCount: number;
+  runsDeletedCount: number;
+}
+
+export const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
+const REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE = 100;
 
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
@@ -403,6 +414,9 @@ function buildWriteMetadata(
     runRowsWrittenCount: number;
     historyWrittenCount: number;
     currentMirroredCount: number;
+    retentionCutoff?: number | null;
+    retentionRunRowsDeletedCount?: number;
+    retentionRunsDeletedCount?: number;
     warnings?: string[];
     writeStatus?: string;
     writePhase?: string;
@@ -418,10 +432,100 @@ function buildWriteMetadata(
     historyWrittenCount: facts.historyWrittenCount,
     currentMirroredCount: facts.currentMirroredCount,
     failedWriteCount: Math.max(0, facts.attemptedCount - facts.runRowsWrittenCount),
+    ...(facts.retentionCutoff != null ? { retentionCutoff: facts.retentionCutoff } : {}),
+    ...(facts.retentionRunRowsDeletedCount != null
+      ? { retentionRunRowsDeletedCount: facts.retentionRunRowsDeletedCount }
+      : {}),
+    ...(facts.retentionRunsDeletedCount != null ? { retentionRunsDeletedCount: facts.retentionRunsDeletedCount } : {}),
     ...(facts.writeStatus ? { writeStatus: facts.writeStatus } : {}),
     ...(facts.writePhase ? { writePhase: facts.writePhase } : {}),
     ...(facts.warnings && facts.warnings.length > 0 ? { writeWarnings: facts.warnings } : {}),
     ...(facts.failure ? { failure: facts.failure } : {}),
+  };
+}
+
+function prunableRedemptionBackstopRunsSubquery(): string {
+  return `SELECT run_id
+            FROM redemption_backstop_runs
+           WHERE COALESCE(completed_at, started_at) < ?
+             AND run_id <> ?
+             AND run_id NOT IN (
+               SELECT run_id
+                 FROM redemption_backstop_runs
+                WHERE status = 'completed'
+                ORDER BY completed_at DESC, started_at DESC, run_id DESC
+                LIMIT 1
+             )
+           LIMIT ?`;
+}
+
+async function deleteRedemptionBackstopRunRowsBatch(
+  db: D1Database,
+  args: { cutoff: number; preserveRunId: string; batchSize: number },
+): Promise<number> {
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `DELETE FROM redemption_backstop_run_rows
+          WHERE snapshot_run_id IN (${prunableRedemptionBackstopRunsSubquery()})`,
+      )
+      .bind(args.cutoff, args.preserveRunId, args.batchSize)
+      .run(),
+  );
+  return Number(result.meta?.changes ?? 0);
+}
+
+async function deleteRedemptionBackstopRunsBatch(
+  db: D1Database,
+  args: { cutoff: number; preserveRunId: string; batchSize: number },
+): Promise<number> {
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `DELETE FROM redemption_backstop_runs
+          WHERE run_id IN (${prunableRedemptionBackstopRunsSubquery()})`,
+      )
+      .bind(args.cutoff, args.preserveRunId, args.batchSize)
+      .run(),
+  );
+  return Number(result.meta?.changes ?? 0);
+}
+
+export async function pruneRedemptionBackstopRunRetention(
+  db: D1Database,
+  input: {
+    nowSec?: number;
+    retentionSec?: number;
+    preserveRunId: string;
+    batchSize?: number;
+  },
+): Promise<RedemptionBackstopRunRetentionResult> {
+  const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
+  const retentionSec = input.retentionSec ?? REDEMPTION_BACKSTOP_RUN_RETENTION_SEC;
+  const batchSize = input.batchSize ?? REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE;
+  const cutoff = nowSec - retentionSec;
+  let runRowsDeletedCount = 0;
+  let runsDeletedCount = 0;
+
+  for (;;) {
+    runRowsDeletedCount += await deleteRedemptionBackstopRunRowsBatch(db, {
+      cutoff,
+      preserveRunId: input.preserveRunId,
+      batchSize,
+    });
+    const deletedRuns = await deleteRedemptionBackstopRunsBatch(db, {
+      cutoff,
+      preserveRunId: input.preserveRunId,
+      batchSize,
+    });
+    runsDeletedCount += deletedRuns;
+    if (deletedRuns < batchSize) break;
+  }
+
+  return {
+    cutoff,
+    runRowsDeletedCount,
+    runsDeletedCount,
   };
 }
 
@@ -470,6 +574,8 @@ export async function upsertRedemptionBackstopSnapshots(
     expectedCount?: number;
     metadata?: Record<string, unknown>;
     runId?: string;
+    retentionSec?: number;
+    nowSec?: number;
   },
 ): Promise<RedemptionBackstopSnapshotWriteResult> {
   if (records.length === 0) {
@@ -479,6 +585,8 @@ export async function upsertRedemptionBackstopSnapshots(
       runRowsWrittenCount: 0,
       historyWrittenCount: 0,
       currentMirroredCount: 0,
+      retentionRunRowsDeletedCount: 0,
+      retentionRunsDeletedCount: 0,
       warnings: ["No redemption backstop records were supplied"],
     };
   }
@@ -497,6 +605,9 @@ export async function upsertRedemptionBackstopSnapshots(
   let runRowsWrittenCount = 0;
   let historyWrittenCount = 0;
   let currentMirroredCount = 0;
+  let retentionRunRowsDeletedCount = 0;
+  let retentionRunsDeletedCount = 0;
+  let retentionCutoff: number | null = null;
   let writePhase = "starting";
 
   try {
@@ -513,6 +624,8 @@ export async function upsertRedemptionBackstopSnapshots(
           runRowsWrittenCount,
           historyWrittenCount,
           currentMirroredCount,
+          retentionRunRowsDeletedCount,
+          retentionRunsDeletedCount,
           writeStatus: "running",
           writePhase,
         }),
@@ -559,6 +672,8 @@ export async function upsertRedemptionBackstopSnapshots(
           runRowsWrittenCount: rowCount.rowCount,
           historyWrittenCount,
           currentMirroredCount,
+          retentionRunRowsDeletedCount,
+          retentionRunsDeletedCount,
           writeStatus: "completed",
           writePhase,
         }),
@@ -587,6 +702,8 @@ export async function upsertRedemptionBackstopSnapshots(
             runRowsWrittenCount: rowCount.rowCount,
             historyWrittenCount,
             currentMirroredCount,
+            retentionRunRowsDeletedCount,
+            retentionRunsDeletedCount,
             warnings,
             writeStatus: "completed-with-warnings",
             writePhase,
@@ -597,26 +714,43 @@ export async function upsertRedemptionBackstopSnapshots(
         // metadata cannot be refreshed.
       }
     }
-    if (warnings.length === 0) {
-      try {
-        await updateRedemptionBackstopRunMetadata(
-          db,
+    writePhase = "retention";
+    try {
+      const retention = await pruneRedemptionBackstopRunRetention(db, {
+        preserveRunId: runId,
+        retentionSec: options?.retentionSec,
+        nowSec: options?.nowSec,
+      });
+      retentionCutoff = retention.cutoff;
+      retentionRunRowsDeletedCount = retention.runRowsDeletedCount;
+      retentionRunsDeletedCount = retention.runsDeletedCount;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`Run retention prune failed after completed snapshot write: ${message}`);
+    }
+
+    try {
+      await updateRedemptionBackstopRunMetadata(
+        db,
+        runId,
+        buildWriteMetadata(options?.metadata, {
           runId,
-          buildWriteMetadata(options?.metadata, {
-            runId,
-            attemptedCount,
-            expectedCount,
-            runRowsWrittenCount: rowCount.rowCount,
-            historyWrittenCount,
-            currentMirroredCount,
-            writeStatus: "completed",
-            writePhase,
-          }),
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        warnings.push(`Completed run metadata refresh failed after current mirror update: ${message}`);
-      }
+          attemptedCount,
+          expectedCount,
+          runRowsWrittenCount: rowCount.rowCount,
+          historyWrittenCount,
+          currentMirroredCount,
+          retentionCutoff,
+          retentionRunRowsDeletedCount,
+          retentionRunsDeletedCount,
+          warnings,
+          writeStatus: warnings.length > 0 ? "completed-with-warnings" : "completed",
+          writePhase,
+        }),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`Completed run metadata refresh failed after retention prune: ${message}`);
     }
 
     return {
@@ -625,6 +759,8 @@ export async function upsertRedemptionBackstopSnapshots(
       runRowsWrittenCount: rowCount.rowCount,
       historyWrittenCount,
       currentMirroredCount,
+      retentionRunRowsDeletedCount,
+      retentionRunsDeletedCount,
       warnings,
     };
   } catch (error) {
@@ -643,6 +779,8 @@ export async function upsertRedemptionBackstopSnapshots(
               runRowsWrittenCount,
               historyWrittenCount,
               currentMirroredCount,
+              retentionRunRowsDeletedCount,
+              retentionRunsDeletedCount,
               writeStatus: "failed",
               writePhase,
               failure: {

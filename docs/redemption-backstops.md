@@ -26,6 +26,8 @@ Configured coverage is defined statically behind the thin facade in `shared/lib/
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
 
+`npm run check:redemption-backstops -- --report <path>` writes per-config audit rows with both the literal configured `capacityBasis` and the resolved runtime-style `resolvedCapacityBasis`. The report also includes `capacityFallbackSource` for reserve-sync fallback ratios/USD buffers and `dailyLimitUsd` when a static model caps same-day capacity, so review queues can distinguish route-family defaults from explicit fallback or daily-limit constraints.
+
 ---
 
 ## Cron Schedule
@@ -320,6 +322,8 @@ Stored fields:
 - `metadata_json`
 
 The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. The legacy current mirror is refreshed only after the completed run exists; mirror failures are recorded as completed-run warnings because readers use immutable run rows as the authoritative snapshot source. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they fall back to legacy `MAX(updated_at)` behavior only for current rows that are not tied to any manifested run.
+
+Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads and legacy fallback constraints stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
 
 ---
 

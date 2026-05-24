@@ -1,6 +1,5 @@
 import {
-  documentedVariableFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -10,7 +9,7 @@ export const SFRXUSD_FRAX_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
   reviewedAt: "2026-05-17",
   docs: [
     sourceRef("Frax sfrxUSD docs", "https://docs.frax.com/protocol/assets/frxusd/sfrxusd", ["route", "capacity"]),

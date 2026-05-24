@@ -5,6 +5,7 @@ import {
   toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
 import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
   loadRedemptionBackstopMap,
@@ -14,6 +15,7 @@ import {
   resolveSnapshotMethodologyVersion,
   upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
+import { pruneRedemptionBackstopRunRetention } from "../redemption-backstops-store-write";
 
 /** Realistic mock row matching an actual offchain-issuer config (EURC). */
 function makeRealisticRow(overrides: Record<string, unknown> = {}) {
@@ -1027,13 +1029,154 @@ describe("loadRedemptionBackstopMap", () => {
     expect(history.some((entry) => entry.sql.includes("status = 'completed'"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("status = 'failed'"))).toBe(false);
     const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
-    const warningMetadataUpdate = metadataUpdates[metadataUpdates.length - 1];
+    const warningMetadataUpdate = metadataUpdates.find((entry) => {
+      const metadata = JSON.parse(String(entry.binds[0] ?? "{}")) as Record<string, unknown>;
+      return metadata.writePhase === "current-mirror";
+    });
     const warningMetadata = JSON.parse(String(warningMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
     expect(warningMetadata).toMatchObject({
       snapshotRunId: "run-current-warning",
       writeStatus: "completed-with-warnings",
       writePhase: "current-mirror",
       writeWarnings: [expect.stringContaining("current mirror failed")],
+    });
+    const finalMetadata = JSON.parse(String(metadataUpdates[metadataUpdates.length - 1]?.binds[0] ?? "{}")) as Record<
+      string,
+      unknown
+    >;
+    expect(finalMetadata).toMatchObject({
+      snapshotRunId: "run-current-warning",
+      writeStatus: "completed-with-warnings",
+      writePhase: "retention",
+      writeWarnings: [expect.stringContaining("current mirror failed")],
+    });
+  });
+
+  it("prunes old run rows and manifests while preserving the current and latest completed runs", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE redemption_backstop_runs (
+          run_id TEXT PRIMARY KEY,
+          started_at INTEGER NOT NULL,
+          completed_at INTEGER,
+          status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+          expected_count INTEGER NOT NULL,
+          written_count INTEGER NOT NULL DEFAULT 0,
+          methodology_version TEXT NOT NULL,
+          min_updated_at INTEGER,
+          max_updated_at INTEGER,
+          metadata_json TEXT
+        );
+        CREATE TABLE redemption_backstop_run_rows (
+          snapshot_run_id TEXT NOT NULL,
+          stablecoin_id TEXT NOT NULL,
+          updated_at INTEGER NOT NULL,
+          PRIMARY KEY (snapshot_run_id, stablecoin_id)
+        );
+      `);
+      const insertRun = sqlite.prepare(
+        `INSERT INTO redemption_backstop_runs (
+          run_id, started_at, completed_at, status, expected_count, written_count,
+          methodology_version, min_updated_at, max_updated_at, metadata_json
+        ) VALUES (?, ?, ?, ?, 1, 1, '4.04', ?, ?, NULL)`,
+      );
+      const insertRunRow = sqlite.prepare(
+        "INSERT INTO redemption_backstop_run_rows (snapshot_run_id, stablecoin_id, updated_at) VALUES (?, ?, ?)",
+      );
+      const nowSec = 10_000;
+      const retentionSec = 1_000;
+      const cutoff = nowSec - retentionSec;
+      const runs = [
+        { runId: "old-completed", startedAt: cutoff - 400, completedAt: cutoff - 390, status: "completed" },
+        { runId: "old-failed", startedAt: cutoff - 380, completedAt: cutoff - 370, status: "failed" },
+        { runId: "old-running", startedAt: cutoff - 360, completedAt: null, status: "running" },
+        { runId: "current-completed", startedAt: cutoff - 700, completedAt: cutoff - 690, status: "completed" },
+        { runId: "latest-completed", startedAt: cutoff - 40, completedAt: cutoff - 30, status: "completed" },
+      ];
+      for (const run of runs) {
+        insertRun.run(
+          run.runId,
+          run.startedAt,
+          run.completedAt,
+          run.status,
+          run.completedAt,
+          run.completedAt,
+        );
+        insertRunRow.run(run.runId, `${run.runId}-coin`, run.completedAt ?? run.startedAt);
+      }
+
+      const result = await pruneRedemptionBackstopRunRetention(createSqliteD1(sqlite), {
+        nowSec,
+        retentionSec,
+        preserveRunId: "current-completed",
+        batchSize: 2,
+      });
+
+      expect(result).toEqual({
+        cutoff,
+        runRowsDeletedCount: 3,
+        runsDeletedCount: 3,
+      });
+      const remainingRuns = sqlite
+        .prepare("SELECT run_id FROM redemption_backstop_runs ORDER BY run_id ASC")
+        .all()
+        .map((row) => (row as { run_id: string }).run_id);
+      expect(remainingRuns).toEqual(["current-completed", "latest-completed"]);
+      const remainingRunRows = sqlite
+        .prepare("SELECT snapshot_run_id FROM redemption_backstop_run_rows ORDER BY snapshot_run_id ASC")
+        .all()
+        .map((row) => (row as { snapshot_run_id: string }).snapshot_run_id);
+      expect(remainingRunRows).toEqual(["current-completed", "latest-completed"]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("records retention failures as completed-run warnings without failing the snapshot", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) AS row_count",
+        rows: [],
+        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
+      },
+      {
+        match: "DELETE FROM redemption_backstop_run_rows",
+        rows: [],
+        throwError: new Error("retention unavailable"),
+      },
+    ]);
+
+    const result = await upsertRedemptionBackstopSnapshots(db, [makeWriteRecord()], {
+      runId: "run-retention-warning",
+      expectedCount: 1,
+      retentionSec: 1_000,
+      nowSec: 10_000,
+    });
+
+    expect(result).toMatchObject({
+      runId: "run-retention-warning",
+      runRowsWrittenCount: 1,
+      currentMirroredCount: 1,
+      retentionRunRowsDeletedCount: 0,
+      retentionRunsDeletedCount: 0,
+    });
+    expect(result.warnings).toEqual([expect.stringContaining("Run retention prune failed")]);
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("status = 'completed'"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("status = 'failed'"))).toBe(false);
+    const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
+    const finalMetadataUpdate = metadataUpdates[metadataUpdates.length - 1];
+    const finalMetadata = JSON.parse(String(finalMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
+    expect(finalMetadata).toMatchObject({
+      snapshotRunId: "run-retention-warning",
+      writeStatus: "completed-with-warnings",
+      writePhase: "retention",
+      retentionRunRowsDeletedCount: 0,
+      retentionRunsDeletedCount: 0,
+      writeWarnings: [expect.stringContaining("retention unavailable")],
     });
   });
 });

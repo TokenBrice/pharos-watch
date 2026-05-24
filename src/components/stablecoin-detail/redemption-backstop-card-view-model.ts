@@ -175,7 +175,8 @@ function getFeeSummary(entry: RedemptionBackstopEntry): FeeSummary {
 
   return {
     headline: "Variable / not explicitly modeled",
-    detail: "No fixed fee is configured in the current model. Actual issuer or protocol fees may vary or be undisclosed.",
+    detail:
+      "No fixed fee is configured in the current model. Actual issuer or protocol fees may vary or be undisclosed.",
   };
 }
 
@@ -189,12 +190,16 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
         : scoringHorizon === "eventual" || entry.capacitySemantics === "eventual-only"
           ? "Eventual Redeemability"
           : "Immediate Capacity";
-  const capacityUsd =
-    entry.immediateCapacityUsd != null &&
-    Number.isFinite(entry.immediateCapacityUsd) &&
-    entry.immediateCapacityUsd > 0
-      ? formatCurrency(entry.immediateCapacityUsd, 1)
+  const scoringCapacityUsd =
+    entry.capacityProfile?.scoringUsd != null &&
+    Number.isFinite(entry.capacityProfile.scoringUsd) &&
+    entry.capacityProfile.scoringUsd > 0
+      ? formatCurrency(entry.capacityProfile.scoringUsd, 1)
       : null;
+  const capacityUsd =
+    entry.immediateCapacityUsd != null && Number.isFinite(entry.immediateCapacityUsd) && entry.immediateCapacityUsd > 0
+      ? formatCurrency(entry.immediateCapacityUsd, 1)
+      : scoringCapacityUsd;
   const capacityRatio =
     entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
@@ -414,7 +419,11 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     docsProvenanceLabel: docs?.provenance ? formatDocsProvenance(docs.provenance) : null,
     scoreBreakdown: {
       access: { label: "Access score", score: entry.accessScore, textClass: scoreTextClass(entry.accessScore) },
-      settlement: { label: "Settlement", score: entry.settlementScore, textClass: scoreTextClass(entry.settlementScore) },
+      settlement: {
+        label: "Settlement",
+        score: entry.settlementScore,
+        textClass: scoreTextClass(entry.settlementScore),
+      },
       execution: {
         label: "Execution",
         score: entry.executionCertaintyScore,

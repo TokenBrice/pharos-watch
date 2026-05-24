@@ -1,6 +1,5 @@
 import {
-  documentedVariableFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -10,7 +9,7 @@ import { reviewedDirectRedemptionSupplyFull } from "./shared";
 export const MSUSD_MAIN_STREET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   ...reviewedDirectRedemptionSupplyFull,
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
   docs: [
     sourceRef("Main Street docs", "https://mainstreet-finance.gitbook.io/mainstreet.finance/", ["route", "capacity"]),
     sourceRef("Main Street website", "https://mainstreet.finance/", ["route"]),

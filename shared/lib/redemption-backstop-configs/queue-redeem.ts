@@ -3,8 +3,8 @@ import {
   applyTrackedReviewedDocs,
   documentedBoundSupplyFull,
   documentedVariableFee,
+  undisclosedReviewedFee,
   fixedFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   queueRedeemBase,
   sourceRef,
 } from "./shared";
@@ -149,7 +149,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "reusd-re-protocol": {
     ...queueRedeemBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    costModel: undisclosedReviewedFee(),
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
       sourceRef("Re Protocol docs", "https://docs.re.xyz/", ["route", "settlement", "capacity"]),
@@ -301,7 +301,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "stkgho-umbrella-aave": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_PHASE_4_COVERAGE_AT),
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    costModel: undisclosedReviewedFee(),
     docs: [
       sourceRef("Aave Umbrella unstake guide", "https://aave.com/help/umbrella/unstake", [
         "route",
@@ -354,7 +354,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.3, confidence: "heuristic", basis: "strategy-buffer" },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    costModel: undisclosedReviewedFee(),
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
       sourceRef("XSY documentation", "https://xsy-1.gitbook.io/xsy-main", ["route", "capacity"]),
@@ -439,7 +439,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     accessModel: "issuer-api",
     settlementModel: "days",
     ...reviewedQueueRedemptionSupplyFull,
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    costModel: undisclosedReviewedFee(),
     docs: [
       sourceRef("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money", [
         "route",

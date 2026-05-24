@@ -56,6 +56,8 @@ describe("check-redemption-backstops CLI", () => {
       stablecoinId: expect.any(String),
       routeFamily: expect.any(String),
       capacityConfidence: expect.any(String),
+      resolvedCapacityBasis: expect.any(String),
+      capacityFallbackSource: expect.any(String),
     });
     expect(report.auditRows[0]).toHaveProperty("reviewedAt");
     expect(report.auditRows.find((row: { stablecoinId: string }) => row.stablecoinId === "ybold-yearn")).toMatchObject({
@@ -119,6 +121,56 @@ describe("check-redemption-backstops CLI", () => {
         stablecoinId: "lisusd-lista",
       }),
     );
+  });
+
+  it("reports resolved capacity basis, fallback source, and daily limit caps in audit rows", () => {
+    const result = validateFixture(
+      {
+        "lisusd-lista": {
+          ...baseConfig,
+          routeFamily: "psm-swap",
+          accessModel: "permissionless-onchain",
+          settlementModel: "atomic",
+          executionModel: "deterministic-onchain",
+          capacityModel: { kind: "supply-ratio", ratio: 0.15, dailyLimitUsd: 500_000 },
+        },
+      },
+      { allowedRouteFamilies: ["psm-swap"] },
+    );
+
+    expect(result.auditRows).toEqual([
+      expect.objectContaining({
+        stablecoinId: "lisusd-lista",
+        capacityBasis: null,
+        resolvedCapacityBasis: "psm-balance-share",
+        capacityFallbackSource: "none",
+        dailyLimitUsd: 500_000,
+      }),
+    ]);
+  });
+
+  it("reports reserve-sync fallback ratio sources separately from resolved basis", () => {
+    const result = validateFixture({
+      "frxusd-frax": {
+        ...baseConfig,
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.1 },
+        reviewedAt: "2026-05-12",
+        docs: [{ label: "Fixture", url: "https://example.com/frxusd-redemption", supports: ["route", "capacity"] }],
+      },
+    });
+
+    expect(result.auditRows).toEqual([
+      expect.objectContaining({
+        stablecoinId: "frxusd-frax",
+        resolvedCapacityBasis: "hot-buffer",
+        capacityFallbackSource: "reserve-sync-fallback-ratio",
+        dailyLimitUsd: null,
+      }),
+    ]);
   });
 
   it("ratchets active stablecoin redemption config coverage", () => {

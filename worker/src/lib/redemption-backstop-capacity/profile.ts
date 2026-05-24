@@ -1,6 +1,7 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { RedemptionBackstopConfig, RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
+import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopProviderId } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
@@ -73,29 +74,4 @@ export function resolveReserveSyncCapacityConfidence(
   return "dynamic";
 }
 
-export function resolveCapacityBasis(
-  routeFamily: RedemptionBackstopConfig["routeFamily"] | null,
-  model: RedemptionCapacityModel,
-  capacityConfidence?: RedemptionBackstopEntry["capacityConfidence"],
-): RedemptionBackstopEntry["capacityBasis"] | undefined {
-  if (model.kind === "reserve-sync-metadata") {
-    if (capacityConfidence === "live-direct") return "live-direct-telemetry";
-    if (capacityConfidence === "live-proxy") return "live-proxy-buffer";
-    if (model.basis) return model.basis;
-    if (routeFamily === "psm-swap") return "psm-balance-share";
-    if (routeFamily === "queue-redeem") return "strategy-buffer";
-    return "hot-buffer";
-  }
-
-  if (model.basis) return model.basis;
-  if (model.kind === "fixed-usd") return "fixed-buffer";
-  if (model.kind === "supply-full") {
-    return routeFamily === "offchain-issuer" || routeFamily === "stablecoin-redeem"
-      ? "issuer-term-redemption"
-      : "full-system-eventual";
-  }
-
-  if (routeFamily === "psm-swap") return "psm-balance-share";
-  if (routeFamily === "queue-redeem") return "strategy-buffer";
-  return "hot-buffer";
-}
+export { resolveCapacityBasis };

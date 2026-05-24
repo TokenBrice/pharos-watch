@@ -1,6 +1,11 @@
 import ts from "typescript";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import {
+  resolveCapacityBasis,
+  resolveCapacityDailyLimitUsd,
+  resolveCapacityFallbackSource,
+} from "@shared/lib/redemption-backstop-capacity";
+import {
   resolveCapacityConfidence,
   resolveCapacitySemantics,
   resolveFeeConfidence,
@@ -51,6 +56,9 @@ export interface RedemptionRegistryAuditRow {
   capacityModelKind: RedemptionBackstopConfig["capacityModel"]["kind"];
   capacityConfidence: string;
   capacityBasis: string | null;
+  resolvedCapacityBasis: string | null;
+  capacityFallbackSource: string;
+  dailyLimitUsd: number | null;
   capacitySemantics: string;
   costModelKind: RedemptionBackstopConfig["costModel"]["kind"];
   feeConfidence: string;
@@ -286,6 +294,7 @@ export function validateRedemptionBackstopRegistry(
       }
     }
 
+    const capacityConfidence = resolveCapacityConfidence(config.capacityModel);
     const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter ?? null;
     const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
     return {
@@ -298,8 +307,11 @@ export function validateRedemptionBackstopRegistry(
       executionModel: config.executionModel,
       outputAssetType: config.outputAssetType,
       capacityModelKind: config.capacityModel.kind,
-      capacityConfidence: resolveCapacityConfidence(config.capacityModel),
+      capacityConfidence,
       capacityBasis: config.capacityModel.basis ?? null,
+      resolvedCapacityBasis: resolveCapacityBasis(config.routeFamily, config.capacityModel, capacityConfidence) ?? null,
+      capacityFallbackSource: resolveCapacityFallbackSource(config.capacityModel),
+      dailyLimitUsd: resolveCapacityDailyLimitUsd(config.capacityModel),
       capacitySemantics: resolveCapacitySemantics(config.capacityModel),
       costModelKind: config.costModel.kind,
       feeConfidence: resolveFeeConfidence(config.costModel),

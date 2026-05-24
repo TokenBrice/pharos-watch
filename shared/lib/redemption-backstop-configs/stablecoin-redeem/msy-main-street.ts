@@ -1,7 +1,6 @@
 import {
   documentedBoundSupplyFull,
-  documentedVariableFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -13,7 +12,7 @@ export const MSY_MAIN_STREET_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig 
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   executionModel: "rules-based-nav",
   totalScoreCap: 65,
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
   docs: [
     sourceRef("Main Street staking model", "https://mainstreet-finance.gitbook.io/mainstreet.finance/staking-model", ["route", "capacity", "fees", "access", "settlement"]),
     sourceRef("Main Street msY vault", "https://mainstreet-finance.gitbook.io/mainstreet.finance/msusd-and-strategy-vaults/strategy-vaults/msy-the-options-box-spread", ["route", "capacity"]),

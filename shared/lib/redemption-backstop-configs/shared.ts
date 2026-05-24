@@ -159,6 +159,10 @@ export function fixedFee(feeBps: number, feeDescription?: string): RedemptionCos
     : { kind: "fee-bps", feeBps, confidence: "fixed" };
 }
 
+export const NO_PUBLIC_NUMERIC_REDEMPTION_FEE = "Public docs reviewed do not publish a numeric redemption fee.";
+
+export const LIQUITY_STYLE_REDEMPTION_FEE = "Minimum 50 bps + baseRate (decays over time).";
+
 export function documentedBoundSupplyFull(
   reviewedAt: string,
 ): Pick<RedemptionBackstopConfig, "capacityModel" | "reviewedAt"> {
@@ -174,10 +178,20 @@ export function documentedBoundSupplyFull(
 export function documentedVariableFee(
   feeDescription: string,
   confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",
-  feeModelKind?: Exclude<RedemptionFeeModelKind, "fixed-bps">,
 ): RedemptionCostModel {
-  const resolvedFeeModelKind = feeModelKind ?? (confidence === "formula" ? "formula" : "undisclosed-reviewed");
+  const resolvedFeeModelKind = confidence === "formula" ? "formula" : "documented-variable";
   return { kind: "dynamic-or-unclear", feeDescription, confidence, feeModelKind: resolvedFeeModelKind };
+}
+
+export function undisclosedReviewedFee(
+  feeDescription: string = NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+): RedemptionCostModel {
+  return {
+    kind: "dynamic-or-unclear",
+    feeDescription,
+    confidence: "undisclosed-reviewed",
+    feeModelKind: "undisclosed-reviewed",
+  };
 }
 
 export function sourceRef(label: string, url: string, supports?: RedemptionDocSourceSupport[]): RedemptionDocSource {
@@ -187,10 +201,6 @@ export function sourceRef(label: string, url: string, supports?: RedemptionDocSo
 function trackedReviewedDocs(stablecoinId: string): RedemptionDocSource[] {
   return trackedRedemptionDocSources(stablecoinId, { includeLiveReserveDisplay: true });
 }
-
-export const NO_PUBLIC_NUMERIC_REDEMPTION_FEE = "Public docs reviewed do not publish a numeric redemption fee.";
-
-export const LIQUITY_STYLE_REDEMPTION_FEE = "Minimum 50 bps + baseRate (decays over time).";
 
 /** Offchain-issuer base config.
  *  Uses supply-full capacity since the full supply is eventually redeemable,
@@ -203,7 +213,7 @@ export const issuerBase: RedemptionBackstopConfig = {
   executionModel: "rules-based-nav",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-full", basis: "issuer-term-redemption" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
 };
 
 export const commodityIssuerBase: RedemptionBackstopConfig = {
@@ -219,7 +229,7 @@ export const stablecoinRedeemBase: RedemptionBackstopConfig = {
   executionModel: "deterministic-onchain",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-full", basis: "issuer-term-redemption" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
 };
 
 export const collateralRedeemBase: RedemptionBackstopConfig = {
@@ -229,7 +239,7 @@ export const collateralRedeemBase: RedemptionBackstopConfig = {
   executionModel: "deterministic-onchain",
   outputAssetType: "bluechip-collateral",
   capacityModel: { kind: "supply-full", basis: "full-system-eventual" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
 };
 
 export const psmSwapBase: RedemptionBackstopConfig = {
@@ -239,7 +249,7 @@ export const psmSwapBase: RedemptionBackstopConfig = {
   executionModel: "deterministic-onchain",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-full", basis: "full-system-eventual" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
 };
 
 export const basketRedeemBase: RedemptionBackstopConfig = {
@@ -249,7 +259,7 @@ export const basketRedeemBase: RedemptionBackstopConfig = {
   executionModel: "deterministic-basket",
   outputAssetType: "stable-basket",
   capacityModel: { kind: "supply-full", basis: "full-system-eventual" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
 };
 
 export const queueRedeemBase: RedemptionBackstopConfig = {
@@ -259,5 +269,5 @@ export const queueRedeemBase: RedemptionBackstopConfig = {
   executionModel: "rules-based-nav",
   outputAssetType: "stable-single",
   capacityModel: { kind: "supply-ratio", ratio: 0.1, basis: "strategy-buffer" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
 };

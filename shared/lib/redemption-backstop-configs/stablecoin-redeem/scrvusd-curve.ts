@@ -1,6 +1,5 @@
 import {
-  documentedVariableFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -10,7 +9,7 @@ export const SCRVUSD_CURVE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = 
   ...stablecoinRedeemBase,
   capacityModel: { kind: "reserve-sync-metadata" },
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
   reviewedAt: "2026-05-17",
   docs: [
     sourceRef("Curve scrvUSD month-in-review", "https://news.curve.finance/savings-crvusd-a-month-in-review/", ["route", "capacity"]),

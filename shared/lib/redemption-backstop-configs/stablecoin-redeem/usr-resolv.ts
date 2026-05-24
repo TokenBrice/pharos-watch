@@ -1,6 +1,5 @@
 import {
-  documentedVariableFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -10,7 +9,7 @@ import { REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
 export const USR_RESOLV_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
   capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
   reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
   docs: [
     sourceRef("Resolv docs", "https://docs.resolv.xyz/", ["route", "capacity"]),

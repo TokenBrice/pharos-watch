@@ -1,7 +1,6 @@
 import {
   documentedBoundSupplyFull,
-  documentedVariableFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   sourceRef,
   stablecoinRedeemBase,
@@ -12,7 +11,7 @@ export const CUSDO_OPENEDEN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig =
   ...stablecoinRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_WRAPPER_REDEMPTION_AT),
   executionModel: "rules-based-nav",
-  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  costModel: undisclosedReviewedFee(),
   docs: [
     sourceRef("OpenEden cUSDO token docs", "https://docs.openeden.com/usdo/cusdo-token", ["route", "capacity"]),
     sourceRef("OpenEden integration guide", "https://docs.openeden.com/usdo/developers/integration-guide", ["route"]),
