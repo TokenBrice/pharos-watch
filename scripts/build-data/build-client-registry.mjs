@@ -7,12 +7,11 @@
  *
  * The full per-coin asset is ~1.37 MiB (391 entries × ~50 fields). Client
  * surfaces read a curated subset of those fields for routing, labels,
- * filtering, classification, reserve coverage summaries, mint-authority
- * summaries, and portfolio exposure. This generator drops fields that still
+ * filtering, classification, reserve coverage summaries, mint-authority coverage
+ * classification, and portfolio exposure. This generator drops fields that still
  * belong on server-only paths (`contracts`, `dependencies`,
- * `blacklistabilityReview`, full mint-authority review evidence,
- * `featuredContent`, obituary prose, etc.) and emits an array with
- * deterministic key ordering.
+ * `blacklistabilityReview`, mint-authority review evidence, `featuredContent`,
+ * obituary prose, etc.) and emits an array with deterministic key ordering.
  *
  * The output file is checked in (not generated at runtime) so the Next.js
  * client bundle can `import` it directly without a runtime fetch.
@@ -117,84 +116,33 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function pickPresent(source, fields) {
-  const target = {};
-  for (const field of fields) {
-    if (source[field] !== undefined) {
-      target[field] = source[field];
-    }
-  }
-  return target;
-}
-
-function appendSources(target, sources, seenUrls) {
-  if (!Array.isArray(sources)) {
-    return;
-  }
-  for (const source of sources) {
-    if (!isPlainObject(source) || typeof source.label !== "string" || typeof source.url !== "string") {
-      continue;
-    }
-    const key = source.url;
-    if (seenUrls.has(key)) {
-      continue;
-    }
-    seenUrls.add(key);
-    target.push({
-      label: source.label,
-      url: source.url,
-    });
-  }
-}
-
 export function projectMintAuthoritySummary(coin) {
   const profile = coin?.mintAuthority;
   if (!isPlainObject(profile)) {
     return undefined;
   }
 
-  const summary = pickPresent(profile, [
-    "mintPath",
-    "authorityPosture",
-    "confidence",
-    "summary",
-    "inheritedFrom",
-  ]);
+  const { mintPath, authorityPosture } = profile;
+  if (typeof mintPath !== "string" || typeof authorityPosture !== "string") {
+    return undefined;
+  }
 
+  const summary = { mintPath, authorityPosture };
   const controls = Array.isArray(profile.controls)
     ? profile.controls
         .filter(isPlainObject)
-        .map((control) =>
-          pickPresent(control, [
-            "chain",
-            "address",
-            "label",
-            "role",
-            "authorityType",
-            "directMintAbility",
-            "threshold",
-            "signerCount",
-            "timelockDelaySec",
-            "capDescription",
-            "modulesOrGuardsStatus",
-          ]),
-        )
-        .filter((control) => Object.keys(control).length > 0)
+        .map((control) => {
+          const { authorityType, directMintAbility } = control;
+          if (typeof authorityType !== "string" || typeof directMintAbility !== "string") {
+            return null;
+          }
+          return { authorityType, directMintAbility };
+        })
+        .filter((control) => control !== null)
     : [];
 
   if (controls.length > 0) {
     summary.controls = controls;
-  }
-
-  const sources = [];
-  const seenUrls = new Set();
-  appendSources(sources, profile.review?.sources, seenUrls);
-  appendSources(sources, profile.sources, seenUrls);
-  for (const control of Array.isArray(profile.controls) ? profile.controls : []) {
-    appendSources(sources, control?.sources, seenUrls);
-  }
-  if (sources.length > 0) {
-    summary.sources = sources;
   }
 
   return summary;

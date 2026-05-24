@@ -25,7 +25,7 @@ import type {
   RedemptionBackstopEntry,
   StablecoinMeta,
 } from "@shared/types";
-import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
+import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 
 export type {
@@ -53,7 +53,7 @@ export { resolveYieldCoverage } from "@/lib/coverage/yield";
 export { COVERAGE_FEATURES };
 
 interface BuildCoverageRowInput {
-  coin: StablecoinMeta & { mintAuthoritySummary?: MintAuthorityClientSummary | null };
+  coin: StablecoinMeta & { mintAuthoritySummary?: MintAuthorityCoverageSummary | null };
   marketCapUsd: number;
   hasPegCoverage: boolean;
   consensusSources?: string[];

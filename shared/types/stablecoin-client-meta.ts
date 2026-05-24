@@ -43,6 +43,17 @@ export interface MintAuthorityClientSummary {
   sources?: StablecoinLink[];
 }
 
+export interface MintAuthorityCoverageControlSummary {
+  authorityType: MintAuthorityType;
+  directMintAbility: MintAuthorityDirectMintAbility;
+}
+
+export interface MintAuthorityCoverageSummary {
+  mintPath: MintAuthorityMintPath;
+  authorityPosture: MintAuthorityPosture;
+  controls?: MintAuthorityCoverageControlSummary[];
+}
+
 /**
  * Slim projection of `StablecoinMeta` for client-side consumers.
  *
@@ -51,8 +62,10 @@ export interface MintAuthorityClientSummary {
  * `featuredContent`, `obituary` text, etc.). Shipping all of that to the
  * browser costs ~1.37 MiB of JSON. This client type keeps only the fields
  * client surfaces actually read for routing, labels, filtering, basic
- * classification, reserve coverage summaries, mint-authority summaries, and
- * portfolio exposure.
+ * classification, reserve coverage summaries, mint-authority coverage
+ * classification, and portfolio exposure. Stablecoin detail pages add
+ * page-specific full mint-authority summaries outside this global registry so
+ * coverage growth does not inflate every route's client chunk.
  *
  * Build pipeline: `scripts/build-data/build-client-registry.mjs` projects
  * `coins.generated.json` to a slim JSON consumed by
@@ -94,7 +107,7 @@ export type StablecoinClientMeta = Pick<
   | "collateral"
   | "collateralQuality"
 > & {
-  mintAuthoritySummary?: MintAuthorityClientSummary;
+  mintAuthoritySummary?: MintAuthorityCoverageSummary;
 };
 
 /** Canonical ordered list of source fields copied into the client projection. */

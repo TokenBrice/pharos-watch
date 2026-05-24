@@ -1,4 +1,4 @@
-import type { MintAuthorityClientSummary } from "@shared/types/stablecoin-client-meta";
+import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
 import {
   breakdownItem,
@@ -89,7 +89,7 @@ const MINT_AUTHORITY_PRESETS: Record<MintAuthorityStatusKind, CoverageStatusPres
   },
 };
 
-function hasActiveMultisigMintControl(summary: MintAuthorityClientSummary): boolean {
+function hasActiveMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
   return (summary.controls ?? []).some(
     (control) =>
       (control.authorityType === "safe" || control.authorityType === "multisig") &&
@@ -97,7 +97,7 @@ function hasActiveMultisigMintControl(summary: MintAuthorityClientSummary): bool
   );
 }
 
-function hasDirectNonMultisigMintControl(summary: MintAuthorityClientSummary): boolean {
+function hasDirectNonMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
   return (summary.controls ?? []).some(
     (control) =>
       control.directMintAbility === "direct" &&
@@ -106,7 +106,7 @@ function hasDirectNonMultisigMintControl(summary: MintAuthorityClientSummary): b
   );
 }
 
-function resolveMintAuthority(summary?: MintAuthorityClientSummary | null): CoverageStatus {
+function resolveMintAuthority(summary?: MintAuthorityCoverageSummary | null): CoverageStatus {
   if (!summary) {
     return createStatus(
       MINT_AUTHORITY_PRESETS.unknown.kind,

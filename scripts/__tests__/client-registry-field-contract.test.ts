@@ -56,7 +56,7 @@ describe("client registry field contract", () => {
     ]);
   });
 
-  it("projects only the mint-authority client summary and excludes review evidence", () => {
+  it("projects only the mint-authority coverage summary and excludes detail evidence", () => {
     const coin = {
       id: "minted-usd",
       name: "Minted USD",
@@ -110,28 +110,9 @@ describe("client registry field contract", () => {
     expect(projected.mintAuthoritySummary).toEqual({
       mintPath: "issuer-direct-mint",
       authorityPosture: "concentrated-admin",
-      confidence: "verified",
-      summary: "Issuer minter can create supply through a documented role.",
-      controls: [
-        {
-          chain: "ethereum",
-          address: "0x0000000000000000000000000000000000000001",
-          label: "Issuer minter",
-          role: "direct-minter",
-          authorityType: "safe",
-          directMintAbility: "direct",
-          threshold: 2,
-          signerCount: 3,
-          timelockDelaySec: 86400,
-          capDescription: "Daily cap",
-          modulesOrGuardsStatus: "none-detected",
-        },
-      ],
-      sources: [
-        { label: "Docs", url: "https://example.com/docs" },
-        { label: "Role", url: "https://example.com/role" },
-      ],
+      controls: [{ authorityType: "safe", directMintAbility: "direct" }],
     });
+    expect(JSON.stringify(projected)).not.toContain("Issuer minter can create supply");
     expect(JSON.stringify(projected)).not.toContain("Long reviewer evidence");
     expect(JSON.stringify(projected)).not.toContain("Control-level evidence");
     expect(JSON.stringify(projected)).not.toContain("Should not ship");
