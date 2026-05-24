@@ -19,6 +19,8 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
       authorityTypeLabel: "DAO governor",
       directMintAbilityLabel: "Cap-limited",
       locationLabel: "ethereum / 0x1234...abcd",
+      addressUrl: "https://etherscan.io/address/0x123400000000000000000000000000000000abcd",
+      securitySetupLabel: "DAO governor, 3/5 threshold",
       thresholdLabel: "3/5 threshold",
       timelockLabel: "1d timelock",
       capDescription: "Facilitator bucket capacity limits minting.",
@@ -50,7 +52,9 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Aave Ethereum Governance");
     expect(html).toContain("DAO governor");
     expect(html).toContain("Cap-limited");
-    expect(html).toContain("3/5 threshold");
+    expect(html).toContain("Setup");
+    expect(html).toContain("DAO governor, 3/5 threshold");
+    expect(html).toContain("https://etherscan.io/address/0x123400000000000000000000000000000000abcd");
     expect(html).toContain("1d timelock");
     expect(html).toContain("Facilitator bucket capacity limits minting");
     expect(html).toContain("Aave GHO facilitators");

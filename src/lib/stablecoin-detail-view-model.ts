@@ -32,6 +32,7 @@ import {
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID, type StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import { buildExplorerUrl } from "@shared/lib/explorer";
 import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,
@@ -175,6 +176,8 @@ export interface MintAuthorityDetailControlViewModel {
   authorityTypeLabel: string;
   directMintAbilityLabel: string;
   locationLabel: string;
+  addressUrl: string | null;
+  securitySetupLabel: string;
   thresholdLabel: string | null;
   timelockLabel: string | null;
   capDescription: string | null;
@@ -268,7 +271,7 @@ const CONTROL_ROLE_LABELS: Record<string, string> = {
 const AUTHORITY_TYPE_LABELS: Record<string, string> = {
   safe: "Safe",
   multisig: "Multisig",
-  eoa: "EOA",
+  eoa: "Externally owned account",
   timelock: "Timelock",
   "dao-governor": "DAO governor",
   contract: "Contract",
@@ -390,17 +393,24 @@ function buildMintAuthorityControlViewModel(
   const safe = isRecord(control.safe) ? control.safe : null;
   const threshold = numberValue(control.threshold) ?? numberValue(safe?.threshold);
   const signerCount = numberValue(control.signerCount) ?? (Array.isArray(safe?.owners) ? safe.owners.length : null);
+  const thresholdLabel = formatThreshold(threshold, signerCount);
+  const authorityTypeLabel = labelFromMap(control.authorityType, AUTHORITY_TYPE_LABELS);
   const locationLabel =
     [chain, address ? shortenAddress(address) : null].filter(Boolean).join(" / ") || "No address published";
+  const addressUrl = address
+    ? buildExplorerUrl({ chainKey: chain ?? undefined, entityType: "address", value: address })
+    : null;
 
   return {
     key: `${label}:${chain ?? "no-chain"}:${address ?? index}`,
     label,
     roleLabel: labelFromMap(control.role, CONTROL_ROLE_LABELS),
-    authorityTypeLabel: labelFromMap(control.authorityType, AUTHORITY_TYPE_LABELS),
+    authorityTypeLabel,
     directMintAbilityLabel: labelFromMap(control.directMintAbility, DIRECT_MINT_ABILITY_LABELS),
     locationLabel,
-    thresholdLabel: formatThreshold(threshold, signerCount),
+    addressUrl,
+    securitySetupLabel: thresholdLabel ? `${authorityTypeLabel}, ${thresholdLabel}` : authorityTypeLabel,
+    thresholdLabel,
     timelockLabel: formatTimelock(numberValue(control.timelockDelaySec)),
     capDescription: stringValue(control.capDescription),
     modulesOrGuardsLabel: control.modulesOrGuardsStatus

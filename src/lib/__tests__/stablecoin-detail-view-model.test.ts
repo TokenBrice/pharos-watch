@@ -123,6 +123,37 @@ describe("stablecoin detail view-model builder", () => {
     expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
   });
 
+  it("adds explorer links and security setup labels to mint-authority controls", () => {
+    const viewModel = buildMintAuthorityDetailViewModel({
+      mintAuthoritySummary: {
+        mintPath: "permissioned-minter",
+        authorityPosture: "bounded-admin",
+        confidence: "verified",
+        summary: "Minting is controlled by a published Safe.",
+        controls: [
+          {
+            chain: "ethereum",
+            address: "0x123400000000000000000000000000000000abcd",
+            label: "Issuer Safe",
+            role: "minter-admin",
+            authorityType: "safe",
+            directMintAbility: "can-authorize",
+            threshold: 2,
+            signerCount: 3,
+            modulesOrGuardsStatus: "none-detected",
+          },
+        ],
+      },
+    } as never);
+
+    expect(viewModel.controls[0]).toMatchObject({
+      locationLabel: "ethereum / 0x123400...00abcd",
+      addressUrl: "https://etherscan.io/address/0x123400000000000000000000000000000000abcd",
+      securitySetupLabel: "Safe, 2/3 threshold",
+      thresholdLabel: "2/3 threshold",
+    });
+  });
+
   it("builds a ready view model from fetched inputs", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

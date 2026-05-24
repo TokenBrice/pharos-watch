@@ -19121,17 +19121,39 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDS inherits Sky/Maker-style governed mint and module authority; supply creation is not a simple immutable user-only mint path.",
+      "summary": "USDS ERC-20 supply is minted through USDS_JOIN against Vat.dai balances, while Sky governance/Pause Proxy remains authorized to change system modules, parameters, and USDS permissions.",
       "controls": [
         {
-          "label": "Protocol governance/admin authority",
-          "role": "cap-admin",
+          "chain": "ethereum",
+          "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+          "label": "USDS_JOIN token adapter",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Mints ERC-20 USDS only against existing Vat.dai balance; not an unrestricted off-protocol minter.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "label": "Sky Pause Proxy governance executor",
+          "role": "governor",
           "authorityType": "dao-governor",
-          "directMintAbility": "parameter-only",
-          "modulesOrGuardsStatus": "unknown"
+          "directMintAbility": "can-authorize",
+          "timelockDelaySec": 172800,
+          "capDescription": "Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, parameters, and USDS authorizations.",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
+        {
+          "label": "Sky USDS contracts",
+          "url": "https://github.com/sky-ecosystem/usds"
+        },
         {
           "label": "Sky docs",
           "url": "https://docs.sky.money/"

@@ -34,6 +34,9 @@ function ControlMeta({ label, value }: { label: string; value: string | null }) 
 }
 
 function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailControlViewModel }) {
+  const locationClassName =
+    "max-w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 font-mono text-[11px] text-muted-foreground";
+
   return (
     <li className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
@@ -43,13 +46,26 @@ function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailCont
             {control.roleLabel} / {control.authorityTypeLabel}
           </p>
         </div>
-        <span className="max-w-full truncate rounded-md border border-border/60 bg-background/70 px-2 py-1 font-mono text-[11px] text-muted-foreground">
-          {control.locationLabel}
-        </span>
+        {control.addressUrl ? (
+          <a
+            href={control.addressUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "pharos-focus-ring inline-flex items-center gap-1 transition-colors hover:text-foreground",
+              locationClassName,
+            )}
+          >
+            <span className="truncate">{control.locationLabel}</span>
+            <ExternalLink aria-hidden className="h-3 w-3 shrink-0" />
+          </a>
+        ) : (
+          <span className={cn("inline-flex truncate", locationClassName)}>{control.locationLabel}</span>
+        )}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
         <ControlMeta label="Mint" value={control.directMintAbilityLabel} />
-        <ControlMeta label="Safe" value={control.thresholdLabel} />
+        <ControlMeta label="Setup" value={control.securitySetupLabel} />
         <ControlMeta label="Delay" value={control.timelockLabel} />
         <ControlMeta label="Modules" value={control.modulesOrGuardsLabel} />
       </div>
