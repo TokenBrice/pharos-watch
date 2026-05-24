@@ -29,6 +29,14 @@ const CORE_SETTLEMENT_MIN_PEG_SCORE = 90;
 const CORE_SETTLEMENT_MIN_LIQUIDITY_SCORE = 60;
 const CORE_SETTLEMENT_MIN_DEPENDENCY_SCORE = 90;
 
+function hasReviewedIssuerExit(card: ReportCard): boolean {
+  return (
+    card.rawInputs.redemptionBackstopScore != null &&
+    card.rawInputs.redemptionRouteFamily === "offchain-issuer" &&
+    (card.rawInputs.redemptionModelConfidence === "high" || card.rawInputs.redemptionModelConfidence === "medium")
+  );
+}
+
 export interface CoreSettlementProfile {
   id: string;
   marketCapUsd: number;
@@ -86,17 +94,13 @@ export function getCoreSettlementProfile(
   if (card.isDefunct || !stablecoin) return null;
   const marketCapUsd = getCirculatingRaw(stablecoin);
   const chainCount = stablecoin.chains.length;
-  const hasIssuerExit =
-    card.rawInputs.redemptionBackstopScore != null &&
-    card.rawInputs.redemptionModelConfidence !== "low" &&
-    card.rawInputs.redemptionRouteFamily === "offchain-issuer";
   if (marketCapUsd < CORE_SETTLEMENT_MIN_MCAP_USD) return null;
   if (chainCount < CORE_SETTLEMENT_MIN_CHAINS) return null;
   if ((card.dimensions.pegStability.score ?? 0) < CORE_SETTLEMENT_MIN_PEG_SCORE) return null;
   if ((card.dimensions.liquidity.score ?? 0) < CORE_SETTLEMENT_MIN_LIQUIDITY_SCORE) return null;
   if ((card.dimensions.dependencyRisk.score ?? 0) < CORE_SETTLEMENT_MIN_DEPENDENCY_SCORE) return null;
   if (card.rawInputs.dependencies.length > 0) return null;
-  if (!hasIssuerExit) return null;
+  if (!hasReviewedIssuerExit(card)) return null;
 
   return {
     id: card.id,

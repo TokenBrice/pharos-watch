@@ -93,7 +93,7 @@ Mint Authority review is descriptive and not scored in the current methodology. 
 
 ### Core Settlement Rail Strip
 
-The Safety Scores grid has a product-facing "Core settlement rails" strip for very large, broadly deployed assets. It is not a methodology dimension and does not change grades. The gate requires all of the following from the current report-card/list payload: market cap at least `$25B`, at least `10` chains, Peg Stability at least `90`, Liquidity / Exit at least `60`, Dependency Risk at least `90`, no dependencies, and a non-low-confidence `offchain-issuer` redemption route. Other route families can still support Liquidity / Exit, but they do not satisfy the issuer-exit rail label.
+The Safety Scores grid has a product-facing "Core settlement rails" strip for very large, broadly deployed assets. It is not a methodology dimension and does not change grades. The gate requires all of the following from the current report-card/list payload: market cap at least `$25B`, at least `10` chains, Peg Stability at least `90`, Liquidity / Exit at least `60`, Dependency Risk at least `90`, no dependencies, and a high- or medium-confidence `offchain-issuer` redemption route. Other route families can still support Liquidity / Exit, but they do not satisfy the issuer-exit rail label.
 
 ### Resilience Details
 

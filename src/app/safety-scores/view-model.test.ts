@@ -232,6 +232,57 @@ describe("safety score view-model", () => {
     }
   });
 
+  it("requires reviewed non-low issuer-exit confidence for core settlement profiles", () => {
+    const base = makeCard({
+      id: "issuer-exit",
+      symbol: "ISS",
+      dimensions: {
+        pegStability: { score: 99, grade: "A+" },
+        liquidity: { score: 80, grade: "B+" },
+        resilience: { score: 88, grade: "B+" },
+        decentralization: { score: 70, grade: "B-" },
+        dependencyRisk: { score: 95, grade: "A+" },
+      },
+    });
+    const stablecoin = {
+      id: "issuer-exit",
+      circulating: { peggedUSD: 30_000_000_000 },
+      chains: Array.from({ length: 12 }, (_, index) => `chain-${index}`),
+    };
+
+    expect(
+      getCoreSettlementProfile(
+        {
+          ...base,
+          rawInputs: {
+            ...base.rawInputs,
+            redemptionModelConfidence: "high",
+          },
+        },
+        stablecoin,
+      ),
+    ).not.toBeNull();
+
+    for (const rawInputs of [
+      { redemptionBackstopScore: null, redemptionModelConfidence: "medium" },
+      { redemptionBackstopScore: 65, redemptionModelConfidence: "low" },
+      { redemptionBackstopScore: 65, redemptionModelConfidence: null },
+    ] as const) {
+      expect(
+        getCoreSettlementProfile(
+          {
+            ...base,
+            rawInputs: {
+              ...base.rawInputs,
+              ...rawInputs,
+            },
+          },
+          stablecoin,
+        ),
+      ).toBeNull();
+    }
+  });
+
   it("builds a market-weighted inspection board and ranks dimension findings", () => {
     const cards = [
       makeCard({
