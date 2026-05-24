@@ -239,6 +239,74 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     );
   });
 
+  it("maps route status and docs provenance labels", () => {
+    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "degraded" }))).toMatchObject({
+      showRouteStatusBadge: true,
+      routeStatusLabel: "degraded",
+    });
+    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "cohort-limited" }))).toMatchObject({
+      showRouteStatusBadge: true,
+      routeStatusLabel: "cohort limited",
+    });
+    expect(buildRedemptionBackstopCardViewModel(entry({ routeStatus: "unknown" }))).toMatchObject({
+      showRouteStatusBadge: true,
+      routeStatusLabel: "status unknown",
+    });
+
+    const provenanceCases = [
+      ["config-reviewed", "Reviewed route source"],
+      ["live-reserve-display", "Fallback live reserve source"],
+      ["proof-of-reserves", "Fallback proof-of-reserves source"],
+      ["preferred-link", "Fallback project link"],
+    ] as const;
+    for (const [provenance, label] of provenanceCases) {
+      expect(
+        buildRedemptionBackstopCardViewModel(
+          entry({
+            docs: {
+              reviewedAt: "2026-05-24",
+              provenance,
+              sources: [
+                {
+                  label: "Fixture source",
+                  url: "https://example.com/redemption",
+                  supports: ["route", "capacity"],
+                },
+              ],
+            },
+          }),
+        ),
+      ).toMatchObject({
+        docsReviewedAt: "2026-05-24",
+        docsProvenanceLabel: label,
+        docSources: [
+          {
+            label: "Fixture source",
+            url: "https://example.com/redemption",
+            supports: "route, capacity",
+          },
+        ],
+      });
+    }
+
+    expect(
+      buildRedemptionBackstopCardViewModel(
+        entry({
+          docs: {
+            label: "Legacy source",
+            url: "https://example.com/legacy",
+          },
+        }),
+      ).docSources,
+    ).toEqual([
+      {
+        label: "Legacy source",
+        url: "https://example.com/legacy",
+        supports: null,
+      },
+    ]);
+  });
+
   it("explains non-rated score states and exposes score breakdown labels", () => {
     const missingCache = buildRedemptionBackstopCardViewModel(
       entry({
