@@ -17,6 +17,8 @@ Design-system overhaul lands, the MiCA tracker goes live, and the yield page get
 - **Guided stablecoin Picker**: A guided stablecoin picker ships at /screener/picker/ on a new selector engine: snapshot endpoint, peg-scope scoring, custody and depeg-watch logic, a mobile form, a homepage callout, and a Telegram follow command.
 - **Navigation & homepage refresh**: An alternate homepage and timeline layout land, with a 9-depeg desktop grid, an optional phosphor CRT reading mode, a unified chain-profile hero, expanded mechanism explainers, and a prominence-ranked command palette.
 - **Pricing integrity & reliability**: DEX price sanity gates and Carbon normalization make DexScreener augmentation opt-in (pricing v6.05), Liquidity Score v5.7 adds price-gating, plus a cron staleness watchdog and an API-key rate-limit fallback.
+- **Redemption backstop coverage**: Redemption backstop scoring (v4.04) gains documented route sources, source-support validation, and expanded confidence scoring, with a coverage matrix that surfaces outage and degraded states; report cards degrade on redemption outages, the data is exposed in stablecoin JSON-LD, and malformed telemetry fails closed.
+- **Mint Authority transparency**: A new Mint Authority section on coin pages surfaces who can mint and control supply — control addresses with on-chain evidence, Safe-module display, and risk-tone posture cues — with coverage expanded across the top stablecoins.
 - **Broader coverage**: The tracked universe reaches 399 coins with FUSD, sDOLA, GLDT, and Ondo's iAUON and sLVON added and pre-launch gynUSD joining, while reserve adapters climb to 57 and live-reserve coverage to 267.
 
 ## 2026-05-11 to 2026-05-17
