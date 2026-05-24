@@ -16,6 +16,8 @@ import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { CURVE_ORACLE_MAX_STALENESS_SEC } from "./constants";
 
+export type CurveRouteType = "direct" | "one-hop" | "trusted-wrapper" | "chained-hop";
+
 export interface CurvePoolConfig {
   stablecoinId: string;
   poolAddress: string;
@@ -28,6 +30,10 @@ export interface CurvePoolConfig {
   useUnderlying?: boolean;
   /** Two-hop pricing: raw price is in intermediate token, multiply by via-token's USD price */
   hop?: { viaStablecoinId: string };
+  /** Explicit route metadata for diagnostics and wrapper/chained-hop opt-in */
+  routeType?: CurveRouteType;
+  /** Maximum allowed dependency depth. Chained hops must opt in with maxHopDepth > 1. */
+  maxHopDepth?: number;
 }
 
 // get_dy(int128,int128,uint256) selector
@@ -46,6 +52,8 @@ const GET_DY_UNDERLYING_SELECTOR = "0x07211ef7";
 export interface CurveOnchainBatch {
   prices: Map<string, number>;
   observedAtByCoinId: Map<string, number>;
+  routeTypeByCoinId: Map<string, CurveRouteType>;
+  hopDepthByCoinId: Map<string, number>;
 }
 
 export async function fetchCurveOnchainPrices(
@@ -53,19 +61,11 @@ export async function fetchCurveOnchainPrices(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<FetcherOutcome<CurveOnchainBatch>> {
-  // Validate: no chained hops (hop referencing another hop)
-  const hopIds = new Set(configs.filter((c) => c.hop).map((c) => c.stablecoinId));
-  for (const config of configs) {
-    if (config.hop && hopIds.has(config.hop.viaStablecoinId)) {
-      throw new Error(
-        `[curve-onchain] Chained hop detected: ${config.stablecoinId} hops via ${config.hop.viaStablecoinId} which is also a hop`,
-      );
-    }
-  }
-
   const emptyBatch: CurveOnchainBatch = {
     prices: new Map<string, number>(),
     observedAtByCoinId: new Map<string, number>(),
+    routeTypeByCoinId: new Map<string, CurveRouteType>(),
+    hopDepthByCoinId: new Map<string, number>(),
   };
 
   // Phase 0: resolve block number + timestamp per distinct chain in parallel
@@ -142,31 +142,32 @@ export async function fetchCurveOnchainPrices(
   }
 
   // Phase 2: Resolve hop prices, build final results stamped with the pool's
-  // chain-block timestamp.
+  // chain-block timestamp. Dependencies resolve recursively so explicitly
+  // allowed chained hops multiply by the final USD price of the via asset.
   const prices = new Map<string, number>();
   const observedAtByCoinId = new Map<string, number>();
+  const routeTypeByCoinId = new Map<string, CurveRouteType>();
+  const hopDepthByCoinId = new Map<string, number>();
+  const configById = new Map(configs.map((config) => [config.stablecoinId, config]));
+  const resolutionCache = new Map<string, CurveResolvedPrice | null>();
+  const resolving = new Set<string>();
 
   for (const config of configs) {
-    const raw = rawPrices.get(config.stablecoinId);
-    if (raw == null) continue;
-    const block = blockByChain.get(config.chain);
-    if (!block) continue;
-
-    if (config.hop) {
-      const viaPrice = rawPrices.get(config.hop.viaStablecoinId);
-      if (viaPrice == null) continue; // dependency missing
-      const finalPrice = raw * viaPrice;
-      if (finalPrice > 0 && finalPrice < 10_000) {
-        prices.set(config.stablecoinId, finalPrice);
-        observedAtByCoinId.set(config.stablecoinId, block.blockTimestamp);
-      }
-    } else {
-      prices.set(config.stablecoinId, raw);
-      observedAtByCoinId.set(config.stablecoinId, block.blockTimestamp);
-    }
+    const resolved = resolveCurveConfig(config, {
+      blockByChain,
+      configById,
+      rawPrices,
+      resolving,
+      resolutionCache,
+    });
+    if (!resolved) continue;
+    prices.set(config.stablecoinId, resolved.price);
+    observedAtByCoinId.set(config.stablecoinId, resolved.observedAt);
+    routeTypeByCoinId.set(config.stablecoinId, resolved.routeType);
+    hopDepthByCoinId.set(config.stablecoinId, resolved.hopDepth);
   }
 
-  const value: CurveOnchainBatch = { prices, observedAtByCoinId };
+  const value: CurveOnchainBatch = { prices, observedAtByCoinId, routeTypeByCoinId, hopDepthByCoinId };
 
   if (rpcAttempts > 0 && rpcThrows === rpcAttempts) {
     return { kind: "upstream-error", value, reason: "all Curve pool RPC calls threw" };
@@ -182,6 +183,109 @@ function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string
   const jHex = BigInt(j).toString(16).padStart(64, "0");
   const dxHex = dx.toString(16).padStart(64, "0");
   return `${selector}${iHex}${jHex}${dxHex}`;
+}
+
+interface CurveResolvedPrice {
+  price: number;
+  observedAt: number;
+  routeType: CurveRouteType;
+  hopDepth: number;
+}
+
+interface CurveResolutionContext {
+  blockByChain: Map<string, { blockNumber: number; blockTimestamp: number }>;
+  configById: Map<string, CurvePoolConfig>;
+  rawPrices: Map<string, number>;
+  resolving: Set<string>;
+  resolutionCache: Map<string, CurveResolvedPrice | null>;
+}
+
+function resolveCurveConfig(
+  config: CurvePoolConfig,
+  context: CurveResolutionContext,
+): CurveResolvedPrice | null {
+  if (context.resolutionCache.has(config.stablecoinId)) {
+    return context.resolutionCache.get(config.stablecoinId) ?? null;
+  }
+  if (context.resolving.has(config.stablecoinId)) {
+    context.resolutionCache.set(config.stablecoinId, null);
+    return null;
+  }
+
+  const routeType = getCurveRouteType(config);
+  if (!isCurveRouteShapeAllowed(config, routeType)) {
+    context.resolutionCache.set(config.stablecoinId, null);
+    return null;
+  }
+
+  const raw = context.rawPrices.get(config.stablecoinId);
+  const block = context.blockByChain.get(config.chain);
+  if (raw == null || !block) {
+    context.resolutionCache.set(config.stablecoinId, null);
+    return null;
+  }
+
+  if (!config.hop) {
+    const resolved = normalizeResolvedCurvePrice(raw, block.blockTimestamp, routeType, 0);
+    context.resolutionCache.set(config.stablecoinId, resolved);
+    return resolved;
+  }
+
+  const viaConfig = context.configById.get(config.hop.viaStablecoinId);
+  if (!viaConfig) {
+    context.resolutionCache.set(config.stablecoinId, null);
+    return null;
+  }
+
+  context.resolving.add(config.stablecoinId);
+  const via = resolveCurveConfig(viaConfig, context);
+  context.resolving.delete(config.stablecoinId);
+
+  if (!via) {
+    context.resolutionCache.set(config.stablecoinId, null);
+    return null;
+  }
+
+  const hopDepth = via.hopDepth + 1;
+  if (hopDepth > getMaxCurveHopDepth(config, routeType)) {
+    context.resolutionCache.set(config.stablecoinId, null);
+    return null;
+  }
+
+  const finalPrice = raw * via.price;
+  const observedAt = Math.min(block.blockTimestamp, via.observedAt);
+  const resolved = normalizeResolvedCurvePrice(finalPrice, observedAt, routeType, hopDepth);
+  context.resolutionCache.set(config.stablecoinId, resolved);
+  return resolved;
+}
+
+function normalizeResolvedCurvePrice(
+  price: number,
+  observedAt: number,
+  routeType: CurveRouteType,
+  hopDepth: number,
+): CurveResolvedPrice | null {
+  if (!Number.isFinite(price) || price <= 0 || price >= 10_000) return null;
+  return { price, observedAt, routeType, hopDepth };
+}
+
+function getCurveRouteType(config: CurvePoolConfig): CurveRouteType {
+  if (config.routeType) return config.routeType;
+  return config.hop ? "one-hop" : "direct";
+}
+
+function isCurveRouteShapeAllowed(config: CurvePoolConfig, routeType: CurveRouteType): boolean {
+  if (routeType === "direct" && config.hop) return false;
+  if (routeType === "chained-hop" && !config.hop) return false;
+  return true;
+}
+
+function getMaxCurveHopDepth(config: CurvePoolConfig, routeType: CurveRouteType): number {
+  if (!config.hop) return 0;
+  if (routeType === "chained-hop") {
+    return Number.isInteger(config.maxHopDepth) && config.maxHopDepth != null ? config.maxHopDepth : 1;
+  }
+  return 1;
 }
 
 /**
