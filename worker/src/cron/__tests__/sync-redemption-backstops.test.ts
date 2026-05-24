@@ -8,6 +8,8 @@ const resolveRedemptionBackstopEntryMock = vi.fn();
 const buildRedemptionBackstopEntryMock = vi.fn();
 const buildFailedRedemptionBackstopEntryMock = vi.fn();
 const upsertRedemptionBackstopSnapshotsMock = vi.fn();
+const updateRedemptionBackstopRunMetadataMock = vi.fn();
+const loadReserveSnapshotMetadataMapMock = vi.fn();
 let configuredIdsMock = ["cusd-cap", "iusd-infinifi"];
 
 function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Record<string, unknown> = {}) {
@@ -67,6 +69,11 @@ vi.mock("../../lib/redemption-backstop-sources", () => ({
 
 vi.mock("../../lib/redemption-backstops-store", () => ({
   upsertRedemptionBackstopSnapshots: upsertRedemptionBackstopSnapshotsMock,
+  updateRedemptionBackstopRunMetadata: updateRedemptionBackstopRunMetadataMock,
+}));
+
+vi.mock("../../lib/live-reserves-store", () => ({
+  loadReserveSnapshotMetadataMap: loadReserveSnapshotMetadataMapMock,
 }));
 
 vi.mock("@shared/lib/redemption-backstops", () => ({
@@ -174,7 +181,18 @@ describe("syncRedemptionBackstops", () => {
         notes: ["Latest redemption-backstop sync failed"],
       }),
     );
-    upsertRedemptionBackstopSnapshotsMock.mockResolvedValue(undefined);
+    loadReserveSnapshotMetadataMapMock.mockResolvedValue(new Map());
+    upsertRedemptionBackstopSnapshotsMock.mockImplementation((_db: unknown, snapshots: unknown[]) =>
+      Promise.resolve({
+        runId: "redemption:test-run",
+        attemptedCount: snapshots.length,
+        runRowsWrittenCount: snapshots.length,
+        historyWrittenCount: snapshots.length,
+        currentMirroredCount: snapshots.length,
+        warnings: [],
+      }),
+    );
+    updateRedemptionBackstopRunMetadataMock.mockResolvedValue(undefined);
     resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
       Promise.resolve(makeResolvedSnapshot(asset.id, now)),
     );
@@ -245,8 +263,52 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.estimated).toBe(1);
     expect(metadata.routeStatusProducer).toBe("live-reserve-adapters-plus-static-policy");
     expect(metadata.routeStatusProducerFetches).toBe(false);
+    expect(metadata.snapshotRunId).toBe("redemption:test-run");
+    expect(metadata.runRowsWrittenCount).toBe(2);
+    expect(metadata.currentMirroredCount).toBe(2);
     expect(typeof metadata.registryHash).toBe("string");
     expect(typeof metadata.v4ScoringParametersHash).toBe("string");
+  });
+
+  it("continues with degraded static rows when optional DEX preload fails", async () => {
+    loadDexLiquiditySnapshotMock.mockRejectedValueOnce(new Error("dex unavailable"));
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("degraded");
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cusd-cap" }),
+      null,
+      expect.any(Number),
+      expect.anything(),
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.preloadDegraded).toBe(true);
+    expect(metadata.preloadWarnings).toEqual([expect.stringContaining("dex-liquidity:dex unavailable")]);
+    expect(metadata.liquidityStale).toBe(true);
+  });
+
+  it("continues with fail-closed live metadata when optional reserve preload fails", async () => {
+    loadReserveSnapshotMetadataMapMock.mockRejectedValueOnce(new Error("reserve preload unavailable"));
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("degraded");
+    expect(resolveRedemptionBackstopEntryMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: "cusd-cap" }),
+      29,
+      expect.any(Number),
+      expect.objectContaining({ reserveSnapshotMetadata: null }),
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.preloadDegraded).toBe(true);
+    expect(metadata.preloadWarnings).toEqual([
+      expect.stringContaining("reserve-metadata:reserve preload unavailable"),
+    ]);
   });
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {
@@ -681,6 +743,34 @@ describe("syncRedemptionBackstops", () => {
       sql: "DELETE FROM redemption_backstop WHERE stablecoin_id = ?",
       binds: ["legacy-removed"],
     });
+  });
+
+  it("keeps a completed snapshot degraded when pruning stale rows fails", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id FROM redemption_backstop",
+        rows: [],
+        throwError: new Error("prune select failed"),
+      },
+    ]);
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(db, new AbortController().signal);
+
+    expect(result.status).toBe("degraded");
+    expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledTimes(1);
+    expect(updateRedemptionBackstopRunMetadataMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "redemption:test-run",
+      expect.objectContaining({
+        pruneDegraded: true,
+        pruneWarning: "prune select failed",
+        snapshotRunId: "redemption:test-run",
+      }),
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.pruneDegraded).toBe(true);
+    expect(metadata.pruneWarning).toBe("prune select failed");
   });
 
   it("materializes failed rows instead of leaving the coin absent from the new snapshot", async () => {

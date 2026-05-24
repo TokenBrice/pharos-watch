@@ -152,6 +152,45 @@ const CURRENT_ROWS_BY_RUN_ID_SQL = `${CURRENT_ROWS_SQL} WHERE snapshot_run_id = 
 const RUN_ROWS_BY_RUN_ID_SQL =
   "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
+function makeWriteRecord(overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
+  return {
+    stablecoinId: "eurc-circle",
+    score: 65,
+    effectiveExitScore: 58,
+    dexLiquidityScore: 44,
+    accessScore: 40,
+    settlementScore: 65,
+    executionCertaintyScore: 60,
+    capacityScore: 100,
+    outputAssetQualityScore: 100,
+    costScore: 40,
+    routeFamily: "offchain-issuer",
+    accessModel: "issuer-api",
+    settlementModel: "same-day",
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    provider: "supply-full-model",
+    sourceMode: "estimated",
+    resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "verified-customer",
+    capacityConfidence: "heuristic",
+    capacitySemantics: "eventual-only",
+    feeConfidence: "undisclosed-reviewed",
+    feeModelKind: "undisclosed-reviewed",
+    modelConfidence: "low",
+    immediateCapacityUsd: null,
+    immediateCapacityRatio: null,
+    feeBps: null,
+    queueEnabled: false,
+    methodologyVersion: "1.1",
+    updatedAt: 1_700_000_000,
+    capsApplied: ["offchain-route-cap"],
+    ...overrides,
+  };
+}
+
 describe("loadRedemptionBackstopMap", () => {
   it("keeps the row and drops malformed details JSON", async () => {
     const db = mockD1([
@@ -400,6 +439,46 @@ describe("loadRedemptionBackstopMap", () => {
 
     expect(result.runId).toBe("run-valid");
     expect(result.latestUpdatedAt).toBe(1_699_999_990);
+  });
+
+  it("falls back to an earlier completed run when the newest completed manifest has no max timestamp", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-missing-max",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: null,
+            methodology_version: "1.1",
+          },
+          {
+            run_id: "run-valid",
+            completed_at: 1_700_000_000,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_699_999_990,
+            max_updated_at: 1_699_999_990,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-valid"],
+        rows: [makeRealisticRow({ snapshot_run_id: "run-valid", updated_at: 1_699_999_990 })],
+      },
+    ]);
+
+    const result = await loadRedemptionBackstopSnapshot(db);
+
+    expect(result.runId).toBe("run-valid");
+    expect(result.latestUpdatedAt).toBe(1_699_999_990);
+    assertAllD1MatchesUsed(db);
   });
 
   it("serves immutable rows from the latest completed run when the current mirror was overwritten by a failed run", async () => {
@@ -715,7 +794,13 @@ describe("loadRedemptionBackstopMap", () => {
   });
 
   it("writes current/history rows under a completed run manifest", async () => {
-    const db = mockD1();
+    const db = mockD1([
+      {
+        match: "COUNT(*) AS row_count",
+        rows: [],
+        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
+      },
+    ]);
     const record: RedemptionBackstopEntry = {
       stablecoinId: "eurc-circle",
       score: 65,
@@ -752,15 +837,31 @@ describe("loadRedemptionBackstopMap", () => {
       capsApplied: ["offchain-route-cap"],
     };
 
-    await upsertRedemptionBackstopSnapshots(db, [record], {
+    const result = await upsertRedemptionBackstopSnapshots(db, [record], {
       runId: "run-test",
       expectedCount: 1,
       metadata: { configured: 1 },
     });
 
+    expect(result).toMatchObject({
+      runId: "run-test",
+      attemptedCount: 1,
+      runRowsWrittenCount: 1,
+      historyWrittenCount: 1,
+      currentMirroredCount: 1,
+      warnings: [],
+    });
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("UPDATE redemption_backstop_runs"))).toBe(true);
+    const runStartIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_runs"));
+    const runRowIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows"));
+    const historyRowIndex = history.findIndex((entry) => entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history"));
+    const completeIndex = history.findIndex((entry) => entry.sql.includes("status = 'completed'"));
+    const currentMirrorIndex = history.findIndex((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("));
+    expect(runStartIndex).toBeGreaterThanOrEqual(0);
+    expect(runRowIndex).toBeGreaterThan(runStartIndex);
+    expect(historyRowIndex).toBeGreaterThan(runRowIndex);
+    expect(completeIndex).toBeGreaterThan(historyRowIndex);
+    expect(currentMirrorIndex).toBeGreaterThan(completeIndex);
     expect(
       history.some(
         (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
@@ -777,10 +878,27 @@ describe("loadRedemptionBackstopMap", () => {
           entry.sql.includes("INSERT OR REPLACE INTO redemption_backstop_history") && entry.binds.includes("run-test"),
       ),
     ).toBe(true);
+    const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
+    const finalMetadataUpdate = metadataUpdates[metadataUpdates.length - 1];
+    const finalMetadata = JSON.parse(String(finalMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
+    expect(finalMetadata).toMatchObject({
+      configured: 1,
+      snapshotRunId: "run-test",
+      attemptedCount: 1,
+      runRowsWrittenCount: 1,
+      historyWrittenCount: 1,
+      currentMirroredCount: 1,
+      writeStatus: "completed",
+    });
   });
 
   it("marks a started run as failed when row writes fail", async () => {
     const db = mockD1([
+      {
+        match: "COUNT(*) AS row_count",
+        rows: [],
+        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
+      },
       {
         match: "redemption_backstop_history",
         rows: [],
@@ -834,6 +952,89 @@ describe("loadRedemptionBackstopMap", () => {
     expect(history.some((entry) => entry.sql.includes("status = 'failed'") && entry.binds.includes("run-fails"))).toBe(
       true,
     );
+    const failedUpdate = history.find((entry) => entry.sql.includes("status = 'failed'"));
+    const failedMetadata = JSON.parse(String(failedUpdate?.binds[2] ?? "{}")) as Record<string, unknown>;
+    expect(failedMetadata).toMatchObject({
+      snapshotRunId: "run-fails",
+      attemptedCount: 1,
+      runRowsWrittenCount: 1,
+      historyWrittenCount: 0,
+      currentMirroredCount: 0,
+      writeStatus: "failed",
+      writePhase: "history",
+    });
+  });
+
+  it("marks a started run as failed when immutable run rows are incomplete", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) AS row_count",
+        rows: [],
+        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
+      },
+    ]);
+    const records = [
+      makeWriteRecord({ stablecoinId: "eurc-circle" }),
+      makeWriteRecord({ stablecoinId: "usdc-circle" }),
+    ];
+
+    await expect(
+      upsertRedemptionBackstopSnapshots(db, records, {
+        runId: "run-partial",
+        expectedCount: 2,
+      }),
+    ).rejects.toThrow("wrote 1/2 immutable rows");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO redemption_backstop ("))).toBe(false);
+    const failedUpdate = history.find((entry) => entry.sql.includes("status = 'failed'"));
+    const failedMetadata = JSON.parse(String(failedUpdate?.binds[2] ?? "{}")) as Record<string, unknown>;
+    expect(failedMetadata).toMatchObject({
+      snapshotRunId: "run-partial",
+      attemptedCount: 2,
+      writeStatus: "failed",
+      writePhase: "run-rows",
+    });
+  });
+
+  it("keeps the immutable completed run when the legacy current mirror fails", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) AS row_count",
+        rows: [],
+        first: { row_count: 1, min_updated_at: 1_700_000_000, max_updated_at: 1_700_000_000 },
+      },
+      {
+        match: "INSERT INTO redemption_backstop (",
+        rows: [],
+        throwError: new Error("current mirror failed"),
+      },
+    ]);
+
+    const result = await upsertRedemptionBackstopSnapshots(db, [makeWriteRecord()], {
+      runId: "run-current-warning",
+      expectedCount: 1,
+    });
+
+    expect(result).toMatchObject({
+      runId: "run-current-warning",
+      runRowsWrittenCount: 1,
+      historyWrittenCount: 1,
+      currentMirroredCount: 0,
+    });
+    expect(result.warnings[0]).toContain("Current mirror update failed");
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("status = 'completed'"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("status = 'failed'"))).toBe(false);
+    const metadataUpdates = history.filter((entry) => entry.sql.includes("SET metadata_json = ?"));
+    const warningMetadataUpdate = metadataUpdates[metadataUpdates.length - 1];
+    const warningMetadata = JSON.parse(String(warningMetadataUpdate?.binds[0] ?? "{}")) as Record<string, unknown>;
+    expect(warningMetadata).toMatchObject({
+      snapshotRunId: "run-current-warning",
+      writeStatus: "completed-with-warnings",
+      writePhase: "current-mirror",
+      writeWarnings: [expect.stringContaining("current mirror failed")],
+    });
   });
 });
 

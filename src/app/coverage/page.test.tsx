@@ -37,6 +37,7 @@ describe("CoveragePage", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "priceAndDepegCoverage" }),
         expect.objectContaining({ name: "safetyScoreCoverage" }),
+        expect.objectContaining({ name: "redemptionBackstopCoverage" }),
         expect.objectContaining({ name: "blacklistCoverage" }),
       ]),
     );

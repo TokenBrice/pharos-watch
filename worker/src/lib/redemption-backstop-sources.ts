@@ -156,10 +156,10 @@ export async function buildRedemptionBackstopEntry(
     routeStatus: resolutionState === "resolved" ? (config.routeStatus ?? "open") : "unknown",
     routeStatusSource: "static-config",
   };
-  const liveRouteStatus: RedemptionRouteStatusEvidence | null = capacity.routeStatus
+  const liveRouteStatus: RedemptionRouteStatusEvidence | null = capacity.routeStatus && capacity.routeStatusSource
     ? {
         routeStatus: capacity.routeStatus,
-        routeStatusSource: capacity.routeStatusSource ?? "protocol-api",
+        routeStatusSource: capacity.routeStatusSource,
         ...(capacity.routeStatusReason ? { routeStatusReason: capacity.routeStatusReason } : {}),
         ...(capacity.routeStatusReviewedAt ? { routeStatusReviewedAt: capacity.routeStatusReviewedAt } : {}),
       }

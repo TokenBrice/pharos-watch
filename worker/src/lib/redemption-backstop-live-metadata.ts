@@ -56,20 +56,52 @@ export interface RedemptionBackstopLiveMetadata {
   routeStatusReviewedAt: string | null;
 }
 
-function coerceFiniteNumber(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function coerceNonNegativeFiniteNumber(value: unknown): number | null {
-  const parsed = coerceFiniteNumber(value);
-  return parsed != null && parsed >= 0 ? parsed : null;
-}
-
 function getRedemptionTelemetry(metadata: Record<string, unknown>): Record<string, unknown> {
   return metadata.redemption && typeof metadata.redemption === "object" && !Array.isArray(metadata.redemption)
     ? (metadata.redemption as Record<string, unknown>)
     : {};
+}
+
+interface ParsedTelemetryNumber {
+  value: number | null;
+  invalid: boolean;
+  warning?: string;
+}
+
+function parseTelemetryNumber(
+  source: Record<string, unknown>,
+  key: string,
+  label: string,
+  bounds: { min?: number; max?: number } = {},
+): ParsedTelemetryNumber {
+  if (!(key in source) || source[key] == null) return { value: null, invalid: false };
+  const raw = source[key];
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return {
+      value: null,
+      invalid: true,
+      warning: `${label} is malformed and was ignored`,
+    };
+  }
+  if (bounds.min != null && raw < bounds.min) {
+    return {
+      value: null,
+      invalid: true,
+      warning: `${label} is below ${bounds.min} and was ignored`,
+    };
+  }
+  if (bounds.max != null && raw > bounds.max) {
+    return {
+      value: null,
+      invalid: true,
+      warning: `${label} is above ${bounds.max} and was ignored`,
+    };
+  }
+  return { value: raw, invalid: false };
+}
+
+function collectTelemetryWarnings(values: readonly ParsedTelemetryNumber[]): string[] {
+  return values.flatMap((value) => (value.warning ? [value.warning] : []));
 }
 
 function coerceRouteStatus(value: unknown): RedemptionRouteStatus | null {
@@ -195,12 +227,14 @@ function resolveCapacityReason(args: {
   hasScoringEligibleFreshness: boolean;
   telemetryCapacity: "direct" | "proxy" | "none";
   capacityTelemetryAvailable: boolean;
+  capacityTelemetryInvalid: boolean;
   capacityKind: RedemptionLiveCapacityKind | null;
   freshnessKind: RedemptionLiveFreshnessKind | null;
   stablecoinId: string;
   canUseDegradedSyncCapacity: boolean;
 }): string | null {
   if (!args.snapshotMetadata) return "Live reserve metadata unavailable";
+  if (args.capacityTelemetryInvalid) return "Live redemption capacity telemetry is malformed; fresh valid metadata required";
   if (!args.isFresh) return "Live reserve metadata stale; fresh metadata required";
   if (args.snapshotMetadata.syncStatus !== "ok" && !args.canUseDegradedSyncCapacity) {
     return "Live reserve metadata degraded; latest snapshot not in ok state";
@@ -237,9 +271,11 @@ function resolveFeeReason(args: {
   hasScoringEligibleFreshness: boolean;
   telemetryFee: "current-bps" | "none";
   fallbackTelemetryAvailable: boolean;
+  feeTelemetryInvalid: boolean;
   stablecoinId: string;
 }): string | null {
   if (!args.snapshotMetadata) return "Live redemption fee telemetry unavailable";
+  if (args.feeTelemetryInvalid) return "Live redemption fee telemetry is malformed; using reviewed fee model instead";
   if (!args.isFresh) return "Live redemption fee telemetry stale; using reviewed fee model instead";
   if (args.snapshotMetadata.syncStatus !== "ok")
     return "Live redemption fee telemetry degraded; latest snapshot not in ok state";
@@ -276,19 +312,92 @@ export function readRedemptionBackstopLiveMetadata(
   const capacityNotes = resolveCapacityNotes(stablecoinId, snapshotMetadata);
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";
   const telemetryFee = adapterDefinition?.redemptionTelemetry.fee ?? "none";
-  const nestedCapacityUsd = coerceFiniteNumber(redemptionTelemetry.capacityUsd);
-  const nestedCapacityRatio = coerceFiniteNumber(redemptionTelemetry.capacityRatioOfSupply);
+  const nestedCapacityUsd = parseTelemetryNumber(redemptionTelemetry, "capacityUsd", "Live redemption capacity USD", {
+    min: 0,
+  });
+  const nestedCapacityRatio = parseTelemetryNumber(
+    redemptionTelemetry,
+    "capacityRatioOfSupply",
+    "Live redemption capacity ratio",
+    { min: 0, max: 1 },
+  );
   const capacityKind = coerceSchemaValue(RedemptionLiveCapacityKindSchema, redemptionTelemetry.capacityKind);
   const freshnessKind = coerceSchemaValue(RedemptionLiveFreshnessKindSchema, redemptionTelemetry.freshnessKind);
-  const legacyCapacityUsd = coerceFiniteNumber(metadata.immediateRedeemableUsd);
-  const legacyCapacityRatio = coerceFiniteNumber(metadata.immediateRedeemableRatio);
+  const legacyCapacityUsd = parseTelemetryNumber(metadata, "immediateRedeemableUsd", "Legacy redemption capacity USD", {
+    min: 0,
+  });
+  const legacyCapacityRatio = parseTelemetryNumber(
+    metadata,
+    "immediateRedeemableRatio",
+    "Legacy redemption capacity ratio",
+    { min: 0, max: 1 },
+  );
+  const nestedFeeBps = parseTelemetryNumber(redemptionTelemetry, "feeBps", "Live redemption fee bps", {
+    min: 0,
+    max: 10_000,
+  });
+  const legacyFeeBps = parseTelemetryNumber(metadata, "redemptionFeeBps", "Legacy redemption fee bps", {
+    min: 0,
+    max: 10_000,
+  });
+  const buyFeeBpsMin = parseTelemetryNumber(metadata, "buyFeeBpsMin", "Live buy-fee minimum bps", {
+    min: 0,
+    max: 10_000,
+  });
+  const buyFeeBpsMax = parseTelemetryNumber(metadata, "buyFeeBpsMax", "Live buy-fee maximum bps", {
+    min: 0,
+    max: 10_000,
+  });
+  const sourceTimestamp = parseTelemetryNumber(redemptionTelemetry, "sourceTimestamp", "Live redemption source timestamp", {
+    min: 0,
+  });
+  const settlementDelaySec = parseTelemetryNumber(
+    redemptionTelemetry,
+    "settlementDelaySec",
+    "Live redemption settlement delay",
+    { min: 0 },
+  );
+  const queueDepthUsd = parseTelemetryNumber(redemptionTelemetry, "queueDepthUsd", "Live redemption queue depth", {
+    min: 0,
+  });
+  const dailyLimitUsd = parseTelemetryNumber(redemptionTelemetry, "dailyLimitUsd", "Live redemption daily limit", {
+    min: 0,
+  });
+  const minRedeemUsd = parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
+    min: 0,
+  });
+  const capacityTelemetryInvalid =
+    nestedCapacityUsd.invalid || nestedCapacityRatio.invalid || legacyCapacityUsd.invalid || legacyCapacityRatio.invalid;
+  const feeTelemetryInvalid = nestedFeeBps.invalid || legacyFeeBps.invalid;
+  const telemetryWarnings = collectTelemetryWarnings([
+    nestedCapacityUsd,
+    nestedCapacityRatio,
+    legacyCapacityUsd,
+    legacyCapacityRatio,
+    nestedFeeBps,
+    legacyFeeBps,
+    buyFeeBpsMin,
+    buyFeeBpsMax,
+    sourceTimestamp,
+    settlementDelaySec,
+    queueDepthUsd,
+    dailyLimitUsd,
+    minRedeemUsd,
+  ]);
+  const routeStatus = coerceRouteStatus(redemptionTelemetry.routeStatus);
+  const routeStatusSource = coerceRouteStatusSource(redemptionTelemetry.routeStatusSource);
+  const routeStatusMissingSource = routeStatus != null && routeStatus !== "unknown" && routeStatusSource == null;
+  if (routeStatusMissingSource) {
+    telemetryWarnings.push("Live redemption route status omitted source attribution and was ignored");
+  }
   const fallbackCapacityTelemetryAvailable =
-    nestedCapacityUsd != null ||
-    legacyCapacityUsd != null ||
-    nestedCapacityRatio != null ||
-    legacyCapacityRatio != null;
+    !capacityTelemetryInvalid &&
+    (nestedCapacityUsd.value != null ||
+      legacyCapacityUsd.value != null ||
+      nestedCapacityRatio.value != null ||
+      legacyCapacityRatio.value != null);
   const fallbackFeeTelemetryAvailable =
-    coerceFiniteNumber(redemptionTelemetry.feeBps) != null || coerceFiniteNumber(metadata.redemptionFeeBps) != null;
+    !feeTelemetryInvalid && (nestedFeeBps.value != null || legacyFeeBps.value != null);
   const capacityReason = resolveCapacityReason({
     snapshotMetadata,
     isFresh,
@@ -296,6 +405,7 @@ export function readRedemptionBackstopLiveMetadata(
     hasScoringEligibleFreshness,
     telemetryCapacity,
     capacityTelemetryAvailable: fallbackCapacityTelemetryAvailable,
+    capacityTelemetryInvalid,
     capacityKind,
     freshnessKind,
     stablecoinId,
@@ -308,6 +418,7 @@ export function readRedemptionBackstopLiveMetadata(
     hasScoringEligibleFreshness,
     telemetryFee,
     fallbackTelemetryAvailable: fallbackFeeTelemetryAvailable,
+    feeTelemetryInvalid,
     stablecoinId,
   });
 
@@ -316,9 +427,11 @@ export function readRedemptionBackstopLiveMetadata(
     isFresh,
     hasScoringEligibleFreshness,
     hasBlockingWarnings,
-    capacityNotes,
+    capacityNotes: [...telemetryWarnings, ...capacityNotes],
     capacityConfidence:
-      telemetryCapacity === "direct"
+      capacityTelemetryInvalid
+        ? null
+        : telemetryCapacity === "direct"
         ? "live-direct"
         : telemetryCapacity === "proxy"
           ? "live-proxy"
@@ -329,22 +442,24 @@ export function readRedemptionBackstopLiveMetadata(
     canUseFee: feeReason == null,
     capacityReason,
     feeReason,
-    immediateRedeemableUsd: nestedCapacityUsd ?? legacyCapacityUsd,
-    immediateRedeemableRatio: nestedCapacityRatio ?? (nestedCapacityUsd != null ? null : legacyCapacityRatio),
+    immediateRedeemableUsd: capacityTelemetryInvalid ? null : nestedCapacityUsd.value ?? legacyCapacityUsd.value,
+    immediateRedeemableRatio: capacityTelemetryInvalid
+      ? null
+      : nestedCapacityRatio.value ?? (nestedCapacityUsd.value != null ? null : legacyCapacityRatio.value),
     capacityKind,
     freshnessKind,
-    sourceTimestamp: coerceNonNegativeFiniteNumber(redemptionTelemetry.sourceTimestamp),
+    sourceTimestamp: sourceTimestamp.value,
     sourceUrls: coerceUrlArray(redemptionTelemetry.sourceUrls),
-    settlementDelaySec: coerceNonNegativeFiniteNumber(redemptionTelemetry.settlementDelaySec),
-    queueDepthUsd: coerceNonNegativeFiniteNumber(redemptionTelemetry.queueDepthUsd),
-    dailyLimitUsd: coerceNonNegativeFiniteNumber(redemptionTelemetry.dailyLimitUsd),
-    minRedeemUsd: coerceNonNegativeFiniteNumber(redemptionTelemetry.minRedeemUsd),
+    settlementDelaySec: settlementDelaySec.value,
+    queueDepthUsd: queueDepthUsd.value,
+    dailyLimitUsd: dailyLimitUsd.value,
+    minRedeemUsd: minRedeemUsd.value,
     liveHolderEligibility: coerceSchemaValue(RedemptionHolderEligibilitySchema, redemptionTelemetry.holderEligibility),
-    redemptionFeeBps: coerceFiniteNumber(redemptionTelemetry.feeBps) ?? coerceFiniteNumber(metadata.redemptionFeeBps),
-    buyFeeBpsMin: coerceFiniteNumber(metadata.buyFeeBpsMin),
-    buyFeeBpsMax: coerceFiniteNumber(metadata.buyFeeBpsMax),
-    routeStatus: coerceRouteStatus(redemptionTelemetry.routeStatus),
-    routeStatusSource: coerceRouteStatusSource(redemptionTelemetry.routeStatusSource),
+    redemptionFeeBps: feeTelemetryInvalid ? null : nestedFeeBps.value ?? legacyFeeBps.value,
+    buyFeeBpsMin: buyFeeBpsMin.value,
+    buyFeeBpsMax: buyFeeBpsMax.value,
+    routeStatus: routeStatusMissingSource ? null : routeStatus,
+    routeStatusSource: routeStatusMissingSource ? null : routeStatusSource,
     routeStatusReason: coerceString(redemptionTelemetry.routeStatusReason),
     routeStatusReviewedAt: coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt),
   };

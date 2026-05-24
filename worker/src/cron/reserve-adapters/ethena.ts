@@ -166,6 +166,7 @@ export function adaptEthenaCollateral(
         freshnessKind: lastUpdatedAt > 0 ? "verified-source-timestamp" : "unverified",
         ...(lastUpdatedAt > 0 ? { sourceTimestamp: lastUpdatedAt } : {}),
         routeStatus: "open",
+        routeStatusSource: "protocol-api",
         holderEligibility: "whitelisted-primary",
         sourceUrls: [sourceUrl],
       }),

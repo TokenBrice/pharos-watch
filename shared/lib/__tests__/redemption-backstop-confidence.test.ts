@@ -15,10 +15,9 @@ import {
 describe("resolveCapacityConfidence", () => {
   it("returns the explicit confidence when set", () => {
     expect(resolveCapacityConfidence({ kind: "supply-full", confidence: "documented-bound" })).toBe("documented-bound");
-    expect(resolveCapacityConfidence({ kind: "supply-ratio", ratio: 0.1, confidence: "live-direct" })).toBe("live-direct");
-    expect(
-      resolveCapacityConfidence({ kind: "reserve-sync-metadata", confidence: "live-proxy" }),
-    ).toBe("live-proxy");
+    expect(resolveCapacityConfidence({ kind: "reserve-sync-metadata", confidence: "documented-bound" })).toBe(
+      "documented-bound",
+    );
   });
 
   it("defaults reserve-sync-metadata to dynamic when confidence is unset", () => {
@@ -28,6 +27,10 @@ describe("resolveCapacityConfidence", () => {
   it("defaults non-reserve-sync models to heuristic when confidence is unset", () => {
     expect(resolveCapacityConfidence({ kind: "supply-full" })).toBe("heuristic");
     expect(resolveCapacityConfidence({ kind: "supply-ratio", ratio: 0.05 })).toBe("heuristic");
+  });
+
+  it("defaults fixed USD buffers to documented-bound", () => {
+    expect(resolveCapacityConfidence({ kind: "fixed-usd", amountUsd: 1_000_000 })).toBe("documented-bound");
   });
 });
 
@@ -50,9 +53,8 @@ describe("resolveCapacitySemantics", () => {
 });
 
 describe("resolveFeeConfidence", () => {
-  it("returns the explicit confidence for fee-bps models", () => {
-    expect(resolveFeeConfidence({ kind: "fee-bps", feeBps: 10, confidence: "formula" })).toBe("formula");
-    expect(resolveFeeConfidence({ kind: "fee-bps", feeBps: 0, confidence: "undisclosed-reviewed" })).toBe("undisclosed-reviewed");
+  it("returns fixed for fee-bps models", () => {
+    expect(resolveFeeConfidence({ kind: "fee-bps", feeBps: 10, confidence: "fixed" })).toBe("fixed");
   });
 
   it("defaults fee-bps to fixed when confidence is unset", () => {
@@ -60,23 +62,21 @@ describe("resolveFeeConfidence", () => {
   });
 
   it("returns the explicit confidence for dynamic-or-unclear models", () => {
-    expect(
-      resolveFeeConfidence({ kind: "dynamic-or-unclear", confidence: "formula" }),
-    ).toBe("formula");
+    expect(resolveFeeConfidence({ kind: "dynamic-or-unclear", confidence: "formula" })).toBe("formula");
   });
 
   it("defaults dynamic-or-unclear to undisclosed-reviewed when confidence is unset", () => {
     expect(resolveFeeConfidence({ kind: "dynamic-or-unclear" })).toBe("undisclosed-reviewed");
-    expect(
-      resolveFeeConfidence({ kind: "dynamic-or-unclear", feeDescription: "base + variable" }),
-    ).toBe("undisclosed-reviewed");
+    expect(resolveFeeConfidence({ kind: "dynamic-or-unclear", feeDescription: "base + variable" })).toBe(
+      "undisclosed-reviewed",
+    );
   });
 });
 
 describe("resolveFeeModelKind", () => {
   it("returns fixed-bps for fee-bps models regardless of other fields", () => {
     expect(resolveFeeModelKind({ kind: "fee-bps", feeBps: 0 })).toBe("fixed-bps");
-    expect(resolveFeeModelKind({ kind: "fee-bps", feeBps: 100, confidence: "formula" })).toBe("fixed-bps");
+    expect(resolveFeeModelKind({ kind: "fee-bps", feeBps: 100, confidence: "fixed" })).toBe("fixed-bps");
   });
 
   it("returns the explicit feeModelKind for dynamic-or-unclear when set", () => {
@@ -101,16 +101,16 @@ describe("resolveFeeModelKind", () => {
   });
 
   it("returns documented-variable for dynamic-or-unclear with feeDescription only", () => {
-    expect(
-      resolveFeeModelKind({ kind: "dynamic-or-unclear", feeDescription: "min 50 bps + base" }),
-    ).toBe("documented-variable");
+    expect(resolveFeeModelKind({ kind: "dynamic-or-unclear", feeDescription: "min 50 bps + base" })).toBe(
+      "documented-variable",
+    );
   });
 
   it("returns undisclosed-reviewed for dynamic-or-unclear with no description and no formula confidence", () => {
     expect(resolveFeeModelKind({ kind: "dynamic-or-unclear" })).toBe("undisclosed-reviewed");
-    expect(
-      resolveFeeModelKind({ kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed" }),
-    ).toBe("undisclosed-reviewed");
+    expect(resolveFeeModelKind({ kind: "dynamic-or-unclear", confidence: "undisclosed-reviewed" })).toBe(
+      "undisclosed-reviewed",
+    );
   });
 });
 
@@ -310,27 +310,21 @@ describe("deriveModelConfidence", () => {
 
 describe("inferStoredCapacityConfidence", () => {
   it("returns dynamic only when provider is reserve-sync-metadata and sourceMode is dynamic", () => {
-    expect(
-      inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "dynamic" }),
-    ).toBe("dynamic");
+    expect(inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "dynamic" })).toBe("dynamic");
   });
 
   it("returns heuristic for non-dynamic source modes even with reserve-sync-metadata provider", () => {
-    expect(
-      inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "estimated" }),
-    ).toBe("heuristic");
-    expect(
-      inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "static" }),
-    ).toBe("heuristic");
+    expect(inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "estimated" })).toBe(
+      "heuristic",
+    );
+    expect(inferStoredCapacityConfidence({ provider: "reserve-sync-metadata", sourceMode: "static" })).toBe(
+      "heuristic",
+    );
   });
 
   it("returns heuristic for any other provider", () => {
-    expect(
-      inferStoredCapacityConfidence({ provider: "supply-full-model", sourceMode: "dynamic" }),
-    ).toBe("heuristic");
-    expect(
-      inferStoredCapacityConfidence({ provider: "supply-ratio-model", sourceMode: "static" }),
-    ).toBe("heuristic");
+    expect(inferStoredCapacityConfidence({ provider: "supply-full-model", sourceMode: "dynamic" })).toBe("heuristic");
+    expect(inferStoredCapacityConfidence({ provider: "supply-ratio-model", sourceMode: "static" })).toBe("heuristic");
   });
 });
 
@@ -359,9 +353,7 @@ describe("inferStoredFeeConfidence", () => {
 
 describe("inferStoredFeeModelKind", () => {
   it("returns fixed-bps when feeBps is a number, regardless of other fields", () => {
-    expect(
-      inferStoredFeeModelKind({ feeBps: 0, feeConfidence: "fixed" }),
-    ).toBe("fixed-bps");
+    expect(inferStoredFeeModelKind({ feeBps: 0, feeConfidence: "fixed" })).toBe("fixed-bps");
     expect(
       inferStoredFeeModelKind({
         feeBps: 25,
@@ -372,9 +364,7 @@ describe("inferStoredFeeModelKind", () => {
   });
 
   it("returns formula for null feeBps with formula confidence", () => {
-    expect(
-      inferStoredFeeModelKind({ feeBps: null, feeConfidence: "formula" }),
-    ).toBe("formula");
+    expect(inferStoredFeeModelKind({ feeBps: null, feeConfidence: "formula" })).toBe("formula");
   });
 
   it("returns documented-variable for null feeBps without formula confidence but with feeDescription", () => {
@@ -388,8 +378,8 @@ describe("inferStoredFeeModelKind", () => {
   });
 
   it("returns undisclosed-reviewed when nothing identifies the fee", () => {
-    expect(
-      inferStoredFeeModelKind({ feeBps: null, feeConfidence: "undisclosed-reviewed" }),
-    ).toBe("undisclosed-reviewed");
+    expect(inferStoredFeeModelKind({ feeBps: null, feeConfidence: "undisclosed-reviewed" })).toBe(
+      "undisclosed-reviewed",
+    );
   });
 });

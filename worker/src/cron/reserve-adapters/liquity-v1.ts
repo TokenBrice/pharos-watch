@@ -147,6 +147,7 @@ export async function fetchLiquityV1Reserves(
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
+        routeStatusSource: "onchain",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
         sourceUrls: [

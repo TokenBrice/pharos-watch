@@ -249,7 +249,7 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
   return {
     rows,
     formula:
-      "score = weighted(access, settlement, execution, capacity, output, cost) with route-family caps + model-confidence discount",
+      "route score = weighted(access, settlement, execution, capacity, output, cost) with route-family caps; effective exit then applies capacity, freshness, model-confidence discount, and independent-route diversification before comparing with DEX liquidity",
     topic: "redemptionBackstop",
   };
 }

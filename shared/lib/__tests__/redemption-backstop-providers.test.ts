@@ -68,6 +68,18 @@ describe("redemption backstop provider definitions", () => {
     });
   });
 
+  it("does not assign live-only capacity confidence to static providers by default", () => {
+    for (const providerId of [
+      "supply-full-model",
+      "supply-ratio-model",
+      "fixed-usd-model",
+      "reserve-sync-fallback",
+      "sync-error",
+    ] as const) {
+      expect(REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[providerId].defaultCapacityConfidence).not.toMatch(/^live-/);
+    }
+  });
+
   it("preserves legacy readback confidence inference by provider/source mode", () => {
     expect(
       inferProviderCapacityConfidence({

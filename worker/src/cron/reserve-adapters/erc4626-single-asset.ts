@@ -255,6 +255,7 @@ export async function fetchErc4626SingleAssetReserves(
             }),
         freshnessKind: "same-run-onchain" as const,
         routeStatus: warnings.length > 0 ? "degraded" as const : "unknown" as const,
+        routeStatusSource: "onchain" as const,
       },
     },
   };

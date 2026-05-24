@@ -179,6 +179,72 @@ describe("coverage filtering", () => {
     expect(matches.map((row) => row.id)).toEqual(expectedIds);
   });
 
+  it("matches redemption quick filter for configured states but excludes Data n/a", () => {
+    const redemptionRows = [
+      makeRow({
+        id: "none",
+        name: "No Route",
+        symbol: "NONE",
+        statuses: {
+          ...rows[0].statuses,
+          redemption: status("none", false),
+        },
+      }),
+      makeRow({
+        id: "data-na",
+        name: "Data NA",
+        symbol: "DNA",
+        statuses: {
+          ...rows[0].statuses,
+          redemption: status("data-unavailable", false),
+        },
+      }),
+      makeRow({
+        id: "heuristic",
+        name: "Heuristic Route",
+        symbol: "HEUR",
+        statuses: {
+          ...rows[0].statuses,
+          redemption: status("modeled-heuristic", false),
+        },
+      }),
+      makeRow({
+        id: "resolved",
+        name: "Resolved Route",
+        symbol: "RES",
+        statuses: {
+          ...rows[0].statuses,
+          redemption: status("resolved-unscored", false),
+        },
+      }),
+      makeRow({
+        id: "impaired",
+        name: "Impaired Route",
+        symbol: "IMP",
+        statuses: {
+          ...rows[0].statuses,
+          redemption: status("impaired", false),
+        },
+      }),
+      makeRow({
+        id: "scored",
+        name: "Scored Route",
+        symbol: "SCR",
+        statuses: {
+          ...rows[0].statuses,
+          redemption: status("offchain-issuer", true),
+        },
+      }),
+    ];
+
+    expect(redemptionRows.filter((row) => matchesCoverageFilter(row, "redemption")).map((row) => row.id)).toEqual([
+      "heuristic",
+      "resolved",
+      "impaired",
+      "scored",
+    ]);
+  });
+
   it("filters by search across names and tickers with trimming and case folding", () => {
     const byName = filterCoverageRows(rows, "all", "market-cap", "  ga ");
     const bySymbol = filterCoverageRows(rows, "all", "market-cap", " alp ");

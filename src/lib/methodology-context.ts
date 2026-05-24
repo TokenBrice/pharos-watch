@@ -202,7 +202,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "Best-path exit score that preserves the strongest exit path while giving modest credit for a second viable route.",
     detail:
-      "When both DEX liquidity and redemption exist, report cards use min(100, max(dex, redemption) + min(dex, redemption)*0.10). If only one path exists, that score is used directly after route caps and freshness gates.",
+      "The route score is first capped by route family and current capacity, then the effective-exit model applies freshness gates, the model-confidence discount, and the independent-route diversification bonus before comparing against DEX liquidity.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_VERSION_LABEL,
   },

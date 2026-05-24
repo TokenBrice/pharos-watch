@@ -192,6 +192,7 @@ export async function fetchSkyMakercoreReserves(
         freshnessKind: timestampSummary != null ? "verified-source-timestamp" : "unverified",
         ...(timestampSummary != null ? { sourceTimestamp: timestampSummary.sourceTimestamp } : {}),
         routeStatus: "open",
+        routeStatusSource: "protocol-api",
         holderEligibility: "any-holder",
         sourceUrls: [primaryInput.url],
       }),

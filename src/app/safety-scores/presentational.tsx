@@ -194,7 +194,7 @@ export function CoreSettlementStrip({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-tight">Core settlement rails</h2>
           <p className="text-sm text-muted-foreground">
-            Very large supply, broad chain reach, tight peg history, self-backed reserves, and a reviewed issuer exit.
+            Very large supply, broad chain reach, tight peg history, self-backed reserves, and a reviewed offchain issuer exit.
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[34rem]">

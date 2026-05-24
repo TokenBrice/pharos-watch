@@ -116,6 +116,7 @@ const UNCONFIGURED_ACTIVE_BASELINE = 60;
 const DAILY_LIMIT_CONTEXT_WINDOW = 80;
 const DAILY_LIMIT_TIME_TERMS = ["daily", "per-day", "per day"] as const;
 const DAILY_LIMIT_BOUND_TERMS = ["limit", "cap", "maximum", "max"] as const;
+const LIVE_ONLY_STATIC_CAPACITY_CONFIDENCES = new Set(["live-direct", "live-proxy"]);
 
 const ROUTE_FAMILY_ORDER: RedemptionRouteFamily[] = [
   "offchain-issuer",
@@ -390,6 +391,16 @@ function validateConfigInvariants(
       context,
     );
   }
+  const rawCapacityConfidence = (config.capacityModel as { confidence?: string }).confidence;
+  if (rawCapacityConfidence && LIVE_ONLY_STATIC_CAPACITY_CONFIDENCES.has(rawCapacityConfidence)) {
+    addFinding(
+      findings,
+      "error",
+      "static-live-capacity-confidence",
+      `${id}: static config capacity confidence cannot be ${rawCapacityConfidence}; live-direct/live-proxy are runtime-only evidence.`,
+      context,
+    );
+  }
   if (
     config.capacityModel.kind === "reserve-sync-metadata" &&
     config.capacityModel.fallbackRatio != null &&
@@ -579,7 +590,7 @@ function validateRedemptionBackstopPolicies(
         findings,
         "error",
         "redemption-policy-invalid-reviewed-at",
-        `${entry.stablecoinId}: redemption policy reviewedAt must be YYYY-MM-DD.`,
+        `${entry.stablecoinId}: redemption policy reviewedAt must be a valid non-future YYYY-MM-DD.`,
         { stablecoinId: entry.stablecoinId, filePath: "shared/lib/redemption-backstop-configs/policies.ts" },
       );
     }
@@ -1009,7 +1020,11 @@ function collectStringArray(expression: ts.Expression | undefined): string[] | n
 function isValidReviewedAt(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value && value <= currentUtcDate();
+}
+
+function currentUtcDate(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function addFinding(

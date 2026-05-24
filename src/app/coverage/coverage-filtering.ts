@@ -5,7 +5,8 @@ const FULL_COVERAGE_COUNT = COVERAGE_FEATURES.length;
 
 const FILTER_MATCHERS: Record<CoverageFilterKey, (row: CoverageRow) => boolean> = {
   all: () => true,
-  redemption: (row) => row.statuses.redemption.kind !== "none",
+  redemption: (row) =>
+    row.statuses.redemption.kind !== "none" && row.statuses.redemption.kind !== "data-unavailable",
   "live-reserves": (row) => row.statuses.reserves.kind === "live",
   yield: (row) => row.statuses.yield.available,
   flows: (row) => row.statuses.flows.available,

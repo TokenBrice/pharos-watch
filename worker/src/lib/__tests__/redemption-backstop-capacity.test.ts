@@ -221,7 +221,7 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
   });
 
-  it("clamps ratio-only over-provisioned live capacity to supply", async () => {
+  it("rejects ratio-only live capacity above supply ratio bounds", async () => {
     const db = {} as D1Database;
     const supplyUsd = 1_000_000;
     const result = await resolveRedemptionCapacity(
@@ -237,10 +237,16 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
         }),
       },
     );
-    expect(result.scoringCapacityUsd).toBe(supplyUsd);
-    expect(result.immediateCapacityUsd).toBe(supplyUsd);
-    expect(result.immediateCapacityRatio).toBe(1);
-    expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
+    expect(result.resolutionState).toBe("missing-capacity");
+    expect(result.scoringCapacityUsd).toBeNull();
+    expect(result.immediateCapacityUsd).toBeNull();
+    expect(result.immediateCapacityRatio).toBeNull();
+    expect(result.notes).toEqual(
+      expect.arrayContaining([
+        "Live redemption capacity ratio is above 1 and was ignored",
+        "Live redemption capacity telemetry is malformed; fresh valid metadata required",
+      ]),
+    );
   });
 
   it("does not clamp or annotate when live capacity is at or below supply", async () => {

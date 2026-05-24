@@ -8,6 +8,7 @@ import {
   formatRedemption,
   formatReportCard,
 } from "@/lib/show-your-work-formatters";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 describe("show-your-work formatters", () => {
   it("formats report card raw inputs into rows", () => {
@@ -115,6 +116,15 @@ describe("show-your-work formatters", () => {
     expect(table.topic).toBe("redemptionBackstop");
     expect(table.rows.find((r) => r.label === "Access")?.value).toBe("80");
     expect(table.rows.find((r) => r.label === "Fee (bps)")?.value).toBe("10");
+    expect(table.formula).toContain("route score = weighted");
+    expect(table.formula).toContain("model-confidence discount");
+    expect(table.formula).toContain("independent-route diversification");
+  });
+
+  it("pins effective-exit methodology copy to the confidence-discount pipeline", () => {
+    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("route score is first capped");
+    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("model-confidence discount");
+    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("diversification bonus");
   });
 
   it("formats chain-health factors with weighted contributions", () => {

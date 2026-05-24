@@ -398,6 +398,7 @@ describe("buildRedemptionBackstopEntry", () => {
               minRedeemUsd: 100_000,
               holderEligibility: "whitelisted-primary",
               routeStatus: "open",
+              routeStatusSource: "protocol-api",
             },
           },
           warningCount: 0,
@@ -477,6 +478,55 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capsApplied).toContain("live-route-status-impairment");
   });
 
+  it("ignores live route status without source attribution", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "cusd-cap",
+      {
+        routeFamily: "basket-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-basket",
+        outputAssetType: "stable-basket",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed variable fee" },
+        reviewedAt: "2026-04-15",
+        docs: [{ label: "Cap vault", url: "https://docs.cap.app/concepts/vault" }],
+      },
+      100_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "cusd-cap",
+          fetchedAt: now - 120,
+          source: "cap-vault",
+          metadata: {
+            freshnessMode: "not-applicable",
+            redemption: {
+              capacityUsd: 10_000_000,
+              capacityKind: "live-direct-bounded",
+              freshnessKind: "same-run-onchain",
+              routeStatus: "paused",
+              routeStatusReason: "All vault assets are paused",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.routeStatus).toBe("open");
+    expect(entry.routeStatusSource).toBe("static-config");
+    expect(entry.notes).toContain("Live redemption route status omitted source attribution and was ignored");
+    expect(entry.capsApplied).not.toContain("live-route-status-impairment");
+  });
+
   it("uses LUSD Liquity v1 system debt as live direct redemption capacity", async () => {
     const config = getRedemptionBackstopConfig("lusd-liquity");
     expect(config).not.toBeNull();
@@ -533,6 +583,7 @@ describe("buildRedemptionBackstopEntry", () => {
             capacityKind: "live-direct-bounded",
             freshnessKind: "same-run-onchain",
             routeStatus: "open",
+            routeStatusSource: "onchain",
             feeBps: 52,
           },
         },
@@ -841,6 +892,7 @@ describe("buildRedemptionBackstopEntry", () => {
               freshnessKind: "same-run-onchain",
               sourceTimestamp: now - 120,
               routeStatus: "open",
+              routeStatusSource: "onchain",
             },
           },
           warningCount: 0,
@@ -865,7 +917,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.score).not.toBeNull();
     expect(entry.routeStatus).toBe("open");
-    expect(entry.routeStatusSource).toBe("protocol-api");
+    expect(entry.routeStatusSource).toBe("onchain");
     expect(entry.modelConfidence).toBe("high");
     expect(entry.capsApplied).not.toContain("market-implied-depeg-impairment");
   });

@@ -91,6 +91,28 @@ describe("validateAdapterOutput redemption telemetry", () => {
     });
   });
 
+  it("rejects stringified redemption capacity and impossible fees", () => {
+    const adapter = getReserveAdapter("gho");
+    const result = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          redemptionFeeBps: 10,
+          redemption: {
+            capacityUsd: "1000000",
+            feeBps: 20_000,
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+
+    expect(result.valid).toBe(false);
+    const codes = result.warnings.map((warning) => warning.code);
+    expect(codes).toContain("invalid-redemption-capacity-usd");
+    expect(codes).toContain("invalid-redemption-fee-bps");
+  });
+
   it("rejects negative redemption constraint metadata", () => {
     const adapter = getReserveAdapter("falcon");
     const result = validateAdapterOutput(
@@ -162,6 +184,31 @@ describe("validateAdapterOutput redemption telemetry", () => {
       code: "invalid-redemption-route-reviewed-at",
       effect: "fatal",
     });
+  });
+
+  it("rejects live route status without source attribution", () => {
+    const adapter = getReserveAdapter("gho");
+    const result = validateAdapterOutput(
+      {
+        slices,
+        metadata: {
+          redemption: {
+            capacityUsd: 1_000_000,
+            capacityKind: "live-direct-bounded",
+            routeStatus: "open",
+          },
+        },
+      },
+      { adapter: adapter ?? undefined },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "missing-redemption-route-status-source",
+        effect: "fatal",
+      }),
+    );
   });
 
   it("rejects invalid holder, capacity, and freshness kinds", () => {

@@ -141,6 +141,7 @@ async function buildFxResult(
               capacityKind: "live-proxy-validated" as const,
               freshnessKind: "same-run-api" as const,
               routeStatus: "open" as const,
+              routeStatusSource: "protocol-api" as const,
               holderEligibility: "any-holder",
               settlementDelaySec: 0,
               sourceUrls,

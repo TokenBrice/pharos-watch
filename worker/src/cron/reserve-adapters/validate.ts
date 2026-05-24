@@ -37,6 +37,22 @@ function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, 
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+interface MetadataNumberField {
+  value: number | null;
+  invalid: boolean;
+}
+
+function getMetadataNumberField(metadata: Record<string, unknown> | undefined, key: string): MetadataNumberField {
+  if (!metadata || !(key in metadata) || metadata[key] == null) {
+    return { value: null, invalid: false };
+  }
+  const value = metadata[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return { value: null, invalid: true };
+  }
+  return { value, invalid: false };
+}
+
 function hasNegativeNumber(values: readonly (number | null)[]): boolean {
   return values.some((value) => value != null && value < 0);
 }
@@ -47,6 +63,14 @@ function hasOutOfRangeRatio(values: readonly (number | null)[]): boolean {
 
 function hasNumber(values: readonly (number | null)[]): boolean {
   return values.some((value) => value != null);
+}
+
+function hasInvalidNumber(values: readonly MetadataNumberField[]): boolean {
+  return values.some((value) => value.invalid);
+}
+
+function hasOutOfRangeFeeBps(values: readonly (number | null)[]): boolean {
+  return values.some((value) => value != null && (value < 0 || value > 10_000));
 }
 
 function isValidUrl(value: string): boolean {
@@ -127,34 +151,37 @@ function validateRedemptionTelemetry(
   const warnings: LiveReserveWarning[] = [];
   const adapterLabel = describeAdapter(adapter);
   const redemption = getMetadataObject(metadata, "redemption");
-  const capacityUsdValues = [
-    getFiniteMetadataNumber(metadata, "immediateRedeemableUsd"),
-    getFiniteMetadataNumber(redemption ?? undefined, "capacityUsd"),
+  const capacityUsdFields = [
+    getMetadataNumberField(metadata, "immediateRedeemableUsd"),
+    getMetadataNumberField(redemption ?? undefined, "capacityUsd"),
   ] as const;
-  const capacityRatioValues = [
-    getFiniteMetadataNumber(metadata, "immediateRedeemableRatio"),
-    getFiniteMetadataNumber(redemption ?? undefined, "capacityRatioOfSupply"),
+  const capacityRatioFields = [
+    getMetadataNumberField(metadata, "immediateRedeemableRatio"),
+    getMetadataNumberField(redemption ?? undefined, "capacityRatioOfSupply"),
   ] as const;
-  const feeBpsValues = [
-    getFiniteMetadataNumber(metadata, "redemptionFeeBps"),
-    getFiniteMetadataNumber(redemption ?? undefined, "feeBps"),
+  const feeBpsFields = [
+    getMetadataNumberField(metadata, "redemptionFeeBps"),
+    getMetadataNumberField(redemption ?? undefined, "feeBps"),
   ] as const;
+  const capacityUsdValues = capacityUsdFields.map((field) => field.value);
+  const capacityRatioValues = capacityRatioFields.map((field) => field.value);
+  const feeBpsValues = feeBpsFields.map((field) => field.value);
 
   const hasCapacityTelemetry = hasNumber(capacityUsdValues) || hasNumber(capacityRatioValues);
   const hasFeeTelemetry = hasNumber(feeBpsValues);
   const adapterCapacity = adapter?.redemptionTelemetry?.capacity ?? "none";
   const adapterFee = adapter?.redemptionTelemetry?.fee ?? "none";
 
-  if (hasNegativeNumber(capacityUsdValues)) {
-    warnings.push(reserveFatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is negative${adapterLabel}`));
+  if (hasInvalidNumber(capacityUsdFields) || hasNegativeNumber(capacityUsdValues)) {
+    warnings.push(reserveFatalWarning("invalid-redemption-capacity-usd", `Redemption capacity is invalid${adapterLabel}`));
   }
-  if (hasOutOfRangeRatio(capacityRatioValues)) {
+  if (hasInvalidNumber(capacityRatioFields) || hasOutOfRangeRatio(capacityRatioValues)) {
     warnings.push(
       reserveFatalWarning("invalid-redemption-capacity-ratio", `Redemption capacity ratio is outside 0-1${adapterLabel}`),
     );
   }
-  if (hasNegativeNumber(feeBpsValues)) {
-    warnings.push(reserveFatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is negative${adapterLabel}`));
+  if (hasInvalidNumber(feeBpsFields) || hasOutOfRangeFeeBps(feeBpsValues)) {
+    warnings.push(reserveFatalWarning("invalid-redemption-fee-bps", `Redemption fee bps is invalid${adapterLabel}`));
   }
   if (hasCapacityTelemetry && adapterCapacity === "none") {
     warnings.push(
@@ -258,6 +285,14 @@ function validateRedemptionTelemetry(
       reserveFatalWarning(
         "invalid-redemption-route-status-source",
         `Redemption route status source is invalid${adapterLabel}`,
+      ),
+    );
+  }
+  if (routeStatus != null && routeStatus !== "unknown" && routeStatusSource == null) {
+    warnings.push(
+      reserveFatalWarning(
+        "missing-redemption-route-status-source",
+        `Redemption route status requires source attribution${adapterLabel}`,
       ),
     );
   }

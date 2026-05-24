@@ -215,6 +215,13 @@ describe("stablecoin detail view-model builder", () => {
           redemptionBackstops: {
             data: {
               coins: {
+                "usdc-circle": {
+                  stablecoinId: "usdc-circle",
+                  score: 80,
+                  effectiveExitScore: 80,
+                  resolutionState: "resolved",
+                  routeFamily: "stablecoin-redeem",
+                },
                 "usdt-tether": {
                   stablecoinId: "usdt-tether",
                   score: null,
@@ -242,6 +249,54 @@ describe("stablecoin detail view-model builder", () => {
       dataUpdatedAt: 12_345,
       hasData: true,
       meta: { source: "test" },
+    });
+  });
+
+  it("keeps the detail page ready when redemption backstop data is missing or errored", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether");
+    expect(coin).toBeDefined();
+    const error = new Error("redemption API unavailable");
+
+    const viewModel = buildStablecoinDetailViewModel(
+      makeBuildStablecoinDetailViewModelParams({
+        core: {
+          id: "usdt-tether",
+          coin: coin!,
+        },
+        queries: {
+          supplyHistory: { data: [{ date: 1_700_000_000, circulatingUsd: 100, price: 1 }] },
+          stablecoinList: {
+            data: {
+              peggedAssets: [
+                {
+                  id: "usdt-tether",
+                  name: "Tether",
+                  symbol: "USDT",
+                  pegType: "peggedUSD",
+                  price: 1,
+                  circulating: { peggedUSD: 100 },
+                },
+              ],
+              fxFallbackRates: {},
+            } as never,
+            dataUpdatedAt: 1,
+          },
+          redemptionBackstops: {
+            data: undefined,
+            error,
+            dataUpdatedAt: 0,
+          },
+        },
+      }),
+    );
+
+    expect(viewModel.status).toBe("ready");
+    if (viewModel.status !== "ready") return;
+
+    expect(viewModel.redemptionBackstop).toBeUndefined();
+    expect(viewModel.staleQueries.find((query) => query.preset === "redemptionBackstops")).toMatchObject({
+      error,
+      hasData: false,
     });
   });
 

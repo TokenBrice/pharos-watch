@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
 import type { RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
@@ -5,6 +8,7 @@ import {
   generateRedemptionCoverageAudit,
   parseArgs,
   renderRedemptionCoverageAuditMarkdown,
+  runCli,
 } from "../maintenance/generate-redemption-coverage-audit";
 
 function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
@@ -83,6 +87,7 @@ describe("generate-redemption-coverage-audit", () => {
 
     expect(audit.summary.activeUnconfigured).toBe(3);
     expect(audit.summary.activeUnclassified).toBe(0);
+    expect(audit.summary.activeDefaultClassified).toBe(1);
     expect(audit.dispositionCounts).toEqual({
       add: 0,
       defer: 0,
@@ -94,18 +99,21 @@ describe("generate-redemption-coverage-audit", () => {
         id: "iusd-initia",
         disposition: "needs-research",
         reasonCode: "capacity-unpublished",
+        classificationSource: "curated",
         allowedRouteFamilyIfProven: "queue-redeem",
       }),
       expect.objectContaining({
         id: "mmxn-moneta-digital",
         disposition: "needs-research",
         reasonCode: "issuer-terms-missing",
+        classificationSource: "curated",
         allowedRouteFamilyIfProven: "offchain-issuer",
       }),
       expect.objectContaining({
         id: "random-crypto",
         disposition: "needs-research",
         reasonCode: "source-review-needed",
+        classificationSource: "default-inferred",
         allowedRouteFamilyIfProven: "collateral-redeem",
       }),
     ]);
@@ -174,15 +182,49 @@ describe("generate-redemption-coverage-audit", () => {
     const markdown = renderRedemptionCoverageAuditMarkdown(audit);
 
     expect(markdown).toContain("## Active Unconfigured Gaps");
-    expect(markdown).toContain("id | lifecycle | current disposition | blocker | evidence needed | allowed route family if proven");
-    expect(markdown).toContain("mmxn-moneta-digital | active | needs-research (issuer-terms-missing)");
+    expect(markdown).toContain(
+      "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven",
+    );
+    expect(markdown).toContain("mmxn-moneta-digital | active | needs-research (issuer-terms-missing) | curated");
   });
 
   it("parses CLI format and report options", () => {
-    expect(parseArgs(["--json", "--report", "agents/audit.json"])).toEqual({
+    expect(parseArgs(["--json", "--strict-active-gaps", "--report", "agents/audit.json"])).toEqual({
       format: "json",
       reportPath: "agents/audit.json",
+      strictActiveGaps: true,
     });
     expect(() => parseArgs(["--report"])).toThrow("--report requires a path");
+  });
+
+  it("strict CLI mode fails default-inferred active gaps but allows curated active gaps", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-"));
+    const defaultGapAudit = () =>
+      generateRedemptionCoverageAudit({
+        trackedCoins: [coin({ id: "random-crypto" })],
+        activeCoins: [
+          coin({
+            id: "random-crypto",
+            flags: {
+              backing: "crypto-backed",
+              pegCurrency: "USD",
+              governance: "decentralized",
+              yieldBearing: false,
+              rwa: false,
+              navToken: false,
+            },
+          }),
+        ],
+        configs: {},
+      });
+    const curatedGapAudit = () =>
+      generateRedemptionCoverageAudit({
+        trackedCoins: [coin({ id: "mmxn-moneta-digital", symbol: "MMXN" })],
+        activeCoins: [coin({ id: "mmxn-moneta-digital", symbol: "MMXN" })],
+        configs: {},
+      });
+
+    expect(runCli(["--json", "--strict-active-gaps", "--report", "default.json"], cwd, defaultGapAudit)).toBe(1);
+    expect(runCli(["--json", "--strict-active-gaps", "--report", "curated.json"], cwd, curatedGapAudit)).toBe(0);
   });
 });

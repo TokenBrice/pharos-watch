@@ -15,7 +15,10 @@ import {
 } from "../../types";
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const RatioSchema = z.number().gt(0).lte(1);
+const RatioSchema = z.number().finite().gt(0).lte(1);
+const NonNegativeNumberSchema = z.number().finite().nonnegative();
+const PositiveNumberSchema = z.number().finite().positive();
+const StaticCapacityConfidenceSchema = RedemptionCapacityConfidenceSchema.exclude(["live-direct", "live-proxy"]);
 const HttpUrlSchema = z
   .string()
   .url()
@@ -33,7 +36,8 @@ const ReviewedAtSchema = z
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`);
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-  }, "Expected a valid calendar date");
+  }, "Expected a valid calendar date")
+  .refine((value) => value <= currentUtcDate(), "reviewedAt cannot be in the future");
 
 const RedemptionDocSourceSchema = z.strictObject({
   label: z.string().min(1),
@@ -44,46 +48,46 @@ const RedemptionDocSourceSchema = z.strictObject({
 const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("supply-full"),
-    confidence: RedemptionCapacityConfidenceSchema.optional(),
+    confidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("supply-ratio"),
     ratio: RatioSchema,
-    dailyLimitUsd: z.number().nonnegative().optional(),
-    confidence: RedemptionCapacityConfidenceSchema.optional(),
+    dailyLimitUsd: PositiveNumberSchema.optional(),
+    confidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("fixed-usd"),
-    amountUsd: z.number().nonnegative(),
-    dailyLimitUsd: z.number().nonnegative().optional(),
-    confidence: RedemptionCapacityConfidenceSchema.optional(),
+    amountUsd: NonNegativeNumberSchema,
+    dailyLimitUsd: PositiveNumberSchema.optional(),
+    confidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("reserve-sync-metadata"),
     fallbackRatio: RatioSchema.optional(),
-    fallbackUsd: z.number().nonnegative().optional(),
-    confidence: RedemptionCapacityConfidenceSchema.optional(),
+    fallbackUsd: NonNegativeNumberSchema.optional(),
+    confidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
 ]);
 
 const RedemptionCostShapeSchema = {
-  flatFeeUsd: z.number().nonnegative().optional(),
-  minFeeUsd: z.number().nonnegative().optional(),
-  feeBpsMin: z.number().nonnegative().optional(),
-  feeBpsMax: z.number().nonnegative().optional(),
-  gasOrBridgeCostUsd: z.number().nonnegative().optional(),
-  stressFeeBps: z.number().nonnegative().optional(),
+  flatFeeUsd: NonNegativeNumberSchema.optional(),
+  minFeeUsd: NonNegativeNumberSchema.optional(),
+  feeBpsMin: NonNegativeNumberSchema.optional(),
+  feeBpsMax: NonNegativeNumberSchema.optional(),
+  gasOrBridgeCostUsd: NonNegativeNumberSchema.optional(),
+  stressFeeBps: NonNegativeNumberSchema.optional(),
   feeScenario: RedemptionFeeScenarioSchema.optional(),
 };
 
 const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("fee-bps"),
-    feeBps: z.number().nonnegative(),
+    feeBps: NonNegativeNumberSchema,
     feeDescription: z.string().min(1).optional(),
     confidence: z.literal("fixed").optional(),
     ...RedemptionCostShapeSchema,
@@ -167,4 +171,86 @@ export const RedemptionBackstopConfigSchema = z
         message: "issuer-api access is only valid for offchain-issuer or queue-redeem routes",
       });
     }
+
+    if (
+      config.capacityModel.kind === "reserve-sync-metadata" &&
+      config.capacityModel.fallbackRatio != null &&
+      config.capacityModel.fallbackUsd != null
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capacityModel", "fallbackUsd"],
+        message: "reserve-sync-metadata fallbackRatio and fallbackUsd are mutually exclusive",
+      });
+    }
+
+    if (
+      config.costModel.feeBpsMin != null &&
+      config.costModel.feeBpsMax != null &&
+      config.costModel.feeBpsMin > config.costModel.feeBpsMax
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["costModel", "feeBpsMin"],
+        message: "feeBpsMin must be less than or equal to feeBpsMax",
+      });
+    }
+
+    const normalFeeBps =
+      config.costModel.kind === "fee-bps"
+        ? config.costModel.feeBps
+        : (config.costModel.feeBpsMax ?? config.costModel.feeBpsMin);
+    if (config.costModel.stressFeeBps != null && normalFeeBps != null && config.costModel.stressFeeBps < normalFeeBps) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["costModel", "stressFeeBps"],
+        message: "stressFeeBps must be greater than or equal to the normal fee bound",
+      });
+    }
+
+    if (config.costModel.feeScenario === "stress" && config.costModel.stressFeeBps == null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["costModel", "stressFeeBps"],
+        message: "feeScenario=stress requires stressFeeBps",
+      });
+    }
+
+    if (config.costModel.kind === "dynamic-or-unclear") {
+      if (
+        config.costModel.confidence === "formula" &&
+        config.costModel.feeModelKind != null &&
+        config.costModel.feeModelKind !== "formula"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["costModel", "feeModelKind"],
+          message: "formula fee confidence requires feeModelKind=formula when feeModelKind is set",
+        });
+      }
+
+      if (
+        config.costModel.feeModelKind === "formula" &&
+        config.costModel.confidence != null &&
+        config.costModel.confidence !== "formula"
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["costModel", "confidence"],
+          message: "feeModelKind=formula requires formula fee confidence",
+        });
+      }
+
+      if (config.costModel.feeModelKind === "documented-variable" && !config.costModel.feeDescription) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["costModel", "feeDescription"],
+          message: "documented-variable fee models require feeDescription",
+        });
+      }
+    }
   });
+
+function currentUtcDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}

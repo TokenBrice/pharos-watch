@@ -27,6 +27,7 @@ export type RedemptionCoverageReasonCode =
   | "source-review-needed";
 
 export type RedemptionCoverageLifecycle = "active" | "pre-launch" | "frozen";
+export type RedemptionCoverageClassificationSource = "curated" | "default-inferred";
 
 type AuditCoin = Pick<
   StablecoinMeta,
@@ -36,6 +37,7 @@ type AuditCoin = Pick<
 export interface CoverageClassification {
   disposition: RedemptionCoverageDisposition;
   reasonCode: RedemptionCoverageReasonCode;
+  classificationSource: RedemptionCoverageClassificationSource;
   blocker: string;
   evidenceNeeded: string;
   allowedRouteFamilyIfProven: RedemptionRouteFamily | null;
@@ -70,6 +72,7 @@ export interface RedemptionCoverageAudit {
     preLaunchUnconfigured: number;
     frozenUnconfigured: number;
     activeUnclassified: number;
+    activeDefaultClassified: number;
     heuristicConfiguredRoutes: number;
   };
   dispositionCounts: Record<RedemptionCoverageDisposition, number>;
@@ -120,6 +123,7 @@ function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification
     return {
       disposition: "needs-research",
       reasonCode: "issuer-terms-missing",
+      classificationSource: "curated",
       blocker: "Official holder redemption terms have not been source-reviewed for v4.",
       evidenceNeeded: "Holder eligibility, output asset, mechanics, capacity basis, fees, and settlement timing.",
       allowedRouteFamilyIfProven: "offchain-issuer",
@@ -132,8 +136,10 @@ function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification
     return {
       disposition: "needs-research",
       reasonCode: "capacity-unpublished",
+      classificationSource: "curated",
       blocker: "Wrapper, vault, or NAV exit has not been source-reviewed for holder exercisability and capacity.",
-      evidenceNeeded: "App or contract redemption docs, downstream dependency, output asset, cooldown/queue terms, and capacity source.",
+      evidenceNeeded:
+        "App or contract redemption docs, downstream dependency, output asset, cooldown/queue terms, and capacity source.",
       allowedRouteFamilyIfProven: coin.flags?.navToken ? "queue-redeem" : "stablecoin-redeem",
       sourceLink: firstSourceLink(coin),
       reviewedDate: null,
@@ -144,8 +150,10 @@ function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification
     return {
       disposition: "needs-research",
       reasonCode: coin.id === "crvusd-curve" ? "pegkeeper-only" : "capacity-unpublished",
+      classificationSource: "curated",
       blocker: "Protocol route requires strict proof of broad holder-exercisable redemption.",
-      evidenceNeeded: "Official docs or audited contract evidence proving holder redemption beyond market-operations routes.",
+      evidenceNeeded:
+        "Official docs or audited contract evidence proving holder redemption beyond market-operations routes.",
       allowedRouteFamilyIfProven: "collateral-redeem",
       sourceLink: firstSourceLink(coin),
       reviewedDate: null,
@@ -156,6 +164,7 @@ function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification
     return {
       disposition: "defer",
       reasonCode: "no-holder-route",
+      classificationSource: "curated",
       blocker: "No broad holder-exercisable route is accepted without new public source evidence.",
       evidenceNeeded: "Official redemption docs or audited callable route available to ordinary holders.",
       allowedRouteFamilyIfProven: "collateral-redeem",
@@ -168,6 +177,7 @@ function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification
     return {
       disposition: "hard-reject",
       reasonCode: "no-holder-route",
+      classificationSource: "curated",
       blocker: "V4 plan marks this as a hard reject until new public terms prove holder redemption.",
       evidenceNeeded: "New issuer or protocol terms proving a holder-exercisable redemption route.",
       allowedRouteFamilyIfProven: null,
@@ -179,8 +189,10 @@ function classifyActiveUnconfiguredCoin(coin: AuditCoin): CoverageClassification
   return {
     disposition: "needs-research",
     reasonCode: "source-review-needed",
+    classificationSource: "default-inferred",
     blocker: "Active unconfigured coin has not yet been source-reviewed for v4 redemption coverage.",
-    evidenceNeeded: "Official issuer/protocol docs, audited contracts, or live API/onchain evidence for route, capacity, fees, access, and settlement.",
+    evidenceNeeded:
+      "Official issuer/protocol docs, audited contracts, or live API/onchain evidence for route, capacity, fees, access, and settlement.",
     allowedRouteFamilyIfProven: inferLikelyRouteFamily(coin),
     sourceLink: firstSourceLink(coin),
     reviewedDate: null,
@@ -200,6 +212,7 @@ function classifyLifecycleExcludedCoin(coin: AuditCoin): CoverageClassification 
     return {
       disposition: "defer",
       reasonCode: "pre-launch",
+      classificationSource: "curated",
       blocker: "Pre-launch assets are excluded from active route count targets.",
       evidenceNeeded: "Lifecycle must change to active before source-reviewed route config work.",
       allowedRouteFamilyIfProven: null,
@@ -211,6 +224,7 @@ function classifyLifecycleExcludedCoin(coin: AuditCoin): CoverageClassification 
   return {
     disposition: "hard-reject",
     reasonCode: FROZEN_HARD_REJECTS.has(coin.id) ? "frozen" : "frozen",
+    classificationSource: "curated",
     blocker: "Frozen assets are excluded from active route count targets.",
     evidenceNeeded: "Lifecycle must change back to active before route config work.",
     allowedRouteFamilyIfProven: null,
@@ -233,14 +247,16 @@ function sortById<T extends { id: string }>(rows: T[]): T[] {
   return rows.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export function generateRedemptionCoverageAudit(input: {
-  trackedCoins?: readonly AuditCoin[];
-  activeCoins?: readonly AuditCoin[];
-  preLaunchCoins?: readonly AuditCoin[];
-  frozenCoins?: readonly AuditCoin[];
-  configs?: Record<string, RedemptionBackstopConfig>;
-  generatedAt?: string;
-} = {}): RedemptionCoverageAudit {
+export function generateRedemptionCoverageAudit(
+  input: {
+    trackedCoins?: readonly AuditCoin[];
+    activeCoins?: readonly AuditCoin[];
+    preLaunchCoins?: readonly AuditCoin[];
+    frozenCoins?: readonly AuditCoin[];
+    configs?: Record<string, RedemptionBackstopConfig>;
+    generatedAt?: string;
+  } = {},
+): RedemptionCoverageAudit {
   const trackedCoins = input.trackedCoins ?? TRACKED_STABLECOINS;
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const preLaunchCoins = input.preLaunchCoins ?? PRE_LAUNCH_STABLECOINS;
@@ -294,6 +310,8 @@ export function generateRedemptionCoverageAudit(input: {
       preLaunchUnconfigured: preLaunchCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       frozenUnconfigured: frozenCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       activeUnclassified: activeUnconfigured.filter((row) => !row.disposition || !row.reasonCode).length,
+      activeDefaultClassified: activeUnconfigured.filter((row) => row.classificationSource === "default-inferred")
+        .length,
       heuristicConfiguredRoutes: heuristicConfiguredRoutes.length,
     },
     dispositionCounts,
@@ -321,61 +339,74 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
     `- Active configured routes: ${audit.summary.activeConfigured}`,
     `- Active unconfigured gaps: ${audit.summary.activeUnconfigured}`,
     `- Active unclassified gaps: ${audit.summary.activeUnclassified}`,
+    `- Active default-classified gaps: ${audit.summary.activeDefaultClassified}`,
     `- Pre-launch unconfigured exclusions: ${audit.summary.preLaunchUnconfigured}`,
     `- Frozen unconfigured exclusions: ${audit.summary.frozenUnconfigured}`,
     `- Heuristic configured routes for V4-43: ${audit.summary.heuristicConfiguredRoutes}`,
     "",
     "## Active Unconfigured Gaps",
     "",
-    "id | lifecycle | current disposition | blocker | evidence needed | allowed route family if proven | source link | reviewed date",
-    "--- | --- | --- | --- | --- | --- | --- | ---",
-    ...audit.activeUnconfigured.map((row) => [
-      row.id,
-      row.lifecycle,
-      `${row.disposition} (${row.reasonCode})`,
-      row.blocker,
-      row.evidenceNeeded,
-      row.allowedRouteFamilyIfProven ?? "TBD",
-      row.sourceLink,
-      row.reviewedDate,
-    ].map(markdownValue).join(" | ")),
+    "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven | source link | reviewed date",
+    "--- | --- | --- | --- | --- | --- | --- | --- | ---",
+    ...audit.activeUnconfigured.map((row) =>
+      [
+        row.id,
+        row.lifecycle,
+        `${row.disposition} (${row.reasonCode})`,
+        row.classificationSource,
+        row.blocker,
+        row.evidenceNeeded,
+        row.allowedRouteFamilyIfProven ?? "TBD",
+        row.sourceLink,
+        row.reviewedDate,
+      ]
+        .map(markdownValue)
+        .join(" | "),
+    ),
     "",
     "## Pre-launch And Frozen Exclusions",
     "",
-    "id | lifecycle | current disposition | blocker | evidence needed | allowed route family if proven | source link | reviewed date",
-    "--- | --- | --- | --- | --- | --- | --- | ---",
-    ...audit.lifecycleExcludedUnconfigured.map((row) => [
-      row.id,
-      row.lifecycle,
-      `${row.disposition} (${row.reasonCode})`,
-      row.blocker,
-      row.evidenceNeeded,
-      row.allowedRouteFamilyIfProven ?? "TBD",
-      row.sourceLink,
-      row.reviewedDate,
-    ].map(markdownValue).join(" | ")),
+    "id | lifecycle | current disposition | classification source | blocker | evidence needed | allowed route family if proven | source link | reviewed date",
+    "--- | --- | --- | --- | --- | --- | --- | --- | ---",
+    ...audit.lifecycleExcludedUnconfigured.map((row) =>
+      [
+        row.id,
+        row.lifecycle,
+        `${row.disposition} (${row.reasonCode})`,
+        row.classificationSource,
+        row.blocker,
+        row.evidenceNeeded,
+        row.allowedRouteFamilyIfProven ?? "TBD",
+        row.sourceLink,
+        row.reviewedDate,
+      ]
+        .map(markdownValue)
+        .join(" | "),
+    ),
     "",
     "## V4-43 Heuristic Route Review Queue",
     "",
     "id | route family | capacity model | reviewed date | blocker | evidence needed",
     "--- | --- | --- | --- | --- | ---",
-    ...audit.heuristicConfiguredRoutes.map((row) => [
-      row.id,
-      row.routeFamily,
-      row.capacityModel,
-      row.reviewedDate,
-      row.blocker,
-      row.evidenceNeeded,
-    ].map(markdownValue).join(" | ")),
+    ...audit.heuristicConfiguredRoutes.map((row) =>
+      [row.id, row.routeFamily, row.capacityModel, row.reviewedDate, row.blocker, row.evidenceNeeded]
+        .map(markdownValue)
+        .join(" | "),
+    ),
     "",
   ];
 
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-export function parseArgs(argv: string[]): { format: "markdown" | "json"; reportPath: string | null } {
+export function parseArgs(argv: string[]): {
+  format: "markdown" | "json";
+  reportPath: string | null;
+  strictActiveGaps: boolean;
+} {
   let format: "markdown" | "json" = "markdown";
   let reportPath: string | null = null;
+  let strictActiveGaps = false;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -385,6 +416,10 @@ export function parseArgs(argv: string[]): { format: "markdown" | "json"; report
     }
     if (arg === "--markdown") {
       format = "markdown";
+      continue;
+    }
+    if (arg === "--strict-active-gaps") {
+      strictActiveGaps = true;
       continue;
     }
     if (arg === "--report") {
@@ -399,15 +434,18 @@ export function parseArgs(argv: string[]): { format: "markdown" | "json"; report
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  return { format, reportPath };
+  return { format, reportPath, strictActiveGaps };
 }
 
-export function runCli(argv = process.argv.slice(2), cwd = process.cwd()): number {
+export function runCli(
+  argv = process.argv.slice(2),
+  cwd = process.cwd(),
+  auditFactory: () => RedemptionCoverageAudit = generateRedemptionCoverageAudit,
+): number {
   const options = parseArgs(argv);
-  const audit = generateRedemptionCoverageAudit();
-  const output = options.format === "json"
-    ? `${JSON.stringify(audit, null, 2)}\n`
-    : renderRedemptionCoverageAuditMarkdown(audit);
+  const audit = auditFactory();
+  const output =
+    options.format === "json" ? `${JSON.stringify(audit, null, 2)}\n` : renderRedemptionCoverageAuditMarkdown(audit);
 
   if (options.reportPath) {
     const target = resolve(cwd, options.reportPath);
@@ -418,7 +456,9 @@ export function runCli(argv = process.argv.slice(2), cwd = process.cwd()): numbe
     process.stdout.write(output);
   }
 
-  return audit.summary.activeUnclassified === 0 ? 0 : 1;
+  if (audit.summary.activeUnclassified > 0) return 1;
+  if (options.strictActiveGaps && audit.summary.activeDefaultClassified > 0) return 1;
+  return 0;
 }
 
 if (process.argv[1]?.endsWith("generate-redemption-coverage-audit.ts")) {

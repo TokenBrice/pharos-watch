@@ -128,5 +128,21 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
 export function buildRedemptionBackstopRegistry(
   manifest: readonly RedemptionBackstopConfigManifestEntry[] = REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
 ): Record<string, RedemptionBackstopConfig> {
-  return Object.assign({}, ...manifest.map((entry) => entry.configs));
+  const registry: Record<string, RedemptionBackstopConfig> = {};
+  const seenById = new Map<string, Pick<RedemptionBackstopConfigManifestEntry, "name" | "filePath">>();
+
+  for (const entry of manifest) {
+    for (const [id, config] of Object.entries(entry.configs)) {
+      const previous = seenById.get(id);
+      if (previous) {
+        throw new Error(
+          `Duplicate redemption backstop config id "${id}" appears in both ${previous.name} (${previous.filePath}) and ${entry.name} (${entry.filePath}).`,
+        );
+      }
+      seenById.set(id, entry);
+      registry[id] = config;
+    }
+  }
+
+  return registry;
 }

@@ -12,8 +12,11 @@ import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
-import { loadReserveSnapshotMetadataMap } from "../lib/live-reserves-store";
-import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
+import { loadReserveSnapshotMetadataMap, type ReserveSnapshotMetadataRecord } from "../lib/live-reserves-store";
+import {
+  updateRedemptionBackstopRunMetadata,
+  upsertRedemptionBackstopSnapshots,
+} from "../lib/redemption-backstops-store";
 import {
   buildFailedRedemptionBackstopEntry,
   buildRedemptionBackstopEntry,
@@ -141,9 +144,32 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     configuredIds.map((stablecoinId) => [stablecoinId, getRedemptionBackstopConfig(stablecoinId)]),
   );
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
-  const { map: dexLiquidityMap, latestUpdatedAt } = await loadDexLiquiditySnapshot(db);
-  const reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   const now = Math.floor(Date.now() / 1000);
+  const preloadWarnings: string[] = [];
+  let dexLiquidityMap: Awaited<ReturnType<typeof loadDexLiquiditySnapshot>>["map"] = {};
+  let latestUpdatedAt: number | null = null;
+  try {
+    const dexSnapshot = await loadDexLiquiditySnapshot(db);
+    dexLiquidityMap = dexSnapshot.map;
+    latestUpdatedAt = dexSnapshot.latestUpdatedAt;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("[sync-redemption-backstops] DEX liquidity preload failed; continuing without DEX input:", error);
+    preloadWarnings.push(`dex-liquidity:${message}`);
+  }
+
+  let reserveSnapshotMetadataById = new Map<string, ReserveSnapshotMetadataRecord>();
+  try {
+    reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      "[sync-redemption-backstops] Reserve metadata preload failed; live capacity will fail closed to static/fallback rows:",
+      error,
+    );
+    preloadWarnings.push(`reserve-metadata:${message}`);
+  }
+
   const routeAvailabilityById = await loadSevereActiveDepegAvailabilityMap(db, formatRouteAvailabilityReviewedAt(now));
   const routeStatusFeedById = loadStaticRedemptionRouteStatusFeedMap(configuredIds);
   const registryMetadata = buildRegistryMetadata(configuredIds, configById);
@@ -228,7 +254,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
   const hasBlockingUnresolved = failedIds.length > 0 || missingFromCache.length > 0 || criticalUnresolvedCount > 0;
   const hasDegradedSyncSignal = hasBlockingUnresolved || !missingCapacityWithinTolerance || liquidityStale;
-  const runMetadata = {
+  const runMetadata: Record<string, unknown> = {
     synced: snapshots.length,
     failed: failedIds.length,
     configured: configuredIds.length,
@@ -247,6 +273,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     routeStatusProducer: REDEMPTION_ROUTE_STATUS_PRODUCER.model,
     routeStatusProducerFetches: REDEMPTION_ROUTE_STATUS_PRODUCER.fetchesDuringRedemptionSync,
     routeStatusOverrideCount: countStaticRedemptionRouteStatusOverrides(),
+    preloadDegraded: preloadWarnings.length > 0,
+    ...(preloadWarnings.length > 0 ? { preloadWarnings: capStringList(preloadWarnings) } : {}),
     ...registryMetadata,
     ...(failedIds.length > 0 ? { failedIds: capStringList(failedIds), failedIdsTruncated: failedIds.length > 25 } : {}),
     ...(availabilityDegradedIds.length > 0
@@ -260,17 +288,44 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       : {}),
   };
 
-  await upsertRedemptionBackstopSnapshots(db, snapshots, {
+  const writeResult = await upsertRedemptionBackstopSnapshots(db, snapshots, {
     expectedCount: configuredIds.length,
     metadata: runMetadata,
   });
-  await pruneRemovedRedemptionBackstops(db, configuredIds);
+  Object.assign(runMetadata, {
+    snapshotRunId: writeResult.runId,
+    attemptedCount: writeResult.attemptedCount,
+    runRowsWrittenCount: writeResult.runRowsWrittenCount,
+    historyWrittenCount: writeResult.historyWrittenCount,
+    currentMirroredCount: writeResult.currentMirroredCount,
+    failedWriteCount: Math.max(0, writeResult.attemptedCount - writeResult.runRowsWrittenCount),
+    ...(writeResult.warnings.length > 0 ? { writeWarnings: writeResult.warnings } : {}),
+  });
+
+  let pruneFailed = false;
+  try {
+    await pruneRemovedRedemptionBackstops(db, configuredIds);
+  } catch (error) {
+    pruneFailed = true;
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("[sync-redemption-backstops] Prune failed after snapshot write:", error);
+    Object.assign(runMetadata, {
+      pruneDegraded: true,
+      pruneWarning: message,
+    });
+    try {
+      await updateRedemptionBackstopRunMetadata(db, writeResult.runId, runMetadata);
+    } catch (metadataError) {
+      console.warn("[sync-redemption-backstops] Failed to persist prune warning metadata:", metadataError);
+    }
+  }
 
   const hasZeroResolvedCapacityFailure = resolvedCount === 0 && missingCapacityCount > 0;
+  const hasPostWriteDegradation = preloadWarnings.length > 0 || writeResult.warnings.length > 0 || pruneFailed;
   const status: CronResult["status"] =
     resolvedCount === 0 && (hasBlockingUnresolved || hasZeroResolvedCapacityFailure)
       ? "error"
-      : hasDegradedSyncSignal
+      : hasDegradedSyncSignal || hasPostWriteDegradation
         ? "degraded"
         : "ok";
 

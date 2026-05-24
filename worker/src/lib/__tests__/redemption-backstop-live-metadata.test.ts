@@ -120,6 +120,85 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     );
   });
 
+  it("rejects malformed numeric telemetry instead of coercing it", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        immediateRedeemableUsd: 500_000,
+        redemptionFeeBps: 50,
+        redemption: {
+          capacityUsd: "1000000",
+          capacityRatioOfSupply: 1.2,
+          feeBps: 20_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBeNull();
+    expect(metadata.immediateRedeemableRatio).toBeNull();
+    expect(metadata.redemptionFeeBps).toBeNull();
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.canUseFee).toBe(false);
+    expect(metadata.capacityReason).toBe("Live redemption capacity telemetry is malformed; fresh valid metadata required");
+    expect(metadata.feeReason).toBe("Live redemption fee telemetry is malformed; using reviewed fee model instead");
+    expect(metadata.capacityNotes).toEqual(
+      expect.arrayContaining([
+        "Live redemption capacity USD is malformed and was ignored",
+        "Live redemption capacity ratio is above 1 and was ignored",
+        "Live redemption fee bps is above 10000 and was ignored",
+      ]),
+    );
+  });
+
+  it("ignores live route status that omits source attribution", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 1_000_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "open",
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.routeStatus).toBeNull();
+    expect(metadata.routeStatusSource).toBeNull();
+    expect(metadata.capacityNotes).toContain("Live redemption route status omitted source attribution and was ignored");
+  });
+
+  it("keeps sourced route status visible even when stale capacity cannot score", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      {
+        ...snapshot("lusd-liquity", {
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 1_000_000,
+            capacityKind: "live-direct-bounded",
+            freshnessKind: "same-run-onchain",
+            routeStatus: "open",
+            routeStatusSource: "onchain",
+          },
+        }),
+        fetchedAt: now - 3 * 86_400,
+      },
+      now,
+    );
+
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.capacityReason).toBe("Live reserve metadata stale; fresh metadata required");
+    expect(metadata.routeStatus).toBe("open");
+    expect(metadata.routeStatusSource).toBe("onchain");
+  });
+
   it("allows unverified freshness for route-approved stablecoins", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "frxusd-frax",

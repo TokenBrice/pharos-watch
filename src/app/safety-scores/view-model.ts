@@ -89,7 +89,7 @@ export function getCoreSettlementProfile(
   const hasIssuerExit =
     card.rawInputs.redemptionBackstopScore != null &&
     card.rawInputs.redemptionModelConfidence !== "low" &&
-    card.rawInputs.redemptionRouteFamily != null;
+    card.rawInputs.redemptionRouteFamily === "offchain-issuer";
   if (marketCapUsd < CORE_SETTLEMENT_MIN_MCAP_USD) return null;
   if (chainCount < CORE_SETTLEMENT_MIN_CHAINS) return null;
   if ((card.dimensions.pegStability.score ?? 0) < CORE_SETTLEMENT_MIN_PEG_SCORE) return null;

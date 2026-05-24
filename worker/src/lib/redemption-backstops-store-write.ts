@@ -1,9 +1,17 @@
 import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { batchExecute } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
+
+export interface RedemptionBackstopSnapshotWriteResult {
+  runId: string;
+  attemptedCount: number;
+  runRowsWrittenCount: number;
+  historyWrittenCount: number;
+  currentMirroredCount: number;
+  warnings: string[];
+}
 
 function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify(
@@ -333,6 +341,23 @@ function buildRunCompleteUpdate(
     );
 }
 
+export async function updateRedemptionBackstopRunMetadata(
+  db: D1Database,
+  runId: string,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE redemption_backstop_runs
+            SET metadata_json = ?
+          WHERE run_id = ?`,
+      )
+      .bind(JSON.stringify(metadata), runId)
+      .run(),
+  );
+}
+
 function buildRunFailedUpdate(
   db: D1Database,
   args: {
@@ -369,6 +394,75 @@ function resolveRunBounds(records: RedemptionBackstopSnapshotRecord[]): {
   return { minUpdatedAt, maxUpdatedAt };
 }
 
+function buildWriteMetadata(
+  baseMetadata: Record<string, unknown> | undefined,
+  facts: {
+    runId: string;
+    attemptedCount: number;
+    expectedCount: number;
+    runRowsWrittenCount: number;
+    historyWrittenCount: number;
+    currentMirroredCount: number;
+    warnings?: string[];
+    writeStatus?: string;
+    writePhase?: string;
+    failure?: Record<string, unknown>;
+  },
+): Record<string, unknown> {
+  return {
+    ...(baseMetadata ?? {}),
+    snapshotRunId: facts.runId,
+    attemptedCount: facts.attemptedCount,
+    expectedCount: facts.expectedCount,
+    runRowsWrittenCount: facts.runRowsWrittenCount,
+    historyWrittenCount: facts.historyWrittenCount,
+    currentMirroredCount: facts.currentMirroredCount,
+    failedWriteCount: Math.max(0, facts.attemptedCount - facts.runRowsWrittenCount),
+    ...(facts.writeStatus ? { writeStatus: facts.writeStatus } : {}),
+    ...(facts.writePhase ? { writePhase: facts.writePhase } : {}),
+    ...(facts.warnings && facts.warnings.length > 0 ? { writeWarnings: facts.warnings } : {}),
+    ...(facts.failure ? { failure: facts.failure } : {}),
+  };
+}
+
+async function executeStatementChunks(
+  db: D1Database,
+  statements: D1PreparedStatement[],
+  chunkSize: number,
+): Promise<number> {
+  let changes = 0;
+  for (let index = 0; index < statements.length; index += chunkSize) {
+    const result = await runWithOverloadRetry(() => db.batch(statements.slice(index, index + chunkSize)));
+    for (const row of result) {
+      changes += Number(row?.meta?.changes ?? 0);
+    }
+  }
+  return changes;
+}
+
+async function countRunRows(
+  db: D1Database,
+  runId: string,
+): Promise<{ rowCount: number; minUpdatedAt: number | null; maxUpdatedAt: number | null }> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT COUNT(*) AS row_count,
+                MIN(updated_at) AS min_updated_at,
+                MAX(updated_at) AS max_updated_at
+           FROM redemption_backstop_run_rows
+          WHERE snapshot_run_id = ?`,
+      )
+      .bind(runId)
+      .first<{ row_count: number | null; min_updated_at: number | null; max_updated_at: number | null }>(),
+  );
+  return {
+    rowCount: Number(row?.row_count ?? 0),
+    minUpdatedAt: row?.min_updated_at ?? null,
+    maxUpdatedAt: row?.max_updated_at ?? null,
+  };
+}
+
 export async function upsertRedemptionBackstopSnapshots(
   db: D1Database,
   records: RedemptionBackstopSnapshotRecord[],
@@ -377,51 +471,162 @@ export async function upsertRedemptionBackstopSnapshots(
     metadata?: Record<string, unknown>;
     runId?: string;
   },
-): Promise<void> {
-  if (records.length === 0) return;
+): Promise<RedemptionBackstopSnapshotWriteResult> {
+  if (records.length === 0) {
+    return {
+      runId: options?.runId ?? "",
+      attemptedCount: 0,
+      runRowsWrittenCount: 0,
+      historyWrittenCount: 0,
+      currentMirroredCount: 0,
+      warnings: ["No redemption backstop records were supplied"],
+    };
+  }
+
+  const uniqueStablecoinIds = new Set(records.map((record) => record.stablecoinId));
+  if (uniqueStablecoinIds.size !== records.length) {
+    throw new Error("Duplicate stablecoin IDs in redemption backstop snapshot records");
+  }
 
   const runId = options?.runId ?? createRedemptionBackstopRunId();
   const startedAt = Math.floor(Date.now() / 1000);
   const snapshotDate = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
+  const expectedCount = options?.expectedCount ?? records.length;
+  const attemptedCount = records.length;
   let runStarted = false;
+  let runRowsWrittenCount = 0;
+  let historyWrittenCount = 0;
+  let currentMirroredCount = 0;
+  let writePhase = "starting";
 
   try {
     await runWithOverloadRetry(() =>
       buildRunStartInsert(db, {
         runId,
         startedAt,
-        expectedCount: options?.expectedCount ?? records.length,
+        expectedCount,
         methodologyVersion: records[0].methodologyVersion,
-        metadata: options?.metadata,
+        metadata: buildWriteMetadata(options?.metadata, {
+          runId,
+          attemptedCount,
+          expectedCount,
+          runRowsWrittenCount,
+          historyWrittenCount,
+          currentMirroredCount,
+          writeStatus: "running",
+          writePhase,
+        }),
       }).run(),
     );
     runStarted = true;
 
-    const stmts: D1PreparedStatement[] = [];
+    writePhase = "run-rows";
+    const runRowStatements: D1PreparedStatement[] = [];
     for (const record of records) {
-      stmts.push(buildRunRowUpsert(db, record, runId));
-      stmts.push(buildCurrentUpsert(db, record, runId));
-      stmts.push(buildHistoryUpsert(db, record, snapshotDate, runId));
+      runRowStatements.push(buildRunRowUpsert(db, record, runId));
+    }
+    // Run rows are the immutable snapshot source. They must be complete before
+    // the run can become readable or any legacy current rows are touched.
+    runRowsWrittenCount = await executeStatementChunks(db, runRowStatements, 30);
+
+    const rowCount = await countRunRows(db, runId);
+    runRowsWrittenCount = rowCount.rowCount;
+    if (rowCount.rowCount !== records.length) {
+      throw new Error(
+        `Redemption backstop run ${runId} wrote ${rowCount.rowCount}/${records.length} immutable rows`,
+      );
     }
 
-    // Each coin produces 3 statements (run row: 25 params, current: 25 params, history: 9 params = 59 total).
-    // D1 limits total bound params per batch (~1000), so chunk at 15 (15×59=885).
-    await batchExecute(db, stmts, 15);
+    writePhase = "history";
+    const historyStatements = records.map((record) => buildHistoryUpsert(db, record, snapshotDate, runId));
+    historyWrittenCount = await executeStatementChunks(db, historyStatements, 80);
 
-    const { minUpdatedAt, maxUpdatedAt } = resolveRunBounds(records);
+    const recordBounds = resolveRunBounds(records);
+    const minUpdatedAt = rowCount.minUpdatedAt ?? recordBounds.minUpdatedAt;
+    const maxUpdatedAt = rowCount.maxUpdatedAt ?? recordBounds.maxUpdatedAt;
+    writePhase = "complete-manifest";
     const completion = await runWithOverloadRetry(() =>
       buildRunCompleteUpdate(db, {
         runId,
         completedAt: Math.floor(Date.now() / 1000),
-        writtenCount: records.length,
+        writtenCount: rowCount.rowCount,
         minUpdatedAt,
         maxUpdatedAt,
-        metadata: options?.metadata,
+        metadata: buildWriteMetadata(options?.metadata, {
+          runId,
+          attemptedCount,
+          expectedCount,
+          runRowsWrittenCount: rowCount.rowCount,
+          historyWrittenCount,
+          currentMirroredCount,
+          writeStatus: "completed",
+          writePhase,
+        }),
       }).run(),
     );
     if ((completion.meta?.changes ?? 0) <= 0) {
       throw new Error(`Failed to mark redemption backstop run ${runId} completed`);
     }
+
+    writePhase = "current-mirror";
+    const currentStatements = records.map((record) => buildCurrentUpsert(db, record, runId));
+    const warnings: string[] = [];
+    try {
+      currentMirroredCount = await executeStatementChunks(db, currentStatements, 30);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`Current mirror update failed after completed run rows were written: ${message}`);
+      try {
+        await updateRedemptionBackstopRunMetadata(
+          db,
+          runId,
+          buildWriteMetadata(options?.metadata, {
+            runId,
+            attemptedCount,
+            expectedCount,
+            runRowsWrittenCount: rowCount.rowCount,
+            historyWrittenCount,
+            currentMirroredCount,
+            warnings,
+            writeStatus: "completed-with-warnings",
+            writePhase,
+          }),
+        );
+      } catch {
+        // Keep the successful immutable snapshot available even if warning
+        // metadata cannot be refreshed.
+      }
+    }
+    if (warnings.length === 0) {
+      try {
+        await updateRedemptionBackstopRunMetadata(
+          db,
+          runId,
+          buildWriteMetadata(options?.metadata, {
+            runId,
+            attemptedCount,
+            expectedCount,
+            runRowsWrittenCount: rowCount.rowCount,
+            historyWrittenCount,
+            currentMirroredCount,
+            writeStatus: "completed",
+            writePhase,
+          }),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        warnings.push(`Completed run metadata refresh failed after current mirror update: ${message}`);
+      }
+    }
+
+    return {
+      runId,
+      attemptedCount,
+      runRowsWrittenCount: rowCount.rowCount,
+      historyWrittenCount,
+      currentMirroredCount,
+      warnings,
+    };
   } catch (error) {
     if (runStarted) {
       const message = error instanceof Error ? error.message : String(error);
@@ -430,16 +635,21 @@ export async function upsertRedemptionBackstopSnapshots(
           buildRunFailedUpdate(db, {
             runId,
             completedAt: Math.floor(Date.now() / 1000),
-            writtenCount: 0,
-            metadata: {
-              ...(options?.metadata ?? {}),
+            writtenCount: runRowsWrittenCount,
+            metadata: buildWriteMetadata(options?.metadata, {
+              runId,
+              attemptedCount,
+              expectedCount,
+              runRowsWrittenCount,
+              historyWrittenCount,
+              currentMirroredCount,
+              writeStatus: "failed",
+              writePhase,
               failure: {
                 message,
                 name: error instanceof Error ? error.name : "Error",
               },
-              attemptedCount: records.length,
-              expectedCount: options?.expectedCount ?? records.length,
-            },
+            }),
           }).run(),
         );
       } catch {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { assertAllD1MatchesUsed, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
 import { handleRedemptionBackstops } from "../redemption-backstops";
@@ -63,6 +63,10 @@ const RUN_ROWS_BY_RUN_ID_SQL =
   "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
 describe("handleRedemptionBackstops", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns 503 when the current snapshot cannot be read", async () => {
     const db = mockD1Strict([
       {
@@ -279,6 +283,85 @@ describe("handleRedemptionBackstops", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.success ? parsed.data.updatedAt : null).toBe(1_699_999_990);
     expect(parsed.success ? parsed.data.coins["cusd-cap"]?.updatedAt : null).toBe(1_699_999_990);
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("emits freshness and cache headers from the completed run timestamp", async () => {
+    const updatedAt = 1_700_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime((updatedAt + 60) * 1000);
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-fresh",
+            completed_at: updatedAt + 10,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: updatedAt,
+            max_updated_at: updatedAt,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-fresh"],
+        rows: [makeRedemptionRow({ snapshot_run_id: "run-fresh", updated_at: updatedAt })],
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
+    expect(response.headers.get("X-Data-Age")).toBe("60");
+    expect(response.headers.get("Warning")).toBeNull();
+    assertAllD1MatchesUsed(db);
+  });
+
+  it("falls back to an earlier valid run when the newest completed run has no max timestamp", async () => {
+    const db = mockD1Strict([
+      {
+        match: COMPLETED_RUNS_SQL,
+        matchBinds: [5],
+        rows: [
+          {
+            run_id: "run-missing-max",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: null,
+            methodology_version: "1.1",
+          },
+          {
+            run_id: "run-old-valid",
+            completed_at: 1_700_000_000,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_699_999_990,
+            max_updated_at: 1_699_999_990,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: RUN_ROWS_BY_RUN_ID_SQL,
+        matchBinds: ["run-old-valid"],
+        rows: [makeRedemptionRow({ snapshot_run_id: "run-old-valid", updated_at: 1_699_999_990 })],
+      },
+    ]);
+
+    const response = await handleRedemptionBackstops(db);
+    expect(response.status).toBe(200);
+    const rawBody = await response.json();
+    const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.success ? parsed.data.updatedAt : null).toBe(1_699_999_990);
     assertAllD1MatchesUsed(db);
   });
 });

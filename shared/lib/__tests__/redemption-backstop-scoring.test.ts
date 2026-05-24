@@ -129,6 +129,24 @@ describe("computeEffectiveExitScore", () => {
   });
 });
 
+describe("isStrongLiveDirectRoute", () => {
+  it("requires direct live capacity, dynamic source mode, and immediate exercisability", () => {
+    const base = {
+      capacityConfidence: "live-direct",
+      capacityKind: "live-direct-bounded",
+      sourceMode: "dynamic",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+    } as const;
+
+    expect(isStrongLiveDirectRoute(base)).toBe(true);
+    expect(isStrongLiveDirectRoute({ ...base, capacityConfidence: "live-proxy" })).toBe(false);
+    expect(isStrongLiveDirectRoute({ ...base, sourceMode: "static" })).toBe(false);
+    expect(isStrongLiveDirectRoute({ ...base, accessModel: "issuer-api" })).toBe(false);
+    expect(isStrongLiveDirectRoute({ ...base, settlementModel: "days" })).toBe(false);
+  });
+});
+
 describe("computeCapacityScore", () => {
   it("returns null when both inputs are null", () => {
     const result = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: null });

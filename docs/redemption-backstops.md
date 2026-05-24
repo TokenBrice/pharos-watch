@@ -300,7 +300,7 @@ Stored fields:
 - `details_json`
 - `snapshot_run_id`
 
-The cron upserts both current and history rows together through `upsertRedemptionBackstopSnapshots(...)`.
+The cron writes immutable `redemption_backstop_run_rows` first, writes daily history, marks the run manifest completed only after the immutable row count and bounds are valid, and then refreshes the legacy current mirror. Current-mirror failures are recorded as completed-run warnings instead of making partial current rows authoritative.
 
 ### `redemption_backstop_runs`
 
@@ -345,7 +345,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 - `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
-- `src/lib/coverage.ts` now distinguishes configured-but-unrated routes, impaired routes, and low-confidence heuristic routes from genuinely covered routes, so unresolved or weakly evidenced rows do not inflate public coverage counts
+- `/coverage` consumes `useRedemptionBackstops()` through `src/lib/coverage/redemption.ts`. It distinguishes scored route-family states from low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, impaired routes, no route, and `Data n/a` feed-unavailable states, so unresolved, eventual-only, impaired, or weakly evidenced rows do not inflate public strong-coverage counts. The Redemption quick filter includes configured/resolved route states but excludes `Data n/a`.
 
 There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
 
@@ -368,4 +368,5 @@ There is currently no dedicated list page or standalone public methodology secti
 | `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                         |
 | `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                           |
 | `src/lib/stablecoin-detail-view-model.ts`                       | Detail-page composed view model with redemption freshness tracking |
+| `src/lib/coverage/redemption.ts`                                | Coverage-page redemption state mapping                             |
 | `src/components/stablecoin-detail/redemption-backstop-card.tsx` | Detail-page redemption card UI                                     |

@@ -148,6 +148,7 @@ export async function resolveReserveSyncCapacity(
       ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
       ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
       notes: [
+        ...liveMetadata.capacityNotes,
         liveMetadata.capacityReason
           ? `${liveMetadata.capacityReason}; using configured fallback ratio`
           : "Live reserve metadata unavailable; using configured fallback ratio",
@@ -200,6 +201,7 @@ export async function resolveReserveSyncCapacity(
       ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
       ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
       notes: [
+        ...liveMetadata.capacityNotes,
         liveMetadata.capacityReason
           ? `${liveMetadata.capacityReason}; using configured fallback USD capacity`
           : "Live reserve metadata unavailable; using configured fallback USD capacity",
@@ -222,6 +224,6 @@ export async function resolveReserveSyncCapacity(
     ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
     ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
     ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
-    notes: [liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],
+    notes: [...liveMetadata.capacityNotes, liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],
   };
 }

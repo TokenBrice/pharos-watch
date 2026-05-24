@@ -106,6 +106,7 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
               capacityKind: "live-direct-bounded" as const,
               freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" as const : "same-run-api" as const,
               routeStatus: "open" as const,
+              routeStatusSource: "protocol-api" as const,
               holderEligibility: "any-holder",
               settlementDelaySec: 0,
               sourceUrls: [

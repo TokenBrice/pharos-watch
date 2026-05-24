@@ -27,12 +27,14 @@ interface RedemptionCostScenarioConfig {
   feeScenario?: RedemptionFeeScenario;
 }
 
+type StaticRedemptionCapacityConfidence = Exclude<RedemptionCapacityConfidence, "live-direct" | "live-proxy">;
+
 export type RedemptionCostModel =
   | ({
       kind: "fee-bps";
       feeBps: number;
       feeDescription?: string;
-      confidence?: RedemptionFeeConfidence;
+      confidence?: Extract<RedemptionFeeConfidence, "fixed">;
     } & RedemptionCostScenarioConfig)
   | ({
       kind: "dynamic-or-unclear";
@@ -44,28 +46,28 @@ export type RedemptionCostModel =
 export type RedemptionCapacityModel =
   | {
       kind: "supply-full";
-      confidence?: RedemptionCapacityConfidence;
+      confidence?: StaticRedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     }
   | {
       kind: "supply-ratio";
       ratio: number;
       dailyLimitUsd?: number;
-      confidence?: RedemptionCapacityConfidence;
+      confidence?: StaticRedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     }
   | {
       kind: "fixed-usd";
       amountUsd: number;
       dailyLimitUsd?: number;
-      confidence?: RedemptionCapacityConfidence;
+      confidence?: StaticRedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     }
   | {
       kind: "reserve-sync-metadata";
       fallbackRatio?: number;
       fallbackUsd?: number;
-      confidence?: RedemptionCapacityConfidence;
+      confidence?: StaticRedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     };
 

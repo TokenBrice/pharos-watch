@@ -146,7 +146,7 @@ describe("safety score view-model", () => {
     }));
   });
 
-  it("derives core settlement profiles from objective market, peg, liquidity, dependency, and issuer-exit gates", () => {
+  it("derives core settlement profiles from objective market, peg, liquidity, dependency, and offchain issuer-exit gates", () => {
     const core = makeCard({
       id: "usdt-tether",
       symbol: "USDT",
@@ -188,6 +188,48 @@ describe("safety score view-model", () => {
       coreSettlementProfiles: profiles,
     });
     expect(sorted.map((card) => card.id)).toEqual(["usdt-tether", "small-usd"]);
+  });
+
+  it("requires an offchain issuer redemption route for core settlement profiles", () => {
+    const base = makeCard({
+      id: "issuer-exit",
+      symbol: "ISS",
+      dimensions: {
+        pegStability: { score: 99, grade: "A+" },
+        liquidity: { score: 80, grade: "B+" },
+        resilience: { score: 88, grade: "B+" },
+        decentralization: { score: 70, grade: "B-" },
+        dependencyRisk: { score: 95, grade: "A+" },
+      },
+    });
+    const stablecoin = {
+      id: "issuer-exit",
+      circulating: { peggedUSD: 30_000_000_000 },
+      chains: Array.from({ length: 12 }, (_, index) => `chain-${index}`),
+    };
+
+    expect(getCoreSettlementProfile(base, stablecoin)).not.toBeNull();
+
+    for (const routeFamily of [
+      "stablecoin-redeem",
+      "basket-redeem",
+      "collateral-redeem",
+      "psm-swap",
+      "queue-redeem",
+    ] as const) {
+      expect(
+        getCoreSettlementProfile(
+          {
+            ...base,
+            rawInputs: {
+              ...base.rawInputs,
+              redemptionRouteFamily: routeFamily,
+            },
+          },
+          stablecoin,
+        ),
+      ).toBeNull();
+    }
   });
 
   it("builds a market-weighted inspection board and ranks dimension findings", () => {

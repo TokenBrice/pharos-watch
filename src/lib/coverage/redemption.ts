@@ -104,7 +104,7 @@ function resolveRedemption(
     routeStatus === "cohort-limited"
   ) {
     return createStatus(
-      "configured-unrated",
+      "impaired",
       "Impaired",
       "amber",
       false,
@@ -139,6 +139,22 @@ function resolveRedemption(
     );
   }
 
+  if (
+    entry.capacitySemantics === "eventual-only" ||
+    entry.score == null ||
+    entry.effectiveExitScore == null
+  ) {
+    return createStatus(
+      "resolved-unscored",
+      "Resolved",
+      "violet",
+      false,
+      1,
+      "A redemption route is resolved for context, but it is eventual-only or otherwise lacks current scored redemption coverage.",
+      "Resolved, unscored",
+    );
+  }
+
   return createPresetStatus(
     REDEMPTION_ROUTE_STATUS_PRESETS[entry.routeFamily] ?? REDEMPTION_ROUTE_STATUS_PRESETS.modeled,
   );
@@ -151,7 +167,9 @@ function formatRedemption(
   const get = (kind: string) => breakdownMap.get(kind) ?? 0;
   return [
     breakdownItem("modeled-heuristic", "heuristic", get("modeled-heuristic")),
+    breakdownItem("resolved-unscored", "resolved", get("resolved-unscored")),
     breakdownItem("configured-unrated", "configured", get("configured-unrated")),
+    breakdownItem("impaired", "impaired", get("impaired")),
     breakdownItem("offchain-issuer", "issuer", get("offchain-issuer")),
     breakdownItem("psm-swap", "psm", get("psm-swap")),
     breakdownItem("queue-redeem", "queue", get("queue-redeem")),
@@ -171,7 +189,9 @@ const REDEMPTION_KINDS: readonly string[] = [
   "basket-redeem",
   "modeled",
   "modeled-heuristic",
+  "resolved-unscored",
   "configured-unrated",
+  "impaired",
   "none",
   DATA_UNAVAILABLE_KIND,
 ] as const;
@@ -200,6 +220,18 @@ const REDEMPTION_LEGEND: readonly CoverageLegendItem[] = [
     term: "Config.",
     description: "A redemption route is configured, but the current snapshot could not resolve a usable score.",
     kinds: ["configured-unrated"],
+  },
+  {
+    term: "Resolved",
+    description:
+      "A redemption route is resolved for context, but is eventual-only or otherwise not current scored redemption coverage.",
+    kinds: ["resolved-unscored"],
+  },
+  {
+    term: "Impaired",
+    description:
+      "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
+    kinds: ["impaired"],
   },
 ] as const;
 

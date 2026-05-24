@@ -53,7 +53,11 @@ import {
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
-export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
+export {
+  upsertRedemptionBackstopSnapshots,
+  updateRedemptionBackstopRunMetadata,
+  type RedemptionBackstopSnapshotWriteResult,
+} from "./redemption-backstops-store-write";
 
 interface RedemptionBackstopRow {
   stablecoin_id: string;
