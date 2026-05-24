@@ -111,6 +111,30 @@ describe("computeEffectiveExitScore", () => {
     expect(computeModeledExitSizeUsd(10_000_000_000)).toBe(25_000_000);
   });
 
+  it("returns null modeled exit size for missing, non-finite, or non-positive supply", () => {
+    expect(computeModeledExitSizeUsd(null)).toBeNull();
+    expect(computeModeledExitSizeUsd(0)).toBeNull();
+    expect(computeModeledExitSizeUsd(-1)).toBeNull();
+    expect(computeModeledExitSizeUsd(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it("treats invalid executable capacity as unbounded and clamps negative executable capacity to zero", () => {
+    expect(
+      computeEffectiveExitScore(null, 90, {
+        modeledExitSizeUsd: 25_000_000,
+        currentExecutableCapacityUsd: Number.NaN,
+        modelConfidence: "high",
+      }),
+    ).toBe(90);
+    expect(
+      computeEffectiveExitScore(null, 90, {
+        modeledExitSizeUsd: 25_000_000,
+        currentExecutableCapacityUsd: -1,
+        modelConfidence: "high",
+      }),
+    ).toBe(0);
+  });
+
   it("exports the effective-exit model parameters used by scoring and cron metadata", () => {
     expect(REDEMPTION_EFFECTIVE_EXIT_MODEL).toMatchObject({
       model: "best-path",
@@ -281,6 +305,82 @@ describe("applyCapacityConstraintScoreEffects", () => {
       "minimum-size-penalty",
       "live-holder-eligibility-penalty",
     ]);
+  });
+
+  it("applies settlement-delay penalties only above each threshold", () => {
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        settlementDelaySec: 3_600,
+      }),
+    ).toEqual({
+      score: 100,
+      capsApplied: [],
+    });
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        settlementDelaySec: 3_601,
+      }),
+    ).toEqual({
+      score: 90,
+      capsApplied: ["settlement-delay-penalty"],
+    });
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        settlementDelaySec: 86_401,
+      }),
+    ).toEqual({
+      score: 75,
+      capsApplied: ["settlement-delay-penalty"],
+    });
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        settlementDelaySec: 604_801,
+      }),
+    ).toEqual({
+      score: 60,
+      capsApplied: ["settlement-delay-penalty"],
+    });
+  });
+
+  it("applies minimum-size penalties only above retail-size thresholds", () => {
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        minRedeemUsd: 10_000,
+      }),
+    ).toEqual({
+      score: 100,
+      capsApplied: [],
+    });
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        minRedeemUsd: 10_001,
+      }),
+    ).toEqual({
+      score: 90,
+      capsApplied: ["minimum-size-penalty"],
+    });
+    expect(
+      applyCapacityConstraintScoreEffects({
+        capacityScore: 100,
+        scoringCapacityUsd: 10_000_000,
+        minRedeemUsd: 1_000_001,
+      }),
+    ).toEqual({
+      score: 75,
+      capsApplied: ["minimum-size-penalty"],
+    });
   });
 });
 

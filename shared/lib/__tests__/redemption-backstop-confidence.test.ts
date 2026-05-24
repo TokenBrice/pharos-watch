@@ -306,6 +306,80 @@ describe("deriveModelConfidence", () => {
       }).modelConfidence,
     ).toBe("low");
   });
+
+  it("downgrades issuer-discretionary and unknown holder cohorts to low confidence", () => {
+    for (const holderEligibility of ["issuer-discretionary", "unknown"] as const) {
+      const result = deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "live-direct",
+        feeConfidence: "fixed",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility,
+        sourceMode: "dynamic",
+        freshnessKind: "same-run-onchain",
+      });
+
+      expect(result.modelConfidence).toBe("low");
+      expect(result.confidenceDetails.reasons).toContain("Holder eligibility is narrow or unclear");
+    }
+  });
+
+  it("does not discount future or invalid reviewedAt values as stale documentation", () => {
+    const future = deriveModelConfidenceWithDetails({
+      resolutionState: "resolved",
+      capacityConfidence: "documented-bound",
+      feeConfidence: "fixed",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
+      sourceMode: "static",
+      reviewedAt: "2027-01-01",
+      now: 1_780_000_000,
+    });
+    const invalid = deriveModelConfidenceWithDetails({
+      resolutionState: "resolved",
+      capacityConfidence: "documented-bound",
+      feeConfidence: "fixed",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
+      sourceMode: "static",
+      reviewedAt: "not-a-date",
+      now: 1_780_000_000,
+    });
+
+    expect(future.modelConfidence).toBe("medium");
+    expect(future.confidenceDetails.reviewedDocAgeDays).toBe(0);
+    expect(invalid.modelConfidence).toBe("medium");
+    expect(invalid.confidenceDetails.reviewedDocAgeDays).toBeNull();
+  });
+
+  it("records source-quality detail scores for live freshness and static fallback evidence", () => {
+    expect(
+      deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "live-direct",
+        feeConfidence: "fixed",
+        routeStatus: "open",
+        routeStatusSource: "protocol-api",
+        holderEligibility: "any-holder",
+        sourceMode: "dynamic",
+        freshnessKind: "same-run-api",
+      }).confidenceDetails.sourceQuality,
+    ).toBe(90);
+    expect(
+      deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "documented-bound",
+        feeConfidence: "fixed",
+        routeStatus: "open",
+        routeStatusSource: "static-config",
+        holderEligibility: "any-holder",
+        sourceMode: "static",
+      }).confidenceDetails.sourceQuality,
+    ).toBe(40);
+  });
 });
 
 describe("inferStoredCapacityConfidence", () => {
