@@ -87,7 +87,7 @@ const HintButton = forwardRef<
         onKeyDown?.(event);
       }}
       className={cn(
-        "pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:h-5 md:w-5 dark:text-frost-blue",
+        "pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:h-6 md:w-6 dark:text-frost-blue",
         className,
       )}
     >
