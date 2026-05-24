@@ -1,7 +1,7 @@
 import type { FaqItem } from "@/lib/faq";
 
 export const TELEGRAM_PAGE_DESCRIPTION =
-  "PharosWatchBot delivers stablecoin alerts on Telegram: DEWS threat bands, depegs and worsening, safety-grade shifts, and pre-launch assets going live. Per-coin, preset, or all-stablecoin. Daily digest and community channels alongside.";
+  "PharosWatchBot delivers stablecoin alerts on Telegram: DEWS threat bands, depegs and worsening, reasoned safety-grade shifts, and pre-launch assets going live. Per-coin, preset, or all-stablecoin. Daily digest and community channels alongside.";
 
 export const TELEGRAM_ACTIONS = [
   {
@@ -10,7 +10,7 @@ export const TELEGRAM_ACTIONS = [
     handle: "@PharosWatchBot",
     href: "https://t.me/PharosWatchBot",
     description:
-      "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves, and pre-launch assets going live. Tune thresholds, set quiet hours, snooze on the fly.",
+      "Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves with reason lines, and pre-launch assets going live. Tune thresholds, set quiet hours, snooze on the fly.",
     heroButtonLabel: "Start PharosWatchBot",
     cardButtonLabel: "Open Bot",
     finalButtonLabel: "Start Bot",
@@ -75,13 +75,15 @@ View on Pharos: pharos.watch/stablecoin/usdc-circle`,
   {
     key: "safety",
     label: "Safety Grade Changes",
-    tagline: "Fires on live grade shifts (A- → B+). Re-scores from methodology changes don't page you.",
+    tagline: "Fires on live grade shifts and points to the driver. Re-scores from methodology changes don't page you.",
     content: `Safety Grade Change
 
-DAI — A- → B+
-Score: 71 → 66
+USDR — B → F
+Score: 70 → 39
 
-View on Pharos: pharos.watch/stablecoin/dai-makerdao`,
+Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39). Now: Safety F 39 · Liquidity 57, DEX TVL $1.2M · Supply $13.1M
+
+View on Pharos: pharos.watch/stablecoin/usdr-tangible`,
     time: "09:45",
   },
   {
@@ -282,7 +284,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "What alerts does Pharos send on Telegram?",
     answer:
-      "DEWS threat-level band crossings, depeg detections and worsening milestones, safety-grade changes, and pre-launch assets going live.",
+      "DEWS threat-level band crossings, depeg detections and worsening milestones, safety-grade changes with reason lines, and pre-launch assets going live.",
   },
   {
     question: "Can I get alerts for all tracked stablecoins at once?",
@@ -325,7 +327,7 @@ export const TELEGRAM_HOW_IT_WORKS_CARDS = [
   {
     title: "Cadence",
     description:
-      "The dispatcher runs every 5 minutes. DEWS, depeg, and launch alerts arrive within one cycle. Safety alerts ride the live report-card publish path — you see the grade change the same moment the site does.",
+      "The dispatcher runs every 5 minutes. DEWS, depeg, and launch alerts arrive within one cycle. Safety alerts ride the live report-card publish path — you see the grade change, plus the driver line, the same moment the site does.",
     unsubscribeCommand: null,
     descriptionAfterCommand: null,
   },

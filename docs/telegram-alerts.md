@@ -81,7 +81,7 @@ primary navigation immediately after `/alt-pegs/`.
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
 - Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry, including the hero pulse strip, the visible capacity / alert-follows / top-follows summary, the Telegram chat lifecycle chart, and a "More information" disclosure for follow composition, daily lifecycle deltas, aggregate alert-type counts, and privacy-filtered quiet-hours/pending-delivery counts
 - Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
-- Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, quiet hours, inline snooze, and the overflow delivery queue
+- Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, reasoned safety-grade alerts, quiet hours, inline snooze, and the overflow delivery queue
 - The recommended setup deep link preloads a Telegram confirmation for `dews,depeg usd-top25`; it does not silently subscribe the user before they confirm in Telegram.
 - Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
 

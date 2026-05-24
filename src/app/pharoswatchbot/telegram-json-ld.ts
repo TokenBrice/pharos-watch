@@ -19,7 +19,7 @@ const TELEGRAM_HOW_TO_STEPS = [
 const TELEGRAM_FEATURE_LIST = [
   "Depeg alerts (triggered, worsening milestones, resolved)",
   "DEWS threat-band alerts (ALERT, WARNING, DANGER)",
-  "Safety grade alerts, including global downgrade filtering by score when available",
+  "Safety grade alerts with reason lines for live score drivers",
   "Pre-launch stablecoin launch alerts",
   "On-demand market brief, top rankings, Safety Score explanations, and coverage checks",
   "Dynamic preset watchlists that keep tracking current cohorts",
@@ -54,7 +54,7 @@ export function buildTelegramPageJsonLd(siteUrl: string) {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: `${siteUrl}/pharoswatchbot/`,
       installUrl: "https://t.me/PharosWatchBot",
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
+      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, and launch alerts.",
       featureList: TELEGRAM_FEATURE_LIST,
       publisher: { "@id": `${siteUrl}#organization` },
     },

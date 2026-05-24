@@ -73,6 +73,7 @@ function findJsonLdNode(nodes: readonly JsonLdRecord[], type: string): JsonLdRec
 describe("PharosWatchBotPage", () => {
   it("keeps public metadata and copy current", () => {
     expect(metadata.description).toBe(TELEGRAM_PAGE_DESCRIPTION);
+    expect(TELEGRAM_PAGE_DESCRIPTION).toContain("reasoned safety-grade shifts");
     expect(TELEGRAM_PAGE_DESCRIPTION).toContain("pre-launch assets going live");
     expect(TELEGRAM_PAGE_DESCRIPTION).not.toContain("pre-launch launches");
   });
@@ -101,6 +102,8 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
     expect(screen.getByText(String(TRACKED_STABLECOIN_COUNT))).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
+    expect(screen.getByText(/Safety alerts include a reason line/i)).toBeTruthy();
+    expect(screen.getAllByText(/Reason: Active depeg peak 7546 bps/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Opens a Telegram confirmation that preloads DEWS and depeg alerts/i)).toBeTruthy();
     expect(screen.getByText("Control every alert from the Mini App.")).toBeTruthy();
     expect(screen.getByText("Global alerts")).toBeTruthy();
@@ -138,11 +141,12 @@ describe("PharosWatchBotPage", () => {
       operatingSystem: "Telegram",
       url: "https://pharos.watch/pharoswatchbot/",
       installUrl: PHAROSWATCHBOT_BOT_URL,
-      description: "Opt-in Telegram bot for stablecoin peg, DEWS, safety, and launch alerts.",
+      description: "Opt-in Telegram bot for stablecoin peg, DEWS, reasoned safety, and launch alerts.",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       publisher: { "@id": "https://pharos.watch#organization" },
     });
     expect(application.featureList).toHaveLength(8);
+    expect(application.featureList).toContain("Safety grade alerts with reason lines for live score drivers");
     expect(application.featureList).toContain(
       "Telegram Mini App for visual watchlist, settings, and presets management",
     );

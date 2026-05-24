@@ -129,7 +129,7 @@ const RECOMMENDED_SETUPS = [
   {
     title: "Research desk setup",
     command: "/subscribe safety mcap-ge-1b",
-    description: "Safety-grade downgrades only, on coins above $1B mcap. Material moves without per-ticker work.",
+    description: "Safety-grade downgrades with reason lines, on coins above $1B mcap. Material moves without per-ticker work.",
     icon: ShieldCheck,
   },
   {
@@ -226,7 +226,7 @@ function CommandLine({ command }: { command: string }) {
 }
 
 function HeroPreview() {
-  const featuredAlert = TELEGRAM_ALERT_EXAMPLES[0];
+  const featuredAlert = TELEGRAM_ALERT_EXAMPLES.find((alert) => alert.key === "safety") ?? TELEGRAM_ALERT_EXAMPLES[0];
 
   return (
     <div className="relative rounded-[1.25rem] border border-border/70 bg-card/86 p-3 shadow-[0_24px_60px_oklch(0_0_0_/0.22)]">
@@ -427,7 +427,8 @@ export default function PharosWatchBotPage() {
                 <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-[17px]">
                   <TelegramLink href={BOT_URL}>@PharosWatchBot</TelegramLink> watches depegs, DEWS
                   threat bands, safety-grade changes, and launch promotions across the tracked universe. Start with one
-                  low-noise preset, then tune thresholds as your watchlist grows.
+                  low-noise preset, then tune thresholds as your watchlist grows. Safety alerts include a reason line so
+                  you know whether to look at liquidity, peg pressure, active-depeg caps, or parent caps first.
                 </p>
               </div>
 
@@ -677,7 +678,8 @@ export default function PharosWatchBotPage() {
               What the bot actually sends
             </h2>
             <p className="pharos-lead">
-              Four alert families, each tied to a stablecoin signal Pharos already computes.
+              Four alert families, each tied to a stablecoin signal Pharos already computes. Safety changes include the
+              driver so an alert points to the part of the risk stack that moved.
             </p>
           </div>
           <div className="pharos-stagger-entrance grid gap-5 md:grid-cols-2">
