@@ -63,8 +63,6 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
     expect(hasPagesDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
-    expect(hasPagesDeployImpact([".github/workflows/pages-prepare.yml"])).toBe(true);
-    expect(hasPagesDeployImpact([".github/workflows/pages-publish.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-llms-txt.ts"])).toBe(true);
@@ -357,7 +355,7 @@ diff --git a/package.json b/package.json
   });
 
   it("treats pages workflow-only changes as Pages-impacting", () => {
-    const execFile = () => ".github/workflows/pages-prepare.yml\n";
+    const execFile = () => ".github/workflows/pages-release.yml\n";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -371,7 +369,7 @@ diff --git a/package.json b/package.json
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.pagesUiChanged).toBe(false);
-    expect(result.changedFiles).toEqual([".github/workflows/pages-prepare.yml"]);
+    expect(result.changedFiles).toEqual([".github/workflows/pages-release.yml"]);
   });
 
   it("skips the deploy path for docs-only push diffs", () => {

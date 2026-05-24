@@ -47,6 +47,7 @@ export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 // Keep the top-level CI/merge-gate contract as the umbrella script while the
 // package-level implementation delegates to the shared registry above.
 export const COMMON_VALIDATE_PREBUILD_COMMANDS = ["npm run validate:prebuild"];
+export const VALIDATE_PREBUILD_SURFACE_ENV = "VALIDATE_PREBUILD_SURFACE";
 
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
@@ -119,6 +120,34 @@ function normalizeValidationCommand(command) {
     return "npm run test:noncritical";
   }
   return command;
+}
+
+export function normalizeValidatePrebuildSurface(surface) {
+  if (surface === "pages" || surface === "worker" || surface === "full") {
+    return surface;
+  }
+  return "full";
+}
+
+const validationCommandDeployImpactByCommand = new Map(
+  VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY.map((entry) => [entry.command, entry.deployImpact]),
+);
+
+export function shouldRunValidatePrebuildCommandForSurface(command, surface) {
+  const normalizedSurface = normalizeValidatePrebuildSurface(surface);
+  const deployImpact = validationCommandDeployImpactByCommand.get(normalizeValidationCommand(command)) ?? "full";
+
+  if (deployImpact === "validation-only" || deployImpact === "full" || normalizedSurface === "full") {
+    return true;
+  }
+
+  return deployImpact === normalizedSurface;
+}
+
+export function buildValidatePrebuildCommandsForSurface(surface) {
+  return VALIDATE_PREBUILD_COMMANDS.filter((command) =>
+    shouldRunValidatePrebuildCommandForSurface(command, surface),
+  );
 }
 
 export function validateValidationCommandImpactRegistry(commands = [

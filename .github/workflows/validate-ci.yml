@@ -32,8 +32,11 @@ env:
 jobs:
   validate-prebuild:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 35
     permissions:
       contents: read
+    env:
+      VALIDATE_PREBUILD_SURFACE: ${{ inputs.pages_changed && inputs.worker_changed && 'full' || inputs.pages_changed && 'pages' || inputs.worker_changed && 'worker' || 'full' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -49,10 +52,11 @@ jobs:
   pages-build:
     if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 40
     permissions:
       contents: read
     env:
-      # Match pages-prepare.yml so the validate build inlines the same flags.
+      # Match pages-release.yml so the validate build inlines the same flags.
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
@@ -82,6 +86,7 @@ jobs:
   test-noncritical:
     name: Noncritical Vitest (${{ matrix.shard }}/4)
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
     permissions:
       contents: read
     strategy:
@@ -101,6 +106,7 @@ jobs:
 
   coverage-critical:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
     permissions:
       contents: read
     env:
@@ -120,6 +126,7 @@ jobs:
   typecheck-worker:
     if: ${{ inputs.worker_changed }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -142,6 +149,7 @@ jobs:
       - typecheck-worker
     if: ${{ always() }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:

@@ -7,11 +7,14 @@ import {
   buildFullCommandPlan,
   fetchBaseRef,
   getChangedFiles,
+  getProductionPagesPublicEnv,
+  getValidatePrebuildSurface,
   runExecutionBatches,
   runMergeGate,
 } from "../maintenance/test-merge-gate.mjs";
 import { getCommandEnv } from "../maintenance/test-merge-gate.mjs";
 import {
+  buildValidatePrebuildCommandsForSurface,
   buildCiValidateCommands,
   buildCiValidateStepPlan,
   buildNoncriticalTestShardCommands,
@@ -19,9 +22,15 @@ import {
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_COMMANDS,
+  VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
+import {
+  buildValidatePrebuildExecutionUnits,
+  runValidatePrebuild,
+} from "../maintenance/run-validate-prebuild.mjs";
 
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {
@@ -105,6 +114,26 @@ describe("buildCommandPlan", () => {
     });
   });
 
+  it("passes a focused validate:prebuild surface hint for deploy-impacting diffs", () => {
+    expect(getValidatePrebuildSurface(["src/app/page.tsx"])).toBe("pages");
+    expect(getValidatePrebuildSurface(["worker/src/api/status.ts"])).toBe("worker");
+    expect(getValidatePrebuildSurface(["shared/lib/classification.ts"])).toBe("full");
+    expect(getValidatePrebuildSurface([])).toBe("full");
+
+    expect(getCommandEnv("npm run validate:prebuild", ["src/app/page.tsx"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+    });
+    expect(getCommandEnv("npm run validate:prebuild", ["worker/src/api/status.ts"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      [VALIDATE_PREBUILD_SURFACE_ENV]: "worker",
+    });
+  });
+
   it("applies the production Pages build env for local static export validation", () => {
     expect(getCommandEnv("npm run build", ["src/app/page.tsx"], {})).toEqual({
       TZ: "UTC",
@@ -116,6 +145,73 @@ describe("buildCommandPlan", () => {
       PUBLIC_DATASETS_REQUIRE_API: "",
       SMOKE_API_BASE: "",
       API_BASE_URL: "",
+    });
+  });
+
+  it("keeps Pages public env offline by default for local Pages validation", () => {
+    const env = {
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      NEXT_PUBLIC_UNRELATED: "keep-out",
+    };
+
+    expect(getCommandEnv("npm run build", ["src/app/page.tsx"], env)).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      NEXT_PUBLIC_GA_ID: undefined,
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: undefined,
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
+      PUBLIC_DATASETS_API_URL: "",
+      PUBLIC_DATASETS_API_KEY: "",
+      PUBLIC_DATASETS_REQUIRE_API: "",
+      SMOKE_API_BASE: "",
+      API_BASE_URL: "",
+    });
+    expect(getCommandEnv("npm run check:feature-flag-inlining", ["src/app/page.tsx"], env)).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      NEXT_PUBLIC_GA_ID: undefined,
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: undefined,
+    });
+  });
+
+  it("mirrors production Pages public env when the local rehearsal mode is enabled", () => {
+    const env = {
+      MERGE_GATE_PRODUCTION_ENV: "1",
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
+      NEXT_PUBLIC_UNRELATED: "keep-out",
+    };
+
+    expect(getProductionPagesPublicEnv(env)).toEqual({
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
+    });
+    expect(getCommandEnv("npm run build", ["src/app/page.tsx"], env)).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
+      PUBLIC_DATASETS_API_URL: "",
+      PUBLIC_DATASETS_API_KEY: "",
+      PUBLIC_DATASETS_REQUIRE_API: "",
+      SMOKE_API_BASE: "",
+      API_BASE_URL: "",
+    });
+    expect(getCommandEnv("npm run check:feature-flag-inlining", ["src/app/page.tsx"], env)).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: "false",
     });
   });
 
@@ -308,6 +404,100 @@ describe("buildCommandPlan", () => {
     expect(envByCommand.get("npm run test:noncritical")).toEqual({});
     expect(envByCommand.get("npm run coverage:critical")).toEqual({
       CRITICAL_COVERAGE_CHANGED_FILES: "src/app/page.tsx,worker/src/api/status.ts",
+    });
+  });
+
+  it("passes production rehearsal env through build and feature-flag check execution", async () => {
+    const envByCommand = new Map<string, Record<string, string | undefined>>();
+
+    await runExecutionBatches(
+      [
+        { cmd: "npm run build", reasons: ["test"] },
+        { cmd: "npm run check:feature-flag-inlining", reasons: ["test"] },
+      ],
+      ["src/app/page.tsx"],
+      {
+        MERGE_GATE_PRODUCTION_ENV: "1",
+        NEXT_PUBLIC_GA_ID: "G-PROD",
+        NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      },
+      {
+        exit: () => {
+          throw new Error("unexpected exit");
+        },
+        runCommandImpl: (cmd, extraEnv) => {
+          envByCommand.set(cmd, extraEnv);
+          return 0;
+        },
+      },
+    );
+
+    expect(envByCommand.get("npm run build")).toMatchObject({
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
+    });
+    expect(envByCommand.get("npm run check:feature-flag-inlining")).toMatchObject({
+      NEXT_PUBLIC_GA_ID: "G-PROD",
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: "true",
+    });
+  });
+});
+
+describe("validate:prebuild surface filtering", () => {
+  it("keeps validation-only and full checks while skipping worker-only checks for pages-only hints", () => {
+    const commands = buildValidatePrebuildCommandsForSurface("pages");
+
+    expect(commands).toContain("npm run audit:deps");
+    expect(commands).toContain("npm run audit:pricing-providers");
+    expect(commands).toContain("npm run check:generated-artifacts");
+    expect(commands).toContain("npm run check:world-map");
+    expect(commands).not.toContain("npm run check:migrations");
+    expect(commands).not.toContain("npm run check:sql-safety");
+  });
+
+  it("keeps validation-only and full checks while skipping pages-only checks for worker-only hints", () => {
+    const commands = buildValidatePrebuildCommandsForSurface("worker");
+
+    expect(commands).toContain("npm run audit:deps");
+    expect(commands).toContain("npm run audit:pricing-providers");
+    expect(commands).toContain("npm run check:migrations");
+    expect(commands).toContain("npm run check:sql-safety");
+    expect(commands).not.toContain("npm run check:generated-artifacts");
+    expect(commands).not.toContain("npm run check:world-map");
+  });
+
+  it("keeps the full prebuild set when the hint is full or absent", () => {
+    expect(buildValidatePrebuildCommandsForSurface("full")).toEqual(VALIDATE_PREBUILD_COMMANDS);
+    expect(buildValidatePrebuildCommandsForSurface(undefined)).toEqual(VALIDATE_PREBUILD_COMMANDS);
+  });
+
+  it("builds runner units from the filtered surface command set", () => {
+    expect(buildValidatePrebuildExecutionUnits("worker").map((unit) => unit.commands[0])).toEqual(
+      buildValidatePrebuildCommandsForSurface("worker"),
+    );
+  });
+
+  it("passes filtered runner units and continue-on-error through the prebuild runner", async () => {
+    let receivedUnits: Array<{ commands: string[] }> = [];
+    let receivedOptions: { continueOnError?: boolean; label?: string; maxParallel?: number } | undefined;
+
+    await runValidatePrebuild({
+      env: {
+        [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+        VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
+      },
+      runExecutionUnits: (units, options) => {
+        receivedUnits = units;
+        receivedOptions = options;
+        return Promise.resolve({ status: 0, failedCmd: null, aborted: false });
+      },
+    });
+
+    expect(receivedUnits.map((unit) => unit.commands[0])).toEqual(buildValidatePrebuildCommandsForSurface("pages"));
+    expect(receivedOptions).toMatchObject({
+      continueOnError: true,
+      label: "validate:prebuild",
     });
   });
 });

@@ -14,6 +14,7 @@ import {
   COMMON_VALIDATE_PREBUILD_COMMANDS,
   PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  VALIDATE_PREBUILD_SURFACE_ENV,
   WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
@@ -23,6 +24,9 @@ const LOCAL_PAGES_CANARY_ROUTES =
   "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
 const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES;
 const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
+const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
+const PRODUCTION_PUBLIC_ENV_KEYS = new Set(["NEXT_PUBLIC_GA_ID"]);
+const PRODUCTION_PUBLIC_ENV_PREFIXES = ["NEXT_PUBLIC_PHAROS_"];
 
 export function normalizePath(path) {
   return normalizeRepoPath(path);
@@ -153,18 +157,73 @@ export function getChangedFiles({
     .filter(Boolean);
 }
 
+function isProductionPublicEnvKey(key) {
+  return PRODUCTION_PUBLIC_ENV_KEYS.has(key) || PRODUCTION_PUBLIC_ENV_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
+export function getProductionPagesPublicEnv(env = process.env) {
+  return Object.fromEntries(
+    Object.keys(env)
+      .filter((key) => isProductionPublicEnvKey(key) && env[key] !== undefined)
+      .sort()
+      .map((key) => [key, env[key]]),
+  );
+}
+
+export function getValidatePrebuildSurface(changedFiles) {
+  const pagesChanged = hasPagesDeployImpact(changedFiles);
+  const workerChanged = hasWorkerDeployImpact(changedFiles);
+
+  if (pagesChanged && !workerChanged) {
+    return "pages";
+  }
+  if (workerChanged && !pagesChanged) {
+    return "worker";
+  }
+  return "full";
+}
+
+function getOfflinePagesPublicEnv(env) {
+  return Object.fromEntries(
+    Object.keys(env)
+      .filter((key) => isProductionPublicEnvKey(key) && env[key] !== undefined)
+      .sort()
+      .map((key) => [key, undefined]),
+  );
+}
+
+function getPagesValidationEnv(env) {
+  return env[PRODUCTION_PAGES_ENV_MODE] === "1" ? getProductionPagesPublicEnv(env) : getOfflinePagesPublicEnv(env);
+}
+
 export function getCommandEnv(cmd, changedFiles, env = process.env) {
   const baseEnv = env.MERGE_GATE_NATIVE_ENV === "1" ? {} : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
+  const pagesValidationEnv = PAGES_VALIDATE_COMMANDS.includes(cmd) ? getPagesValidationEnv(env) : {};
+
+  if (cmd === "npm run validate:prebuild") {
+    return {
+      ...baseEnv,
+      [VALIDATE_PREBUILD_SURFACE_ENV]: getValidatePrebuildSurface(changedFiles),
+    };
+  }
 
   if (cmd === "npm run build") {
     return {
       ...baseEnv,
+      ...pagesValidationEnv,
       NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
       PUBLIC_DATASETS_API_URL: "",
       PUBLIC_DATASETS_API_KEY: "",
       PUBLIC_DATASETS_REQUIRE_API: "",
       SMOKE_API_BASE: "",
       API_BASE_URL: "",
+    };
+  }
+
+  if (PAGES_VALIDATE_COMMANDS.includes(cmd)) {
+    return {
+      ...baseEnv,
+      ...pagesValidationEnv,
     };
   }
 

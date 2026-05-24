@@ -13,8 +13,21 @@ permissions:
   contents: read
 
 jobs:
-  detect-changes:
+  guard-production-ref:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require production deploys from main
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Production deploys must run from refs/heads/main; got ${GITHUB_REF}."
+            exit 1
+          fi
+
+  detect-changes:
+    needs: guard-production-ref
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       deploy_required: ${{ steps.classify.outputs.deploy_required }}
       pages_changed: ${{ steps.classify.outputs.pages_changed }}
@@ -47,6 +60,7 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.deploy_required != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - run: echo "No Pages or worker deploy surfaces changed in this push; skipping the production workflow."
 
@@ -55,6 +69,7 @@ jobs:
       - detect-changes
     if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
     runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
     outputs:
       previous_version_id: ${{ steps.current-deployment.outputs.previous_version_id }}
       version_id: ${{ steps.upload-version.outputs.version_id }}
@@ -70,17 +85,11 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
-          install-deps: "false"
-      - name: Install worker upload dependencies (production-only)
-        # Upload prep is intentionally optimized: this non-mutating job installs
-        # only the Worker runtime closure and uses the pinned registry Wrangler
-        # below. The mutating deploy job still uses the lockfile-installed CLI.
-        run: npm install --workspace worker --include-workspace-root --omit=dev --no-audit --no-fund
       - name: Capture current production version
         id: current-deployment
         run: |
           cd worker
-          npx --yes wrangler@4.91.0 deployments status --json > /tmp/wrangler-deployment-status.json
+          npx --no-install wrangler deployments status --json > /tmp/wrangler-deployment-status.json
           node <<'NODE' >> "$GITHUB_OUTPUT"
           const fs = require("node:fs");
           const status = JSON.parse(fs.readFileSync("/tmp/wrangler-deployment-status.json", "utf8"));
@@ -96,7 +105,7 @@ jobs:
           rm -f "$WRANGLER_OUTPUT_FILE_PATH"
           cd worker
           set +e
-          npx --yes wrangler@4.91.0 versions upload --message "GitHub Actions candidate ${GITHUB_SHA}" 2>&1 | tee /tmp/wrangler-versions-upload.log
+          npx --no-install wrangler versions upload --message "GitHub Actions candidate ${GITHUB_SHA}" 2>&1 | tee /tmp/wrangler-versions-upload.log
           upload_status="${PIPESTATUS[0]}"
           set -e
           cd ..
@@ -129,12 +138,14 @@ jobs:
         && needs.upload-worker-version.result == 'success'
       }}
     runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
@@ -151,6 +162,24 @@ jobs:
           --timeout-message "Timed out waiting for validate / validate to finish."
       - name: Rehearse D1 migrations locally
         run: npm run check:migrations
+      - name: Capture previous worker trigger config for rollback
+        id: previous-worker-trigger-config
+        env:
+          DEPLOY_BASE_SHA: ${{ github.event.before }}
+        run: |
+          if [ -z "${DEPLOY_BASE_SHA:-}" ] || [[ "${DEPLOY_BASE_SHA}" =~ ^0+$ ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No push base SHA available; trigger rollback will keep the current checked-out config."
+            exit 0
+          fi
+
+          if git cat-file -e "${DEPLOY_BASE_SHA}:worker/wrangler.toml"; then
+            git show "${DEPLOY_BASE_SHA}:worker/wrangler.toml" > worker/.rollback-wrangler.toml
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Could not read worker/wrangler.toml at ${DEPLOY_BASE_SHA}; trigger rollback restoration will be skipped."
+          fi
       - name: Apply production D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Smoke uploaded preview worker
@@ -174,8 +203,11 @@ jobs:
         if: ${{ needs.upload-worker-version.outputs.version_upload_unavailable == 'true' }}
         run: cd worker && npx --no-install wrangler deploy
       - name: Sync worker triggers
+        id: sync-worker-triggers
+        continue-on-error: true
         run: cd worker && npx --no-install wrangler triggers deploy
       - name: Smoke production worker
+        if: ${{ steps.sync-worker-triggers.outcome == 'success' }}
         id: production-smoke-api
         continue-on-error: true
         run: npm run test:smoke-api
@@ -190,7 +222,10 @@ jobs:
       - name: Roll back production worker to previous stable version
         if: >-
           ${{
-            steps.production-smoke-api.outcome == 'failure'
+            (
+              steps.sync-worker-triggers.outcome == 'failure'
+              || steps.production-smoke-api.outcome == 'failure'
+            )
             && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
             && needs.upload-worker-version.outputs.previous_version_id != ''
           }}
@@ -199,10 +234,26 @@ jobs:
         run: >-
           cd worker
           && npx --no-install wrangler rollback "${PREVIOUS_WORKER_VERSION_ID}"
-          --message "Auto rollback after smoke-api failure for ${GITHUB_SHA}"
+          --message "Auto rollback after Worker deploy post-check failure for ${GITHUB_SHA}"
           --yes
-      - name: Fail after production worker smoke failure
-        if: ${{ steps.production-smoke-api.outcome == 'failure' }}
+      - name: Restore worker triggers after rollback
+        if: >-
+          ${{
+            (
+              steps.sync-worker-triggers.outcome == 'failure'
+              || steps.production-smoke-api.outcome == 'failure'
+            )
+            && needs.upload-worker-version.outputs.version_upload_unavailable != 'true'
+            && needs.upload-worker-version.outputs.previous_version_id != ''
+            && steps.previous-worker-trigger-config.outputs.available == 'true'
+          }}
+        run: cd worker && npx --no-install wrangler triggers deploy --config .rollback-wrangler.toml
+      - name: Fail after worker deploy post-check failure
+        if: >-
+          ${{
+            steps.sync-worker-triggers.outcome == 'failure'
+            || steps.production-smoke-api.outcome == 'failure'
+          }}
         run: exit 1
       - name: Run worker-only live smokes
         if: ${{ needs.detect-changes.outputs.pages_changed != 'true' }}
@@ -247,7 +298,6 @@ jobs:
       }}
     uses: ./.github/workflows/pages-release.yml
     with:
-      direct_publish: true
       pages_ui_changed: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}
       wait_for_validate_job: true
       wait_for_worker_promotion: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}

@@ -314,8 +314,6 @@ export const DEPLOY_IMPACT_REGISTRY = {
     exactPaths: uniqueSorted([...getValidationCommandDeployImpactPaths("pages"), ...PAGES_EXTRA_EXACT_PATHS]),
     prefixes: ["data/", "functions/", "public/", "shared/", "src/"],
     workflowOnlyExactPaths: [
-      ".github/workflows/pages-prepare.yml",
-      ".github/workflows/pages-publish.yml",
       ".github/workflows/pages-release.yml",
       ".github/workflows/rebuild-pages.yml",
     ],

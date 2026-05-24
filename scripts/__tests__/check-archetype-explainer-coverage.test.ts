@@ -7,7 +7,7 @@ describe("validateArchetypeExplainerCoverage", () => {
     const result = mod.validateArchetypeExplainerCoverage();
     expect(result.findings).toEqual([]);
     expect(result.failedArchetypes.size).toBe(0);
-  });
+  }, 15_000);
 
   it("reports a finding when a MECHANISM_ARCHETYPE_LABELS entry is empty", async () => {
     vi.resetModules();

@@ -14,7 +14,19 @@ permissions:
   contents: read
 
 jobs:
+  guard-production-ref:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require production rebuilds from main
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Production Pages rebuilds must run from refs/heads/main; got ${GITHUB_REF}."
+            exit 1
+          fi
+
   pages-release:
+    needs: guard-production-ref
     uses: ./.github/workflows/pages-release.yml
     secrets:
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}

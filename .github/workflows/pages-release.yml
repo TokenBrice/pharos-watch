@@ -8,28 +8,18 @@ on:
         required: false
         default: ""
         type: string
-      artifact_name:
-        description: Artifact name for the built static export.
-        required: false
-        default: pages-static-export
-        type: string
-      direct_publish:
-        description: Build, smoke, and publish in one job without artifact transfer.
-        required: false
-        default: false
-        type: boolean
       pages_ui_changed:
-        description: Whether direct-publish mode should run strict mobile smoke.
+        description: Whether the release should run strict mobile smoke.
         required: false
         default: true
         type: boolean
       wait_for_validate_job:
-        description: Whether direct-publish mode should wait for validate / validate before publishing.
+        description: Whether the release should wait for validate / validate before publishing.
         required: false
         default: false
         type: boolean
       wait_for_worker_promotion:
-        description: Whether direct-publish mode should wait for deploy-worker before publishing.
+        description: Whether the release should wait for deploy-worker before publishing.
         required: false
         default: false
         type: boolean
@@ -58,34 +48,9 @@ permissions:
   contents: read
 
 jobs:
-  pages-prepare:
-    if: ${{ !inputs.direct_publish }}
-    uses: ./.github/workflows/pages-prepare.yml
-    with:
-      api_base_url: ${{ inputs.api_base_url }}
-      artifact_name: ${{ inputs.artifact_name }}
-    secrets:
-      DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
-      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY }}
-      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY }}
-      SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
-      SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
-
-  pages-publish:
-    if: ${{ !inputs.direct_publish }}
-    needs: pages-prepare
-    uses: ./.github/workflows/pages-publish.yml
-    with:
-      artifact_name: ${{ inputs.artifact_name }}
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
-      OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
-
-  pages-release-direct:
-    if: ${{ inputs.direct_publish }}
+  pages-release:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 75
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -127,6 +92,7 @@ jobs:
           PUBLIC_DATASETS_REQUIRE_API: ""
           SMOKE_API_BASE: ""
           API_BASE_URL: ""
+      - run: npm run test:a11y
       - run: npm run check:feature-flag-inlining
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
@@ -234,15 +200,6 @@ jobs:
             echo "local pre-publish statuses: seo=${seo_status}, ui=${ui_status}, mobile=${mobile_status}"
             exit 1
           fi
-      - name: Dump local export smoke server log
-        if: failure()
-        run: cat /tmp/pages-smoke-server.log
-      - name: Stop local export smoke server
-        if: always()
-        run: |
-          if [ -f /tmp/pages-smoke-server.pid ]; then
-            kill "$(cat /tmp/pages-smoke-server.pid)" || true
-          fi
       - name: Wait for validation gate
         if: ${{ inputs.wait_for_validate_job }}
         env:
@@ -265,6 +222,23 @@ jobs:
           --sleep-sec 5
           --stop-message "stopping production Pages deployment."
           --timeout-message "Timed out waiting for deploy-worker to finish."
+      - name: Run local artifact smoke against promoted worker
+        if: ${{ inputs.wait_for_worker_promotion }}
+        env:
+          SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          SMOKE_UI_BROWSER_CHANNEL: chrome
+          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
+          SMOKE_UI_OVERFLOW_WORKERS: "6"
+        run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
+      - name: Dump local export smoke server log
+        if: failure()
+        run: cat /tmp/pages-smoke-server.log
+      - name: Stop local export smoke server
+        if: always()
+        run: |
+          if [ -f /tmp/pages-smoke-server.pid ]; then
+            kill "$(cat /tmp/pages-smoke-server.pid)" || true
+          fi
       - name: Deploy Pages with retry
         id: deploy-pages
         run: |
