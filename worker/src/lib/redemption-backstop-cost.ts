@@ -1,14 +1,11 @@
-import {
-  resolveFeeConfidence,
-  resolveFeeModelKind,
-} from "@shared/lib/redemption-backstop-confidence";
-import type {
-  RedemptionBackstopConfig,
-  RedemptionCostModel,
-} from "@shared/lib/redemption-backstops";
+import { resolveFeeConfidence, resolveFeeModelKind } from "@shared/lib/redemption-backstop-confidence";
+import type { RedemptionBackstopConfig, RedemptionCostModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "./live-reserves-store";
-import { readRedemptionBackstopLiveMetadata } from "./redemption-backstop-live-metadata";
+import {
+  readRedemptionBackstopLiveMetadata,
+  type RedemptionBackstopLiveMetadata,
+} from "./redemption-backstop-live-metadata";
 import { resolveRedemptionDocs } from "@shared/lib/redemption-backstop-docs";
 
 export interface ResolvedRedemptionCost {
@@ -111,18 +108,20 @@ function resolveRedemptionCost(
   costModel: RedemptionCostModel,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
+  liveMetadata?: RedemptionBackstopLiveMetadata,
 ): ResolvedRedemptionCost {
   const feeConfidence = resolveFeeConfidence(costModel);
   const feeModelKind = resolveFeeModelKind(costModel);
-  const liveMetadata = readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
+  const resolvedLiveMetadata =
+    liveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
 
   if (
-    liveMetadata.canUseFee
-    && liveMetadata.redemptionFeeBps != null
-    && costModel.kind === "dynamic-or-unclear"
-    && feeConfidence === "formula"
+    resolvedLiveMetadata.canUseFee &&
+    resolvedLiveMetadata.redemptionFeeBps != null &&
+    costModel.kind === "dynamic-or-unclear" &&
+    feeConfidence === "formula"
   ) {
-    const feeBps = Math.max(0, Math.round(liveMetadata.redemptionFeeBps));
+    const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
     return {
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
@@ -134,8 +133,8 @@ function resolveRedemptionCost(
     };
   }
 
-  if (liveMetadata.canUseFee && liveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
-    const feeBps = Math.max(0, Math.round(liveMetadata.redemptionFeeBps));
+  if (resolvedLiveMetadata.canUseFee && resolvedLiveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
+    const feeBps = Math.max(0, Math.round(resolvedLiveMetadata.redemptionFeeBps));
     return {
       score: resolveBoundedFeeScore(feeBps),
       feeBps,
@@ -163,8 +162,8 @@ function resolveRedemptionCost(
       costScenarioScores: scenarioScores,
       ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
       notes:
-        feeConfidence === "formula" && liveMetadata.updatedAt != null && liveMetadata.feeReason
-          ? [liveMetadata.feeReason]
+        feeConfidence === "formula" && resolvedLiveMetadata.updatedAt != null && resolvedLiveMetadata.feeReason
+          ? [resolvedLiveMetadata.feeReason]
           : [],
     };
   }
@@ -192,6 +191,7 @@ export function resolveRedemptionStaticFields(
   },
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
+  liveMetadata?: RedemptionBackstopLiveMetadata,
 ): RedemptionStaticFields {
   const {
     score: costScore,
@@ -201,7 +201,7 @@ export function resolveRedemptionStaticFields(
     feeModelKind,
     costScenarioScores,
     notes,
-  } = resolveRedemptionCost(stablecoinId, config.costModel, reserveSnapshotMetadata, now);
+  } = resolveRedemptionCost(stablecoinId, config.costModel, reserveSnapshotMetadata, now, liveMetadata);
 
   return {
     ...scores,

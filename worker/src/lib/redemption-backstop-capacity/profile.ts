@@ -6,6 +6,7 @@ import type { RedemptionBackstopProviderId } from "@shared/lib/redemption-backst
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
 import type { RedemptionRouteAvailability } from "../redemption-backstop-availability";
+import type { RedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
 
 export interface CapacityResolution {
   immediateCapacityUsd: number | null;
@@ -40,6 +41,7 @@ export interface CapacityResolution {
 
 export interface RedemptionBackstopBuildOptions {
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
+  redemptionLiveMetadata?: RedemptionBackstopLiveMetadata;
   routeAvailability?: RedemptionRouteAvailability | null;
   routeStatusFeed?: {
     origin: "operator-override" | "protocol-feed";

@@ -32,7 +32,8 @@ export async function resolveReserveSyncCapacity(
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const liveMetadata = readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
+  const liveMetadata =
+    options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, snapshotMetadata, now);
 
   if (
     liveMetadata.canUseCapacity &&

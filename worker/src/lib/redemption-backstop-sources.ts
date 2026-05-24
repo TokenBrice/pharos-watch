@@ -32,12 +32,17 @@ import {
 } from "./redemption-backstop-capacity";
 import { mergeRedemptionRouteStatus, type RedemptionRouteStatusEvidence } from "./redemption-backstop-route-status";
 import { resolveRedemptionStaticFields } from "./redemption-backstop-cost";
+import {
+  readRedemptionBackstopLiveMetadata,
+  type RedemptionBackstopLiveMetadata,
+} from "./redemption-backstop-live-metadata";
 
 function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
+  liveMetadata?: RedemptionBackstopLiveMetadata,
 ) {
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[config.settlementModel];
@@ -54,6 +59,7 @@ function resolveStaticFields(
     },
     reserveSnapshotMetadata,
     now,
+    liveMetadata,
   );
 }
 
@@ -91,9 +97,12 @@ export async function buildRedemptionBackstopEntry(
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
+  const liveMetadata =
+    options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);
   const capacity = await resolveRedemptionCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
     reserveSnapshotMetadata,
+    redemptionLiveMetadata: liveMetadata,
   });
   const capacityScoring = computeCapacityScore({
     immediateCapacityUsd: capacity.scoringCapacityUsd,
@@ -108,7 +117,7 @@ export async function buildRedemptionBackstopEntry(
     minRedeemUsd: capacity.minRedeemUsd,
     liveHolderEligibility: capacity.liveHolderEligibility,
   });
-  const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now);
+  const staticFields = resolveStaticFields(stablecoinId, config, reserveSnapshotMetadata, now, liveMetadata);
   const scored = computeRedemptionBackstopScore({
     routeFamily: config.routeFamily,
     accessScore: staticFields.accessScore,
@@ -161,14 +170,15 @@ export async function buildRedemptionBackstopEntry(
           : "unknown",
     routeStatusSource: "static-config",
   };
-  const liveRouteStatus: RedemptionRouteStatusEvidence | null = capacity.routeStatus && capacity.routeStatusSource
-    ? {
-        routeStatus: capacity.routeStatus,
-        routeStatusSource: capacity.routeStatusSource,
-        ...(capacity.routeStatusReason ? { routeStatusReason: capacity.routeStatusReason } : {}),
-        ...(capacity.routeStatusReviewedAt ? { routeStatusReviewedAt: capacity.routeStatusReviewedAt } : {}),
-      }
-    : null;
+  const liveRouteStatus: RedemptionRouteStatusEvidence | null =
+    capacity.routeStatus && capacity.routeStatusSource
+      ? {
+          routeStatus: capacity.routeStatus,
+          routeStatusSource: capacity.routeStatusSource,
+          ...(capacity.routeStatusReason ? { routeStatusReason: capacity.routeStatusReason } : {}),
+          ...(capacity.routeStatusReviewedAt ? { routeStatusReviewedAt: capacity.routeStatusReviewedAt } : {}),
+        }
+      : null;
   const mergedRouteStatus = mergeRedemptionRouteStatus({
     staticEvidence: staticRouteStatus,
     liveEvidence: liveRouteStatus,

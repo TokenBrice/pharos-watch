@@ -416,6 +416,83 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacitySemantics).toBe("immediate-bounded");
   });
 
+  it("reuses pre-parsed live redemption metadata for capacity and fees", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "usdo-openeden",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: {
+          kind: "dynamic-or-unclear",
+          confidence: "formula",
+          feeDescription: "Live fee formula",
+        },
+      },
+      50_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "usdo-openeden",
+          fetchedAt: now - 120,
+          source: "test",
+          metadata: {
+            redemption: {
+              capacityUsd: 1,
+              feeBps: 99,
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+        redemptionLiveMetadata: {
+          updatedAt: now - 120,
+          isFresh: true,
+          hasScoringEligibleFreshness: true,
+          hasBlockingWarnings: false,
+          capacityNotes: [],
+          capacityConfidence: "live-direct",
+          canUseCapacity: true,
+          canUseFee: true,
+          capacityReason: null,
+          feeReason: null,
+          immediateRedeemableUsd: 12_500_000,
+          immediateRedeemableRatio: null,
+          capacityKind: "live-direct",
+          freshnessKind: "verified-source-timestamp",
+          sourceTimestamp: now - 120,
+          sourceUrls: ["https://example.com/redemption.json"],
+          settlementDelaySec: null,
+          queueDepthUsd: null,
+          dailyLimitUsd: null,
+          minRedeemUsd: null,
+          liveHolderEligibility: null,
+          redemptionFeeBps: 4,
+          buyFeeBpsMin: null,
+          buyFeeBpsMax: null,
+          routeStatus: "open",
+          routeStatusSource: "protocol-api",
+          routeStatusReason: null,
+          routeStatusReviewedAt: null,
+        },
+      },
+    );
+
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.immediateCapacityUsd).toBe(12_500_000);
+    expect(entry.feeBps).toBe(4);
+    expect(entry.sourceTimestamp).toBe(now - 120);
+    expect(entry.sourceUrls).toEqual(["https://example.com/redemption.json"]);
+  });
+
   it("derives reserve-sync ratio from supply when nested capacity omits ratio", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
@@ -981,7 +1058,7 @@ describe("buildRedemptionBackstopEntry", () => {
       url: "https://example.com/route",
       provenance: "config-reviewed",
     });
-    expect(entry.docs?.sources[0]?.supports).toEqual(["route", "fees"]);
+    expect(entry.docs?.sources?.[0]?.supports).toEqual(["route", "fees"]);
   });
 
   it("does not add current-exit uplift for eventual-only redemption", async () => {
