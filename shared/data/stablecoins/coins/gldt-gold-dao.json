@@ -1,0 +1,78 @@
+{
+  "id": "gldt-gold-dao",
+  "name": "Gold Token",
+  "symbol": "GLDT",
+  "oneLiner": "GLDT is Gold DAO's fungible gold token: each token represents 0.01 grams of physical gold through locked GLD NFT backing.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
+  "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
+  "commodityOunces": 0.000321507467,
+  "detailProvider": "commodity",
+  "geckoId": "gold-token",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://gldt.org/",
+    "provider": "GLDT transparency page",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Switzerland"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gldt.org/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/TheGoldDAO"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
+      "decimals": 8
+    },
+    {
+      "chain": "base",
+      "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
+      "decimals": 8
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
+      "decimals": 8
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "dao-governance",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://gldt.org/"
+      }
+    ],
+    "evidence": "GLDT resolves to Upstream because its backing depends on GLD NFT, vault, and bridge infrastructure; reviewed materials do not document a separate direct holder-balance freeze path for GLDT.",
+    "reviewer": "Codex data addition",
+    "reviewedAt": "2026-05-24"
+  },
+  "reserves": [
+    {
+      "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+      "pct": 100,
+      "risk": "low"
+    }
+  ]
+}

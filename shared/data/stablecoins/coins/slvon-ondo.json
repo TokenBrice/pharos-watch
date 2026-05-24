@@ -1,0 +1,103 @@
+{
+  "id": "slvon-ondo",
+  "name": "iShares Silver Trust (Ondo Tokenized)",
+  "symbol": "SLVon",
+  "oneLiner": "SLVon is Ondo's tokenized iShares Silver Trust exposure, a NAV-style ETF tracker for non-U.S. investors rather than a $1 stablecoin.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Ondo Global Markets tokenized ETF exposure referencing iShares Silver Trust (SLV), designed to provide economic exposure to the underlying publicly traded ETF through Ondo GM rather than direct ownership of ETF shares",
+  "pegMechanism": "NAV-style tokenized ETF tracker rather than a $1 peg; subscriptions, redemptions, and market pricing follow the underlying SLV economic exposure through Ondo Global Markets and eligible investor flows",
+  "detailProvider": "coingecko",
+  "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+    "provider": "Ondo Global Markets collateral attestations",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.ondo.finance/assets/slvon"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ondofinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+    },
+    {
+      "label": "Important Notes",
+      "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
+      "decimals": 9
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0xd53d98d13d93c817011645442c2e4d46e499b460",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Important Notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      }
+    ],
+    "evidence": "SLVon resolves to Yes because it is a centrally issued Ondo GM tokenized ETF product with eligibility restrictions and issuer-controlled subscription, redemption, and transfer infrastructure.",
+    "reviewer": "Codex data addition",
+    "reviewedAt": "2026-05-24"
+  },
+  "reserves": [
+    {
+      "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
+      "pct": 100,
+      "risk": "low"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Tokenized ETF exposure",
+      "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
+    }
+  ]
+}

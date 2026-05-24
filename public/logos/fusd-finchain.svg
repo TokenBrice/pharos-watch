@@ -1,0 +1,27 @@
+<svg viewBox="0 0 2000 2000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2000.000000" height="1999.999756" fill="none" customFrame="#000000">
+	<defs>
+		<linearGradient id="paint_linear_3" x1="250.000122" x2="1566.24487" y1="249.999817" y2="1086.02124" gradientUnits="userSpaceOnUse">
+			<stop stop-color="rgb(255,242,214)" offset="0" stop-opacity="1" />
+			<stop stop-color="rgb(221.5,195,159)" offset="0.29873386" stop-opacity="1" />
+			<stop stop-color="rgb(188,148,104)" offset="1" stop-opacity="1" />
+		</linearGradient>
+		<linearGradient id="paint_linear_4" x1="826.37561" x2="2142.62061" y1="295.830139" y2="1131.85156" gradientUnits="userSpaceOnUse">
+			<stop stop-color="rgb(255,242,214)" offset="0" stop-opacity="1" />
+			<stop stop-color="rgb(221.5,195,159)" offset="0.29873386" stop-opacity="1" />
+			<stop stop-color="rgb(188,148,104)" offset="1" stop-opacity="1" />
+		</linearGradient>
+	</defs>
+	<g id="组合 13">
+		<rect id="矩形 3" width="2000.000000" height="2000.000000" x="0.000000" y="0.000000" fill="rgb(59,58,56)" />
+		<g id="组合 12">
+			<g id="组合 4">
+				<g id="组合 5">
+					<g id="组合 6">
+						<path id="矢量 1" d="M864.363 943.75L737.5 943.75L700.001 1056.25L876.475 1056.25C916.675 1056.25 949.75 1087.97 951.513 1128.14C959.313 1308.66 954.4 1486.9 865.038 1643.5C835.413 1695.62 771.663 1718.12 716.163 1695.25C443.126 1583.5 250.751 1315 250.001 1001.87C249.251 601 566.876 267.625 966.625 250C1055.5 250 1115.87 254.5 1173.62 269.5C965.162 430.487 934.825 642.887 939.25 867.062C940.075 909.1 906.438 943.75 864.363 943.75Z" fill="url(#paint_linear_3)" fill-rule="nonzero" />
+						<path id="矢量 2" d="M1750 998.125C1750.75 1398.62 1433.12 1732.38 1033.38 1750C944.5 1750 884.125 1745.5 826.375 1730.5C1034.5 1569.51 1064.8 1357.11 1060.38 1132.94C1059.55 1090.86 1093.19 1056.25 1135.23 1056.25L1262.5 1056.25L1300 943.75L1123.15 943.75C1082.95 943.75 1049.88 912.025 1048.11 871.862C1040.28 691.337 1045.19 513.1 1134.59 356.5C1164.59 304.375 1228.34 281.875 1283.84 304.75C1556.87 416.5 1749.25 685 1750 998.125Z" fill="url(#paint_linear_4)" fill-rule="nonzero" />
+					</g>
+				</g>
+			</g>
+		</g>
+	</g>
+</svg>

@@ -99,6 +99,16 @@
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
   },
+  "sdola-inverse-finance": {
+    "title": "DOLA With an Exchange Rate",
+    "text": "sDOLA is Inverse Finance's {{term:yield-bearing}}yield-bearing{{/term}} DOLA wrapper, not a separate base dollar. DOLA deposits sit in the sDOLA contract while FiRM borrowing revenue is converted through the DBR-DOLA auction and compounded into a rising DOLA:sDOLA exchange rate. The design avoids rehypothecating user principal, but it still inherits DOLA's {{term:cdp}}CDP{{/term}} collateral mix, governance history, and upstream dilution risk. Chainlink CCIP deployments on Base, Optimism, Arbitrum, and Berachain broaden access while keeping Ethereum as the source of exchange-rate truth.",
+    "updatedAt": "2026-05-24",
+    "authoredBy": "ai",
+    "model": "codex-stablecoin-review",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
+  },
   "gusd-gemini": {
     "title": "Pristine Reserves, Ghost Town Liquidity",
     "text": "GUSD is Gemini Trust's NYDFS-chartered dollar redeemable 1:1 against State Street/Western Alliance cash and short {{term:treasury}}T-bills{{/term}} — pristine compliance, almost no users. Gemini Dollar's reserve is impeccable: 62% T-bills and 38% cash at State Street and Western Alliance Bank, NYDFS trust charter, zero {{term:redemption}}redemption{{/term}} fees, and a B+ safety grade. The problem is that nobody uses it. At $44M circulating — down from a peak well above $300M — GUSD has become a regulatory trophy collecting dust. The 2,433 depeg events and a staggering worst deviation of 7,254 bps positive reveal a coin so thinly traded that even small flows cause wild pricing artifacts on secondary markets. Four DEX pools with 0.83 HHI concentration and a 44 liquidity score mean on-chain exit is a theoretical exercise. Gemini built the compliance-first stablecoin that regulators asked for, and the market responded with a collective shrug.",
@@ -1479,6 +1489,26 @@
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
   },
+  "slvon-ondo": {
+    "title": "Silver ETF Rails",
+    "text": "SLVon is Ondo Global Markets' tokenized exposure to the iShares Silver Trust, tracked as a {{term:rwa}}RWA{{/term}} NAV asset rather than a $1 stablecoin. The token gives eligible non-U.S. investors economic exposure to SLV on Ethereum, BSC, Solana, and HyperEVM, with Ondo handling the issuer, subscription, and redemption infrastructure. The useful feature is composability for a listed ETF; the tradeoff is that holders own an Ondo GM token, not direct ETF shares or physical silver. Risk therefore lives in the Ondo GM legal structure, collateral attestations, access controls, and secondary-market liquidity.",
+    "updatedAt": "2026-05-24",
+    "authoredBy": "ai",
+    "model": "codex-stablecoin-review",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
+  },
+  "iauon-ondo": {
+    "title": "Gold ETF Rails",
+    "text": "IAUon is Ondo Global Markets' tokenized exposure to the iShares Gold Trust, modeled as a {{term:rwa}}RWA{{/term}} NAV asset rather than a dollar stablecoin. It is gold-linked through the underlying IAU ETF exposure, not through direct allocated bullion redemption like PAXG or XAUT. Ondo's multi-chain issuer rails make the ETF exposure portable across Ethereum, BSC, Solana, and HyperEVM, while eligibility restrictions and issuer controls remain central to the risk profile. The cleanest way to read IAUon is as tokenized listed-security exposure that borrows stablecoin-style settlement infrastructure.",
+    "updatedAt": "2026-05-24",
+    "authoredBy": "ai",
+    "model": "codex-stablecoin-review",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
+  },
   "mtbill-midas": {
     "title": "Europe's T-Bill Token",
     "text": "Compliance-first European tokenized U.S. T-bill product (BlackRock IB01 ETF, Swiss custody, FMA-approved MiFID II), restricted to non-U.S./UK retail; daily Ankura NAV attestations. mTBILL is Midas's compliance-first answer to the tokenized {{term:treasury}}T-bill{{/term}} race: 97% in BlackRock's IB01 ETF with Swiss {{term:custody}}custody{{/term}} at Maerki Baumann, issued as a Liechtenstein FMA-approved MiFID II instrument -- the exact bureaucratic architecture required to legally sell T-bill exposure to European professionals. Ankura Trust provides daily on-chain NAV {{term:attestation}}attestations{{/term}}, and the {{term:rwa}}RWA{{/term}} collateral quality with regulated-entity governance earns institutional credibility that most crypto-native tokenized treasury products lack. The 'not available to U.S. or UK retail persons' restriction is the mirror image of USTB and OUSG's American access gates, carving out a European institutional niche in a market dominated by U.S. issuers. Deployed across five chains, mTBILL functions as infrastructure in Midas's product stack and as stable collateral in third-party structured products -- the European {{term:money-market-fund}}money-market-fund-like{{/term}} token for protocols that need regulatory certainty over DeFi composability.",
@@ -1678,6 +1708,16 @@
     "reviewedBy": "@TokenBrice",
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
+  },
+  "gldt-gold-dao": {
+    "title": "NFT Gold, Fungible Wrapper",
+    "text": "GLDT is Gold DAO's fungible wrapper over GLD NFTs, with each token representing 0.01 grams of physical gold. The backing model is unusual: GLD NFTs represent gold bars stored in Switzerland, and GLDT is minted when those NFTs are locked into the swap canister at 100 GLDT per gram. That creates a cleaner commodity reference than issuer-balance-sheet gold, but the reserve proof remains mostly self-reported from the GLDT site rather than a Pharos-integrated independent reserve feed. EVM deployments on Ethereum, Base, and Arbitrum add reach, while the main dependency remains the gold vault, NFT swap infrastructure, and bridge path.",
+    "updatedAt": "2026-05-24",
+    "authoredBy": "ai",
+    "model": "codex-stablecoin-review",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
   },
   "axcnh-anchorx": {
     "title": "The Offshore Yuan",
@@ -2488,6 +2528,16 @@
     "reviewedBy": "@TokenBrice",
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
+  },
+  "fusd-finchain": {
+    "title": "A Rebasing Bermuda Dollar",
+    "text": "FinChain Dollar is a BMA-licensed, {{term:yield-bearing}}rebasing{{/term}} dollar backed by tokenized U.S. Treasury bill and money-market fund products. The token targets a fixed $1 value while balances rebase daily, so the yield shows up as more FUSD rather than a rising NAV. DefiLlama provides the runtime price and supply path, while FinChain's own reserve dashboard and docs describe Taikang, ChinaAMC, and BNY Mellon/Finloop reserve assets. The main caveats are issuer concentration, eligible-customer access, and reserve transparency that is still issuer-led rather than a deeply integrated independent feed.",
+    "updatedAt": "2026-05-24",
+    "authoredBy": "ai",
+    "model": "codex-stablecoin-review",
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
   },
   "zsd-zephyr-protocol": {
     "title": "The Zephyr Privacy Dollar",

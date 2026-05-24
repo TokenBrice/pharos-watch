@@ -1,0 +1,102 @@
+{
+  "id": "sdola-inverse-finance",
+  "name": "Inverse Staked DOLA",
+  "symbol": "sDOLA",
+  "oneLiner": "sDOLA is Inverse Finance's ERC-4626 DOLA savings wrapper, compounding FiRM lending revenue into a rising DOLA exchange rate.",
+  "mechanismArchetype": "cdp",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "dola-inverse-finance",
+  "variantKind": "savings-passthrough",
+  "pegReferenceId": "dola-inverse-finance",
+  "collateral": "DOLA deposited into Inverse Finance's ERC-4626 sDOLA wrapper around the DOLA Savings Account; DOLA remains in the smart contract while FiRM DBR revenue is auctioned into DOLA and distributed through the exchange rate",
+  "pegMechanism": "Deposit DOLA to mint sDOLA at the current vault exchange rate; the DOLA:sDOLA exchange rate rises as FiRM lending revenue is converted into DOLA, and holders can unwrap back to DOLA without a lock-up",
+  "detailProvider": "coingecko",
+  "geckoId": "sdola",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.inverse.finance/sDOLA"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/InverseFinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+    },
+    {
+      "label": "Deployments",
+      "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x7a1e123e41458aabab8068bfed6010d8f9480898",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "sDOLA docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "DOLA metadata",
+        "url": "https://pharos.watch/stablecoins/dola-inverse-finance/"
+      }
+    ],
+    "evidence": "sDOLA resolves to Upstream because it is a savings wrapper over DOLA, and DOLA's reviewed status is Dilutable through admin-controlled mint authority.",
+    "reviewer": "Codex data addition",
+    "reviewedAt": "2026-05-24"
+  },
+  "reserves": [
+    {
+      "name": "DOLA deposited in the sDOLA savings wrapper",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "dola-inverse-finance",
+      "depType": "wrapper"
+    }
+  ],
+  "yieldConfig": {
+    "defiLlamaPoolId": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
+    "yieldSource": "Inverse Finance sDOLA vault",
+    "yieldType": "nav-appreciation"
+  }
+}
