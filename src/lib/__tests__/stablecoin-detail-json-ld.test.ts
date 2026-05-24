@@ -62,6 +62,19 @@ describe("buildStablecoinDatasetJsonLd", () => {
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
 
+  it("exposes redemption backstop coverage as an active analytics measurement", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const jsonLd = buildStablecoinDatasetJsonLd(coin, {
+      siteUrl: "https://pharos.watch",
+    });
+
+    expect(jsonLd.description).toContain("redemption backstop coverage");
+    expect(jsonLd.variableMeasured).toContainEqual({
+      "@type": "PropertyValue",
+      name: "redemptionBackstopCoverage",
+    });
+  });
+
   it("omits dateModified unless an explicit source date is provided", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const withoutDate = buildStablecoinDatasetJsonLd(coin, {

@@ -107,7 +107,7 @@ export function buildStablecoinDatasetJsonLd(
         }
       : {
           name: `${coin.name} Stablecoin Analytics`,
-          description: `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
+          description: `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, redemption backstop coverage, and depeg history.`,
           keywords: ["analytics", "peg tracking"],
           variableMeasured: [
             { "@type": "PropertyValue", name: "price", unitText: "USD" },
@@ -116,6 +116,7 @@ export function buildStablecoinDatasetJsonLd(
             { "@type": "PropertyValue", name: "pegScore", minValue: 0, maxValue: 100 },
             { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
             { "@type": "PropertyValue", name: "safetyGrade" },
+            { "@type": "PropertyValue", name: "redemptionBackstopCoverage" },
           ],
           measurementTechnique:
             "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
