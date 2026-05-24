@@ -15,13 +15,13 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/app/stablecoin/[id]/client.tsx": {
+  "src/app/about/page.tsx": {
     "disposition": "queued-p4",
-    "notes": "Stablecoin detail client now owns the expanded stablecoin detail tab shell, detail view-model orchestration, frozen-state messaging, and multiple report-card/reserve/yield panels. Keep it queued for a focused detail-page split after the prevalidated registry cleanup settles; extract tab sections before adding more detail-page features.",
+    "notes": "SEO metadata expansion added AboutPage JSON-LD and preserved the existing long-form about content in one route module. Keep the page explicitly owned until an about-page cleanup can split schema/data constants and content sections into narrower modules.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-23",
-    "reviewAfter": "2026-08-23",
-    "nextAction": "Split stablecoin detail tab-section rendering and frozen-state orchestration into focused components in the next detail-page cleanup pass."
+    "createdAt": "2026-05-24",
+    "reviewAfter": "2026-08-24",
+    "nextAction": "Split the about page schema/data constants and section rendering into focused modules before adding another substantial about-page content tranche."
   },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
