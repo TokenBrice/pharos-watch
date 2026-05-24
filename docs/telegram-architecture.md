@@ -143,7 +143,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 - `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
-- `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, durable job manifests, per-target audit)
+- `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts` (snapshot I/O, diff producers, alert context/reason builders, durable job manifests, per-target audit)
 - `worker/src/cron/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
 - `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` (five-minute lane after dispatch/watchdog: expired disambiguation cleanup and Telegram pulse snapshot publication via `worker/src/api/telegram-pulse.ts`)
@@ -157,6 +157,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Must NOT.**
 - Format command replies. Alert message formatting lives in `telegram-alerts.ts` (Common) and is shared between Dispatch and admin-broadcast; do not duplicate.
 - Inline subscriber-query SQL into the entrypoint. Add new fan-out paths in `dispatch-telegram-alerts-fanout.ts` or one of the existing helper modules.
+- Import API action-handler modules for alert context. Dispatch-owned context and reason helpers live under `worker/src/cron/`.
 - Open new connections beyond Cloudflare's 6-per-trigger pool. Consume response bodies (`drainResponseBody`) before opening more fetches.
 
 ---

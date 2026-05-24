@@ -13,7 +13,7 @@ The subsystem has four moving parts:
 
 The delivery system is worker-owned. The frontend exposes a static `/pharoswatchbot/` landing page plus a lightweight public telemetry strip sourced from `/_site-data/telegram-pulse`, which proxies `GET /api/telegram-pulse` through the website-internal lane; it does not call any mutating bot APIs directly. Direct `https://api.pharos.watch/api/telegram-pulse` requests remain API-key protected like other non-exempt public reads. `/pharoswatchbot/` is the canonical public route, and the legacy `/telegram` and `/telegram/*` aliases redirect there.
 
-The safety-alert path now has an additional hard dependency: `publish-report-card-cache` writes a generation-aware live safety source snapshot into `cache["alert:safety-source-cache"]`, and the 5-minute Telegram lane will suppress only safety-grade alerts when that source is missing, corrupt, stale, or from the wrong generation.
+The safety-alert path now has an additional hard dependency: `publish-report-card-cache` writes a generation-aware live safety source snapshot into `cache["alert:safety-source-cache"]`, and the 5-minute Telegram lane will suppress only safety-grade alerts when that source is missing, corrupt, stale, or from the wrong generation. Each live safety source row may also carry an `explain` payload with scoring-stage, dimension, and raw-input snapshots so safety alerts can say why a grade changed.
 
 ## Mini App Launch Entrypoints
 
@@ -379,7 +379,7 @@ Each dispatch run loads:
 - Latest DEWS rows from `stress_signals`
 - Active depegs from `depeg_events WHERE ended_at IS NULL`
 - The latest `safety_grade_history` row for each stablecoin (not just the latest change day)
-- The live safety source cache from `cache["alert:safety-source-cache"]`
+- The live safety source cache from `cache["alert:safety-source-cache"]`, including optional `explain` snapshots produced with the same report-card methodology constants as the public card
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
   - `alert:dews-alertable-snapshot`
@@ -390,7 +390,7 @@ When `alert:dews-alertable-snapshot` is absent (for example, immediately after d
 
 DEWS, depeg, and safety snapshots older than `24 hours` are treated as stale and are reseeded before any alerts are sent. Launch promotions use a separate best-effort `alert:launch-snapshot` read later in the run; a missing or malformed launch snapshot falls back to an empty prior set and does not trigger the stale-snapshot seed gate.
 
-The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals.
+The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals. Legacy rows without `explain` remain valid; malformed or future-version `explain` payloads are dropped at parse time without dropping the row.
 
 ### First-Run / Stale-Snapshot Behavior
 
@@ -418,6 +418,8 @@ If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `r
 - Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
 - Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
 - Methodology-version-only safety regrades are suppressed from user alerts
+
+Safety-grade alerts attach a `Reason:` blockquote instead of the generic `Context:` blockquote used by DEWS/depeg/launch alerts. The reason builder compares the previous and current optional `explain` snapshots and ranks scoring-stage movements before dimension deltas: newly binding or tighter active-depeg caps, new no-liquidity penalties, new variant-parent caps, then the largest dimension movement matching the overall grade direction. When no valid `explain` data is available, the alert falls back to score or grade movement and appends the generic live context after `Now:`. Blacklist/freeze metadata remains display-only under the current methodology and is not used as a causal reason.
 
 If the live safety source cache is missing, corrupt, stale, or from the wrong generation, DEWS/depeg/launch alerts can still continue, but safety alerts stay suppressed until a fresh publish lands and the Telegram lane reseeds its prior safety snapshot under that same generation.
 
