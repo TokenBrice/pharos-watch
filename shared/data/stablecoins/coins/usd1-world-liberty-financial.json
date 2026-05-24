@@ -99,22 +99,53 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USD1 is modeled as an issuer-backed stablecoin with issuer-operated mint authority pending deeper role verification.",
+    "summary": "USD1 is issuer-backed; the Ethereum token owner/controller is contract-based and its default admin is a 3/6 Safe behind a 3-day admin delay.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2",
+        "label": "USD1 token owner/controller",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
+        "timelockDelaySec": 259200,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
             "label": "USD1 website",
             "url": "https://worldlibertyfinancial.com/usd1"
+          },
+          {
+            "label": "Ethereum USD1 contract",
+            "url": "https://etherscan.io/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#readProxyContract"
           }
         ],
-        "evidence": "World Liberty Financial presents USD1 as an issued dollar stablecoin rather than a permissionless collateral protocol."
+        "evidence": "Ethereum token owner/controller reads resolved to this contract. Its defaultAdminDelay was reported as 259200 seconds in the verified-source review."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0d190b74308669E8f4Fe7dbce3466169B285289D",
+        "label": "USD1 controller default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 259200,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "source": "manual"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0d190b74308669E8f4Fe7dbce3466169B285289D/"
+          }
+        ],
+        "evidence": "Controller default-admin review resolved this Safe; getThreshold() returned 3 and getOwners() returned 6 owners at Ethereum block 25165911."
       }
     ],
     "review": {
@@ -124,8 +155,8 @@
           "url": "https://worldlibertyfinancial.com/usd1"
         }
       ],
-      "evidence": "World Liberty Financial presents USD1 as an issued dollar stablecoin rather than a permissionless collateral protocol.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "World Liberty Financial presents USD1 as issuer-backed; Ethereum contract reads identify the token owner/controller and 3/6 Safe default-admin path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

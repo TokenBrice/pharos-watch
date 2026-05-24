@@ -253,22 +253,30 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDT is issuer-minted by Tether; the MVP records centralized issuer mint authority rather than a permissionless protocol mint path.",
+    "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "label": "Ethereum USDT token owner multisig",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "Tether transparency",
             "url": "https://tether.to/en/transparency/"
+          },
+          {
+            "label": "Ethereum USDT contract",
+            "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
           }
         ],
-        "evidence": "Tether transparency materials describe USDT as an issuer-backed reserve stablecoin operated by Tether."
+        "evidence": "Ethereum USDT getOwner() returned this address; required() returned 3 and owners(0..5) confirmed six owner slots at block 25165911."
       }
     ],
     "review": {
@@ -276,10 +284,14 @@
         {
           "label": "Tether transparency",
           "url": "https://tether.to/en/transparency/"
+        },
+        {
+          "label": "Ethereum USDT contract",
+          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
         }
       ],
-      "evidence": "Tether transparency materials describe USDT as an issuer-backed reserve stablecoin operated by Tether.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

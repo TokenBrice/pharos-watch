@@ -22,17 +22,23 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "MUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+    "summary": "MetaMask USD is an M0-backed extension; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
     "controls": [
       {
-        "label": "M0 permissioned minter and validator rails",
+        "chain": "ethereum",
+        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "label": "M0 MinterGateway backing rail",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+        "capDescription": "Base M issuance backing MUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
           {
             "label": "M0 protocol docs",
             "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
@@ -42,7 +48,51 @@
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
           }
         ],
-        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "label": "M0 SwapFacility extension router",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 SwapFacility docs",
+            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          }
+        ],
+        "evidence": "Official M0 deployments list SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 on Ethereum; SwapFacility docs describe approved-extension wrap/swap routing."
+      },
+      {
+        "chain": "linea",
+        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "label": "M0 SwapFacility extension router",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 SwapFacility docs",
+            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          }
+        ],
+        "evidence": "Official M0 deployments list SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 on Linea; SwapFacility docs describe approved-extension wrap/swap routing."
       }
     ],
     "review": {

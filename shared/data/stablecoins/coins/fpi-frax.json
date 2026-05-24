@@ -67,11 +67,13 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "FPI mint authority is modeled as Frax governance/custodian hybrid authority with privileged mint/admin surfaces already flagged as dilutable by Pharos.",
+    "summary": "FPI mint/admin authority is Frax-governed; the FPI Controller Pool is owned by a 3/5 Frax Comptroller Safe.",
     "controls": [
       {
-        "label": "AMO/custodian or governance-controlled mint authority",
-        "role": "custodian",
+        "chain": "ethereum",
+        "address": "0x2397321b301B80A1C0911d6f9ED4B6033d43cF51",
+        "label": "FPI Controller Pool",
+        "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
@@ -82,11 +84,34 @@
             "url": "https://docs.frax.finance/amo/overview"
           },
           {
-            "label": "Frax frxUSD docs",
-            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            "label": "FPI Controller Pool",
+            "url": "https://etherscan.io/address/0x2397321b301B80A1C0911d6f9ED4B6033d43cF51#readContract"
           }
         ],
-        "evidence": "Frax FPI documentation and the existing Pharos dilutable source indicate governed protocol/custodian mint authority."
+        "evidence": "FPI Controller Pool owner() returned the FPI Comptroller Safe at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502",
+        "label": "FPI Comptroller Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "source": "manual"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
+          }
+        ],
+        "evidence": "getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911. Worker Safe API review found no modules and no guard."
       }
     ],
     "review": {
@@ -94,14 +119,10 @@
         {
           "label": "Frax AMO docs",
           "url": "https://docs.frax.finance/amo/overview"
-        },
-        {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
         }
       ],
-      "evidence": "Frax FPI documentation and the existing Pharos dilutable source indicate governed protocol/custodian mint authority.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Frax documentation and Ethereum reads identify the FPI Controller Pool and 3/5 Frax Comptroller Safe owner path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

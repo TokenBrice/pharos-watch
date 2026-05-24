@@ -65,22 +65,34 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "U is modeled as issuer-operated mint authority pending deeper role verification.",
+    "summary": "U is issuer-operated; Ethereum/BSC token ownership resolves to a 2/4 Safe that controls mint/admin authority.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0x59f94ade4F881F21EA608aD4448Bf70b78E37187",
+        "label": "U token owner Safe",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 4,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 2,
+          "source": "manual"
+        },
         "sources": [
           {
             "label": "U website",
             "url": "https://u.tech/"
+          },
+          {
+            "label": "Ethereum U contract",
+            "url": "https://etherscan.io/address/0xce24439F2D9C6a2289f741120fE202248B666666#readProxyContract"
           }
         ],
-        "evidence": "United Stables presents U as an issued stablecoin rather than a permissionless user-collateralized mint path."
+        "evidence": "Ethereum/BSC token owner reads resolve to this Safe; getThreshold() returned 2 and getOwners() returned 4 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
       }
     ],
     "review": {
@@ -90,8 +102,8 @@
           "url": "https://u.tech/"
         }
       ],
-      "evidence": "United Stables presents U as an issued stablecoin rather than a permissionless user-collateralized mint path.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "United Stables presents U as issuer-operated, and token owner reads identify a 2/4 Safe as the on-chain mint/admin owner path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

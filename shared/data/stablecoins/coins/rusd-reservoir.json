@@ -139,34 +139,66 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "rUSD mint authority is modeled as Reservoir issuer/protocol-operated authority pending deeper role review.",
+    "summary": "rUSD issuance runs through Reservoir protocol contracts, including PSMs and the Credit Enforcer; governance/admin setup for those contracts remains unresolved.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0x4809010926aec940b550D34a46A52739f996D75D",
+        "label": "Reservoir USDC Peg Stability Module",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Reservoir docs list the USDC PSM as a core mint/redeem entry point for rUSD.",
         "sources": [
           {
-            "label": "Reservoir docs",
-            "url": "https://docs.reservoir.xyz"
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
           }
         ],
-        "evidence": "Reservoir documentation describes rUSD issuance through protocol/issuer rails rather than immutable collateralized borrowing."
+        "evidence": "Official Reservoir contract-address docs list this PSM address and describe PSMs as mint/redeem infrastructure."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+        "label": "Reservoir Credit Enforcer",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Credit Enforcer is the protocol risk-control component enforcing solvency, debt limits, and operational constraints.",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "Reservoir GitHub",
+            "url": "https://github.com/reservoir-protocol/reservoir"
+          }
+        ],
+        "evidence": "Reservoir docs list Credit Enforcer at this address and describe it as the risk-management control for supply and solvency constraints."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Reservoir docs",
-          "url": "https://docs.reservoir.xyz"
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Reservoir GitHub",
+          "url": "https://github.com/reservoir-protocol/reservoir"
         }
       ],
-      "evidence": "Reservoir documentation describes rUSD issuance through protocol/issuer rails rather than immutable collateralized borrowing.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Reservoir docs list rUSD, PSM, and Credit Enforcer addresses; security setup for governance/admin ownership was not resolved in this pass.",
+      "reviewer": "Codex mint-authority address pass",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve Reservoir governance/admin owner and any Safe threshold for PSM and Credit Enforcer controls."
+      ]
     }
   },
   "chainTier": "ethereum",

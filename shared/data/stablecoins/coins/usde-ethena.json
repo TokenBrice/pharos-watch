@@ -210,10 +210,12 @@
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "USDe minting is modeled as off-chain order/signature mediated authority with privileged mint surface already flagged as dilutable by Pharos.",
+    "summary": "USDe minting uses Ethena signed-order flows; the Ethereum token minter is a contract and token ownership is held by a 5/10 Safe.",
     "controls": [
       {
-        "label": "Off-chain order/signature mint authority",
+        "chain": "ethereum",
+        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+        "label": "USDe token minter contract",
         "role": "backend-signer",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -225,11 +227,34 @@
             "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
           },
           {
-            "label": "Ethena trust assumptions",
-            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+            "label": "Ethereum USDe token",
+            "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#readProxyContract"
           }
         ],
-        "evidence": "Ethena mint/redeem documentation describes signed order flows and trust assumptions around minting; Pharos also flags USDe as dilutable from token source evidence."
+        "evidence": "Ethereum USDe minter() returned this address at block 25165931; Ethena docs describe signed mint/redeem order flows and backend trust assumptions."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+        "label": "USDe token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 5,
+          "source": "manual"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862/"
+          }
+        ],
+        "evidence": "Ethereum USDe owner() returned this Safe; getThreshold() returned 5 and getOwners() returned 10 owners at block 25165911. Worker Safe API review found no modules and zero guard."
       }
     ],
     "review": {
@@ -243,8 +268,8 @@
           "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
         }
       ],
-      "evidence": "Ethena mint/redeem documentation describes signed order flows and trust assumptions around minting; Pharos also flags USDe as dilutable from token source evidence.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Ethena documentation describes signed order minting; Ethereum reads identify the active token minter and 5/10 Safe token-owner path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

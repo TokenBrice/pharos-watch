@@ -90,26 +90,72 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "wM is a wrapped M asset; base mint authority is inherited from M0 M plus wrapper accounting.",
+    "summary": "wM wraps base M; wrapper minting is 1:1 accounting while base M issuance remains inherited from the Ethereum M0 MinterGateway.",
     "inheritedFrom": "m-m0",
     "controls": [
       {
+        "chain": "ethereum",
+        "address": "0x437cc33344a0B27A429f795ff6B469C72698B291",
         "label": "Wrapper/share accounting",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
+        "capDescription": "WrappedMToken mints wM only through wrapping deposited M and burns wM on unwrap; it does not mint base M.",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "WrappedMToken technical specification",
+            "url": "https://docs.m0.org/home/technical-specifications/wrapped-m-token/"
+          }
+        ],
+        "evidence": "Official deployments list Wrapped M Token at 0x437cc33344a0B27A429f795ff6B469C72698B291; the WrappedMToken spec describes wrap/unwrap as M-backed accounting."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "label": "Inherited M0 MinterGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Base M issuance inherited by wM depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
           },
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
           }
         ],
-        "evidence": "M0 extension documentation describes wrappers/extensions around M; this row inherits base M mint authority."
+        "evidence": "Official deployments list the Ethereum MinterGateway; wM inherits base M issuance risk rather than creating base supply itself."
+      },
+      {
+        "chain": "solana",
+        "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+        "label": "Solana Wrapped M Token-2022 program",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "capDescription": "The Solana wM deployment is documented as a wrapped, 1:1 M-backed extension; base M supply remains inherited from M0 rails.",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 on Solana technical deep dive",
+            "url": "https://docs.m0.org/home/technical-documentations/solana/"
+          }
+        ],
+        "evidence": "Official M0 deployments list Solana Wrapped M Token at mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp."
       }
     ],
     "review": {

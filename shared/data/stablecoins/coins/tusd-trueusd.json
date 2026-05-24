@@ -93,12 +93,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "TUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+    "summary": "TUSD is issuer-backed; Ethereum mint control resolves through the token controller/mint-key path, with controller ownership held by a 2/3 Safe.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0x0000000000075efbee23fe2de1bd0b7690883cc9",
+        "label": "TUSD token controller",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
@@ -106,9 +108,36 @@
           {
             "label": "TrueUSD",
             "url": "https://tusd.io/"
+          },
+          {
+            "label": "Ethereum TUSD contract",
+            "url": "https://etherscan.io/address/0x0000000000085d4780B73119b644AE5ecd22b376#code"
           }
         ],
-        "evidence": "TrueUSD materials describe TUSD as an issued fiat-backed stablecoin."
+        "evidence": "Ethereum source/RPC review resolved the proxy owner/token-controller path to this controller address; the implementation exposes mint limits and mintKey controls."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x93fde11c8107127A80cE95100DF611790E4413c9",
+        "label": "TUSD controller owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 2,
+          "source": "manual"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80cE95100DF611790E4413c9/"
+          }
+        ],
+        "evidence": "Safe getThreshold() returned 2 and getOwners() returned 3 owners at Ethereum block 25165911; worker Safe API review found no modules and zero guard."
       }
     ],
     "review": {
@@ -116,10 +145,14 @@
         {
           "label": "TrueUSD",
           "url": "https://tusd.io/"
+        },
+        {
+          "label": "Ethereum TUSD contract",
+          "url": "https://etherscan.io/address/0x0000000000085d4780B73119b644AE5ecd22b376#code"
         }
       ],
-      "evidence": "TrueUSD materials describe TUSD as an issued fiat-backed stablecoin.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "TrueUSD is issuer-backed; Ethereum contract review resolved the token controller, mint-key path, and 2/3 Safe controller owner.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

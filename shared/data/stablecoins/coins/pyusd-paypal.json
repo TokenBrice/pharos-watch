@@ -89,33 +89,56 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "PYUSD is issued through Paxos/PayPal issuer operations; minting is not limited to permissionless user collateral mechanics.",
+    "summary": "PYUSD is issuer-minted by Paxos-operated infrastructure; the Ethereum token delegates supply control to a dedicated SupplyControl contract.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0x31d9bDEa6F104606C954f8FE6ba614F1BD347Ec3",
+        "label": "PYUSD SupplyControl contract",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
-            "label": "Paxos PYUSD",
-            "url": "https://paxos.com/pyusd/"
+            "label": "Paxos PYUSD mainnet docs",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "PYUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x6c3ea9036406852006290770BEdFcAbA0e23A0e8#readProxyContract"
           }
         ],
-        "evidence": "Paxos materials describe PYUSD as an issued fiat-backed stablecoin redeemable through the issuer infrastructure."
+        "evidence": "PYUSD supplyControl() returned this address at Ethereum block 25165931; Paxos documentation lists this SupplyControl contract for mainnet supply management."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
+        "label": "PYUSD SupplyControl owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "PYUSD SupplyControl",
+            "url": "https://etherscan.io/address/0x31d9bDEa6F104606C954f8FE6ba614F1BD347Ec3#readProxyContract"
+          }
+        ],
+        "evidence": "SupplyControl owner() returned this address at Ethereum block 25165911; code read did not identify an on-chain multisig contract."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Paxos PYUSD",
-          "url": "https://paxos.com/pyusd/"
+          "label": "Paxos PYUSD mainnet docs",
+          "url": "https://github.com/paxosglobal/pyusd-contract"
         }
       ],
-      "evidence": "Paxos materials describe PYUSD as an issued fiat-backed stablecoin redeemable through the issuer infrastructure.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Paxos documentation and Ethereum token reads identify PYUSD's dedicated SupplyControl contract and owner/admin path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

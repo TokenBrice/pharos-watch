@@ -76,22 +76,34 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDf minting is modeled as Falcon issuer/protocol-operated mint authority pending deeper role verification.",
+    "summary": "USDf uses AccessControl mint/admin roles; the verified Ethereum default-admin path is a 4/6 Safe, while active minter-role holders still need enumeration.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x1e482B60Bf19CB1CC859389E0eA3ded153F16BD7",
+        "label": "USDf default admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 4,
+          "source": "manual"
+        },
         "sources": [
           {
             "label": "Falcon docs",
             "url": "https://docs.falcon.finance"
+          },
+          {
+            "label": "Ethereum USDf contract",
+            "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
           }
         ],
-        "evidence": "Falcon documentation presents USDf as an issued stablecoin managed through Falcon protocol operations."
+        "evidence": "Verified source uses AccessControl; DEFAULT_ADMIN_ROLE is held by this Safe. getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Active MINTER_ROLE holders remain unresolved."
       }
     ],
     "review": {
@@ -101,9 +113,12 @@
           "url": "https://docs.falcon.finance"
         }
       ],
-      "evidence": "Falcon documentation presents USDf as an issued stablecoin managed through Falcon protocol operations.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Falcon documentation presents USDf as issuer/protocol-operated; verified Ethereum source and role reads identify a 4/6 Safe admin path but not the full active minter set.",
+      "reviewer": "Codex mint-authority address pass",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate current MINTER_ROLE holders across USDf deployments."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

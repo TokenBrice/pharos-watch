@@ -73,17 +73,23 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "XO Cash is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+    "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway and Solana movement relies on M0 portal infrastructure.",
     "controls": [
       {
-        "label": "M0 permissioned minter and validator rails",
+        "chain": "ethereum",
+        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "label": "M0 MinterGateway backing rail",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+        "capDescription": "Base M issuance backing XO Cash depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
           {
             "label": "M0 protocol docs",
             "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
@@ -93,7 +99,29 @@
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
           }
         ],
-        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins."
+        "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
+      },
+      {
+        "chain": "solana",
+        "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "label": "M0 Solana Portal",
+        "role": "bridge-admin",
+        "authorityType": "bridge",
+        "directMintAbility": "cap-limited",
+        "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; official Solana docs did not expose an XO-specific mint-authority address.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 on Solana technical deep dive",
+            "url": "https://docs.m0.org/home/technical-documentations/solana/"
+          }
+        ],
+        "evidence": "Official M0 deployments list the Solana Portal program; an XO-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
       }
     ],
     "review": {

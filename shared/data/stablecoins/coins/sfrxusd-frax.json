@@ -100,41 +100,63 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "sfrxUSD is a savings wrapper whose base mint authority is inherited from frxUSD plus wrapper share accounting.",
+    "summary": "sfrxUSD is a savings wrapper over frxUSD; wrapper minting is share accounting while base frxUSD mint authority is inherited from the Frax custodian and Comptroller Safe path.",
     "inheritedFrom": "frxusd-frax",
     "controls": [
       {
-        "label": "Wrapper/share accounting",
+        "chain": "ethereum",
+        "address": "0xCf62F905562626CfcDD2261162a51fd02Fc9c5b6",
+        "label": "sfrxUSD wrapper token",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "sfrxUSD represents savings/share accounting over deposited frxUSD and does not mint base frxUSD.",
         "sources": [
           {
-            "label": "Frax AMO docs",
-            "url": "https://docs.frax.finance/amo/overview"
-          },
-          {
             "label": "Frax frxUSD docs",
-            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            "url": "https://docs.frax.com/frxusd"
           }
         ],
-        "evidence": "sfrxUSD documentation describes a savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD."
+        "evidence": "sfrxUSD is documented as the savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+        "label": "Inherited Frax Comptroller Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "source": "manual"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+          }
+        ],
+        "evidence": "sfrxUSD inherits base frxUSD mint authority from frxUSD, whose token and custodian owner path resolves to this 3/5 Safe."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Frax AMO docs",
-          "url": "https://docs.frax.finance/amo/overview"
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/frxusd"
         },
         {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          "label": "FraxNet custodian addresses",
+          "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
         }
       ],
-      "evidence": "sfrxUSD documentation describes a savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "sfrxUSD wrapper/share accounting is separate from base frxUSD minting, which is inherited from frxUSD custodian and Comptroller Safe controls.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

@@ -59,22 +59,34 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "XAI mint authority is modeled as governed CDP/protocol authority with existing Pharos dilutable-source evidence pending deeper role and cap review.",
+    "summary": "XAI is a governed CDP/protocol asset; Ethereum token ownership resolves to a 3/4 Safe with privileged mint/admin authority.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "chain": "ethereum",
+        "address": "0xE8e8041cB5E3158A0829A19E014CA1cf91098554",
+        "label": "XAI token owner Safe",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "safe",
         "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 4,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "source": "manual"
+        },
         "sources": [
           {
             "label": "Etherscan contract source",
             "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+          },
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE8e8041cB5E3158A0829A19E014CA1cf91098554/"
           }
         ],
-        "evidence": "XAI already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        "evidence": "XAI owner() returned this Safe; getThreshold() returned 3 and getOwners() returned 4 owners at Ethereum block 25165931. Worker Safe API review found no modules and zero guard."
       }
     ],
     "review": {
@@ -84,8 +96,8 @@
           "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
         }
       ],
-      "evidence": "XAI already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "XAI source/owner reads identify a 3/4 Safe as the privileged mint/admin owner path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

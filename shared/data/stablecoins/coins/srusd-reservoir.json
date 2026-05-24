@@ -76,34 +76,57 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "srUSD is a savings wrapper whose base mint authority is inherited from Reservoir rUSD plus wrapper share accounting.",
+    "summary": "srUSD is the savings wrapper over rUSD; wrapper minting is share accounting while base rUSD mint authority is inherited from Reservoir PSM/Credit Enforcer controls.",
     "inheritedFrom": "rusd-reservoir",
     "controls": [
       {
-        "label": "Wrapper/share accounting",
+        "chain": "ethereum",
+        "address": "0x5475611Dffb8ef4d697Ae39df9395513b6E947d7",
+        "label": "Reservoir Savings Module",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "not-applicable",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "The Savings Module issues srUSD shares against rUSD and does not create base rUSD supply.",
         "sources": [
           {
-            "label": "Reservoir docs",
-            "url": "https://docs.reservoir.xyz"
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
           }
         ],
-        "evidence": "Reservoir documentation describes srUSD as a savings/yield wrapper over rUSD; base mint authority is inherited from rUSD."
+        "evidence": "Reservoir contract-address docs list the Savings Module at this address for srUSD/savings share accounting."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+        "label": "Inherited Reservoir Credit Enforcer",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          }
+        ],
+        "evidence": "srUSD inherits base rUSD mint-path risk from Reservoir rUSD controls, including the Credit Enforcer listed in official docs."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Reservoir docs",
-          "url": "https://docs.reservoir.xyz"
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
         }
       ],
-      "evidence": "Reservoir documentation describes srUSD as a savings/yield wrapper over rUSD; base mint authority is inherited from rUSD.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Reservoir docs describe srUSD as savings/wrapper accounting over rUSD; base mint authority is inherited from rUSD PSM and Credit Enforcer controls.",
+      "reviewer": "Codex mint-authority address pass",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve Reservoir governance/admin owner and any Safe threshold for the Savings Module and inherited rUSD controls."
+      ]
     }
   },
   "chainTier": "ethereum",

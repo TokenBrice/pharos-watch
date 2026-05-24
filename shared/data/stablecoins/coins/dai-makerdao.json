@@ -125,33 +125,67 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "DAI minting is primarily vault/module based, but Maker governance can authorize modules and ceilings that affect supply creation.",
+    "summary": "DAI minting is vault/module based, with DaiJoin moving Vat.dai into ERC-20 DAI and Maker/Sky governance controlling module authorization and debt ceilings through the Pause process.",
     "controls": [
       {
-        "label": "Protocol governance/admin authority",
-        "role": "cap-admin",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "chain": "ethereum",
+        "address": "0x9759A6Ac90977b93B58547b4A71c78317f391a28",
+        "label": "DaiJoin token adapter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "DaiJoin mints ERC-20 DAI only against existing Vat.dai balances and burns DAI on join; it is not an unrestricted off-protocol issuer minter.",
         "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
           {
             "label": "Maker core accounting docs",
             "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
           }
         ],
-        "evidence": "Maker core accounting documentation describes module authorization and accounting surfaces that govern DAI creation."
+        "evidence": "Sky Chainlog lists MCD_JOIN_DAI at this address, and DAI.wards(DaiJoin) returned 1 at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "label": "Maker/Sky Pause Proxy governance executor",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Maker/Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, collateral parameters, and debt ceilings.",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Maker core accounting docs",
+            "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+          }
+        ],
+        "evidence": "Sky Chainlog lists MCD_PAUSE_PROXY at this address and MCD_PAUSE at 0xbE286431454714F511008713973d3B053A2d38f3; MCD_PAUSE.delay() returned 172800 at Ethereum block 25165911."
       }
     ],
     "review": {
       "sources": [
         {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
+        {
           "label": "Maker core accounting docs",
           "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
         }
       ],
-      "evidence": "Maker core accounting documentation describes module authorization and accounting surfaces that govern DAI creation.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Maker/Sky Chainlog and Ethereum reads identify DaiJoin as the ERC-20 DAI adapter and the Pause Proxy as the governance executor for module and parameter changes.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

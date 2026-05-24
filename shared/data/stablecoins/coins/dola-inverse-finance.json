@@ -88,12 +88,14 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "DOLA has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+    "summary": "DOLA minting is controlled by the token operator contract; Inverse documentation describes DOLA supply expansion through Fed/operator contracts rather than permissionless user minting.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "chain": "ethereum",
+        "address": "0x926dF14a23BE491164dCF93f4c468A50ef659D5B",
+        "label": "DOLA token operator",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
@@ -101,9 +103,17 @@
           {
             "label": "Etherscan contract source",
             "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+          },
+          {
+            "label": "Inverse DOLA docs",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+          },
+          {
+            "label": "Inverse DOLA Fed docs",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
           }
         ],
-        "evidence": "DOLA already has Pharos dilutable-source evidence for privileged mint or mint-admin authority; this MVP records that authority as a mint-authority review pending deeper threshold/cap verification."
+        "evidence": "On-chain DOLA operator() read returned 0x926dF14a23BE491164dCF93f4c468A50ef659D5B. The address has contract code and did not verify as a Safe through getThreshold(); no threshold or signer set was publicly verified."
       }
     ],
     "review": {

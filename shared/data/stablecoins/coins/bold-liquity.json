@@ -74,40 +74,44 @@
     "mintPath": "immutable-user-collateralized",
     "authorityPosture": "none-resolved",
     "confidence": "verified",
-    "summary": "BOLD minting is limited to user borrowing against Liquity v2 collateral markets; no privileged durable mint path is resolved in the curated review.",
+    "summary": "BOLD minting is limited to registered Liquity v2 branch contracts used by borrower collateral markets; the BOLD token owner is renounced and no privileged durable issuer mint path is resolved.",
     "controls": [
       {
-        "label": "Immutable protocol mint path",
+        "chain": "ethereum",
+        "address": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
+        "label": "BOLD token / registered Liquity branch minters",
         "role": "other",
-        "authorityType": "none",
+        "authorityType": "contract",
         "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BOLDToken.mint is callable only by registered BorrowerOperations or ActivePool contracts; owner() is the zero address after collateral registry setup.",
         "sources": [
           {
-            "label": "Liquity docs",
-            "url": "https://docs.liquity.org/"
+            "label": "Liquity BOLD contract source",
+            "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
           },
           {
-            "label": "Liquity BOLD",
-            "url": "https://www.liquity.org/bold"
+            "label": "Liquity v2 docs",
+            "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
           }
         ],
-        "evidence": "Liquity BOLD documentation describes protocol minting through borrower collateral markets, not an issuer-operated direct mint authority."
+        "evidence": "Ethereum reads returned owner() = 0x0000000000000000000000000000000000000000 and collateralRegistryAddress() set; verified source restricts mint to registered BorrowerOperations or ActivePool addresses."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Liquity docs",
-          "url": "https://docs.liquity.org/"
+          "label": "Liquity BOLD contract source",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
         },
         {
-          "label": "Liquity BOLD",
-          "url": "https://www.liquity.org/bold"
+          "label": "Liquity v2 docs",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
         }
       ],
-      "evidence": "Liquity BOLD documentation describes protocol minting through borrower collateral markets, not an issuer-operated direct mint authority.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Liquity BOLD documentation and token source describe protocol minting through collateral branches, with the token owner renounced and no issuer minter resolved.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

@@ -93,12 +93,14 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "BUIDL share/token issuance is modeled as fund/transfer-agent operated authority rather than permissionless collateralized minting.",
+    "summary": "BUIDL share/token issuance is operated through Securitize fund administration; the Ethereum proxy target exposes issueTokens mint functions and owner reads resolve to an externally owned address.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0x603BB6909BE14F83282E03632280D91bE7fB83b2",
+        "label": "BUIDL implementation issueTokens surface",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
@@ -106,9 +108,30 @@
           {
             "label": "Securitize BUIDL",
             "url": "https://securitize.io/blackrock/buidl"
+          },
+          {
+            "label": "Ethereum BUIDL contract",
+            "url": "https://etherscan.io/address/0x7712c34205737192402172409a8F7ccef8aA2aec#readProxyContract"
           }
         ],
-        "evidence": "Securitize BUIDL materials describe issuance/redemption through the tokenized fund administration stack."
+        "evidence": "BUIDL proxy target() returned this implementation; source review identified Securitize issueTokens mint functions."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+        "label": "BUIDL token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum BUIDL contract",
+            "url": "https://etherscan.io/address/0x7712c34205737192402172409a8F7ccef8aA2aec#readProxyContract"
+          }
+        ],
+        "evidence": "Ethereum BUIDL owner() returned this address at block 25165931; code read returned no contract bytecode, so no on-chain multisig threshold was verified."
       }
     ],
     "review": {
@@ -118,8 +141,8 @@
           "url": "https://securitize.io/blackrock/buidl"
         }
       ],
-      "evidence": "Securitize BUIDL materials describe issuance/redemption through the tokenized fund administration stack.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Securitize materials describe BUIDL issuance through fund administration; Ethereum proxy/source reads identify the issueTokens implementation and owner/admin address.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

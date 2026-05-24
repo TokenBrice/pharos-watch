@@ -185,41 +185,155 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "frxUSD mint authority is modeled as a Frax governance/custodian hybrid pending deeper per-contract cap review.",
+    "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the Frax Comptroller 3/5 Safe.",
     "controls": [
       {
-        "label": "AMO/custodian or governance-controlled mint authority",
-        "role": "custodian",
+        "chain": "ethereum",
+        "address": "0xFE2Ea8dE262d956e852F12DE108fda57171a0a29",
+        "label": "frxUSD-USDB Custodian Proxy",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
         "sources": [
           {
-            "label": "Frax AMO docs",
-            "url": "https://docs.frax.finance/amo/overview"
+            "label": "FraxNet custodian addresses",
+            "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
           },
           {
-            "label": "Frax frxUSD docs",
-            "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+            "label": "FrxUSDCustodian docs",
+            "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "Frax frxUSD documentation describes issuer/protocol and custodian components rather than immutable user-only minting."
+        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x860Cc723935FC9A15fF8b1A94237a711DFeF7857",
+        "label": "frxUSD-WTGXX Custodian Proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+        "sources": [
+          {
+            "label": "FraxNet custodian addresses",
+            "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+          },
+          {
+            "label": "FrxUSDCustodian docs",
+            "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+          }
+        ],
+        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
+        "label": "frxUSD-BUIDL Custodian Proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+        "sources": [
+          {
+            "label": "FraxNet custodian addresses",
+            "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+          },
+          {
+            "label": "FrxUSDCustodian docs",
+            "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+          }
+        ],
+        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c",
+        "label": "frxUSD-USDC Custodian Proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+        "sources": [
+          {
+            "label": "FraxNet custodian addresses",
+            "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+          },
+          {
+            "label": "FrxUSDCustodian docs",
+            "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+          }
+        ],
+        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33",
+        "label": "frxUSD-USTB Custodian Proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+        "sources": [
+          {
+            "label": "FraxNet custodian addresses",
+            "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+          },
+          {
+            "label": "FrxUSDCustodian docs",
+            "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+          }
+        ],
+        "evidence": "FraxNet docs list this custodian address; owner() returned the Frax Comptroller Safe at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+        "label": "Frax Comptroller Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "source": "manual"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+          }
+        ],
+        "evidence": "frxUSD token owner() and each checked custodian owner() returned this Safe; getThreshold() returned 3 and getOwners() returned 5 owners at Ethereum block 25165911."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Frax AMO docs",
-          "url": "https://docs.frax.finance/amo/overview"
+          "label": "FraxNet custodian addresses",
+          "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
         },
         {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          "label": "FrxUSDCustodian docs",
+          "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
         }
       ],
-      "evidence": "Frax frxUSD documentation describes issuer/protocol and custodian components rather than immutable user-only minting.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "FraxNet docs list the current frxUSD custodian contracts; Ethereum reads identify the Frax Comptroller 3/5 Safe as token and custodian owner.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

@@ -116,22 +116,34 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDY issuance is modeled as Ondo issuer-operated authority rather than permissionless user collateralized minting.",
+    "summary": "USDY issuance is Ondo-operated; Ethereum AccessControl role reads identify a 4/7 Safe as the default admin/minter role holder.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0x1A694a09494e214A3BE3652E4B343b7B81a73Ad7",
+        "label": "USDY default admin / minter Safe",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 7,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 4,
+          "source": "manual"
+        },
         "sources": [
           {
             "label": "Ondo docs",
             "url": "https://docs.ondo.finance/"
+          },
+          {
+            "label": "Ethereum USDY contract",
+            "url": "https://etherscan.io/address/0x96F6eF951840721AdBF46Ac996b59E0235CB985C#code"
           }
         ],
-        "evidence": "Ondo documentation describes USDY as a tokenized note/stablecoin product issued through Ondo-controlled processes."
+        "evidence": "AccessControl role reads showed this Safe holds default admin/minter authority; getThreshold() returned 4 and getOwners() returned 7 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
       }
     ],
     "review": {
@@ -141,8 +153,8 @@
           "url": "https://docs.ondo.finance/"
         }
       ],
-      "evidence": "Ondo documentation describes USDY as a tokenized note/stablecoin product issued through Ondo-controlled processes.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

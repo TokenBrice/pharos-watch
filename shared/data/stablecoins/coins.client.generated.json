@@ -1506,24 +1506,27 @@
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
       "confidence": "verified",
-      "summary": "BOLD minting is limited to user borrowing against Liquity v2 collateral markets; no privileged durable mint path is resolved in the curated review.",
+      "summary": "BOLD minting is limited to registered Liquity v2 branch contracts used by borrower collateral markets; the BOLD token owner is renounced and no privileged durable issuer mint path is resolved.",
       "controls": [
         {
-          "label": "Immutable protocol mint path",
+          "chain": "ethereum",
+          "address": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
+          "label": "BOLD token / registered Liquity branch minters",
           "role": "other",
-          "authorityType": "none",
+          "authorityType": "contract",
           "directMintAbility": "none",
+          "capDescription": "BOLDToken.mint is callable only by registered BorrowerOperations or ActivePool contracts; owner() is the zero address after collateral registry setup.",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
-          "label": "Liquity docs",
-          "url": "https://docs.liquity.org/"
+          "label": "Liquity BOLD contract source",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
         },
         {
-          "label": "Liquity BOLD",
-          "url": "https://www.liquity.org/bold"
+          "label": "Liquity v2 docs",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
         }
       ]
     }
@@ -2134,20 +2137,35 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "BUIDL share/token issuance is modeled as fund/transfer-agent operated authority rather than permissionless collateralized minting.",
+      "summary": "BUIDL share/token issuance is operated through Securitize fund administration; the Ethereum proxy target exposes issueTokens mint functions and owner reads resolve to an externally owned address.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x603BB6909BE14F83282E03632280D91bE7fB83b2",
+          "label": "BUIDL implementation issueTokens surface",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe01605f6b6dC593b7d2917F4a0940db2A625b09e",
+          "label": "BUIDL token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
           "label": "Securitize BUIDL",
           "url": "https://securitize.io/blackrock/buidl"
+        },
+        {
+          "label": "Ethereum BUIDL contract",
+          "url": "https://etherscan.io/address/0x7712c34205737192402172409a8F7ccef8aA2aec#readProxyContract"
         }
       ]
     }
@@ -3110,11 +3128,23 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "crvUSD combines user borrowing markets with governed/admin pegkeeper and parameter surfaces that can affect supply.",
+      "summary": "crvUSD combines user borrowing markets with Curve ControllerFactory debt-ceiling and market-admin surfaces that can affect supply.",
       "controls": [
         {
-          "label": "Protocol governance/admin authority",
+          "chain": "ethereum",
+          "address": "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC",
+          "label": "crvUSD ControllerFactory",
           "role": "cap-admin",
+          "authorityType": "contract",
+          "directMintAbility": "parameter-only",
+          "capDescription": "ControllerFactory manages collateral markets, controller deployments, and debt ceilings for crvUSD borrow markets.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
+          "label": "crvUSD ControllerFactory admin",
+          "role": "governor",
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
           "modulesOrGuardsStatus": "unknown"
@@ -3126,8 +3156,12 @@
           "url": "https://resources.curve.finance/crvusd/"
         },
         {
-          "label": "crvUSD contract source",
-          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+          "label": "crvUSD ControllerFactory",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+        },
+        {
+          "label": "crvUSD ControllerFactory",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#readContract"
         }
       ]
     }
@@ -3193,14 +3227,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "ctUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "ctUSD is an M0-backed extension on Citrea; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing ctUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "citrea",
+          "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+          "label": "M0 SwapFacility extension router",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -3212,6 +3258,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
         }
       ]
     }
@@ -3561,17 +3615,35 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "DAI minting is primarily vault/module based, but Maker governance can authorize modules and ceilings that affect supply creation.",
+      "summary": "DAI minting is vault/module based, with DaiJoin moving Vat.dai into ERC-20 DAI and Maker/Sky governance controlling module authorization and debt ceilings through the Pause process.",
       "controls": [
         {
-          "label": "Protocol governance/admin authority",
-          "role": "cap-admin",
+          "chain": "ethereum",
+          "address": "0x9759A6Ac90977b93B58547b4A71c78317f391a28",
+          "label": "DaiJoin token adapter",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "DaiJoin mints ERC-20 DAI only against existing Vat.dai balances and burns DAI on join; it is not an unrestricted off-protocol issuer minter.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+          "label": "Maker/Sky Pause Proxy governance executor",
+          "role": "governor",
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "modulesOrGuardsStatus": "unknown"
+          "timelockDelaySec": 172800,
+          "capDescription": "Maker/Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, collateral parameters, and debt ceilings.",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
         {
           "label": "Maker core accounting docs",
           "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
@@ -3891,12 +3963,14 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "DOLA has existing Pharos dilutable-source evidence for privileged mint/admin authority; the MVP records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "DOLA minting is controlled by the token operator contract; Inverse documentation describes DOLA supply expansion through Fed/operator contracts rather than permissionless user minting.",
       "controls": [
         {
-          "label": "Privileged token mint/admin authority",
+          "chain": "ethereum",
+          "address": "0x926dF14a23BE491164dCF93f4c468A50ef659D5B",
+          "label": "DOLA token operator",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "unknown"
         }
@@ -3905,6 +3979,14 @@
         {
           "label": "Etherscan contract source",
           "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+        },
+        {
+          "label": "Inverse DOLA docs",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+        },
+        {
+          "label": "Inverse DOLA Fed docs",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/dola-feds"
         }
       ]
     }
@@ -5502,20 +5584,28 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "FDUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+      "summary": "FDUSD is issuer-backed; Ethereum/BSC token ownership resolves to a 4/6 Safe that controls mint/admin authority.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0xfa771871D3D5c85e156D3d379E2ff7699C4D6A66",
+          "label": "FDUSD token owner Safe",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "safe",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "threshold": 4,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "First Digital USD",
           "url": "https://www.firstdigitallabs.com/fdusd"
+        },
+        {
+          "label": "Ethereum FDUSD contract",
+          "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
         }
       ]
     }
@@ -5815,14 +5905,27 @@
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "FPI mint authority is modeled as Frax governance/custodian hybrid authority with privileged mint/admin surfaces already flagged as dilutable by Pharos.",
+      "summary": "FPI mint/admin authority is Frax-governed; the FPI Controller Pool is owned by a 3/5 Frax Comptroller Safe.",
       "controls": [
         {
-          "label": "AMO/custodian or governance-controlled mint authority",
-          "role": "custodian",
+          "chain": "ethereum",
+          "address": "0x2397321b301B80A1C0911d6f9ED4B6033d43cF51",
+          "label": "FPI Controller Pool",
+          "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502",
+          "label": "FPI Comptroller Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
@@ -5831,8 +5934,12 @@
           "url": "https://docs.frax.finance/amo/overview"
         },
         {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          "label": "FPI Controller Pool",
+          "url": "https://etherscan.io/address/0x2397321b301B80A1C0911d6f9ED4B6033d43cF51#readContract"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6A7efa964Cf6D9Ab3BC3c47eBdDB853A8853C502/"
         }
       ]
     }
@@ -5909,14 +6016,27 @@
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "FRAX mint authority is modeled as an AMO/governance/custodian hybrid rather than immutable user-only minting.",
+      "summary": "FRAX mint authority is an AMO/governance hybrid; the Ethereum AMO Minter is owned by the Frax Comptroller 3/5 Safe.",
       "controls": [
         {
-          "label": "AMO/custodian or governance-controlled mint authority",
-          "role": "custodian",
+          "chain": "ethereum",
+          "address": "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241",
+          "label": "FRAX AMO Minter",
+          "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+          "label": "Frax Comptroller Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
@@ -5925,8 +6045,12 @@
           "url": "https://docs.frax.finance/amo/overview"
         },
         {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          "label": "FRAX AMO Minter",
+          "url": "https://etherscan.io/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241#readContract"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ]
     }
@@ -6008,24 +6132,82 @@
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "frxUSD mint authority is modeled as a Frax governance/custodian hybrid pending deeper per-contract cap review.",
+      "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the Frax Comptroller 3/5 Safe.",
       "controls": [
         {
-          "label": "AMO/custodian or governance-controlled mint authority",
-          "role": "custodian",
+          "chain": "ethereum",
+          "address": "0xFE2Ea8dE262d956e852F12DE108fda57171a0a29",
+          "label": "frxUSD-USDB Custodian Proxy",
+          "role": "direct-minter",
           "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x860Cc723935FC9A15fF8b1A94237a711DFeF7857",
+          "label": "frxUSD-WTGXX Custodian Proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
+          "label": "frxUSD-BUIDL Custodian Proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c",
+          "label": "frxUSD-USDC Custodian Proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33",
+          "label": "frxUSD-USTB Custodian Proxy",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+          "label": "Frax Comptroller Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
           "directMintAbility": "can-authorize",
-          "modulesOrGuardsStatus": "unknown"
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
-          "label": "Frax AMO docs",
-          "url": "https://docs.frax.finance/amo/overview"
+          "label": "FraxNet custodian addresses",
+          "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
         },
         {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          "label": "FrxUSDCustodian docs",
+          "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ]
     }
@@ -6567,14 +6749,76 @@
       "mintPath": "facilitator-bucket-mint",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "verified",
-      "summary": "GHO minting depends on DAO-approved facilitators and bucket capacity rather than unrestricted issuer minting.",
+      "summary": "GHO minting depends on DAO-approved facilitator contracts and bucket capacity rather than unrestricted issuer minting.",
       "controls": [
         {
-          "label": "DAO-approved facilitator capacity",
-          "role": "facilitator",
+          "chain": "ethereum",
+          "address": "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
+          "label": "GHO token facilitator registry",
+          "role": "bucket-admin",
           "authorityType": "dao-governor",
+          "directMintAbility": "can-authorize",
+          "capDescription": "The GHO token stores facilitator bucket capacity and DAO-approved facilitator addresses.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x5513224daaEABCa31af5280727878d52097afA05",
+          "label": "CoreGhoDirectMinter",
+          "role": "facilitator",
+          "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "Facilitator bucket capacity constrains minting.",
+          "capDescription": "250M GHO bucket observed",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xb639D208Bcf0589D54FaC24E655C79EC529762B8",
+          "label": "FlashMinter Facilitator",
+          "role": "facilitator",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "2M GHO bucket observed",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2bd010Ab5393AB51b601B99C4B33ba148d9466e9",
+          "label": "GhoDirectFacilitator Plasma",
+          "role": "facilitator",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "50M GHO bucket observed",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2",
+          "label": "GhoDirectFacilitator GSMs Mainnet",
+          "role": "facilitator",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "280M GHO bucket observed",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2cE01c87Fec1b71A9041c52CaED46Fc5f4807285",
+          "label": "LidoGhoDirectMinter",
+          "role": "facilitator",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "175M GHO bucket observed",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xe10C78A3AC7f016eD2DE1A89c5479b1039EAB9eA",
+          "label": "HorizonGhoDirectMinter",
+          "role": "facilitator",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "80M GHO bucket observed",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ],
@@ -6582,6 +6826,10 @@
         {
           "label": "Aave GHO facilitators",
           "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        {
+          "label": "GHO token contract",
+          "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
         }
       ]
     }
@@ -9517,24 +9765,37 @@
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
       "confidence": "verified",
-      "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity contracts; no privileged durable mint path is resolved in the curated review.",
+      "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity v1 contracts; no privileged durable mint path is resolved.",
       "controls": [
         {
-          "label": "Immutable protocol mint path",
+          "chain": "ethereum",
+          "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+          "label": "Liquity v1 BorrowerOperations",
           "role": "other",
-          "authorityType": "none",
+          "authorityType": "contract",
           "directMintAbility": "none",
+          "capDescription": "BorrowerOperations opens and adjusts Troves; LUSD issuance is bounded by user collateralization and Liquity protocol rules.",
+          "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xA39739EF8b023dBFA0DcdA07d7e29FAabcf4bb2",
+          "label": "Liquity v1 TroveManager",
+          "role": "other",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "TroveManager enforces Trove state, liquidations, redemptions, and debt accounting for the immutable LUSD system.",
           "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
-          "label": "Liquity docs",
-          "url": "https://docs.liquity.org/"
+          "label": "Liquity v1 resources",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
         },
         {
-          "label": "Liquity BOLD",
-          "url": "https://www.liquity.org/bold"
+          "label": "LUSD token contract",
+          "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0#code"
         }
       ]
     }
@@ -9624,14 +9885,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "M minting depends on the M0 permissioned minter/validator architecture rather than a public collateralized CDP.",
+      "summary": "M minting is routed through the Ethereum M0 MinterGateway, with cross-chain representations bridged through M0 portal infrastructure.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "MToken.mint is callable only by the MinterGateway; MinterGateway issuance depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "solana",
+          "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "label": "M0 Solana Portal",
+          "role": "bridge-admin",
+          "authorityType": "bridge",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -9643,6 +9916,18 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "MToken technical specification",
+          "url": "https://docs.m0.org/home/technical-specifications/m-token"
+        },
+        {
+          "label": "M0 on Solana technical deep dive",
+          "url": "https://docs.m0.org/home/technical-documentations/solana/"
         }
       ]
     }
@@ -10640,14 +10925,36 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "MUSD is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "MetaMask USD is an M0-backed extension; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing MUSD depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+          "label": "M0 SwapFacility extension router",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "linea",
+          "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+          "label": "M0 SwapFacility extension router",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -10659,6 +10966,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
         }
       ]
     }
@@ -12274,20 +12589,39 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "PYUSD is issued through Paxos/PayPal issuer operations; minting is not limited to permissionless user collateral mechanics.",
+      "summary": "PYUSD is issuer-minted by Paxos-operated infrastructure; the Ethereum token delegates supply control to a dedicated SupplyControl contract.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x31d9bDEa6F104606C954f8FE6ba614F1BD347Ec3",
+          "label": "PYUSD SupplyControl contract",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
+          "label": "PYUSD SupplyControl owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
-          "label": "Paxos PYUSD",
-          "url": "https://paxos.com/pyusd/"
+          "label": "Paxos PYUSD mainnet docs",
+          "url": "https://github.com/paxosglobal/pyusd-contract"
+        },
+        {
+          "label": "PYUSD Ethereum token",
+          "url": "https://etherscan.io/address/0x6c3ea9036406852006290770BEdFcAbA0e23A0e8#readProxyContract"
+        },
+        {
+          "label": "PYUSD SupplyControl",
+          "url": "https://etherscan.io/address/0x31d9bDEa6F104606C954f8FE6ba614F1BD347Ec3#readProxyContract"
         }
       ]
     }
@@ -12913,20 +13247,37 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "rUSD mint authority is modeled as Reservoir issuer/protocol-operated authority pending deeper role review.",
+      "summary": "rUSD issuance runs through Reservoir protocol contracts, including PSMs and the Credit Enforcer; governance/admin setup for those contracts remains unresolved.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x4809010926aec940b550D34a46A52739f996D75D",
+          "label": "Reservoir USDC Peg Stability Module",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Reservoir docs list the USDC PSM as a core mint/redeem entry point for rUSD.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+          "label": "Reservoir Credit Enforcer",
+          "role": "cap-admin",
+          "authorityType": "contract",
+          "directMintAbility": "parameter-only",
+          "capDescription": "Credit Enforcer is the protocol risk-control component enforcing solvency, debt limits, and operational constraints.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
       "sources": [
         {
-          "label": "Reservoir docs",
-          "url": "https://docs.reservoir.xyz"
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Reservoir GitHub",
+          "url": "https://github.com/reservoir-protocol/reservoir"
         }
       ]
     }
@@ -13709,25 +14060,43 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "sfrxUSD is a savings wrapper whose base mint authority is inherited from frxUSD plus wrapper share accounting.",
+      "summary": "sfrxUSD is a savings wrapper over frxUSD; wrapper minting is share accounting while base frxUSD mint authority is inherited from the Frax custodian and Comptroller Safe path.",
       "inheritedFrom": "frxusd-frax",
       "controls": [
         {
-          "label": "Wrapper/share accounting",
+          "chain": "ethereum",
+          "address": "0xCf62F905562626CfcDD2261162a51fd02Fc9c5b6",
+          "label": "sfrxUSD wrapper token",
           "role": "wrapper",
           "authorityType": "contract",
           "directMintAbility": "none",
+          "capDescription": "sfrxUSD represents savings/share accounting over deposited frxUSD and does not mint base frxUSD.",
           "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+          "label": "Inherited Frax Comptroller Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
-          "label": "Frax AMO docs",
-          "url": "https://docs.frax.finance/amo/overview"
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/frxusd"
         },
         {
-          "label": "Frax frxUSD docs",
-          "url": "https://docs.frax.com/protocol/assets/frxusd/overview"
+          "label": "FraxNet custodian addresses",
+          "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ]
     }
@@ -14089,21 +14458,33 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "srUSD is a savings wrapper whose base mint authority is inherited from Reservoir rUSD plus wrapper share accounting.",
+      "summary": "srUSD is the savings wrapper over rUSD; wrapper minting is share accounting while base rUSD mint authority is inherited from Reservoir PSM/Credit Enforcer controls.",
       "inheritedFrom": "rusd-reservoir",
       "controls": [
         {
-          "label": "Wrapper/share accounting",
+          "chain": "ethereum",
+          "address": "0x5475611Dffb8ef4d697Ae39df9395513b6E947d7",
+          "label": "Reservoir Savings Module",
           "role": "wrapper",
           "authorityType": "contract",
           "directMintAbility": "none",
-          "modulesOrGuardsStatus": "not-applicable"
+          "capDescription": "The Savings Module issues srUSD shares against rUSD and does not create base rUSD supply.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+          "label": "Inherited Reservoir Credit Enforcer",
+          "role": "cap-admin",
+          "authorityType": "contract",
+          "directMintAbility": "parameter-only",
+          "modulesOrGuardsStatus": "unknown"
         }
       ],
       "sources": [
         {
-          "label": "Reservoir docs",
-          "url": "https://docs.reservoir.xyz"
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
         }
       ]
     }
@@ -15807,20 +16188,41 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "TUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+      "summary": "TUSD is issuer-backed; Ethereum mint control resolves through the token controller/mint-key path, with controller ownership held by a 2/3 Safe.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x0000000000075efbee23fe2de1bd0b7690883cc9",
+          "label": "TUSD token controller",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x93fde11c8107127A80cE95100DF611790E4413c9",
+          "label": "TUSD controller owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 2,
+          "signerCount": 3,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "TrueUSD",
           "url": "https://tusd.io/"
+        },
+        {
+          "label": "Ethereum TUSD contract",
+          "url": "https://etherscan.io/address/0x0000000000085d4780B73119b644AE5ecd22b376#code"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x93fde11c8107127A80cE95100DF611790E4413c9/"
         }
       ]
     }
@@ -15877,20 +16279,28 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "U is modeled as issuer-operated mint authority pending deeper role verification.",
+      "summary": "U is issuer-operated; Ethereum/BSC token ownership resolves to a 2/4 Safe that controls mint/admin authority.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x59f94ade4F881F21EA608aD4448Bf70b78E37187",
+          "label": "U token owner Safe",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "safe",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "threshold": 2,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "U website",
           "url": "https://u.tech/"
+        },
+        {
+          "label": "Ethereum U contract",
+          "url": "https://etherscan.io/address/0xce24439F2D9C6a2289f741120fE202248B666666#readProxyContract"
         }
       ]
     }
@@ -16308,20 +16718,43 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USD1 is modeled as an issuer-backed stablecoin with issuer-operated mint authority pending deeper role verification.",
+      "summary": "USD1 is issuer-backed; the Ethereum token owner/controller is contract-based and its default admin is a 3/6 Safe behind a 3-day admin delay.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2",
+          "label": "USD1 token owner/controller",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
+          "timelockDelaySec": 259200,
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x0d190b74308669E8f4Fe7dbce3466169B285289D",
+          "label": "USD1 controller default-admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 6,
+          "timelockDelaySec": 259200,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "USD1 website",
           "url": "https://worldlibertyfinancial.com/usd1"
+        },
+        {
+          "label": "Ethereum USD1 contract",
+          "url": "https://etherscan.io/address/0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d#readProxyContract"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0d190b74308669E8f4Fe7dbce3466169B285289D/"
         }
       ]
     }
@@ -16736,14 +17169,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDat is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "USDat is an M0-backed extension on Ethereum; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing USDat depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+          "label": "M0 SwapFacility extension router",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -16755,6 +17200,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
         }
       ]
     }
@@ -16948,20 +17401,39 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDC is issuer-minted by Circle; the MVP records Circle-operated mint authority rather than a permissionless protocol mint path.",
+      "summary": "USDC is issuer-minted by Circle; Ethereum USDC uses a MasterMinter contract for minter management and an externally owned token owner/admin address.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
-          "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "chain": "ethereum",
+          "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+          "label": "Ethereum USDC MasterMinter",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xFcb19e6a322b27c06842A71e8c725399f049AE3a",
+          "label": "Ethereum USDC token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
           "label": "Circle USDC docs",
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Centre USDC contract docs",
+          "url": "https://github.com/centrehq/centre-tokens"
+        },
+        {
+          "label": "Ethereum USDC contract",
+          "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#readProxyContract"
         }
       ]
     }
@@ -17234,14 +17706,27 @@
       "mintPath": "offchain-attested-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "USDe minting is modeled as off-chain order/signature mediated authority with privileged mint surface already flagged as dilutable by Pharos.",
+      "summary": "USDe minting uses Ethena signed-order flows; the Ethereum token minter is a contract and token ownership is held by a 5/10 Safe.",
       "controls": [
         {
-          "label": "Off-chain order/signature mint authority",
+          "chain": "ethereum",
+          "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
+          "label": "USDe token minter contract",
           "role": "backend-signer",
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+          "label": "USDe token owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 5,
+          "signerCount": 10,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
@@ -17252,6 +17737,14 @@
         {
           "label": "Ethena trust assumptions",
           "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+        },
+        {
+          "label": "Ethereum USDe token",
+          "url": "https://etherscan.io/address/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3#readProxyContract"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862/"
         }
       ]
     }
@@ -17367,20 +17860,28 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDf minting is modeled as Falcon issuer/protocol-operated mint authority pending deeper role verification.",
+      "summary": "USDf uses AccessControl mint/admin roles; the verified Ethereum default-admin path is a 4/6 Safe, while active minter-role holders still need enumeration.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
-          "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "chain": "ethereum",
+          "address": "0x1e482B60Bf19CB1CC859389E0eA3ded153F16BD7",
+          "label": "USDf default admin Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "Falcon docs",
           "url": "https://docs.falcon.finance"
+        },
+        {
+          "label": "Ethereum USDf contract",
+          "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
         }
       ]
     }
@@ -17496,20 +17997,39 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDG is an issuer-backed Global Dollar stablecoin; mint authority is modeled as issuer-operated until deeper role evidence is attached.",
+      "summary": "USDG is issuer-minted by Paxos-operated infrastructure; the Ethereum token delegates supply control to a dedicated SupplyControl contract.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x9a7164112029b81c07636AB7b59fA813E0883BBF",
+          "label": "USDG SupplyControl contract",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x3Af3e85f4f97De7AD0f000B724Fb77fE5ffc024B",
+          "label": "USDG SupplyControl owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
-          "label": "Global Dollar Network",
-          "url": "https://www.globaldollar.com/"
+          "label": "Paxos USDG mainnet docs",
+          "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+        },
+        {
+          "label": "USDG Ethereum token",
+          "url": "https://etherscan.io/address/0xe343167631d89B6Ffc58B88d6b7fB0228795491D#readProxyContract"
+        },
+        {
+          "label": "USDG SupplyControl",
+          "url": "https://etherscan.io/address/0x9a7164112029b81c07636AB7b59fA813E0883BBF#readProxyContract"
         }
       ]
     }
@@ -17829,14 +18349,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDK is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "USDK is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway and Solana movement relies on M0 portal infrastructure.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing USDK depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "solana",
+          "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "label": "M0 Solana Portal",
+          "role": "bridge-admin",
+          "authorityType": "bridge",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; official Solana docs did not expose a USDK-specific mint-authority address.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -17848,6 +18380,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 on Solana technical deep dive",
+          "url": "https://docs.m0.org/home/technical-documentations/solana/"
         }
       ]
     }
@@ -18177,14 +18717,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "Noble USDN is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "Noble USDN is an M0-backed Noble deployment; base M issuance remains on the Ethereum MinterGateway and Noble movement uses M0 portal infrastructure.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing Noble USDN depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16",
+          "label": "M0 Noble Portal",
+          "role": "bridge-admin",
+          "authorityType": "bridge",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 deployments list the Noble Portal on Ethereum for Noble movement; base supply remains governed by the Ethereum MinterGateway.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -18196,6 +18748,10 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
         }
       ]
     }
@@ -18352,14 +18908,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDnr is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "USDnr is an M0-backed extension; extension wrapping routes through M0 extension infrastructure where deployed while base M issuance remains on the Ethereum MinterGateway.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing USDnr depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+          "label": "M0 SwapFacility extension router",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -18371,6 +18939,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
         }
       ]
     }
@@ -19217,14 +19793,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDSC is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "USDSC is an M0-backed extension on Soneium; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing USDSC depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "soneium",
+          "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+          "label": "M0 SwapFacility extension router",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -19236,6 +19824,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
         }
       ]
     }
@@ -19358,20 +19954,28 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDT is issuer-minted by Tether; the MVP records centralized issuer mint authority rather than a permissionless protocol mint path.",
+      "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+          "label": "Ethereum USDT token owner multisig",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "multisig",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "threshold": 3,
+          "signerCount": 6,
+          "modulesOrGuardsStatus": "not-applicable"
         }
       ],
       "sources": [
         {
           "label": "Tether transparency",
           "url": "https://tether.to/en/transparency/"
+        },
+        {
+          "label": "Ethereum USDT contract",
+          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
         }
       ]
     }
@@ -19835,20 +20439,28 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDY issuance is modeled as Ondo issuer-operated authority rather than permissionless user collateralized minting.",
+      "summary": "USDY issuance is Ondo-operated; Ethereum AccessControl role reads identify a 4/7 Safe as the default admin/minter role holder.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0x1A694a09494e214A3BE3652E4B343b7B81a73Ad7",
+          "label": "USDY default admin / minter Safe",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "safe",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "threshold": 4,
+          "signerCount": 7,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "Ondo docs",
           "url": "https://docs.ondo.finance/"
+        },
+        {
+          "label": "Ethereum USDY contract",
+          "url": "https://etherscan.io/address/0x96F6eF951840721AdBF46Ac996b59E0235CB985C#code"
         }
       ]
     }
@@ -21643,15 +22255,38 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "wM is a wrapped M asset; base mint authority is inherited from M0 M plus wrapper accounting.",
+      "summary": "wM wraps base M; wrapper minting is 1:1 accounting while base M issuance remains inherited from the Ethereum M0 MinterGateway.",
       "inheritedFrom": "m-m0",
       "controls": [
         {
+          "chain": "ethereum",
+          "address": "0x437cc33344a0B27A429f795ff6B469C72698B291",
           "label": "Wrapper/share accounting",
           "role": "wrapper",
           "authorityType": "contract",
           "directMintAbility": "none",
+          "capDescription": "WrappedMToken mints wM only through wrapping deposited M and burns wM on unwrap; it does not mint base M.",
           "modulesOrGuardsStatus": "not-applicable"
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "Inherited M0 MinterGateway",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Base M issuance inherited by wM depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "solana",
+          "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
+          "label": "Solana Wrapped M Token-2022 program",
+          "role": "wrapper",
+          "authorityType": "contract",
+          "directMintAbility": "none",
+          "capDescription": "The Solana wM deployment is documented as a wrapped, 1:1 M-backed extension; base M supply remains inherited from M0 rails.",
+          "modulesOrGuardsStatus": "unknown"
         }
       ],
       "sources": [
@@ -21662,6 +22297,18 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "WrappedMToken technical specification",
+          "url": "https://docs.m0.org/home/technical-specifications/wrapped-m-token/"
+        },
+        {
+          "label": "M0 on Solana technical deep dive",
+          "url": "https://docs.m0.org/home/technical-documentations/solana/"
         }
       ]
     }
@@ -22060,20 +22707,28 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "XAI mint authority is modeled as governed CDP/protocol authority with existing Pharos dilutable-source evidence pending deeper role and cap review.",
+      "summary": "XAI is a governed CDP/protocol asset; Ethereum token ownership resolves to a 3/4 Safe with privileged mint/admin authority.",
       "controls": [
         {
-          "label": "Privileged token mint/admin authority",
+          "chain": "ethereum",
+          "address": "0xE8e8041cB5E3158A0829A19E014CA1cf91098554",
+          "label": "XAI token owner Safe",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "safe",
           "directMintAbility": "direct",
-          "modulesOrGuardsStatus": "unknown"
+          "threshold": 3,
+          "signerCount": 4,
+          "modulesOrGuardsStatus": "none-detected"
         }
       ],
       "sources": [
         {
           "label": "Etherscan contract source",
           "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+        },
+        {
+          "label": "Safe transaction service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xE8e8041cB5E3158A0829A19E014CA1cf91098554/"
         }
       ]
     }
@@ -22375,14 +23030,26 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "XO Cash is tagged as M0 infrastructure; mint authority is modeled through M0 permissioned minter/extension rails pending issuer-specific role review.",
+      "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway and Solana movement relies on M0 portal infrastructure.",
       "controls": [
         {
-          "label": "M0 permissioned minter and validator rails",
+          "chain": "ethereum",
+          "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+          "label": "M0 MinterGateway backing rail",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+          "capDescription": "Base M issuance backing XO Cash depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+          "modulesOrGuardsStatus": "unknown"
+        },
+        {
+          "chain": "solana",
+          "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "label": "M0 Solana Portal",
+          "role": "bridge-admin",
+          "authorityType": "bridge",
+          "directMintAbility": "cap-limited",
+          "capDescription": "M0 documents Solana as a spoke deployment bridged from Ethereum; official Solana docs did not expose an XO-specific mint-authority address.",
           "modulesOrGuardsStatus": "unknown"
         }
       ],
@@ -22394,6 +23061,14 @@
         {
           "label": "M0 minter gateway docs",
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 on Solana technical deep dive",
+          "url": "https://docs.m0.org/home/technical-documentations/solana/"
         }
       ]
     }

@@ -316,22 +316,45 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDC is issuer-minted by Circle; the MVP records Circle-operated mint authority rather than a permissionless protocol mint path.",
+    "summary": "USDC is issuer-minted by Circle; Ethereum USDC uses a MasterMinter contract for minter management and an externally owned token owner/admin address.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "label": "Ethereum USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
             "label": "Circle USDC docs",
             "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          },
+          {
+            "label": "Centre USDC contract docs",
+            "url": "https://github.com/centrehq/centre-tokens"
           }
         ],
-        "evidence": "Circle documentation describes USDC as issued and redeemed by Circle through its stablecoin infrastructure."
+        "evidence": "Ethereum USDC masterMinter() returned this address at block 25165911; Circle/Centre contract documentation describes MasterMinter as the contract that configures token minters."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xFcb19e6a322b27c06842A71e8c725399f049AE3a",
+        "label": "Ethereum USDC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USDC contract",
+            "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#readProxyContract"
+          }
+        ],
+        "evidence": "Ethereum USDC owner() returned this address at block 25165911; code read returned no contract bytecode, so no on-chain multisig threshold was verified."
       }
     ],
     "review": {
@@ -339,10 +362,14 @@
         {
           "label": "Circle USDC docs",
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Centre USDC contract docs",
+          "url": "https://github.com/centrehq/centre-tokens"
         }
       ],
-      "evidence": "Circle documentation describes USDC as issued and redeemed by Circle through its stablecoin infrastructure.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Circle documentation describes USDC as issuer-operated, and direct Ethereum reads identify the MasterMinter and token owner/admin addresses.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

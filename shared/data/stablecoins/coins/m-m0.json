@@ -22,17 +22,23 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "M minting depends on the M0 permissioned minter/validator architecture rather than a public collateralized CDP.",
+    "summary": "M minting is routed through the Ethereum M0 MinterGateway, with cross-chain representations bridged through M0 portal infrastructure.",
     "controls": [
       {
-        "label": "M0 permissioned minter and validator rails",
+        "chain": "ethereum",
+        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "label": "M0 MinterGateway",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "M0 minting depends on approved minters, validator attestations, and protocol-defined collateral checks.",
+        "capDescription": "MToken.mint is callable only by the MinterGateway; MinterGateway issuance depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
           {
             "label": "M0 protocol docs",
             "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
@@ -40,9 +46,35 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MToken technical specification",
+            "url": "https://docs.m0.org/home/technical-specifications/m-token"
           }
         ],
-        "evidence": "M0 documentation describes approved minters, validator attestations, and minter gateway mechanics for M issuance."
+        "evidence": "Official deployments list MinterGateway at 0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E, and an on-chain MToken minterGateway() read returned that address."
+      },
+      {
+        "chain": "solana",
+        "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "label": "M0 Solana Portal",
+        "role": "bridge-admin",
+        "authorityType": "bridge",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 on Solana technical deep dive",
+            "url": "https://docs.m0.org/home/technical-documentations/solana/"
+          }
+        ],
+        "evidence": "Official M0 deployments list the Solana M token and Portal program; M0 Solana docs describe Solana as a spoke in the cross-chain model with Ethereum as hub."
       }
     ],
     "review": {

@@ -107,26 +107,46 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "crvUSD combines user borrowing markets with governed/admin pegkeeper and parameter surfaces that can affect supply.",
+    "summary": "crvUSD combines user borrowing markets with Curve ControllerFactory debt-ceiling and market-admin surfaces that can affect supply.",
     "controls": [
       {
-        "label": "Protocol governance/admin authority",
+        "chain": "ethereum",
+        "address": "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC",
+        "label": "crvUSD ControllerFactory",
         "role": "cap-admin",
-        "authorityType": "dao-governor",
+        "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
+        "capDescription": "ControllerFactory manages collateral markets, controller deployments, and debt ceilings for crvUSD borrow markets.",
         "sources": [
           {
             "label": "Curve crvUSD resources",
             "url": "https://resources.curve.finance/crvusd/"
           },
           {
-            "label": "crvUSD contract source",
-            "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+            "label": "crvUSD ControllerFactory",
+            "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
           }
         ],
-        "evidence": "Curve crvUSD resources and contract evidence show protocol minting plus admin/governed surfaces around pegkeeper and market configuration."
+        "evidence": "ControllerFactory source exposes debt-ceiling and market-admin functions; admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79 at Ethereum block 25165931."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79",
+        "label": "crvUSD ControllerFactory admin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "crvUSD ControllerFactory",
+            "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#readContract"
+          }
+        ],
+        "evidence": "ControllerFactory admin() returned this address; code is present, but signer or timelock setup was not resolved in this pass."
       }
     ],
     "review": {
@@ -136,13 +156,16 @@
           "url": "https://resources.curve.finance/crvusd/"
         },
         {
-          "label": "crvUSD contract source",
-          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+          "label": "crvUSD ControllerFactory",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
         }
       ],
-      "evidence": "Curve crvUSD resources and contract evidence show protocol minting plus admin/governed surfaces around pegkeeper and market configuration.",
-      "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Curve resources and ControllerFactory reads identify the factory and current admin address controlling debt ceilings and market configuration.",
+      "reviewer": "Codex mint-authority address pass",
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Resolve the crvUSD ControllerFactory admin security setup and any timelock/DAO execution path."
+      ]
     }
   },
   "chainTier": "ethereum",

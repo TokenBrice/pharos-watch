@@ -81,22 +81,34 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "FDUSD is an issuer-backed stablecoin; mint authority is modeled as issuer-operated pending deeper on-chain role review.",
+    "summary": "FDUSD is issuer-backed; Ethereum/BSC token ownership resolves to a 4/6 Safe that controls mint/admin authority.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0xfa771871D3D5c85e156D3d379E2ff7699C4D6A66",
+        "label": "FDUSD token owner Safe",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "safe",
         "directMintAbility": "direct",
+        "threshold": 4,
+        "signerCount": 6,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 4,
+          "source": "manual"
+        },
         "sources": [
           {
             "label": "First Digital USD",
             "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Ethereum FDUSD contract",
+            "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
           }
         ],
-        "evidence": "First Digital materials describe FDUSD as a fiat-backed issued stablecoin."
+        "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
       }
     ],
     "review": {
@@ -106,8 +118,8 @@
           "url": "https://www.firstdigitallabs.com/fdusd"
         }
       ],
-      "evidence": "First Digital materials describe FDUSD as a fiat-backed issued stablecoin.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "First Digital materials describe FDUSD as issuer-backed, and token owner reads identify a 4/6 Safe as the on-chain mint/admin owner path.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },

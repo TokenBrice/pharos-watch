@@ -10,7 +10,7 @@
 import type { StablecoinMeta } from "../../types";
 import coinsGenerated from "./coins.generated.json";
 
-// FNV-1a 32-bit fingerprint of `coins.generated.json` at generation time: 2b79839c.
+// FNV-1a 32-bit fingerprint of `coins.generated.json` at generation time: c7799bcd.
 
 /**
  * Pre-validated stablecoin metas, exposed in source order. The generator

@@ -88,23 +88,137 @@
     "mintPath": "facilitator-bucket-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "GHO minting depends on DAO-approved facilitators and bucket capacity rather than unrestricted issuer minting.",
+    "summary": "GHO minting depends on DAO-approved facilitator contracts and bucket capacity rather than unrestricted issuer minting.",
     "controls": [
       {
-        "label": "DAO-approved facilitator capacity",
-        "role": "facilitator",
+        "chain": "ethereum",
+        "address": "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
+        "label": "GHO token facilitator registry",
+        "role": "bucket-admin",
         "authorityType": "dao-governor",
-        "directMintAbility": "cap-limited",
-        "capDescription": "Facilitator bucket capacity constrains minting.",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The GHO token stores facilitator bucket capacity and DAO-approved facilitator addresses.",
         "sources": [
           {
             "label": "Aave GHO facilitators",
             "url": "https://aave.com/help/gho-stablecoin/facilitators"
+          },
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
           }
         ],
-        "evidence": "Aave documentation describes facilitators as DAO-approved entities that can mint and burn GHO within bucket capacity."
+        "evidence": "getFacilitatorsList() returned six facilitator addresses at Ethereum block 25165911; each facilitator has a bucket capacity and level."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5513224daaEABCa31af5280727878d52097afA05",
+        "label": "CoreGhoDirectMinter",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "250M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          }
+        ],
+        "evidence": "GHO getFacilitator(0x5513224daaEABCa31af5280727878d52097afA05) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb639D208Bcf0589D54FaC24E655C79EC529762B8",
+        "label": "FlashMinter Facilitator",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "2M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          }
+        ],
+        "evidence": "GHO getFacilitator(0xb639D208Bcf0589D54FaC24E655C79EC529762B8) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2bd010Ab5393AB51b601B99C4B33ba148d9466e9",
+        "label": "GhoDirectFacilitator Plasma",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "50M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          }
+        ],
+        "evidence": "GHO getFacilitator(0x2bd010Ab5393AB51b601B99C4B33ba148d9466e9) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2",
+        "label": "GhoDirectFacilitator GSMs Mainnet",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "280M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          }
+        ],
+        "evidence": "GHO getFacilitator(0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2cE01c87Fec1b71A9041c52CaED46Fc5f4807285",
+        "label": "LidoGhoDirectMinter",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "175M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          }
+        ],
+        "evidence": "GHO getFacilitator(0x2cE01c87Fec1b71A9041c52CaED46Fc5f4807285) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe10C78A3AC7f016eD2DE1A89c5479b1039EAB9eA",
+        "label": "HorizonGhoDirectMinter",
+        "role": "facilitator",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "80M GHO bucket observed",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GHO token contract",
+            "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
+          }
+        ],
+        "evidence": "GHO getFacilitator(0xe10C78A3AC7f016eD2DE1A89c5479b1039EAB9eA) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
       }
     ],
     "review": {
@@ -112,10 +226,14 @@
         {
           "label": "Aave GHO facilitators",
           "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        {
+          "label": "GHO token contract",
+          "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
         }
       ],
-      "evidence": "Aave documentation describes facilitators as DAO-approved entities that can mint and burn GHO within bucket capacity.",
-      "reviewer": "Codex mint-authority MVP",
+      "evidence": "Aave documentation describes DAO-approved facilitators, and Ethereum reads identify the current facilitator set and bucket capacities.",
+      "reviewer": "Codex mint-authority address pass",
       "reviewedAt": "2026-05-24"
     }
   },
