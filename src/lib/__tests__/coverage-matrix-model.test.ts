@@ -248,14 +248,14 @@ describe("buildCoverageMatrixModel", () => {
         coins: {
           "usdc-circle": {
             stablecoinId: "usdc-circle",
-            resolutionState: "impaired",
+            resolutionState: "resolved",
             routeStatus: "paused",
             routeStatusReason: "Issuer paused primary redemption while reserves are reconciled.",
             routeFamily: "offchain-issuer",
-            modelConfidence: "low",
+            modelConfidence: "medium",
             capacitySemantics: "immediate-bounded",
-            score: null,
-            effectiveExitScore: null,
+            score: 65,
+            effectiveExitScore: 72,
           },
         },
       } as never),

@@ -261,10 +261,10 @@ describe("StablecoinDetailClient", () => {
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
-    const liquidityZone = container.querySelector("#liquidity")?.parentElement?.parentElement;
+    const priceCard = screen.getByTestId("price-transparency-card");
+    const priceSection = priceCard.closest("section");
     const redemptionCard = screen.getByTestId("redemption-backstop-card");
-    expect(liquidityZone?.contains(redemptionCard)).toBe(true);
-    expect(screen.getByTestId("price-transparency-card")).toBeTruthy();
+    expect(redemptionCard.parentElement).toBe(priceSection?.parentElement);
   });
 
   it("keeps the liquidity price panel when redemption backstop data is absent", () => {
