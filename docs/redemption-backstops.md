@@ -187,7 +187,7 @@ Each row also carries:
   - `static-config` for normal config-derived status
   - `market-implied` for the severe active-depeg exercisability gate
   - `operator-notice`, `protocol-api`, and `onchain` are reserved for future current-route evidence sources
-  - operator overrides take precedence over live adapter and protocol-feed evidence so emergency route controls cannot be masked by stale open telemetry
+  - no operator override store is wired in the cron path today; if a future route-status feed is added, merge precedence is operator override, then live adapter evidence, then protocol feed evidence, then static config
 - `holderEligibility`:
   - derived from the route access model by default: permissionless onchain routes are `any-holder`, whitelist routes are `whitelisted-primary`, issuer API routes are `verified-customer`, and manual routes are `issuer-discretionary`
 - `capacityConfidence`:
