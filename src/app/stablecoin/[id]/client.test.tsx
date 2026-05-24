@@ -257,7 +257,7 @@ describe("StablecoinDetailClient", () => {
       },
     }));
 
-    const { container } = render(
+    render(
       <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
     );
 
