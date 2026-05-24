@@ -124,10 +124,10 @@ export default function PrivacyPage() {
           </ul>
           <p>
             For the PharosWatchBot Mini App, the signed Telegram{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. Only its
-            hash is recorded once per mutation for one-shot replay protection within the 5-minute mutation window.
-            Read-only session launches accept a Telegram-signed launch up to 24 hours old so an open panel stays usable
-            across the day.
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. It is
+            validated request-locally through Telegram&apos;s HMAC signature and freshness window. Mutations use a
+            5-minute auth window plus a per-user cooldown, while read-only session launches accept a Telegram-signed
+            launch up to 24 hours old so an open panel stays usable across the day.
           </p>
         </section>
 

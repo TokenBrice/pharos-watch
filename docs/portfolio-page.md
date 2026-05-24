@@ -50,7 +50,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 - share link generation
 - empty-state onboarding via `src/components/portfolio-empty-state.tsx`
 
-The page excludes cemetery assets from the selectable universe by filtering tracked assets against `DEAD_STABLECOINS`.
+The page uses `CLIENT_ACTIVE_STABLECOINS` for `PORTFOLIO_COIN_OPTIONS`, excluding pre-launch and frozen assets. It does not filter against `DEAD_STABLECOINS`.
 
 ---
 

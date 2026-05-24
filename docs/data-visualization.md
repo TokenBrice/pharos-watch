@@ -167,7 +167,7 @@ At a glance:
 | Viewport adaptation | Parameterize the scene with CSS variables; change values per breakpoint, not markup | Atlas `--peg-coin-scale`: `1 / 0.72 / 0.54` |
 | Hit targets | Grow on coarse pointer | Atlas `--peg-hit-scale: 1.35`; DEWS 18px invisible hit circle |
 | Interaction polarity | Fine = hover/click; coarse = tap to preview, tap again to commit | `resolveRadarClick` in `dews-summary-model.ts` |
-| Small-screen fallback | Full-feature parallel list below breakpoint | `harbor-list.tsx`, `mobile-region-list.tsx`, `CelestialBand` |
+| Small-screen fallback | Full-feature parallel list or scale-first inspection when the scene would become unreadable | Harbor fallback list; Atlas responsive `PegDiversityHeroLive` scene with fullscreen inspection |
 
 ### Scale-first, not breakpoint-first
 
@@ -190,8 +190,7 @@ DEWS reads `matchMedia("(hover: hover) and (pointer: fine)")` and runs two inter
 Below the breakpoint where the scene becomes unreadable, render a screen-reader-friendly list that presents the same data:
 
 - Harbor: `harbor-list.tsx` — stacked harbor cards with logo, supply, health band, dominant cargo, 7d wake, berth progress bar.
-- Atlas: `mobile-region-list.tsx` — fiat cohorts grouped by region.
-- Atlas sky: `CelestialBand` — horizontal gallery of sun/moon/index cohorts.
+- Atlas: current mobile strategy is scale-first. One responsive `PegDiversityHeroLive` scene adjusts CSS scale variables per breakpoint and offers fullscreen inspection; there is no shipped `mobile-region-list.tsx` or production `CelestialBand` fallback.
 
 The list is not a degraded experience — it is a first-class surface for small screens and assistive tech. Feature parity is required.
 

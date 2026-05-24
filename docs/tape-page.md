@@ -49,7 +49,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 7. **Day separator** — full-width mono rule with the date inline (`─── TODAY · MAY 15, 2026 ─────────────`), not a thin underline header.
 8. **Currently-open band** — mono uppercase eyebrow (`⚠ CURRENTLY OPEN · N INCIDENTS`) over hairline-divided rows; no rounded shell.
 9. **Pinned linked-event block** — mono uppercase label (`PINNED · Linked from URL`) inside the feed above day groups; no shell.
-10. **Activity histogram strip** — a mono Unicode block strip above the stale-data banner summarizes event density by bucket; glyph height encodes count and text color encodes max severity.
+10. **Summary band above filters** — shows loaded count, open-incident count, active window, severity floor, update recency, last-event timestamp, and the dark-mode-only CRT toggle. No event-density histogram is currently rendered.
 11. **Filter row is a flat wire-control surface** — it uses hairline `border-y` dividers and shared control primitives, but it does not use `pharos-card-shell`.
 
 ---
@@ -115,7 +115,7 @@ Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLAS
 ## Behavior
 
 - **Severity-floor default:** the page opens at `notice+`. Lower-priority chip ("All") drops the floor.
-- **Activity histogram:** visible result sets render a mono block histogram above the data-status notices. Bucket width follows the active window (`24h` hourly, `7d` six-hourly, `30d`/`90d` daily, `alltime` capped at 180 daily cells). The strip is read-only and exposed as a single `role="img"` summary.
+- **Summary band:** visible result sets render a summary band above filters and data-status notices. It reports loaded count, open-incident count, active window, severity floor, update recency, last-event timestamp, and the dark-mode-only CRT toggle.
 - **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N events · M classes`) so users can decide whether to scan a day before scrolling. Quiet days with `≤ 3` events render as a collapsed day-level `<details>` summary listing class/ticker tokens before the underlying class groups.
 - **Digest grouping:** within each day, events are partitioned by class (`digestByDay` in `src/lib/tape-digest.ts`). Classes with `≥ 3` events render as a collapsible `<details>` recap row carrying a class background tint, count, top tickers, and class-specific aggregate stats (`worst N bps`, `$X frozen`, `N upgrades · M downgrades`, `max <severity>`). Classes with `< 3` events render inline unless the whole day is using the quiet-day wrapper. The recap line stays visible when closed; clicking reveals the underlying `EventCard` rows. Severity above the notice floor is communicated via the colored `max <severity>` chip in the recap and via the per-event severity text in the open state.
 - **Page-seam merging:** `digestPage(...)` digests each infinite-query page independently and `mergeDigestedPages(...)` re-merges adjacent pages that share a UTC day, preserving day grouping across pagination seams.
@@ -160,7 +160,7 @@ Update this doc when any of these contracts change:
 - the projector roster in `TAPE_PROJECTOR_JOBS`
 - the `tape_events` schema, the event-id format, or the cursor encoding
 - the `GET /api/events` query params, freshness budget, or pagination cap
-- the histogram, quiet-day collapse, infinite-scroll digestion, or `?event=` permalink resolution path (buffer size, scroll behavior)
+- the summary band, quiet-day collapse, infinite-scroll digestion, or `?event=` permalink resolution path (buffer size, scroll behavior)
 - the JSON-LD shape emitted by `src/app/timeline/page.tsx`
 
 If a new projector class ships, also update:
