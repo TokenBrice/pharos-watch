@@ -45,7 +45,7 @@ export function FreezableSupplyMeter({
           <Skeleton className="h-14 w-40" />
         </div>
         <Skeleton className="mt-6 h-12 w-full rounded-md" />
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Skeleton className="h-32 rounded-xl lg:col-span-2" />
           <Skeleton className="h-32 rounded-xl" />
           <Skeleton className="h-32 rounded-xl" />
@@ -109,7 +109,7 @@ export function FreezableSupplyMeter({
 
       <FreezeLineBar buckets={orderedBuckets} totalMarketCap={totalMarketCap} />
 
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {yesBucket ? (
           <BucketCard
             bucket={yesBucket}
