@@ -326,6 +326,30 @@ describe("syncRedemptionBackstops", () => {
     expect(updateRedemptionBackstopRunMetadataMock).not.toHaveBeenCalled();
   });
 
+  it("aborts after snapshot write resolves without pruning or refreshing metadata", async () => {
+    const controller = new AbortController();
+    upsertRedemptionBackstopSnapshotsMock.mockImplementationOnce((_db: unknown, snapshots: unknown[]) => {
+      controller.abort(new Error("abort during write"));
+      return Promise.resolve({
+        runId: "redemption:test-run",
+        attemptedCount: snapshots.length,
+        runRowsWrittenCount: snapshots.length,
+        historyWrittenCount: snapshots.length,
+        currentMirroredCount: snapshots.length,
+        warnings: [],
+      });
+    });
+
+    const db = mockD1([{ match: "SELECT stablecoin_id FROM redemption_backstop", rows: [] }]);
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+
+    await expect(syncRedemptionBackstops(db, controller.signal)).rejects.toThrow("abort during write");
+    expect(updateRedemptionBackstopRunMetadataMock).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT stablecoin_id FROM redemption_backstop"))).toBe(
+      false,
+    );
+  });
+
   it("continues with degraded static rows when optional DEX preload fails", async () => {
     loadDexLiquiditySnapshotMock.mockRejectedValueOnce(new Error("dex unavailable"));
 

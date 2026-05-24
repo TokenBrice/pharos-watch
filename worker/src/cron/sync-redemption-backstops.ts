@@ -299,6 +299,8 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     expectedCount: configuredIds.length,
     metadata: runMetadata,
   });
+  throwIfAborted(signal);
+
   Object.assign(runMetadata, {
     snapshotRunId: writeResult.runId,
     attemptedCount: writeResult.attemptedCount,
