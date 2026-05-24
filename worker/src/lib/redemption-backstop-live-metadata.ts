@@ -24,6 +24,7 @@ import {
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
   type ReserveSnapshotMetadataRecord,
 } from "./live-reserves-store";
+import { MALFORMED_REDEMPTION_TELEMETRY } from "./live-reserves-store-row-decoding";
 
 export interface RedemptionBackstopLiveMetadata {
   updatedAt: number | null;
@@ -61,10 +62,8 @@ interface ParsedRedemptionTelemetry {
   malformed: boolean;
 }
 
-const MALFORMED_REDEMPTION_TELEMETRY_MARKER = "__malformedRedemptionTelemetry";
-
 function isMalformedRedemptionTelemetryMarker(raw: Record<string, unknown>): boolean {
-  return raw[MALFORMED_REDEMPTION_TELEMETRY_MARKER] === true;
+  return (raw as { [MALFORMED_REDEMPTION_TELEMETRY]?: boolean })[MALFORMED_REDEMPTION_TELEMETRY] === true;
 }
 
 function getRedemptionTelemetry(metadata: Record<string, unknown>): ParsedRedemptionTelemetry {

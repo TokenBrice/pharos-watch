@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
 import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
-import { parseSnapshotMetadata } from "../live-reserves-store-row-decoding";
+import { parseReserveCompositionRow } from "../live-reserves-store-row-decoding";
 
 const now = 1_780_000_000;
 
@@ -20,6 +20,27 @@ function snapshot(
     warnings: [],
     metadata,
   };
+}
+
+function decodedRowMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const decoded = parseReserveCompositionRow(
+    {
+      stablecoin_id: "lusd-liquity",
+      slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
+      fetched_at: now - 60,
+      source: "liquity-v1",
+      metadata: JSON.stringify(metadata),
+      warning_count: 0,
+      warnings: null,
+      adapter_source_model: "single-bucket",
+      adapter_evidence_class: "independent",
+    },
+    null,
+  );
+
+  expect(decoded.issue).toBeNull();
+  expect(decoded.record).not.toBeNull();
+  return decoded.record!.metadata;
 }
 
 describe("readRedemptionBackstopLiveMetadata", () => {
@@ -155,14 +176,18 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     );
   });
 
-  it("fails closed on malformed nested redemption telemetry instead of falling back to legacy fields", () => {
+  it.each([
+    ["string", "malformed"],
+    ["null", null],
+    ["array", []],
+  ])("fails closed on malformed %s nested redemption telemetry instead of falling back to legacy fields", (_label, redemption) => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
       snapshot("lusd-liquity", {
         freshnessMode: "not-applicable",
         immediateRedeemableUsd: 500_000,
         redemptionFeeBps: 50,
-        redemption: "malformed",
+        redemption,
       }),
       now,
     );
@@ -176,20 +201,21 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
   });
 
-  it("fails closed on malformed nested redemption telemetry after D1 row decoding", () => {
+  it.each([
+    ["string", "malformed"],
+    ["null", null],
+    ["array", []],
+    ["object-shaped numeric fields", { capacityUsd: "500000", feeBps: "50" }],
+  ])("fails closed on malformed %s nested redemption telemetry after D1 row decoding", (_label, redemption) => {
+    const decodedMetadata = decodedRowMetadata({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 500_000,
+      redemptionFeeBps: 50,
+      redemption,
+    });
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
-      snapshot(
-        "lusd-liquity",
-        parseSnapshotMetadata(
-          JSON.stringify({
-            freshnessMode: "not-applicable",
-            immediateRedeemableUsd: 500_000,
-            redemptionFeeBps: 50,
-            redemption: "malformed",
-          }),
-        ),
-      ),
+      snapshot("lusd-liquity", decodedMetadata),
       now,
     );
 
@@ -198,6 +224,29 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.canUseCapacity).toBe(false);
     expect(metadata.canUseFee).toBe(false);
     expect(metadata.capacityNotes).toContain("Live redemption telemetry is malformed and was ignored");
+    expect(JSON.stringify(decodedMetadata)).not.toContain("malformedRedemptionTelemetry");
+    expect(Object.keys((decodedMetadata.redemption ?? {}) as Record<string, unknown>)).not.toContain(
+      "__malformedRedemptionTelemetry",
+    );
+  });
+
+  it("keeps decoded missing nested redemption telemetry legacy-compatible", () => {
+    const decodedMetadata = decodedRowMetadata({
+      freshnessMode: "not-applicable",
+      immediateRedeemableUsd: 500_000,
+      redemptionFeeBps: 50,
+    });
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", decodedMetadata),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBe(500_000);
+    expect(metadata.redemptionFeeBps).toBe(50);
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.canUseFee).toBe(true);
+    expect(metadata.capacityNotes).not.toContain("Live redemption telemetry is malformed and was ignored");
   });
 
   it("lets valid nested redemption telemetry override malformed legacy fallback fields", () => {

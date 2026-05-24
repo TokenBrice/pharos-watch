@@ -61,7 +61,7 @@ const VALID_REDEMPTION_ROUTE_STATUS_SOURCES = new Set<LiveReserveRedemptionRoute
   "protocol-api",
   "onchain",
 ]);
-const MALFORMED_REDEMPTION_TELEMETRY_MARKER = "__malformedRedemptionTelemetry";
+export const MALFORMED_REDEMPTION_TELEMETRY = Symbol.for("pharos.malformedRedemptionTelemetry");
 const STORED_SLICE_SUM_TOLERANCE = 2;
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -79,6 +79,17 @@ function parseJsonObject(value: string | null | undefined): Record<string, unkno
 
 function coerceFiniteMetadataNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function isPresentMalformedNumber(value: unknown): boolean {
+  return value != null && (typeof value !== "number" || !Number.isFinite(value));
+}
+
+function markMalformedRedemptionTelemetry(redemption: object): void {
+  Object.defineProperty(redemption, MALFORMED_REDEMPTION_TELEMETRY, {
+    value: true,
+    enumerable: false,
+  });
 }
 
 function isHttpUrl(value: string): boolean {
@@ -144,9 +155,11 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
       "minRedeemUsd",
       "feeBps",
     ];
+    let hasMalformedRedemptionTelemetry = false;
     for (const key of knownRedemptionNumberKeys) {
       const value = coerceFiniteMetadataNumber(rawRedemption[key]);
       if (value == null) {
+        hasMalformedRedemptionTelemetry ||= isPresentMalformedNumber(rawRedemption[key]);
         delete redemption[key];
       } else {
         redemption[key] = value;
@@ -215,11 +228,14 @@ function normalizeSnapshotMetadata(metadata: Record<string, unknown>): LiveReser
     } else {
       delete redemption.sourceUrls;
     }
+    if (hasMalformedRedemptionTelemetry) {
+      markMalformedRedemptionTelemetry(redemption);
+    }
     normalized.redemption = redemption;
   } else if (Object.prototype.hasOwnProperty.call(metadata, "redemption")) {
-    normalized.redemption = {
-      [MALFORMED_REDEMPTION_TELEMETRY_MARKER]: true,
-    };
+    const redemption = {};
+    markMalformedRedemptionTelemetry(redemption);
+    normalized.redemption = redemption;
   } else {
     delete normalized.redemption;
   }
