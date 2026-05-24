@@ -55,6 +55,7 @@ npm run check:archetype-explainer-coverage # Verify every `MechanismArchetype` h
 npm run check:attestor-tier-coverage # Enforce proof-of-reserves attestor-tier coverage for independent-audit coins
 npm run check:glossary-coverage # Verify AI-summary glossary term markers resolve
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness
+npm run check:redemption-coverage-audit # Enforce ratcheted Redemption Backstop active-gap/default-gap/heuristic backlog baselines
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run audit:pricing-providers # Verify pricing provider configs are consistent
 npm run coverage:critical:update-baseline # Update the critical-coverage baseline snapshot
@@ -529,6 +530,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 ### Registry Guardrails
 
 - `npm run check:redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
+- `npm run check:redemption-coverage-audit` validates the Redemption Backstop backlog audit against `scripts/lib/redemption-coverage-audit-baseline.json`, so default-inferred active gaps, total active gaps, and heuristic route counts cannot grow while the backlog is being researched.
 - `worker/src/lib/__tests__/redemption-backstops-store.test.ts` now covers completed-run snapshot manifests for `redemption_backstop_runs`, including generation-filtered reads and current/history rows written with `snapshot_run_id`.
 
 ### Test style

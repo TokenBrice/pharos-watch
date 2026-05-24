@@ -69,6 +69,7 @@
     "check:hook-polling-window": "node scripts/ci/check-hook-polling-window.mjs",
     "check:hotspot-ratchet": "node scripts/ci/check-hotspot-ratchet.mjs",
     "check:redemption-backstops": "tsx scripts/ci/check-redemption-backstops.ts",
+    "check:redemption-coverage-audit": "tsx scripts/maintenance/generate-redemption-coverage-audit.ts --check",
     "check:hotspot-ratchet:update-baseline": "node scripts/maintenance/update-hotspot-ratchet-baseline.mjs",
     "check:cron-sync": "tsx scripts/ci/check-cron-schedule-sync.ts",
     "check:doc-counts": "node scripts/ci/check-doc-counts.mjs",

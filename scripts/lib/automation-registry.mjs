@@ -108,6 +108,14 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     paths: ["scripts/ci/check-redemption-backstops.ts"],
   },
   {
+    command: "npm run check:redemption-coverage-audit",
+    deployImpact: "full",
+    paths: [
+      "scripts/maintenance/generate-redemption-coverage-audit.ts",
+      "scripts/lib/redemption-coverage-audit-baseline.json",
+    ],
+  },
+  {
     command: "npm run check:reserve-fixture-freshness",
     deployImpact: "validation-only",
     paths: ["scripts/ci/check-reserve-fixture-freshness.mjs"],

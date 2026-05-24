@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { StablecoinMeta } from "../../shared/types";
 import type { RedemptionRouteFamily } from "../../shared/types/redemption";
@@ -80,6 +80,24 @@ export interface RedemptionCoverageAudit {
   lifecycleExcludedUnconfigured: CoverageAuditRow[];
   heuristicConfiguredRoutes: HeuristicRouteAuditRow[];
 }
+
+export interface RedemptionCoverageAuditBaseline {
+  activeDefaultClassified: number;
+  activeUnconfigured: number;
+  heuristicConfiguredRoutes: number;
+}
+
+export interface RedemptionCoverageAuditCheckFinding {
+  code:
+    | "active-unclassified-gaps"
+    | "active-default-classified-gaps"
+    | "active-default-classified-ratchet-regressed"
+    | "active-unconfigured-ratchet-regressed"
+    | "heuristic-configured-ratchet-regressed";
+  message: string;
+}
+
+const CHECK_BASELINE_PATH = "scripts/lib/redemption-coverage-audit-baseline.json";
 
 const OFFCHAIN_CANDIDATES = new Set(["mmxn-moneta-digital", "vndc-jade-labs", "zkusd-goal3"]);
 const FROZEN_HARD_REJECTS = new Set(["buck-buck-assets", "usnd-nerite"]);
@@ -411,10 +429,12 @@ export function parseArgs(argv: string[]): {
   format: "markdown" | "json";
   reportPath: string | null;
   strictActiveGaps: boolean;
+  check: boolean;
 } {
   let format: "markdown" | "json" = "markdown";
   let reportPath: string | null = null;
   let strictActiveGaps = false;
+  let check = false;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -430,6 +450,10 @@ export function parseArgs(argv: string[]): {
       strictActiveGaps = true;
       continue;
     }
+    if (arg === "--check") {
+      check = true;
+      continue;
+    }
     if (arg === "--report") {
       const value = argv[i + 1];
       if (!value) {
@@ -442,31 +466,102 @@ export function parseArgs(argv: string[]): {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  return { format, reportPath, strictActiveGaps };
+  return { format, reportPath, strictActiveGaps, check };
+}
+
+export function loadRedemptionCoverageAuditBaseline(cwd = process.cwd()): RedemptionCoverageAuditBaseline {
+  const baseline = JSON.parse(readFileSync(resolve(cwd, CHECK_BASELINE_PATH), "utf8")) as Record<string, unknown>;
+  const readBaselineCount = (key: keyof RedemptionCoverageAuditBaseline): number => {
+    const value = baseline[key];
+    if (!Number.isInteger(value) || (value as number) < 0) {
+      throw new Error(`${CHECK_BASELINE_PATH} has invalid ${key} baseline`);
+    }
+    return value as number;
+  };
+  return {
+    activeDefaultClassified: readBaselineCount("activeDefaultClassified"),
+    activeUnconfigured: readBaselineCount("activeUnconfigured"),
+    heuristicConfiguredRoutes: readBaselineCount("heuristicConfiguredRoutes"),
+  };
+}
+
+export function evaluateRedemptionCoverageAudit(
+  audit: RedemptionCoverageAudit,
+  options: {
+    strictActiveGaps?: boolean;
+    baseline?: RedemptionCoverageAuditBaseline | null;
+  } = {},
+): RedemptionCoverageAuditCheckFinding[] {
+  const findings: RedemptionCoverageAuditCheckFinding[] = [];
+  if (audit.summary.activeUnclassified > 0) {
+    findings.push({
+      code: "active-unclassified-gaps",
+      message: `Active unconfigured redemption gaps include ${audit.summary.activeUnclassified} unclassified rows.`,
+    });
+  }
+  if (options.strictActiveGaps && audit.summary.activeDefaultClassified > 0) {
+    findings.push({
+      code: "active-default-classified-gaps",
+      message: `Active unconfigured redemption gaps include ${audit.summary.activeDefaultClassified} default-inferred rows.`,
+    });
+  }
+  if (options.baseline) {
+    if (audit.summary.activeDefaultClassified > options.baseline.activeDefaultClassified) {
+      findings.push({
+        code: "active-default-classified-ratchet-regressed",
+        message: `Default-inferred active redemption gaps increased to ${audit.summary.activeDefaultClassified} (baseline ${options.baseline.activeDefaultClassified}).`,
+      });
+    }
+    if (audit.summary.activeUnconfigured > options.baseline.activeUnconfigured) {
+      findings.push({
+        code: "active-unconfigured-ratchet-regressed",
+        message: `Active unconfigured redemption gaps increased to ${audit.summary.activeUnconfigured} (baseline ${options.baseline.activeUnconfigured}).`,
+      });
+    }
+    if (audit.summary.heuristicConfiguredRoutes > options.baseline.heuristicConfiguredRoutes) {
+      findings.push({
+        code: "heuristic-configured-ratchet-regressed",
+        message: `Heuristic configured redemption routes increased to ${audit.summary.heuristicConfiguredRoutes} (baseline ${options.baseline.heuristicConfiguredRoutes}).`,
+      });
+    }
+  }
+  return findings;
 }
 
 export function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
   auditFactory: () => RedemptionCoverageAudit = generateRedemptionCoverageAudit,
+  baseline: RedemptionCoverageAuditBaseline | null = null,
 ): number {
   const options = parseArgs(argv);
   const audit = auditFactory();
   const output =
     options.format === "json" ? `${JSON.stringify(audit, null, 2)}\n` : renderRedemptionCoverageAuditMarkdown(audit);
+  const checkBaseline = options.check ? (baseline ?? loadRedemptionCoverageAuditBaseline()) : null;
+  const findings = evaluateRedemptionCoverageAudit(audit, {
+    strictActiveGaps: options.strictActiveGaps,
+    baseline: checkBaseline,
+  });
 
   if (options.reportPath) {
     const target = resolve(cwd, options.reportPath);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, output, "utf8");
     console.log(`Wrote redemption coverage audit to ${target}`);
+  } else if (options.check) {
+    const baselineDetail = checkBaseline
+      ? `; default-inferred=${audit.summary.activeDefaultClassified}/${checkBaseline.activeDefaultClassified}, active-unconfigured=${audit.summary.activeUnconfigured}/${checkBaseline.activeUnconfigured}, heuristic=${audit.summary.heuristicConfiguredRoutes}/${checkBaseline.heuristicConfiguredRoutes}`
+      : "";
+    console.log(`Redemption coverage audit check ${findings.length > 0 ? "failed" : "passed"}${baselineDetail}.`);
   } else {
     process.stdout.write(output);
   }
 
-  if (audit.summary.activeUnclassified > 0) return 1;
-  if (options.strictActiveGaps && audit.summary.activeDefaultClassified > 0) return 1;
-  return 0;
+  for (const finding of findings) {
+    console.error(`${finding.code}: ${finding.message}`);
+  }
+  return findings.length > 0 ? 1 : 0;
 }
 
 if (process.argv[1]?.endsWith("generate-redemption-coverage-audit.ts")) {

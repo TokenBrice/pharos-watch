@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
 import type { RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
 import {
+  evaluateRedemptionCoverageAudit,
   generateRedemptionCoverageAudit,
   parseArgs,
   renderRedemptionCoverageAuditMarkdown,
@@ -147,6 +148,8 @@ describe("generate-redemption-coverage-audit", () => {
       "hard-reject": 1,
       "needs-research": 2,
     });
+    expect(audit.summary.activeUnclassified).toBe(0);
+    expect(audit.summary.activeDefaultClassified).toBe(1);
     expect(audit.activeUnconfigured).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -160,6 +163,7 @@ describe("generate-redemption-coverage-audit", () => {
           disposition: "hard-reject",
           reasonCode: "no-holder-route",
           classificationSource: "curated",
+          allowedRouteFamilyIfProven: null,
         }),
         expect.objectContaining({
           id: "hollar-hydrated",
@@ -282,10 +286,11 @@ describe("generate-redemption-coverage-audit", () => {
   });
 
   it("parses CLI format and report options", () => {
-    expect(parseArgs(["--json", "--strict-active-gaps", "--report", "agents/audit.json"])).toEqual({
+    expect(parseArgs(["--json", "--strict-active-gaps", "--check", "--report", "agents/audit.json"])).toEqual({
       format: "json",
       reportPath: "agents/audit.json",
       strictActiveGaps: true,
+      check: true,
     });
     expect(() => parseArgs(["--report"])).toThrow("--report requires a path");
     expect(() => parseArgs(["--unknown"])).toThrow("Unknown argument: --unknown");
@@ -324,6 +329,46 @@ describe("generate-redemption-coverage-audit", () => {
       summary: { activeDefaultClassified: number };
     };
     expect(defaultReport.summary.activeDefaultClassified).toBe(1);
+  });
+
+  it("check mode ratchets the default backlog without requiring strict-zero immediately", () => {
+    const audit = generateRedemptionCoverageAudit({
+      trackedCoins: [coin({ id: "random-crypto" })],
+      activeCoins: [
+        coin({
+          id: "random-crypto",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            yieldBearing: false,
+            rwa: false,
+            navToken: false,
+          },
+        }),
+      ],
+      configs: {},
+    });
+
+    expect(
+      evaluateRedemptionCoverageAudit(audit, {
+        baseline: { activeDefaultClassified: 1, activeUnconfigured: 1, heuristicConfiguredRoutes: 0 },
+      }),
+    ).toEqual([]);
+    expect(
+      evaluateRedemptionCoverageAudit(audit, {
+        baseline: { activeDefaultClassified: 0, activeUnconfigured: 1, heuristicConfiguredRoutes: 0 },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        code: "active-default-classified-ratchet-regressed",
+      }),
+    ]);
+    expect(evaluateRedemptionCoverageAudit(audit, { strictActiveGaps: true })).toEqual([
+      expect.objectContaining({
+        code: "active-default-classified-gaps",
+      }),
+    ]);
   });
 
   it("writes nested CLI reports with the selected output format", () => {
