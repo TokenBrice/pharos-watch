@@ -148,10 +148,15 @@ export function ScreenerClient() {
   useEffect(() => {
     if (!hasHydrated || aliasNormalizedRef.current) return;
     aliasNormalizedRef.current = true;
-    replaceParams((params) => {
-      normalizeScreenerDeepLinkAliases(params);
-    });
-  }, [hasHydrated, replaceParams]);
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (!normalizeScreenerDeepLinkAliases(params)) return;
+
+    const qs = params.toString();
+    const nextSearch = qs ? `?${qs}` : "";
+    window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
+  }, [hasHydrated]);
 
   // Decode filters from URL via W1-F codec on every searchParams change.
   // The URL is only available in the browser, so deep-linked filters are applied after hydration.

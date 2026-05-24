@@ -1,12 +1,20 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
-import { createElement } from "react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { createElement, useLayoutEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isUrlFilterClearValue, useUrlFilters } from "@/hooks/use-url-filters";
 
 function UrlFilterProbe() {
   const { searchParams } = useUrlFilters();
+  return createElement("div", { "data-testid": "peg-filter" }, searchParams.get("peg") ?? "");
+}
+
+function LateCommittedUrlProbe({ nextUrl }: { nextUrl: string }) {
+  const { searchParams } = useUrlFilters();
+  useLayoutEffect(() => {
+    window.history.replaceState(null, "", nextUrl);
+  }, [nextUrl]);
   return createElement("div", { "data-testid": "peg-filter" }, searchParams.get("peg") ?? "");
 }
 
@@ -43,5 +51,13 @@ describe("useUrlFilters", () => {
     });
 
     expect(screen.getByTestId("peg-filter").textContent).toBe("fiat-non-usd-peg");
+  });
+
+  it("syncs the current browser URL after a route commits during mount", async () => {
+    render(createElement(LateCommittedUrlProbe, { nextUrl: "/screener/?peg=USD" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("peg-filter").textContent).toBe("USD");
+    });
   });
 });

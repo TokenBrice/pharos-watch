@@ -88,9 +88,19 @@ export function useUrlFilters() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     window.addEventListener("popstate", syncFromLocation);
     const unsubscribeFromHistoryChanges = subscribeToHistoryChanges(syncFromLocation);
+    const syncAfterCommit = () => {
+      if (active) syncFromLocation();
+    };
+    if (typeof window.queueMicrotask === "function") {
+      window.queueMicrotask(syncAfterCommit);
+    } else {
+      window.setTimeout(syncAfterCommit, 0);
+    }
     return () => {
+      active = false;
       window.removeEventListener("popstate", syncFromLocation);
       unsubscribeFromHistoryChanges();
     };
