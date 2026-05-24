@@ -154,6 +154,65 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     );
   });
 
+  it("lets valid nested redemption telemetry override malformed legacy fallback fields", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        immediateRedeemableUsd: "legacy-bad",
+        immediateRedeemableRatio: -0.5,
+        redemptionFeeBps: "legacy-fee-bad",
+        redemption: {
+          capacityUsd: 750_000,
+          capacityRatioOfSupply: 0.25,
+          feeBps: 42,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBe(750_000);
+    expect(metadata.immediateRedeemableRatio).toBe(0.25);
+    expect(metadata.redemptionFeeBps).toBe(42);
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.canUseFee).toBe(true);
+    expect(metadata.capacityNotes).not.toEqual(
+      expect.arrayContaining([
+        "Legacy redemption capacity USD is malformed and was ignored",
+        "Legacy redemption capacity ratio is below 0 and was ignored",
+        "Legacy redemption fee bps is malformed and was ignored",
+      ]),
+    );
+  });
+
+  it("still fails closed on malformed legacy telemetry when nested fields are absent", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        immediateRedeemableUsd: Number.NaN,
+        immediateRedeemableRatio: -0.1,
+        redemptionFeeBps: -1,
+      }),
+      now,
+    );
+
+    expect(metadata.immediateRedeemableUsd).toBeNull();
+    expect(metadata.immediateRedeemableRatio).toBeNull();
+    expect(metadata.redemptionFeeBps).toBeNull();
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.canUseFee).toBe(false);
+    expect(metadata.capacityNotes).toEqual(
+      expect.arrayContaining([
+        "Legacy redemption capacity USD is malformed and was ignored",
+        "Legacy redemption capacity ratio is below 0 and was ignored",
+        "Legacy redemption fee bps is below 0 and was ignored",
+      ]),
+    );
+  });
+
   it("ignores live route status that omits source attribution", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "lusd-liquity",
@@ -172,6 +231,30 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.routeStatus).toBeNull();
     expect(metadata.routeStatusSource).toBeNull();
     expect(metadata.capacityNotes).toContain("Live redemption route status omitted source attribution and was ignored");
+  });
+
+  it("drops orphaned route status source and details when the status is invalid", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "lusd-liquity",
+      snapshot("lusd-liquity", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 1_000_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "closed",
+          routeStatusSource: "onchain",
+          routeStatusReason: "Adapter emitted a non-schema status.",
+          routeStatusReviewedAt: "2026-05-17",
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.routeStatus).toBeNull();
+    expect(metadata.routeStatusSource).toBeNull();
+    expect(metadata.routeStatusReason).toBeNull();
+    expect(metadata.routeStatusReviewedAt).toBeNull();
   });
 
   it("keeps sourced route status visible even when stale capacity cannot score", () => {

@@ -104,6 +104,10 @@ function collectTelemetryWarnings(values: readonly ParsedTelemetryNumber[]): str
   return values.flatMap((value) => (value.warning ? [value.warning] : []));
 }
 
+function hasTelemetryValue(value: ParsedTelemetryNumber): boolean {
+  return value.value != null || value.invalid;
+}
+
 function coerceRouteStatus(value: unknown): RedemptionRouteStatus | null {
   return value === "open" ||
     value === "degraded" ||
@@ -366,16 +370,18 @@ export function readRedemptionBackstopLiveMetadata(
   const minRedeemUsd = parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
     min: 0,
   });
-  const capacityTelemetryInvalid =
-    nestedCapacityUsd.invalid || nestedCapacityRatio.invalid || legacyCapacityUsd.invalid || legacyCapacityRatio.invalid;
-  const feeTelemetryInvalid = nestedFeeBps.invalid || legacyFeeBps.invalid;
+  const hasNestedCapacityTelemetry = hasTelemetryValue(nestedCapacityUsd) || hasTelemetryValue(nestedCapacityRatio);
+  const hasLegacyCapacityTelemetry = hasTelemetryValue(legacyCapacityUsd) || hasTelemetryValue(legacyCapacityRatio);
+  const capacityTelemetryInvalid = hasNestedCapacityTelemetry
+    ? nestedCapacityUsd.invalid || nestedCapacityRatio.invalid
+    : legacyCapacityUsd.invalid || legacyCapacityRatio.invalid;
+  const hasNestedFeeTelemetry = hasTelemetryValue(nestedFeeBps);
+  const feeTelemetryInvalid = hasNestedFeeTelemetry ? nestedFeeBps.invalid : legacyFeeBps.invalid;
   const telemetryWarnings = collectTelemetryWarnings([
-    nestedCapacityUsd,
-    nestedCapacityRatio,
-    legacyCapacityUsd,
-    legacyCapacityRatio,
-    nestedFeeBps,
-    legacyFeeBps,
+    ...(hasNestedCapacityTelemetry || !hasLegacyCapacityTelemetry
+      ? [nestedCapacityUsd, nestedCapacityRatio]
+      : [legacyCapacityUsd, legacyCapacityRatio]),
+    ...(hasNestedFeeTelemetry ? [nestedFeeBps] : [legacyFeeBps]),
     buyFeeBpsMin,
     buyFeeBpsMax,
     sourceTimestamp,
@@ -387,17 +393,17 @@ export function readRedemptionBackstopLiveMetadata(
   const routeStatus = coerceRouteStatus(redemptionTelemetry.routeStatus);
   const routeStatusSource = coerceRouteStatusSource(redemptionTelemetry.routeStatusSource);
   const routeStatusMissingSource = routeStatus != null && routeStatus !== "unknown" && routeStatusSource == null;
+  const shouldUseRouteStatus = routeStatus != null && !routeStatusMissingSource;
   if (routeStatusMissingSource) {
     telemetryWarnings.push("Live redemption route status omitted source attribution and was ignored");
   }
   const fallbackCapacityTelemetryAvailable =
     !capacityTelemetryInvalid &&
-    (nestedCapacityUsd.value != null ||
-      legacyCapacityUsd.value != null ||
-      nestedCapacityRatio.value != null ||
-      legacyCapacityRatio.value != null);
+    (hasNestedCapacityTelemetry
+      ? nestedCapacityUsd.value != null || nestedCapacityRatio.value != null
+      : legacyCapacityUsd.value != null || legacyCapacityRatio.value != null);
   const fallbackFeeTelemetryAvailable =
-    !feeTelemetryInvalid && (nestedFeeBps.value != null || legacyFeeBps.value != null);
+    !feeTelemetryInvalid && (hasNestedFeeTelemetry ? nestedFeeBps.value != null : legacyFeeBps.value != null);
   const capacityReason = resolveCapacityReason({
     snapshotMetadata,
     isFresh,
@@ -442,10 +448,16 @@ export function readRedemptionBackstopLiveMetadata(
     canUseFee: feeReason == null,
     capacityReason,
     feeReason,
-    immediateRedeemableUsd: capacityTelemetryInvalid ? null : nestedCapacityUsd.value ?? legacyCapacityUsd.value,
+    immediateRedeemableUsd: capacityTelemetryInvalid
+      ? null
+      : hasNestedCapacityTelemetry
+        ? nestedCapacityUsd.value
+        : legacyCapacityUsd.value,
     immediateRedeemableRatio: capacityTelemetryInvalid
       ? null
-      : nestedCapacityRatio.value ?? (nestedCapacityUsd.value != null ? null : legacyCapacityRatio.value),
+      : hasNestedCapacityTelemetry
+        ? (nestedCapacityRatio.value ?? (nestedCapacityUsd.value != null ? null : legacyCapacityRatio.value))
+        : legacyCapacityRatio.value,
     capacityKind,
     freshnessKind,
     sourceTimestamp: sourceTimestamp.value,
@@ -455,12 +467,12 @@ export function readRedemptionBackstopLiveMetadata(
     dailyLimitUsd: dailyLimitUsd.value,
     minRedeemUsd: minRedeemUsd.value,
     liveHolderEligibility: coerceSchemaValue(RedemptionHolderEligibilitySchema, redemptionTelemetry.holderEligibility),
-    redemptionFeeBps: feeTelemetryInvalid ? null : nestedFeeBps.value ?? legacyFeeBps.value,
+    redemptionFeeBps: feeTelemetryInvalid ? null : hasNestedFeeTelemetry ? nestedFeeBps.value : legacyFeeBps.value,
     buyFeeBpsMin: buyFeeBpsMin.value,
     buyFeeBpsMax: buyFeeBpsMax.value,
-    routeStatus: routeStatusMissingSource ? null : routeStatus,
-    routeStatusSource: routeStatusMissingSource ? null : routeStatusSource,
-    routeStatusReason: coerceString(redemptionTelemetry.routeStatusReason),
-    routeStatusReviewedAt: coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt),
+    routeStatus: shouldUseRouteStatus ? routeStatus : null,
+    routeStatusSource: shouldUseRouteStatus ? routeStatusSource : null,
+    routeStatusReason: shouldUseRouteStatus ? coerceString(redemptionTelemetry.routeStatusReason) : null,
+    routeStatusReviewedAt: shouldUseRouteStatus ? coerceReviewedAtDate(redemptionTelemetry.routeStatusReviewedAt) : null,
   };
 }
