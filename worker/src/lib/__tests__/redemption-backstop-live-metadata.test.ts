@@ -178,13 +178,9 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.redemptionFeeBps).toBe(42);
     expect(metadata.canUseCapacity).toBe(true);
     expect(metadata.canUseFee).toBe(true);
-    expect(metadata.capacityNotes).not.toEqual(
-      expect.arrayContaining([
-        "Legacy redemption capacity USD is malformed and was ignored",
-        "Legacy redemption capacity ratio is below 0 and was ignored",
-        "Legacy redemption fee bps is malformed and was ignored",
-      ]),
-    );
+    expect(metadata.capacityNotes).not.toContain("Legacy redemption capacity USD is malformed and was ignored");
+    expect(metadata.capacityNotes).not.toContain("Legacy redemption capacity ratio is below 0 and was ignored");
+    expect(metadata.capacityNotes).not.toContain("Legacy redemption fee bps is malformed and was ignored");
   });
 
   it("still fails closed on malformed legacy telemetry when nested fields are absent", () => {

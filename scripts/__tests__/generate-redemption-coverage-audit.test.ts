@@ -371,6 +371,41 @@ describe("generate-redemption-coverage-audit", () => {
     ]);
   });
 
+  it("check mode ratchets active unconfigured and heuristic route growth", () => {
+    const activeGapAudit = generateRedemptionCoverageAudit({
+      trackedCoins: [coin({ id: "random-crypto" })],
+      activeCoins: [coin({ id: "random-crypto" })],
+      configs: {},
+    });
+    const heuristicAudit = generateRedemptionCoverageAudit({
+      trackedCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
+      activeCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
+      configs: {
+        "usdc-circle": configuredRoute,
+        "pmusd-precious-metals": heuristicRoute,
+      },
+    });
+
+    expect(
+      evaluateRedemptionCoverageAudit(activeGapAudit, {
+        baseline: { activeDefaultClassified: 1, activeUnconfigured: 0, heuristicConfiguredRoutes: 0 },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        code: "active-unconfigured-ratchet-regressed",
+      }),
+    ]);
+    expect(
+      evaluateRedemptionCoverageAudit(heuristicAudit, {
+        baseline: { activeDefaultClassified: 0, activeUnconfigured: 0, heuristicConfiguredRoutes: 0 },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        code: "heuristic-configured-ratchet-regressed",
+      }),
+    ]);
+  });
+
   it("writes nested CLI reports with the selected output format", () => {
     const cwd = mkdtempSync(join(tmpdir(), "redemption-coverage-audit-report-"));
     const status = runCli(["--json", "--report", "nested/reports/audit.json"], cwd, () =>
