@@ -209,7 +209,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
           reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
           routeAvailability,
-          routeStatusFeed: null,
         });
       } else {
         const config = configById.get(stablecoinId);
@@ -217,7 +216,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
             reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
             routeAvailability,
-            routeStatusFeed: null,
           });
         }
       }

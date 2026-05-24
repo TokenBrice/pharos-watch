@@ -386,9 +386,7 @@ describe("syncRedemptionBackstops", () => {
     );
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.preloadDegraded).toBe(true);
-    expect(metadata.preloadWarnings).toEqual([
-      expect.stringContaining("reserve-metadata:reserve preload unavailable"),
-    ]);
+    expect(metadata.preloadWarnings).toEqual([expect.stringContaining("reserve-metadata:reserve preload unavailable")]);
   });
 
   it("passes severe active depeg availability into builders without degrading the cron", async () => {
@@ -573,7 +571,7 @@ describe("syncRedemptionBackstops", () => {
       null,
       47,
       expect.any(Number),
-      expect.objectContaining({ reserveSnapshotMetadata: null, routeAvailability: null, routeStatusFeed: null }),
+      expect.objectContaining({ reserveSnapshotMetadata: null, routeAvailability: null }),
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),

@@ -182,7 +182,6 @@ export async function buildRedemptionBackstopEntry(
   const mergedRouteStatus = mergeRedemptionRouteStatus({
     staticEvidence: staticRouteStatus,
     liveEvidence: liveRouteStatus,
-    feedEvidence: options.routeStatusFeed ?? null,
     severeMarketImplied: options.routeAvailability ?? null,
     allowSevereMarketOpenException: hasStrongLiveDirectRoute,
   });

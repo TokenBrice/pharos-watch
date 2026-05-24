@@ -14,10 +14,6 @@ export interface RedemptionRouteStatusEvidence {
   routeStatusReviewedAt?: string;
 }
 
-export interface RedemptionRouteStatusFeedEntry extends RedemptionRouteStatusEvidence {
-  origin: "operator-override" | "protocol-feed";
-}
-
 export interface MergedRedemptionRouteStatus extends RedemptionRouteStatusEvidence {
   impaired: boolean;
   capsApplied: string[];
@@ -36,25 +32,14 @@ function normalizeEvidence(
   };
 }
 
-function isOperatorOverride(
-  evidence: RedemptionRouteStatusFeedEntry | null | undefined,
-): evidence is RedemptionRouteStatusFeedEntry {
-  return evidence?.origin === "operator-override";
-}
-
 export function mergeRedemptionRouteStatus(args: {
   staticEvidence: RedemptionRouteStatusEvidence;
   liveEvidence?: RedemptionRouteStatusEvidence | null;
-  feedEvidence?: RedemptionRouteStatusFeedEntry | null;
   severeMarketImplied?: RedemptionRouteAvailability | null;
   allowSevereMarketOpenException: boolean;
 }): MergedRedemptionRouteStatus {
   const liveEvidence = normalizeEvidence(args.liveEvidence);
-  const operatorEvidence = isOperatorOverride(args.feedEvidence) ? normalizeEvidence(args.feedEvidence) : null;
-  const feedEvidence = !isOperatorOverride(args.feedEvidence) ? normalizeEvidence(args.feedEvidence) : null;
-  const selected = operatorEvidence ??
-    liveEvidence ??
-    feedEvidence ??
+  const selected = liveEvidence ??
     normalizeEvidence(args.staticEvidence) ?? {
       routeStatus: "unknown" as const,
       routeStatusSource: "static-config" as const,

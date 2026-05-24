@@ -43,13 +43,6 @@ export interface RedemptionBackstopBuildOptions {
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
   redemptionLiveMetadata?: RedemptionBackstopLiveMetadata;
   routeAvailability?: RedemptionRouteAvailability | null;
-  routeStatusFeed?: {
-    origin: "operator-override" | "protocol-feed";
-    routeStatus: RedemptionBackstopEntry["routeStatus"];
-    routeStatusSource: RedemptionBackstopEntry["routeStatusSource"];
-    routeStatusReason?: string;
-    routeStatusReviewedAt?: string;
-  } | null;
 }
 
 export interface CapacityResolverContext {

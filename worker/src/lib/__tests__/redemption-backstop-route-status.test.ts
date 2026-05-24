@@ -15,7 +15,7 @@ describe("mergeRedemptionRouteStatus", () => {
     });
   });
 
-  it("prioritizes live adapter route status over protocol feed status", () => {
+  it("prioritizes live adapter route status over static status", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
       liveEvidence: {
@@ -23,11 +23,6 @@ describe("mergeRedemptionRouteStatus", () => {
         routeStatusSource: "onchain",
         routeStatusReason: "Vault paused onchain",
         routeStatusReviewedAt: "2026-05-12",
-      },
-      feedEvidence: {
-        origin: "protocol-feed",
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
       },
       allowSevereMarketOpenException: false,
     });
@@ -39,37 +34,24 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.notes).toEqual(["Vault paused onchain"]);
   });
 
-  it("prioritizes operator overrides over live adapter evidence", () => {
+  it("falls back to static status when no live route status is present", () => {
     const result = mergeRedemptionRouteStatus({
-      staticEvidence: staticOpen,
-      liveEvidence: {
-        routeStatus: "open",
-        routeStatusSource: "onchain",
-      },
-      feedEvidence: {
-        origin: "operator-override",
-        routeStatus: "paused",
-        routeStatusSource: "operator-notice",
-        routeStatusReason: "Emergency operator pause",
-        routeStatusReviewedAt: "2026-05-12",
+      staticEvidence: {
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
       },
       allowSevereMarketOpenException: false,
     });
 
-    expect(result.routeStatus).toBe("paused");
-    expect(result.routeStatusSource).toBe("operator-notice");
-    expect(result.impaired).toBe(true);
-    expect(result.notes).toEqual(["Emergency operator pause"]);
+    expect(result.routeStatus).toBe("unknown");
+    expect(result.routeStatusSource).toBe("static-config");
+    expect(result.impaired).toBe(false);
+    expect(result.notes).toEqual([]);
   });
 
-  it("applies severe market impairment after an open protocol feed", () => {
+  it("applies severe market impairment after static status", () => {
     const result = mergeRedemptionRouteStatus({
       staticEvidence: staticOpen,
-      feedEvidence: {
-        origin: "protocol-feed",
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
-      },
       severeMarketImplied: {
         routeStatus: "degraded",
         routeStatusSource: "market-implied",
