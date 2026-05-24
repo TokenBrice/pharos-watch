@@ -110,15 +110,15 @@ function StackBar({
         .filter((seg) => seg.count > 0)
         .map((seg) => {
           const percentage = (seg.count / total) * 100;
-          const isTooNarrowForFocus = percentage < 8;
+          const isTooNarrowForFocus = percentage < 14;
           return (
             <Tooltip key={seg.key}>
               <TooltipTrigger asChild>
                 <span
                   tabIndex={isTooNarrowForFocus ? undefined : 0}
                   className={cn(
-                    "block h-full cursor-help",
-                    !isTooNarrowForFocus && "pharos-focus-ring",
+                    "block h-full",
+                    isTooNarrowForFocus ? "pointer-events-none" : "pharos-focus-ring cursor-help",
                     seg.bg,
                   )}
                   style={{ width: `${percentage}%` }}
