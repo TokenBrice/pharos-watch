@@ -46,7 +46,7 @@
     }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement — public mint address not yet disclosed by Anchorage Digital Bank / Fireblocks / BusinessWire; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; DefiLlama reports supply but no usable price yet, so Pharos promotion remains pending verifiable contract address and runtime price data",
+  "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 a live Solana mint shows on-chain supply (~$1.5M), but DefiLlama does not yet track USDPT and the CoinGecko entry (usdpt-western-union) is preview-only with no price or supply — so Pharos promotion remains pending a verified contract address and a fetchable runtime price/market-cap path",
   "featuredContent": [
     {
       "type": "tweet",

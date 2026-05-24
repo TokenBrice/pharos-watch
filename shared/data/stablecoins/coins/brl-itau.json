@@ -41,7 +41,7 @@
   "announcedDate": "2025-04-03",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option.",
+  "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option. In May 2026, BCB Resolution 561 (effective Oct 1 2026) banned authorised FX providers from using stablecoins or crypto to settle cross-border remittances, tightening the regulatory backdrop the launch is gated on.",
   "featuredContent": [
     {
       "type": "article",
@@ -72,6 +72,13 @@
       "title": "Brazil stablecoin FX-classification regime takes effect",
       "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; Itau's launch timing remains contingent on the final Consulta Publica 111 framework, especially around self-custody and bank-issuer permissions.",
       "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
+    },
+    {
+      "date": "2026-05-02",
+      "type": "regulatory",
+      "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
+      "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances — a restrictive backdrop for any BRL stablecoin, though it does not name Itau.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
     }
   ]
 }

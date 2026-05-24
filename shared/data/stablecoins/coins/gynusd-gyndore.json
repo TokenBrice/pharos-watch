@@ -32,7 +32,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-02",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
+  "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. A public waitlist opened May 21 2026 (waitlist.gyndore.com), reviving social activity after the GitHub repo (last commit Mar 7) and Medium (last post Feb 2) went quiet. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
   "milestones": [
     {
       "date": "2026-02-02",
@@ -40,6 +40,13 @@
       "title": "Gyndore announced — whitepaper published",
       "description": "Bitcoin-backed CDP stablecoin protocol on Base announced by Ayeteasea, with whitepaper and website going live.",
       "sourceUrl": "https://medium.com/@gyndore"
+    },
+    {
+      "date": "2026-05-21",
+      "type": "announcement",
+      "title": "Public waitlist opened at waitlist.gyndore.com",
+      "description": "Gyndore opens a public waitlist; the project remains pre-launch with no token, launch date, or live metrics, and no third-party coverage.",
+      "sourceUrl": "https://x.com/gyndore"
     }
   ],
   "featuredContent": [],

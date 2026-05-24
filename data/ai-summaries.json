@@ -1590,14 +1590,14 @@
     "factsAsOf": "2026-05-15"
   },
   "eur-qivalis": {
-    "title": "Twelve Banks, One Euro",
-    "text": "QEUR is a pre-launch MiCA-oriented euro stablecoin from a 17-bank consortium; targeting H2 2026 under a Dutch EMI license. Qivalis is the European banking establishment's answer to USDC and Tether: a MiCA-compliant euro stablecoin backed by a consortium of 12 major banks including BNP Paribas, ING, UniCredit, and BBVA. The reserve design — 30-40% bank deposits, the remainder in short-term eurozone government bonds — reads like a {{term:money-market-fund}}money market fund{{/term}} with a blockchain address. The blockchain question is now settled: Ethereum mainnet first (ERC-20), then Polygon and Base, all with a permissioned KYC layer — only pre-verified participants can hold or transfer the token, which is the banking consortium's compromise between public chain liquidity and institutional control. CEO Jan-Oliver Sell (ex-Coinbase Germany) is finalizing exchange partnerships, with Bit2Me named as one platform in discussions. The EMI license application has been filed with De Nederlandsche Bank but not yet granted. The central tension remains whether twelve banks that compete fiercely in every other market can cooperate long enough to ship before Circle's EURC and SocGen's EURCV eat the entire MiCA-compliant euro stablecoin market. {{term:custody}}Custody{{/term}} sits across consortium banks and 1:1 {{term:redemption}}redemption{{/term}} rights remain pre-launch commitments.",
-    "updatedAt": "2026-05-15",
+    "title": "Thirty-Seven Banks, One Euro",
+    "text": "QEUR is a pre-launch MiCA-oriented euro stablecoin from a banking consortium that ballooned to 37 institutions across 15 countries by May 2026 — up from 12 a few months earlier — targeting H2 2026 issuance under a Dutch EMI license. Qivalis is the European banking establishment's answer to USDC and Tether: a MiCA-compliant euro stablecoin now backed by names like BNP Paribas, ING, UniCredit, BBVA, ABN Amro, Intesa Sanpaolo, Rabobank, and Nordea. The reserve design — 30-40% bank deposits, the remainder in short-term eurozone government bonds — reads like a {{term:money-market-fund}}money market fund{{/term}} with a blockchain address. The chain question is settled: Ethereum mainnet first (ERC-20F with a permissioned KYC layer), then Polygon and Base — only pre-verified participants can hold or transfer the token, the consortium's compromise between public-chain liquidity and institutional control. CEO Jan-Oliver Sell (ex-Coinbase Germany) is lining up exchange partnerships, and the EMI license application sits with De Nederlandsche Bank, filed but not granted; Qivalis says it will launch the moment approval lands. The central tension is unchanged and arguably sharper at 37 members: whether dozens of banks that compete fiercely everywhere else can cooperate long enough to ship before Circle's EURC and SocGen's EURCV finish eating the MiCA-compliant euro market. The ticker itself isn't even public yet. {{term:custody}}Custody{{/term}} sits across consortium banks and 1:1 {{term:redemption}}redemption{{/term}} rights remain pre-launch commitments.",
+    "updatedAt": "2026-05-24",
     "authoredBy": "ai",
     "model": "claude-opus-4-7",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
   },
   "pusd-polaris": {
     "title": "Immutable CDP, Yield Included",
@@ -2621,13 +2621,13 @@
   },
   "hkdap-anchorpoint": {
     "title": "Hong Kong's First Licensed Dollar",
-    "text": "The first HKMA-licensed HKD stablecoin under the Stablecoins Ordinance; HKD-backed by HQLA in segregated accounts. HKDAP is what happens when Standard Chartered, Hong Kong's largest telco (HKT), and Animoca Brands form a joint venture to build the first stablecoin licensed under the HKMA's Stablecoins Ordinance — a regulatory framework that went from proposal to law faster than most jurisdictions manage a consultation paper. The HKD peg is backed by high-quality liquid assets in segregated accounts, which is regulatory-speak for 'we learned from Tether's early years.' The B2B2C model targeting RWA settlement and cross-border payments positions HKDAP as infrastructure for Hong Kong's push to become Asia's regulated digital asset hub. Whether the consortium structure — a bank, a telco, and a gaming company — can move at stablecoin speed rather than committee speed is the operational question nobody has answered yet. The licensing playbook is built on segregated {{term:custody}}custody{{/term}}, HKMA-mandated {{term:attestation}}attestation{{/term}}, and a regulated {{term:redemption}}redemption{{/term}} path scoped for HKD-denominated {{term:rwa}}RWA{{/term}} settlement.",
-    "updatedAt": "2026-05-15",
+    "text": "The first HKMA-licensed HKD stablecoin under the Stablecoins Ordinance; HKD-backed by HQLA in segregated accounts. HKDAP is what happens when Standard Chartered, Hong Kong's largest telco (HKT), and Animoca Brands form a joint venture to build the first stablecoin licensed under the HKMA's Stablecoins Ordinance — a regulatory framework that went from proposal to law faster than most jurisdictions manage a consultation paper. In May 2026 the project moved from paper to chain: Anchorpoint and OSL Group ran a full-lifecycle test on Ethereum mainnet — fiat funding, reserve, mint, transfer, and full redemption — without putting tokens into public circulation, which both advances HKDAP into testing and confirms Ethereum as the deployment chain. The HKD peg is backed by high-quality liquid assets in segregated accounts, regulatory-speak for 'we learned from Tether's early years.' The B2B2C model targeting RWA settlement and cross-border payments positions HKDAP as infrastructure for Hong Kong's push to become Asia's regulated digital asset hub, with a phased rollout still aimed at the end of Q2 2026. Whether the consortium structure — a bank, a telco, and a gaming company — can move at stablecoin speed rather than committee speed is the operational question, though a working mainnet mint-and-redeem cycle is a more convincing answer than most pre-launch issuers can show. The licensing playbook is built on segregated {{term:custody}}custody{{/term}}, HKMA-mandated {{term:attestation}}attestation{{/term}}, and a regulated {{term:redemption}}redemption{{/term}} path scoped for HKD-denominated {{term:rwa}}RWA{{/term}} settlement.",
+    "updatedAt": "2026-05-24",
     "authoredBy": "ai",
     "model": "claude-opus-4-7",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-05-24",
+    "factsAsOf": "2026-05-24"
   },
   "hkd-hsbc": {
     "title": "PayMe Gets a Blockchain",

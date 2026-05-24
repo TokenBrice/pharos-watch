@@ -1172,6 +1172,13 @@
         "title": "External security audit remediation: high and medium severity fixes merged",
         "description": "Merged fixes for LP token price manipulation vulnerability (H01) and timelock bypass bug (M02); fuzz tests added for Aero LP pricing.",
         "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
+      },
+      {
+        "date": "2026-05-21",
+        "type": "audit",
+        "title": "Post-audit remediation ongoing — oracle staleness, TWAP/slippage, and sAMM-overflow fixes merged",
+        "description": "GitHub activity through May 21 2026 shows continued audit-finding remediation (oracle staleness-check, TWAP/slippage handling, and sAMM overflow fixes) merged into the main branch; no mainnet deployment yet.",
+        "sourceUrl": "https://github.com/basedollar/basedollar"
       }
     ],
     "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers"
@@ -1507,6 +1514,13 @@
         "title": "Brazil stablecoin FX-classification regime takes effect",
         "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; BRD launch deferred pending issuer compliance under the new regime and final Consulta Publica 111 output.",
         "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+      },
+      {
+        "date": "2026-05-02",
+        "type": "regulatory",
+        "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
+        "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances — a restrictive backdrop for BRD, though it does not name CF Inovacao.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
       }
     ],
     "collateral": "Brazilian National Treasury bonds (LTN/NTN-B); yield from the Selic-linked rate (currently ~15%) is structured to be shared with token holders",
@@ -1575,6 +1589,13 @@
         "title": "Brazil stablecoin FX-classification regime takes effect",
         "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; Itau's launch timing remains contingent on the final Consulta Publica 111 framework, especially around self-custody and bank-issuer permissions.",
         "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
+      },
+      {
+        "date": "2026-05-02",
+        "type": "regulatory",
+        "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
+        "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances — a restrictive backdrop for any BRL stablecoin, though it does not name Itau.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
       }
     ],
     "collateral": "Pre-launch: Itau is evaluating a BRL- or USD-denominated stablecoin pending Brazil's Consulta Publica 111 framework. The bank already participates in the DREX wholesale CBDC pilot and would source distribution rails and custody from its existing regulated infrastructure, but no reserve composition has been publicly committed."
@@ -4071,7 +4092,7 @@
     "id": "eur-qivalis",
     "name": "Qivalis Euro",
     "symbol": "QEUR",
-    "oneLiner": "QEUR is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 17-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
+    "oneLiner": "QEUR is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 37-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -4134,6 +4155,13 @@
         "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank — consortium now 17 members",
         "description": "Five Spanish and European banks expand the consortium beyond the original 12 founding members.",
         "sourceUrl": "https://www.banklesstimes.com/articles/2026/05/05/sabadell-bankinter-join-qivalis-euro-stablecoin-push-in-2026/"
+      },
+      {
+        "date": "2026-05-20",
+        "type": "milestone",
+        "title": "Consortium expands to 37 banks across 15 countries",
+        "description": "Roughly 20 additional institutions join — including ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, and Raiffeisen Bank International — up from 17 members.",
+        "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
       }
     ],
     "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet"
@@ -5540,6 +5568,13 @@
         "title": "Q1 earnings: CEO confirms stablecoin pilot on track for summer 2026",
         "description": "CEO Michael Lyons: 'on track to launch our previously announced stablecoin pilot this summer to facilitate interbank money movement.' Huntington confirmed as pilot partner alongside Bank of North Dakota and several other banks.",
         "sourceUrl": "https://www.fool.com/earnings/call-transcripts/2026/05/05/fiserv-fisv-q1-2026-earnings-call-transcript/"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "milestone",
+        "title": "FIUSD featured at Fiserv 2026 Investor Day as a strategic growth vector",
+        "description": "Fiserv positions FIUSD on an 'issued through banks, accepted through merchants' model with real-time clearing/settlement and white-label issuance; interbank-money-movement pilots with Bank of North Dakota, Huntington, and others remain on track for summer 2026.",
+        "sourceUrl": "https://investors.fiserv.com/events/event-details/fiserv-2026-investor-day"
       }
     ],
     "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure"
@@ -6807,6 +6842,13 @@
         "title": "Gyndore announced — whitepaper published",
         "description": "Bitcoin-backed CDP stablecoin protocol on Base announced by Ayeteasea, with whitepaper and website going live.",
         "sourceUrl": "https://medium.com/@gyndore"
+      },
+      {
+        "date": "2026-05-21",
+        "type": "announcement",
+        "title": "Public waitlist opened at waitlist.gyndore.com",
+        "description": "Gyndore opens a public waitlist; the project remains pre-launch with no token, launch date, or live metrics, and no third-party coverage.",
+        "sourceUrl": "https://x.com/gyndore"
       }
     ],
     "canBeBlacklisted": "possible",
@@ -7008,7 +7050,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "announced",
+    "launchPhase": "testnet",
     "milestones": [
       {
         "date": "2026-04-10",
@@ -7016,6 +7058,13 @@
         "title": "HKMA grants stablecoin issuer licence to Anchorpoint Financial",
         "description": "The HKMA grants Anchorpoint Financial Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
         "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+      },
+      {
+        "date": "2026-05-13",
+        "type": "testnet",
+        "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
+        "description": "Anchorpoint and OSL Group execute an end-to-end production-grade test (fiat funding, reserve, mint, transfer, full redemption) on Ethereum mainnet; tokens were not placed into public circulation. Confirms Ethereum as the deployment chain.",
+        "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
       }
     ],
     "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements"
@@ -12037,6 +12086,20 @@
         "title": "Revolut UK Head of Policy testifies to House of Lords on GBP stablecoin strategy",
         "description": "Rory Tanner tells peers the UK is 'already behind' the US and EU; outlines UK→India remittance corridor (seventh-largest globally) as priority B2B use case; flags Bank of England's proposed 'branded stablecoin' ban as a commercial blocker.",
         "sourceUrl": "https://paymentexpert.com/2026/03/25/revolut-uk-legal-head-gbp-stablecoin/"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "regulatory",
+        "title": "Bank of England signals stablecoin proposals were 'excessively conservative'",
+        "description": "Deputy Governor Breeden indicates the BoE is ready to soften its proposed stablecoin rules following industry pushback, ahead of revised draft rules — easing the 'branded stablecoin' ban and holding-cap risks flagged for GBP issuers like Revolut.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/05/14/bank-of-england-ready-to-water-down-overly-conservative-stablecoin-proposals-ft"
+      },
+      {
+        "date": "2026-05-19",
+        "type": "regulatory",
+        "title": "Bank of England drops £20k individual holding cap for aggregate issuer caps",
+        "description": "At CityWeek 2026 the BoE confirms it is abandoning the proposed £20,000 per-person holding limit in favour of aggregate issuance caps; revised draft rules expected June 2026.",
+        "sourceUrl": "https://invezz.com/news/2026/05/19/bank-of-england-weighs-stablecoin-guardrail-alternatives-ahead-of-draft-rules/"
       }
     ],
     "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal"

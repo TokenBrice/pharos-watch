@@ -43,7 +43,7 @@
   "status": "pre-launch",
   "expectedLaunchDate": "2026-Q2",
   "launchPhase": "auditing",
-  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged; not yet deployed to mainnet",
+  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); not yet deployed to mainnet; targeting Q2 2026",
   "milestones": [
     {
       "date": "2026-04-03",
@@ -58,6 +58,13 @@
       "title": "External security audit remediation: high and medium severity fixes merged",
       "description": "Merged fixes for LP token price manipulation vulnerability (H01) and timelock bypass bug (M02); fuzz tests added for Aero LP pricing.",
       "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
+    },
+    {
+      "date": "2026-05-21",
+      "type": "audit",
+      "title": "Post-audit remediation ongoing — oracle staleness, TWAP/slippage, and sAMM-overflow fixes merged",
+      "description": "GitHub activity through May 21 2026 shows continued audit-finding remediation (oracle staleness-check, TWAP/slippage handling, and sAMM overflow fixes) merged into the main branch; no mainnet deployment yet.",
+      "sourceUrl": "https://github.com/basedollar/basedollar"
     }
   ]
 }

@@ -39,7 +39,7 @@
   "announcedDate": "2025-06",
   "expectedLaunchDate": "2026",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; Investor Day May 14 expected to detail digital asset strategy",
+  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'), with the interbank pilot still targeted for summer 2026",
   "featuredContent": [
     {
       "type": "article",
@@ -102,6 +102,13 @@
       "title": "Q1 earnings: CEO confirms stablecoin pilot on track for summer 2026",
       "description": "CEO Michael Lyons: 'on track to launch our previously announced stablecoin pilot this summer to facilitate interbank money movement.' Huntington confirmed as pilot partner alongside Bank of North Dakota and several other banks.",
       "sourceUrl": "https://www.fool.com/earnings/call-transcripts/2026/05/05/fiserv-fisv-q1-2026-earnings-call-transcript/"
+    },
+    {
+      "date": "2026-05-14",
+      "type": "milestone",
+      "title": "FIUSD featured at Fiserv 2026 Investor Day as a strategic growth vector",
+      "description": "Fiserv positions FIUSD on an 'issued through banks, accepted through merchants' model with real-time clearing/settlement and white-label issuance; interbank-money-movement pilots with Bank of North Dakota, Huntington, and others remain on track for summer 2026.",
+      "sourceUrl": "https://investors.fiserv.com/events/event-details/fiserv-2026-investor-day"
     }
   ]
 }

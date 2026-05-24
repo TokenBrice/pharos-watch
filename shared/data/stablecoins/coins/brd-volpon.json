@@ -38,7 +38,7 @@
   "announcedDate": "2026-01-06",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026)",
+  "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026); BCB Resolution 561 (published Apr 30 2026, effective Oct 1 2026) further bans stablecoin/crypto settlement in regulated cross-border FX, tightening the regulatory backdrop",
   "featuredContent": [
     {
       "type": "article",
@@ -69,6 +69,13 @@
       "title": "Brazil stablecoin FX-classification regime takes effect",
       "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; BRD launch deferred pending issuer compliance under the new regime and final Consulta Publica 111 output.",
       "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+    },
+    {
+      "date": "2026-05-02",
+      "type": "regulatory",
+      "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
+      "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances — a restrictive backdrop for BRD, though it does not name CF Inovacao.",
+      "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
     }
   ]
 }

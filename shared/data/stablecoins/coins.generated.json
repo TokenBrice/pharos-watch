@@ -2403,7 +2403,7 @@
     "status": "pre-launch",
     "expectedLaunchDate": "2026-Q2",
     "launchPhase": "auditing",
-    "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged; not yet deployed to mainnet",
+    "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); not yet deployed to mainnet; targeting Q2 2026",
     "milestones": [
       {
         "date": "2026-04-03",
@@ -2418,6 +2418,13 @@
         "title": "External security audit remediation: high and medium severity fixes merged",
         "description": "Merged fixes for LP token price manipulation vulnerability (H01) and timelock bypass bug (M02); fuzz tests added for Aero LP pricing.",
         "sourceUrl": "https://github.com/basedollar/basedollar/pull/98"
+      },
+      {
+        "date": "2026-05-21",
+        "type": "audit",
+        "title": "Post-audit remediation ongoing — oracle staleness, TWAP/slippage, and sAMM-overflow fixes merged",
+        "description": "GitHub activity through May 21 2026 shows continued audit-finding remediation (oracle staleness-check, TWAP/slippage handling, and sAMM overflow fixes) merged into the main branch; no mainnet deployment yet.",
+        "sourceUrl": "https://github.com/basedollar/basedollar"
       }
     ]
   },
@@ -3097,7 +3104,7 @@
     "announcedDate": "2026-01-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026)",
+    "launchPhaseDetail": "Announced Jan 6 2026 on 'Cripto na Real' by former Brazil central bank deputy governor Tony Volpon (BCB 2015-16, ex-UBS/Nomura MD); to be issued by CF Inovacao (co-founded with Jose Carneiro in 2023), targeting institutional investors who want on-chain access to Selic-rate yield (~15%); positioned as the first BRL-pegged token to explicitly share government-debt yield with holders, competing against Crown's BRLV which raised a $13.5M Series A from Paradigm in December 2025; no formal product docs or deployment timeline yet; awaiting BCB Resolution implementation under Public Consultation 111 (FX-classification regime effective February 2 2026); BCB Resolution 561 (published Apr 30 2026, effective Oct 1 2026) further bans stablecoin/crypto settlement in regulated cross-border FX, tightening the regulatory backdrop",
     "featuredContent": [
       {
         "type": "article",
@@ -3128,6 +3135,13 @@
         "title": "Brazil stablecoin FX-classification regime takes effect",
         "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; BRD launch deferred pending issuer compliance under the new regime and final Consulta Publica 111 output.",
         "sourceUrl": "https://www.coindesk.com/business/2026/01/07/former-brazil-central-bank-official-unveils-real-pegged-stablecoin-with-yield-sharing"
+      },
+      {
+        "date": "2026-05-02",
+        "type": "regulatory",
+        "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
+        "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances — a restrictive backdrop for BRD, though it does not name CF Inovacao.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
       }
     ]
   },
@@ -3238,7 +3252,7 @@
     "announcedDate": "2025-04-03",
     "expectedLaunchDate": "2026",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option.",
+    "launchPhaseDetail": "Itau Unibanco (Brazil's largest private bank by assets, ~5.6T BRL) is evaluating its own stablecoin. Head of Digital Assets Guto Antunes confirmed exploration at an industry event in Sao Paulo in April 2025: 'we are always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. Final peg-currency choice (BRL or USD) and product timeline are gated on Brazil's regulatory output via BCB Consulta Publica 111. Itau already participates in the DREX wholesale CBDC pilot, providing distribution-rail experience; ticker not yet announced. Pharos tracks BRL as the most likely first launch given the Brazilian retail base, but the editorial summary documents the open USD option. In May 2026, BCB Resolution 561 (effective Oct 1 2026) banned authorised FX providers from using stablecoins or crypto to settle cross-border remittances, tightening the regulatory backdrop the launch is gated on.",
     "featuredContent": [
       {
         "type": "article",
@@ -3269,6 +3283,13 @@
         "title": "Brazil stablecoin FX-classification regime takes effect",
         "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; Itau's launch timing remains contingent on the final Consulta Publica 111 framework, especially around self-custody and bank-issuer permissions.",
         "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
+      },
+      {
+        "date": "2026-05-02",
+        "type": "regulatory",
+        "title": "BCB Resolution 561 bans stablecoin settlement in regulated cross-border FX",
+        "description": "Brazil's central bank publishes Resolution 561 (effective Oct 1 2026) prohibiting authorised FX providers from using stablecoins or crypto to settle cross-border remittances — a restrictive backdrop for any BRL stablecoin, though it does not name Itau.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
       }
     ]
   },
@@ -7926,7 +7947,7 @@
     "detailProvider": "defillama",
     "name": "Qivalis Euro",
     "symbol": "QEUR",
-    "oneLiner": "QEUR is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 17-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
+    "oneLiner": "QEUR is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 37-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -7963,7 +7984,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "announced",
-    "launchPhaseDetail": "17-bank consortium (second wave May 5: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license with Dutch Central Bank in final stages; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; H2 2026 on track",
+    "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); EMI license application with De Nederlandsche Bank pending — Qivalis says it will launch immediately on approval; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis; H2 2026 on track",
     "featuredContent": [
       {
         "type": "article",
@@ -7986,6 +8007,13 @@
         "title": "France's finance minister calls for more euro stablecoins, expresses Qivalis support",
         "description": "Roland Lescure reverses Paris's prior hostility to private stablecoins, specifically backing Qivalis and urging EU banks to accelerate tokenized deposits.",
         "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520",
+        "title": "European banks back Amsterdam-based euro stablecoin project Qivalis",
+        "description": "The Qivalis consortium expands to 37 banks across 15 countries as it awaits a Dutch EMI license to launch its MiCA-compliant euro stablecoin in H2 2026.",
+        "source": "FXStreet"
       }
     ],
     "milestones": [
@@ -8036,6 +8064,13 @@
         "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank — consortium now 17 members",
         "description": "Five Spanish and European banks expand the consortium beyond the original 12 founding members.",
         "sourceUrl": "https://www.banklesstimes.com/articles/2026/05/05/sabadell-bankinter-join-qivalis-euro-stablecoin-push-in-2026/"
+      },
+      {
+        "date": "2026-05-20",
+        "type": "milestone",
+        "title": "Consortium expands to 37 banks across 15 countries",
+        "description": "Roughly 20 additional institutions join — including ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, and Raiffeisen Bank International — up from 17 members.",
+        "sourceUrl": "https://www.fxstreet.com/cryptocurrencies/news/european-banks-back-amsterdam-based-euro-stablecoin-project-qivalis-202605201520"
       }
     ]
   },
@@ -10571,7 +10606,7 @@
     "announcedDate": "2025-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; Investor Day May 14 expected to detail digital asset strategy",
+    "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot 'on track for this summer' for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'), with the interbank pilot still targeted for summer 2026",
     "featuredContent": [
       {
         "type": "article",
@@ -10633,6 +10668,13 @@
         "title": "Q1 earnings: CEO confirms stablecoin pilot on track for summer 2026",
         "description": "CEO Michael Lyons: 'on track to launch our previously announced stablecoin pilot this summer to facilitate interbank money movement.' Huntington confirmed as pilot partner alongside Bank of North Dakota and several other banks.",
         "sourceUrl": "https://www.fool.com/earnings/call-transcripts/2026/05/05/fiserv-fisv-q1-2026-earnings-call-transcript/"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "milestone",
+        "title": "FIUSD featured at Fiserv 2026 Investor Day as a strategic growth vector",
+        "description": "Fiserv positions FIUSD on an 'issued through banks, accepted through merchants' model with real-time clearing/settlement and white-label issuance; interbank-money-movement pilots with Bank of North Dakota, Huntington, and others remain on track for summer 2026.",
+        "sourceUrl": "https://investors.fiserv.com/events/event-details/fiserv-2026-investor-day"
       }
     ]
   },
@@ -13069,7 +13111,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-02",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
+    "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. A public waitlist opened May 21 2026 (waitlist.gyndore.com), reviving social activity after the GitHub repo (last commit Mar 7) and Medium (last post Feb 2) went quiet. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
     "featuredContent": [],
     "milestones": [
       {
@@ -13078,6 +13120,13 @@
         "title": "Gyndore announced — whitepaper published",
         "description": "Bitcoin-backed CDP stablecoin protocol on Base announced by Ayeteasea, with whitepaper and website going live.",
         "sourceUrl": "https://medium.com/@gyndore"
+      },
+      {
+        "date": "2026-05-21",
+        "type": "announcement",
+        "title": "Public waitlist opened at waitlist.gyndore.com",
+        "description": "Gyndore opens a public waitlist; the project remains pre-launch with no token, launch date, or live metrics, and no third-party coverage.",
+        "sourceUrl": "https://x.com/gyndore"
       }
     ]
   },
@@ -13458,8 +13507,8 @@
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "announced",
-    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets; phased B2B2C rollout expected in the coming months / Q2 2026 for RWA settlement and cross-border payments",
+    "launchPhase": "testnet",
+    "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint and OSL Group completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. Phased B2B2C rollout targeted by end of Q2 2026 for RWA settlement and cross-border payments",
     "featuredContent": [
       {
         "type": "article",
@@ -13467,6 +13516,13 @@
         "title": "Animoca-backed Anchorpoint to launch regulated HKD stablecoin HKDAP",
         "description": "Standard Chartered, HKT, and Animoca Brands JV receives first HKMA stablecoin license for HKD-pegged HKDAP.",
         "source": "crypto.news"
+      },
+      {
+        "type": "article",
+        "url": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum",
+        "title": "OSL and Anchorpoint complete HKDAP stablecoin test transfers on Ethereum",
+        "description": "Anchorpoint and OSL Group complete a full-lifecycle HKDAP test on Ethereum mainnet — fiat funding through mint, transfer, and redemption — ahead of a phased Q2 2026 launch.",
+        "source": "OSL"
       }
     ],
     "milestones": [
@@ -13476,6 +13532,13 @@
         "title": "HKMA grants stablecoin issuer licence to Anchorpoint Financial",
         "description": "The HKMA grants Anchorpoint Financial Limited a stablecoin issuer licence under the Stablecoins Ordinance, effective April 10 2026.",
         "sourceUrl": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
+      },
+      {
+        "date": "2026-05-13",
+        "type": "testnet",
+        "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
+        "description": "Anchorpoint and OSL Group execute an end-to-end production-grade test (fiat funding, reserve, mint, transfer, full redemption) on Ethereum mainnet; tokens were not placed into public circulation. Confirms Ethereum as the deployment chain.",
+        "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
       }
     ]
   },
@@ -23042,7 +23105,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2027",
     "launchPhase": "announced",
-    "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; Bank of England's proposed ban on 'branded' stablecoins and 40% unremunerated-reserve requirement remain open commercial risks; UK full authorisation regime not active until October 2027",
+    "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026 — dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries — though the 40% unremunerated-reserve requirement remains under review; UK full authorisation regime not active until October 2027",
     "featuredContent": [
       {
         "type": "article",
@@ -23080,6 +23143,20 @@
         "title": "Revolut UK Head of Policy testifies to House of Lords on GBP stablecoin strategy",
         "description": "Rory Tanner tells peers the UK is 'already behind' the US and EU; outlines UK→India remittance corridor (seventh-largest globally) as priority B2B use case; flags Bank of England's proposed 'branded stablecoin' ban as a commercial blocker.",
         "sourceUrl": "https://paymentexpert.com/2026/03/25/revolut-uk-legal-head-gbp-stablecoin/"
+      },
+      {
+        "date": "2026-05-14",
+        "type": "regulatory",
+        "title": "Bank of England signals stablecoin proposals were 'excessively conservative'",
+        "description": "Deputy Governor Breeden indicates the BoE is ready to soften its proposed stablecoin rules following industry pushback, ahead of revised draft rules — easing the 'branded stablecoin' ban and holding-cap risks flagged for GBP issuers like Revolut.",
+        "sourceUrl": "https://www.coindesk.com/policy/2026/05/14/bank-of-england-ready-to-water-down-overly-conservative-stablecoin-proposals-ft"
+      },
+      {
+        "date": "2026-05-19",
+        "type": "regulatory",
+        "title": "Bank of England drops £20k individual holding cap for aggregate issuer caps",
+        "description": "At CityWeek 2026 the BoE confirms it is abandoning the proposed £20,000 per-person holding limit in favour of aggregate issuance caps; revised draft rules expected June 2026.",
+        "sourceUrl": "https://invezz.com/news/2026/05/19/bank-of-england-weighs-stablecoin-guardrail-alternatives-ahead-of-draft-rules/"
       }
     ]
   },
@@ -33858,7 +33935,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement — public mint address not yet disclosed by Anchorage Digital Bank / Fireblocks / BusinessWire; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; DefiLlama reports supply but no usable price yet, so Pharos promotion remains pending verifiable contract address and runtime price data",
+    "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 a live Solana mint shows on-chain supply (~$1.5M), but DefiLlama does not yet track USDPT and the CoinGecko entry (usdpt-western-union) is preview-only with no price or supply — so Pharos promotion remains pending a verified contract address and a fetchable runtime price/market-cap path",
     "featuredContent": [
       {
         "type": "tweet",
