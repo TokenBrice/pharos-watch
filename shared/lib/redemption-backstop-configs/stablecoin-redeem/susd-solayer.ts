@@ -1,5 +1,6 @@
 import {
   documentedBoundSupplyFull,
+  sourceRef,
   undisclosedReviewedFee,
   type RedemptionBackstopConfig,
   stablecoinRedeemBase,
@@ -13,4 +14,14 @@ export const SUSD_SOLAYER_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   costModel: undisclosedReviewedFee(
     "Solayer docs describe sUSD mint and redemption through protocol rails; public docs reviewed do not publish a fixed redemption fee",
   ),
+  docs: [
+    sourceRef("Solayer sUSD RFQ process", "https://docs.solayer.org/susd/decentralized-rfq-protocol/process", [
+      "route",
+      "capacity",
+      "settlement",
+    ]),
+    sourceRef("Solayer sUSD eligibility", "https://docs.solayer.org/susd/protocol-info/eligibility%26risks", [
+      "access",
+    ]),
+  ],
 };

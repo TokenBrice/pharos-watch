@@ -1,8 +1,4 @@
-import {
-  documentedVariableFee,
-  type RedemptionBackstopConfig,
-  stablecoinRedeemBase,
-} from "../shared";
+import { documentedVariableFee, sourceRef, type RedemptionBackstopConfig, stablecoinRedeemBase } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
 
 export const OUSG_ONDO_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
@@ -13,5 +9,12 @@ export const OUSG_ONDO_FINANCE_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfi
   costModel: documentedVariableFee(
     "Instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 via BUIDL on-chain liquidity)",
   ),
+  docs: [
+    sourceRef("Ondo OUSG", "https://ondo.finance/ousg", ["route", "capacity", "fees", "access"]),
+    sourceRef("Ondo OUSG redeeming", "https://docs.ondo.finance/qualified-access-products/ousg/redeeming", [
+      "route",
+      "settlement",
+    ]),
+  ],
   notes: ["Token transfers restricted to KYC-verified whitelisted addresses on-chain"],
 };
