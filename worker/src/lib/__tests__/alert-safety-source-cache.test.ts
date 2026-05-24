@@ -188,6 +188,34 @@ describe("alert safety source cache", () => {
     });
   });
 
+  it("marks source envelopes corrupt when every core row is invalid", () => {
+    const assessed = assessAlertSafetySourceCache(
+      {
+        value: JSON.stringify({
+          generation: getAlertSafetySourceGeneration("7.09"),
+          methodologyVersion: "7.09",
+          publishedAt: 1_700_000_000,
+          snapshot: {
+            corrupt: {
+              grade: "A",
+              score: "90",
+              methodologyVersion: "7.09",
+            },
+          },
+        }),
+        updatedAt: 1_700_000_000,
+      },
+      {
+        expectedGeneration: getAlertSafetySourceGeneration("7.09"),
+        nowSec: 1_700_000_060,
+        producerIntervalSec: 900,
+      },
+    );
+
+    expect(assessed.state).toBe("corrupt");
+    expect(assessed.envelope).toBeNull();
+  });
+
   it("keeps explain data through the source-cache to alert-snapshot envelope path", () => {
     const source = buildAlertSafetySourceEnvelope([reportCard()], "7.09", 1_700_000_000);
     const alertSnapshot = buildAlertSafetySnapshotEnvelope(source.snapshot, source.generation);

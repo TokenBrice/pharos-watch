@@ -23,7 +23,11 @@ describe("telegram alert safety reasons", () => {
         rawInputs: { activeDepeg: true, activeDepegBps: 7546 },
       },
     });
-    const previous = snapshot({ grade: "B", score: 72 });
+    const previous = snapshot({
+      grade: "B",
+      score: 72,
+      explain: { schemaVersion: 1, stages: { activeDepegCapApplied: false } },
+    });
 
     const [result] = addSafetyReasonLines(
       [BASE_CHANGE],
@@ -32,8 +36,25 @@ describe("telegram alert safety reasons", () => {
       new Map([["coin", "Context: Safety F 39 · Liquidity 57, DEX TVL $1.2M"]]),
     );
 
-    expect(result.contextLine).toContain("Reason: Active depeg peak 7546 bps capped Safety Score at F.");
+    expect(result.contextLine).toContain("Reason: Active depeg peak 7546 bps capped the pre-variant Safety Score at F (39).");
     expect(result.contextLine).not.toContain("Context:");
+  });
+
+  it("does not claim a new active-depeg cap when the previous explain snapshot is missing", () => {
+    const current = snapshot({
+      grade: "F",
+      score: 39,
+      explain: {
+        schemaVersion: 1,
+        stages: { activeDepegCapApplied: true, activeDepegCapScore: 39 },
+        rawInputs: { activeDepeg: true, activeDepegBps: 7546 },
+      },
+    });
+    const previous = snapshot({ grade: "B", score: 72 });
+
+    const [result] = addSafetyReasonLines([BASE_CHANGE], current, previous);
+
+    expect(result.contextLine).toBe("Reason: Safety Score declined from 72 to 39.");
   });
 
   it("does not let an unchanged active cap mask a larger dimension move", () => {
@@ -101,7 +122,47 @@ describe("telegram alert safety reasons", () => {
       previous,
     );
 
-    expect(result.contextLine).toBe("Reason: Active depeg peak 2600 bps capped Safety Score at F.");
+    expect(result.contextLine).toBe("Reason: Active depeg peak 2600 bps capped the pre-variant Safety Score at F (39).");
+  });
+
+  it("uses variant-cap tightening when an existing parent cap moves lower", () => {
+    const previous = snapshot({
+      grade: "C+",
+      score: 61,
+      explain: {
+        schemaVersion: 1,
+        stages: {
+          variantCapApplied: true,
+          scoreBeforeVariantCap: 72,
+          finalScore: 61,
+        },
+        rawInputs: { variantParentId: "parent-coin" },
+      },
+    });
+    const current = snapshot({
+      grade: "F",
+      score: 39,
+      explain: {
+        schemaVersion: 1,
+        stages: {
+          variantCapApplied: true,
+          scoreBeforeVariantCap: 72,
+          finalScore: 39,
+        },
+        rawInputs: { variantParentId: "parent-coin" },
+        dimensions: {
+          liquidity: { grade: "F", score: 20, detail: "DEX liquidity 20/100" },
+        },
+      },
+    });
+
+    const [result] = addSafetyReasonLines(
+      [{ ...BASE_CHANGE, oldGrade: "C+", oldScore: 61 }],
+      current,
+      previous,
+    );
+
+    expect(result.contextLine).toBe("Reason: Variant parent cap by parent parent-coin tightened Safety Score to F (39).");
   });
 
   it("selects the dimension movement matching the overall downgrade", () => {
@@ -223,6 +284,41 @@ describe("telegram alert safety reasons", () => {
     );
   });
 
+  it("ranks dimension movements by weighted score impact", () => {
+    const previous = snapshot({
+      grade: "B",
+      score: 72,
+      explain: {
+        schemaVersion: 1,
+        dimensions: {
+          liquidity: { grade: "B", score: 72, detail: "DEX liquidity 72/100" },
+          decentralization: { grade: "B", score: 72, detail: "Decentralization 72/100" },
+        },
+      },
+    });
+    const current = snapshot({
+      grade: "C+",
+      score: 61,
+      explain: {
+        schemaVersion: 1,
+        dimensions: {
+          liquidity: { grade: "C+", score: 52, detail: "DEX liquidity 52/100" },
+          decentralization: { grade: "F", score: 42, detail: "Decentralization 42/100" },
+        },
+      },
+    });
+
+    const [result] = addSafetyReasonLines(
+      [{ ...BASE_CHANGE, newGrade: "C+", newScore: 61 }],
+      current,
+      previous,
+    );
+
+    expect(result.contextLine).toBe(
+      "Reason: Liquidity / Exit fell B -> C+ (72 -> 52). Now: DEX liquidity 52/100.",
+    );
+  });
+
   it("uses the dimension movement matching an upgrade", () => {
     const previous = snapshot({
       grade: "D",
@@ -295,6 +391,35 @@ describe("telegram alert safety reasons", () => {
 
     expect(result.contextLine).toBe(
       "Reason: Safety Score declined from 72 to 61. Now: Safety C+ 61 · Supply $10.0M.",
+    );
+  });
+
+  it("uses neutral dimension wording when grade and score directions conflict", () => {
+    const previous = snapshot({
+      grade: "B",
+      score: 72,
+      explain: {
+        schemaVersion: 1,
+        dimensions: { liquidity: { grade: "B", score: 72, detail: "DEX liquidity 72/100" } },
+      },
+    });
+    const current = snapshot({
+      grade: "C+",
+      score: 74,
+      explain: {
+        schemaVersion: 1,
+        dimensions: { liquidity: { grade: "C+", score: 74, detail: "DEX liquidity 74/100" } },
+      },
+    });
+
+    const [result] = addSafetyReasonLines(
+      [{ ...BASE_CHANGE, newGrade: "C+", newScore: 74 }],
+      current,
+      previous,
+    );
+
+    expect(result.contextLine).toBe(
+      "Reason: Liquidity / Exit changed B -> C+ (72 -> 74). Now: DEX liquidity 74/100.",
     );
   });
 });

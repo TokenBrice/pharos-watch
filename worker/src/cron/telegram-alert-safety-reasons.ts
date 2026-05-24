@@ -1,3 +1,7 @@
+import {
+  DIMENSION_WEIGHTS,
+  scoreToGrade,
+} from "@shared/lib/report-card-core";
 import type { DimensionKey } from "@shared/types/report-cards";
 import type { SafetyChange } from "../lib/telegram-alerts";
 import type { AlertSafetySourceRow } from "../lib/alert-safety-source-cache";
@@ -56,7 +60,7 @@ export type SafetyChangeWithExplain = SafetyChange & {
   currentExplain?: DispatchSafetyExplainSnapshot;
 };
 
-type Direction = "upgrade" | "downgrade" | "flat";
+type Direction = "upgrade" | "downgrade" | "mixed" | "flat";
 
 export function addSafetyReasonLines(
   changes: readonly SafetyChange[],
@@ -77,7 +81,7 @@ export function addSafetyReasonLines(
   });
 }
 
-export function buildSafetyReasonLine(
+function buildSafetyReasonLine(
   change: SafetyChangeWithExplain,
   currentContextLine?: string,
 ): string {
@@ -98,17 +102,15 @@ function chooseSafetyReason(change: SafetyChangeWithExplain): string {
     typeof current.rawInputs.activeDepegBps === "number" &&
     isNewOrTighterActiveDepegCap(current, previous)
   ) {
-    return `Active depeg peak ${Math.round(current.rawInputs.activeDepegBps)} bps capped Safety Score at ${change.newGrade}`;
+    return `Active depeg peak ${Math.round(current.rawInputs.activeDepegBps)} bps capped the pre-variant Safety Score at ${formatCapTarget(current.stages?.activeDepegCapScore)}`;
   }
 
-  if (current?.stages?.noLiquidityPenaltyApplied === true && previous?.stages?.noLiquidityPenaltyApplied !== true) {
+  if (current?.stages?.noLiquidityPenaltyApplied === true && previous?.stages?.noLiquidityPenaltyApplied === false) {
     return "Exit liquidity became unrated, applying the no-liquidity penalty";
   }
 
-  if (current?.stages?.variantCapApplied === true && previous?.stages?.variantCapApplied !== true) {
-    const parent = current.rawInputs?.variantParentId ? ` by parent ${current.rawInputs.variantParentId}` : "";
-    return `Variant parent cap${parent} limited Safety Score to ${change.newGrade}`;
-  }
+  const variantReason = buildVariantCapReason(change);
+  if (variantReason) return variantReason;
 
   const dimensionReason = buildDimensionMovementReason(change);
   if (dimensionReason) return dimensionReason;
@@ -131,12 +133,34 @@ function isNewOrTighterActiveDepegCap(
   previous: DispatchSafetyExplainSnapshot | undefined,
 ): boolean {
   if (current.stages?.activeDepegCapApplied !== true) return false;
-  if (previous?.stages?.activeDepegCapApplied !== true) return true;
+  if (!previous?.stages) return false;
+  if (previous.stages.activeDepegCapApplied === false) return true;
   const currentCap = current.stages.activeDepegCapScore;
   const previousCap = previous.stages.activeDepegCapScore;
   return typeof currentCap === "number" &&
     typeof previousCap === "number" &&
     currentCap < previousCap;
+}
+
+function buildVariantCapReason(change: SafetyChangeWithExplain): string | null {
+  const current = change.currentExplain;
+  const previous = change.previousExplain;
+  if (current?.stages?.variantCapApplied !== true || !previous?.stages) return null;
+
+  const parent = current.rawInputs?.variantParentId ? ` by parent ${current.rawInputs.variantParentId}` : "";
+  if (previous.stages.variantCapApplied === false) {
+    return `Variant parent cap${parent} limited Safety Score to ${formatGradeScore(change.newGrade, change.newScore)}`;
+  }
+
+  if (previous.stages.variantCapApplied === true) {
+    const currentFinal = current.stages.finalScore;
+    const previousFinal = previous.stages.finalScore;
+    if (typeof currentFinal === "number" && typeof previousFinal === "number" && currentFinal < previousFinal) {
+      return `Variant parent cap${parent} tightened Safety Score to ${formatGradeScore(change.newGrade, currentFinal)}`;
+    }
+  }
+
+  return null;
 }
 
 function buildDimensionMovementReason(change: SafetyChangeWithExplain): string | null {
@@ -158,11 +182,13 @@ function buildDimensionMovementReason(change: SafetyChangeWithExplain): string |
     const scoreDelta = calculateScoreDelta(prev, curr);
     const gradeChanged = prev.grade !== curr.grade;
     if (direction === "flat" && !gradeChanged && scoreDelta === 0) return [];
-    return [{ key, prev, curr, direction, scoreDelta, gradeChanged, magnitude: movementMagnitude(prev, curr, scoreDelta) }];
+    return [{ key, prev, curr, direction, scoreDelta, gradeChanged, magnitude: movementMagnitude(key, prev, curr, scoreDelta) }];
   });
 
   if (movements.length === 0) return null;
-  const directional = movements.filter((movement) => movement.direction === overallDirection);
+  const directional = overallDirection === "upgrade" || overallDirection === "downgrade"
+    ? movements.filter((movement) => movement.direction === overallDirection)
+    : [];
   const candidates = directional.length > 0 ? directional : movements;
   const selected = candidates.sort((a, b) => b.magnitude - a.magnitude)[0];
   if (!selected) return null;
@@ -196,7 +222,7 @@ function readExplain(row: AlertSafetySourceRow | undefined): DispatchSafetyExpla
   const rawInputsRecord = asRecord(record.rawInputs);
   const dimensionsRecord = asRecord(record.dimensions);
   const explain: DispatchSafetyExplainSnapshot = {};
-    if (schemaVersion) explain.schemaVersion = schemaVersion;
+  if (schemaVersion) explain.schemaVersion = schemaVersion;
   if (stagesRecord) {
     explain.stages = {
       baseScore: readOptionalNullableNumber(stagesRecord.baseScore),
@@ -248,13 +274,22 @@ function compareGradeOrScore(
 ): Direction {
   const oldRank = SAFETY_GRADE_RANK[oldGrade];
   const newRank = SAFETY_GRADE_RANK[newGrade];
+  let gradeDirection: Direction = "flat";
+  let scoreDirection: Direction = "flat";
   if (oldRank != null && newRank != null && oldRank !== newRank) {
-    return newRank > oldRank ? "upgrade" : "downgrade";
+    gradeDirection = newRank > oldRank ? "upgrade" : "downgrade";
   }
   if (oldScore != null && newScore != null && oldScore !== newScore) {
-    return newScore > oldScore ? "upgrade" : "downgrade";
+    scoreDirection = newScore > oldScore ? "upgrade" : "downgrade";
   }
-  return "flat";
+  if (
+    (gradeDirection === "upgrade" || gradeDirection === "downgrade") &&
+    (scoreDirection === "upgrade" || scoreDirection === "downgrade") &&
+    gradeDirection !== scoreDirection
+  ) {
+    return "mixed";
+  }
+  return gradeDirection !== "flat" ? gradeDirection : scoreDirection;
 }
 
 function formatDimensionTransition(
@@ -272,6 +307,14 @@ function formatDimensionState(dimension: DispatchSafetyDimensionSnapshot): strin
   return dimension.score != null ? `${dimension.grade} (${dimension.score})` : dimension.grade;
 }
 
+function formatGradeScore(grade: string, score: number | null): string {
+  return score == null ? grade : `${grade} (${score})`;
+}
+
+function formatCapTarget(score: number | null | undefined): string {
+  return typeof score === "number" ? `${scoreToGrade(score)} (${score})` : "the active-depeg cap";
+}
+
 function calculateScoreDelta(
   previous: DispatchSafetyDimensionSnapshot,
   current: DispatchSafetyDimensionSnapshot,
@@ -283,16 +326,17 @@ function calculateScoreDelta(
 }
 
 function movementMagnitude(
+  key: DimensionKey,
   previous: DispatchSafetyDimensionSnapshot,
   current: DispatchSafetyDimensionSnapshot,
   scoreDelta: number,
 ): number {
   const scoreMagnitude = Math.abs(scoreDelta);
-  if (scoreMagnitude > 0) return scoreMagnitude;
+  if (scoreMagnitude > 0) return scoreMagnitude * (DIMENSION_WEIGHTS[key] ?? 1);
   const previousRank = SAFETY_GRADE_RANK[previous.grade];
   const currentRank = SAFETY_GRADE_RANK[current.grade];
   if (previousRank == null || currentRank == null) return 0;
-  return Math.abs(currentRank - previousRank) * 10;
+  return Math.abs(currentRank - previousRank) * 10 * (DIMENSION_WEIGHTS[key] ?? 1);
 }
 
 function stripContextPrefix(line: string | undefined): string | null {
