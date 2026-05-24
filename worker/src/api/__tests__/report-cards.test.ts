@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../report-cards";
+import { REPORT_CARDS_SNAPSHOT_CACHE_GENERATION } from "../../lib/report-cards-snapshot-cache";
 import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
 
 function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
@@ -32,7 +33,7 @@ function makeCachedSnapshot(updatedAt = Math.floor(Date.now() / 1000)) {
 
 function makeCachedSnapshotEnvelope(snapshot: ReturnType<typeof makeCachedSnapshot>) {
   return {
-    generation: 2,
+    generation: REPORT_CARDS_SNAPSHOT_CACHE_GENERATION,
     methodologyVersion: METHODOLOGY_VERSION,
     payload: snapshot,
   };

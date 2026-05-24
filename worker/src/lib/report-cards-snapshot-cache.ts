@@ -4,7 +4,7 @@ import { decodeCachedJson } from "./cache-json";
 import { getCache, setCache } from "./db-cache";
 
 const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
-const REPORT_CARDS_SNAPSHOT_CACHE_GENERATION = 3;
+export const REPORT_CARDS_SNAPSHOT_CACHE_GENERATION = 3;
 
 export type ReportCardsSnapshotCacheFailureReason =
   | "missing-cache"
