@@ -252,6 +252,7 @@ function resolveCapacityReason(args: {
   capacityTelemetryInvalid: boolean;
   capacityKind: RedemptionLiveCapacityKind | null;
   freshnessKind: RedemptionLiveFreshnessKind | null;
+  verifiedSourceTimestampMissing: boolean;
   stablecoinId: string;
   canUseDegradedSyncCapacity: boolean;
 }): string | null {
@@ -267,6 +268,9 @@ function resolveCapacityReason(args: {
   }
   if (args.capacityKind && !SCOREABLE_REDEMPTION_CAPACITY_KINDS.has(args.capacityKind)) {
     return `Live redemption capacity kind ${args.capacityKind} is display-only for scoring`;
+  }
+  if (args.freshnessKind === "verified-source-timestamp" && args.verifiedSourceTimestampMissing) {
+    return "Live redemption capacity claims verified source freshness without a source timestamp";
   }
   if (!isRedemptionFreshnessAllowed(args.stablecoinId, args.freshnessKind, args.hasScoringEligibleFreshness)) {
     return args.freshnessKind === "unverified"
@@ -390,6 +394,8 @@ export function readRedemptionBackstopLiveMetadata(
   const minRedeemUsd = parseTelemetryNumber(redemptionTelemetry, "minRedeemUsd", "Live redemption minimum redeem", {
     min: 0,
   });
+  const verifiedSourceTimestampMissing =
+    freshnessKind === "verified-source-timestamp" && sourceTimestamp.value == null;
   const hasNestedCapacityTelemetry =
     redemptionTelemetryMalformed || hasTelemetryValue(nestedCapacityUsd) || hasTelemetryValue(nestedCapacityRatio);
   const hasLegacyCapacityTelemetry = hasTelemetryValue(legacyCapacityUsd) || hasTelemetryValue(legacyCapacityRatio);
@@ -425,6 +431,9 @@ export function readRedemptionBackstopLiveMetadata(
   const routeStatusMissingSource = routeStatus != null && routeStatusSource == null;
   const shouldUseSourcedRouteStatus = routeStatus != null && !routeStatusMissingSource;
   const shouldPreserveUnsourcedUnknownRouteStatus = routeStatus === "unknown" && routeStatusMissingSource;
+  if (verifiedSourceTimestampMissing && !sourceTimestamp.invalid) {
+    telemetryWarnings.push("Live redemption freshness is verified-source-timestamp without sourceTimestamp");
+  }
   if (routeStatusMissingSource && routeStatus === "unknown") {
     telemetryWarnings.push("Live redemption route status is unknown without source attribution");
   } else if (routeStatusMissingSource) {
@@ -447,6 +456,7 @@ export function readRedemptionBackstopLiveMetadata(
     capacityTelemetryInvalid,
     capacityKind,
     freshnessKind,
+    verifiedSourceTimestampMissing,
     stablecoinId,
     canUseDegradedSyncCapacity,
   });

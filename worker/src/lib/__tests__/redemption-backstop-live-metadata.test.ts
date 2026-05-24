@@ -459,6 +459,42 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.routeStatusSource).toBe("onchain");
   });
 
+  it.each([
+    ["missing", undefined, "Live redemption freshness is verified-source-timestamp without sourceTimestamp"],
+    ["malformed", "1700000000", "Live redemption source timestamp is malformed and was ignored"],
+  ])(
+    "fails closed when verified redemption freshness has a %s source timestamp",
+    (_label, redemptionSourceTimestamp, expectedWarning) => {
+      const redemption: Record<string, unknown> = {
+        capacityUsd: 1_000_000,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "verified-source-timestamp",
+      };
+      if (redemptionSourceTimestamp !== undefined) {
+        redemption.sourceTimestamp = redemptionSourceTimestamp;
+      }
+
+      const metadata = readRedemptionBackstopLiveMetadata(
+        "lusd-liquity",
+        snapshot("lusd-liquity", {
+          freshnessMode: "verified",
+          sourceTimestamp: now - 120,
+          redemption,
+        }),
+        now,
+      );
+
+      expect(metadata.hasScoringEligibleFreshness).toBe(true);
+      expect(metadata.freshnessKind).toBe("verified-source-timestamp");
+      expect(metadata.sourceTimestamp).toBeNull();
+      expect(metadata.canUseCapacity).toBe(false);
+      expect(metadata.capacityReason).toBe(
+        "Live redemption capacity claims verified source freshness without a source timestamp",
+      );
+      expect(metadata.capacityNotes).toContain(expectedWarning);
+    },
+  );
+
   it("allows unverified freshness for route-approved stablecoins", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "frxusd-frax",

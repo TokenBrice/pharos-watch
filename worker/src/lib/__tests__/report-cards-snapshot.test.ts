@@ -797,13 +797,25 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.dimensions.pegStability.detail).toContain("Peg reference (USDai)");
   });
 
-  it("throws when the redemption backstop snapshot is unavailable", async () => {
+  it("degrades gracefully when the redemption backstop snapshot is unavailable", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
-    loadRedemptionBackstopSnapshotMock.mockRejectedValueOnce(
-      new RedemptionBackstopSnapshotUnavailableError("redemption snapshot unavailable"),
-    );
+    loadRedemptionBackstopSnapshotMock
+      .mockRejectedValueOnce(new RedemptionBackstopSnapshotUnavailableError("redemption snapshot unavailable"))
+      .mockRejectedValueOnce(new RedemptionBackstopSnapshotUnavailableError("redemption snapshot unavailable"));
 
-    await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(ReportCardsSnapshotUnavailableError);
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "usdt-tether");
+
+    expect(snapshot.redemptionStale).toBe(true);
+    expect(snapshot.inputFreshness.redemptionBackstops).toEqual({
+      updatedAt: null,
+      ageSeconds: null,
+      stale: true,
+    });
+    expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
+
+    const response = await handleReportCards(db);
+    expect(response.status).toBe(200);
   });
 
   it("degrades gracefully when dex liquidity is unavailable", async () => {

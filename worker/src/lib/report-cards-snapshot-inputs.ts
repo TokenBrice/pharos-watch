@@ -87,13 +87,20 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
     throw new ReportCardsSnapshotUnavailableError("Cached stablecoins data is corrupt");
   }
 
-  if (redemptionBackstopMapResult.status === "rejected") {
-    if (redemptionBackstopMapResult.reason instanceof RedemptionBackstopSnapshotUnavailableError) {
-      throw new ReportCardsSnapshotUnavailableError(
-        "Redemption backstop snapshot unavailable",
-      );
+  let redemptionBackstopSnapshot: Awaited<ReturnType<typeof loadRedemptionBackstopSnapshot>>;
+  let redemptionSnapshotUnavailable = false;
+  if (redemptionBackstopMapResult.status === "fulfilled") {
+    redemptionBackstopSnapshot = redemptionBackstopMapResult.value;
+  } else {
+    if (!(redemptionBackstopMapResult.reason instanceof RedemptionBackstopSnapshotUnavailableError)) {
+      throw redemptionBackstopMapResult.reason;
     }
-    throw redemptionBackstopMapResult.reason;
+    console.warn(
+      "[report-cards] Redemption backstop snapshot unavailable; suppressing redemption inputs:",
+      redemptionBackstopMapResult.reason,
+    );
+    redemptionSnapshotUnavailable = true;
+    redemptionBackstopSnapshot = { map: {}, latestUpdatedAt: null };
   }
 
   const bluechipCached = bluechipCachedResult.status === "fulfilled"
@@ -128,12 +135,13 @@ export async function loadReportCardsSnapshotInputs(db: D1Database): Promise<Rep
       })();
 
   const redemptionFreshness = buildFreshnessEntry(
-    redemptionBackstopMapResult.value.latestUpdatedAt,
+    redemptionBackstopSnapshot.latestUpdatedAt,
     nowSec,
     REPORT_CARD_REDEMPTION_FRESHNESS_SEC,
+    redemptionSnapshotUnavailable,
   );
   const redemptionStale = redemptionFreshness.stale;
-  const redemptionBackstopMap = redemptionStale ? {} : redemptionBackstopMapResult.value.map;
+  const redemptionBackstopMap = redemptionStale ? {} : redemptionBackstopSnapshot.map;
   if (redemptionStale) {
     console.warn(
       `[report-cards] Redemption backstop data is stale or missing` +
