@@ -23,7 +23,7 @@ import {
   type DdrResolutionTier,
   type DdrResponse,
   type DdrRow,
-} from "@shared/types";
+} from "@shared/types/depeg-resolver";
 
 interface DepegResolverModuleProps {
   data: DdrResponse | undefined;
@@ -68,6 +68,13 @@ const CELL_STATE_LABELS: Record<DdrCellState, string> = {
   data_issue: "Data issue",
 };
 
+const SUPPRESSED_REASON_LABELS: Record<string, string> = {
+  insufficient_support: "Insufficient comparable recoveries for a duration band.",
+  insufficient_signal: "Duration suppressed until the resolver has enough live signal.",
+  verdict_terminal: "Duration suppressed for a terminal recovery outlook.",
+  stale_cache: "Duration suppressed because the resolver snapshot is stale.",
+};
+
 // --- formatting helpers ----------------------------------------------------
 
 const HOUR_SECONDS = 3600;
@@ -92,14 +99,14 @@ function FactorChip({ factor }: { factor: DdrFactor }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
+        "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
         isKill
           ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
           : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
       )}
       title={`${isKill ? "Kill signal" : "Recovery anchor"} · ${factor.severity}`}
     >
-      <span>{factor.label}</span>
+      <span className="min-w-0 whitespace-normal break-words">{factor.label}</span>
       <span className="font-mono text-[10px] uppercase tracking-wide opacity-70">
         {factor.severity}
       </span>
@@ -268,7 +275,9 @@ function ResolverRowCard({ row, logos }: { row: DdrRow; logos?: Record<string, s
             ) : null}
           </div>
         ) : duration.suppressedReason ? (
-          <p className="text-sm text-muted-foreground">{duration.suppressedReason}</p>
+          <p className="text-sm text-muted-foreground">
+            {SUPPRESSED_REASON_LABELS[duration.suppressedReason] ?? "Duration estimate is not available."}
+          </p>
         ) : null}
 
         <RelatedContextDetails row={row} />
@@ -283,6 +292,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
   if (!isDepegResolverEnabled()) return null;
 
   const rows = data?.rows ?? [];
+  const showStaleRows = data?._meta.degraded === true && data._meta.degradedReason === "stale-cache" && rows.length > 0;
 
   return (
     <section aria-label="Depeg Duration Resolver" className="space-y-4">
@@ -317,7 +327,19 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
         {DDR_PUBLIC_WARNING}
       </p>
 
-      {rows.length === 0 ? (
+      {!data ? (
+        <Card className="rounded-xl">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Resolver data is loading.
+          </CardContent>
+        </Card>
+      ) : data._meta.degraded && !showStaleRows ? (
+        <Card className="rounded-xl">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Resolver data is temporarily unavailable.
+          </CardContent>
+        </Card>
+      ) : rows.length === 0 ? (
         <Card className="rounded-xl">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             No active confirmed depegs. Resolver readouts appear here when Pharos has an open
@@ -325,11 +347,18 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {rows.map((row) => (
-            <ResolverRowCard key={`${row.stablecoinId}:${row.eventId}`} row={row} logos={logos} />
-          ))}
-        </div>
+        <>
+          {showStaleRows ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+              Resolver snapshot is stale; duration estimates are suppressed until the next refresh.
+            </p>
+          ) : null}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {rows.map((row) => (
+              <ResolverRowCard key={`${row.stablecoinId}:${row.eventId}`} row={row} logos={logos} />
+            ))}
+          </div>
+        </>
       )}
     </section>
   );

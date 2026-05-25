@@ -21,6 +21,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/dex-liquidity",
   "/api/stability-index",
   "/api/report-cards",
+  "/api/depeg-resolver",
   "/api/redemption-backstops",
   "/api/blacklist",
   "/api/blacklist-summary",

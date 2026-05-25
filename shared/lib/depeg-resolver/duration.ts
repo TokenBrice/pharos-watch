@@ -11,7 +11,7 @@
 import type { DdrDuration, DdrHorizon, DdrHorizonCell } from "../../types/depeg-resolver";
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import type { DdrIncident } from "./incident-groups";
-import { candidateStrata, stratumLabel, stratumMatches, type DdrStratumKey } from "./strata";
+import { candidateStrata, depthBucket, stratumLabel, stratumMatches, type DdrStratumCandidate, type DdrStratumKey } from "./strata";
 
 export const HORIZON_SECONDS: Record<DdrHorizon, number> = {
   "6h": 6 * 3600,
@@ -21,6 +21,8 @@ export const HORIZON_SECONDS: Record<DdrHorizon, number> = {
 };
 
 const Z90 = 1.64;
+const MIN_TRAINING_DURATION_SEC = 30 * 60;
+const MIN_TRAINING_PEAK_BPS = 250;
 
 function percentile(sortedAsc: number[], p: number): number {
   if (sortedAsc.length === 0) return 0;
@@ -44,8 +46,41 @@ function displayInterval(lower: number, upper: number): string {
   return `${lo}-${hi}%`;
 }
 
+interface WeightedClosureStats {
+  probability: number;
+  effectiveN: number;
+  weightedClosures: number;
+  weightedNonClosures: number;
+}
+
+function incidentDepthAtAge(incident: DdrIncident, ageSec: number): DdrIncident["depth"] {
+  const fragments = incident.fragments?.filter((f) => f.offsetSec <= ageSec) ?? [];
+  if (fragments.length === 0) return incident.depth;
+  let worst = fragments[0].peakDeviationBps;
+  for (const fragment of fragments.slice(1)) {
+    if (Math.abs(fragment.peakDeviationBps) > Math.abs(worst)) {
+      worst = fragment.peakDeviationBps;
+    }
+  }
+  return depthBucket(worst);
+}
+
+function incidentMatchesAtAge(candidate: DdrStratumCandidate, incident: DdrIncident, ageSec: number): boolean {
+  return stratumMatches(candidate, {
+    direction: incident.direction,
+    depth: incidentDepthAtAge(incident, ageSec),
+    structural: incident.structural,
+    currency: incident.currency,
+  });
+}
+
+function isTrainableIncident(incident: DdrIncident): boolean {
+  if (!incident.recovered || incident.durationSec == null) return false;
+  return incident.durationSec >= MIN_TRAINING_DURATION_SEC || Math.abs(incident.peakDeviationBps) >= MIN_TRAINING_PEAK_BPS;
+}
+
 /** Coin-capped weighted closure probability (each coin contributes ≤ 1.0). */
-function weightedProbability(comparable: DdrIncident[], horizonEndSec: number, ageSec: number): number {
+function weightedClosureStats(comparable: DdrIncident[], horizonEndSec: number, ageSec: number): WeightedClosureStats {
   const byCoin = new Map<string, { closed: number; total: number }>();
   for (const inc of comparable) {
     const e = byCoin.get(inc.stablecoinId) ?? { closed: 0, total: 0 };
@@ -55,28 +90,38 @@ function weightedProbability(comparable: DdrIncident[], horizonEndSec: number, a
   }
   let weightedClosures = 0;
   for (const { closed, total } of byCoin.values()) weightedClosures += closed / total;
-  return byCoin.size === 0 ? 0 : weightedClosures / byCoin.size;
+  const probability = byCoin.size === 0 ? 0 : weightedClosures / byCoin.size;
+  return {
+    probability,
+    effectiveN: byCoin.size,
+    weightedClosures,
+    weightedNonClosures: Math.max(0, byCoin.size - weightedClosures),
+  };
 }
 
 function selectStratum(
   activeKey: DdrStratumKey,
   trainable: DdrIncident[],
-): { matched: DdrIncident[]; key: DdrStratumKey; label: string } {
+  ageSec: number,
+): { matched: DdrIncident[]; key: DdrStratumCandidate; label: string } {
   const candidates = candidateStrata(activeKey);
-  let fallbackKey: DdrStratumKey | null = null;
+  let fallbackKey: DdrStratumCandidate | null = null;
   let fallbackMatched: DdrIncident[] = [];
+  let fallbackComparableCount = -1;
   for (const cand of candidates) {
-    const matched = trainable.filter((inc) => stratumMatches(cand, inc));
-    const uniqueCoins = new Set(matched.map((m) => m.stablecoinId)).size;
-    if (fallbackKey == null) {
+    const matched = trainable.filter((inc) => incidentMatchesAtAge(cand, inc, ageSec));
+    const comparable = matched.filter((inc) => (inc.durationSec as number) >= ageSec);
+    const uniqueCoins = new Set(comparable.map((m) => m.stablecoinId)).size;
+    if (comparable.length > fallbackComparableCount) {
       fallbackKey = cand;
       fallbackMatched = matched;
+      fallbackComparableCount = comparable.length;
     }
-    if (matched.length >= 10 && uniqueCoins >= 5) {
+    if (comparable.length >= 10 && uniqueCoins >= 5) {
       return { matched, key: cand, label: stratumLabel(cand) };
     }
   }
-  const key = fallbackKey ?? activeKey;
+  const key = fallbackKey ?? candidateStrata(activeKey)[0];
   return { matched: fallbackMatched, key, label: stratumLabel(key) };
 }
 
@@ -87,13 +132,13 @@ export function computeDuration(
   quarantined: Set<string>,
 ): DdrDuration {
   const trainable = incidents.filter(
-    (i) => i.recovered && i.durationSec != null && !quarantined.has(i.stablecoinId),
+    (i) => isTrainableIncident(i) && !quarantined.has(i.stablecoinId),
   );
-  const { matched, label } = selectStratum(activeKey, trainable);
+  const { matched, label } = selectStratum(activeKey, trainable, ageSec);
 
   const durationsAll = matched.map((m) => m.durationSec as number).sort((a, b) => a - b);
   const comparable = matched.filter((m) => (m.durationSec as number) >= ageSec);
-  const comparableDur = comparable.map((m) => m.durationSec as number).sort((a, b) => a - b);
+  const comparableRemainingDur = comparable.map((m) => (m.durationSec as number) - ageSec).sort((a, b) => a - b);
   const uniqueCoinsComparable = new Set(comparable.map((m) => m.stablecoinId)).size;
 
   // age status from the full matched-stratum distribution
@@ -110,18 +155,27 @@ export function computeDuration(
     const closures = comparable.filter((m) => (m.durationSec as number) <= ageSec + hSec).length;
     const nonClosures = comparable.length - closures;
     const n = comparable.length;
+    const weighted = weightedClosureStats(comparable, hSec, ageSec);
+    const effectiveClosures = weighted.weightedClosures;
+    const effectiveNonClosures = weighted.weightedNonClosures;
 
     let state: DdrHorizonCell["state"];
     if (n === 0) state = "unsupported";
     else if (ageStatus === "chronic_tail") state = "chronic_tail";
-    else if (n >= 30 && uniqueCoinsComparable >= 10 && closures >= 5 && nonClosures >= 5) state = "benchmarked";
-    else if (n >= 10 && uniqueCoinsComparable >= 5 && closures >= 1) state = "thin_support";
+    else if (
+      n >= 30 &&
+      uniqueCoinsComparable >= 10 &&
+      weighted.effectiveN >= 10 &&
+      effectiveClosures >= 5 &&
+      effectiveNonClosures >= 5
+    ) state = "benchmarked";
+    else if (n >= 10 && uniqueCoinsComparable >= 5 && weighted.effectiveN >= 5 && effectiveClosures >= 1) state = "thin_support";
     else if (closures === 0) state = "no_comparable_closures";
     else state = "unsupported";
 
     const displayable = (state === "benchmarked" || state === "thin_support") && closures > 0;
-    const interval = displayable ? wilson(closures, n) : null;
-    const probability = displayable ? weightedProbability(comparable, hSec, ageSec) : null;
+    const interval = displayable ? wilson(Math.round(effectiveClosures), Math.max(1, Math.round(weighted.effectiveN))) : null;
+    const probability = displayable ? weighted.probability : null;
 
     return {
       horizon: h,
@@ -142,8 +196,8 @@ export function computeDuration(
     suppressed: !hasSupport,
     suppressedReason: hasSupport ? null : "insufficient_support",
     stratum: label,
-    medianSec: hasSupport ? percentile(comparableDur, 0.5) : null,
-    iqrSec: hasSupport ? [percentile(comparableDur, 0.25), percentile(comparableDur, 0.75)] : null,
+    medianSec: hasSupport ? percentile(comparableRemainingDur, 0.5) : null,
+    iqrSec: hasSupport ? [percentile(comparableRemainingDur, 0.25), percentile(comparableRemainingDur, 0.75)] : null,
     ageStatus,
     horizons,
   };

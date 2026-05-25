@@ -3,6 +3,7 @@ import {
   type DdrResponse,
   type DdrRow,
 } from "@shared/types/depeg-resolver";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DDR_DURATION_MODEL_VERSION,
   DDR_INCIDENT_GROUPING_VERSION,
@@ -12,6 +13,7 @@ import {
   DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SUPPORT_RULES_VERSION,
 } from "@shared/lib/depeg-resolver-version";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import {
   groupIncidents,
   quarantinedCoins,
@@ -26,13 +28,21 @@ import {
 } from "@shared/lib/depeg-resolver";
 import { TRACKED_META_BY_ID, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
+import { sumPegBuckets } from "@shared/lib/supply";
+import type { StablecoinData } from "@shared/types/market";
 import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { writeDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
+import { deriveDepegSignal } from "../lib/depeg-signals";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 const TRAINING_WINDOW_SEC = 4 * 365 * 86400;
 const HISTORICAL_ROW_CAP = 60000;
 const DAY = 86400;
+const CURRENT_PRICE_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+const DEWS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals;
+const DEX_LIQUIDITY_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.dexLiquidity;
+const REDEMPTION_BACKSTOP_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops;
 
 function abortIf(signal: AbortSignal | undefined, label: string): void {
   if (signal?.aborted) throw signal.reason ?? new Error(`${label} aborted`);
@@ -101,6 +111,35 @@ function buildSupplyContext(snapshots: { date: number; usd: number }[], startedA
   };
 }
 
+async function buildCurrentDeviationMap(
+  db: D1Database,
+  nowSec: number,
+): Promise<Map<string, number | null>> {
+  const cache = await loadStablecoinsCache(db, { mode: "lenient", contract: "critical-fields" });
+  if (!hasUsableStablecoinsPayload(cache) || cache.updatedAt == null || nowSec - cache.updatedAt > CURRENT_PRICE_MAX_AGE_SEC) {
+    return new Map();
+  }
+
+  const assets = cache.payload.peggedAssets as StablecoinData[];
+  const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+  const { rates } = derivePegRates(assets, TRACKED_META_BY_ID, cache.payload.fxFallbackRates);
+  const out = new Map<string, number | null>();
+
+  for (const [id, asset] of assetById) {
+    const meta = TRACKED_META_BY_ID.get(id);
+    if (!meta || meta.flags.navToken) continue;
+    const supply = asset.circulating ? sumPegBuckets(asset.circulating) : 0;
+    if (supply <= 0 || asset.price == null || !Number.isFinite(asset.price)) {
+      out.set(id, null);
+      continue;
+    }
+    const pegRef = getPegReference(asset.pegType, rates, meta.commodityOunces);
+    out.set(id, deriveDepegSignal(asset.price, pegRef)?.bps ?? null);
+  }
+
+  return out;
+}
+
 function placeholders(n: number): string {
   return Array.from({ length: n }, () => "?").join(", ");
 }
@@ -119,7 +158,9 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
   const activeResult = await db
     .prepare(
       "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, peg_reference " +
-        "FROM depeg_events WHERE ended_at IS NULL ORDER BY started_at ASC",
+        "FROM depeg_events_with_provenance WHERE ended_at IS NULL " +
+        "AND (provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')) " +
+        "ORDER BY started_at ASC",
     )
     .all<{
       id: number;
@@ -143,6 +184,7 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
   };
 
   if (activeRows.length > 0) {
+    const currentDeviationByCoin = await buildCurrentDeviationMap(db, nowSec);
     const active: DdrActiveEventInput[] = activeRows.map((r) => ({
       id: r.id,
       stablecoinId: r.stablecoin_id,
@@ -152,7 +194,7 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
       peakDeviationBps: r.peak_deviation_bps,
       startedAt: r.started_at,
       pegReference: r.peg_reference,
-      currentDeviationBps: null,
+      currentDeviationBps: currentDeviationByCoin.get(r.stablecoin_id) ?? null,
     }));
     const activeCoinIds = [...new Set(active.map((a) => a.stablecoinId))];
     const directions = [...new Set(active.map((a) => a.direction))];
@@ -211,23 +253,37 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
 
     const dewsResult = await db
       .prepare(
-        `SELECT s.stablecoin_id, s.score, s.band FROM stress_signals s ` +
+        `SELECT s.stablecoin_id, s.score, s.band, s.computed_at FROM stress_signals s ` +
           `JOIN (SELECT stablecoin_id, MAX(computed_at) mc FROM stress_signals ` +
           `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) GROUP BY stablecoin_id) m ` +
           `ON s.stablecoin_id = m.stablecoin_id AND s.computed_at = m.mc`,
       )
       .bind(...activeCoinIds)
-      .all<{ stablecoin_id: string; score: number; band: string }>();
+      .all<{ stablecoin_id: string; score: number; band: string; computed_at: number }>();
     const dewsByCoin = new Map((dewsResult.results ?? []).map((d) => [d.stablecoin_id, d]));
 
     const liqResult = await db
       .prepare(
-        `SELECT stablecoin_id, liquidity_score, concentration_hhi FROM dex_liquidity ` +
+        `SELECT stablecoin_id, liquidity_score, concentration_hhi, updated_at FROM dex_liquidity ` +
           `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)})`,
       )
       .bind(...activeCoinIds)
-      .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null }>();
+      .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; updated_at: number }>();
     const liqByCoin = new Map((liqResult.results ?? []).map((l) => [l.stablecoin_id, l]));
+
+    const redemptionResult = await db
+      .prepare(
+        `SELECT stablecoin_id, immediate_capacity_ratio, route_family, updated_at FROM redemption_backstop ` +
+          `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)})`,
+      )
+      .bind(...activeCoinIds)
+      .all<{
+        stablecoin_id: string;
+        immediate_capacity_ratio: number | null;
+        route_family: string | null;
+        updated_at: number;
+      }>();
+    const redemptionByCoin = new Map((redemptionResult.results ?? []).map((r) => [r.stablecoin_id, r]));
 
     abortIf(signal, "compute-depeg-resolver");
 
@@ -237,11 +293,17 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
       const supply = buildSupplyContext(supplyByCoin.get(ev.stablecoinId) ?? [], ev.startedAt);
       const dews = dewsByCoin.get(ev.stablecoinId);
       const liq = liqByCoin.get(ev.stablecoinId);
+      const redemption = redemptionByCoin.get(ev.stablecoinId);
+      const dewsFresh = dews != null && nowSec - dews.computed_at <= DEWS_MAX_AGE_SEC;
+      const liqFresh = liq != null && nowSec - liq.updated_at <= DEX_LIQUIDITY_MAX_AGE_SEC;
+      const redemptionFresh = redemption != null && nowSec - redemption.updated_at <= REDEMPTION_BACKSTOP_MAX_AGE_SEC;
       const live: DdrLiveContext = {
-        dewsBand: dews?.band ?? null,
-        dewsScore: dews?.score ?? null,
-        liquidityScore: liq?.liquidity_score ?? null,
-        concentrationHhi: liq?.concentration_hhi ?? null,
+        dewsBand: dewsFresh ? dews.band : null,
+        dewsScore: dewsFresh ? dews.score : null,
+        liquidityScore: liqFresh ? liq.liquidity_score : null,
+        concentrationHhi: liqFresh ? liq.concentration_hhi : null,
+        redemptionCapacityRatio: redemptionFresh ? redemption.immediate_capacity_ratio : null,
+        redemptionRouteFamily: redemptionFresh ? redemption.route_family : null,
       };
       return resolveDepeg({ active: ev, coin, supply, live, nowSec, incidents, quarantined });
     });

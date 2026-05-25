@@ -80,6 +80,15 @@ DEWS is a forward-looking stress score. It combines price deviation, source dive
 Pending depegs require source-family-aware corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records canonical source keys behind every confirmed mutation.
 
 
+## Depeg Duration Resolver
+
+When Pharos confirms an active depeg, the Depeg Duration Resolver (DDR) answers two questions in order: will it come back, and if so, when. Stage 1 emits an ordinal Resolution Outlook (Recovery Likely, At Risk, Recovery Unlikely, or Insufficient Signal) from transparent kill signals and recovery anchors over the coin's structure and the depeg's fingerprint. It is a calibrated mechanistic rubric, not fitted machine learning, because the terminal-label corpus is too thin to train a supervised classifier.
+
+Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landmark-survival estimate over the clean corpus of recovered incidents, conditioned on the depeg's structural stratum (depth, direction, structural class, and peg currency) most-dependable-first. It reports a median time-to-repeg with an interquartile band plus per-horizon resolution probabilities, support-gated and Wilson-bounded so thin cells show their support state instead of a fabricated number.
+
+DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is a probabilistic estimate from historical data, not investment advice and not a credit rating.
+
+
 ## Contagion Stress Test
 
 The contagion stress test models how failure in one stablecoin can propagate through collateral, wrapper, and mechanism dependencies. It asks which assets would inherit stress if a major stablecoin, reserve asset, or shared mechanism became impaired.

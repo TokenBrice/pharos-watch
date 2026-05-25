@@ -178,10 +178,10 @@ export function useReportCards(overrides?: QueryControlOverrides) {
   );
 }
 
-export function useDepegResolver() {
+export function useDepegResolver(overrides?: QueryControlOverrides) {
   return useRegisteredApiQueryWithMeta<DdrResponse>(
     FRONTEND_API_QUERY_REGISTRY.depegResolver,
-    { keepPreviousData: true },
+    { keepPreviousData: true, ...overrides },
   );
 }
 

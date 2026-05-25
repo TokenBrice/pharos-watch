@@ -123,6 +123,7 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 | `GET /api/bluechip-ratings` | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`      | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`   | 3600          | Manual injection after live safety hydration |
+| `GET /api/depeg-resolver`   | 900           | `worker/src/api/depeg-resolver.ts`           |
 
 Array-typed responses (e.g., endpoints returning a JSON array at the top level) do not include `_meta`. They receive `X-Data-Age` / `Warning` only when their handler wires freshness metadata explicitly. Supply history, safety score history, and non-USD share are explicit history-endpoint exceptions that emit freshness headers; DEX liquidity history currently exposes cache headers but no freshness headers.
 
@@ -139,7 +140,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | Profile            | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | realtime           | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                                          |
-| standard           | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                                                          |
+| standard           | `public, s-maxage=300, max-age=60`     | stablecoin-charts, depeg-resolver, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                                          |
 | custom             | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                                              |
 | per-coin           | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                  |
 | slow               | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                                                 |
@@ -1040,6 +1041,39 @@ Results are ordered by `startedAt` descending (most recent first).
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                          |
 | `asOf`                | `number`  | Unix timestamp used for methodology attribution                         |
 | `isCurrent`           | `boolean` | Whether `version` matches `currentVersion`                              |
+
+---
+
+### `GET /api/depeg-resolver`
+
+Cache-backed Depeg Duration Resolver readouts for active confirmed depeg events. The resolver emits one row per open confirmed event: a Resolution Outlook verdict plus a duration estimate when the verdict is not terminal and historical support is sufficient.
+
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true` and `rows: []`; stale snapshots keep the Stage 1 verdict rows but set `_meta.degraded=true`, `degradedReason="stale-cache"`, and suppress duration bands/horizon cells until the next precompute.
+
+**Response**
+
+```text
+{
+  "_meta": {
+    "dataAsOf": 1779700000,
+    "modelAsOf": 1779700000,
+    "computedAt": 1779700000,
+    "expiresAt": 1779701800,
+    "degraded": false,
+    "degradedReason": null,
+    "publicWarning": "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.",
+    "resolutionRubricVersion": "resolution-rubric-v1",
+    "durationModelVersion": "duration-landmark-v1",
+    "incidentGroupingVersion": "incident-group-v1",
+    "supportRulesVersion": "support-rules-v1",
+    "lineage": { "eventCount": 34129, "incidentCount": 1820, "coinCount": 142, "quarantinedCoins": 7 }
+  },
+  "rows": [DdrRow, ...],
+  "methodology": { "version": "1.0", "versionLabel": "v1.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+}
+```
+
+`DdrRow.resolution.tier` is one of `recovery_likely`, `at_risk`, `recovery_unlikely`, or `insufficient_signal`. `resolution.factors[]` contains stable K/R factor codes and public reason labels. `duration` is suppressed for terminal, insufficient-signal, stale, or unsupported rows; otherwise it includes the stratum used, median remaining seconds, IQR remaining seconds, age status, and 6h / 24h / 7d / 30d horizon cells.
 
 ---
 

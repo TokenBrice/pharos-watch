@@ -24,7 +24,7 @@ export interface DdrCoinStructural {
   deploymentModel?: string | null;
   governanceQuality?: string | null;
   reserves?: { risk: string; pct: number }[];
-  canBeBlacklisted?: boolean | "possible" | null;
+  canBeBlacklisted?: boolean | "possible" | "inherited" | null;
   /** True when any dependency resolves to a frozen/dead coin at material weight. */
   dependencyImpaired?: boolean | null;
 }
@@ -54,6 +54,8 @@ export interface DdrLiveContext {
   safetyScore?: number | null;
   /** Immediately redeemable fraction of circulating supply, 0..1. */
   redemptionCapacityRatio?: number | null;
+  /** Redemption route family when a fresh redemption-backstop row is available. */
+  redemptionRouteFamily?: string | null;
 }
 
 /** The active confirmed depeg event being resolved. */

@@ -1,6 +1,7 @@
 import { BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG } from "../../shared/lib/blacklist-tracker-version";
 import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "../../shared/lib/chain-health-version";
 import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "../../shared/lib/depeg-dews-version";
+import { DDR_METHODOLOGY_CHANGELOG } from "../../shared/lib/depeg-resolver-version";
 import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "../../shared/lib/liquidity-score-version";
 import type { MethodologyChangelogEntry } from "../../shared/lib/methodology-version";
 import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "../../shared/lib/mint-burn-flow-version";
@@ -21,6 +22,11 @@ const CHANGELOG_REGISTRY = {
     title: "Depeg Tracker and DEWS Changelog",
     path: "/methodology/depeg-changelog/",
     entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  },
+  "depeg-resolver": {
+    title: "Depeg Duration Resolver Changelog",
+    path: "/methodology/depeg-resolver-changelog/",
+    entries: DDR_METHODOLOGY_CHANGELOG,
   },
   "blacklist-tracker": {
     title: "Blacklist Tracker Changelog",

@@ -99,6 +99,10 @@ function expectTextInOrder(text: string, snippets: readonly string[]): void {
   }
 }
 
+function extractFeatureFlagEnvReads(source: string): string[] {
+  return [...source.matchAll(/process\.env\.(NEXT_PUBLIC_PHAROS_[A-Z_]+)/g)].map((match) => match[1]);
+}
+
 describe("validate-ci parity", () => {
   it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
@@ -149,6 +153,18 @@ describe("validate-ci parity", () => {
     expect(setupWorkspaceAction).toContain('default: "24"');
     expect(workflow).not.toContain("node-version: 25");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
+  });
+
+  it("threads every public Pharos feature flag into Pages build workflows", () => {
+    const flagsSource = readFileSync(resolve(process.cwd(), "src/lib/feature-flags.ts"), "utf8");
+    const validateWorkflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const pagesReleaseWorkflow = readFileSync(resolve(process.cwd(), ".github/workflows/pages-release.yml"), "utf8");
+    const flags = [...new Set(extractFeatureFlagEnvReads(flagsSource))].sort();
+
+    for (const flag of flags) {
+      expect(validateWorkflow).toContain(`${flag}: \${{ vars.${flag} }}`);
+      expect(pagesReleaseWorkflow).toContain(`${flag}: \${{ vars.${flag} }}`);
+    }
   });
 
   it("keeps validate:prebuild delegated to the shared registry", () => {

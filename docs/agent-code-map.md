@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
 - `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
 - `src/components/command-palette.tsx` - CommandPalette
-- ... 331 more files omitted; use `rg --files src/components` for the full list.
+- ... 332 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -367,11 +367,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-dews-version.ts`
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
-- `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, groupIncidents, quarantinedCoins
+- `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
 - `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
 - `shared/lib/depeg-resolver/resolution.ts` - resolveOutlook
-- `shared/lib/depeg-resolver/strata.ts` - DdrCurrencyClass, DdrDepthBucket, DdrStratumKey, DdrStructuralClass, STRATUM_ANY, candidateStrata
+- `shared/lib/depeg-resolver/strata.ts` - DdrCurrencyClass, DdrDepthBucket, DdrStratumCandidate, DdrStratumKey, DdrStructuralClass, STRATUM_ANY
 - `shared/lib/dependency-derivation.ts` - DependencyDerivationBaseSource, DependencyDerivationSource, DerivedDependencySet, deriveDependencies, deriveEffectiveDependencies, deriveEffectiveDependencySet
 - `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, buildDependencyGraphEdgesFromDependencies, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
 - `shared/lib/dews-config.ts` - DEWS_SIGNAL_DESCRIPTIONS, DEWS_SIGNAL_LABELS, DEWS_SIGNAL_SHORT_LABELS, DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS, DewsSignalKey

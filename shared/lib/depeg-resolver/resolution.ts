@@ -67,16 +67,19 @@ function killSignals(
   }
 
   // K3 — freeze / seizure
-  if ((coin.canBeBlacklisted === true && live.blacklistSurge === true) || coin.custodyModel === "institutional-sanctioned") {
+  const freezable = coin.canBeBlacklisted === true || coin.canBeBlacklisted === "inherited";
+  if ((freezable && live.blacklistSurge === true) || coin.custodyModel === "institutional-sanctioned") {
     out.push({ code: "K3_freeze_seizure", kind: "kill", severity: "severe", label: coin.custodyModel === "institutional-sanctioned" ? "Custody under sanction/freeze" : "Freeze surge while holders are blacklistable" });
+  } else if (coin.canBeBlacklisted === "possible" && live.blacklistSurge === true) {
+    out.push({ code: "K3_freeze_seizure", kind: "kill", severity: "elevated", label: "Possible freeze path during a blacklist surge" });
   } else if (coin.custodyModel === "cex") {
     out.push({ code: "K3_freeze_seizure", kind: "kill", severity: "elevated", label: "Reserves custodied on a CEX" });
   }
 
   // K4 — reflexive death-spiral
-  if (coin.mechanismArchetype === "algorithmic") {
-    const sev = below && deep && supplyExpanding ? "severe" : "elevated";
-    out.push({ code: "K4_reflexive_spiral", kind: "kill", severity: sev, label: "Algorithmic peg mechanism (reflexive supply)" });
+  if (coin.mechanismArchetype === "algorithmic" && below && supplyExpanding) {
+    const sev = deep ? "severe" : "elevated";
+    out.push({ code: "K4_reflexive_spiral", kind: "kill", severity: sev, label: "Algorithmic supply expands into a below-peg break" });
   } else if (
     coin.mechanismArchetype === "synthetic-delta-neutral" && below && deep &&
     supply.change7dPct != null && supply.change7dPct < -10
@@ -109,9 +112,11 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
   // R2 — hard collateral + redemption
   const veryLow = sumReserveRisk(coin, ["very-low", "low"]);
   const rcr = live.redemptionCapacityRatio;
-  if (coin.collateralQuality === "native" || veryLow >= 80 || (rcr != null && rcr >= 0.1)) {
+  const hardCollateral = coin.collateralQuality === "native" || veryLow >= 80;
+  const liveRedemptionRoute = rcr != null && rcr >= 0.1 && live.redemptionRouteFamily != null;
+  if (hardCollateral && liveRedemptionRoute) {
     out.push({ code: "R2_hard_collateral_redemption", kind: "anchor", severity: "strong", label: "Hard collateral with a working redemption path" });
-  } else if (coin.mechanismArchetype === "cdp" || coin.collateralQuality === "rwa" || coin.collateralQuality === "eth-lst") {
+  } else if (hardCollateral || coin.mechanismArchetype === "cdp" || coin.collateralQuality === "rwa" || coin.collateralQuality === "eth-lst") {
     out.push({ code: "R2_hard_collateral_redemption", kind: "anchor", severity: "weak", label: "Overcollateralized / real-asset backing" });
   }
 
@@ -119,7 +124,7 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
   if (supply.covered) {
     if (supply.mintSurge === false && (supply.change7dPct == null || Math.abs(supply.change7dPct) < 10)) {
       out.push({ code: "R3_no_supply_anomaly", kind: "anchor", severity: "strong", label: "No supply anomaly — market dislocation, not structural" });
-    } else {
+    } else if (supply.mintSurge !== true && (supply.change7dPct == null || Math.abs(supply.change7dPct) < 20)) {
       out.push({ code: "R3_no_supply_anomaly", kind: "anchor", severity: "weak", label: "Supply roughly stable around the break" });
     }
   }
@@ -148,9 +153,10 @@ export function resolveOutlook(
   live: DdrLiveContext,
 ): DdrResolution {
   const insufficientReasons: string[] = [];
-  const missingStructural = !coin.mechanismArchetype && (coin.authorityPosture == null || coin.authorityPosture === "unknown");
-  if (missingStructural) insufficientReasons.push("No reviewed mint authority or mechanism archetype");
+  const missingMintAuthority = coin.authorityPosture == null || coin.authorityPosture === "unknown";
+  if (missingMintAuthority) insufficientReasons.push("No reviewed mint authority");
   if (!supply.covered) insufficientReasons.push("No usable supply history for this coin");
+  if (active.currentDeviationBps == null) insufficientReasons.push("No live price deviation for this event");
 
   // Frozen/dead coin sitting in an open event is terminal context by definition.
   const frozenTerminal = coin.status === "frozen";
@@ -159,7 +165,7 @@ export function resolveOutlook(
   const anchors = recoveryAnchors(coin, supply, live);
   const factors: DdrFactor[] = [...kills, ...anchors];
 
-  if (missingStructural && !supply.covered && !frozenTerminal) {
+  if (insufficientReasons.length > 0 && !frozenTerminal) {
     return { tier: "insufficient_signal", factors, insufficientReasons };
   }
 

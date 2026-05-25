@@ -107,6 +107,7 @@ const methodologyLinks = [
   ["Methodology Hub", absolute("/methodology/"), "Full scoring model for safety, peg, liquidity, yield, contagion."],
   ["Safety Scores Changelog", absolute("/methodology/scoring-changelog/"), "Every weight change since v1.0."],
   ["Depeg + DEWS Changelog", absolute("/methodology/depeg-changelog/"), ""],
+  ["Depeg Duration Resolver Changelog", absolute("/methodology/depeg-resolver-changelog/"), ""],
   ["Liquidity Score Changelog", absolute("/methodology/liquidity-score-changelog/"), ""],
   ["Stability Index Changelog", absolute("/methodology/stability-index-changelog/"), ""],
   ["Chain Health Changelog", absolute("/methodology/chain-health-changelog/"), ""],
@@ -186,7 +187,7 @@ const apiLinks = [
 const feedLinks = [
   ["Digest feed (RSS 2.0)", absolute("/feed/digest.xml"), "Daily and weekly digests."],
   ["Depeg feed (RSS 2.0)", absolute("/feed/depeg.xml"), "Confirmed depeg events."],
-  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology.xml"), "Unified methodology changelog across 9 datasets."],
+  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology.xml"), "Unified methodology changelog across 10 datasets."],
   ["Cemetery feed (RSS 2.0)", absolute("/feed/cemetery.xml"), "Newly archived defunct stablecoins."],
 ] as const;
 

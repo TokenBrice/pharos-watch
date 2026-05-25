@@ -26,6 +26,7 @@
 - [Methodology Hub](https://pharos.watch/methodology/): Full scoring model for safety, peg, liquidity, yield, contagion.
 - [Safety Scores Changelog](https://pharos.watch/methodology/scoring-changelog/): Every weight change since v1.0.
 - [Depeg + DEWS Changelog](https://pharos.watch/methodology/depeg-changelog/)
+- [Depeg Duration Resolver Changelog](https://pharos.watch/methodology/depeg-resolver-changelog/)
 - [Liquidity Score Changelog](https://pharos.watch/methodology/liquidity-score-changelog/)
 - [Stability Index Changelog](https://pharos.watch/methodology/stability-index-changelog/)
 - [Chain Health Changelog](https://pharos.watch/methodology/chain-health-changelog/)
@@ -77,7 +78,7 @@
 
 - [Digest feed (RSS 2.0)](https://pharos.watch/feed/digest.xml): Daily and weekly digests.
 - [Depeg feed (RSS 2.0)](https://pharos.watch/feed/depeg.xml): Confirmed depeg events.
-- [Methodology feed (RSS 2.0)](https://pharos.watch/feed/methodology.xml): Unified methodology changelog across 9 datasets.
+- [Methodology feed (RSS 2.0)](https://pharos.watch/feed/methodology.xml): Unified methodology changelog across 10 datasets.
 - [Cemetery feed (RSS 2.0)](https://pharos.watch/feed/cemetery.xml): Newly archived defunct stablecoins.
 
 ## Changelog

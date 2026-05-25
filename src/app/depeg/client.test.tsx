@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   useInfiniteDepegEvents: vi.fn(),
   useLogos: vi.fn(),
   useUrlFilters: vi.fn(),
+  isDepegResolverEnabled: vi.fn(),
+  QueryFreshnessNotices: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -36,8 +38,15 @@ vi.mock("@/hooks/use-url-filters", () => ({
   useUrlFilters: mocks.useUrlFilters,
 }));
 
+vi.mock("@/lib/feature-flags", () => ({
+  isDepegResolverEnabled: mocks.isDepegResolverEnabled,
+}));
+
 vi.mock("@/components/query-freshness-notices", () => ({
-  QueryFreshnessNotices: () => null,
+  QueryFreshnessNotices: (props: { queries: Array<{ label?: string; preset?: string }> }) => {
+    mocks.QueryFreshnessNotices(props);
+    return <div data-testid="freshness-notices">{props.queries.map((q) => q.label ?? q.preset).join(",")}</div>;
+  },
 }));
 
 vi.mock("@/components/section-error-boundary", () => ({
@@ -111,6 +120,7 @@ function makeCoin(id: string, symbol: string) {
 
 describe("DepegClient", () => {
   it("keeps filters scoped to the leaderboard/heatmap and wires active/pending lanes", () => {
+    mocks.isDepegResolverEnabled.mockReturnValue(true);
     mocks.usePegSummary.mockReturnValue({
       data: {
         coins: [makeCoin("coin-a", "A"), makeCoin("coin-b", "B")],
@@ -178,11 +188,63 @@ describe("DepegClient", () => {
     render(<DepegClient />);
 
     expect(mocks.useInfiniteDepegEvents).toHaveBeenCalledWith({ includePending: true });
+    expect(mocks.useDepegResolver).toHaveBeenCalledWith({ enabled: true });
     expect(screen.getByText("Leaderboard and heatmap filters")).toBeTruthy();
     expect(screen.getByTestId("depeg-table").textContent).toContain("pending rows 1");
     expect(screen.getByTestId("feed-Active Incidents").textContent).toBe("1");
     expect(screen.getByTestId("feed-Recent Depeg Events").textContent).toBe("1");
     expect(screen.getByTestId("pending-incidents").textContent).toBe("1");
     expect(screen.getByTestId("depeg-resolver")).toBeTruthy();
+    expect(screen.getByTestId("freshness-notices").textContent).toContain("Depeg Resolver");
+  });
+
+  it("does not fetch or render DDR freshness when the rollback flag is disabled", () => {
+    mocks.isDepegResolverEnabled.mockReturnValue(false);
+    mocks.usePegSummary.mockReturnValue({
+      data: {
+        coins: [makeCoin("coin-a", "A")],
+        summary: { activeDepegCount: 0, medianDeviationBps: 0, worstCurrent: null, coinsAtPeg: 1, totalTracked: 1, depegEventsToday: 0, depegEventsYesterday: 0 },
+      },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 0,
+      meta: null,
+      refetch: vi.fn(),
+    });
+    mocks.useStressSignals.mockReturnValue({
+      data: { signals: {}, updatedAt: 1_700_000_000, methodology: {} },
+      error: null,
+      dataUpdatedAt: 0,
+      meta: null,
+      refetch: vi.fn(),
+    });
+    mocks.useInfiniteDepegEvents.mockReturnValue({
+      data: { events: [], pending: [] },
+      error: null,
+      dataUpdatedAt: 0,
+      meta: null,
+      refetch: vi.fn(),
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    mocks.useDepegResolver.mockReturnValue({
+      data: undefined,
+      error: new Error("disabled path should not surface"),
+      dataUpdatedAt: 0,
+      meta: null,
+      refetch: vi.fn(),
+    });
+    mocks.useLogos.mockReturnValue({ data: {} });
+    mocks.useUrlFilters.mockReturnValue({
+      getParam: (_key: string, fallback = "") => fallback,
+      setParam: vi.fn(),
+    });
+
+    render(<DepegClient />);
+
+    expect(mocks.useDepegResolver).toHaveBeenCalledWith({ enabled: false });
+    expect(screen.queryByTestId("depeg-resolver")).toBeNull();
+    expect(screen.getByTestId("freshness-notices").textContent).not.toContain("Depeg Resolver");
   });
 });

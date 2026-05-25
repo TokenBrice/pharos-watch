@@ -28,6 +28,7 @@ const METHODOLOGY_MARKDOWN_PATHS = new Set([
   "/methodology/blacklist-tracker-changelog/",
   "/methodology/chain-health-changelog/",
   "/methodology/depeg-changelog/",
+  "/methodology/depeg-resolver-changelog/",
   "/methodology/liquidity-score-changelog/",
   "/methodology/mint-burn-flow-changelog/",
   "/methodology/pricing-pipeline-changelog/",

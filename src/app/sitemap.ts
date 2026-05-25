@@ -214,6 +214,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.4,
     },
     {
+      url: `${SITE_URL}/methodology/depeg-resolver-changelog/`,
+      lastModified: lastEdited("/methodology/depeg-resolver-changelog/"),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
       url: `${SITE_URL}/methodology/blacklist-tracker-changelog/`,
       lastModified: lastEdited("/methodology/blacklist-tracker-changelog/"),
       changeFrequency: "monthly",

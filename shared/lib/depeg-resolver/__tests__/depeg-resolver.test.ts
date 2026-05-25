@@ -33,6 +33,7 @@ const event = (over: Partial<DdrActiveEventInput> = {}): DdrActiveEventInput => 
   peakDeviationBps: -300,
   startedAt: 1_000_000,
   pegReference: 1,
+  currentDeviationBps: -300,
   ...over,
 });
 const coin = (over: Partial<DdrCoinStructural> = {}): DdrCoinStructural => ({
@@ -93,7 +94,7 @@ describe("resolveOutlook — acceptance cases", () => {
         collateralQuality: "native",
       }),
       baseSupply({ mintSurge: false, change7dPct: 1 }),
-      baseLive({ safetyScore: 92, liquidityScore: 80 }),
+      baseLive({ safetyScore: 92, liquidityScore: 80, redemptionCapacityRatio: 0.2, redemptionRouteFamily: "collateral-redeem" }),
     );
     expect(r.tier).toBe("recovery_likely");
   });
@@ -129,7 +130,7 @@ describe("resolveOutlook — acceptance cases", () => {
   it("overpeg is quasi-certain to recover, unless premium is sticky", () => {
     const recoverable = resolveOutlook(
       event({ direction: "above", peakDeviationBps: 300 }),
-      coin({ mechanismArchetype: "cdp" }),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" }),
       baseSupply(),
       baseLive({ liquidityScore: 70 }),
     );
@@ -137,7 +138,7 @@ describe("resolveOutlook — acceptance cases", () => {
 
     const sticky = resolveOutlook(
       event({ direction: "above", peakDeviationBps: 300 }),
-      coin({ mechanismArchetype: "cdp" }),
+      coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" }),
       baseSupply(),
       baseLive({ liquidityScore: 15, tvlChange7d: -60 }),
     );
@@ -153,6 +154,33 @@ describe("resolveOutlook — acceptance cases", () => {
     );
     expect(r.tier).toBe("insufficient_signal");
     expect(r.insufficientReasons && r.insufficientReasons.length).toBeGreaterThan(0);
+  });
+
+  it("each missing key input independently yields insufficient_signal", () => {
+    const structural = coin({ mechanismArchetype: "cdp", authorityPosture: "none-resolved" });
+    expect(resolveOutlook(event(), coin({ mechanismArchetype: "cdp", authorityPosture: undefined }), baseSupply(), baseLive()).tier).toBe("insufficient_signal");
+    expect(resolveOutlook(event(), structural, baseSupply({ covered: false, change7dPct: null, change30dPct: null, mintSurge: null }), baseLive()).tier).toBe("insufficient_signal");
+    expect(resolveOutlook(event({ currentDeviationBps: null }), structural, baseSupply(), baseLive()).tier).toBe("insufficient_signal");
+  });
+
+  it("does not treat algorithmic mechanism alone as a reflexive death spiral", () => {
+    const r = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -300 }),
+      coin({ mechanismArchetype: "algorithmic", authorityPosture: "none-resolved" }),
+      baseSupply({ mintSurge: false, change7dPct: 0 }),
+      baseLive(),
+    );
+    expect(r.factors.some((f) => f.code === "K4_reflexive_spiral")).toBe(false);
+  });
+
+  it("treats inherited blacklistability as freeze/seizure pressure during a surge", () => {
+    const r = resolveOutlook(
+      event(),
+      coin({ mechanismArchetype: "fiat-cash", authorityPosture: "concentrated-admin", canBeBlacklisted: "inherited" }),
+      baseSupply(),
+      baseLive({ blacklistSurge: true }),
+    );
+    expect(r.factors.some((f) => f.code === "K3_freeze_seizure" && f.severity === "severe")).toBe(true);
   });
 });
 
@@ -238,6 +266,53 @@ describe("computeDuration", () => {
     expect(d.suppressedReason).toBe("insufficient_support");
     expect(d.medianSec).toBeNull();
   });
+
+  it("uses remaining duration at the landmark age", () => {
+    const incidents = makeStratum(40, 24 * 3600, "c");
+    const d = computeDuration(key, 6 * 3600, incidents, new Set());
+    expect(d.suppressed).toBe(false);
+    expect(d.medianSec).toBe(18 * 3600);
+  });
+
+  it("does not borrow minor-depth clocks for a severe active event", () => {
+    const minorIncidents: DdrIncident[] = Array.from({ length: 40 }, (_, i) => ({
+      stablecoinId: `m-${i % 12}`,
+      direction: "below" as const,
+      peakDeviationBps: -120,
+      depth: "minor" as const,
+      currency: "USD" as const,
+      structural: "robust" as const,
+      startedAt: i * 100000,
+      endedAt: i * 100000 + 3600,
+      durationSec: 3600,
+      recovered: true,
+    }));
+    const d = computeDuration({ ...key, depth: "severe" }, 0, minorIncidents, new Set());
+    expect(d.suppressed).toBe(true);
+    expect(d.stratum).toContain("severe");
+  });
+
+  it("matches historical depth as observed at landmark age, not final peak", () => {
+    const incidents: DdrIncident[] = Array.from({ length: 12 }, (_, i) => ({
+      stablecoinId: `coin-${i}`,
+      direction: "below" as const,
+      peakDeviationBps: -2000,
+      depth: "severe" as const,
+      currency: "USD" as const,
+      structural: "robust" as const,
+      startedAt: i * 100000,
+      endedAt: i * 100000 + 12 * 3600,
+      durationSec: 12 * 3600,
+      recovered: true,
+      fragments: [
+        { offsetSec: 0, peakDeviationBps: -500 },
+        { offsetSec: 8 * 3600, peakDeviationBps: -2000 },
+      ],
+    }));
+    const d = computeDuration({ ...key, depth: "severe" }, 2 * 3600, incidents, new Set());
+    expect(d.stratum).not.toBe("below · severe · robust · USD");
+    expect(d.stratum).toContain("moderate+severe+catastrophic");
+  });
 });
 
 describe("resolveDepeg orchestration", () => {
@@ -248,12 +323,24 @@ describe("resolveDepeg orchestration", () => {
       supply: baseSupply({ mintSurge: true, change7dPct: 40 }),
       live: baseLive({ liquidityScore: 15, tvlChange7d: -60 }),
       nowSec: 1_000_000 + 3600,
-      incidents: [],
+      incidents: Array.from({ length: 20 }, (_, i) => ({
+        stablecoinId: `c-${i}`,
+        direction: "below" as const,
+        peakDeviationBps: -500,
+        depth: "moderate" as const,
+        currency: "USD" as const,
+        structural: "fragile" as const,
+        startedAt: i * 100000,
+        endedAt: i * 100000 + 24 * 3600,
+        durationSec: 24 * 3600,
+        recovered: true,
+      })),
       quarantined: new Set(),
     });
     expect(row.resolution.tier).toBe("recovery_unlikely");
     expect(row.duration.suppressed).toBe(true);
     expect(row.duration.suppressedReason).toBe("verdict_terminal");
+    expect(row.duration.horizons).toEqual([]);
     expect(row.ageSec).toBe(3600);
   });
 });

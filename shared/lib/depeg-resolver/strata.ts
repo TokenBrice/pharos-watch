@@ -23,7 +23,12 @@ export interface DdrStratumKey {
   currency: DdrCurrencyClass;
 }
 
-const DEPTH_ORDER: DdrDepthBucket[] = ["minor", "moderate", "severe", "catastrophic"];
+export interface DdrStratumCandidate {
+  direction: "above" | "below";
+  depths: readonly DdrDepthBucket[];
+  structural: DdrStructuralClass | typeof STRATUM_ANY;
+  currency: DdrCurrencyClass | typeof STRATUM_ANY;
+}
 
 /** Depth bucket from absolute peak deviation in bps (spike thresholds). */
 export function depthBucket(peakDeviationBps: number): DdrDepthBucket {
@@ -57,36 +62,62 @@ export function currencyClass(pegCurrency: string): DdrCurrencyClass {
 }
 
 /** Human label for a stratum, used in the payload for transparency. */
-export function stratumLabel(key: DdrStratumKey): string {
+export function stratumLabel(key: DdrStratumKey | DdrStratumCandidate): string {
   const structural = (key.structural as string) === STRATUM_ANY ? "any" : key.structural;
   const currency = (key.currency as string) === STRATUM_ANY ? "any" : key.currency;
-  return `${key.direction} · ${key.depth} · ${structural} · ${currency}`;
+  const depths = "depths" in key ? key.depths : [key.depth];
+  const depthLabel = depths.length === 1 ? depths[0] : depths.join("+");
+  return `${key.direction} · ${depthLabel} · ${structural} · ${currency}`;
 }
 
 /**
- * Candidate strata for an active event, from most specific to coarsest.
- * For each depth level (active → collapsed toward minor) we try:
- * full → drop currency → drop structural+currency. direction+depth is retained.
+ * Candidate strata for an active event, from most specific to coarsest:
+ * exact full → drop currency → collapse the non-minor depth split while
+ * preserving structure → finally drop structure. Severe/catastrophic events
+ * never borrow the minor-flap clock.
  */
-export function candidateStrata(active: DdrStratumKey): DdrStratumKey[] {
-  const startIdx = DEPTH_ORDER.indexOf(active.depth);
-  const depths = DEPTH_ORDER.slice(0, startIdx + 1).reverse(); // active depth down to minor
-  const out: DdrStratumKey[] = [];
-  for (const depth of depths) {
-    out.push({ direction: active.direction, depth, structural: active.structural, currency: active.currency });
-    out.push({ direction: active.direction, depth, structural: active.structural, currency: STRATUM_ANY as DdrCurrencyClass });
-    out.push({ direction: active.direction, depth, structural: STRATUM_ANY as DdrStructuralClass, currency: STRATUM_ANY as DdrCurrencyClass });
+export function candidateStrata(active: DdrStratumKey): DdrStratumCandidate[] {
+  const exact: readonly DdrDepthBucket[] = [active.depth];
+  const collapsed: readonly DdrDepthBucket[] =
+    active.depth === "catastrophic"
+      ? ["severe", "catastrophic"]
+      : active.depth === "severe"
+        ? ["severe", "catastrophic"]
+        : active.depth === "moderate"
+          ? ["moderate", "severe", "catastrophic"]
+          : ["minor"];
+  const broad: readonly DdrDepthBucket[] =
+    active.depth === "minor"
+      ? ["minor"]
+      : ["moderate", "severe", "catastrophic"];
+
+  const out: DdrStratumCandidate[] = [
+    { direction: active.direction, depths: exact, structural: active.structural, currency: active.currency },
+    { direction: active.direction, depths: exact, structural: active.structural, currency: STRATUM_ANY },
+  ];
+  if (collapsed.length > exact.length || collapsed[0] !== exact[0]) {
+    out.push({ direction: active.direction, depths: collapsed, structural: active.structural, currency: STRATUM_ANY });
+  }
+  if (broad.length > collapsed.length || broad.some((d) => !collapsed.includes(d))) {
+    out.push({ direction: active.direction, depths: broad, structural: active.structural, currency: STRATUM_ANY });
+  }
+  out.push({ direction: active.direction, depths: exact, structural: STRATUM_ANY, currency: STRATUM_ANY });
+  if (collapsed.length > exact.length || collapsed[0] !== exact[0]) {
+    out.push({ direction: active.direction, depths: collapsed, structural: STRATUM_ANY, currency: STRATUM_ANY });
+  }
+  if (broad.length > collapsed.length || broad.some((d) => !collapsed.includes(d))) {
+    out.push({ direction: active.direction, depths: broad, structural: STRATUM_ANY, currency: STRATUM_ANY });
   }
   return out;
 }
 
 /** Whether a historical incident's key matches a (possibly wildcarded) candidate. */
 export function stratumMatches(
-  candidate: DdrStratumKey,
+  candidate: DdrStratumCandidate,
   incident: Pick<DdrStratumKey, "direction" | "depth" | "structural" | "currency">,
 ): boolean {
   if (candidate.direction !== incident.direction) return false;
-  if (candidate.depth !== incident.depth) return false;
+  if (!candidate.depths.includes(incident.depth)) return false;
   if ((candidate.structural as string) !== STRATUM_ANY && candidate.structural !== incident.structural) return false;
   if ((candidate.currency as string) !== STRATUM_ANY && candidate.currency !== incident.currency) return false;
   return true;

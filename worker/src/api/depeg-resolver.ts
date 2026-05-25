@@ -42,10 +42,36 @@ function degradedResponse(reason: string): DdrResponse {
   };
 }
 
+function staleSnapshotResponse(snapshot: DdrResponse): DdrResponse {
+  return {
+    ...snapshot,
+    _meta: {
+      ...snapshot._meta,
+      degraded: true,
+      degradedReason: "stale-cache",
+    },
+    rows: snapshot.rows.map((row) => ({
+      ...row,
+      duration: {
+        ...row.duration,
+        suppressed: true,
+        suppressedReason: "stale_cache",
+        stratum: null,
+        medianSec: null,
+        iqrSec: null,
+        ageStatus: null,
+        horizons: [],
+      },
+    })),
+  };
+}
+
 export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db: D1Database): Promise<Response> => {
   const cached = await loadDepegResolverSnapshot(db);
   if (cached.kind === "ok") {
-    return jsonFreshResponse(cached.payload, {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const payload = nowSec > cached.payload._meta.expiresAt ? staleSnapshotResponse(cached.payload) : cached.payload;
+    return jsonFreshResponse(payload, {
       cacheControl: CACHE_PROFILES.standard,
       updatedAt: cached.payload._meta.computedAt,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,

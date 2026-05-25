@@ -82,6 +82,11 @@ const METHODOLOGY_CHANGELOGS: readonly RouteRow[] = [
     description: "DEWS event criteria and severity thresholds",
   },
   {
+    href: "/methodology/depeg-resolver-changelog/",
+    label: "Depeg Duration Resolver",
+    description: "Resolution outlook and duration support rules",
+  },
+  {
     href: "/methodology/liquidity-score-changelog/",
     label: "Liquidity score",
     description: "DEX depth, durability, and market support",

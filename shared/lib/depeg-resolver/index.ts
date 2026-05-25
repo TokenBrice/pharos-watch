@@ -26,7 +26,16 @@ export interface DdrResolveInput {
 }
 
 function suppressDuration(duration: DdrDuration, reason: string): DdrDuration {
-  return { ...duration, suppressed: true, suppressedReason: reason, medianSec: null, iqrSec: null };
+  return {
+    ...duration,
+    suppressed: true,
+    suppressedReason: reason,
+    stratum: null,
+    medianSec: null,
+    iqrSec: null,
+    ageStatus: null,
+    horizons: [],
+  };
 }
 
 export function resolveDepeg(input: DdrResolveInput): DdrRow {

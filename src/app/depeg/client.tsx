@@ -28,6 +28,7 @@ import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
+import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -37,6 +38,7 @@ import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
 
 export function DepegClient() {
+  const resolverEnabled = isDepegResolverEnabled();
   const [nowSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const {
     data: pegData,
@@ -69,7 +71,7 @@ export function DepegClient() {
     dataUpdatedAt: resolverUpdatedAt,
     meta: resolverMeta,
     refetch: refetchResolver,
-  } = useDepegResolver();
+  } = useDepegResolver({ enabled: resolverEnabled });
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -154,7 +156,7 @@ export function DepegClient() {
   const handleRowClick = useCallback((id: string) => {
     router.push(buildStablecoinUrl(id));
   }, [router]);
-  const globalError = pegError ?? dewsError ?? eventsError;
+  const globalError = pegError ?? dewsError ?? eventsError ?? (resolverEnabled ? resolverError : null);
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([refetchPeg, refetchDews, refetchEvents, refetchResolver]);
   }, [refetchDews, refetchEvents, refetchPeg, refetchResolver]);
@@ -191,7 +193,7 @@ export function DepegClient() {
           { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
           { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
           { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
-          { label: "Depeg Resolver", staleTime: 900_000, dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta },
+          ...(resolverEnabled ? [{ label: "Depeg Resolver", staleTime: 900_000, dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta }] : []),
         ]}
       />
 
@@ -253,9 +255,11 @@ export function DepegClient() {
       </div>
 
       {/* Depeg Duration Resolver — recovery verdict + expected duration per open event */}
-      <SectionErrorBoundary name="depeg-resolver">
-        <DepegResolverModule data={resolverData} logos={logos} />
-      </SectionErrorBoundary>
+      {resolverEnabled ? (
+        <SectionErrorBoundary name="depeg-resolver">
+          <DepegResolverModule data={resolverData} logos={logos} />
+        </SectionErrorBoundary>
+      ) : null}
 
       {/* Cohort deviation shape (Council D15) — standalone ridge plot */}
       <SectionErrorBoundary name="cohort-ridge">

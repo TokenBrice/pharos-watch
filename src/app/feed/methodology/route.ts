@@ -13,6 +13,10 @@ import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/depeg-dews";
 import {
+  DDR_METHODOLOGY_CHANGELOG,
+  DDR_METHODOLOGY_CHANGELOG_PATH,
+} from "@shared/lib/methodology-versions/depeg-resolver";
+import {
   LIQUIDITY_METHODOLOGY_CHANGELOG,
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/liquidity-score";
@@ -63,6 +67,12 @@ const SOURCES: readonly Source[] = [
     label: "Depeg + DEWS",
     path: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "depeg-resolver",
+    label: "Depeg Duration Resolver",
+    path: DDR_METHODOLOGY_CHANGELOG_PATH,
+    entries: DDR_METHODOLOGY_CHANGELOG,
   },
   {
     key: "psi",
@@ -136,7 +146,7 @@ export async function GET(): Promise<Response> {
     link: `${SITE_URL}/methodology/`,
     feedUrl: `${SITE_URL}${FEED_PATH}`,
     description:
-      "Versioned methodology updates from pharos.watch — Safety Score, DEWS, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
+      "Versioned methodology updates from pharos.watch — Safety Score, DEWS, DDR, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
     language: "en-US",
     lastBuildDate,
     items,
