@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.05",
+    title: "ZCHF bridge capacity follows CHFAU",
+    date: "2026-05-25",
+    effectiveAt: 1779732000,
+    summary:
+      "Frankencoin ZCHF redemption capacity now uses the active CHFAU StablecoinBridge instead of the expired VCHF bridge, restoring live bridge-buffer telemetry for permissionless ZCHF exits.",
+    impact: [
+      "`zchf-frankencoin` now probes the CHFAU bridge at `0x3e445ff4dddf0ff8ae7458c9746ed80bd664f6c1` and CHFAU token `0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78`",
+      "The old VCHF bridge remains documented historically but no longer supplies current capacity because its inventory is zero and its horizon expired on April 15, 2026",
+      "Until Frankencoin's price API publishes CHFAU directly, bridge telemetry values CHFAU at the existing VCHF CHF-price proxy and keeps a conservative 0.85% fallback buffer",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.04",
     title: "Documented-bound confidence and live wrapper capacity",
     date: "2026-05-17",

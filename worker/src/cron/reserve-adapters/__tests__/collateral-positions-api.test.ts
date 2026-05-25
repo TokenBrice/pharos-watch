@@ -156,6 +156,7 @@ describe("adaptCollateralPositions", () => {
         "0xfps": { price: { usd: 500 } },
         "0xaapl": { price: { usd: 200 } },
         "0xysybold": { price: { usd: 1.05 } },
+        "0xchfau": { price: { usd: 1.25 } },
       },
       0,
     );
@@ -167,6 +168,29 @@ describe("adaptCollateralPositions", () => {
       coinId: "bold-liquity",
       depType: "collateral",
     });
+  });
+
+  it("recognizes CHFAU as a low-risk protocol stablecoin when it appears in collateral positions", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xchfau": {
+          address: "0xCHFAU",
+          name: "AllUnity CHF",
+          symbol: "CHFAU",
+          decimals: 6,
+          positions: [{ collateralBalance: "250000000000" }],
+        },
+      },
+      {
+        "0xchfau": { price: { usd: 1.25 } },
+      },
+      0,
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toEqual([
+      { name: "CHFAU (AllUnity CHF)", pct: 100, risk: "low", coinId: "chfau-allunity" },
+    ]);
   });
 
   it("attaches optional bridge-backed redeemable capacity metadata", () => {

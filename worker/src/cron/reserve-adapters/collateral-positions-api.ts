@@ -68,6 +68,7 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   BOSS: { risk: "very-high" },
   // Stablecoins not in canonical map
   VCHF: { risk: "low" },
+  CHFAU: { risk: "low" },
   YSYBOLD: { risk: "medium", coinId: "bold-liquity", depType: "collateral" },
   // Wrapped BTC variants
   BBTC: { risk: "medium" },
@@ -112,6 +113,8 @@ function inferCoinId(symbol: string): string | undefined {
       return "lusd-liquity";
     case "ZCHF":
       return "zchf-frankencoin";
+    case "CHFAU":
+      return "chfau-allunity";
     default:
       return undefined;
   }

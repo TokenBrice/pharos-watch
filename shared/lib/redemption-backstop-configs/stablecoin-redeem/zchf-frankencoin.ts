@@ -8,16 +8,16 @@ import { REVIEWED_ZCHF_BRIDGE_AT } from "./shared";
 
 export const ZCHF_FRANKENCOIN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
-  capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.014 },
+  capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.0085 },
   costModel: fixedFee(
     0,
-    "Reviewed StablecoinBridge source burns ZCHF and transfers the same amount of VCHF with no fee logic",
+    "Reviewed StablecoinBridge source burns ZCHF and transfers the equivalent CHFAU amount with no fee logic",
   ),
   reviewedAt: REVIEWED_ZCHF_BRIDGE_AT,
   docs: [
     sourceRef(
-      "Frankencoin StablecoinBridge (VCHF)",
-      "https://etherscan.io/address/0x3b71ba73299f925a837836160c3e1fec74340403",
+      "Frankencoin StablecoinBridge (CHFAU)",
+      "https://etherscan.io/address/0x3e445ff4dddf0ff8ae7458c9746ed80bd664f6c1",
       ["route", "capacity", "fees"],
     ),
     sourceRef(
@@ -26,13 +26,14 @@ export const ZCHF_FRANKENCOIN_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig
       ["route"],
     ),
     sourceRef(
-      "VNX docs",
-      "https://vnx.gitbook.io/vnx-platform/",
+      "AllUnity CHFAU",
+      "https://allunity.com/chfau/",
       ["capacity"],
     ),
   ],
   notes: [
-    "Fresh live reserve metadata uses the bridge's current VCHF balance as the immediate redeemable lower bound for permissionless ZCHF -> VCHF exits",
-    "Fallback retains a conservative 1.4% bridge-buffer ratio derived from the reviewed bridge inventory relative to ZCHF supply on April 6, 2026",
+    "Fresh live reserve metadata uses the bridge's current CHFAU balance as the immediate redeemable lower bound for permissionless ZCHF -> CHFAU exits",
+    "Frankencoin's price API does not yet publish CHFAU, so reserve telemetry values CHFAU at the existing VCHF CHF-price proxy",
+    "Fallback retains a conservative 0.85% bridge-buffer ratio derived from the reviewed CHFAU bridge inventory relative to ZCHF supply on May 25, 2026",
   ],
 };

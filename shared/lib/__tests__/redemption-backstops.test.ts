@@ -158,9 +158,9 @@ describe("getRedemptionBackstopConfig", () => {
       settlementModel: "atomic",
       executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
-      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.014 },
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.0085 },
       costModel: { kind: "fee-bps", feeBps: 0 },
-      reviewedAt: "2026-04-06",
+      reviewedAt: "2026-05-25",
     });
 
     for (const id of ["susd1plus-lorenzo", "witry-brix"] as const) {

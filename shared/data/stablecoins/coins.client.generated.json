@@ -27479,9 +27479,10 @@
         "redemptionBridge": {
           "chain": "ethereum",
           "rpcMode": "public-rpc",
-          "holder": "0x3b71ba73299f925a837836160c3e1fec74340403",
-          "tokenAddress": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
-          "tokenDecimals": 18
+          "holder": "0x3e445ff4dddf0ff8ae7458c9746ed80bd664f6c1",
+          "tokenAddress": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+          "tokenDecimals": 6,
+          "priceAddress": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
         }
       }
     },

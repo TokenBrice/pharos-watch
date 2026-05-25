@@ -840,7 +840,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.modelConfidence).toBe("high");
   });
 
-  it("models the ZCHF StablecoinBridge route with live bridge capacity and zero fee", async () => {
+  it("models the ZCHF CHFAU StablecoinBridge route with live bridge capacity and zero fee", async () => {
     const config = getRedemptionBackstopConfig("zchf-frankencoin");
     expect(config).not.toBeNull();
 
@@ -857,7 +857,7 @@ describe("buildRedemptionBackstopEntry", () => {
           fetchedAt: now - 300,
           source: "collateral-positions-api",
           metadata: {
-            immediateRedeemableUsd: 494_182.68,
+            immediateRedeemableUsd: 362_655.25,
             freshnessMode: "unverified",
           },
           warningCount: 0,
@@ -873,7 +873,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.provider).toBe("reserve-sync-metadata");
     expect(entry.capacityConfidence).toBe("live-direct");
-    expect(entry.immediateCapacityUsd).toBe(494_182.68);
+    expect(entry.immediateCapacityUsd).toBe(362_655.25);
     expect(entry.feeBps).toBe(0);
     expect(entry.feeConfidence).toBe("fixed");
     expect(entry.modelConfidence).toBe("high");

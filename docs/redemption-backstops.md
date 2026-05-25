@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.04`
+- **Current methodology version:** `v4.05`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.04` update: source-reviewed documented-bound routes can retain medium model confidence when explicit route-status telemetry is unknown; active RWA, fiat, and wrapper coverage expands; and ERC-4626 wrapper adapters can expose idle underlying balances as direct current redemption capacity.
+Latest `v4.05` update: Frankencoin ZCHF's StablecoinBridge capacity telemetry now follows the active CHFAU bridge after the prior VCHF bridge expired with no remaining inventory.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
