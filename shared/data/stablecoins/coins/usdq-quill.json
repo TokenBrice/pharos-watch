@@ -155,32 +155,49 @@
   },
   "geckoId": "quill-usdq",
   "mintAuthority": {
-    "mintPath": "immutable-user-collateralized",
-    "authorityPosture": "none-resolved",
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "USDQ is minted only when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's immutable Liquity-v2 (BOLD) fork on Scroll; mint is restricted to the registered branch contracts and no admin can mint or freeze the token.",
+    "summary": "USDQ is minted when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's Liquity-v2/BOLD fork on Scroll; minting is restricted to registered branch contracts, while the UUPS/AccessManager authority means the core is not immutable.",
     "controls": [
       {
         "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
-        "role": "other",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "none",
+        "directMintAbility": "cap-limited",
         "chain": "scroll",
         "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Quill is an exclusive Liquity-v2 fork; per the Liquity-v2 BoldToken design, mint/burn rights are fixed to the registered per-branch protocol contracts at deployment and the token is non-upgradeable, so no owner/admin can mint outside CDP borrowing or freeze holders. QUILL governance only directs collateral incentives, not core minting."
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Quill docs and source review show branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps; Scroll source also shows UUPS/AccessManager authority, so the token should not be treated as immutable."
+      },
+      {
+        "chain": "scroll",
+        "address": "0xBe589551397d0F28255e429DDB478620b1C2f08a",
+        "label": "Quill AccessManager / UUPS authority",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Quill USDQ docs",
+            "url": "https://docs.quill.finance/faq/usdusdq"
+          }
+        ],
+        "evidence": "Scroll source and RPC review identify this AccessManager/UUPS authority controlling upgrade/admin paths for the USDQ token system."
       }
     ],
     "review": {
-      "evidence": "Quill is a Liquity-v2 (BOLD codebase) fork on Scroll; minting follows the immutable Liquity-v2 model where users mint USDQ by borrowing against overcollateralized troves and redemption is permissionless. Prior Pharos review confirmed the token has no freeze/blacklist/seizure/proxy-upgrade surface. Renouncement here is grounded in the documented, audited immutable Liquity-v2 architecture (mint confined to registered branch contracts, non-upgradeable core), not an independent on-chain owner() read.",
+      "evidence": "Quill is a Liquity-v2 (BOLD codebase) fork on Scroll; users mint USDQ by borrowing against overcollateralized troves and redemption is permissionless. Source/RPC review shows UUPS/AccessManager authority, so admin risk remains partially bounded rather than none-resolved/immutable.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
         { "label": "Quill & Liquity v2 docs", "url": "https://docs.quill.finance/faq/quill-and-liquity-v2" },
         { "label": "USDQ docs", "url": "https://docs.quill.finance/faq/usdusdq" }
       ],
-      "unresolvedQuestions": ["Confirm on-chain that the BoldToken branch addresses are locked and no setBranchAddresses/owner authority remains active for 0xdb9e8f82d6d45fff803161f2a5f75543972b229a."]
+      "unresolvedQuestions": ["Enumerate AccessManager roles and signer threshold for 0xBe589551397d0F28255e429DDB478620b1C2f08a before raising confidence."]
     }
   }
 }

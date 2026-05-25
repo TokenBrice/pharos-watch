@@ -11566,9 +11566,13 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "bridge-or-oft-synthetic",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize"
@@ -14254,9 +14258,13 @@
     "collateralQuality": "exotic",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "unbounded-or-compromised",
       "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
         {
           "authorityType": "unknown",
           "directMintAbility": "direct"
@@ -15770,11 +15778,15 @@
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "none-resolved",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
           "authorityType": "contract",
           "directMintAbility": "none"
+        },
+        {
+          "authorityType": "safe",
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -17029,16 +17041,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
-      "mintPath": "wrapped-or-variant-inherited",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none"
+          "directMintAbility": "cap-limited"
         },
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "none"
+          "authorityType": "unknown",
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -17140,12 +17152,12 @@
     "collateral": "Ethena whitelabel synthetic-dollar backing using digital-asset collateral and short futures exposure for the Sui deployment",
     "blacklistStatus": true,
     "mintAuthoritySummary": {
-      "mintPath": "wrapped-or-variant-inherited",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "controls": [
         {
-          "authorityType": "contract",
-          "directMintAbility": "none"
+          "authorityType": "unknown",
+          "directMintAbility": "direct"
         },
         {
           "authorityType": "issuer-backend",
@@ -18021,8 +18033,12 @@
           "directMintAbility": "none"
         },
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "none"
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -18105,7 +18121,7 @@
         },
         {
           "authorityType": "multisig",
-          "directMintAbility": "none"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -18262,7 +18278,7 @@
         },
         {
           "authorityType": "issuer-backend",
-          "directMintAbility": "none"
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -20111,12 +20127,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "unknown",
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -20845,6 +20865,10 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited"
+        },
+        {
+          "authorityType": "unknown",
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -21872,11 +21896,11 @@
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "multisig",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "multisig",
           "directMintAbility": "unknown"
         }
       ]

@@ -26058,11 +26058,31 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "bridge-or-oft-synthetic",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
-      "confidence": "verified",
-      "summary": "The Ethereum MUSD token has owner-managed mintList entries. The meaningful active minter identified is a Wormhole NTT manager owned by a 5/9 Safe; two other active mintList entries are tiny noOp contracts and remain unresolved placeholders.",
+      "confidence": "manual-review",
+      "summary": "MUSD is primarily minted on Mezo through a BTC-only overcollateralized CDP/Liquity-style borrower path; the Ethereum token/bridge surface has owner-managed mintList entries, with the meaningful active Ethereum minter identified as a Wormhole NTT manager owned by a 5/9 Safe.",
       "controls": [
+        {
+          "label": "Mezo MUSD borrower/CDP mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Mezo docs describe MUSD minting against native and wrapped BTC collateral at 110% minimum collateralization through a Liquity-style borrower flow.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Mezo MUSD docs",
+              "url": "https://mezo.org/docs/users/musd/"
+            },
+            {
+              "label": "Mezo mint MUSD docs",
+              "url": "https://mezo.org/docs/users/musd/mint-musd/"
+            }
+          ],
+          "evidence": "Official Mezo docs describe MUSD as a BTC-only overcollateralized stablecoin minted by borrowing against BTC collateral, not primarily as an Ethereum bridge/OFT synthetic."
+        },
         {
           "chain": "ethereum",
           "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
@@ -26145,11 +26165,11 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
           }
         ],
-        "evidence": "Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
+        "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
         "reviewer": "Codex mint-authority top100 batch-c",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Core Mezo-side borrower/CDP mint authority was not verified; this recommendation covers the Ethereum token/bridge surface only.",
+          "Decode Mezo-side borrower/CDP contract admin and collateral parameter authority.",
           "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo."
         ]
       }
@@ -32033,14 +32053,34 @@
       "country": "Singapore"
     },
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "PHT has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "PHT docs describe a MakerDAO-style CDP system, with beta minting against apcxUSDT collateral; token-source evidence still shows unresolved privileged mint/admin authority, so Mint Authority records the CDP route plus unresolved admin risk.",
       "controls": [
         {
-          "label": "Privileged token mint/admin authority",
+          "label": "APACX PHT vault/CDP mint path",
           "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "APACX docs describe PHT minting through MakerDAO-style vaults/CDPs, with beta PHT minted against apcxUSDT collateral and later collateral expansion planned.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "PHT overview",
+              "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+            },
+            {
+              "label": "PHT mint/redeem guide",
+              "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
+            }
+          ],
+          "evidence": "APACX docs describe PHT as a MakerDAO MCD-style stablecoin minted from collateralized vaults, while the beta guide describes current PHT minted using apcxUSDT collateral backed 1:1 by a reserve address."
+        },
+        {
+          "label": "Privileged token mint/admin authority",
+          "role": "minter-admin",
           "authorityType": "unknown",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
@@ -32059,11 +32099,22 @@
           {
             "label": "Etherscan contract source",
             "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+          },
+          {
+            "label": "PHT overview",
+            "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+          },
+          {
+            "label": "PHT mint/redeem guide",
+            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
           }
         ],
-        "evidence": "PHT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
+        "evidence": "APACX docs describe a MakerDAO MCD-style PHT CDP system and beta apcxUSDT collateral minting; Etherscan token-source evidence still indicates privileged mint/admin authority requiring threshold and cap review.",
         "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewedAt": "2026-05-25",
+        "unresolvedQuestions": [
+          "Resolve the live Ethereum/Polygon/Tron admin and exact CDP/vault contract authority before lowering the unbounded admin posture."
+        ]
       }
     },
     "contracts": [
@@ -35259,9 +35310,9 @@
     ],
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
-      "authorityPosture": "none-resolved",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "sBOLD is a risk-absorption variant over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD.",
+      "summary": "sBOLD is a K3 Capital ERC-4626 wrapper over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD, and K3 wrapper administration resolves to a 2/3 Safe.",
       "inheritedFrom": "bold-liquity",
       "controls": [
         {
@@ -35279,7 +35330,42 @@
               "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
             }
           ],
-          "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority."
+          "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority. Live asset() reads confirm the vault asset is BOLD."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5",
+          "label": "K3 sBOLD owner Safe",
+          "role": "minter-admin",
+          "authorityType": "safe",
+          "directMintAbility": "parameter-only",
+          "threshold": 2,
+          "signerCount": 3,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0xc4ca03Bac67184B37F0209750b5896aA9cAA506c",
+              "0x6a2Be1424bB8ee960a9260Ae561593E385807ee5",
+              "0xe6D42fCA40b3ecF4Bb4a244cF94961Acbde6DB83"
+            ],
+            "threshold": 2,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "K3 sBOLD repository",
+              "url": "https://github.com/K3Capital/sBOLD"
+            },
+            {
+              "label": "sBOLD owner Safe API",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
+            }
+          ],
+          "evidence": "Ethereum owner() resolved to this Safe; Safe API returned a 2/3 Safe with no enabled modules and the zero guard."
         }
       ],
       "review": {
@@ -35289,7 +35375,7 @@
             "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
           }
         ],
-        "evidence": "sBOLD should inherit BOLD's reviewed mint authority; no separate durable issuer mint path was resolved in local variant metadata.",
+        "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard.",
         "reviewer": "Codex mint-authority full-gap batch-4",
         "reviewedAt": "2026-05-24"
       }
@@ -38200,32 +38286,31 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "wrapped-or-variant-inherited",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "stUSD is StoneYield's strategy-vault wrapper over USDC routed through a Venus-linked strategy layer; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
-      "inheritedFrom": "usdc-circle",
+      "summary": "stUSD is StoneYield's strategy-vault token over USDC-routed strategies, but StoneYield docs expose local mint and emergency controls including deposit minting, rewardMint(), pause(), adminUnlock(), and sweepUSDC(); its mint authority is not inherited-only from USDC.",
       "controls": [
         {
           "chain": "bsc",
           "address": "0x806dd21af6de051fb811760a5768d04a99160eb9",
-          "label": "StoneYield stUSD wrapper token",
-          "role": "wrapper",
+          "label": "StoneYield stUSD deposit mint path",
+          "role": "direct-minter",
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "capDescription": "stUSD shares are minted/burned by the StoneYield vault against USDC deposits and withdrawals; this share accounting cannot create or destroy base USDC supply.",
-          "canRaiseCap": false,
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "Strategy-vault receipt: stUSD shares represent a claim on USDC routed through StoneYield's Venus-linked strategy; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
-        },
-        {
-          "label": "Inherited USDC (Circle) issuer mint path",
-          "role": "other",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "none",
+          "directMintAbility": "cap-limited",
+          "capDescription": "User deposits USDC into StakeableAssetImpl/StrategyRouter, which mints stUSD shares against strategy assets; the token does not create base USDC supply but can mint local stUSD shares.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+          "evidence": "StoneYield contract-design docs describe the flow `User Deposits USDC -> StakeableAssetImpl (mints STUSD) -> StrategyRouter`."
+        },
+        {
+          "label": "StoneYield stUSD reward/emergency admin controls",
+          "role": "minter-admin",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "StoneYield docs list admin rewardMint(), pause(), adminUnlock(), and sweepUSDC() controls on the STUSD token design; exact owner/admin holder was not resolved in this pass."
         }
       ],
       "review": {
@@ -38235,10 +38320,13 @@
             "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
           }
         ],
-        "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority.",
-        "evidence": "stUSD (variantOf usdc-circle, variantKind strategy-vault) is a StoneYield yield wrapper whose shares track deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
+        "sourceFreeRationale": "StoneYield docs document local STUSD mint/admin functions; exact owner/admin holder was not resolved from the BSC contract in this pass.",
+        "evidence": "StoneYield docs describe stUSD share minting from USDC deposits plus admin rewardMint and emergency controls, so the local token has its own permissioned mint/admin surface even though base USDC supply remains Circle-issued.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
-        "reviewedAt": "2026-05-25"
+        "reviewedAt": "2026-05-25",
+        "unresolvedQuestions": [
+          "Resolve the live BSC owner/admin holder for rewardMint(), pause(), adminUnlock(), and sweepUSDC()."
+        ]
       }
     },
     "contracts": [
@@ -38460,38 +38548,37 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "wrapped-or-variant-inherited",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
       "confidence": "manual-review",
-      "summary": "suiUSDe is Sui's Ethena-whitelabel synthetic dollar; it inherits USDe's off-chain attested mint authority and exposure to Ethena's backend/Safe controls rather than creating an independent mint path on Sui.",
-      "inheritedFrom": "usde-ethena",
+      "summary": "suiUSDe is Sui's eSui Dollar powered by Ethena economics, but the Sui package defines a native coin with a TreasuryCap; the live TreasuryCap holder is unresolved, so the Sui deployment cannot be treated as inherited-only USDe authority.",
       "controls": [
         {
           "chain": "sui",
           "address": "0x41d587e5336f1c86cad50d38a7136db99333bb9bda91cea4ba69115defeb1402::sui_usde::SUI_USDE",
-          "label": "suiUSDe Sui wrapper/representation",
-          "role": "wrapper",
-          "authorityType": "contract",
-          "directMintAbility": "none",
+          "label": "suiUSDe Sui TreasuryCap mint authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "evidence": "suiUSDe is the Sui deployment of Ethena's whitelabel synthetic dollar; its supply tracks Ethena's USDe issuance rather than minting base USDe supply, so the wrapper itself holds no independent mint authority."
+          "evidence": "Sui coin metadata identifies eSui Dollar/suiUSDe, and the normalized Move module exposes init_treasury returning TreasuryCap<SUI_USDE>, DenyCapV2, and MetadataCap; the current TreasuryCap holder remains unresolved."
         },
         {
-          "label": "Inherited USDe off-chain attested mint authority",
+          "label": "Ethena economic/backing dependency",
           "role": "backend-signer",
           "authorityType": "issuer-backend",
           "directMintAbility": "none",
           "canRaiseCap": "unknown",
-          "evidence": "Underlying USDe minting uses Ethena signed-order flows with a contract minter and a 5/10 Safe token owner; suiUSDe inherits this authority posture from the parent USDe without adding its own mint route."
+          "evidence": "Sui ecosystem materials describe suiUSDe/eSui Dollar as a synthetic dollar issued in collaboration with Ethena and powered by Ethena-style backing; this is an economic dependency, not proof that Sui mint authority is inherited-only."
         }
       ],
       "review": {
-        "sourceFreeRationale": "Classified as a variant of usde-ethena from Pharos dependency/mechanism metadata; posture mirrored from the parent USDe mintAuthority. The Sui deployment's own admin surface was not independently resolved.",
-        "evidence": "suiUSDe is a Sui-native Ethena whitelabel synthetic dollar (dependency weight 1 on usde-ethena, mechanismArchetype synthetic-delta-neutral). It inherits USDe's offchain-attested mint authority and unbounded/compromised admin posture; no independent on-chain mint authority was identified for the Sui deployment.",
+        "sourceFreeRationale": "Sui metadata/module reads establish a local TreasuryCap mint surface; exact holder and signer model were not resolved.",
+        "evidence": "Sui coin metadata and normalized Move module output show suiUSDe is a native Sui coin with a TreasuryCap, while Sui/Ethena materials describe Ethena-powered economics; exact TreasuryCap/admin ownership remains unresolved.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the suiUSDe Sui object/package admin and confirm whether the Sui deployment can mint independently of Ethena's USDe issuance rails."
+          "Resolve the suiUSDe TreasuryCap holder, DenyCap holder, and package/admin upgrade authority before raising confidence."
         ]
       }
     },
@@ -40470,13 +40557,38 @@
           "evidence": "Strategy-vault receipt: syrupUSDC shares represent a claim on USDC lent as overcollateralized institutional loans; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
         },
         {
-          "label": "Inherited USDC (Circle) issuer mint path",
-          "role": "other",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "none",
+          "chain": "ethereum",
+          "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+          "label": "Inherited USDC MasterMinter",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+          "sources": [
+            {
+              "label": "Ethereum USDC contract",
+              "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+            }
+          ],
+          "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter. Live masterMinter() reads resolve to this contract, which can authorize minters for the base USDC monetary supply."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xFcb19e6a322b27c06842A71e8c725399f049AE3a",
+          "label": "Inherited USDC token owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Ethereum USDC contract",
+              "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+            }
+          ],
+          "evidence": "Underlying USDC token owner/admin can authorize USDC mint administration; syrupUSDC wrapper shares inherit this base USDC authority."
         }
       ],
       "review": {
@@ -40487,7 +40599,7 @@
           }
         ],
         "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority.",
-        "evidence": "syrupUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
+        "evidence": "syrupUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDC; live USDC parent reads resolve the inherited MasterMinter and token owner controls.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25"
       }
@@ -40629,13 +40741,27 @@
           "evidence": "Strategy-vault receipt: syrupUSDT shares represent a claim on USDT lent as overcollateralized institutional loans; minting shares only follows USDT deposits and does not expand the parent USDT monetary base."
         },
         {
+          "chain": "ethereum",
+          "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
           "label": "Inherited USDT (Tether) issuer mint path",
-          "role": "other",
+          "role": "direct-minter",
           "authorityType": "multisig",
-          "directMintAbility": "none",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 6,
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "Underlying USDT supply is issuer-minted by Tether; on Ethereum the token owner is a 3/6 multisig-style owner with direct supply authority (issuer-direct-mint, concentrated-admin); this wrapper holds USDT and inherits that base mint authority."
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Tether transparency",
+              "url": "https://tether.to/en/transparency/"
+            },
+            {
+              "label": "Ethereum USDT contract",
+              "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+            }
+          ],
+          "evidence": "Underlying USDT supply is issuer-minted by Tether; Ethereum getOwner() resolves to this 3/6 multisig-style owner with direct supply authority. syrupUSDT wrapper shares inherit that base USDT authority."
         }
       ],
       "review": {
@@ -40646,7 +40772,7 @@
           }
         ],
         "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdt-tether, strategy-vault, wrapper reserve); posture mirrors the USDT parent mint authority.",
-        "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT; base mint authority is the inherited Tether USDT issuer path (concentrated-admin) and is mirrored here.",
+        "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT; live USDT parent reads resolve the inherited 3/6 owner with direct supply authority.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25"
       }
@@ -40948,13 +41074,23 @@
           "label": "Inherited yzUSD permissioned mint authority",
           "role": "direct-minter",
           "authorityType": "issuer-backend",
-          "directMintAbility": "none",
+          "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "evidence": "Underlying yzUSD primary mint/redeem is gated to KYC'ed eligible investors 1:1 with USDT0, with collateral managed in a Fordefi MPC workspace. syzUSD inherits this concentrated-admin posture from the parent."
         }
       ],
       "review": {
-        "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
+        "sources": [
+          {
+            "label": "Yuzu syzUSD docs",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd"
+          },
+          {
+            "label": "Yuzu yzUSD docs",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/yuzu-stablecoin-yzusd"
+          }
+        ],
+        "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
         "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
@@ -45129,15 +45265,17 @@
       "country": "Dominica"
     },
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "USDD mints through Maker-style collateralized TRON DAO Reserve rails; Ethereum token source exposes warded mint authority and the USDD Join contract is the resolved direct minter, while governance/Pause/Vat administration remains unresolved.",
       "controls": [
         {
-          "label": "Privileged token mint/admin authority",
+          "chain": "ethereum",
+          "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
+          "label": "USDD Join token ward / direct minter",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
@@ -45147,19 +45285,39 @@
               "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
             }
           ],
-          "evidence": "USDD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+          "evidence": "USDD system/deployment docs describe collateralized USDD issuance rails, and Ethereum token source exposes warded mint authority. Live/source review identifies the USDD Join contract as the token ward/direct minter rather than a generic privileged token authority."
+        },
+        {
+          "label": "USDD governance / Pause / Vat administration",
+          "role": "governor",
+          "authorityType": "unknown",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "System-level governance, Pause, and Vat administration can alter issuance parameters or privileged wards; exact current signer set and threshold were not decoded in this pass."
         }
       ],
       "review": {
         "sources": [
           {
+            "label": "USDD system architecture",
+            "url": "https://docs.usdd.io/system-architecture/system-architecture"
+          },
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
             "label": "Etherscan contract source",
             "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
           }
         ],
-        "evidence": "USDD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
+        "evidence": "USDD docs describe collateralized issuance architecture and deployment addresses; token-source review identifies USDD Join as the direct ward/minter while governance/Pause/Vat authority remains unresolved.",
         "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewedAt": "2026-05-25",
+        "unresolvedQuestions": [
+          "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence."
+        ]
       }
     },
     "contracts": [
@@ -46877,7 +47035,7 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDK is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway and Solana movement relies on M0 portal infrastructure.",
+      "summary": "USDK is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and live Solana Token-2022 metadata exposes a USDK mint authority.",
       "controls": [
         {
           "chain": "ethereum",
@@ -46926,6 +47084,23 @@
             }
           ],
           "evidence": "Official M0 deployments list the Solana Portal program; a USDK-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
+        },
+        {
+          "chain": "solana",
+          "address": "C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
+          "label": "USDK Token-2022 mint authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "USDK Solana token",
+              "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+            }
+          ],
+          "evidence": "Solana Token-2022 mint account reads identify this live USDK mint authority; signer model was not decoded."
         }
       ],
       "review": {
@@ -46939,7 +47114,7 @@
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
           }
         ],
-        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins; live Solana Token-2022 metadata also exposes a USDK mint authority.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -49103,20 +49278,24 @@
           "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
           "label": "USDQ Ethereum owner",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "multisig",
           "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 5,
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "owner() returned this address at Ethereum block 25165887."
+          "evidence": "owner() returned this address at Ethereum block 25165887; required()/getOwners() reads confirmed a 3/5 multisig-style owner."
         },
         {
           "chain": "polygon",
           "address": "0x84e8d731fCBe186B803DB51e9E58142083417929",
           "label": "USDQ Polygon owner",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "multisig",
           "directMintAbility": "unknown",
+          "threshold": 2,
+          "signerCount": 5,
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "owner() returned this address at Polygon block 87368488; exact Polygon mint role source needs review."
+          "evidence": "owner() returned this address at Polygon block 87368488; required()/getOwners() reads confirmed a 2/5 multisig-style owner. Exact Polygon mint role source needs review."
         }
       ],
       "review": {
@@ -49130,11 +49309,11 @@
             "url": "https://www.quantoz.com/products/eurq-usdq"
           }
         ],
-        "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 at block 87368488.",
+        "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 and owner threshold = 3/5 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 and owner threshold = 2/5 at block 87368488.",
         "reviewer": "Codex mint-authority top100 batch-b",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Identify whether owner/proxy-admin addresses are Safes, EOAs, or contracts.",
+          "Identify proxy-admin address thresholds and signer models.",
           "Enumerate Polygon roles and confirm whether Polygon can independently mint or only bridge."
         ]
       }

@@ -105,28 +105,43 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API against segregated cash and short-term EU government bond reserves, and the Ethereum token is an issuer-controlled upgradeable proxy.",
+    "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API, with live Ethereum owner and proxy-admin authority resolving to multisig-style contracts.",
     "controls": [
       {
-        "label": "StablR upgradeable-proxy owner/admin (Ethereum)",
+        "label": "USDR token owner",
         "role": "minter-admin",
-        "authorityType": "contract",
+        "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
-        "address": "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8",
+        "address": "0xC7Dcd41682C7Fd246e48b30ad39BcEe82968A0E4",
+        "threshold": 2,
+        "signerCount": 2,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
-        "evidence": "Etherscan shows USDR is an EIP-1967 TransparentUpgradeableProxy (implementation 0x76E0BAEf381656d51d733cf9aa60d7bf8017f958) using OpenZeppelin upgradeable token contracts; proxy admin 0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c holds upgrade authority and StablR's issuance API mints/redeems against reserves, so mint creation is issuer-controlled.",
+        "evidence": "Live owner() read returned this token owner; multisig method reads returned 2 required signatures and 2 owners.",
         "sources": [
           {
             "label": "Etherscan USDR contract",
             "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
           }
         ]
+      },
+      {
+        "label": "USDR EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "chain": "ethereum",
+        "address": "0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c",
+        "threshold": 1,
+        "signerCount": 1,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "EIP-1967 proxy-admin slot returned this address; multisig method reads returned 1 required signature and 1 owner."
       }
     ],
     "review": {
-      "evidence": "USDR is a MiCAR-compliant EMT issued by StablR Ltd under MFSA EMI supervision, redeemable 1:1 via StablR's API; the Ethereum token is an OpenZeppelin upgradeable proxy with issuer-held admin, confirming centralized issuer mint against segregated cash and short-term government bond reserves.",
+      "evidence": "USDR is a MiCAR-compliant EMT issued by StablR Ltd under MFSA EMI supervision, redeemable 1:1 via StablR's API; live Ethereum reads resolve the token owner to a 2/2 multisig-style contract and the proxy admin to a 1/1 multisig-style contract.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -140,7 +155,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Confirm whether the proxy admin and the implementation's mint privilege are held by an EOA, multisig, or Safe, and the exact minter role configuration."
+        "Confirm the exact implementation minter-role configuration and whether the 1/1 proxy-admin signer has any further organizational controls."
       ]
     }
   }

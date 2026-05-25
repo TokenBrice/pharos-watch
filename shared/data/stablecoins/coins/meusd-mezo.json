@@ -57,11 +57,31 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "bridge-or-oft-synthetic",
+    "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "The Ethereum MUSD token has owner-managed mintList entries. The meaningful active minter identified is a Wormhole NTT manager owned by a 5/9 Safe; two other active mintList entries are tiny noOp contracts and remain unresolved placeholders.",
+    "confidence": "manual-review",
+    "summary": "MUSD is primarily minted on Mezo through a BTC-only overcollateralized CDP/Liquity-style borrower path; the Ethereum token/bridge surface has owner-managed mintList entries, with the meaningful active Ethereum minter identified as a Wormhole NTT manager owned by a 5/9 Safe.",
     "controls": [
+      {
+        "label": "Mezo MUSD borrower/CDP mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Mezo docs describe MUSD minting against native and wrapped BTC collateral at 110% minimum collateralization through a Liquity-style borrower flow.",
+        "sources": [
+          {
+            "label": "Mezo MUSD docs",
+            "url": "https://mezo.org/docs/users/musd/"
+          },
+          {
+            "label": "Mezo mint MUSD docs",
+            "url": "https://mezo.org/docs/users/musd/mint-musd/"
+          }
+        ],
+        "evidence": "Official Mezo docs describe MUSD as a BTC-only overcollateralized stablecoin minted by borrowing against BTC collateral, not primarily as an Ethereum bridge/OFT synthetic."
+      },
       {
         "chain": "ethereum",
         "address": "0x98D8899c3030741925BE630C710A98B57F397C7a",
@@ -144,11 +164,11 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x98D8899c3030741925BE630C710A98B57F397C7a/"
         }
       ],
-      "evidence": "Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
+      "evidence": "Official Mezo docs describe core Mezo-side MUSD minting through a BTC-only overcollateralized borrower/CDP flow. Ethereum token reads identify owner-managed mintList authority, a 5/9 Safe owner, and a Wormhole NTT manager as the meaningful active Ethereum mint/bridge route.",
       "reviewer": "Codex mint-authority top100 batch-c",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-        "Core Mezo-side borrower/CDP mint authority was not verified; this recommendation covers the Ethereum token/bridge surface only.",
+        "Decode Mezo-side borrower/CDP contract admin and collateral parameter authority.",
         "Active mintList entries 0x52b952d9e77fc89c7a0ab5b766e6560df778c35a and 0xe9c3d269d259d3a336147714dca60e3ff639079a are noOp contracts; do not classify them as operational minters without explanation from Mezo."
       ]
     }

@@ -117,20 +117,24 @@
         "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
         "label": "USDQ Ethereum owner",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "owner() returned this address at Ethereum block 25165887."
+        "evidence": "owner() returned this address at Ethereum block 25165887; required()/getOwners() reads confirmed a 3/5 multisig-style owner."
       },
       {
         "chain": "polygon",
         "address": "0x84e8d731fCBe186B803DB51e9E58142083417929",
         "label": "USDQ Polygon owner",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "unknown",
+        "threshold": 2,
+        "signerCount": 5,
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "owner() returned this address at Polygon block 87368488; exact Polygon mint role source needs review."
+        "evidence": "owner() returned this address at Polygon block 87368488; required()/getOwners() reads confirmed a 2/5 multisig-style owner. Exact Polygon mint role source needs review."
       }
     ],
     "review": {
@@ -144,11 +148,11 @@
           "url": "https://www.quantoz.com/products/eurq-usdq"
         }
       ],
-      "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 at block 87368488.",
+    "evidence": "Direct reads: Ethereum implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin = 0xa6724f792002d5677a7bc370986e1b580b8773e7, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 and owner threshold = 3/5 at block 25165887. Polygon implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, proxy admin = 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 and owner threshold = 2/5 at block 87368488.",
       "reviewer": "Codex mint-authority top100 batch-b",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-        "Identify whether owner/proxy-admin addresses are Safes, EOAs, or contracts.",
+      "Identify proxy-admin address thresholds and signer models.",
         "Enumerate Polygon roles and confirm whether Polygon can independently mint or only bridge."
       ]
     }
