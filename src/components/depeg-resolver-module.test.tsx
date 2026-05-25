@@ -99,4 +99,34 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("Insufficient comparable recoveries for a duration band.")).toBeTruthy();
     expect(screen.queryByText("insufficient_support")).toBeNull();
   });
+
+  it("states the terminal recovery outlook clearly", () => {
+    render(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              resolution: {
+                tier: "recovery_unlikely",
+                factors: [],
+              },
+              duration: {
+                ...row.duration,
+                suppressedReason: "verdict_terminal",
+              },
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("DDR does not expect this depeg to recover.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Comparable structural failures did not return to peg, so no duration estimate is shown.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Duration not estimated/)).toBeNull();
+  });
 });

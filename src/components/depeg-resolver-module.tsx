@@ -71,7 +71,7 @@ const CELL_STATE_LABELS: Record<DdrCellState, string> = {
 const SUPPRESSED_REASON_LABELS: Record<string, string> = {
   insufficient_support: "Insufficient comparable recoveries for a duration band.",
   insufficient_signal: "Duration suppressed until the resolver has enough live signal.",
-  verdict_terminal: "Duration suppressed for a terminal recovery outlook.",
+  verdict_terminal: "DDR does not expect recovery on current signals, so no duration estimate is shown.",
   stale_cache: "Duration suppressed because the resolver snapshot is stale.",
 };
 
@@ -226,8 +226,9 @@ function ResolverRowCard({ row, logos }: { row: DdrRow; logos?: Record<string, s
 
         {tier === "recovery_unlikely" ? (
           <div className="rounded-lg border border-red-500/25 bg-red-500/5 px-3 py-2 text-sm">
-            <p className="text-foreground">
-              Duration not estimated — comparable structural failures did not recover.
+            <p className="font-medium text-foreground">DDR does not expect this depeg to recover.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Comparable structural failures did not return to peg, so no duration estimate is shown.
             </p>
             <Link
               href="/cemetery"
