@@ -1,0 +1,194 @@
+/**
+ * Stage 1 — Resolution Outlook (terminal vs recoverable).
+ *
+ * Mechanistic, transparent, and calibrated rather than fitted (the death-label
+ * corpus is too small for ML; see docs/depeg-resolver.md). Combines structural
+ * fragility (can supply be weaponized? can backing fail? can it be frozen?) with
+ * the live depeg fingerprint (depth, supply behaviour, stress) into an ordinal
+ * verdict plus the factors that drove it.
+ */
+
+import type { DdrFactor, DdrResolution, DdrResolutionTier } from "../../types/depeg-resolver";
+import type { DdrActiveEventInput, DdrCoinStructural, DdrLiveContext, DdrSupplyContext } from "./inputs";
+import { depthBucket } from "./strata";
+
+const RISKY_MINT_PATHS = new Set([
+  "issuer-direct-mint",
+  "offchain-attested-minter",
+  "bridge-or-oft-synthetic",
+  "amo-or-custodian-hybrid",
+  "facilitator-bucket-mint",
+]);
+const RISKY_POSTURES = new Set(["concentrated-admin", "unbounded-or-compromised"]);
+
+function sumReserveRisk(coin: DdrCoinStructural, risks: string[]): number {
+  if (!coin.reserves?.length) return 0;
+  return coin.reserves.filter((r) => risks.includes(r.risk)).reduce((s, r) => s + (r.pct ?? 0), 0);
+}
+
+interface RawFactor {
+  code: DdrFactor["code"];
+  kind: DdrFactor["kind"];
+  severity: DdrFactor["severity"];
+  label: string;
+}
+
+function killSignals(
+  active: DdrActiveEventInput,
+  coin: DdrCoinStructural,
+  supply: DdrSupplyContext,
+  live: DdrLiveContext,
+): RawFactor[] {
+  const out: RawFactor[] = [];
+  const below = active.direction === "below";
+  const depth = depthBucket(active.peakDeviationBps);
+  const deep = depth === "severe" || depth === "catastrophic";
+  const riskyMinter = (coin.authorityPosture != null && RISKY_POSTURES.has(coin.authorityPosture)) ||
+    (coin.mintPath != null && RISKY_MINT_PATHS.has(coin.mintPath));
+  const supplyExpanding =
+    supply.mintSurge === true || (supply.change7dPct != null && supply.change7dPct > 20);
+
+  // K1 — supply weaponization (below-peg only)
+  if (below && riskyMinter && supplyExpanding) {
+    const sev = coin.authorityPosture === "unbounded-or-compromised" && supply.mintSurge === true
+      ? "severe"
+      : "elevated";
+    const pct = supply.change7dPct != null ? ` (+${Math.round(supply.change7dPct)}% supply / 7d)` : "";
+    out.push({ code: "K1_supply_weaponization", kind: "kill", severity: sev, label: `Privileged minter expanding supply into the break${pct}` });
+  }
+
+  // K2 — backing impairment
+  const veryHigh = sumReserveRisk(coin, ["very-high"]);
+  const highish = sumReserveRisk(coin, ["high", "very-high"]);
+  if (coin.dependencyImpaired === true || veryHigh >= 30) {
+    out.push({ code: "K2_backing_impairment", kind: "kill", severity: "severe", label: coin.dependencyImpaired ? "Depends on a frozen/dead collateral asset" : "Reserves concentrated in very-high-risk assets" });
+  } else if (coin.collateralQuality === "exotic" || highish >= 40) {
+    out.push({ code: "K2_backing_impairment", kind: "kill", severity: "elevated", label: "Exotic or high-risk collateral base" });
+  }
+
+  // K3 — freeze / seizure
+  if ((coin.canBeBlacklisted === true && live.blacklistSurge === true) || coin.custodyModel === "institutional-sanctioned") {
+    out.push({ code: "K3_freeze_seizure", kind: "kill", severity: "severe", label: coin.custodyModel === "institutional-sanctioned" ? "Custody under sanction/freeze" : "Freeze surge while holders are blacklistable" });
+  } else if (coin.custodyModel === "cex") {
+    out.push({ code: "K3_freeze_seizure", kind: "kill", severity: "elevated", label: "Reserves custodied on a CEX" });
+  }
+
+  // K4 — reflexive death-spiral
+  if (coin.mechanismArchetype === "algorithmic") {
+    const sev = below && deep && supplyExpanding ? "severe" : "elevated";
+    out.push({ code: "K4_reflexive_spiral", kind: "kill", severity: sev, label: "Algorithmic peg mechanism (reflexive supply)" });
+  } else if (
+    coin.mechanismArchetype === "synthetic-delta-neutral" && below && deep &&
+    supply.change7dPct != null && supply.change7dPct < -10
+  ) {
+    out.push({ code: "K4_reflexive_spiral", kind: "kill", severity: "elevated", label: "Synthetic hedge under redemption/unwind pressure" });
+  }
+
+  // K5 — exit collapse
+  const liq = live.liquidityScore;
+  const rcr = live.redemptionCapacityRatio;
+  if ((liq != null && liq < 20 && live.tvlChange7d != null && live.tvlChange7d < -40) || (rcr != null && rcr < 0.005)) {
+    out.push({ code: "K5_exit_collapse", kind: "kill", severity: "severe", label: "Exit liquidity collapsing with no redemption path" });
+  } else if ((liq != null && liq < 30) || live.bankRun === true || (rcr != null && rcr < 0.02)) {
+    out.push({ code: "K5_exit_collapse", kind: "kill", severity: "elevated", label: live.bankRun === true ? "Sustained one-sided outflow (bank-run signal)" : "Thin exit liquidity" });
+  }
+
+  return out;
+}
+
+function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live: DdrLiveContext): RawFactor[] {
+  const out: RawFactor[] = [];
+
+  // R1 — non-inflatable supply
+  if (coin.authorityPosture === "none-resolved" || coin.mintPath === "immutable-user-collateralized") {
+    out.push({ code: "R1_noninflatable_supply", kind: "anchor", severity: "strong", label: "Immutable user-collateralized supply (cannot be inflated)" });
+  } else if (coin.mintPath === "user-collateralized-governed") {
+    out.push({ code: "R1_noninflatable_supply", kind: "anchor", severity: "weak", label: "User-collateralized supply (governance-bounded)" });
+  }
+
+  // R2 — hard collateral + redemption
+  const veryLow = sumReserveRisk(coin, ["very-low", "low"]);
+  const rcr = live.redemptionCapacityRatio;
+  if (coin.collateralQuality === "native" || veryLow >= 80 || (rcr != null && rcr >= 0.1)) {
+    out.push({ code: "R2_hard_collateral_redemption", kind: "anchor", severity: "strong", label: "Hard collateral with a working redemption path" });
+  } else if (coin.mechanismArchetype === "cdp" || coin.collateralQuality === "rwa" || coin.collateralQuality === "eth-lst") {
+    out.push({ code: "R2_hard_collateral_redemption", kind: "anchor", severity: "weak", label: "Overcollateralized / real-asset backing" });
+  }
+
+  // R3 — no supply anomaly
+  if (supply.covered) {
+    if (supply.mintSurge === false && (supply.change7dPct == null || Math.abs(supply.change7dPct) < 10)) {
+      out.push({ code: "R3_no_supply_anomaly", kind: "anchor", severity: "strong", label: "No supply anomaly — market dislocation, not structural" });
+    } else {
+      out.push({ code: "R3_no_supply_anomaly", kind: "anchor", severity: "weak", label: "Supply roughly stable around the break" });
+    }
+  }
+
+  // R4 — no single freeze point
+  if (coin.governance === "decentralized" && coin.custodyModel === "onchain" && coin.canBeBlacklisted === false) {
+    out.push({ code: "R4_no_freeze_point", kind: "anchor", severity: "strong", label: "Decentralized, on-chain, non-freezable" });
+  } else if (coin.governance === "decentralized" || coin.custodyModel === "onchain") {
+    out.push({ code: "R4_no_freeze_point", kind: "anchor", severity: "weak", label: "Limited single-point freeze risk" });
+  }
+
+  // R5 — proven mean-reversion
+  if (live.safetyScore != null && live.safetyScore >= 85) {
+    out.push({ code: "R5_proven_meanreversion", kind: "anchor", severity: "strong", label: "Strong safety/peg track record" });
+  } else if (live.safetyScore != null && live.safetyScore >= 70) {
+    out.push({ code: "R5_proven_meanreversion", kind: "anchor", severity: "weak", label: "Decent safety/peg track record" });
+  }
+
+  return out;
+}
+
+export function resolveOutlook(
+  active: DdrActiveEventInput,
+  coin: DdrCoinStructural,
+  supply: DdrSupplyContext,
+  live: DdrLiveContext,
+): DdrResolution {
+  const insufficientReasons: string[] = [];
+  const missingStructural = !coin.mechanismArchetype && (coin.authorityPosture == null || coin.authorityPosture === "unknown");
+  if (missingStructural) insufficientReasons.push("No reviewed mint authority or mechanism archetype");
+  if (!supply.covered) insufficientReasons.push("No usable supply history for this coin");
+
+  // Frozen/dead coin sitting in an open event is terminal context by definition.
+  const frozenTerminal = coin.status === "frozen";
+
+  const kills = killSignals(active, coin, supply, live);
+  const anchors = recoveryAnchors(coin, supply, live);
+  const factors: DdrFactor[] = [...kills, ...anchors];
+
+  if (missingStructural && !supply.covered && !frozenTerminal) {
+    return { tier: "insufficient_signal", factors, insufficientReasons };
+  }
+
+  let tier: DdrResolutionTier;
+
+  if (active.direction === "above") {
+    // Overpeg: recovery is quasi-certain; only a sticky-premium signal lifts to at_risk.
+    const sticky = kills.some((k) => k.code === "K5_exit_collapse");
+    tier = sticky ? "at_risk" : "recovery_likely";
+  } else {
+    const severeKills = kills.filter((k) => k.severity === "severe").length;
+    const elevatedOrWorse = kills.length;
+    const strongAnchors = anchors.filter((a) => a.severity === "strong");
+    const hasStrongStructuralAnchor = strongAnchors.some(
+      (a) => a.code === "R1_noninflatable_supply" || a.code === "R2_hard_collateral_redemption",
+    );
+
+    if (frozenTerminal || severeKills >= 1 || (elevatedOrWorse >= 2 && !hasStrongStructuralAnchor)) {
+      tier = "recovery_unlikely";
+    } else if (elevatedOrWorse === 0 && strongAnchors.length >= 2 && hasStrongStructuralAnchor) {
+      tier = "recovery_likely";
+    } else {
+      tier = "at_risk";
+    }
+  }
+
+  if (frozenTerminal && !factors.some((f) => f.kind === "kill")) {
+    factors.unshift({ code: "K3_freeze_seizure", kind: "kill", severity: "severe", label: "Issuer frozen / wound down" });
+  }
+
+  return { tier, factors };
+}
