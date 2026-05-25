@@ -49,11 +49,20 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USG resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tangent USG docs",
+        "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+      },
+      {
+        "label": "Sourcify USG source",
+        "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+      }
+    ],
+    "evidence": "Verified USG source exposes burnDebt(address,uint256), callable by owner-managed burner roles, and burns from the supplied address without holder allowance. That is direct holder-balance burn/seizure authority.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -126,7 +135,7 @@
       ]
     }
   },
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": true,
   "status": "active",
   "announcedDate": "2026-03",
   "launchPhase": "beta",

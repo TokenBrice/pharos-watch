@@ -97,11 +97,33 @@
         "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
         "label": "ftUSD token owner / masterMinter",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; signer setup was not verified."
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xB7B543337539219A5a1326aCB71dBa8Bba408bc8",
+            "0x3c42749709BF354B3aE0Db29Fd2dd88089b21B4E",
+            "0xf9E5aF16243041cE3141284D225CAfC0fC749a10",
+            "0x09E2B49280f1879172b2C3345d08896921707881",
+            "0xD0CA88388d1732594D611535314e9B6745396f5A"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "ftUSD owner Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+          }
+        ],
+        "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; Safe API returned a 3/5 Safe with no enabled modules and the zero guard."
       }
     ],
     "review": {
@@ -111,11 +133,11 @@
           "url": "https://docs.flyingtulip.com/"
         }
       ],
-      "evidence": "Flying Tulip docs describe on-chain mint/redeem, and Ethereum reads identify the minter and owner/masterMinter addresses.",
+      "evidence": "Flying Tulip docs describe on-chain mint/redeem, and Ethereum reads identify the minter plus a 3/5 Safe owner/masterMinter.",
       "reviewer": "Codex mint-authority full-gap batch-2",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-        "Verify the source and security setup of 0x1118E1c057211306A40A4D7006C040dBFE1370cb and 0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9.",
+        "Verify the source and security setup of 0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9.",
         "Review the Sonic deployment separately."
       ]
     }

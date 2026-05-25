@@ -6,12 +6,12 @@ The stablecoin registry currently contains 399 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.27`
+- **Current methodology version:** `v7.28`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.27)
+## Overall Grade (v7.28)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.27 retires the FreezeWatch `Dilutable` status now that Mint Authority records admin supply control separately. FreezeWatch remains freeze-only: direct controls resolve as Yes, dependency/collateral/custody paths resolve as Upstream, ambiguous direct holder controls resolve as Possible, and reviewed non-freezable assets resolve as No.
+Current-version note: v7.28 keeps the v7.27 four-status FreezeWatch model after a full re-audit of active assets previously shown as `No`. FreezeWatch remains freeze-only: direct controls resolve as Yes, dependency/collateral/custody paths resolve as Upstream, ambiguous direct holder controls resolve as Possible, and reviewed non-freezable assets resolve as No.
 
 ## Yield Source-Risk Boundary
 
@@ -114,12 +114,12 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 
 | Value     | Condition                                                                                                                  |
 | --------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Yes       | `canBeBlacklisted: true` (explicit) or `governance === "centralized"`                                                      |
+| Yes       | `canBeBlacklisted: true` (explicit), reviewed direct-freeze evidence, or unsuppressed `governance === "centralized"`       |
 | Possible  | Explicit `canBeBlacklisted: "possible"` override for a direct token/vault freeze, blacklist, or pause surface              |
-| Upstream  | Any reserve, backing, custody, or parent-asset path that can freeze or block redemptions upstream of the token itself      |
+| Upstream  | Any reserve, backing, custody, parent-asset path, or curated upstream review that can freeze or block value upstream       |
 | No        | None of the above                                                                                                          |
 
-`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` accepts `boolean | "possible"`. Admin mint authority is reviewed separately in the Mint Authority module and no longer creates a FreezeWatch tier by itself. The inherited tier is displayed as `Upstream` and covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, and tracked parent-asset exposures regardless of weight. This is an any-reserve policy: once a reserve/backing/custody/parent path resolves to a freezeable upstream asset, it is classified as Upstream rather than Possible even if the matched slice is small. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
+`"inherited"` is the internal value displayed as `Upstream`. It is not accepted by the `canBeBlacklisted` direct-override field, which remains `boolean | "possible"`, but curated `blacklistabilityReview.reviewedStatus: "inherited"` can pin an upstream-only review when no direct holder-token freeze surface is identified. Admin mint authority is reviewed separately in the Mint Authority module and no longer creates a FreezeWatch tier by itself. The inherited tier covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, tracked parent-asset exposures, and backing/redemption rails regardless of weight. This is an any-reserve policy: once a reserve/backing/custody/parent path resolves to a freezeable upstream asset, it is classified as Upstream rather than Possible even if the matched slice is small. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 

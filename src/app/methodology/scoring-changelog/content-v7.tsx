@@ -1,3 +1,4 @@
+import { ScoringChangelogV728Entry } from "./content-v7-28";
 import { ScoringChangelogV727Entry } from "./content-v7-27";
 import {
   ScoringChangelogV726Entry,
@@ -32,6 +33,7 @@ import {
 export function ScoringChangelogV7Entries() {
   return (
     <>
+      <ScoringChangelogV728Entry />
       <ScoringChangelogV727Entry />
       <ScoringChangelogV726Entry />
       <ScoringChangelogV725Entry />

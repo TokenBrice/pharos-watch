@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions; user collateral is not rehypothecated. Protocol is forked from the d-EURO / Frankencoin architecture.",
+  "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions, plus active bridge routes where source stablecoins such as USDC and USDT are deposited 1:1; protocol is forked from the d-EURO / Frankencoin architecture.",
   "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
@@ -45,22 +45,25 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Docs",
         "url": "https://docs.juicedollar.com/"
       },
       {
-        "label": "GitHub",
-        "url": "https://github.com/JuiceDollar"
+        "label": "Bridge docs",
+        "url": "https://docs.juicedollar.com/swap.html"
+      },
+      {
+        "label": "Smart contracts docs",
+        "url": "https://docs.juicedollar.com/smart-contracts.html"
       }
     ],
-    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Juice Dollar contracts are documented as immutable with no admin keys, so no direct JUSD holder freeze was identified. Active USDC/USDT bridge routes deposit source stablecoins and mint JUSD 1:1, creating upstream freeze exposure.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
@@ -70,8 +73,14 @@
   "reserves": [
     {
       "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
-      "pct": 100,
+      "pct": 99.999,
       "risk": "medium"
+    },
+    {
+      "name": "USDC/USDT bridge reserves",
+      "pct": 0.001,
+      "risk": "low",
+      "blacklistable": true
     }
   ],
   "mintAuthority": {

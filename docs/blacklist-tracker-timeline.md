@@ -1,8 +1,16 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.993` (2026-02-09 -> 2026-05-12).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.995` (2026-02-09 -> 2026-05-25).
 
 ---
+
+## v3.995 — Full unfreezable set re-audit (2026-05-25)
+
+- **All 25 prior No assets reviewed** — the active set previously shown as Unfreezable/No was rechecked against official docs, token contracts, explorer metadata, and upstream reserve/redemption paths
+- **Direct Yes corrections** — M by M0, ISC, and USG now resolve as direct Freezable/Yes based on Solana freeze authority or arbitrary holder-burn evidence
+- **Possible corrections** — DLLR, FXD, CJPY, USDQ, and USDK now resolve as Possible where mutable proxy, pause, manager-burn, or protocol-control paths exist without a confirmed active blacklist function
+- **Upstream corrections** — JUSD, SILK, NXUSD, LUAUSD, KRWO, and BNUSD now resolve as Upstream through stablecoin reserves, DAI collateral, Open Voucher redemption rails, or Stability Fund stablecoin collateral
+- **Curated upstream pins** — `blacklistabilityReview.reviewedStatus: "inherited"` can now pin upstream-only exposure when direct token freezability is absent
 
 ## v3.994 — Four-status FreezeWatch exposure model (2026-05-24)
 

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V7: readonly MethodologyChangelogEntry[] = [
     {
+      version: "7.28",
+      title: "FreezeWatch curated upstream review audit",
+      date: "2026-05-25",
+      effectiveAt: 1779667200,
+      summary:
+        "A full review of the active assets previously shown as FreezeWatch `No` corrects direct, possible, and upstream exposure classifications while keeping blacklist capability descriptive and unscored.",
+      impact: [
+        "M by M0, ISC, and USG now resolve as direct `Yes` based on Solana freeze authority or arbitrary holder-burn evidence",
+        "DLLR, FXD, CJPY, USDQ, and USDK now resolve as `Possible` where mutable proxy, pause, manager-burn, or protocol-control paths exist without a confirmed active blacklist",
+        "JUSD, SILK, NXUSD, LUAUSD, KRWO, and BNUSD now resolve as `Upstream` through stablecoin reserves, DAI collateral, Open Voucher redemption rails, or Stability Fund stablecoin collateral",
+        "Curated `blacklistabilityReview.reviewedStatus: \"inherited\"` entries are now honored as upstream status when no direct `canBeBlacklisted` override exists, covering centralized assets whose freeze risk is backing/redemption-side rather than token-side",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "7.27",
       title: "FreezeWatch removes Dilutable admin-mint tier",
       date: "2026-05-24",

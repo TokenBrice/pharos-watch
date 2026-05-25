@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.995",
+    title: "Full unfreezable set re-audit",
+    date: "2026-05-25",
+    effectiveAt: 1779667200, // 2026-05-25T00:00:00Z
+    summary:
+      "Re-audits every active stablecoin that resolved to `No` after the four-status FreezeWatch migration, correcting direct freeze, possible-control, and upstream reserve/redemption exposure.",
+    impact: [
+      "M by M0, ISC, and USG move from `No` to `Yes` based on Solana freeze authority or arbitrary holder-burn evidence",
+      "DLLR, FXD, CJPY, USDQ, and USDK move to `Possible` where mutable proxy, pause, manager-burn, or protocol-control paths exist without confirmed active blacklist functions",
+      "JUSD, SILK, NXUSD, LUAUSD, KRWO, and BNUSD move to `Upstream` through stablecoin reserves, DAI collateral, Open Voucher redemption rails, or Stability Fund stablecoin collateral",
+      "Curated upstream reviews are honored even for centralized assets when no direct holder-token freeze surface is identified and the exposure sits in backing or redemption rails",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.994",
     title: "Four-status FreezeWatch exposure model",
     date: "2026-05-24",

@@ -80,17 +80,17 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 1/3 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
+    "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 2/2 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x8278d2881DBf8F6FC01C98D196c4b16F1AadE5Bc",
+        "address": "0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD",
         "label": "EURR Ethereum owner mint authority",
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
-        "threshold": 1,
-        "signerCount": 3,
+        "threshold": 2,
+        "signerCount": 2,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -103,7 +103,7 @@
             "url": "https://docs.stablr.com/docs/smart-contract"
           }
         ],
-        "evidence": "owner() returned this address at Ethereum block 25166592. required() returned 1 and getOwners() returned 3 owners."
+        "evidence": "owner() returned this address in a 2026-05-25 Ethereum RPC read. required() returned 2 and getOwners() returned 2 owners."
       },
       {
         "chain": "ethereum",
@@ -135,7 +135,7 @@
           "url": "https://docs.stablr.com/docs/what-is-eurr"
         }
       ],
-      "evidence": "StablR docs identify EURR as issuer-managed and list the Ethereum contract; direct reads resolve owner/proxy-admin controls and multisig-style thresholds.",
+      "evidence": "StablR docs identify EURR as issuer-managed and list the Ethereum contract; direct reads resolve owner/proxy-admin controls and multisig-style thresholds. A 2026-05-25 Ethereum RPC read returned owner 0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD as a 2/2 multisig-style contract.",
       "reviewer": "Codex mint-authority full-gap batch-2",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [

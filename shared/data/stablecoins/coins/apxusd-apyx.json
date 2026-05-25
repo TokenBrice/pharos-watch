@@ -57,25 +57,34 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
+    "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "apxUSD issuance is modeled as protocol/issuer-operated authority pending deeper on-chain role review.",
+    "summary": "apxUSD minting is routed through Apyx's MinterV0 contract, where an m-of-n minter submits EIP-712 signed orders and AccessManager delays/permissions gate the eventual apxUSD mint.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "label": "Apyx MinterV0 signed-order mint path",
+        "role": "backend-signer",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "signingModel": "EIP-712 signed orders submitted by an m-of-n minter wallet",
+          "rateLimits": "MinterV0 includes rate limiting and AccessManager-delayed execution per Apyx contract documentation",
+          "pausersAdminsUpgraders": "AccessManager manages mint permissions; live role holders were not independently enumerated"
+        },
         "sources": [
           {
             "label": "Apyx docs",
             "url": "https://docs.apyx.fi"
+          },
+          {
+            "label": "Apyx EVM contracts",
+            "url": "https://apyx-labs.github.io/evm-contracts/"
           }
         ],
-        "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting."
+        "evidence": "Apyx technical documentation describes MinterV0 handling apxUSD minting through EIP-712 signed orders, rate limits, AccessManager integration, and whitelisted beneficiary checks."
       }
     ],
     "review": {
@@ -83,11 +92,18 @@
         {
           "label": "Apyx docs",
           "url": "https://docs.apyx.fi"
+        },
+        {
+          "label": "Apyx EVM contracts",
+          "url": "https://apyx-labs.github.io/evm-contracts/"
         }
       ],
-      "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting.",
+      "evidence": "Apyx docs say whitelisted users deposit collateral and receive newly minted apxUSD; Apyx's contract documentation identifies MinterV0 as the mint route using EIP-712 signed orders, an m-of-n minter wallet, AccessManager checks, and beneficiary screening.",
       "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewedAt": "2026-05-24",
+      "unresolvedQuestions": [
+        "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence."
+      ]
     }
   },
   "collateralQuality": "rwa",

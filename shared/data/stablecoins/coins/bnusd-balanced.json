@@ -63,11 +63,20 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BNUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Balanced stablecoin page",
+        "url": "https://balanced.network/stablecoin/"
+      },
+      {
+        "label": "Balanced docs",
+        "url": "https://docs.balanced.network"
+      }
+    ],
+    "evidence": "No direct bnUSD holder blacklist was identified, but Balanced's Stability Fund swaps USDC and USDT 1:1 for bnUSD and holds those stablecoins as collateral. That creates upstream freeze exposure under the any-reserve policy.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -131,9 +140,10 @@
       "risk": "high"
     },
     {
-      "name": "Cross-chain Hub collateral (BTC, ETH, BNB, AVAX, INJ and other bridged assets)",
+      "name": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
       "pct": 10,
-      "risk": "high"
+      "risk": "high",
+      "blacklistable": true
     }
   ]
 }

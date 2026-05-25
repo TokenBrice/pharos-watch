@@ -121,12 +121,12 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "NUSD is a synthetic delta-neutral dollar whose token carries a MINTER_ROLE, a DEFAULT_ADMIN_ROLE, and a denylist; mint is routed through Neutrl's Router.sol (1:1 vs USDC/USDT/USDe with a per-block cap) into custodied reserves, while redemption is KYC-gated. A single admin controls minter and denylist roles.",
+    "summary": "NUSD is a synthetic delta-neutral dollar whose token grants MINTER_ROLE to Neutrl's StableMinter and DEFAULT_ADMIN_ROLE to a separate admin; mint is routed through Neutrl's Router.sol into AssetReserve/StableMinter, while redemption is KYC-gated.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
-        "label": "NUSD token MINTER_ROLE (Router/Minter)",
+        "address": "0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D",
+        "label": "NUSD StableMinter MINTER_ROLE",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
@@ -137,25 +137,33 @@
           "rateLimits": "Mint enforces maxMintPerBlock to limit per-block issuance.",
           "signingModel": "Mint is permissionless via Router.sol; redemption is restricted to KYC/KYB-approved counterparties (asymmetric design)."
         },
-        "evidence": "Etherscan ABI for the NUSD token shows MINTER_ROLE, mint/burn, and denylist functions; Neutrl docs describe Router.sol mint() routing collateral to AssetReserve.sol with a maxMintPerBlock cap and KYC-gated redemption.",
+        "evidence": "Ethereum role reads on 2026-05-25 confirmed 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D holds MINTER_ROLE; Neutrl docs list it as StableMinter and describe Router.sol mint() routing collateral to AssetReserve.sol before StableMinter issues NUSD with a maxMintPerBlock cap.",
         "sources": [
           {
             "label": "NUSD token (Etherscan)",
             "url": "https://etherscan.io/token/0xe556aba6fe6036275ec1f87eda296be72c811bce"
+          },
+          {
+            "label": "Neutrl addresses",
+            "url": "https://docs.neutrl.finance/resources-and-ecosystem/addresses"
+          },
+          {
+            "label": "Neutrl minting docs",
+            "url": "https://docs.neutrl.finance/protocol-mechanics/minting"
           }
         ]
       },
       {
         "chain": "ethereum",
-        "address": "0xE78615F841c3C013173FBE7679d17442C8673Cc1",
+        "address": "0x51De41ec06e779715d7FB71Ef83A736cFc903217",
         "label": "NUSD DEFAULT_ADMIN_ROLE (token admin)",
         "role": "minter-admin",
-        "authorityType": "eoa",
+        "authorityType": "unknown",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
+        "modulesOrGuardsStatus": "unknown",
         "capDescription": "The NUSD token admin (DEFAULT_ADMIN_ROLE, with transferAdmin/acceptAdmin) can grant/revoke MINTER_ROLE and DENYLIST_MANAGER_ROLE, concentrating mint-authorization and denylist control in a single admin.",
-        "evidence": "Etherscan shows the NUSD constructor took an _admin parameter resolving to 0xE78615F841c3C013173FBE7679d17442C8673Cc1, with SingleAdminAccessControl (transferAdmin/acceptAdmin) over MINTER_ROLE and DENYLIST_MANAGER_ROLE.",
+        "evidence": "Ethereum hasRole(DEFAULT_ADMIN_ROLE) reads on 2026-05-25 returned true for 0x51De41ec06e779715d7FB71Ef83A736cFc903217 and false for the prior constructor/admin address 0xE78615F841c3C013173FBE7679d17442C8673Cc1.",
         "sources": [
           {
             "label": "NUSD token (Etherscan)",
@@ -165,7 +173,7 @@
       }
     ],
     "review": {
-      "evidence": "Etherscan reads of the NUSD token show MINTER_ROLE, a SingleAdminAccessControl admin (constructor _admin 0xE78615...3Cc1), and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption, backed by delta-neutral/OTC strategies held at custodians.",
+      "evidence": "Ethereum reads of the NUSD token show MINTER_ROLE assigned to StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D, live DEFAULT_ADMIN_ROLE at 0x51De41ec06e779715d7FB71Ef83A736cFc903217, and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -178,9 +186,9 @@
           "url": "https://docs.neutrl.finance/"
         }
       ],
-      "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Etherscan and Neutrl docs; whether the admin is an EOA, multisig, or Safe was not verified on-chain, so EOA is recorded conservatively pending confirmation.",
+      "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Ethereum role reads and Neutrl docs; whether the live admin is an EOA, multisig, or Safe was not verified on-chain.",
       "unresolvedQuestions": [
-        "Confirm whether the NUSD admin address 0xE78615F841c3C013173FBE7679d17442C8673Cc1 is an EOA, multisig, or Safe, and resolve the live MINTER_ROLE holder (Router/Minter contract) before raising confidence."
+        "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence."
       ]
     }
   }

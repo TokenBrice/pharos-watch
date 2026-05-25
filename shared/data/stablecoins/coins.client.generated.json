@@ -516,12 +516,12 @@
     "collateralQuality": "rwa",
     "blacklistStatus": true,
     "mintAuthoritySummary": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -601,8 +601,8 @@
           "directMintAbility": "none"
         },
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -1701,14 +1701,15 @@
         "risk": "high"
       },
       {
-        "name": "Cross-chain Hub collateral (BTC, ETH, BNB, AVAX, INJ and other bridged assets)",
+        "name": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
         "pct": 10,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ],
     "collateral": "Overcollateralized loans on ICON against sICX (staked ICX), with cross-chain Hub collateral support for assets bridged in via Balanced's xCall infrastructure",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": false,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -3303,7 +3304,7 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "can-authorize"
         },
         {
@@ -3484,7 +3485,7 @@
     "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
     "mechanismArchetype": "cdp",
     "geckoId": "convertible-jpy-token",
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v1"
     ],
@@ -3520,7 +3521,7 @@
       }
     ],
     "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest",
-    "blacklistStatus": false,
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -4389,7 +4390,7 @@
     "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
     "mechanismArchetype": "cdp",
     "geckoId": "sovryn-dollar",
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -4451,7 +4452,7 @@
     ],
     "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": false,
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -4640,6 +4641,10 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
         {
           "authorityType": "contract",
           "directMintAbility": "cap-limited"
@@ -5558,7 +5563,7 @@
           "directMintAbility": "can-authorize"
         },
         {
-          "authorityType": "eoa",
+          "authorityType": "contract",
           "directMintAbility": "upgrade-only"
         }
       ]
@@ -7105,7 +7110,7 @@
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "safe",
           "directMintAbility": "can-authorize"
         }
       ]
@@ -7210,6 +7215,7 @@
     "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
     "mechanismArchetype": "cdp",
     "geckoId": "fathom-dollar",
+    "canBeBlacklisted": "possible",
     "reserves": [
       {
         "name": "XDC and Fathom collateral-pool positions",
@@ -7219,7 +7225,7 @@
     ],
     "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
     "collateralQuality": "exotic",
-    "blacklistStatus": false,
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -7575,7 +7581,7 @@
     "id": "ggbr-goldfish-gold",
     "name": "Goldfish Gold",
     "symbol": "GGBR",
-    "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure rather than on-chain redemption logic.",
+    "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure and issuer-controlled mint/redeem contracts.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GOLD",
@@ -7584,7 +7590,7 @@
       "rwa": true,
       "navToken": false
     },
-    "pegMechanism": "Issuer-managed gold reference rather than on-chain redemption logic; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
+    "pegMechanism": "Issuer-managed gold reference with issuer-controlled mint/redeem contracts; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
     "geckoId": "goldfish-gold",
     "commodityOunces": 0.001,
     "liveReservesConfig": {
@@ -8940,12 +8946,16 @@
     "collateralQuality": "rwa",
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "issuer-backend",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -9419,7 +9429,7 @@
     "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
-      "authorityPosture": "partially-bounded-admin",
+      "authorityPosture": "concentrated-admin",
       "controls": [
         {
           "authorityType": "issuer-backend",
@@ -9525,7 +9535,7 @@
     "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "international-stable-currency",
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": true,
     "yieldConfig": {
       "yieldSource": "ISC purchasing-power basket appreciation",
       "yieldType": "nav-appreciation"
@@ -9558,7 +9568,7 @@
       }
     ],
     "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
-    "blacklistStatus": false,
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -10361,17 +10371,22 @@
     "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
     "mechanismArchetype": "cdp",
     "geckoId": "juice-dollar",
-    "canBeBlacklisted": false,
     "reserves": [
       {
         "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
-        "pct": 100,
+        "pct": 99.999,
         "risk": "medium"
+      },
+      {
+        "name": "USDC/USDT bridge reserves",
+        "pct": 0.001,
+        "risk": "low",
+        "blacklistable": true
       }
     ],
-    "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions; user collateral is not rehypothecated. Protocol is forked from the d-EURO / Frankencoin architecture.",
+    "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions, plus active bridge routes where source stablecoins such as USDC and USDT are deposited 1:1; protocol is forked from the d-EURO / Frankencoin architecture.",
     "collateralQuality": "native",
-    "blacklistStatus": false,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "bounded-admin",
@@ -10872,17 +10887,17 @@
     "pegMechanism": "KRWO is issued against OV tokens at a 10,000 KRWO = 1 OV token/voucher ratio; Open Voucher documentation describes OV vouchers as redeemable for Korean won at 1:1 through the Open Voucher service",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "krwo",
-    "canBeBlacklisted": false,
     "reserves": [
       {
         "name": "Open Voucher KRW vouchers / OV tokens",
         "pct": 100,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ],
     "collateral": "Open Voucher (OV) KRW vouchers issued by Open Asset and represented on-chain as OV tokens used as collateral for KRWO issuance",
     "collateralQuality": "rwa",
-    "blacklistStatus": false,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -11134,7 +11149,6 @@
     "mechanismArchetype": "algorithmic",
     "geckoId": "lumi-finance-luausd",
     "protocolSlug": "lumi-finance",
-    "canBeBlacklisted": false,
     "yieldConfig": {
       "yieldSource": "Lumi Finance LUAUSD NAV mechanics",
       "yieldType": "nav-appreciation"
@@ -11158,13 +11172,14 @@
     },
     "reserves": [
       {
-        "name": "LUA floor-price collateral and protocol-owned liquidity",
+        "name": "LUA floor-price collateral, protocol-owned liquidity, and stablecoin reserves",
         "pct": 100,
-        "risk": "very-high"
+        "risk": "very-high",
+        "blacklistable": true
       }
     ],
     "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
-    "blacklistStatus": false,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "unbounded-or-compromised",
@@ -11309,6 +11324,7 @@
     },
     "pegMechanism": "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
     "mechanismArchetype": "tbill",
+    "canBeBlacklisted": true,
     "infrastructures": [
       "m0"
     ],
@@ -11343,7 +11359,7 @@
       }
     ],
     "collateral": "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
-    "blacklistStatus": false,
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -13266,7 +13282,7 @@
           "directMintAbility": "cap-limited"
         },
         {
-          "authorityType": "eoa",
+          "authorityType": "unknown",
           "directMintAbility": "can-authorize"
         }
       ]
@@ -13442,13 +13458,14 @@
     },
     "reserves": [
       {
-        "name": "Nereus overcollateralized crypto positions",
+        "name": "Nereus overcollateralized crypto positions including DAI collateral",
         "pct": 100,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ],
     "collateral": "Overcollateralized Nereus Finance lending positions, primarily Avalanche ecosystem crypto collateral",
-    "blacklistStatus": false,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -14444,12 +14461,12 @@
     "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "direct"
+          "directMintAbility": "none"
         }
       ]
     }
@@ -16212,7 +16229,6 @@
     "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
     "mechanismArchetype": "cdp",
     "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
-    "canBeBlacklisted": false,
     "yieldConfig": {
       "yieldSource": "SILK basket index appreciation",
       "yieldType": "nav-appreciation"
@@ -16226,7 +16242,8 @@
       {
         "name": "Stablecoin redemption pools (USDC, other stables)",
         "pct": 20,
-        "risk": "low"
+        "risk": "low",
+        "blacklistable": true
       },
       {
         "name": "SHD governance token (bounded minting backing)",
@@ -16236,7 +16253,7 @@
     ],
     "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": false,
+    "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -18381,7 +18398,7 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "contract",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         }
       ]
@@ -20847,7 +20864,7 @@
     },
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "mechanismArchetype": "cdp",
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -20951,7 +20968,7 @@
     ],
     "collateral": "WETH, weETH, rswETH, and swETH in overcollateralized Liquity v2-style CDP markets on Swellchain; the configured SWELL branch is currently shut down in live on-chain telemetry",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": false,
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
@@ -21881,7 +21898,7 @@
     "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "mechanismArchetype": "cdp",
     "geckoId": "quill-usdq",
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -21975,7 +21992,7 @@
     ],
     "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "blacklistStatus": false,
+    "blacklistStatus": "possible",
     "mintAuthoritySummary": {
       "mintPath": "immutable-user-collateralized",
       "authorityPosture": "none-resolved",
@@ -23107,7 +23124,7 @@
         "sourceUrl": "https://etherscan.io/token/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": true,
     "reserves": [
       {
         "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions)",
@@ -23116,7 +23133,7 @@
       }
     ],
     "collateral": "Over-collateralized productive DeFi collateral, including Curve Finance LP tokens, Pendle PTs, and other yield-bearing or LP positions from protocols such as Curve, Convex, Stake DAO, and Spectra.",
-    "blacklistStatus": false,
+    "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",

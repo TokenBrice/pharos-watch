@@ -81,7 +81,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner and proxy-admin reads resolve to EOAs with no verified on-chain multisig setup.",
+    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner reads resolve to an EOA while the EIP-1967 proxy admin is a contract whose owner resolves to an EOA.",
     "controls": [
       {
         "label": "Banking Circle issuer-operated mint authority",
@@ -124,10 +124,10 @@
         "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
         "label": "EURI EIP-1967 proxy admin",
         "role": "proxy-admin",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "upgrade-only",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166591; code read returned no contract bytecode."
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "EIP-1967 admin slot returned this address in a 2026-05-25 Ethereum RPC read; code size was nonzero and owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21."
       }
     ],
     "review": {
@@ -141,12 +141,10 @@
           "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
         }
       ],
-      "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path.",
+      "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path. A 2026-05-25 Ethereum RPC read corrected the proxy-admin classification from no-code EOA to contract-owned admin.",
       "reviewer": "Codex mint-authority full-gap batch-2",
       "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "Review BSC deployment roles before extending this to all EURI chains."
-      ]
+      "unresolvedQuestions": ["Review BSC deployment roles before extending this to all EURI chains."]
     }
   },
   "deploymentModel": "native-multichain",

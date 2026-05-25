@@ -85,11 +85,13 @@
       {
         "label": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
         "role": "minter-admin",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Per the OpenZeppelin audit, the owner of the StableTokenV1OFT contract can mint and burn tokens (no separate MINTER role) and holds UUPS upgrade authority; mint follows off-chain GBP deposit verification by the team.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Per the OpenZeppelin audit, the owner of the StableTokenV1OFT contract can mint and burn tokens (no separate MINTER role) and holds UUPS upgrade authority; Ethereum owner() returned 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 and cast code returned 0x.",
         "sources": [
           {
             "label": "OpenZeppelin tGBP audit",
@@ -108,9 +110,9 @@
           "url": "https://www.openzeppelin.com/news/tgbp-audit"
         }
       ],
-      "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; the live owner address (EOA vs Safe/multisig) was not independently resolved on-chain.",
+      "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; live Ethereum owner read resolved to an EOA.",
       "unresolvedQuestions": [
-        "Resolve whether the live StableTokenV1OFT owner is an EOA, multisig, or Safe, and the proxy admin, before raising to verified."
+        "Resolve the proxy admin before raising to verified."
       ]
     }
   },

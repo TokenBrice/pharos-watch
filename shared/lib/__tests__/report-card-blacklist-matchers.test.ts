@@ -40,6 +40,21 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("inherited");
   });
 
+  it("honors curated upstream reviews when direct token freezability is absent", () => {
+    const meta = {
+      flags: { governance: "centralized" as const },
+      canBeBlacklisted: undefined,
+      blacklistabilityReview: {
+        reviewedStatus: "inherited" as const,
+        sourceFreeRationale: "fixture",
+        evidence: "fixture upstream rail",
+        reviewer: "fixture",
+        reviewedAt: "2026-05-25",
+      },
+    };
+    expect(isBlacklistable(meta as never)).toBe("inherited");
+  });
+
   it("returns inherited for direct reserve exposure below the old inherited threshold", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },

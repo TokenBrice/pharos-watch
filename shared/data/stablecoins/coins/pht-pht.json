@@ -63,14 +63,34 @@
     "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
+    "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
-    "summary": "PHT has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+    "summary": "PHT docs describe a MakerDAO-style CDP system, with beta minting against apcxUSDT collateral; token-source evidence still shows unresolved privileged mint/admin authority, so Mint Authority records the CDP route plus unresolved admin risk.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "label": "APACX PHT vault/CDP mint path",
         "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "APACX docs describe PHT minting through MakerDAO-style vaults/CDPs, with beta PHT minted against apcxUSDT collateral and later collateral expansion planned.",
+        "sources": [
+          {
+            "label": "PHT overview",
+            "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+          },
+          {
+            "label": "PHT mint/redeem guide",
+            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
+          }
+        ],
+        "evidence": "APACX docs describe PHT as a MakerDAO MCD-style stablecoin minted from collateralized vaults, while the beta guide describes current PHT minted using apcxUSDT collateral backed 1:1 by a reserve address."
+      },
+      {
+        "label": "Privileged token mint/admin authority",
+        "role": "minter-admin",
         "authorityType": "unknown",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
@@ -89,11 +109,22 @@
         {
           "label": "Etherscan contract source",
           "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+        },
+        {
+          "label": "PHT overview",
+          "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+        },
+        {
+          "label": "PHT mint/redeem guide",
+          "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
         }
       ],
-      "evidence": "PHT has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
+      "evidence": "APACX docs describe a MakerDAO MCD-style PHT CDP system and beta apcxUSDT collateral minting; Etherscan token-source evidence still indicates privileged mint/admin authority requiring threshold and cap review.",
       "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewedAt": "2026-05-25",
+      "unresolvedQuestions": [
+        "Resolve the live Ethereum/Polygon/Tron admin and exact CDP/vault contract authority before lowering the unbounded admin posture."
+      ]
     }
   },
   "collateralQuality": "exotic",

@@ -84,24 +84,25 @@
     }
   },
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
+    "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "PUSD is a Polygon ERC-20 wrapper minted 1:1 when users deposit USDC.e through Polymarket's CollateralOnramp wrap() function; the onramp is admin-pausable and operated by Polymarket.",
+    "summary": "PUSD is a Polygon ERC-20 wrapper minted 1:1 when users deposit USDC.e through Polymarket's CollateralOnramp wrap() function; the onramp is admin-pausable and PUSD inherits base USDC issuance risk from Circle.",
+    "inheritedFrom": "usdc-circle",
     "controls": [
       {
         "label": "Polymarket CollateralOnramp (wrap, admin-pausable)",
-        "role": "direct-minter",
+        "role": "wrapper",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "none",
         "chain": "polygon",
         "address": "0x93070a847efEf7F70739046A929D47a521F5B8ee",
         "modulesOrGuardsStatus": "present",
-        "evidence": "Polymarket docs describe wrap(address,address,uint256) on the CollateralOnramp minting pUSD 1:1 against deposited USDC.e; an admin can pause the onramp (reverts OnlyUnpaused), so issuance is contract-mediated but issuer-controlled."
+        "evidence": "Polymarket docs describe wrap(address,address,uint256) on the CollateralOnramp minting pUSD 1:1 against deposited USDC.e; an admin can pause the onramp (reverts OnlyUnpaused), so the wrapper is contract-mediated but cannot create base USDC supply."
       }
     ],
     "review": {
-      "evidence": "Polymarket pUSD docs describe a CollateralOnramp/CollateralOfframp pair that wraps/unwraps USDC.e 1:1 into pUSD with on-chain enforcement and an admin pause control; minting is issuer-controlled via the onramp contract, not permissionless or user-collateralized governance.",
+      "evidence": "Polymarket pUSD docs describe a CollateralOnramp/CollateralOfframp pair that wraps/unwraps USDC.e 1:1 into pUSD with on-chain enforcement and an admin pause control; pUSD wrapper issuance is contract-mediated and inherits base USDC mint authority.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [

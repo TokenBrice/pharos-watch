@@ -42,23 +42,25 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Docs",
         "url": "https://docs.shadeprotocol.io/shade-protocol/"
       },
       {
-        "label": "GitHub",
-        "url": "https://github.com/securesecrets/shade"
+        "label": "SILK docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk"
+      },
+      {
+        "label": "Minting and redemption docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
       }
     ],
-    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12",
-    "upstreamSuppressionRationale": "The reviewed override is scoped to the SILK holder-facing token. Stablecoin redemption-pool assets are upstream reserve collateral, so this override records no direct SILK holder blacklist surface while documenting the deliberate reserve-side suppression."
+    "evidence": "No direct SILK holder blacklist was identified, but Shade documentation lists stablecoins such as USDC in collateral/redemption pool routes. Under the any-reserve FreezeWatch policy, that resolves as upstream freeze exposure.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
@@ -74,7 +76,8 @@
     {
       "name": "Stablecoin redemption pools (USDC, other stables)",
       "pct": 20,
-      "risk": "low"
+      "risk": "low",
+      "blacklistable": true
     },
     {
       "name": "SHD governance token (bounded minting backing)",

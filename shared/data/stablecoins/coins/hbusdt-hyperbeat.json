@@ -42,7 +42,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "hbUSDT is a Hyperbeat vault/share token over USDT; wrapper minting is share accounting while base USDT issuance remains inherited from Tether's reviewed USDT mint authority.",
+    "summary": "hbUSDT is a Hyperbeat vault/share token that accepts USDT0, USDe, and USR into a Hyperbeat insurance/vault flow; wrapper minting is share accounting while the USDT/USDT0 leg still inherits Tether's reviewed mint authority.",
     "inheritedFrom": "usdt-tether",
     "controls": [
       {
@@ -53,18 +53,18 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "unknown",
-        "capDescription": "hbUSDT shares are minted against USDT strategy deposits and do not create base USDT supply.",
+        "capDescription": "hbUSDT shares are minted through Hyperbeat deposit contracts against supported strategy assets including USDT0, USDe, and USR; the share token does not create base USDT supply.",
         "sources": [
           {
-            "label": "Hyperbeat",
-            "url": "https://hyperbeat.org/"
+            "label": "Hyperbeat hbUSDT docs",
+            "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
           },
           {
             "label": "Accountable Hyperbeat reserves",
             "url": "https://accountable.hyperbeat.org/"
           }
         ],
-        "evidence": "Local metadata marks hbUSDT as a strategy-vault variant of usdt-tether; Hyperbeat materials identify the vault/reserve route. HyperEVM reads at block 35977747 resolved implementation 0x77b13307d6a36511ee7d887ae7ae9eb28e78e690 and proxy admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac."
+        "evidence": "Hyperbeat docs list the hbUSDT vault token, insurance contract, redemption contract, and supported deposit assets USDT0, USDe, and USR. HyperEVM reads at block 35977747 resolved implementation 0x77b13307d6a36511ee7d887ae7ae9eb28e78e690 and proxy admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac."
       },
       {
         "chain": "ethereum",
@@ -93,15 +93,15 @@
     "review": {
       "sources": [
         {
-          "label": "Hyperbeat",
-          "url": "https://hyperbeat.org/"
+          "label": "Hyperbeat hbUSDT docs",
+          "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
         },
         {
           "label": "Tether transparency",
           "url": "https://tether.to/en/transparency/"
         }
       ],
-      "evidence": "Local variant metadata and Hyperbeat reserve materials establish hbUSDT as wrapper/share accounting over USDT; parent USDT mint authority is already reviewed.",
+      "evidence": "Hyperbeat docs establish hbUSDT as wrapper/share accounting over supported strategy assets including USDT0, USDe, and USR; the USDT/USDT0 dependency inherits reviewed Tether mint authority.",
       "reviewer": "Codex mint-authority full-gap batch-2",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [

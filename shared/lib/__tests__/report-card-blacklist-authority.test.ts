@@ -82,12 +82,12 @@ describe("report-card blacklist authority", () => {
     // pause, seize, or arbitrary burn surface under FreezeWatch semantics.
     expect(resolved.get("vcred-vcred")).toBe(false);
     expect(resolved.get("fusd-freedom-dollar")).toBe(false);
-    // LUAUSD: `UtilityToken` on Arbitrum is Ownable with mint authority and
-    // allowance-based `burnFrom`, but no holder freeze or seizure surface.
-    expect(resolved.get("luausd-lumi-finance")).toBe(false);
-    // NXUSD: BoringOwnable with mint rate-limited to 15%/24h and no admin
-    // reach into user balances. Bounded enough to remain a defensible "No".
-    expect(resolved.get("nxusd-nereus")).toBe(false);
+    // LUAUSD: no direct token freeze, but Lumi materials describe stablecoin
+    // reserves, so FreezeWatch resolves reserve-side exposure upstream.
+    expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
+    // NXUSD: no direct token freeze, but Nereus materials include DAI in the
+    // collateral set, so the DAI path resolves upstream.
+    expect(resolved.get("nxusd-nereus")).toBe("inherited");
     // HCHF: Hedera token metadata has no admin/freeze/wipe/pause key.
     // The supply key is used by HLiquity's collateralized CDP mint path, not
     // treated as standalone unbounded admin dilution authority.
@@ -103,12 +103,12 @@ describe("report-card blacklist authority", () => {
     // Felix feUSD on Hyperliquid: TransparentUpgradeableProxy. Project docs
     // cite "Admin Parameter Controls" and "Emergency Pausing" as features.
     expect(resolved.get("feusd-felix")).toBe(true);
-    // Quill USDQ on Scroll: re-audited in the metadata backfill as an immutable,
-    // admin-keyless Liquity-v2 (BOLD) fork — no token-level freeze, seizure, or
-    // proxy-upgrade surface, so the earlier upgradeable-proxy classification is dropped.
-    expect(resolved.get("usdq-quill")).toBe(false);
-    // Orki USDK on Swellchain: re-audited to non-freezable in the metadata backfill.
-    expect(resolved.get("usdk-orki")).toBe(false);
+    // Quill USDQ on Scroll: no direct blacklist confirmed, but the token is a
+    // mutable EIP-1967/UUPS-style proxy behind AccessManager authority.
+    expect(resolved.get("usdq-quill")).toBe("possible");
+    // Orki USDK on Swellchain: no direct blacklist confirmed, but the token is
+    // a mutable EIP-1967 proxy behind Orki AccessManager authority.
+    expect(resolved.get("usdk-orki")).toBe("possible");
     // srUSD: wrapper over rUSD; freeze exposure now resolves through the parent
     // balance sheet and PSM path, while mint authority is assessed separately.
     expect(resolved.get("srusd-reservoir")).toBe("inherited");
@@ -118,6 +118,20 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("xusd-babelfish")).toBe("inherited");
   });
 
+  it("pins the May 25 2026 full unfreezable re-audit", () => {
+    const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
+
+    expect(resolved.get("m-m0")).toBe(true);
+    expect(resolved.get("isc-international-stable-currency")).toBe(true);
+    expect(resolved.get("usg-tangent")).toBe(true);
+    expect(resolved.get("dllr-sovryn")).toBe("possible");
+    expect(resolved.get("fxd-fathom")).toBe("possible");
+    expect(resolved.get("cjpy-yamato")).toBe("possible");
+    expect(resolved.get("jusd-juicedollar")).toBe("inherited");
+    expect(resolved.get("silk-shade-protocol")).toBe("inherited");
+    expect(resolved.get("bnusd-balanced")).toBe("inherited");
+  });
+
   it("pins the retired Dilutable cohort under freeze-only semantics", () => {
     const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
 
@@ -125,8 +139,8 @@ describe("report-card blacklist authority", () => {
       expect(resolved.get(id)).toBe("inherited");
     }
 
-    expect(resolved.get("krwo-gimswap")).toBe(false);
-    expect(resolved.get("luausd-lumi-finance")).toBe(false);
+    expect(resolved.get("krwo-gimswap")).toBe("inherited");
+    expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
     expect(resolved.get("usdn-smardex")).toBe("possible");
     expect(resolved.get("vcred-vcred")).toBe(false);
 

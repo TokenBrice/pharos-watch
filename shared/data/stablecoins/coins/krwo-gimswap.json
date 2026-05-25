@@ -49,9 +49,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "BscScan contract source",
@@ -62,9 +61,9 @@
         "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
       }
     ],
-    "evidence": "Freeze-only re-review: the verified BSC FiatToken source exposes privileged mint authority but no holder freeze, blacklist, pause, seize, or arbitrary role-burn function. OV voucher/redemption risk is not a holder-balance FreezeWatch control.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "evidence": "Verified BSC FiatToken source exposes privileged mint authority but no direct holder freeze, blacklist, pause, seize, or arbitrary role-burn function. KRWO is backed by Open Voucher/KRW redemption rails, so FreezeWatch resolves upstream backing/redemption blocking exposure.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -109,7 +108,8 @@
     {
       "name": "Open Voucher KRW vouchers / OV tokens",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "blacklistable": true
     }
   ]
 }

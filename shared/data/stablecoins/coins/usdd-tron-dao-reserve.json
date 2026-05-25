@@ -66,15 +66,17 @@
     "reviewedAt": "2026-05-24"
   },
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "USDD has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+    "summary": "USDD mints through Maker-style collateralized TRON DAO Reserve rails; Ethereum token source exposes warded mint authority and the USDD Join contract is the resolved direct minter, while governance/Pause/Vat administration remains unresolved.",
     "controls": [
       {
-        "label": "Privileged token mint/admin authority",
+        "chain": "ethereum",
+        "address": "0x983dfef6d71862d809e239845da5a959492f63b8",
+        "label": "USDD Join token ward / direct minter",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
@@ -84,19 +86,39 @@
             "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
           }
         ],
-        "evidence": "USDD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+        "evidence": "USDD system/deployment docs describe collateralized USDD issuance rails, and Ethereum token source exposes warded mint authority. Live/source review identifies the USDD Join contract as the token ward/direct minter rather than a generic privileged token authority."
+      },
+      {
+        "label": "USDD governance / Pause / Vat administration",
+        "role": "governor",
+        "authorityType": "unknown",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "System-level governance, Pause, and Vat administration can alter issuance parameters or privileged wards; exact current signer set and threshold were not decoded in this pass."
       }
     ],
     "review": {
       "sources": [
         {
+          "label": "USDD system architecture",
+          "url": "https://docs.usdd.io/system-architecture/system-architecture"
+        },
+        {
+          "label": "USDD deployment addresses",
+          "url": "https://docs.usdd.io/developers/deployment-addresses"
+        },
+        {
           "label": "Etherscan contract source",
           "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
         }
       ],
-      "evidence": "USDD has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
+      "evidence": "USDD docs describe collateralized issuance architecture and deployment addresses; token-source review identifies USDD Join as the direct ward/minter while governance/Pause/Vat authority remains unresolved.",
       "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewedAt": "2026-05-25",
+      "unresolvedQuestions": [
+        "Resolve USDD governance/Pause/Vat signer thresholds and current ward-management authority before raising confidence."
+      ]
     }
   },
   "chainTier": "established-alt-l1",

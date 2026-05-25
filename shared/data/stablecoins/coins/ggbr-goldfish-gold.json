@@ -2,7 +2,7 @@
   "id": "ggbr-goldfish-gold",
   "name": "Goldfish Gold",
   "symbol": "GGBR",
-  "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure rather than on-chain redemption logic.",
+  "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure and issuer-controlled mint/redeem contracts.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital",
-  "pegMechanism": "Issuer-managed gold reference rather than on-chain redemption logic; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
+  "pegMechanism": "Issuer-managed gold reference with issuer-controlled mint/redeem contracts; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
   "commodityOunces": 0.001,
   "detailProvider": "commodity",
   "geckoId": "goldfish-gold",
@@ -48,7 +48,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "GGBR is issued by Goldfish Gold (I-On Digital Corp); each token references 1/1000th of a troy ounce of issuer-managed gold exposure and is minted/managed by the issuer rather than through any on-chain user redemption logic.",
+    "summary": "GGBR is issued by Goldfish Gold (I-On Digital Corp); each token references 1/1000th of a troy ounce of issuer-managed gold exposure, with minting and redemption controlled by issuer contracts and admin keys.",
     "controls": [
       {
         "label": "Goldfish Gold / I-On Digital issuance backend",
@@ -56,15 +56,16 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Issuer materials describe GGBR as issuer-managed gold exposure on I-On Digital's balance sheet with no on-chain redemption logic; supply creation is controlled by the issuer with no permissionless mint route."
+        "evidence": "Issuer materials describe GGBR as issuer-managed gold exposure on I-On Digital's balance sheet; the Cyfrin review covers issuer mint/redemption contracts, so supply creation and redemption remain issuer-controlled with no permissionless mint route."
       }
     ],
     "review": {
-      "evidence": "Project materials and CoinGecko describe GGBR as an issuer-managed fractional gold token (1/1000 troy ounce) without on-chain redemption; minting is fully centralized at the issuer.",
+      "evidence": "Project materials and the Cyfrin review describe GGBR as an issuer-managed fractional gold token (1/1000 troy ounce) with issuer-controlled mint/redemption contracts; minting remains centralized at the issuer.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Goldfish Gold", "url": "https://goldfishgold.com/" }
+        { "label": "Goldfish Gold", "url": "https://goldfishgold.com/" },
+        { "label": "Goldfish Gold Cyfrin review", "url": "https://goldfishgold.com/Cyfrin-Report.pdf" }
       ],
       "sourceFreeRationale": "Classification based on the issuer-managed model in project materials; the on-chain Ethereum owner/minter admin for GGBR was not independently resolved.",
       "unresolvedQuestions": ["Resolve the on-chain Ethereum owner/minter admin for GGBR before raising confidence."]

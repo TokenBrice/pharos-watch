@@ -39,14 +39,26 @@
     }
   ],
   "deploymentModel": "single-chain",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Reviewed local metadata suppression: ISC's \"Cash reserves\" slice describes generic off-chain cash, not the unrelated CASH token tracked elsewhere.",
-    "evidence": "Explicit No retained: the apparent Upstream signal is a text match on a generic cash reserve label, with no coinId, blacklistable reserve flag, variant parent, CEX custody, or direct stablecoin reserve reference.",
-    "reviewer": "Codex inferred-status backfill audit",
-    "reviewedAt": "2026-05-12",
-    "upstreamSuppressionRationale": "Suppresses a resolver text false-positive where the generic reserve phrase \"Cash reserves\" matches the tracked CASH symbol. ISC metadata does not identify CASH token exposure or another upstream freezable asset."
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "ISC docs",
+        "url": "https://wp.isc.money/"
+      },
+      {
+        "label": "Orb token metadata",
+        "url": "https://orbmarkets.io/token/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD/metadata"
+      },
+      {
+        "label": "Solana freeze account docs",
+        "url": "https://solana.com/docs/tokens/basics/freeze-account"
+      }
+    ],
+    "evidence": "ISC's Solana mint has a non-null freeze authority, and Solana token accounts can be frozen when a mint retains freeze authority. That is direct holder-account freeze capability.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "reserves": [
     {

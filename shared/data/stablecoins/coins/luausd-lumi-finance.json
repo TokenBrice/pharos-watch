@@ -35,18 +35,25 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sourcify UtilityToken.sol",
         "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+      },
+      {
+        "label": "Lumi Finance",
+        "url": "https://lumi.finance/"
+      },
+      {
+        "label": "CoinGecko metadata",
+        "url": "https://api.coingecko.com/api/v3/coins/lumi-finance-luausd"
       }
     ],
-    "evidence": "Freeze-only re-review: the verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no holder freeze, blacklist, pause, seize, or arbitrary burn function.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "evidence": "Verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no direct holder freeze, blacklist, pause, seize, or arbitrary burn function. Lumi materials describe protocol reserves that include stablecoins, so FreezeWatch resolves upstream exposure.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -86,9 +93,10 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "LUA floor-price collateral and protocol-owned liquidity",
+      "name": "LUA floor-price collateral, protocol-owned liquidity, and stablecoin reserves",
       "pct": 100,
-      "risk": "very-high"
+      "risk": "very-high",
+      "blacklistable": true
     }
   ],
   "liveReservesConfig": {

@@ -40,12 +40,26 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: FXD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Fathom docs",
+        "url": "https://docs.fathom.fi/"
+      },
+      {
+        "label": "Fathom stablecoin source",
+        "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/FathomStablecoin.sol"
+      },
+      {
+        "label": "AdminControls source",
+        "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/AdminControls.sol"
+      }
+    ],
+    "evidence": "FXD token source does not show a direct blacklist, but Fathom AdminControls can pause core modules including bookKeeper, positionManager, and stablecoinAdapter. Treat as a possible mutable holder-facing protocol-control surface.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
+  "canBeBlacklisted": "possible",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

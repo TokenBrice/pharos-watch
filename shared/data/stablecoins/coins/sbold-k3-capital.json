@@ -63,9 +63,9 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "none-resolved",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "sBOLD is a risk-absorption variant over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD.",
+    "summary": "sBOLD is a K3 Capital ERC-4626 wrapper over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD, and K3 wrapper administration resolves to a 2/3 Safe.",
     "inheritedFrom": "bold-liquity",
     "controls": [
       {
@@ -83,7 +83,42 @@
             "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
           }
         ],
-        "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority."
+        "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority. Live asset() reads confirm the vault asset is BOLD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5",
+        "label": "K3 sBOLD owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 2,
+          "owners": [
+            "0xc4ca03Bac67184B37F0209750b5896aA9cAA506c",
+            "0x6a2Be1424bB8ee960a9260Ae561593E385807ee5",
+            "0xe6D42fCA40b3ecF4Bb4a244cF94961Acbde6DB83"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "K3 sBOLD repository",
+            "url": "https://github.com/K3Capital/sBOLD"
+          },
+          {
+            "label": "sBOLD owner Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
+          }
+        ],
+        "evidence": "Ethereum owner() resolved to this Safe; Safe API returned a 2/3 Safe with no enabled modules and the zero guard."
       }
     ],
     "review": {
@@ -93,7 +128,7 @@
           "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
         }
       ],
-      "evidence": "sBOLD should inherit BOLD's reviewed mint authority; no separate durable issuer mint path was resolved in local variant metadata.",
+      "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard.",
       "reviewer": "Codex mint-authority full-gap batch-4",
       "reviewedAt": "2026-05-24"
     }

@@ -217,6 +217,10 @@ export function resolveBlacklistStatus(
   options: ResolveBlacklistStatusOptions = {},
 ): BlacklistStatus {
   if (meta.canBeBlacklisted !== undefined && meta.canBeBlacklisted !== false) return meta.canBeBlacklisted;
+  if (meta.canBeBlacklisted === undefined && meta.blacklistabilityReview?.reviewedStatus !== undefined) {
+    const reviewedStatus = meta.blacklistabilityReview.reviewedStatus;
+    if (reviewedStatus !== false) return reviewedStatus;
+  }
 
   const inferredStatus = resolveBlacklistStatusWithoutExplicitOverride(meta, options);
   if (meta.canBeBlacklisted === false) {

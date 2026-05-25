@@ -71,36 +71,35 @@
     "yieldType": "lending-vault"
   },
   "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "inheritedFrom": "usdc-circle",
-    "summary": "stUSD is StoneYield's strategy-vault wrapper over USDC routed through a Venus-linked strategy layer; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
+    "summary": "stUSD is StoneYield's strategy-vault token over USDC-routed strategies, but StoneYield docs expose local mint and emergency controls including deposit minting, rewardMint(), pause(), adminUnlock(), and sweepUSDC(); its mint authority is not inherited-only from USDC.",
     "controls": [
       {
         "chain": "bsc",
         "address": "0x806dd21af6de051fb811760a5768d04a99160eb9",
-        "label": "StoneYield stUSD wrapper token",
-        "role": "wrapper",
+        "label": "StoneYield stUSD deposit mint path",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "stUSD shares are minted/burned by the StoneYield vault against USDC deposits and withdrawals; this share accounting cannot create or destroy base USDC supply.",
-        "evidence": "Strategy-vault receipt: stUSD shares represent a claim on USDC routed through StoneYield's Venus-linked strategy; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
-      },
-      {
-        "label": "Inherited USDC (Circle) issuer mint path",
-        "role": "other",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+        "capDescription": "User deposits USDC into StakeableAssetImpl/StrategyRouter, which mints stUSD shares against strategy assets; the token does not create base USDC supply but can mint local stUSD shares.",
+        "evidence": "StoneYield contract-design docs describe the flow `User Deposits USDC -> StakeableAssetImpl (mints STUSD) -> StrategyRouter`."
+      },
+      {
+        "label": "StoneYield stUSD reward/emergency admin controls",
+        "role": "minter-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "StoneYield docs list admin rewardMint(), pause(), adminUnlock(), and sweepUSDC() controls on the STUSD token design; exact owner/admin holder was not resolved in this pass."
       }
     ],
     "review": {
-      "evidence": "stUSD (variantOf usdc-circle, variantKind strategy-vault) is a StoneYield yield wrapper whose shares track deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
+      "evidence": "StoneYield docs describe stUSD share minting from USDC deposits plus admin rewardMint and emergency controls, so the local token has its own permissioned mint/admin surface even though base USDC supply remains Circle-issued.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -109,7 +108,10 @@
           "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
         }
       ],
-      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
+      "sourceFreeRationale": "StoneYield docs document local STUSD mint/admin functions; exact owner/admin holder was not resolved from the BSC contract in this pass.",
+      "unresolvedQuestions": [
+        "Resolve the live BSC owner/admin holder for rewardMint(), pause(), adminUnlock(), and sweepUSDC()."
+      ]
     }
   },
   "notices": [

@@ -85,7 +85,7 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xfa771871D3D5c85e156D3d379E2ff7699C4D6A66",
+        "address": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
         "label": "FDUSD token owner Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -106,9 +106,13 @@
           {
             "label": "Ethereum FDUSD contract",
             "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
+          },
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
           }
         ],
-        "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
+        "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Safe API review confirmed 4/6 owners, no modules, and zero guard."
       }
     ],
     "review": {

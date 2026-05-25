@@ -16,22 +16,26 @@
   "mechanismArchetype": "cdp",
   "llamaId": "265",
   "detailProvider": "defillama",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Docs",
         "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
       },
       {
-        "label": "Website",
-        "url": "https://app.orki.finance/"
+        "label": "Contract addresses",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/contract-addresses"
+      },
+      {
+        "label": "Swell explorer",
+        "url": "https://explorer.swellnetwork.io/address/0x0000baa0b1678229863c0a941c1056b83a1955f5"
       }
     ],
-    "evidence": "Explicit No retained: USDK is an immutable, admin-keyless Liquity-v2 (BOLD) fork; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
-    "reviewer": "Opus med-confidence verification",
-    "reviewedAt": "2026-05-23"
+    "evidence": "USDK is deployed behind an EIP-1967 proxy with Orki AccessManager authority. No active direct blacklist or freeze function was confirmed, but the holder-facing token surface is mutable.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "links": [
     {

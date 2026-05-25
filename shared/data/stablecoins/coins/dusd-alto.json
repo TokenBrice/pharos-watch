@@ -49,7 +49,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "DUSD is minted by users overcollateralizing assets in isolated on-chain mint markets (ETH/LSTs, sUSDe, Syrup USDC) on Ethereum, backstopped by a 5M USDC PSM for 1:1 swaps; ALTO token holders govern markets and per-asset risk parameters.",
+    "summary": "DUSD is minted in Alto mint markets against posted collateral subject to per-market debt ceilings, with a capped USDC PSM that can mint/burn DUSD 1:1 before fees. ALTO staking grants governance power and fee sharing, while live admin executors still need direct on-chain role review.",
     "controls": [
       {
         "label": "Alto isolated mint markets (collateral mint)",
@@ -57,31 +57,69 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "ethereum",
-        "capDescription": "Mint bounded by per-market isolated collateral risk parameters; PSM enables 1:1 USDC<->DUSD swaps at 0.20% fee capped at 5M USDC.",
+        "capDescription": "Mint bounded by per-market debt ceilings and collateral risk parameters.",
         "canRaiseCap": "unknown",
-        "evidence": "DUSD is minted via overcollateralized isolated lending markets with per-asset risk parameters, plus a 5M-cap USDC PSM for peg arbitrage, per Alto docs."
+        "sources": [
+          {
+            "label": "Alto DUSD docs",
+            "url": "https://docs.alto.money/alto-protocol/dusd"
+          }
+        ],
+        "evidence": "Alto docs distinguish borrow markets from mint markets and state that mint markets create new DUSD against posted collateral, capped by market-level debt ceilings."
       },
       {
-        "label": "ALTO token governance",
+        "label": "Alto DUSD/USDC PSM",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "capDescription": "The public PSM can mint DUSD against USDC and burn DUSD for USDC, bounded by a 5,000,000 USDC capacity and 0.20% fee.",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Alto PSM docs",
+            "url": "https://docs.alto.money/alto-protocol/psm"
+          }
+        ],
+        "evidence": "Alto PSM docs state that USDC->DUSD swaps mint new DUSD, DUSD->USDC swaps burn DUSD, and the PSM refuses swaps above the configured 5,000,000 USDC capacity."
+      },
+      {
+        "label": "Alto governance and admin executors",
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
         "canRaiseCap": "unknown",
-        "evidence": "All markets and risk parameters are governed by ALTO token holder votes; governance tunes parameters and the PSM cap rather than minting directly."
+        "sources": [
+          {
+            "label": "Alto staking and governance docs",
+            "url": "https://docs.alto.money/alto-protocol/staking"
+          }
+        ],
+        "evidence": "Alto docs describe ALTO staking as the governance-power mechanism, but the live Owner/Pauser/Freezer execution path was not independently read on-chain."
       }
     ],
     "review": {
-      "evidence": "Alto docs describe DUSD as an overcollateralized stable minted from isolated on-chain markets with a 5M USDC PSM backstop, all governed by ALTO token votes; no centralized direct-mint route is described.",
+      "evidence": "Alto docs describe DUSD mint markets that create new DUSD against collateral subject to debt ceilings and a capped PSM that mints/burns DUSD against USDC; docs also describe ALTO staking governance, but not enough live role data to assert direct ALTO-token-holder control of admin execution.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
         {
-          "label": "Alto docs",
-          "url": "https://docs.alto.money/"
+          "label": "Alto DUSD docs",
+          "url": "https://docs.alto.money/alto-protocol/dusd"
+        },
+        {
+          "label": "Alto PSM docs",
+          "url": "https://docs.alto.money/alto-protocol/psm"
+        },
+        {
+          "label": "Alto staking and governance docs",
+          "url": "https://docs.alto.money/alto-protocol/staking"
         }
       ],
       "sourceFreeRationale": "Market/PSM mechanism and ALTO governance confirmed from Alto docs; on-chain market admin owner and governance execution path not independently read on-chain.",
-      "unresolvedQuestions": ["Resolve the on-chain Alto market admin/owner and ALTO governance execution authority on Ethereum."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain Alto market admin/owner, PSM owner/cap admin, and Owner/Pauser/Freezer or governance execution authorities on Ethereum."
+      ]
     }
   },
   "collateralQuality": "exotic",

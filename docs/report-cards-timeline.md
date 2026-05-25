@@ -1,6 +1,14 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.26 (2026-02-25 → 2026-05-21). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.28 (2026-02-25 → 2026-05-25). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+
+## v7.28 — FreezeWatch curated upstream review audit (2026-05-25)
+
+- Re-audits every active asset that still resolved as `No` after the four-status FreezeWatch migration
+- M by M0, ISC, and USG now resolve as direct `Yes` based on Solana freeze authority or arbitrary holder-burn evidence
+- DLLR, FXD, CJPY, USDQ, and USDK now resolve as `Possible` for mutable proxy, pause, manager-burn, or protocol-control paths without a confirmed active blacklist
+- JUSD, SILK, NXUSD, LUAUSD, KRWO, and BNUSD now resolve as `Upstream` through stablecoin reserves, DAI collateral, Open Voucher redemption rails, or Stability Fund stablecoin collateral
+- Curated `blacklistabilityReview.reviewedStatus: "inherited"` entries are honored as upstream status when there is no direct `canBeBlacklisted` override
 
 ## v7.27 — FreezeWatch removes Dilutable admin-mint tier (2026-05-24)
 

@@ -116,9 +116,9 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "IDRX is issued by PT IDRX with centralized KYC-gated 1:1 mint/redeem against IDR fiat and government bonds; CertiK-audited contracts use multi-member approval and a 24-hour timelock to bound privileged admin actions.",
+    "summary": "IDRX is issued by PT IDRX with centralized KYC-gated 1:1 mint/redeem against IDR fiat and government bonds; audited materials state the direct MINTER_ROLE is assigned to an MPC wallet, while multisig/timelock controls apply to upgrade and role-admin paths.",
     "controls": [
       {
         "label": "PT IDRX issuance backend",
@@ -129,17 +129,17 @@
         "evidence": "PT IDRX operates centralized KYC-gated mint and redeem of IDRX against custodied IDR reserves and government bonds across its native-multichain deployment."
       },
       {
-        "label": "IDRX multisig + 24h timelock admin",
+        "label": "IDRX role/upgrade multisig + 24h timelock admin",
         "role": "minter-admin",
         "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "IDRX security disclosures describe multi-member (multisig) approval for transactions and a 24-hour timelock on changes, bounding privileged admin/role operations; exact signer set and threshold not independently confirmed."
+        "evidence": "IDRX audit materials describe multi-member approval and a 24-hour timelock for privileged admin/upgrade paths, but explicitly state the direct MINTER_ROLE cannot use the timelock and is assigned to an MPC wallet."
       }
     ],
     "review": {
-      "evidence": "IDRX materials and CertiK-audit coverage describe a centralized fiat issuer with KYC-gated mint/redeem plus multi-member approval and a 24-hour timelock on privileged actions; minting is issuer-operated rather than permissionless.",
+      "evidence": "IDRX materials and CertiK-audit coverage describe a centralized fiat issuer with KYC-gated mint/redeem. The audit states direct MINTER_ROLE minting is assigned to an MPC wallet because that function cannot use the timelock; multisig/timelock controls bound role/upgrade changes, not the direct mint path.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -150,11 +150,15 @@
         {
           "label": "IDRX website",
           "url": "https://idrx.co/"
+        },
+        {
+          "label": "IDRX CertiK assessment",
+          "url": "https://home.idrx.co/docs/security-assesment-idrx.pdf"
         }
       ],
-      "sourceFreeRationale": "Multisig/timelock controls reported in IDRX security disclosures; exact on-chain multisig signer/threshold and which operations the timelock governs were not independently confirmed in this pass.",
+      "sourceFreeRationale": "Direct minter MPC and role/upgrade timelock split taken from the IDRX CertiK assessment; exact on-chain signer/threshold and per-chain role holders were not independently confirmed in this pass.",
       "unresolvedQuestions": [
-        "Confirm the on-chain multisig signer set/threshold and whether the 24h timelock governs the mint path itself or only role/upgrade changes.",
+        "Confirm the on-chain MPC wallet address holding MINTER_ROLE and the multisig signer set/threshold for role and upgrade admin changes.",
         "Resolve per-chain minter-admin and proxy admin across Polygon, Base, BSC, Klaytn, Gnosis, Etherlink, Worldchain, and Solana."
       ]
     }

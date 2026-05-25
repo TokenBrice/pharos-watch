@@ -40,19 +40,33 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: NXUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Sourcify NXUSD source",
+        "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+      },
+      {
+        "label": "Nereus peg article",
+        "url": "https://medium.com/nereus-protocol/algorithmic-stablecoin-peg-mechanisms-4eb3e2eef411"
+      },
+      {
+        "label": "Nereus NXUSD overview",
+        "url": "https://medium.com/nereus-protocol/everything-you-need-to-know-about-nxsud-1234fc84ed29"
+      }
+    ],
+    "evidence": "NXUSD token source exposes owner mint and user burn paths but no direct freeze, blacklist, pause, or seize function. Nereus materials describe DAI among NXUSD collateral, so DAI's freeze exposure resolves upstream.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "Nereus overcollateralized crypto positions",
+      "name": "Nereus overcollateralized crypto positions including DAI collateral",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "blacklistable": true
     }
   ],
   "notices": [

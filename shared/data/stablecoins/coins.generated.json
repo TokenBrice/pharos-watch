@@ -1197,25 +1197,34 @@
       "country": "British Virgin Islands"
     },
     "mintAuthority": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "offchain-attested-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "apxUSD issuance is modeled as protocol/issuer-operated authority pending deeper on-chain role review.",
+      "summary": "apxUSD minting is routed through Apyx's MinterV0 contract, where an m-of-n minter submits EIP-712 signed orders and AccessManager delays/permissions gate the eventual apxUSD mint.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
-          "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "label": "Apyx MinterV0 signed-order mint path",
+          "role": "backend-signer",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
+          "routeChecks": {
+            "signingModel": "EIP-712 signed orders submitted by an m-of-n minter wallet",
+            "rateLimits": "MinterV0 includes rate limiting and AccessManager-delayed execution per Apyx contract documentation",
+            "pausersAdminsUpgraders": "AccessManager manages mint permissions; live role holders were not independently enumerated"
+          },
           "sources": [
             {
               "label": "Apyx docs",
               "url": "https://docs.apyx.fi"
+            },
+            {
+              "label": "Apyx EVM contracts",
+              "url": "https://apyx-labs.github.io/evm-contracts/"
             }
           ],
-          "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting."
+          "evidence": "Apyx technical documentation describes MinterV0 handling apxUSD minting through EIP-712 signed orders, rate limits, AccessManager integration, and whitelisted beneficiary checks."
         }
       ],
       "review": {
@@ -1223,11 +1232,18 @@
           {
             "label": "Apyx docs",
             "url": "https://docs.apyx.fi"
+          },
+          {
+            "label": "Apyx EVM contracts",
+            "url": "https://apyx-labs.github.io/evm-contracts/"
           }
         ],
-        "evidence": "Apyx documentation and attestations describe apxUSD as an issued collateral-backed stablecoin with protocol-operated minting.",
+        "evidence": "Apyx docs say whitelisted users deposit collateral and receive newly minted apxUSD; Apyx's contract documentation identifies MinterV0 as the mint route using EIP-712 signed orders, an m-of-n minter wallet, AccessManager checks, and beneficiary screening.",
         "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewedAt": "2026-05-24",
+        "unresolvedQuestions": [
+          "Enumerate live MinterV0, AccessManager role holders, rate limits, and any pause/upgrade admins before raising confidence."
+        ]
       }
     },
     "contracts": [
@@ -1374,19 +1390,23 @@
         {
           "chain": "ethereum",
           "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
-          "label": "Inherited apxUSD issuer authority",
-          "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "label": "Inherited apxUSD signed-order mint authority",
+          "role": "backend-signer",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
           "sources": [
             {
               "label": "Apyx docs",
               "url": "https://docs.apyx.fi"
+            },
+            {
+              "label": "Apyx EVM contracts",
+              "url": "https://apyx-labs.github.io/evm-contracts/"
             }
           ],
-          "evidence": "apyUSD inherits the reviewed apxUSD mint-authority profile; apxUSD documentation and attestations describe protocol-operated minting."
+          "evidence": "apyUSD inherits the reviewed apxUSD mint-authority profile; Apyx contract documentation describes apxUSD minting through MinterV0 EIP-712 signed orders and AccessManager permissions."
         }
       ],
       "review": {
@@ -1396,11 +1416,15 @@
             "url": "https://docs.apyx.fi"
           },
           {
+            "label": "Apyx EVM contracts",
+            "url": "https://apyx-labs.github.io/evm-contracts/"
+          },
+          {
             "label": "Ethereum apyUSD contract",
             "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#readContract"
           }
         ],
-        "evidence": "Local variant metadata and Ethereum asset() reads confirm apyUSD is a wrapper over reviewed apxUSD rather than an independent base-dollar issuer.",
+        "evidence": "Local variant metadata and Ethereum asset() reads confirm apyUSD is a wrapper over reviewed apxUSD rather than an independent base-dollar issuer. The inherited apxUSD mint path is signed-order MinterV0 issuance, not a plain issuer-backend mint.",
         "reviewer": "Codex mint-authority full-gap batch-1",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -4058,11 +4082,20 @@
       }
     ],
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: BNUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sources": [
+        {
+          "label": "Balanced stablecoin page",
+          "url": "https://balanced.network/stablecoin/"
+        },
+        {
+          "label": "Balanced docs",
+          "url": "https://docs.balanced.network"
+        }
+      ],
+      "evidence": "No direct bnUSD holder blacklist was identified, but Balanced's Stability Fund swaps USDC and USDT 1:1 for bnUSD and holds those stablecoins as collateral. That creates upstream freeze exposure under the any-reserve policy.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "mature-alt-l1",
     "deploymentModel": "native-multichain",
@@ -4076,9 +4109,10 @@
         "risk": "high"
       },
       {
-        "name": "Cross-chain Hub collateral (BTC, ETH, BNB, AVAX, INJ and other bridged assets)",
+        "name": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
         "pct": 10,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ],
     "notices": [
@@ -7453,9 +7487,11 @@
       "summary": "cgUSD is an ERC-4626 rebasing vault on Base where users mint by depositing USDC/USDT (incl. cross-chain via Axelar), but Cygnus custodies the off-chain U.S. Treasury reserves, controls the daily oracle-reported NAV rebase, and runs an AMO managing on-chain liquidity.",
       "controls": [
         {
-          "label": "Cygnus oracle/rebase + reserve custodian",
+          "chain": "base",
+          "address": "0x3430BcaDc7F23C42e7054e20f129d67baA91B184",
+          "label": "Cygnus accounting oracle/rebase + reserve custodian",
           "role": "custodian",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "sources": [
@@ -7464,18 +7500,18 @@
               "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint"
             }
           ],
-          "evidence": "The cgUSD vault contract exposes an owner-gated oracle-report path (handleOracleReport) that synchronizes total supply to off-chain T-bill NAV on NYC banking days; Cygnus custodies the off-chain Treasuries and authorizes the supply adjustment that user deposits cannot perform alone."
+          "evidence": "The cgUSD vault contract exposes handleOracleReport(), which is gated to the accountingOracle address loaded from the Cygnus locator rather than to the vault owner. A 2026-05-25 Base RPC read resolved the locator oracleReportComponents() accountingOracle to this address."
         },
         {
           "chain": "base",
-          "address": "0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+          "address": "0xfECAB866b450b97dB38500898e9272c1D18918b7",
           "label": "cgUSD vault owner (mint/pause admin)",
           "role": "minter-admin",
           "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "The Base cgUSD contract is an OpenZeppelin Ownable ERC-4626 vault with a mint() that issues shares for deposited assets and owner-controlled pause/resume; the owner address itself was not independently resolved on-chain."
+          "evidence": "The Base cgUSD contract is an OpenZeppelin Ownable ERC-4626 vault with a mint() that issues shares for deposited assets and owner-controlled pause/resume; a 2026-05-25 Base RPC read resolved owner() to this timelock/admin address, but its signer/governance setup was not independently decoded."
         }
       ],
       "review": {
@@ -7485,12 +7521,12 @@
             "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
           }
         ],
-        "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Live owner/oracle admin addresses not independently resolved.",
-        "evidence": "Cygnus documentation describes user mint with USDC at $1 (0% fee, Axelar cross-chain) backed by off-chain U.S. Treasuries with a daily issuer-controlled NAV rebase and an AMO managing on-chain liquidity; this is a custodian/AMO hybrid rather than a pure issuer fiat mint or a permissionless user-collateralized CDP.",
+        "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Owner/oracle addresses were read, but governance and operator custody were not decoded.",
+        "evidence": "Cygnus documentation describes user mint with USDC at $1 (0% fee, Axelar cross-chain) backed by off-chain U.S. Treasuries with daily NAV rebases and an AMO managing on-chain liquidity; contract source and 2026-05-25 Base RPC reads show handleOracleReport is gated by the locator accountingOracle, while owner() resolves to a separate timelock/admin address.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the on-chain owner and oracle-reporter addresses of the Base cgUSD vault, and the AMO controller, before raising confidence."
+          "Resolve the governance/signers behind the owner timelock/admin, accounting oracle operator, and AMO controller before raising confidence."
         ]
       }
     },
@@ -7992,9 +8028,9 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "possible",
       "sources": [
         {
           "label": "Docs",
@@ -8003,11 +8039,15 @@
         {
           "label": "GitHub",
           "url": "https://github.com/DeFiGeek-Community/yamato"
+        },
+        {
+          "label": "Ethereum contract",
+          "url": "https://etherscan.io/address/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
         }
       ],
-      "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "No direct CJPY blacklist or transfer freeze was confirmed, but Yamato's CurrencyOS/Yamato routing is governance-settable and includes protocol burn and pause paths. Treat as possible mutable holder-facing protocol control.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "deploymentModel": "single-chain",
     "custodyModel": "onchain",
@@ -10022,23 +10062,26 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "possible",
       "sources": [
         {
           "label": "Explorer",
           "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
         },
         {
-          "label": "Dapp",
-          "url": "https://app.mynt.xyz/"
+          "label": "Mynt docs",
+          "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+        },
+        {
+          "label": "Sovryn Dollar",
+          "url": "https://sovryn.com/sovryn-dollar"
         }
       ],
-      "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12",
-      "upstreamSuppressionRationale": "The reviewed override is scoped to the DLLR holder-facing token. The DOC reserve slice is de minimis reserve-side exposure and is intentionally not promoted to DLLR direct freezability in this metadata override."
+      "evidence": "Verified DLLR source exposes no blacklist, freeze, or pause function, but it has manager-gated burn(address,uint256) and an owner-settable MassetManager proxy. Treat as possible holder-balance intervention risk rather than confirmed direct blacklist.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "mature-alt-l1",
     "deploymentModel": "single-chain",
@@ -10424,7 +10467,7 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "DUSD is minted by users overcollateralizing assets in isolated on-chain mint markets (ETH/LSTs, sUSDe, Syrup USDC) on Ethereum, backstopped by a 5M USDC PSM for 1:1 swaps; ALTO token holders govern markets and per-asset risk parameters.",
+      "summary": "DUSD is minted in Alto mint markets against posted collateral subject to per-market debt ceilings, with a capped USDC PSM that can mint/burn DUSD 1:1 before fees. ALTO staking grants governance power and fee sharing, while live admin executors still need direct on-chain role review.",
       "controls": [
         {
           "chain": "ethereum",
@@ -10432,32 +10475,68 @@
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "Mint bounded by per-market isolated collateral risk parameters; PSM enables 1:1 USDC<->DUSD swaps at 0.20% fee capped at 5M USDC.",
+          "capDescription": "Mint bounded by per-market debt ceilings and collateral risk parameters.",
           "canRaiseCap": "unknown",
-          "evidence": "DUSD is minted via overcollateralized isolated lending markets with per-asset risk parameters, plus a 5M-cap USDC PSM for peg arbitrage, per Alto docs."
+          "sources": [
+            {
+              "label": "Alto DUSD docs",
+              "url": "https://docs.alto.money/alto-protocol/dusd"
+            }
+          ],
+          "evidence": "Alto docs distinguish borrow markets from mint markets and state that mint markets create new DUSD against posted collateral, capped by market-level debt ceilings."
         },
         {
-          "label": "ALTO token governance",
+          "chain": "ethereum",
+          "label": "Alto DUSD/USDC PSM",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "The public PSM can mint DUSD against USDC and burn DUSD for USDC, bounded by a 5,000,000 USDC capacity and 0.20% fee.",
+          "canRaiseCap": "unknown",
+          "sources": [
+            {
+              "label": "Alto PSM docs",
+              "url": "https://docs.alto.money/alto-protocol/psm"
+            }
+          ],
+          "evidence": "Alto PSM docs state that USDC->DUSD swaps mint new DUSD, DUSD->USDC swaps burn DUSD, and the PSM refuses swaps above the configured 5,000,000 USDC capacity."
+        },
+        {
+          "label": "Alto governance and admin executors",
           "role": "governor",
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
           "canRaiseCap": "unknown",
-          "evidence": "All markets and risk parameters are governed by ALTO token holder votes; governance tunes parameters and the PSM cap rather than minting directly."
+          "sources": [
+            {
+              "label": "Alto staking and governance docs",
+              "url": "https://docs.alto.money/alto-protocol/staking"
+            }
+          ],
+          "evidence": "Alto docs describe ALTO staking as the governance-power mechanism, but the live Owner/Pauser/Freezer execution path was not independently read on-chain."
         }
       ],
       "review": {
         "sources": [
           {
-            "label": "Alto docs",
-            "url": "https://docs.alto.money/"
+            "label": "Alto DUSD docs",
+            "url": "https://docs.alto.money/alto-protocol/dusd"
+          },
+          {
+            "label": "Alto PSM docs",
+            "url": "https://docs.alto.money/alto-protocol/psm"
+          },
+          {
+            "label": "Alto staking and governance docs",
+            "url": "https://docs.alto.money/alto-protocol/staking"
           }
         ],
         "sourceFreeRationale": "Market/PSM mechanism and ALTO governance confirmed from Alto docs; on-chain market admin owner and governance execution path not independently read on-chain.",
-        "evidence": "Alto docs describe DUSD as an overcollateralized stable minted from isolated on-chain markets with a 5M USDC PSM backstop, all governed by ALTO token votes; no centralized direct-mint route is described.",
+        "evidence": "Alto docs describe DUSD mint markets that create new DUSD against collateral subject to debt ceilings and a capped PSM that mints/burns DUSD against USDC; docs also describe ALTO staking governance, but not enough live role data to assert direct ALTO-token-holder control of admin execution.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the on-chain Alto market admin/owner and ALTO governance execution authority on Ethereum."
+          "Resolve the on-chain Alto market admin/owner, PSM owner/cap admin, and Owner/Pauser/Freezer or governance execution authorities on Ethereum."
         ]
       }
     },
@@ -12347,7 +12426,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner and proxy-admin reads resolve to EOAs with no verified on-chain multisig setup.",
+      "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum owner reads resolve to an EOA while the EIP-1967 proxy admin is a contract whose owner resolves to an EOA.",
       "controls": [
         {
           "label": "Banking Circle issuer-operated mint authority",
@@ -12390,10 +12469,10 @@
           "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
           "label": "EURI EIP-1967 proxy admin",
           "role": "proxy-admin",
-          "authorityType": "eoa",
+          "authorityType": "contract",
           "directMintAbility": "upgrade-only",
-          "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166591; code read returned no contract bytecode."
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "EIP-1967 admin slot returned this address in a 2026-05-25 Ethereum RPC read; code size was nonzero and owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21."
         }
       ],
       "review": {
@@ -12407,7 +12486,7 @@
             "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
           }
         ],
-        "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path.",
+        "evidence": "Issuer materials and direct Ethereum reads identify Banking Circle's issuer route, token owner, and proxy-admin path. A 2026-05-25 Ethereum RPC read corrected the proxy-admin classification from no-code EOA to contract-owned admin.",
         "reviewer": "Codex mint-authority full-gap batch-2",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -13157,7 +13236,7 @@
           "role": "direct-minter",
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "threshold": 2,
+          "threshold": 3,
           "signerCount": 5,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
@@ -13171,7 +13250,7 @@
               "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
             }
           ],
-          "evidence": "EURQ owner() returned this address at Ethereum block 25166592. required() returned 2 and getOwners() returned 5 owners. HadronToken source exposes owner-only mint(destination,amount)."
+          "evidence": "EURQ owner() returned this address in a 2026-05-25 Ethereum RPC read. required() returned 3 and getOwners() returned 5 owners. HadronToken source exposes owner-only mint(destination,amount)."
         },
         {
           "chain": "ethereum",
@@ -13180,7 +13259,7 @@
           "role": "proxy-admin",
           "authorityType": "multisig",
           "directMintAbility": "upgrade-only",
-          "threshold": 2,
+          "threshold": 3,
           "signerCount": 5,
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -13189,7 +13268,7 @@
               "url": "https://etherscan.io/address/0x8df723295214ea6f21026eeeb4382d475f146f9f"
             }
           ],
-          "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166592. required() returned 2 and getOwners() returned 5 owners."
+          "evidence": "EIP-1967 admin slot returned this address in a 2026-05-25 Ethereum RPC read. required() returned 3 and getOwners() returned 5 owners."
         }
       ],
       "review": {
@@ -13203,7 +13282,7 @@
             "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
           }
         ],
-        "evidence": "Direct Ethereum reads resolved implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, owner 0x284Df7B9d9F471554E9257bD9b116189f7997d45, and proxy admin 0xa6724f792002D5677a7Bc370986E1B580b8773E7; source confirms owner-only minting.",
+        "evidence": "Direct Ethereum reads resolved implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, owner 0x284Df7B9d9F471554E9257bD9b116189f7997d45, and proxy admin 0xa6724f792002D5677a7Bc370986E1B580b8773E7; live multisig reads on 2026-05-25 returned 3/5 for both controls, and source confirms owner-only minting.",
         "reviewer": "Codex mint-authority full-gap batch-2",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -13336,17 +13415,17 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 1/3 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
+      "summary": "EURR is issuer-minted by StablR. Ethereum exposes owner/proxy-admin controls; the owner is a 2/2 multisig-style contract and the proxy admin is a 1/1 multisig-style contract.",
       "controls": [
         {
           "chain": "ethereum",
-          "address": "0x8278d2881DBf8F6FC01C98D196c4b16F1AadE5Bc",
+          "address": "0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD",
           "label": "EURR Ethereum owner mint authority",
           "role": "direct-minter",
           "authorityType": "multisig",
           "directMintAbility": "direct",
-          "threshold": 1,
-          "signerCount": 3,
+          "threshold": 2,
+          "signerCount": 2,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
           "sources": [
@@ -13359,7 +13438,7 @@
               "url": "https://docs.stablr.com/docs/smart-contract"
             }
           ],
-          "evidence": "owner() returned this address at Ethereum block 25166592. required() returned 1 and getOwners() returned 3 owners."
+          "evidence": "owner() returned this address in a 2026-05-25 Ethereum RPC read. required() returned 2 and getOwners() returned 2 owners."
         },
         {
           "chain": "ethereum",
@@ -13391,7 +13470,7 @@
             "url": "https://docs.stablr.com/docs/what-is-eurr"
           }
         ],
-        "evidence": "StablR docs identify EURR as issuer-managed and list the Ethereum contract; direct reads resolve owner/proxy-admin controls and multisig-style thresholds.",
+        "evidence": "StablR docs identify EURR as issuer-managed and list the Ethereum contract; direct reads resolve owner/proxy-admin controls and multisig-style thresholds. A 2026-05-25 Ethereum RPC read returned owner 0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD as a 2/2 multisig-style contract.",
         "reviewer": "Codex mint-authority full-gap batch-2",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -14545,7 +14624,7 @@
       "controls": [
         {
           "chain": "ethereum",
-          "address": "0xfa771871D3D5c85e156D3d379E2ff7699C4D6A66",
+          "address": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
           "label": "FDUSD token owner Safe",
           "role": "direct-minter",
           "authorityType": "safe",
@@ -14566,9 +14645,13 @@
             {
               "label": "Ethereum FDUSD contract",
               "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
+            },
+            {
+              "label": "Safe transaction service",
+              "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
             }
           ],
-          "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Worker Safe API review found no modules and zero guard."
+          "evidence": "Token owner reads resolve to this Safe; getThreshold() returned 4 and getOwners() returned 6 owners at Ethereum block 25165911. Safe API review confirmed 4/6 owners, no modules, and zero guard."
         }
       ],
       "review": {
@@ -15964,11 +16047,33 @@
           "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
           "label": "ftUSD token owner / masterMinter",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "safe",
           "directMintAbility": "can-authorize",
+          "threshold": 3,
+          "signerCount": 5,
           "canRaiseCap": true,
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; signer setup was not verified."
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0xB7B543337539219A5a1326aCB71dBa8Bba408bc8",
+              "0x3c42749709BF354B3aE0Db29Fd2dd88089b21B4E",
+              "0xf9E5aF16243041cE3141284D225CAfC0fC749a10",
+              "0x09E2B49280f1879172b2C3345d08896921707881",
+              "0xD0CA88388d1732594D611535314e9B6745396f5A"
+            ],
+            "threshold": 3,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+            "source": "safe-api"
+          },
+          "sources": [
+            {
+              "label": "ftUSD owner Safe API",
+              "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+            }
+          ],
+          "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; Safe API returned a 3/5 Safe with no enabled modules and the zero guard."
         }
       ],
       "review": {
@@ -15978,11 +16083,11 @@
             "url": "https://docs.flyingtulip.com/"
           }
         ],
-        "evidence": "Flying Tulip docs describe on-chain mint/redeem, and Ethereum reads identify the minter and owner/masterMinter addresses.",
+        "evidence": "Flying Tulip docs describe on-chain mint/redeem, and Ethereum reads identify the minter plus a 3/5 Safe owner/masterMinter.",
         "reviewer": "Codex mint-authority full-gap batch-2",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Verify the source and security setup of 0x1118E1c057211306A40A4D7006C040dBFE1370cb and 0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9.",
+          "Verify the source and security setup of 0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9.",
           "Review the Sonic deployment separately."
         ]
       }
@@ -16371,12 +16476,26 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: FXD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Fathom docs",
+          "url": "https://docs.fathom.fi/"
+        },
+        {
+          "label": "Fathom stablecoin source",
+          "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/FathomStablecoin.sol"
+        },
+        {
+          "label": "AdminControls source",
+          "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/AdminControls.sol"
+        }
+      ],
+      "evidence": "FXD token source does not show a direct blacklist, but Fathom AdminControls can pause core modules including bookKeeper, positionManager, and stablecoinAdapter. Treat as a possible mutable holder-facing protocol-control surface.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
@@ -17182,7 +17301,7 @@
     "detailProvider": "commodity",
     "name": "Goldfish Gold",
     "symbol": "GGBR",
-    "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure rather than on-chain redemption logic.",
+    "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure and issuer-controlled mint/redeem contracts.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GOLD",
@@ -17192,7 +17311,7 @@
       "navToken": false
     },
     "collateral": "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital",
-    "pegMechanism": "Issuer-managed gold reference rather than on-chain redemption logic; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
+    "pegMechanism": "Issuer-managed gold reference with issuer-controlled mint/redeem contracts; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
     "commodityOunces": 0.001,
     "geckoId": "goldfish-gold",
     "links": [
@@ -17212,7 +17331,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "GGBR is issued by Goldfish Gold (I-On Digital Corp); each token references 1/1000th of a troy ounce of issuer-managed gold exposure and is minted/managed by the issuer rather than through any on-chain user redemption logic.",
+      "summary": "GGBR is issued by Goldfish Gold (I-On Digital Corp); each token references 1/1000th of a troy ounce of issuer-managed gold exposure, with minting and redemption controlled by issuer contracts and admin keys.",
       "controls": [
         {
           "label": "Goldfish Gold / I-On Digital issuance backend",
@@ -17220,7 +17339,7 @@
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "evidence": "Issuer materials describe GGBR as issuer-managed gold exposure on I-On Digital's balance sheet with no on-chain redemption logic; supply creation is controlled by the issuer with no permissionless mint route."
+          "evidence": "Issuer materials describe GGBR as issuer-managed gold exposure on I-On Digital's balance sheet; the Cyfrin review covers issuer mint/redemption contracts, so supply creation and redemption remain issuer-controlled with no permissionless mint route."
         }
       ],
       "review": {
@@ -17228,10 +17347,14 @@
           {
             "label": "Goldfish Gold",
             "url": "https://goldfishgold.com/"
+          },
+          {
+            "label": "Goldfish Gold Cyfrin review",
+            "url": "https://goldfishgold.com/Cyfrin-Report.pdf"
           }
         ],
         "sourceFreeRationale": "Classification based on the issuer-managed model in project materials; the on-chain Ethereum owner/minter admin for GGBR was not independently resolved.",
-        "evidence": "Project materials and CoinGecko describe GGBR as an issuer-managed fractional gold token (1/1000 troy ounce) without on-chain redemption; minting is fully centralized at the issuer.",
+        "evidence": "Project materials and the Cyfrin review describe GGBR as an issuer-managed fractional gold token (1/1000 troy ounce) with issuer-controlled mint/redemption contracts; minting remains centralized at the issuer.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -17646,7 +17769,7 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); Mento DAO (veMENTO) governs via a timelock, with stablecoin contract ownership held by a 4/7 multisig during the V3 rollout.",
+      "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); live token ownership resolves to the Mento timelock, while Mento DAO (veMENTO) governs the system.",
       "controls": [
         {
           "chain": "celo",
@@ -17661,14 +17784,15 @@
         },
         {
           "chain": "celo",
+          "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
           "label": "Mento DAO governance / stablecoin contract owner",
           "role": "governor",
           "authorityType": "dao-governor",
           "directMintAbility": "parameter-only",
-          "capDescription": "Mento DAO (veMENTO) governs via a timelock; per MGP-14 the owner role of Mento V3 stablecoin contracts was transferred to a 4/7 multisig to orchestrate the V3 rollout.",
+          "capDescription": "Mento DAO (veMENTO) governs via a timelock; live GHSm owner() returned this timelock, whose getMinDelay() returned 172800 seconds.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "Mento governance docs describe a veMENTO DAO with a governance timelock; MGP-14 transferred Mento V3 stablecoin contract ownership to a 4/7 multisig for the deployment rollout."
+          "evidence": "Mento governance docs describe a veMENTO DAO with a governance timelock; Celo RPC reads on 2026-05-25 returned GHSm owner 0x890DB8A597940165901372Dd7DB61C9f246e2147 and a 2-day timelock delay."
         }
       ],
       "review": {
@@ -17682,12 +17806,12 @@
             "url": "https://docs.mento.org/mento/protocol-concepts/governance"
           }
         ],
-        "sourceFreeRationale": "Mint mechanism and governance model confirmed from Mento docs and MGP-14; the live GHSm Celo token owner address was not independently read.",
-        "evidence": "Mento V3 docs and the MGP-14 deployment proposal describe collateralized CDP minting of FX stables against USDm, governed by the Mento DAO timelock with a 4/7 multisig owning the stablecoin contracts during rollout.",
+        "sourceFreeRationale": "Mint mechanism and governance model confirmed from Mento docs; live owner and timelock delay were read from Celo RPC on 2026-05-25.",
+        "evidence": "Mento V3 docs describe collateralized CDP minting of FX stables against USDm; live Celo RPC reads show GHSm owner() now resolves to the Mento timelock with a 2-day delay.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the live GHSm Celo token owner (Mento Timelock vs 4/7 multisig) and borrower-operations/circuit-breaker admins before raising confidence."
+          "Resolve borrower-operations and circuit-breaker admins before raising confidence."
         ]
       }
     },
@@ -19370,7 +19494,7 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "hbUSDT is a Hyperbeat vault/share token over USDT; wrapper minting is share accounting while base USDT issuance remains inherited from Tether's reviewed USDT mint authority.",
+      "summary": "hbUSDT is a Hyperbeat vault/share token that accepts USDT0, USDe, and USR into a Hyperbeat insurance/vault flow; wrapper minting is share accounting while the USDT/USDT0 leg still inherits Tether's reviewed mint authority.",
       "inheritedFrom": "usdt-tether",
       "controls": [
         {
@@ -19380,19 +19504,19 @@
           "role": "wrapper",
           "authorityType": "contract",
           "directMintAbility": "none",
-          "capDescription": "hbUSDT shares are minted against USDT strategy deposits and do not create base USDT supply.",
+          "capDescription": "hbUSDT shares are minted through Hyperbeat deposit contracts against supported strategy assets including USDT0, USDe, and USR; the share token does not create base USDT supply.",
           "modulesOrGuardsStatus": "unknown",
           "sources": [
             {
-              "label": "Hyperbeat",
-              "url": "https://hyperbeat.org/"
+              "label": "Hyperbeat hbUSDT docs",
+              "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
             },
             {
               "label": "Accountable Hyperbeat reserves",
               "url": "https://accountable.hyperbeat.org/"
             }
           ],
-          "evidence": "Local metadata marks hbUSDT as a strategy-vault variant of usdt-tether; Hyperbeat materials identify the vault/reserve route. HyperEVM reads at block 35977747 resolved implementation 0x77b13307d6a36511ee7d887ae7ae9eb28e78e690 and proxy admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac."
+          "evidence": "Hyperbeat docs list the hbUSDT vault token, insurance contract, redemption contract, and supported deposit assets USDT0, USDe, and USR. HyperEVM reads at block 35977747 resolved implementation 0x77b13307d6a36511ee7d887ae7ae9eb28e78e690 and proxy admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac."
         },
         {
           "chain": "ethereum",
@@ -19421,15 +19545,15 @@
       "review": {
         "sources": [
           {
-            "label": "Hyperbeat",
-            "url": "https://hyperbeat.org/"
+            "label": "Hyperbeat hbUSDT docs",
+            "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
           },
           {
             "label": "Tether transparency",
             "url": "https://tether.to/en/transparency/"
           }
         ],
-        "evidence": "Local variant metadata and Hyperbeat reserve materials establish hbUSDT as wrapper/share accounting over USDT; parent USDT mint authority is already reviewed.",
+        "evidence": "Hyperbeat docs establish hbUSDT as wrapper/share accounting over supported strategy assets including USDT0, USDe, and USR; the USDT/USDT0 dependency inherits reviewed Tether mint authority.",
         "reviewer": "Codex mint-authority full-gap batch-2",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -20104,18 +20228,28 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "HLUSD is issued and managed by HeLa Labs (Singapore) as the HeLa ecosystem's centralized dollar settlement asset, minted against fiat and fiat-equivalent reserves through an issuer/ecosystem-controlled backend on HeLa's native chain.",
+      "summary": "HLUSD issuance is controlled by HeLa's on-chain governance roles: MintProposer initiates mint requests, MintVoter approval satisfies the configured quorum, and Admin configures role/quorum parameters.",
       "controls": [
         {
-          "label": "HeLa Labs issuance backend",
+          "label": "HeLa MintProposer/MintVoter quorum",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "evidence": "HeLa Labs / the HeLa ecosystem mints and manages HLUSD against fiat-equivalent reserves as the chain's settlement asset per its governance docs; supply is issuer-controlled with no permissionless or user-collateralized mint route."
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "HeLa governance docs describe MintProposer addresses proposing mint requests to whitelisted users and MintVoter addresses approving them until mintQuorum is reached."
+        },
+        {
+          "label": "HeLa Admin role",
+          "role": "minter-admin",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "HeLa governance docs state that Admin manages roles, mintQuorum, burnQuorum, thresholds, and stablecoin parameters."
         }
       ],
       "review": {
@@ -20125,8 +20259,8 @@
             "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
           }
         ],
-        "sourceFreeRationale": "Classification based on the issuer/ecosystem model in HeLa documentation; the on-chain minter/admin could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
-        "evidence": "HeLa documentation describes HLUSD as an issuer/ecosystem-managed stablecoin backed by fiat and fiat-equivalent reserves and used as the HeLa runtime settlement asset; minting is centralized at the issuer.",
+        "sourceFreeRationale": "Classification based on the role-based mint governance model in HeLa documentation; the on-chain role holder addresses could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
+        "evidence": "HeLa documentation describes HLUSD mint governance through MintProposer, MintVoter, and Admin roles rather than a generic issuer backend; exact live role holder addresses are still unresolved.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -21094,9 +21228,9 @@
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
-      "authorityPosture": "partially-bounded-admin",
+      "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "IDRX is issued by PT IDRX with centralized KYC-gated 1:1 mint/redeem against IDR fiat and government bonds; CertiK-audited contracts use multi-member approval and a 24-hour timelock to bound privileged admin actions.",
+      "summary": "IDRX is issued by PT IDRX with centralized KYC-gated 1:1 mint/redeem against IDR fiat and government bonds; audited materials state the direct MINTER_ROLE is assigned to an MPC wallet, while multisig/timelock controls apply to upgrade and role-admin paths.",
       "controls": [
         {
           "label": "PT IDRX issuance backend",
@@ -21107,13 +21241,13 @@
           "evidence": "PT IDRX operates centralized KYC-gated mint and redeem of IDRX against custodied IDR reserves and government bonds across its native-multichain deployment."
         },
         {
-          "label": "IDRX multisig + 24h timelock admin",
+          "label": "IDRX role/upgrade multisig + 24h timelock admin",
           "role": "minter-admin",
           "authorityType": "multisig",
           "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "IDRX security disclosures describe multi-member (multisig) approval for transactions and a 24-hour timelock on changes, bounding privileged admin/role operations; exact signer set and threshold not independently confirmed."
+          "evidence": "IDRX audit materials describe multi-member approval and a 24-hour timelock for privileged admin/upgrade paths, but explicitly state the direct MINTER_ROLE cannot use the timelock and is assigned to an MPC wallet."
         }
       ],
       "review": {
@@ -21125,14 +21259,18 @@
           {
             "label": "IDRX website",
             "url": "https://idrx.co/"
+          },
+          {
+            "label": "IDRX CertiK assessment",
+            "url": "https://home.idrx.co/docs/security-assesment-idrx.pdf"
           }
         ],
-        "sourceFreeRationale": "Multisig/timelock controls reported in IDRX security disclosures; exact on-chain multisig signer/threshold and which operations the timelock governs were not independently confirmed in this pass.",
-        "evidence": "IDRX materials and CertiK-audit coverage describe a centralized fiat issuer with KYC-gated mint/redeem plus multi-member approval and a 24-hour timelock on privileged actions; minting is issuer-operated rather than permissionless.",
+        "sourceFreeRationale": "Direct minter MPC and role/upgrade timelock split taken from the IDRX CertiK assessment; exact on-chain signer/threshold and per-chain role holders were not independently confirmed in this pass.",
+        "evidence": "IDRX materials and CertiK-audit coverage describe a centralized fiat issuer with KYC-gated mint/redeem. The audit states direct MINTER_ROLE minting is assigned to an MPC wallet because that function cannot use the timelock; multisig/timelock controls bound role/upgrade changes, not the direct mint path.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm the on-chain multisig signer set/threshold and whether the 24h timelock governs the mint path itself or only role/upgrade changes.",
+          "Confirm the on-chain MPC wallet address holding MINTER_ROLE and the multisig signer set/threshold for role and upgrade admin changes.",
           "Resolve per-chain minter-admin and proxy admin across Polygon, Base, BSC, Klaytn, Gnosis, Etherlink, Worldchain, and Solana."
         ]
       }
@@ -21441,14 +21579,26 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Reviewed local metadata suppression: ISC's \"Cash reserves\" slice describes generic off-chain cash, not the unrelated CASH token tracked elsewhere.",
-      "evidence": "Explicit No retained: the apparent Upstream signal is a text match on a generic cash reserve label, with no coinId, blacklistable reserve flag, variant parent, CEX custody, or direct stablecoin reserve reference.",
-      "reviewer": "Codex inferred-status backfill audit",
-      "reviewedAt": "2026-05-12",
-      "upstreamSuppressionRationale": "Suppresses a resolver text false-positive where the generic reserve phrase \"Cash reserves\" matches the tracked CASH symbol. ISC metadata does not identify CASH token exposure or another upstream freezable asset."
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "ISC docs",
+          "url": "https://wp.isc.money/"
+        },
+        {
+          "label": "Orb token metadata",
+          "url": "https://orbmarkets.io/token/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD/metadata"
+        },
+        {
+          "label": "Solana freeze account docs",
+          "url": "https://solana.com/docs/tokens/basics/freeze-account"
+        }
+      ],
+      "evidence": "ISC's Solana mint has a non-null freeze authority, and Solana token accounts can be frozen when a mint retains freeze authority. That is direct holder-account freeze capability.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
@@ -23264,7 +23414,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions; user collateral is not rehypothecated. Protocol is forked from the d-EURO / Frankencoin architecture.",
+    "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions, plus active bridge routes where source stablecoins such as USDC and USDT are deposited 1:1; protocol is forked from the d-EURO / Frankencoin architecture.",
     "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
     "mechanismArchetype": "cdp",
     "geckoId": "juice-dollar",
@@ -23346,22 +23496,25 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "inherited",
       "sources": [
         {
           "label": "Docs",
           "url": "https://docs.juicedollar.com/"
         },
         {
-          "label": "GitHub",
-          "url": "https://github.com/JuiceDollar"
+          "label": "Bridge docs",
+          "url": "https://docs.juicedollar.com/swap.html"
+        },
+        {
+          "label": "Smart contracts docs",
+          "url": "https://docs.juicedollar.com/smart-contracts.html"
         }
       ],
-      "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12"
+      "evidence": "Juice Dollar contracts are documented as immutable with no admin keys, so no direct JUSD holder freeze was identified. Active USDC/USDT bridge routes deposit source stablecoins and mint JUSD 1:1, creating upstream freeze exposure.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
@@ -23371,8 +23524,14 @@
     "reserves": [
       {
         "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
-        "pct": 100,
+        "pct": 99.999,
         "risk": "medium"
+      },
+      {
+        "name": "USDC/USDT bridge reserves",
+        "pct": 0.001,
+        "risk": "low",
+        "blacklistable": true
       }
     ]
   },
@@ -23413,7 +23572,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "JUSD is an issuer-managed, self-described asset-backed dollar token on BSC and Polygon; the issuer periodically adjusts supply through mint/burn against a claimed reserve, but no verifiable whitepaper, audited attestation, or holder-exercisable redemption route is published.",
+      "summary": "JUSD is an issuer-managed, self-described asset-backed dollar token on BSC and Polygon; the whitepaper says supply is adjusted through smart-contract mint/burn when backing assets change, but no audited attestation or holder-exercisable redemption route is published.",
       "controls": [
         {
           "label": "JUSD issuer mint/burn authority",
@@ -23429,10 +23588,14 @@
           {
             "label": "JUSD site",
             "url": "https://jusd.app/"
+          },
+          {
+            "label": "JUSD whitepaper",
+            "url": "https://jusd.app/whitepaper.pdf"
           }
         ],
-        "sourceFreeRationale": "Issuer-managed mint/burn taken from JUSD's marketing materials; the on-chain token owner/minter admin and any reserve backing are unverified, and detailed mechanism documentation could not be located.",
-        "evidence": "JUSD's public site and token listings describe a centrally issuer-managed asset-backed stablecoin with generic mint/burn and reserve-adjustment language across BSC and Polygon, but no verifiable whitepaper, audited reserve attestation, or holder redemption route was found; issuance is treated as issuer-controlled.",
+        "sourceFreeRationale": "Issuer-managed mint/burn taken from JUSD's public site and whitepaper; the on-chain token owner/minter admin and any reserve backing are unverified.",
+        "evidence": "JUSD's public site and whitepaper describe a centrally issuer-managed asset-backed stablecoin with smart-contract mint/burn and reserve-adjustment language across BSC and Polygon, but no audited reserve attestation or holder redemption route was found; issuance is treated as issuer-controlled.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -24385,9 +24548,8 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "inherited",
       "sources": [
         {
           "label": "BscScan contract source",
@@ -24398,9 +24560,9 @@
           "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
         }
       ],
-      "evidence": "Freeze-only re-review: the verified BSC FiatToken source exposes privileged mint authority but no holder freeze, blacklist, pause, seize, or arbitrary role-burn function. OV voucher/redemption risk is not a holder-balance FreezeWatch control.",
-      "reviewer": "Codex FreezeWatch review",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Verified BSC FiatToken source exposes privileged mint authority but no direct holder freeze, blacklist, pause, seize, or arbitrary role-burn function. KRWO is backed by Open Voucher/KRW redemption rails, so FreezeWatch resolves upstream backing/redemption blocking exposure.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
@@ -24411,7 +24573,8 @@
       {
         "name": "Open Voucher KRW vouchers / OV tokens",
         "pct": 100,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ]
   },
@@ -24904,26 +25067,34 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "inherited",
       "sources": [
         {
           "label": "Sourcify UtilityToken.sol",
           "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+        },
+        {
+          "label": "Lumi Finance",
+          "url": "https://lumi.finance/"
+        },
+        {
+          "label": "CoinGecko metadata",
+          "url": "https://api.coingecko.com/api/v3/coins/lumi-finance-luausd"
         }
       ],
-      "evidence": "Freeze-only re-review: the verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no holder freeze, blacklist, pause, seize, or arbitrary burn function.",
-      "reviewer": "Codex FreezeWatch review",
-      "reviewedAt": "2026-05-24"
+      "evidence": "Verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no direct holder freeze, blacklist, pause, seize, or arbitrary burn function. Lumi materials describe protocol reserves that include stablecoins, so FreezeWatch resolves upstream exposure.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "stage1-l2",
     "deploymentModel": "single-chain",
     "reserves": [
       {
-        "name": "LUA floor-price collateral and protocol-owned liquidity",
+        "name": "LUA floor-price collateral, protocol-owned liquidity, and stablecoin reserves",
         "pct": 100,
-        "risk": "very-high"
+        "risk": "very-high",
+        "blacklistable": true
       }
     ],
     "liveReservesConfig": {
@@ -25434,12 +25605,26 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-      "evidence": "Resolved to No: M0's M has on-chain TTG/POWER governance over permissioned minters and off-chain T-bill custody, but the M token itself exposes no holder-balance freeze, blacklist, or seizure surface.",
-      "reviewer": "Opus med-confidence verification",
-      "reviewedAt": "2026-05-23"
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "M0 Solana docs",
+          "url": "https://docs.m0.org/home/technical-documentations/solana/"
+        },
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "MToken technical specification",
+          "url": "https://docs.m0.org/home/technical-specifications/m-token"
+        }
+      ],
+      "evidence": "M0's Ethereum MToken mint and burn paths route through MinterGateway, and the Solana Token-2022 M deployment is documented as frozen-by-default with thawing limited to approved earners. That Solana holder-account control is direct FreezeWatch exposure for M.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-unregulated",
@@ -29610,12 +29795,12 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "NUSD is a synthetic delta-neutral dollar whose token carries a MINTER_ROLE, a DEFAULT_ADMIN_ROLE, and a denylist; mint is routed through Neutrl's Router.sol (1:1 vs USDC/USDT/USDe with a per-block cap) into custodied reserves, while redemption is KYC-gated. A single admin controls minter and denylist roles.",
+      "summary": "NUSD is a synthetic delta-neutral dollar whose token grants MINTER_ROLE to Neutrl's StableMinter and DEFAULT_ADMIN_ROLE to a separate admin; mint is routed through Neutrl's Router.sol into AssetReserve/StableMinter, while redemption is KYC-gated.",
       "controls": [
         {
           "chain": "ethereum",
-          "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
-          "label": "NUSD token MINTER_ROLE (Router/Minter)",
+          "address": "0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D",
+          "label": "NUSD StableMinter MINTER_ROLE",
           "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
@@ -29630,27 +29815,35 @@
             {
               "label": "NUSD token (Etherscan)",
               "url": "https://etherscan.io/token/0xe556aba6fe6036275ec1f87eda296be72c811bce"
+            },
+            {
+              "label": "Neutrl addresses",
+              "url": "https://docs.neutrl.finance/resources-and-ecosystem/addresses"
+            },
+            {
+              "label": "Neutrl minting docs",
+              "url": "https://docs.neutrl.finance/protocol-mechanics/minting"
             }
           ],
-          "evidence": "Etherscan ABI for the NUSD token shows MINTER_ROLE, mint/burn, and denylist functions; Neutrl docs describe Router.sol mint() routing collateral to AssetReserve.sol with a maxMintPerBlock cap and KYC-gated redemption."
+          "evidence": "Ethereum role reads on 2026-05-25 confirmed 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D holds MINTER_ROLE; Neutrl docs list it as StableMinter and describe Router.sol mint() routing collateral to AssetReserve.sol before StableMinter issues NUSD with a maxMintPerBlock cap."
         },
         {
           "chain": "ethereum",
-          "address": "0xE78615F841c3C013173FBE7679d17442C8673Cc1",
+          "address": "0x51De41ec06e779715d7FB71Ef83A736cFc903217",
           "label": "NUSD DEFAULT_ADMIN_ROLE (token admin)",
           "role": "minter-admin",
-          "authorityType": "eoa",
+          "authorityType": "unknown",
           "directMintAbility": "can-authorize",
           "capDescription": "The NUSD token admin (DEFAULT_ADMIN_ROLE, with transferAdmin/acceptAdmin) can grant/revoke MINTER_ROLE and DENYLIST_MANAGER_ROLE, concentrating mint-authorization and denylist control in a single admin.",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "not-applicable",
+          "modulesOrGuardsStatus": "unknown",
           "sources": [
             {
               "label": "NUSD token (Etherscan)",
               "url": "https://etherscan.io/token/0xe556aba6fe6036275ec1f87eda296be72c811bce"
             }
           ],
-          "evidence": "Etherscan shows the NUSD constructor took an _admin parameter resolving to 0xE78615F841c3C013173FBE7679d17442C8673Cc1, with SingleAdminAccessControl (transferAdmin/acceptAdmin) over MINTER_ROLE and DENYLIST_MANAGER_ROLE."
+          "evidence": "Ethereum hasRole(DEFAULT_ADMIN_ROLE) reads on 2026-05-25 returned true for 0x51De41ec06e779715d7FB71Ef83A736cFc903217 and false for the prior constructor/admin address 0xE78615F841c3C013173FBE7679d17442C8673Cc1."
         }
       ],
       "review": {
@@ -29664,12 +29857,12 @@
             "url": "https://docs.neutrl.finance/"
           }
         ],
-        "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Etherscan and Neutrl docs; whether the admin is an EOA, multisig, or Safe was not verified on-chain, so EOA is recorded conservatively pending confirmation.",
-        "evidence": "Etherscan reads of the NUSD token show MINTER_ROLE, a SingleAdminAccessControl admin (constructor _admin 0xE78615...3Cc1), and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption, backed by delta-neutral/OTC strategies held at custodians.",
+        "sourceFreeRationale": "Token-level MINTER_ROLE/admin and Router mint flow confirmed from Ethereum role reads and Neutrl docs; whether the live admin is an EOA, multisig, or Safe was not verified on-chain.",
+        "evidence": "Ethereum reads of the NUSD token show MINTER_ROLE assigned to StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D, live DEFAULT_ADMIN_ROLE at 0x51De41ec06e779715d7FB71Ef83A736cFc903217, and denylist roles; Neutrl docs describe permissionless Router.sol minting 1:1 against liquid stablecoins with a per-block cap and KYC-gated redemption.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm whether the NUSD admin address 0xE78615F841c3C013173FBE7679d17442C8673Cc1 is an EOA, multisig, or Safe, and resolve the live MINTER_ROLE holder (Router/Minter contract) before raising confidence."
+          "Confirm whether the NUSD admin address 0x51De41ec06e779715d7FB71Ef83A736cFc903217 is an EOA, multisig, or Safe before raising confidence."
         ]
       }
     },
@@ -30122,19 +30315,33 @@
       }
     ],
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: NXUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": "inherited",
+      "sources": [
+        {
+          "label": "Sourcify NXUSD source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+        },
+        {
+          "label": "Nereus peg article",
+          "url": "https://medium.com/nereus-protocol/algorithmic-stablecoin-peg-mechanisms-4eb3e2eef411"
+        },
+        {
+          "label": "Nereus NXUSD overview",
+          "url": "https://medium.com/nereus-protocol/everything-you-need-to-know-about-nxsud-1234fc84ed29"
+        }
+      ],
+      "evidence": "NXUSD token source exposes owner mint and user burn paths but no direct freeze, blacklist, pause, or seize function. Nereus materials describe DAI among NXUSD collateral, so DAI's freeze exposure resolves upstream.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "reserves": [
       {
-        "name": "Nereus overcollateralized crypto positions",
+        "name": "Nereus overcollateralized crypto positions including DAI collateral",
         "pct": 100,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ],
     "liveReservesConfig": {
@@ -32288,20 +32495,21 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "issuer-direct-mint",
+      "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "PUSD is a Polygon ERC-20 wrapper minted 1:1 when users deposit USDC.e through Polymarket's CollateralOnramp wrap() function; the onramp is admin-pausable and operated by Polymarket.",
+      "summary": "PUSD is a Polygon ERC-20 wrapper minted 1:1 when users deposit USDC.e through Polymarket's CollateralOnramp wrap() function; the onramp is admin-pausable and PUSD inherits base USDC issuance risk from Circle.",
+      "inheritedFrom": "usdc-circle",
       "controls": [
         {
           "chain": "polygon",
           "address": "0x93070a847efEf7F70739046A929D47a521F5B8ee",
           "label": "Polymarket CollateralOnramp (wrap, admin-pausable)",
-          "role": "direct-minter",
+          "role": "wrapper",
           "authorityType": "contract",
-          "directMintAbility": "direct",
+          "directMintAbility": "none",
           "modulesOrGuardsStatus": "present",
-          "evidence": "Polymarket docs describe wrap(address,address,uint256) on the CollateralOnramp minting pUSD 1:1 against deposited USDC.e; an admin can pause the onramp (reverts OnlyUnpaused), so issuance is contract-mediated but issuer-controlled."
+          "evidence": "Polymarket docs describe wrap(address,address,uint256) on the CollateralOnramp minting pUSD 1:1 against deposited USDC.e; an admin can pause the onramp (reverts OnlyUnpaused), so the wrapper is contract-mediated but cannot create base USDC supply."
         }
       ],
       "review": {
@@ -32311,7 +32519,7 @@
             "url": "https://docs.polymarket.com/concepts/pusd"
           }
         ],
-        "evidence": "Polymarket pUSD docs describe a CollateralOnramp/CollateralOfframp pair that wraps/unwraps USDC.e 1:1 into pUSD with on-chain enforcement and an admin pause control; minting is issuer-controlled via the onramp contract, not permissionless or user-collateralized governance.",
+        "evidence": "Polymarket pUSD docs describe a CollateralOnramp/CollateralOfframp pair that wraps/unwraps USDC.e 1:1 into pUSD with on-chain enforcement and an admin pause control; pUSD wrapper issuance is contract-mediated and inherits base USDC mint authority.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -36291,23 +36499,25 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "inherited",
       "sources": [
         {
           "label": "Docs",
           "url": "https://docs.shadeprotocol.io/shade-protocol/"
         },
         {
-          "label": "GitHub",
-          "url": "https://github.com/securesecrets/shade"
+          "label": "SILK docs",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk"
+        },
+        {
+          "label": "Minting and redemption docs",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
         }
       ],
-      "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12",
-      "upstreamSuppressionRationale": "The reviewed override is scoped to the SILK holder-facing token. Stablecoin redemption-pool assets are upstream reserve collateral, so this override records no direct SILK holder blacklist surface while documenting the deliberate reserve-side suppression."
+      "evidence": "No direct SILK holder blacklist was identified, but Shade documentation lists stablecoins such as USDC in collateral/redemption pool routes. Under the any-reserve FreezeWatch policy, that resolves as upstream freeze exposure.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
@@ -36323,7 +36533,8 @@
       {
         "name": "Stablecoin redemption pools (USDC, other stables)",
         "pct": 20,
-        "risk": "low"
+        "risk": "low",
+        "blacklistable": true
       },
       {
         "name": "SHD governance token (bounded minting backing)",
@@ -41026,19 +41237,21 @@
       "summary": "tGBP is a UUPS-upgradeable OFT token (StableTokenV1OFT) by BCP Technologies whose owner can mint and burn; minting occurs once an equivalent GBP deposit is verified off-chain by the team, with no separate role-gated minter.",
       "controls": [
         {
+          "chain": "ethereum",
+          "address": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
           "label": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
           "role": "minter-admin",
-          "authorityType": "contract",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "OpenZeppelin tGBP audit",
               "url": "https://www.openzeppelin.com/news/tgbp-audit"
             }
           ],
-          "evidence": "Per the OpenZeppelin audit, the owner of the StableTokenV1OFT contract can mint and burn tokens (no separate MINTER role) and holds UUPS upgrade authority; mint follows off-chain GBP deposit verification by the team."
+          "evidence": "Per the OpenZeppelin audit, the owner of the StableTokenV1OFT contract can mint and burn tokens (no separate MINTER role) and holds UUPS upgrade authority; Ethereum owner() returned 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 and cast code returned 0x."
         }
       ],
       "review": {
@@ -41048,12 +41261,12 @@
             "url": "https://www.openzeppelin.com/news/tgbp-audit"
           }
         ],
-        "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; the live owner address (EOA vs Safe/multisig) was not independently resolved on-chain.",
+        "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; live Ethereum owner read resolved to an EOA.",
         "evidence": "OpenZeppelin's audit of BCP Technologies' tGBP (StableTokenV1OFT) confirms a single owner controls mint and burn with UUPS upgradeability and no separate minter role; minting is gated on off-chain GBP deposit verification. This is owner-gated permissioned minting rather than a pure backend-only model.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve whether the live StableTokenV1OFT owner is an EOA, multisig, or Safe, and the proxy admin, before raising to verified."
+          "Resolve the proxy admin before raising to verified."
         ]
       }
     },
@@ -46865,22 +47078,26 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "possible",
       "sources": [
         {
           "label": "Docs",
           "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
         },
         {
-          "label": "Website",
-          "url": "https://app.orki.finance/"
+          "label": "Contract addresses",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/contract-addresses"
+        },
+        {
+          "label": "Swell explorer",
+          "url": "https://explorer.swellnetwork.io/address/0x0000baa0b1678229863c0a941c1056b83a1955f5"
         }
       ],
-      "evidence": "Explicit No retained: USDK is an immutable, admin-keyless Liquity-v2 (BOLD) fork; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
-      "reviewer": "Opus med-confidence verification",
-      "reviewedAt": "2026-05-23"
+      "evidence": "USDK is deployed behind an EIP-1967 proxy with Orki AccessManager authority. No active direct blacklist or freeze function was confirmed, but the holder-facing token surface is mutable.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "deploymentModel": "single-chain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -49062,22 +49279,26 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
-      "reviewedStatus": false,
+      "reviewedStatus": "possible",
       "sources": [
         {
           "label": "Docs",
           "url": "https://docs.quill.finance/faq/usdusdq"
         },
         {
-          "label": "Website",
-          "url": "https://app.quill.finance/"
+          "label": "Contract addresses",
+          "url": "https://docs.quill.finance/documentation/contract-addresses"
+        },
+        {
+          "label": "Scroll explorer",
+          "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xdb9e8f82d6d45fff803161f2a5f75543972b229a"
         }
       ],
-      "evidence": "Explicit No retained: USDQ is an immutable, admin-keyless Liquity-v2 (BOLD) fork on Scroll; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
-      "reviewer": "Opus med-confidence verification",
-      "reviewedAt": "2026-05-23"
+      "evidence": "USDQ is an EIP-1967/UUPS-style proxy whose implementation is controlled through the Quill AccessManager. No active direct blacklist or freeze function was confirmed, but the holder-facing token surface is mutable.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "chainTier": "unproven",
     "deploymentModel": "single-chain",
@@ -51927,13 +52148,22 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: USG resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Tangent USG docs",
+          "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+        },
+        {
+          "label": "Sourcify USG source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+        }
+      ],
+      "evidence": "Verified USG source exposes burnDebt(address,uint256), callable by owner-managed burner roles, and burns from the supplied address without holder allowance. That is direct holder-balance burn/seizure authority.",
+      "reviewer": "Codex FreezeWatch audit",
+      "reviewedAt": "2026-05-25"
     },
     "deploymentModel": "single-chain",
     "reserves": [

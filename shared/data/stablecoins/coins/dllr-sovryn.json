@@ -39,23 +39,26 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Explorer",
         "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
       },
       {
-        "label": "Dapp",
-        "url": "https://app.mynt.xyz/"
+        "label": "Mynt docs",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+      },
+      {
+        "label": "Sovryn Dollar",
+        "url": "https://sovryn.com/sovryn-dollar"
       }
     ],
-    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12",
-    "upstreamSuppressionRationale": "The reviewed override is scoped to the DLLR holder-facing token. The DOC reserve slice is de minimis reserve-side exposure and is intentionally not promoted to DLLR direct freezability in this metadata override."
+    "evidence": "Verified DLLR source exposes no blacklist, freeze, or pause function, but it has manager-gated burn(address,uint256) and an owner-settable MassetManager proxy. Treat as possible holder-balance intervention risk rather than confirmed direct blacklist.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -16,22 +16,26 @@
   "mechanismArchetype": "cdp",
   "llamaId": "228",
   "detailProvider": "defillama",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Docs",
         "url": "https://docs.quill.finance/faq/usdusdq"
       },
       {
-        "label": "Website",
-        "url": "https://app.quill.finance/"
+        "label": "Contract addresses",
+        "url": "https://docs.quill.finance/documentation/contract-addresses"
+      },
+      {
+        "label": "Scroll explorer",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xdb9e8f82d6d45fff803161f2a5f75543972b229a"
       }
     ],
-    "evidence": "Explicit No retained: USDQ is an immutable, admin-keyless Liquity-v2 (BOLD) fork on Scroll; the issued token has no holder-balance freeze, blacklist, seizure, or proxy-upgrade surface.",
-    "reviewer": "Opus med-confidence verification",
-    "reviewedAt": "2026-05-23"
+    "evidence": "USDQ is an EIP-1967/UUPS-style proxy whose implementation is controlled through the Quill AccessManager. No active direct blacklist or freeze function was confirmed, but the holder-facing token surface is mutable.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
   },
   "links": [
     {

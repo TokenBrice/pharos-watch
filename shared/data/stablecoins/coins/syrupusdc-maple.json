@@ -133,18 +133,43 @@
         "capDescription": "syrupUSDC shares are minted/burned by the Maple ERC-4626 vault against USDC deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDC supply.",
         "evidence": "Strategy-vault receipt: syrupUSDC shares represent a claim on USDC lent as overcollateralized institutional loans; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
       },
-      {
-        "label": "Inherited USDC (Circle) issuer mint path",
-        "role": "other",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+    {
+      "chain": "ethereum",
+      "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+      "label": "Inherited USDC MasterMinter",
+      "role": "minter-admin",
+      "authorityType": "contract",
+      "directMintAbility": "can-authorize",
+      "canRaiseCap": "unknown",
+      "modulesOrGuardsStatus": "unknown",
+      "sources": [
+        {
+          "label": "Ethereum USDC contract",
+          "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+        }
+      ],
+      "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter. Live masterMinter() reads resolve to this contract, which can authorize minters for the base USDC monetary supply."
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xFcb19e6a322b27c06842A71e8c725399f049AE3a",
+      "label": "Inherited USDC token owner",
+      "role": "minter-admin",
+      "authorityType": "eoa",
+      "directMintAbility": "can-authorize",
+      "canRaiseCap": "unknown",
+      "modulesOrGuardsStatus": "not-applicable",
+      "sources": [
+        {
+          "label": "Ethereum USDC contract",
+          "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+        }
+      ],
+      "evidence": "Underlying USDC token owner/admin can authorize USDC mint administration; syrupUSDC wrapper shares inherit this base USDC authority."
       }
     ],
     "review": {
-      "evidence": "syrupUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
+    "evidence": "syrupUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDC; live USDC parent reads resolve the inherited MasterMinter and token owner controls.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
