@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Blacklist Tracker Changelog",
   leadSubject: "Blacklist Tracker",
   versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-rose-500",
   entries: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
   citation: { id: "blacklist-tracker", versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL },
 });

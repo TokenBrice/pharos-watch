@@ -424,7 +424,7 @@ export function LiquidityExitRouteMap({
     : "routes";
 
   return (
-    <Card className="overflow-hidden rounded-xl border-l-[3px] border-l-emerald-500">
+    <Card className="overflow-hidden rounded-xl">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">

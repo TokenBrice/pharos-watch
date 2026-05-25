@@ -4,7 +4,6 @@ export function ScoringChangelogV726Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.26")}
-      accent="border-l-amber-500"
     >
       <p>
         NAV and savings wrappers with a configured peg reference now use the referenced base stablecoin&apos;s peg
@@ -23,7 +22,6 @@ export function ScoringChangelogV725Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.25")}
-      accent="border-l-violet-500"
     >
       <p>
         Wrapper Decentralization now follows the tracked wrapped asset when the parent relationship is known, instead
@@ -48,7 +46,6 @@ export function ScoringChangelogV724Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.24")}
-      accent="border-l-emerald-500"
     >
       <p>
         Liquidity / Exit now consumes Redemption Backstop v4 current-capacity semantics instead of treating every
@@ -76,7 +73,6 @@ export function ScoringChangelogV723Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.23")}
-      accent="border-l-emerald-500"
     >
       <p>
         Reserve-sync refinements promote additional clean independent snapshots without widening score-grade evidence
@@ -104,7 +100,6 @@ export function ScoringChangelogV722Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.22")}
-      accent="border-l-cyan-500"
     >
       <p>
         More RWA NAV tokens and tracked savings wrappers now use direct independent reserve feeds instead of curated
@@ -134,7 +129,6 @@ export function ScoringChangelogV720Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.20")}
-      accent="border-l-purple-500"
     >
       <p>
         The follow-up admin-mint sweep expands the{" "}
@@ -161,7 +155,6 @@ export function ScoringChangelogV721Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.21")}
-      accent="border-l-violet-500"
     >
       <p>
         crvUSD scoring now reads LLAMMA reserve balances directly from on-chain Curve ControllerFactory data instead
@@ -188,7 +181,6 @@ export function ScoringChangelogV719Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.19")}
-      accent="border-l-rose-500"
     >
       <p>
         A re-audit of 22 stablecoins marked{" "}
@@ -234,7 +226,6 @@ export function ScoringChangelogV718Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.18")}
-      accent="border-l-emerald-500"
     >
       <p>
         Liquidity / Exit now applies stricter live redemption telemetry gates before redemption capacity can improve
@@ -256,7 +247,6 @@ export function ScoringChangelogV717Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.17")}
-      accent="border-l-emerald-500"
     >
       <p>
         USD3 / Web 3 Dollar is reclassified from DeFi to CeFi-dependent because its Reserve Protocol DTF basket is
@@ -281,7 +271,6 @@ export function ScoringChangelogV716Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.16")}
-      accent="border-l-emerald-500"
     >
       <p>
         Six disputed <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> classifications were
@@ -311,7 +300,6 @@ export function ScoringChangelogV715Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.15")}
-      accent="border-l-emerald-500"
     >
       <p>
         The resolved <code className="text-xs bg-muted px-1 py-0.5 rounded">Freezable: No</code> cohort was reviewed
@@ -342,7 +330,6 @@ export function ScoringChangelogV714Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.14")}
-      accent="border-l-emerald-500"
     >
       <p>
         Score-grade live reserve slices with tracked{" "}
@@ -371,7 +358,6 @@ export function ScoringChangelogV713Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.13")}
-      accent="border-l-emerald-500"
     >
       <p>
         Blacklist labeling now reserves <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code> for
@@ -401,7 +387,6 @@ export function ScoringChangelogV712Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.12")}
-      accent="border-l-emerald-500"
     >
       <p>
         K3 sBOLD now joins the tracked parent-linked variant framework as a risk-absorption child of BOLD.
@@ -433,7 +418,6 @@ export function ScoringChangelogV711Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.11")}
-      accent="border-l-emerald-500"
     >
       <p>
         The tracked parent-linked wrapper framework now covers the four highest-confidence strategy-vault children.
@@ -471,7 +455,6 @@ export function ScoringChangelogV710Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.10")}
-      accent="border-l-emerald-500"
     >
       <p>
         The parent-linked wrapper framework now covers bond-maturity variants, starting with bUSD0 as a bond leg
@@ -502,7 +485,6 @@ export function ScoringChangelogV709Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.09")}
-      accent="border-l-emerald-500"
     >
       <p>
         Tracked savings and staked wrappers now carry an explicit parent relationship in Safety Scores instead of
@@ -538,7 +520,6 @@ export function ScoringChangelogV708Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.08")}
-      accent="border-l-emerald-500"
     >
       <p>
         Reserve-risk tiering now distinguishes transparent spot or wrapped market exposure from actively managed
@@ -567,7 +548,6 @@ export function ScoringChangelogV707Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.07")}
-      accent="border-l-emerald-500"
     >
       <p>
         Liquidity / Exit and the redemption-backstop snapshot now reuse the last-known DEX liquidity score when
@@ -607,7 +587,6 @@ export function ScoringChangelogV706Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.06")}
-      accent="border-l-emerald-500"
     >
       <p>
         The GHO reserve adapter now decomposes residual issuance across active facilitators and routes unmapped
@@ -635,7 +614,6 @@ export function ScoringChangelogV705Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.05")}
-      accent="border-l-emerald-500"
     >
       <p>
         Documented issuer redemption now earns a small primary-market exit bonus only when DEX liquidity is already present.
@@ -659,7 +637,6 @@ export function ScoringChangelogV704Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.04")}
-      accent="border-l-emerald-500"
     >
       <p>
         Redemption backstops now stay eligible through normal 4-hourly sync lag instead of dropping
@@ -686,7 +663,6 @@ export function ScoringChangelogV703Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.03")}
-      accent="border-l-emerald-500"
     >
       <p>
         USTB can now use Superstate&apos;s current liquidity telemetry while keeping NAV/AUM separate from
@@ -705,7 +681,6 @@ export function ScoringChangelogV702Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.02")}
-      accent="border-l-emerald-500"
     >
       <p>
         frxUSD now uses fresh Frax balance-sheet redemption capacity with route-status and capacity-ratio
@@ -724,7 +699,6 @@ export function ScoringChangelogV701Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.01")}
-      accent="border-l-emerald-500"
     >
       <p>
         Liquidity / Exit now distinguishes standalone redemption-route quality from Safety Score-eligible exit capacity.
@@ -742,7 +716,6 @@ export function ScoringChangelogV70Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("7.0")}
-      accent="border-l-emerald-500"
     >
       <p>
         More proof-style reserve feeds now use timestamped independent evidence instead of weak liveness checks.

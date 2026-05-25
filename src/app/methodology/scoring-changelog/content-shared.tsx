@@ -40,17 +40,15 @@ function Pill({ children }: { children: ReactNode }) {
 
 export function VersionCard({
   entry,
-  accent,
   children,
 }: {
   entry: MethodologyChangelogEntry;
-  accent: string;
   children: ReactNode;
 }) {
   const anchorId = scoringAnchorId(`v${entry.version}`);
 
   return (
-    <Card id={anchorId} className={`scroll-mt-28 rounded-xl border-l-[3px] ${accent}`}>
+    <Card id={anchorId} className="scroll-mt-28 rounded-xl">
       <CardHeader>
         <CardTitle as="h2">
           <span className="flex flex-wrap items-center gap-2">

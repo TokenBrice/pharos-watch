@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { BLACKLIST_STATUS_BUCKET_COLORS, type BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 
@@ -68,8 +68,6 @@ export function BlacklistStats({
   return (
     <div className="grid grid-cols-1 gap-3 animate-in fade-in duration-300 sm:grid-cols-2 sm:gap-5">
       <MetricStatCard
-        borderColorClass="border-border"
-        borderColorHex={BLACKLIST_STATUS_BUCKET_COLORS.no}
         title="Unfreezable Market Share"
         value={unfreezableMarketShareValue}
         subtext={unfreezableMarketShareSubtext}
@@ -81,7 +79,6 @@ export function BlacklistStats({
         actionLabel="Show unfreezable stablecoins"
       />
       <MetricStatCard
-        borderColorClass="border-l-amber-500"
         title="Tracked Frozen Total"
         value={formatCurrency(trackedFrozenTotal)}
         subtext="last-known freeze snapshots"
@@ -89,7 +86,6 @@ export function BlacklistStats({
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
-        borderColorClass="border-l-red-500"
         title="Total Wiped Value"
         value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
         subtext="destroyed or confiscated value"

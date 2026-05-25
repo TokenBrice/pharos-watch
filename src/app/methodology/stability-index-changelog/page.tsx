@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Stability Index Changelog",
   leadSubject: "PSI",
   versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-cyan-500",
   entries: PSI_METHODOLOGY_CHANGELOG,
   citation: { id: "psi", versionLabel: PSI_METHODOLOGY_VERSION_LABEL },
 });

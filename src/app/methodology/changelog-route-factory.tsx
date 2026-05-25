@@ -25,7 +25,6 @@ interface MethodologyChangelogRouteConfig<T extends MethodologyChangelogSourceEn
   breadcrumbName: string;
   title: string;
   lead: ReactNode;
-  accentClass: string;
   entries?: readonly T[];
   selectImpact?: (entry: T) => readonly string[];
   sections?: readonly { id: string; label: string }[];
@@ -63,7 +62,6 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
       path={config.path}
       title={config.title}
       lead={config.lead}
-      accentClass={config.accentClass}
       entries={entries}
       sections={config.sections}
       jsonLdIdentifier={buildPharosUrnJsonLdIdentifier(

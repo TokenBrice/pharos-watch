@@ -96,7 +96,7 @@ export function CemeteryClient({ entries }: { entries: CemeteryEntry[] }) {
       </Card>
 
       {/* Autopsy reports */}
-      <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
+      <Card className="rounded-xl">
         <CardHeader className="gap-1.5 border-b border-border/60">
           <CardTitle as="h2" className="pharos-kicker">
             Autopsy Reports

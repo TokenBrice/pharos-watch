@@ -19,7 +19,6 @@ export function StabilityIndexMethodologySection() {
             versionLabel={PSI_METHODOLOGY_VERSION_LABEL}
             changelogPath={PSI_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change."
-            accentClassName="border-l-cyan-500"
             badgeClassName="border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"
             changelogClassName="hover:text-cyan-700 dark:text-cyan-400"
           >
@@ -75,7 +74,7 @@ export function StabilityIndexMethodologySection() {
               >
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Scoring Formula</h3>
-                  <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+                  <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
                     Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
                   </code>
                   <p className="text-xs">The final value is clamped to [0, 100] and rounded to one decimal.</p>
@@ -173,7 +172,7 @@ export function StabilityIndexMethodologySection() {
                       weight for 30 days, then decay linearly to a 25% floor over 120 days.
                     </li>
                   </ul>
-                  <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+                  <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
                     factor = ageDays &le; 30 ? 1.0 : max(0.25, 1.0 &minus; (ageDays &minus; 30)/120)
                   </code>
                 </div>

@@ -47,7 +47,6 @@ export function MethodologySectionShell({
   versionLabel,
   changelogPath,
   versionNote,
-  accentClassName,
   badgeClassName,
   changelogClassName,
   children,
@@ -57,7 +56,6 @@ export function MethodologySectionShell({
   versionLabel?: string;
   changelogPath?: string;
   versionNote?: string;
-  accentClassName: string;
   badgeClassName?: string;
   changelogClassName?: string;
   children: ReactNode;
@@ -65,7 +63,7 @@ export function MethodologySectionShell({
   return (
     <Card
       id={id}
-      className={cn("scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] bg-card md:scroll-mt-28", accentClassName)}
+      className="scroll-mt-36 rounded-xl border border-border/70 bg-card md:scroll-mt-28"
     >
       <CardHeader className={versionNote ? "space-y-2" : undefined}>
         <div className="flex flex-wrap items-center gap-2">

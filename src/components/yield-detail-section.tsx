@@ -39,7 +39,7 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
   return (
     <TooltipProvider>
       <section id="yield" aria-labelledby="yield-intelligence-heading">
-        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+        <Card className="rounded-xl">
           <CardHeader className="pb-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">

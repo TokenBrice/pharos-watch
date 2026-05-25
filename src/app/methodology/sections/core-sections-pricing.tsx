@@ -19,7 +19,6 @@ export function PricingPipelineMethodologySection() {
       versionLabel={PRICING_PIPELINE_VERSION_LABEL}
       changelogPath={PRICING_PIPELINE_CHANGELOG_PATH}
       versionNote="Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change."
-      accentClassName="border-l-blue-500"
       badgeClassName="border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400"
       changelogClassName="hover:text-blue-700 dark:text-blue-400"
     >
@@ -249,7 +248,7 @@ export function PricingPipelineMethodologySection() {
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
               <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any protocol-level median diverges beyond the peg-type-aware threshold (500 bps for USD pegs, <code className="text-xs">min(2 &times; depeg threshold, 500)</code> for non-USD pegs), downgrade to <code className="text-xs">low</code>, and only replace the price when at least two independent protocol-level medians corroborate that divergence unless severe-downside preservation applies &mdash; on-chain liquidity is a more honest signal when aggregators share upstream data, but a single protocol or a single rogue pool can still be wrong</li>
             </ol>
-            <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
+            <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
               agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps
             </code>
           </div>

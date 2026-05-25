@@ -22,7 +22,6 @@ const route = createMethodologyChangelogRoute({
       change, new dimension, and structural decision from v1.0 to {SAFETY_SCORE_VERSION_LABEL}.
     </>
   ),
-  accentClass: "border-l-amber-500",
   entries: SAFETY_SCORE_CHANGELOG,
   selectImpact: (entry) => entry.impact,
   sections: SAFETY_SCORE_CHANGELOG_NAV_VERSIONS.map((version) => ({

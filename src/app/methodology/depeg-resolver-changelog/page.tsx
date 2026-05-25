@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Depeg Duration Resolver Changelog",
   leadSubject: "DDR",
   versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-violet-500",
   entries: DDR_METHODOLOGY_CHANGELOG,
   citation: { id: "depeg-resolver", versionLabel: DDR_METHODOLOGY_VERSION_LABEL },
 });

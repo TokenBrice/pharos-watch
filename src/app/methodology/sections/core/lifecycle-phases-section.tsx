@@ -10,7 +10,6 @@ export function LifecyclePhasesMethodologySection() {
     <MethodologySectionShell
       id={LIFECYCLE_PHASES_SECTION_CONTENT.id}
       title={LIFECYCLE_PHASES_SECTION_CONTENT.title}
-      accentClassName="border-l-zinc-500"
       versionNote="Lifecycle phase is a data-collection policy. No per-domain methodology version is bumped when a coin transitions between phases."
     >
       <p>

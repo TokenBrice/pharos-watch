@@ -11,7 +11,6 @@ interface MethodologyChangelogPageProps {
   path: string;
   title: string;
   lead: React.ReactNode;
-  accentClass?: string;
   entries?: readonly MethodologyChangelogEntry[];
   sections?: readonly { id: string; label: string }[];
   railLabel?: string;
@@ -30,7 +29,6 @@ export function MethodologyChangelogPage({
   path,
   title,
   lead,
-  accentClass = "border-l-foreground/50",
   entries = [],
   sections,
   railLabel = "Jump to Version",
@@ -161,7 +159,6 @@ export function MethodologyChangelogPage({
               <MethodologyVersionCard
                 key={entry.version}
                 entry={entry}
-                accentClass={accentClass}
                 entryId={changelogEntryId(entry.version)}
                 defaultOpen={index === 0}
               />

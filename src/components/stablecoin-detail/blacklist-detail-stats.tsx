@@ -37,19 +37,16 @@ export function BlacklistDetailStats({ symbol, stats, isLoading }: BlacklistDeta
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5 animate-in fade-in duration-300">
       <MetricStatCard
-        borderColorClass="border-l-emerald-500"
         title="Frozen addresses"
         value={frozenAddresses}
         subtext="net-frozen (latest action is blacklist)"
       />
       <MetricStatCard
-        borderColorClass="border-l-amber-500"
         title="Frozen total"
         value={formatCurrency(frozenTotal)}
         subtext="persistent freeze-ledger balance"
       />
       <MetricStatCard
-        borderColorClass="border-l-red-500"
         title="Destroyed"
         value={formatCurrency(destroyedTotal)}
         subtext="seized &amp; burned (USD value)"

@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Yield Intelligence Changelog",
   leadSubject: "Yield Intelligence",
   versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-violet-500",
   entries: YIELD_METHODOLOGY_CHANGELOG,
   citation: { id: "yield", versionLabel: YIELD_METHODOLOGY_VERSION_LABEL },
 });

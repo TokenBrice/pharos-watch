@@ -5,7 +5,7 @@ export function ScoringChangelogSummaryTables() {
   return (
     <>
             {/* ──────────── Summary tables ──────────── */}
-            <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
+            <Card className="rounded-xl">
               <CardHeader>
                 <CardTitle as="h2">Quick Reference</CardTitle>
               </CardHeader>

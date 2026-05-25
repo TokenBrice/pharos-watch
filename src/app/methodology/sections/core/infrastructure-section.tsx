@@ -10,7 +10,6 @@ export function InfrastructureMethodologySection() {
       id={INFRASTRUCTURE_SECTION_CONTENT.id}
       title={INFRASTRUCTURE_SECTION_CONTENT.title}
       versionLabel="v1.0"
-      accentClassName="border-l-violet-500"
       badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
     >
       <p>

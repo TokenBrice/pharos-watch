@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Depeg Tracker + DEWS Changelog",
   leadSubject: "Depeg Tracker and DEWS",
   versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-amber-500",
   entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
   citation: { id: "dews", versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL },
 });

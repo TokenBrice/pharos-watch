@@ -11,7 +11,6 @@ export function ContagionStressTestMethodologySection() {
             id={CONTAGION_SECTION_CONTENT.id}
             title={CONTAGION_SECTION_CONTENT.title}
             versionLabel="v1.0"
-            accentClassName="border-l-emerald-500"
             badgeClassName="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
           >
               <p>

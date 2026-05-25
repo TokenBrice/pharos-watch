@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Mint/Burn Flow Changelog",
   leadSubject: "Mint/Burn Flow",
   versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-orange-500",
   entries: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
   citation: { id: "mint-burn-flow", versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL },
 });

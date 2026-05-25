@@ -14,7 +14,6 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
 import { digestDisplay } from "@/lib/fonts/digest";
-import { getPharosToneClasses, type PharosTone } from "@/lib/tone-classes";
 import {
   COMPANION_FEATURES,
   COMPUTED_FEATURES,
@@ -36,6 +35,10 @@ const INLINE_EXTERNAL_LINK_CLASS =
   "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
 const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
+const TELEGRAM_CTA_BUTTON_CLASS = cn(
+  CTA_BUTTON_CLASS,
+  "border-transparent bg-foreground text-background shadow-sm hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:text-background dark:hover:bg-foreground/90 dark:hover:text-background",
+);
 const ABOUT_METADATA_TITLE = "About Pharos: Shining a Light on Every Peg";
 const ABOUT_METADATA_DESCRIPTION =
   "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.";
@@ -116,8 +119,7 @@ function PipelineSources() {
   );
 }
 
-function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: PharosTone }) {
-  const toneClasses = getPharosToneClasses(tone);
+function AboutFeatureRow({ item }: { item: AboutFeatureItem }) {
   const rowClassName = cn(
     "flex min-h-11 gap-3 rounded-xl px-2 py-4 sm:px-3",
     item.href && "pharos-focus-ring pharos-interactive-card group hover:bg-muted/20",
@@ -126,7 +128,7 @@ function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: PharosT
   const content = (
     <>
       <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75">
-        <item.icon className={cn("h-4 w-4", toneClasses.icon)} aria-hidden="true" />
+        <item.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
         <h3 className="text-sm font-semibold tracking-tight text-foreground">{item.title}</h3>
@@ -163,24 +165,20 @@ function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: PharosT
 function AboutSection({
   eyebrow,
   title,
-  tone,
   children,
   contentClassName,
 }: {
   eyebrow: string;
   title: string;
-  tone: PharosTone;
   children: ReactNode;
   contentClassName?: string;
 }) {
-  const toneClasses = getPharosToneClasses(tone);
-
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
+    <Card className="rounded-xl">
       <CardHeader className="space-y-2">
         <div className="flex items-center gap-3">
-          <p className={cn("pharos-kicker", toneClasses.kicker)}>{eyebrow}</p>
-          <div className={cn("h-px flex-1 bg-gradient-to-r", toneClasses.rule)} />
+          <p className="pharos-kicker">{eyebrow}</p>
+          <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
         </div>
         <CardTitle as="h2">{title}</CardTitle>
       </CardHeader>
@@ -194,22 +192,20 @@ function AboutFeatureSection({
   title,
   intro,
   items,
-  tone,
   footer,
 }: {
   eyebrow: string;
   title: string;
   intro: ReactNode;
   items: readonly AboutFeatureItem[];
-  tone: PharosTone;
   footer?: ReactNode;
 }) {
   return (
-    <AboutSection eyebrow={eyebrow} title={title} tone={tone} contentClassName="space-y-0">
-      <div className="-mt-2 mb-4 max-w-3xl px-4 text-sm leading-relaxed text-muted-foreground">{intro}</div>
+    <AboutSection eyebrow={eyebrow} title={title} contentClassName="space-y-0">
+      <div className="-mt-2 mb-4 px-4 text-sm leading-relaxed text-muted-foreground">{intro}</div>
       <div className="divide-y divide-border/60">
         {items.map((item) => (
-          <AboutFeatureRow key={item.title} item={item} tone={tone} />
+          <AboutFeatureRow key={item.title} item={item} />
         ))}
       </div>
       {footer ? <div className="mt-4 border-t border-border/60 pt-4">{footer}</div> : null}
@@ -288,7 +284,6 @@ export default function AboutPage() {
         <AboutSection
           eyebrow="Why it exists"
           title="Why Pharos?"
-          tone="brand"
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
@@ -344,7 +339,6 @@ export default function AboutPage() {
         <AboutSection
           eyebrow="The team"
           title="Who Is Building Pharos?"
-          tone="brand"
           contentClassName="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5"
         >
           <div className="flex flex-wrap items-start gap-4">
@@ -414,10 +408,9 @@ export default function AboutPage() {
         <AboutSection
           eyebrow="In the wild"
           title="Live Walkthrough"
-          tone="brand"
           contentClassName="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start"
         >
-          <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getPharosToneClasses("brand").icon)} />
+          <Radio className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
           <div className="space-y-3">
             <p>
               TokenBrice walked through Pharos live on Leviathan News &mdash; the motivation behind the project,
@@ -437,7 +430,6 @@ export default function AboutPage() {
           title="What Pharos Tracks"
           intro="The raw monitoring layer — live supply, peg behavior, blacklist activity, liquidity depth, and chain-level flow data pulled from 50+ sources into one operating picture."
           items={trackedFeatures}
-          tone="data"
         />
 
         <AboutFeatureSection
@@ -445,13 +437,12 @@ export default function AboutPage() {
           title="What Pharos Computes"
           intro="The analysis layer — models, scores, and forecasts you cannot find anywhere else: a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
           items={COMPUTED_FEATURES}
-          tone="insight"
           footer={
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 Telegram alerts cover DEWS state changes, depeg events, and safety grade changes.
               </p>
-              <Button asChild variant="default" className={CTA_BUTTON_CLASS}>
+              <Button asChild variant="default" className={TELEGRAM_CTA_BUTTON_CLASS}>
                 <Link href="/pharoswatchbot/">
                   Open @PharosWatchBot
                   <ArrowRight className="h-4 w-4" />
@@ -466,13 +457,11 @@ export default function AboutPage() {
           title="Companion Experiences"
           intro="Sibling surfaces hosted at separate origins. They consume the same Pharos data through the public API but run on their own, so they can experiment with presentation without crowding the dashboard."
           items={COMPANION_FEATURES}
-          tone="brand"
         />
 
         <AboutSection
           eyebrow="Governance lens"
           title="Classification"
-          tone="classification"
           contentClassName="text-sm leading-relaxed text-muted-foreground"
         >
           <p>
@@ -492,7 +481,6 @@ export default function AboutPage() {
         <AboutSection
           eyebrow="Source flow"
           title="Data Pipeline"
-          tone="data"
           contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
@@ -529,7 +517,6 @@ export default function AboutPage() {
         <AboutSection
           eyebrow="Scoring details"
           title="Methodology"
-          tone="data"
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
@@ -559,7 +546,6 @@ export default function AboutPage() {
         <AboutSection
           eyebrow="Reach out"
           title="Get in Touch"
-          tone="brand"
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>

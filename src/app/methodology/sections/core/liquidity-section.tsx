@@ -13,7 +13,6 @@ export function LiquidityMethodologySection() {
       versionLabel={LIQUIDITY_METHODOLOGY_VERSION_LABEL}
       changelogPath={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic changes."
-      accentClassName="border-l-sky-500"
       badgeClassName="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400"
       changelogClassName="hover:text-sky-700 dark:text-sky-400"
     >

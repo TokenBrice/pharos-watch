@@ -11,7 +11,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.8")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but direct latest-state reserve adapters now stamp
@@ -36,7 +35,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.7")}
-              accent="border-l-amber-500"
             >
               <p>
                 Blacklistability attribution now treats{" "}
@@ -62,7 +60,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.6")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but collateral-quality live reserve passthrough now
@@ -92,7 +89,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.5")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but the collateral-quality live reserve
@@ -126,7 +122,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.4")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but Liquity-style formula routes can now
@@ -155,7 +150,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.3")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but a narrow class of immutable on-chain
@@ -183,7 +177,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.2")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but the collateral-quality live reserve
@@ -214,7 +207,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.1")}
-              accent="border-l-amber-500"
             >
               <p>
                 Safety Score structure is unchanged, but the Liquidity dimension is now
@@ -238,7 +230,6 @@ export function ScoringChangelogV6Entries() {
 
             <VersionCard
               entry={getScoringEntry("6.0")}
-              accent="border-l-amber-500"
             >
               <p>
                 Four structural changes landed together in the safety methodology:

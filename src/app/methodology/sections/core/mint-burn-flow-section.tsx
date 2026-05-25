@@ -17,7 +17,6 @@ export function MintBurnFlowMethodologySection() {
             versionLabel={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
             changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."
-            accentClassName="border-l-orange-500"
             badgeClassName="border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
             changelogClassName="hover:text-orange-700 dark:text-orange-400"
           >
@@ -184,7 +183,7 @@ export function MintBurnFlowMethodologySection() {
                     This is the existing Flow Intensity formula under clearer naming. It measures how far current 24-hour
                     flow pressure deviates from the coin&apos;s own trailing 30 fully closed daily configured issuance-chain baseline.
                   </p>
-                  <p className="pharos-numeric text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+                  <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     denominator = max(baselineDailyAbs &times; 0.3, $1M)
                     <br />
                     z = (currentDailyNet &minus; baselineDailyNet) / denominator

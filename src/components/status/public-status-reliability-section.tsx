@@ -31,7 +31,6 @@ export function PublicStatusReliabilitySection({
     <StatusSection
       id="reliability"
       title="Route probes, breakers, and cache pressure"
-      accentClassName="border-l-amber-500 bg-[linear-gradient(180deg,oklch(0.99_0.006_80_/_0.98),oklch(0.968_0.012_80_/_0.98)_46%,oklch(0.952_0.014_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(24,18,10,0.42),rgba(7,10,18,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
       summary={
         <>
           {probeSummary && probeSummary.failCount > 0 && (

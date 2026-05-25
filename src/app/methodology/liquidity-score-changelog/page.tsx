@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Liquidity Score Changelog",
   leadSubject: "Liquidity Score",
   versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-sky-500",
   entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
   citation: { id: "liquidity-score", versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL },
 });

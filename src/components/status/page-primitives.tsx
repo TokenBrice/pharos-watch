@@ -64,7 +64,7 @@ export function StatusSection({
   kicker?: string;
   title: string;
   description?: string;
-  accentClassName: string;
+  accentClassName?: string;
   summary?: ReactNode;
   children: ReactNode;
 }) {
@@ -72,7 +72,7 @@ export function StatusSection({
     <section
       id={id}
       className={cn(
-        "scroll-mt-36 rounded-[1.5rem] border border-border/70 border-l-[3px] bg-card/82 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)] md:scroll-mt-28 sm:px-5 lg:px-6",
+        "scroll-mt-36 rounded-[1.5rem] border border-border/70 bg-card px-4 py-5 shadow-sm md:scroll-mt-28 sm:px-5 lg:px-6",
         accentClassName,
       )}
     >

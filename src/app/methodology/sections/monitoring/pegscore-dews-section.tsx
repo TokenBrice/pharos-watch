@@ -15,7 +15,6 @@ export function PegScoreDewsMethodologySection() {
       versionLabel={DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
       changelogPath={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics change."
-      accentClassName="border-l-amber-500"
       badgeClassName="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
       changelogClassName="hover:text-amber-700 dark:text-amber-400"
     >

@@ -41,7 +41,7 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
   if (total === 0) return null;
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-sky-500">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle className="pharos-kicker">Chain TVL Breakdown</CardTitle>
       </CardHeader>
@@ -87,7 +87,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
   if (total === 0) return null;
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle className="pharos-kicker">Protocol TVL Breakdown</CardTitle>
       </CardHeader>
@@ -121,7 +121,6 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
         <MetricStatCard
-          borderColorClass="border-l-blue-500"
           title="Total DEX TVL"
           value={formatCurrency(stats.totalTvl)}
           valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
@@ -142,7 +141,6 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         />
 
         <MetricStatCard
-          borderColorClass="border-l-emerald-500"
           title="24h DEX Volume"
           value={formatCurrency(stats.totalVol)}
           valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
@@ -151,7 +149,6 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         />
 
         <MetricStatCard
-          borderColorClass="border-l-amber-500"
           title={<MethodologyLabel topic="liquidityScore">Avg Liq Score</MethodologyLabel>}
           value={
             <>
@@ -165,7 +162,6 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         />
 
         <MetricStatCard
-          borderColorClass="border-l-violet-500"
           title={<MethodologyLabel topic="liquidityScore">Covered on DEX</MethodologyLabel>}
           value={stats.withLiquidity}
           valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
@@ -174,7 +170,6 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         />
         {stats.avgBalance != null && (
           <MetricStatCard
-            borderColorClass="border-l-cyan-500"
             title="Avg Pool Balance"
             value={`${stats.avgBalance}%`}
             valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
@@ -184,7 +179,6 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         )}
         {stats.avgOrganic != null && (
           <MetricStatCard
-            borderColorClass="border-l-pink-500"
             title="Organic Liquidity"
             value={`${stats.avgOrganic}%`}
             valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"

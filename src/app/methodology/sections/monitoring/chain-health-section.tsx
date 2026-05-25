@@ -17,7 +17,6 @@ export function ChainHealthMethodologySection() {
             versionLabel={CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}
             changelogPath={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when factor weights, tier assignments, or sub-factor formulas change."
-            accentClassName="border-l-teal-500"
             badgeClassName="border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-400"
             changelogClassName="hover:text-teal-700 dark:hover:text-teal-400"
           >

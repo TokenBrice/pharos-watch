@@ -6,7 +6,6 @@ export function ScoringChangelogLegacyEntries() {
             {/* ──────────── v4 ──────────── */}
             <VersionCard
               entry={getScoringEntry("4.1")}
-              accent="border-l-cyan-500"
             >
               <p>
                 Liquidity 25%&rarr;30% (&ldquo;swappability is the most defining
@@ -23,7 +22,6 @@ export function ScoringChangelogLegacyEntries() {
 
             <VersionCard
               entry={getScoringEntry("4.0")}
-              accent="border-l-cyan-500"
             >
               <p>
                 <span className="text-foreground font-medium">
@@ -87,7 +85,6 @@ export function ScoringChangelogLegacyEntries() {
             {/* ──────────── v3 ──────────── */}
             <VersionCard
               entry={getScoringEntry("3.3")}
-              accent="border-l-emerald-500"
             >
               <p>
                 For coins with curated reserve composition data, collateral quality is
@@ -124,7 +121,6 @@ export function ScoringChangelogLegacyEntries() {
 
             <VersionCard
               entry={getScoringEntry("3.2")}
-              accent="border-l-emerald-500"
             >
               <p>
                 New dependency types: <code className="text-xs bg-muted px-1 py-0.5 rounded">wrapper</code>,{" "}
@@ -154,7 +150,6 @@ export function ScoringChangelogLegacyEntries() {
 
             <VersionCard
               entry={getScoringEntry("3.0")}
-              accent="border-l-emerald-500"
             >
               <p>
                 Complete redesign of Resilience from 2 factors (chain distribution +
@@ -211,7 +206,6 @@ export function ScoringChangelogLegacyEntries() {
             {/* ──────────── v2 ──────────── */}
             <VersionCard
               entry={getScoringEntry("2.0")}
-              accent="border-l-violet-500"
             >
               <p>
                 Only ~20 of 142 coins had Bluechip ratings. Sparse coverage caused
@@ -253,7 +247,6 @@ export function ScoringChangelogLegacyEntries() {
             {/* ──────────── v1 ──────────── */}
             <VersionCard
               entry={getScoringEntry("1.0")}
-              accent="border-l-zinc-500"
             >
               <p>Six weighted dimensions:</p>
               <div className="overflow-x-auto">

@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Pricing Pipeline Changelog",
   leadSubject: "Pricing Pipeline",
   versionLabel: PRICING_PIPELINE_VERSION_LABEL,
-  accentClass: "border-l-blue-500",
   entries: PRICING_PIPELINE_CHANGELOG,
   citation: { id: "pricing-pipeline", versionLabel: PRICING_PIPELINE_VERSION_LABEL },
 });

@@ -30,7 +30,6 @@ export function PublicServiceSummarySection({
     <StatusSection
       id="overview"
       title="Public service summary"
-      accentClassName="border-l-frost-blue bg-[linear-gradient(180deg,oklch(0.988_0.008_248_/_0.98),oklch(0.956_0.012_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(11,18,32,0.88),rgba(4,10,20,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
       summary={
         <>
           <StatusSummaryBadge label="Status" status={healthData.status} />

@@ -4,7 +4,6 @@ export function ScoringChangelogV69Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.9")}
-      accent="border-l-amber-500"
     >
       <p>
         Blacklistability attribution now separates mutable-contract risk from collateral-inherited freeze risk.

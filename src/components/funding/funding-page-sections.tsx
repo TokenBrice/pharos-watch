@@ -3,8 +3,6 @@ import { ExternalLink, Heart, Star, Wallet, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
-import { cn } from "@/lib/utils";
-import { getPharosToneClasses, type PharosTone } from "@/lib/tone-classes";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -83,11 +81,11 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
         };
 
   return (
-    <Card className={cn("rounded-lg border-l-[3px]", getPharosToneClasses("brand").border)}>
+    <Card className="rounded-lg">
       <CardContent className="space-y-5 p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-1.5">
-            <p className={cn("pharos-kicker", getPharosToneClasses("brand").kicker)}>This month coverage</p>
+            <p className="pharos-kicker text-muted-foreground">This month coverage</p>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <p className="font-mono text-3xl font-semibold tracking-tight text-foreground tabular-nums">
                 {thisMonth.primary}
@@ -100,13 +98,11 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
               label="Community support"
               value={community.primary}
               detail={community.secondary}
-              tone="insight"
             />
             <FundingMiniStat
               label="Best long-term help"
               value="Recurring Giveth"
               detail="predictable support for the public site"
-              tone="brand"
             />
           </div>
         </div>
@@ -174,10 +170,10 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
   );
 }
 
-function FundingMiniStat({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: PharosTone }) {
+function FundingMiniStat({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
-      <p className={cn("pharos-kicker", getPharosToneClasses(tone).kicker)}>{label}</p>
+      <p className="pharos-kicker text-muted-foreground">{label}</p>
       <p className="font-mono text-lg font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
@@ -207,9 +203,9 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
   });
 
   return (
-    <Card className={cn("rounded-lg border-l-[3px]", getPharosToneClasses("data").border)}>
+    <Card className="rounded-lg">
       <CardHeader className="space-y-1">
-        <p className={cn("pharos-kicker", getPharosToneClasses("data").kicker)}>Where it goes</p>
+        <p className="pharos-kicker text-muted-foreground">Where it goes</p>
         <CardTitle as="h2">Monthly costs</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -269,9 +265,9 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
       : null;
 
   return (
-    <Card className={cn("rounded-lg border-l-[3px]", getPharosToneClasses("insight").border)}>
+    <Card className="rounded-lg">
       <CardHeader className="space-y-1">
-        <p className={cn("pharos-kicker", getPharosToneClasses("insight").kicker)}>Supporters</p>
+        <p className="pharos-kicker text-muted-foreground">Supporters</p>
         <CardTitle as="h2">Recent supporters</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -321,9 +317,9 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
 export function SupportCtas() {
   return (
     <section id="how-to-support">
-      <Card className={cn("rounded-lg border-l-[3px]", getPharosToneClasses("brand").border)}>
+      <Card className="rounded-lg">
         <CardHeader className="space-y-1">
-          <p className={cn("pharos-kicker", getPharosToneClasses("brand").kicker)}>Get involved</p>
+          <p className="pharos-kicker text-muted-foreground">Get involved</p>
           <CardTitle as="h2">How to support</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -360,7 +356,7 @@ function PrimaryGivethTile() {
     <div className="flex h-full flex-col gap-3 rounded-lg border border-frost-blue/30 bg-frost-blue/8 p-5 lg:col-span-2 dark:bg-frost-blue/6">
       <div className="flex items-center gap-2">
         <Heart className="h-4 w-4 text-sky-700 dark:text-frost-blue/82" />
-        <p className={cn("pharos-kicker", getPharosToneClasses("brand").kicker)}>Recommended</p>
+        <p className="pharos-kicker text-muted-foreground">Recommended</p>
       </div>
       <p className="text-base font-semibold text-foreground">Recurring via Giveth</p>
       <p className="text-sm text-muted-foreground leading-relaxed">
@@ -442,9 +438,9 @@ function SocialButton({
 export function YearEndHorizon() {
   const shareUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(PHAROS_SHARE_MESSAGE);
   return (
-    <Card className={cn("rounded-lg border-l-[3px]", getPharosToneClasses("brand").border)}>
+    <Card className="rounded-lg">
       <CardHeader className="space-y-1">
-        <p className={cn("pharos-kicker", getPharosToneClasses("brand").kicker)}>Where we&apos;re going</p>
+        <p className="pharos-kicker text-muted-foreground">Where we&apos;re going</p>
         <CardTitle as="h2">Path to sustainability</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
@@ -498,7 +494,7 @@ export function FundingFaq() {
     },
   ];
   return (
-    <Card className="rounded-lg border-l-[3px] border-l-zinc-500">
+    <Card className="rounded-lg">
       <CardHeader className="space-y-1">
         <p className="pharos-kicker text-muted-foreground">Questions</p>
         <CardTitle as="h2">FAQ</CardTitle>

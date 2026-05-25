@@ -58,7 +58,7 @@ export function UsdsStatusCard() {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+      <Card className="rounded-xl">
         <CardHeader className="pb-1">
           <Skeleton className="h-4 w-32" />
         </CardHeader>
@@ -75,7 +75,6 @@ export function UsdsStatusCard() {
 
   return (
     <MetricStatCard
-      borderColorClass="border-l-violet-500"
       title="USDS Blacklist Status"
       headerRight={
         status.freezeActive ? (

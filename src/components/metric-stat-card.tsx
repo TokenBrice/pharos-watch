@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 
 interface MetricStatCardProps {
   title: ReactNode;
-  borderColorClass: string;
+  /** Optional left-accent border class. When omitted, the card renders flat (homepage style). */
+  borderColorClass?: string;
   /** When set, renders the left border via inline style (for non-Tailwind hex colors). */
   borderColorHex?: string;
   value?: ReactNode;
@@ -48,7 +49,8 @@ export function MetricStatCard({
   return (
     <Card
       className={cn(
-        "@container rounded-xl border-l-[3px]",
+        "@container rounded-xl",
+        (borderColorClass || borderColorHex) && "border-l-[3px]",
         borderColorClass,
         isInteractive &&
           "cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

@@ -20,7 +20,6 @@ export function YieldIntelligenceMethodologySection() {
             versionLabel={YIELD_METHODOLOGY_VERSION_LABEL}
             changelogPath={YIELD_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or eligibility rules for discovered yield sources change."
-            accentClassName="border-l-violet-500"
             badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
             changelogClassName="hover:text-violet-700 dark:text-violet-400"
           >
@@ -213,7 +212,7 @@ export function YieldIntelligenceMethodologySection() {
                 {/* PYS formula */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
-                  <p className="pharos-numeric text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+                  <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                     benchmarkSpread = apy30d &minus; benchmarkRate
                     <br />
                     effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25)

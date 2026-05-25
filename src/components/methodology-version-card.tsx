@@ -12,12 +12,10 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export function MethodologyVersionCard({
   entry,
-  accentClass,
   entryId,
   defaultOpen = false,
 }: {
   entry: MethodologyChangelogEntry;
-  accentClass: string;
   entryId?: string;
   defaultOpen?: boolean;
 }) {
@@ -32,7 +30,7 @@ export function MethodologyVersionCard({
     <details
       id={entryId}
       open={defaultOpen}
-      className={`group rounded-[1.35rem] border border-border/60 border-l-[3px] bg-card/82 shadow-[0_14px_32px_oklch(0_0_0_/0.12)] ${accentClass}`}
+      className="group rounded-[1.35rem] border border-border/60 bg-card shadow-sm"
     >
       <summary className="cursor-pointer list-none px-5 py-4 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -13,7 +13,6 @@ const route = createStandardMethodologyChangelogRoute({
   title: "Chain Health Score Changelog",
   leadSubject: "Chain Health Score",
   versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
-  accentClass: "border-l-teal-500",
   entries: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
   citation: { id: "chain-health", versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL },
 });

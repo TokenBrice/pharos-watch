@@ -17,7 +17,6 @@ export function DepegResolverMethodologySection() {
       versionLabel={DDR_METHODOLOGY_VERSION_LABEL}
       changelogPath={DDR_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes."
-      accentClassName="border-l-violet-500"
       badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
       changelogClassName="hover:text-violet-700 dark:text-violet-400"
     >

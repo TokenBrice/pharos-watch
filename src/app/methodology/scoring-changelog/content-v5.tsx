@@ -6,7 +6,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.9 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.9")}
-              accent="border-l-amber-500"
             >
               <p>
                 Three DeFi-classified coins were corrected after live reserve review
@@ -32,7 +31,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.8 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.8")}
-              accent="border-l-amber-500"
             >
               <p>
                 Collateral quality scoring now consumes{" "}
@@ -57,7 +55,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.7 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.7")}
-              accent="border-l-amber-500"
             >
               <p>
                 Direct <span className="text-foreground font-medium">ETH</span> and canonical
@@ -83,7 +80,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.6 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.6")}
-              accent="border-l-amber-500"
             >
               <p>
                 The Safety Score liquidity dimension now evaluates
@@ -112,7 +108,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.5 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.5")}
-              accent="border-l-amber-500"
             >
               <p>
                 Three fixes to the peg score formula that prevent young coins with chronic
@@ -142,7 +137,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.4 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.4")}
-              accent="border-l-amber-500"
             >
               <p>
                 When the Liquidity dimension is NR (no DEX data), the overall score
@@ -161,7 +155,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.3 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.3")}
-              accent="border-l-amber-500"
             >
               <p>
                 Chain infrastructure was scored in{" "}
@@ -186,7 +179,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.2 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.2")}
-              accent="border-l-amber-500"
             >
               <p>
                 New highest GovernanceQuality tier:{" "}
@@ -233,7 +225,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.1 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.1")}
-              accent="border-l-amber-500"
             >
               <ul className="list-disc list-inside space-y-1">
                 <li>
@@ -263,7 +254,6 @@ export function ScoringChangelogV5Entries() {
             {/* ──────────── v5.0 ──────────── */}
             <VersionCard
               entry={getScoringEntry("5.0")}
-              accent="border-l-amber-500"
             >
               <div className="space-y-2">
                 <h3 className="text-foreground font-medium">

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
 import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import type { DigestInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
@@ -13,16 +13,14 @@ import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, Trend
 function SnapshotCard({
   title,
   icon,
-  borderClass,
   children,
 }: {
   title: string;
   icon: React.ReactNode;
-  borderClass: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className={`rounded-lg border border-border/50 border-l-[3px] ${borderClass} p-3 space-y-1.5`}>
+    <div className="rounded-lg border border-border/50 p-3 space-y-1.5">
       <h3 className="pharos-kicker">
         <span className="flex items-center gap-1.5">
           {icon}
@@ -96,7 +94,6 @@ function ActiveDepegsCard({
     <SnapshotCard
       title="Active Depegs"
       icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
-      borderClass="border-l-amber-500"
     >
       <p className="text-sm text-foreground/90">
         <span className="font-medium">{count}</span>{" "}
@@ -164,7 +161,6 @@ export function DigestSnapshot({ date }: { date: string }) {
         <SnapshotCard
           title="Market Snapshot"
           icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
-          borderClass="border-l-blue-500"
         >
           <p className="text-sm text-foreground/90">
             Total mcap:{" "}
@@ -200,7 +196,6 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard
             title="Stability Index"
             icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-            borderClass={PSI_BORDER_CLASSES[inputData.stabilityIndex.band as ConditionBand] ?? "border-l-muted-foreground"}
           >
             <p className="text-sm text-foreground/90">
               Score:{" "}
@@ -239,7 +234,6 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard
             title="Biggest Supply Mover"
             icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
-            borderClass="border-l-cyan-500"
           >
             <p className="text-sm text-foreground/90">
               <span className="font-medium">
@@ -272,7 +266,6 @@ export function DigestSnapshot({ date }: { date: string }) {
             <SnapshotCard
               title="Blacklist Activity"
               icon={<ShieldBan className="h-4 w-4" aria-hidden="true" />}
-              borderClass="border-l-red-500"
             >
               <p className="text-sm text-foreground/90">
                 <span className="font-medium">{blacklistEvents.length}</span>{" "}
@@ -311,7 +304,6 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard
             title="Safety Scores"
             icon={<Shield className="h-4 w-4" aria-hidden="true" />}
-            borderClass="border-l-violet-500"
           >
             {inputData.safetyScores.mentionedCoins.length > 0 && (
               <ul className="space-y-0.5">
@@ -338,7 +330,7 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 7. Yield Anomalies */}
         {inputData.yieldAnomalies && inputData.yieldAnomalies.length > 0 && (
-          <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} borderClass="border-l-amber-500">
+          <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}>
             {inputData.yieldAnomalies.map((y) => (
               <div key={y.symbol} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{y.symbol}</span>
@@ -355,7 +347,7 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 8. Liquidity Shifts */}
         {inputData.liquidityShifts && inputData.liquidityShifts.length > 0 && (
-          <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />} borderClass="border-l-blue-500">
+          <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}>
             {inputData.liquidityShifts.map((l) => (
               <div key={l.symbol} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{l.symbol}</span>
@@ -375,7 +367,6 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard
             title="Supply Velocity"
             icon={<ArrowDownUp className="h-4 w-4" aria-hidden="true" />}
-            borderClass="border-l-emerald-500"
           >
             <ul className="space-y-0.5">
               {inputData.supplyVelocity.map((v) => (
@@ -399,7 +390,6 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard
             title="Resolved Depegs"
             icon={<CheckCircle className="h-4 w-4" aria-hidden="true" />}
-            borderClass="border-l-teal-500"
           >
             <ul className="space-y-0.5">
               {inputData.resolvedDepegs.map((r) => (

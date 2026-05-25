@@ -20,7 +20,6 @@ export function ScoringChangelogV699Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.99")}
-      accent="border-l-emerald-500"
     >
       <p>
         USDaf&apos;s Asymmetry reserve feed can now qualify for live collateral passthrough when the protocol
@@ -47,7 +46,6 @@ export function ScoringChangelogV698Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.98")}
-      accent="border-l-emerald-500"
     >
       <p>
         Timestamped reserve feeds can now re-enter collateral-quality passthrough when they satisfy the
@@ -77,7 +75,6 @@ export function ScoringChangelogV697Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.97")}
-      accent="border-l-amber-500"
     >
       <p>
         Active-depeg and dependency edge cases now follow the documented Safety Score model more strictly.
@@ -110,7 +107,6 @@ export function ScoringChangelogV696Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.96")}
-      accent="border-l-amber-500"
     >
       <p>
         Severe active depegs now force redemption uplift to prove current exercisability instead of
@@ -138,7 +134,6 @@ export function ScoringChangelogV695Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.95")}
-      accent="border-l-amber-500"
     >
       <p>
         Direct inherited freeze risk now counts two reserve-side collateral classes that were previously
@@ -175,7 +170,6 @@ export function ScoringChangelogV694Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.94")}
-      accent="border-l-amber-500"
     >
       <p>
         NAV wrappers that explicitly wrap a stablecoin now inherit peg risk from the referenced base
@@ -205,7 +199,6 @@ export function ScoringChangelogV693Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.93")}
-      accent="border-l-amber-500"
     >
       <p>
         Peg stability now has more weight in the final grade, and severe live depegs can hard-cap the
@@ -237,7 +230,6 @@ export function ScoringChangelogV692Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.92")}
-      accent="border-l-amber-500"
     >
       <p>
         LUSD now uses direct Liquity v1 system-collateral reads instead of the generic proof-style
@@ -269,7 +261,6 @@ export function ScoringChangelogV691Entry() {
   return (
     <VersionCard
       entry={getScoringEntry("6.91")}
-      accent="border-l-amber-500"
     >
       <p>
         Blacklistability attribution now treats reserve-side freeze clues as first-class signals instead of
