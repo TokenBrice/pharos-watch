@@ -328,7 +328,14 @@ export async function apiFetchWithMeta<T>(
     };
   }
 
-  return { data: validateApiPayload(path, data, schema, contractMode), meta };
+  try {
+    return { data: validateApiPayload(path, data, schema, contractMode), meta };
+  } catch (err) {
+    if (schema && data !== json && err instanceof SchemaValidationError) {
+      return { data: validateApiPayload(path, json, schema, contractMode), meta };
+    }
+    throw err;
+  }
 }
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<StablecoinReservesResponse | null> {

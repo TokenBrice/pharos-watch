@@ -3,6 +3,7 @@ import { z } from "zod";
 import { StablecoinChartResponseSchema } from "@shared/types/digest";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
+import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
   apiRequest,
@@ -137,6 +138,64 @@ describe("api contract validation policy", () => {
 
     expect(result.data).toEqual({ summary: null, coins: [] });
     expect(result.meta).toEqual({ updatedAt: 200, ageSeconds: 20, status: "degraded" });
+  });
+
+  it("validates meta-aware response schemas that intentionally retain _meta", async () => {
+    const ddrPayload = {
+      _meta: {
+        dataAsOf: 1779723422,
+        modelAsOf: 1779723422,
+        computedAt: 1779723422,
+        expiresAt: 1779725222,
+        degraded: false,
+        degradedReason: null,
+        publicWarning: "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.",
+        resolutionRubricVersion: "resolution-rubric-v1",
+        durationModelVersion: "duration-landmark-v1",
+        incidentGroupingVersion: "incident-group-v1",
+        supportRulesVersion: "support-rules-v1",
+        lineage: null,
+      },
+      rows: [],
+      methodology: {
+        version: "1.0",
+        versionLabel: "v1.0",
+        currentVersion: "1.0",
+        currentVersionLabel: "v1.0",
+        changelogPath: "/methodology/depeg-resolver-changelog/",
+        asOf: 1779723422,
+        isCurrent: true,
+      },
+    };
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(ddrPayload), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "X-Data-Age": "0" },
+      }),
+    );
+
+    const result = await apiFetchWithMeta("/api/depeg-resolver", DdrResponseSchema);
+
+    expect(result.data._meta.computedAt).toBe(1779723422);
+    expect(result.data.rows).toEqual([]);
+    expect(result.meta).toMatchObject({
+      ageSeconds: 0,
+      status: "fresh",
+    });
+  });
+
+  it("preserves strict meta-aware validation failures when no envelope fallback applies", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(
+      apiFetchWithMeta("/api/custom", z.object({ ok: z.literal(false) })),
+    ).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
   it("preserves optional report-card live reserve telemetry in the shared schema", () => {
