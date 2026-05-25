@@ -1,9 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   Tooltip,
@@ -22,6 +22,7 @@ import {
   type DdrrDurationReview,
   type DdrrResponse,
   type DdrrRow,
+  type DdrrSummary,
   type DdrrVerdictReview,
 } from "@shared/types/depeg-resolver-review";
 
@@ -31,9 +32,13 @@ interface DepegResolverReviewerModuleProps {
   logos?: Record<string, string>;
 }
 
+/** Below this many scored verdicts, accuracy is presented as a raw fraction, not a percentage. */
+const CALIBRATION_THRESHOLD = 5;
+const ROW_DISPLAY_LIMIT = 8;
+
 const VERDICT_LABELS: Record<DdrrVerdictReview, string> = {
-  correct_recoverable: "Correct recoverable",
-  correct_terminal: "Correct terminal",
+  correct_recoverable: "Correct",
+  correct_terminal: "Correct",
   false_terminal: "False terminal",
   false_recoverable: "False recoverable",
   risk_noted_terminal: "Risk noted",
@@ -54,12 +59,12 @@ const VERDICT_STYLES: Record<DdrrVerdictReview, string> = {
 };
 
 const OUTCOME_LABELS: Record<DdrrActualOutcome, string> = {
-  recovered: "Recovered",
-  orphan_closed: "Closed without recovery",
-  terminal_observed: "Terminal observed",
-  still_open: "Still open",
-  source_event_missing: "Source missing",
-  data_issue: "Data issue",
+  recovered: "recovered",
+  orphan_closed: "closed without recovery",
+  terminal_observed: "terminal observed",
+  still_open: "still open",
+  source_event_missing: "source missing",
+  data_issue: "data issue",
 };
 
 const CHECKPOINT_LABELS: Record<DdrrCheckpoint, string> = {
@@ -78,9 +83,22 @@ const DURATION_LABELS: Record<DdrrDurationReview, string> = {
   median_late_by: "late vs median",
   median_early_by: "early vs median",
   median_exact: "exact median",
-  duration_unscored: "duration unscored",
+  duration_unscored: "unscored",
   data_issue: "data issue",
 };
+
+/** Verdict reviews that count as a real, scored result (vs. still maturing). */
+const SCORED_VERDICTS = new Set<DdrrVerdictReview>([
+  "correct_recoverable",
+  "correct_terminal",
+  "false_terminal",
+  "false_recoverable",
+  "risk_noted_terminal",
+]);
+
+function isScored(row: DdrrRow): boolean {
+  return SCORED_VERDICTS.has(row.verdictReview);
+}
 
 function formatPercent(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "N/A";
@@ -92,58 +110,243 @@ function formatSignedDuration(seconds: number | null): string {
   if (seconds == null || !Number.isFinite(seconds)) return "N/A";
   const rounded = Math.round(seconds);
   if (rounded === 0) return "0s";
-  return `${rounded > 0 ? "+" : "-"}${formatElapsedSeconds(Math.abs(rounded))}`;
+  return `${rounded > 0 ? "+" : "−"}${formatElapsedSeconds(Math.abs(rounded))}`;
 }
 
-function formatDurationOrNa(seconds: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds)) return "N/A";
-  return formatElapsedSeconds(Math.round(seconds));
-}
+// --- primitives ------------------------------------------------------------
 
-function durationDirection(seconds: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds)) return "No scored recoveries yet";
-  if (seconds > 0) return "observed slower than DDR median";
-  if (seconds < 0) return "observed faster than DDR median";
-  return "observed matched DDR median";
-}
-
-function StatBlock({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "emerald" | "cyan";
-}) {
+function Kicker({ children }: { children: ReactNode }) {
   return (
-    <Card className={cn(
-      "rounded-xl border-l-[3px]",
-      tone === "emerald" ? "border-l-emerald-500" : "border-l-cyan-500",
-    )}>
-      <CardHeader className="pb-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</h3>
-      </CardHeader>
-      <CardContent>
-        <div className="font-mono text-3xl font-semibold tabular-nums text-foreground">{value}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-      </CardContent>
-    </Card>
+    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      {children}
+    </p>
   );
 }
 
-function ReviewerHeader() {
+function CoinLockup({
+  row,
+  logos,
+}: {
+  row: Pick<DdrrRow, "stablecoinId" | "symbol" | "name">;
+  logos?: Record<string, string>;
+}) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <Link
+      href={buildStablecoinUrl(row.stablecoinId)}
+      className="pharos-focus-ring group/lockup flex min-w-0 items-center gap-2 rounded-sm"
+    >
+      <StablecoinLogo src={logos?.[row.stablecoinId]} name={row.symbol} size={22} />
+      <span className="truncate text-sm font-semibold text-foreground group-hover/lockup:underline">
+        {row.symbol}
+      </span>
+      <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+    </Link>
+  );
+}
+
+/** Scored-vs-maturing progress: a filled segment over a muted track plus a count caption. */
+function CalibrationBar({
+  scored,
+  maturing,
+  tone,
+}: {
+  scored: number;
+  maturing: number;
+  tone: "emerald" | "cyan";
+}) {
+  const total = scored + maturing;
+  const scoredPct = total > 0 ? (scored / total) * 100 : 0;
+  const fill = tone === "emerald" ? "bg-emerald-500/80" : "bg-cyan-500/80";
+  return (
+    <div className="space-y-1.5">
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-muted"
+        role="img"
+        aria-label={`${scored} scored of ${total}, ${maturing} still maturing`}
+      >
+        <div className={cn("h-full rounded-full", fill)} style={{ width: `${scoredPct}%` }} />
+      </div>
+      <p className="font-mono text-[10px] text-muted-foreground">
+        {scored} scored · {maturing} maturing
+      </p>
+    </div>
+  );
+}
+
+function BreakdownStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: ReactNode;
+  tone?: "emerald" | "red" | "muted";
+}) {
+  const color =
+    tone === "emerald"
+      ? "text-emerald-700 dark:text-emerald-400"
+      : tone === "red"
+        ? "text-red-700 dark:text-red-400"
+        : "text-foreground";
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className={cn("font-mono text-sm font-semibold tabular-nums", color)}>{value}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
+  const correct = summary.recoveryLikelihoodCorrectCount;
+  const scored = summary.recoveryLikelihoodScoredCount;
+  const pct = summary.recoveryLikelihoodAccuracyPct;
+  const durationScored = summary.durationScoredCount;
+
+  const recoveryValue = scored > 0 ? `${correct} / ${scored}` : "—";
+  const recoveryCaption =
+    scored === 0
+      ? "none scored yet"
+      : scored >= CALIBRATION_THRESHOLD && pct != null
+        ? `correct · ${formatPercent(pct)}`
+        : "correct so far";
+
+  return (
+    <div className="pharos-card-shell p-4 sm:p-5">
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+        <div className="space-y-2.5">
+          <Kicker>Recovery calls</Kicker>
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+              {recoveryValue}
+            </span>
+            <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
+          </div>
+          <CalibrationBar scored={scored} maturing={summary.pending} tone="emerald" />
+        </div>
+
+        <div className="space-y-2.5 sm:border-l sm:border-border/50 sm:pl-6">
+          <Kicker>Duration calls</Kicker>
+          <div className="flex items-baseline gap-2">
+            {durationScored > 0 ? (
+              <>
+                <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+                  {formatSignedDuration(summary.averageSignedDurationErrorSec)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  mean miss · ±{formatElapsedSeconds(summary.averageAbsoluteDurationErrorSec ?? 0)}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono text-2xl font-semibold tabular-nums text-muted-foreground/60">
+                  —
+                </span>
+                <span className="text-xs text-muted-foreground">not yet scored</span>
+              </>
+            )}
+          </div>
+          <CalibrationBar scored={durationScored} maturing={summary.pending} tone="cyan" />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/50 pt-3">
+        <BreakdownStat
+          label="correct"
+          value={summary.correctRecoverable + summary.correctTerminal}
+          tone="emerald"
+        />
+        <BreakdownStat
+          label="false terminal"
+          value={summary.falseTerminal}
+          tone={summary.falseTerminal > 0 ? "red" : "muted"}
+        />
+        <BreakdownStat
+          label="false recoverable"
+          value={summary.falseRecoverable}
+          tone={summary.falseRecoverable > 0 ? "red" : "muted"}
+        />
+        <BreakdownStat label="inside IQR" value={`${summary.withinIqrCount}/${summary.iqrScoredCount}`} />
+        <BreakdownStat label="pending" value={summary.pending} />
+      </div>
+    </div>
+  );
+}
+
+function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string> }) {
+  const scored = isScored(row);
+  const durationText =
+    row.signedErrorSec == null
+      ? DURATION_LABELS[row.durationReview]
+      : `${formatSignedDuration(row.signedErrorSec)} ${DURATION_LABELS[row.durationReview]}`;
+
+  // Two stacked lines on mobile (identity never shrinks to nothing), one row on sm+.
+  return (
+    <li
+      className={cn(
+        "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5",
+        "sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_auto_auto]",
+        scored ? "" : "opacity-80",
+      )}
+    >
+      <div className="min-w-0 sm:col-start-1 sm:row-start-1">
+        <CoinLockup row={row} logos={logos} />
+      </div>
+      <Badge
+        variant="outline"
+        className={cn(
+          "justify-self-end text-[11px] sm:col-start-3 sm:row-start-1 sm:justify-self-start",
+          VERDICT_STYLES[row.verdictReview],
+        )}
+      >
+        {VERDICT_LABELS[row.verdictReview]}
+      </Badge>
+      <span className="justify-self-start font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
+        {CHECKPOINT_LABELS[row.checkpoint]} · {OUTCOME_LABELS[row.actualOutcome]}
+      </span>
+      <span className="justify-self-end font-mono text-[11px] tabular-nums text-muted-foreground sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
+        {durationText}
+      </span>
+    </li>
+  );
+}
+
+function ReviewLegend() {
+  const items: Array<{ tone: string; label: string }> = [
+    { tone: "bg-emerald-500", label: "correct" },
+    { tone: "bg-red-500", label: "miss" },
+    { tone: "bg-sky-500", label: "pending" },
+  ];
+  return (
+    <div className="hidden items-center gap-3 text-[10px] text-muted-foreground sm:flex">
+      {items.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-1">
+          <span className={cn("h-1.5 w-1.5 rounded-full", item.tone)} aria-hidden="true" />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// --- module header ---------------------------------------------------------
+
+function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: DdrrResponse | undefined }) {
+  const meta = data?._meta;
+  const scored = data?.summary?.recoveryLikelihoodScoredCount ?? 0;
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5">
       <div className="flex items-center gap-2">
         <h2 className="pharos-kicker">Depeg Duration Resolver Reviewer</h2>
         <Badge
           variant="outline"
-          className="border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0 text-[10px] uppercase tracking-wide text-cyan-700 dark:text-cyan-400"
+          className={cn(
+            "px-1.5 py-0 text-[10px] uppercase tracking-wide",
+            calibrating
+              ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+          )}
         >
-          Review
+          {calibrating ? "Calibrating" : "Review"}
         </Badge>
         <TooltipProvider>
           <Tooltip>
@@ -154,46 +357,30 @@ function ReviewerHeader() {
               <Info className="h-3.5 w-3.5" aria-hidden="true" />
             </TooltipTrigger>
             <TooltipContent className="max-w-[300px]">
-              Compares stored DDR assessments with later confirmed event outcomes. Pending rows are
-              visible but excluded from scored accuracy.
+              Each stored DDR readout is graded against later confirmed event data once the event
+              closes. Open events stay pending and are excluded from scored accuracy.
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
+      {meta ? (
+        <p className="font-mono text-[10px] text-muted-foreground">
+          comparing {meta.assessedEventCount} stored readouts · {scored} scored
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string> }) {
-  const signedError = formatSignedDuration(row.signedErrorSec);
-  const durationText =
-    row.signedErrorSec == null
-      ? DURATION_LABELS[row.durationReview]
-      : `${signedError} ${DURATION_LABELS[row.durationReview]}`;
-
+function ReviewerNote({ text }: { text: string }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-3 text-sm md:grid-cols-[minmax(0,1.4fr)_auto_auto_auto] md:items-center">
-      <Link
-        href={buildStablecoinUrl(row.stablecoinId)}
-        className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-sm"
-      >
-        <StablecoinLogo src={logos?.[row.stablecoinId]} name={row.symbol} size={22} />
-        <span className="truncate font-semibold">{row.symbol}</span>
-        <span className="truncate text-xs text-muted-foreground">{row.name}</span>
-      </Link>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <Badge variant="outline" className="border-border bg-muted text-[10px] text-muted-foreground">
-          {CHECKPOINT_LABELS[row.checkpoint]}
-        </Badge>
-        <span className="text-xs text-muted-foreground">{OUTCOME_LABELS[row.actualOutcome]}</span>
-      </div>
-      <Badge variant="outline" className={cn("justify-self-start text-xs md:justify-self-auto", VERDICT_STYLES[row.verdictReview])}>
-        {VERDICT_LABELS[row.verdictReview]}
-      </Badge>
-      <div className="font-mono text-xs tabular-nums text-muted-foreground md:text-right">{durationText}</div>
-    </div>
+    <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      {text}
+    </p>
   );
 }
+
+// --- public component -------------------------------------------------------
 
 export function DepegResolverReviewerModule({ data, error, logos }: DepegResolverReviewerModuleProps) {
   if (!isDepegResolverReviewerEnabled()) return null;
@@ -201,103 +388,65 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
   if (error && !data) {
     return (
       <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
-        <ReviewerHeader />
-        <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          {DDRR_PUBLIC_WARNING}
-        </p>
-        <Card className="rounded-xl">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Reviewer data is temporarily unavailable.
-          </CardContent>
-        </Card>
+        <ReviewerHeader calibrating data={undefined} />
+        <ReviewerNote text={DDRR_PUBLIC_WARNING} />
+        <div className="pharos-empty-note text-center">Reviewer data is temporarily unavailable.</div>
       </section>
     );
   }
 
   const summary = data?.summary;
   const rows = data?.rows ?? [];
-  const recentRows = rows.slice(0, 6);
-  const showRows = data && recentRows.length > 0;
-  const likelihoodDetail = summary
-    ? `${summary.recoveryLikelihoodCorrectCount}/${summary.recoveryLikelihoodScoredCount} scored DDR recovery verdicts`
-    : "Loading scored DDR recovery verdicts";
-  const durationDetail = summary
-    ? `${durationDirection(summary.averageSignedDurationErrorSec)}; mean absolute miss ${formatDurationOrNa(summary.averageAbsoluteDurationErrorSec)}`
-    : "Loading observed-minus-predicted recovery timing";
+  const calibrating = (summary?.recoveryLikelihoodScoredCount ?? 0) < CALIBRATION_THRESHOLD;
+
+  // Scored rows carry the signal; surface them first, then a capped run of maturing rows.
+  const orderedRows = [...rows].sort((a, b) => Number(isScored(b)) - Number(isScored(a)));
+  const shownRows = orderedRows.slice(0, ROW_DISPLAY_LIMIT);
+  const hiddenCount = orderedRows.length - shownRows.length;
 
   return (
     <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
-      <ReviewerHeader />
+      <ReviewerHeader calibrating={calibrating} data={data} />
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <StatBlock
-          label="Recovery likelihood"
-          value={formatPercent(summary?.recoveryLikelihoodAccuracyPct ?? null)}
-          detail={likelihoodDetail}
-          tone="emerald"
-        />
-        <StatBlock
-          label="Recovery duration"
-          value={formatSignedDuration(summary?.averageSignedDurationErrorSec ?? null)}
-          detail={durationDetail}
-          tone="cyan"
-        />
-      </div>
-
-      <p className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-        {data?._meta.publicWarning ?? DDRR_PUBLIC_WARNING}
-      </p>
-
-      {!data ? (
-        <Card className="rounded-xl">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Reviewer data is loading.
-          </CardContent>
-        </Card>
+      {!data || !summary ? (
+        <div className="pharos-empty-note text-center">Reviewer data is loading.</div>
       ) : data._meta.degraded && rows.length === 0 ? (
-        <Card className="rounded-xl">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Reviewer data is temporarily unavailable.
-          </CardContent>
-        </Card>
+        <div className="pharos-empty-note text-center">Reviewer data is temporarily unavailable.</div>
       ) : rows.length === 0 ? (
-        <Card className="rounded-xl">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No DDR assessments have matured into reviewable outcomes yet.
-          </CardContent>
-        </Card>
+        <div className="pharos-empty-note">
+          <p className="font-medium text-foreground">No readouts have matured yet.</p>
+          <p className="mt-1">
+            As open depeg events close, each prior DDR readout is graded against the confirmed
+            outcome and its accuracy appears here.
+          </p>
+        </div>
       ) : (
         <>
+          <CalibrationLedger summary={summary} />
+          <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
+
           {data._meta.degraded ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               Reviewer snapshot is degraded: {data._meta.degradedReason ?? "unknown"}.
             </p>
           ) : null}
-          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            <div>
-              <div className="font-mono text-lg font-semibold tabular-nums">{summary?.pending ?? 0}</div>
-              <div className="text-xs text-muted-foreground">pending rows</div>
+
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <Kicker>Reviewed readouts</Kicker>
+              <ReviewLegend />
             </div>
-            <div>
-              <div className="font-mono text-lg font-semibold tabular-nums">{summary?.withinIqrCount ?? 0}/{summary?.iqrScoredCount ?? 0}</div>
-              <div className="text-xs text-muted-foreground">inside IQR</div>
-            </div>
-            <div>
-              <div className="font-mono text-lg font-semibold tabular-nums">{summary?.falseTerminal ?? 0}</div>
-              <div className="text-xs text-muted-foreground">false terminal</div>
-            </div>
-            <div>
-              <div className="font-mono text-lg font-semibold tabular-nums">{summary?.falseRecoverable ?? 0}</div>
-              <div className="text-xs text-muted-foreground">false recoverable</div>
-            </div>
-          </div>
-          {showRows ? (
-            <div className="space-y-2">
-              {recentRows.map((row) => (
+            <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-card/40">
+              {shownRows.map((row) => (
                 <ReviewRow key={`${row.eventId}:${row.checkpoint}:${row.assessedAt}`} row={row} logos={logos} />
               ))}
-            </div>
-          ) : null}
+            </ul>
+            {hiddenCount > 0 ? (
+              <p className="px-1 font-mono text-[11px] text-muted-foreground">
+                +{hiddenCount} more maturing
+              </p>
+            ) : null}
+          </div>
         </>
       )}
     </section>

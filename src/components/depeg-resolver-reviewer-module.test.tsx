@@ -115,15 +115,45 @@ function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
 }
 
 describe("DepegResolverReviewerModule", () => {
-  it("surfaces recovery likelihood and recovery duration headline stats", () => {
+  it("shows the calibration ledger as fractions while the scored sample is thin", () => {
     render(<DepegResolverReviewerModule data={response()} />);
 
-    expect(screen.getByText("Recovery likelihood")).toBeTruthy();
-    expect(screen.getByText("Recovery duration")).toBeTruthy();
-    expect(screen.getByText("50%")).toBeTruthy();
+    expect(screen.getByText("Recovery calls")).toBeTruthy();
+    expect(screen.getByText("Duration calls")).toBeTruthy();
+    // Scored sample (4) is below the promotion threshold, so the call is a raw fraction…
+    expect(screen.getByText("2 / 4")).toBeTruthy();
+    expect(screen.getByText("correct so far")).toBeTruthy();
+    // …and the percentage is deliberately withheld to avoid overstating a thin sample.
+    expect(screen.queryByText("50%")).toBeNull();
+    expect(screen.getByText("Calibrating")).toBeTruthy();
+    // Duration miss + scored-vs-maturing progress captions.
     expect(screen.getAllByText("+1h").length).toBeGreaterThan(0);
-    expect(screen.getByText("2/4 scored DDR recovery verdicts")).toBeTruthy();
-    expect(screen.getByText(/mean absolute miss 1h 30m/)).toBeTruthy();
+    expect(screen.getByText(/1h 30m/)).toBeTruthy();
+    expect(screen.getByText("4 scored · 1 maturing")).toBeTruthy();
+    expect(screen.getByText("2 scored · 1 maturing")).toBeTruthy();
+    // Reviewed readout row renders with its verdict.
+    expect(screen.getByText("LUSD")).toBeTruthy();
+    expect(screen.getByText("Correct")).toBeTruthy();
+  });
+
+  it("promotes the percentage once enough verdicts are scored", () => {
+    render(
+      <DepegResolverReviewerModule
+        data={response({
+          summary: {
+            ...summary,
+            recoveryLikelihoodCorrectCount: 5,
+            recoveryLikelihoodScoredCount: 5,
+            recoveryLikelihoodAccuracyPct: 1,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("5 / 5")).toBeTruthy();
+    expect(screen.getByText(/100%/)).toBeTruthy();
+    expect(screen.getByText("Review")).toBeTruthy();
+    expect(screen.queryByText("Calibrating")).toBeNull();
   });
 
   it("keeps loading and empty states distinct", () => {
@@ -131,15 +161,15 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.getByText("Reviewer data is loading.")).toBeTruthy();
 
     rerender(<DepegResolverReviewerModule data={response({ rows: [], summary })} />);
-    expect(screen.getByText("No DDR assessments have matured into reviewable outcomes yet.")).toBeTruthy();
+    expect(screen.getByText("No readouts have matured yet.")).toBeTruthy();
   });
 
-  it("surfaces endpoint errors without rendering N/A headline stats", () => {
+  it("surfaces endpoint errors without rendering misleading stats", () => {
     render(<DepegResolverReviewerModule data={undefined} error={new Error("missing endpoint")} />);
 
     expect(screen.getByText("Reviewer data is temporarily unavailable.")).toBeTruthy();
-    expect(screen.queryByText("Recovery likelihood")).toBeNull();
-    expect(screen.queryByText("Recovery duration")).toBeNull();
+    expect(screen.queryByText("Recovery calls")).toBeNull();
+    expect(screen.queryByText("Duration calls")).toBeNull();
     expect(screen.queryByText("N/A")).toBeNull();
   });
 });
