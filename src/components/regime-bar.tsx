@@ -72,7 +72,7 @@ export function RegimeBar() {
       >
         <div className="min-h-0 overflow-hidden">
           <div className={cn(
-            "flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-mono tabular-nums",
+            "flex items-center justify-center gap-3 px-4 py-1 text-[11px] leading-none font-mono tabular-nums",
             useDarkText ? "text-gray-900/90" : "text-white/90",
           )}>
             <span className="font-semibold tracking-wide">{band}</span>
@@ -89,9 +89,9 @@ export function RegimeBar() {
               {current.components.trend.toFixed(1)}
             </span>
           </div>
-          <div className="mx-auto mb-1.5 flex max-w-3xl items-center gap-2 px-4">
+          <div className="mx-auto mb-1 flex max-w-3xl items-center gap-2 px-4">
             <div
-              className="flex h-[10px] flex-1 gap-[1px] overflow-hidden rounded-[2px]"
+              className="flex h-[4px] flex-1 gap-[1px] overflow-hidden rounded-[1px]"
               role="img"
               aria-label="Last 30 days of PSI band classifications"
             >

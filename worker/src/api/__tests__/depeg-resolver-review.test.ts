@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DDR_METHODOLOGY_VERSION } from "@shared/lib/depeg-resolver-version";
+import {
+  DDR_METHODOLOGY_VERSION,
+  DDR_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/depeg-resolver-version";
 import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
 import { DDRR_REVIEWER_VERSION } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
@@ -83,9 +86,9 @@ function snapshot(computedAt: number, expiresAt: number): DdrrResponse {
     ],
     methodology: {
       version: DDR_METHODOLOGY_VERSION,
-      versionLabel: "v1.0",
+      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
       currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: "v1.0",
+      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
       changelogPath: "/methodology/depeg-resolver-changelog/",
       asOf: computedAt,
       isCurrent: true,

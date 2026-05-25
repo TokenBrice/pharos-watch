@@ -1071,7 +1071,7 @@ Cache-backed Depeg Duration Resolver readouts for active confirmed depeg events.
     "lineage": { "eventCount": 34129, "incidentCount": 1820, "coinCount": 142, "quarantinedCoins": 7 }
   },
   "rows": [DdrRow, ...],
-  "methodology": { "version": "1.0", "versionLabel": "v1.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "methodology": { "version": "1.1", "versionLabel": "v1.1", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 
@@ -1081,7 +1081,7 @@ Cache-backed Depeg Duration Resolver readouts for active confirmed depeg events.
 
 ### `GET /api/depeg-resolver-review`
 
-Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored first DDR assessment for each event under the current DDR methodology with later canonical `depeg_events` outcomes; it does not replay current DDR code over older events. Later checkpoints are retained in D1 for audit/drill-down expansion, but the public v1 headline stats are event-level.
+Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored first DDR assessment for each event under the current DDR methodology with later canonical `depeg_events` outcomes; it does not replay current DDR code over older events. Later checkpoints are retained in D1 for audit/drill-down expansion, but the public reviewer v1 headline stats are event-level.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true`, an empty summary, and `rows: []`; stale snapshots keep review rows but set `_meta.degraded=true` and `degradedReason="stale-cache"`.
 
@@ -1109,7 +1109,7 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored
     "pendingEventCount": 8,
     "durationScoredCount": 6,
     "verdictScoredCount": 10,
-    "methodologyVersions": ["1.0"]
+    "methodologyVersions": ["1.1"]
   },
   "summary": {
     "recoveryLikelihoodAccuracyPct": 0.7,
@@ -1118,7 +1118,7 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored
     "horizonHitRates": [{ "horizon": "6h", "scored": 5, "hits": 3, "misses": 2, "hitRate": 0.6 }]
   },
   "rows": [DdrrRow, ...],
-  "methodology": { "version": "1.0", "versionLabel": "v1.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "methodology": { "version": "1.1", "versionLabel": "v1.1", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { handleDepegResolver } from "../depeg-resolver";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { DDR_METHODOLOGY_VERSION } from "@shared/lib/depeg-resolver-version";
+import {
+  DDR_METHODOLOGY_VERSION,
+  DDR_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/depeg-resolver-version";
 import { DDR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-snapshot-cache";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 
@@ -75,9 +78,9 @@ function snapshot(computedAt: number, expiresAt: number): DdrResponse {
     ],
     methodology: {
       version: DDR_METHODOLOGY_VERSION,
-      versionLabel: "v1.0",
+      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
       currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: "v1.0",
+      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
       changelogPath: "/methodology/depeg-resolver-changelog/",
       asOf: computedAt,
       isCurrent: true,

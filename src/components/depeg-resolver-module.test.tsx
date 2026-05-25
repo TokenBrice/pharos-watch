@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
+import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import type { DdrResponse, DdrRow } from "@shared/types";
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -66,10 +67,10 @@ function response(overrides: Partial<DdrResponse> = {}): DdrResponse {
     _meta: meta,
     rows: [],
     methodology: {
-      version: "1.0",
-      versionLabel: "v1.0",
-      currentVersion: "1.0",
-      currentVersionLabel: "v1.0",
+      version: DDR_METHODOLOGY_VERSION,
+      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+      currentVersion: DDR_METHODOLOGY_VERSION,
+      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
       changelogPath: "/methodology/depeg-resolver-changelog/",
       asOf: 1,
       isCurrent: true,
@@ -79,6 +80,12 @@ function response(overrides: Partial<DdrResponse> = {}): DdrResponse {
 }
 
 describe("DepegResolverModule", () => {
+  it("shows the DDR methodology version in the module header", () => {
+    render(<DepegResolverModule data={response()} />);
+
+    expect(screen.getByText(DDR_METHODOLOGY_VERSION_LABEL)).toBeTruthy();
+  });
+
   it("does not claim there are no active depegs before data loads", () => {
     render(<DepegResolverModule data={undefined} />);
 

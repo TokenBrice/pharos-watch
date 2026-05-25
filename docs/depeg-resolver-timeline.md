@@ -1,10 +1,19 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` onward.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v1.1`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
 
 ---
+
+## v1.1 — Depeg Duration Resolver Reviewer (May 25, 2026)
+
+Added the Depeg Duration Resolver Reviewer (DDRR), the audit layer that scores stored DDR assessments against later canonical depeg-event outcomes.
+
+- **Assessment checkpoints.** The DDR writer now stores quarter-hourly checkpoints in `depeg_resolver_assessments` (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) with the original verdict tier, duration median/IQR, horizon cells, factors, methodology version, and source row JSON.
+- **Public review stats.** The `/depeg/` module and `GET /api/depeg-resolver-review` endpoint expose strict recovery-likelihood accuracy plus average observed-minus-DDR recovery-duration error. Public reviewer v1 scoring uses the `first` checkpoint for each event under the current methodology so headline stats stay event-level.
+- **Conservative outcome handling.** Pending, insufficient-signal, and data-issue rows are visible but excluded from scored headline accuracy; still-open events remain pending and are never counted as proof that a terminal call was right.
+- **No historical replay.** DDRR compares stored DDR readouts with later `depeg_events` outcomes and tracked-coin lifecycle state; it does not replay today's resolver over old events.
 
 ## v1.0 — Initial Depeg Duration Resolver (May 25, 2026)
 
@@ -14,10 +23,6 @@ Launched the two-stage Depeg Duration Resolver: a mechanistic Resolution Outlook
 - **Stage 2 — Expected Duration.** Emits a depth / direction / structural-class stratified landmark estimate with a median plus interquartile band and per-horizon (6h / 24h / 7d / 30d) resolution likelihood, support-gated and Wilson-bounded, computed only when Stage 1 is non-terminal.
 - **Provenance handling.** Audit-verdict gating is not used because the depeg-event provenance side-table is unpopulated in production. Corpus quality comes from incident grouping, quarantine of flappy coins, and a minimum-severity/duration floor instead.
 - **Sub-component versions seeded:** `resolution-rubric-v1`, `duration-landmark-v1`, `incident-group-v1`, `support-rules-v1`.
-
-### v1.0 reviewer companion — DDRR (May 25, 2026)
-
-Added the Depeg Duration Resolver Reviewer without changing the DDR methodology version. DDRR stores quarter-hourly DDR assessment checkpoints and compares them with later canonical `depeg_events` outcomes. The public `/depeg/` module and `GET /api/depeg-resolver-review` endpoint expose strict recovery-likelihood accuracy plus average observed-minus-DDR recovery-duration error. Pending, insufficient-signal, and data-issue rows are visible but excluded from scored headline accuracy.
 
 ---
 

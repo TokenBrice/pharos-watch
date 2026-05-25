@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./base";
 
 const ddr = createMethodologyVersion({
-  currentVersion: "1.0",
+  currentVersion: "1.1",
   changelogPath: "/methodology/depeg-resolver-changelog/",
   changelog: [
+    {
+      version: "1.1",
+      title: "Depeg Duration Resolver Reviewer",
+      date: "2026-05-25",
+      effectiveAt: 1779733800,
+      summary:
+        "Added the Depeg Duration Resolver Reviewer (DDRR), the audit layer that scores stored DDR assessments against later canonical depeg-event outcomes.",
+      impact: [
+        "Stores quarter-hourly DDR assessment checkpoints and reviews the first checkpoint for each event under the current methodology",
+        "Publishes recovery-likelihood accuracy and average observed-minus-DDR recovery-duration error on /depeg/ and GET /api/depeg-resolver-review",
+        "Keeps pending, insufficient-signal, and data-issue rows visible while excluding them from scored headline accuracy",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.0",
       title: "Initial Depeg Duration Resolver",

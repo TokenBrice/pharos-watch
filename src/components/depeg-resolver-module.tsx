@@ -16,6 +16,7 @@ import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
+import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import {
   DDR_PUBLIC_WARNING,
   type DdrCellState,
@@ -467,10 +468,19 @@ function RelatedContextDetails({ row }: { row: DdrRow }) {
 
 function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
   const lineage = data?._meta.lineage ?? null;
+  const versionLabel = data?.methodology.currentVersionLabel ?? DDR_METHODOLOGY_VERSION_LABEL;
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5">
       <div className="flex items-center gap-2">
         <h2 className="pharos-kicker">Depeg Duration Resolver</h2>
+        {versionLabel ? (
+          <Badge
+            variant="outline"
+            className="border-violet-500/30 bg-violet-500/10 px-1.5 py-0 text-[10px] font-mono uppercase tracking-wide text-violet-700 dark:text-violet-400"
+          >
+            {versionLabel}
+          </Badge>
+        ) : null}
         <Badge
           variant="outline"
           className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-400"

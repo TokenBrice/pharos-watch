@@ -11,12 +11,12 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.0`
+- **Current methodology version:** `v1.1`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
 
-DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, or support-gate rules change in a way that moves published verdicts or bands.
+DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
 
 Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion`, `durationModelVersion`, `incidentGroupingVersion`, and `supportRulesVersion`.
 
@@ -120,7 +120,7 @@ No leakage: a closed event's final peak severity is never used to estimate a liv
 
 The Depeg Duration Resolver Reviewer (DDRR) is the audit companion to DDR. DDR answers an open-event question; DDRR asks whether a stored DDR answer later matched canonical Pharos event data.
 
-DDRR does **not** replay today's resolver over old events. The quarter-hourly DDR writer stores assessment checkpoints in `depeg_resolver_assessments` (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) with the original verdict tier, duration median/IQR, horizon cells, factors, methodology version, and source row JSON. Public v1 scores the `first` checkpoint for the current DDR methodology so headline stats are event-level, while later checkpoints remain in D1 for audit/drill-down expansion. The review layer compares the stored assessment with the later `depeg_events` row and tracked-coin lifecycle status.
+DDRR does **not** replay today's resolver over old events. The quarter-hourly DDR writer stores assessment checkpoints in `depeg_resolver_assessments` (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) with the original verdict tier, duration median/IQR, horizon cells, factors, methodology version, and source row JSON. Public reviewer v1 scores the `first` checkpoint for the current DDR methodology so headline stats are event-level, while later checkpoints remain in D1 for audit/drill-down expansion. The review layer compares the stored assessment with the later `depeg_events` row and tracked-coin lifecycle status.
 
 The public module on `/depeg/` sits directly below DDR and surfaces two headline reviewer stats first:
 
