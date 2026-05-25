@@ -345,7 +345,7 @@ export function DepegClient() {
                 onValueChange={setSearchQuery}
                 placeholder="Search..."
                 className="relative w-full sm:w-44"
-                inputClassName="pl-8 h-8 text-xs"
+                inputClassName="pl-8 h-11 md:h-8 text-xs"
                 ariaLabel="Search stablecoins by name or symbol"
               />
             </div>
