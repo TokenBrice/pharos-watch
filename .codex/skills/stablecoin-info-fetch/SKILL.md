@@ -1,6 +1,6 @@
 ---
 name: stablecoin-info-fetch
-description: Verify and populate per-coin metadata fields for a tracked stablecoin in the Pharos dashboard, including collateral, peg mechanism, jurisdiction, links, `geckoId`, `cmcSlug`, `contracts`, and `proofOfReserves`. Use when adding a stablecoin, filling metadata gaps, or auditing entries in `shared/data/stablecoins/coins/*.json` for one coin at a time.
+description: Verify and populate per-coin metadata fields for a tracked stablecoin in the Pharos dashboard, including collateral, peg mechanism, jurisdiction, links, `geckoId`, `cmcSlug`, `contracts`, `proofOfReserves`, and Mint Authority review context. Use when adding a stablecoin, filling metadata gaps, or auditing entries in `shared/data/stablecoins/coins/*.json` for one coin at a time.
 ---
 
 # Stablecoin Info Fetch
@@ -26,6 +26,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - `cmcSlug`
 - `contracts`
 - `proofOfReserves`
+- `mintAuthority` (reviewed-or-waived for high-value active additions and pre-launch promotions; descriptive only)
 
 ## Workflow
 
@@ -39,6 +40,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - CoinGecko coin detail API for links, categories, and `detail_platforms`
 - official site, docs, transparency page, legal page
 - explorer APIs for contract verification
+- verified contract source, proxy/admin reads, role registries, Safe/multisig state, bridge/OFT route docs, and issuer/backend signer docs for Mint Authority review
 - secondary reporting only when official material is incomplete
 
 4. Prefer structured APIs over page scraping. Use browser/web fallback only when the needed information is not available in an API response.
@@ -52,12 +54,15 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - `cmcSlug`: add only when genuinely needed for price fallback
 - `contracts`: verify name, symbol, and decimals before adding
 - `proofOfReserves`: store `{ type, url, provider? }`
+- `mintAuthority`: if high-value or explicitly requested, either author a sourced `mintAuthority` profile or record an intentional gap. The profile must include `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review`; privileged paths require `controls[]` unless confidence is `unknown`.
 
 6. If DefiLlama reports meaningful supply on a chain that is missing from `contracts`, treat that as a gap signal and use `contract-populate` or `contract-enrich` style verification.
 
-7. Patch the coin's per-coin JSON file with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned and regenerate `shared/data/stablecoins/coins.generated.json`.
+7. For Mint Authority, treat `tsx scripts/maintenance/audit-mint-authority.ts --coin <id>` output as a candidate queue only. Do not copy scanner output into metadata without source review. Admin mint authority belongs in `mintAuthority`, not in `canBeBlacklisted` / FreezeWatch.
 
-8. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
+8. Patch the coin's per-coin JSON file with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned and regenerate `shared/data/stablecoins/coins.generated.json`.
+
+9. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
 
 ## Guardrails
 
@@ -65,3 +70,5 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - Use `x.com` links, not `twitter.com`, unless the project itself still uses a different canonical URL.
 - Lowercase EVM addresses; preserve canonical case for non-EVM chains.
 - If sources conflict, keep the current value unless a stronger primary source clearly wins.
+- Mint Authority is descriptive and unscored. Missing reviewed data means the detail section is omitted; it must not be treated as safe.
+- Verified Safe or multisig Mint Authority controls need threshold, signer count, and modules/guards status. If modules or guards are unknown, cap verified or probable confidence at `manual-review`.

@@ -138,6 +138,7 @@ Do the research manually, or use the maintained skills when they match the task:
 - `stablecoin-info-fetch`: audit/populate a single coin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts).
 - `contract-populate` / `contract-enrich`: resolve `contracts[]` across chains from CoinGecko + DefiLlama + explorer verification.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
+- Mint Authority does not have a publication skill yet. Use the Phase 5f review rubric below; `scripts/maintenance/audit-mint-authority.ts` is only a local candidate producer.
 - `write-ai-summaries` (Claude-only): draft or refresh the `data/ai-summaries.json` entry.
 - `resilience-classify`: pick `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` overrides.
 - `pre-launch-update` (Claude-only): refresh milestones, launch phase, and featured content for pre-launch entries.
@@ -187,6 +188,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `infrastructures`
 - `yieldConfig`
 - `liveReservesConfig`
+- `mintAuthority`
 - `notices`
 - `tags`
 - all pre-launch metadata from Phase 0a
@@ -239,6 +241,13 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `mechanismArchetype`           | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund`                                  |
 | `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none`                                                                                 |
 | `proofOfReserves.cadence`      | `daily-nav` \| `real-time` \| `daily` \| `weekly` \| `monthly` \| `quarterly` \| `semi-annual` \| `annual` \| `ad-hoc` \| `none`    |
+| `mintAuthority.mintPath`       | `immutable-user-collateralized` \| `user-collateralized-governed` \| `issuer-direct-mint` \| `permissioned-minter` \| `offchain-attested-minter` \| `facilitator-bucket-mint` \| `amo-or-custodian-hybrid` \| `bridge-or-oft-synthetic` \| `m0-permissioned-minter` \| `wrapped-or-variant-inherited` \| `unknown` |
+| `mintAuthority.authorityPosture` | `none-resolved` \| `bounded-admin` \| `partially-bounded-admin` \| `concentrated-admin` \| `unbounded-or-compromised` \| `unknown` |
+| `mintAuthority.confidence`     | `verified` \| `probable` \| `manual-review` \| `unknown`                                                                            |
+| `mintAuthority.controls[].role` | `direct-minter` \| `minter-admin` \| `facilitator` \| `bucket-admin` \| `cap-admin` \| `proxy-admin` \| `bridge-admin` \| `timelock` \| `governor` \| `backend-signer` \| `custodian` \| `wrapper` \| `other` \| `unknown` |
+| `mintAuthority.controls[].authorityType` | `safe` \| `multisig` \| `eoa` \| `timelock` \| `dao-governor` \| `contract` \| `issuer-backend` \| `bridge` \| `custodian` \| `none` \| `unknown` |
+| `mintAuthority.controls[].directMintAbility` | `direct` \| `cap-limited` \| `can-authorize` \| `upgrade-only` \| `parameter-only` \| `none` \| `unknown` |
+| `mintAuthority.controls[].modulesOrGuardsStatus` | `none-detected` \| `present` \| `unknown` \| `not-applicable`                                                        |
 | `launchPhase`                  | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon`                                                                |
 
 ### Classification rules that are easy to get wrong
@@ -246,6 +255,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
+- `mintAuthority` is descriptive. It does not change Safety Score, report-card raw inputs, selector exclusions, or rankings. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review.
 - `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
 - `variantOf` / `variantKind` are only for active wrapped, staked, strategy-vault, or bond-maturity children whose primary user expectation is still direct exposure to another tracked stablecoin. They co-require, the parent must be an active non-variant non-`navToken` stablecoin, and the child must keep `flags.navToken === true` plus `pegReferenceId === variantOf`. Supported kinds and their dependency-risk ceilings relative to the parent overall: `savings-passthrough` = `parent - 3`, `strategy-vault` = `parent - 5`, `risk-absorption` = `parent - 5`, `bond-maturity` = `parent - 8`. Blacklistable/freezable status inherits from the parent automatically — do not author `canBeBlacklisted` on a variant unless the wrapper's own contract exposes a freeze surface beyond the parent's.
 - `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
@@ -340,9 +350,10 @@ Required fields and their conditions:
 | `oneLiner`                     | every active or pre-launch coin                                                                                               | none — frozen coins follow the past-tense rewrite path instead                                                    |
 | `mechanismArchetype`           | coin enters the editorial cohort (top-60 by canonical rank in `scripts/lib/curation-baseline-caps.json` or market cap ≥ $50M) | record an "intentional gap" line in Phase 5 coverage notes with reason (e.g. "wrapper inherits parent archetype") |
 | `proofOfReserves.attestorTier` | `proofOfReserves.type === "independent-audit"`                                                                                | none — if the attestor is genuinely unknown, omit the whole `proofOfReserves` block instead and record the reason |
+| `mintAuthority` coverage decision | new high-value active additions or pre-launch promotions (top-60 by canonical rank, market cap ≥ $50M, or issuer/operator has obvious mint control) | record an "intentional gap" line in Phase 5 coverage notes with the unresolved control path or source gap |
 | `data/ai-summaries.json` entry | every active coin                                                                                                             | record skip reason in Phase 5 coverage notes                                                                      |
 
-The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phase 3.5 step before saving the per-coin JSON. The maintainer can also run the gate manually by re-checking the four fields against the rubric above.
+The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phase 3.5 step before saving the per-coin JSON. The maintainer can also run the gate manually by re-checking the fields against the rubric above.
 
 CI backstops (run in `validate:prebuild`):
 
@@ -350,6 +361,8 @@ CI backstops (run in `validate:prebuild`):
 - `npm run check:mechanism-archetype-coverage` — fails if more than ~27% of the cohort (non-variant, non-frozen) lacks an archetype; threshold is documented in the script header and tightens over time per the curation cadence plan.
 - `npm run check:attestor-tier-coverage` — fails if more than 20% of `independent-audit` coins lack a tier.
 - `npm run check:glossary-coverage` — fails if AI summaries reference unknown `{{term:slug}}` markers.
+
+Mint Authority coverage is currently a manual reviewed-or-waived gate because absence can be intentional. `npm run check:stablecoin-data` validates any authored `mintAuthority` profile against the schema, but it does not require every high-value coin to have one yet.
 
 The chart-annotation stream (`shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
 
@@ -402,6 +415,45 @@ Add the new object to the asset's per-coin JSON file using current field names a
 
 `oneLiner`, `mechanismArchetype`, and the four `proofOfReserves` extension fields (`attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`) drive the hero verdict, mechanism schematic, and attestor-tier badge on the detail page. Omit when uncertain — they're optional and the UI falls back cleanly. See the Phase 3 "Hero verdict, mechanism archetype, and attestor-tier surfacing" subsection for full guidance.
 
+### Mint Authority profile shape
+
+When the Phase 3.5 / Phase 5f gate calls for a reviewed Mint Authority profile, author it in the per-coin JSON as `mintAuthority`. It is optional overall, but when present the schema expects a reviewable profile:
+
+```json
+{
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "A short user-facing sentence explaining who can create durable supply and through which route.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xabc123...",
+        "label": "Acme token owner",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [{ "label": "Ethereum token contract", "url": "https://etherscan.io/address/0xabc123..." }],
+        "evidence": "Contract reads and verified source show this owner can call the token mint function."
+      }
+    ],
+    "review": {
+      "sources": [{ "label": "Acme docs", "url": "https://docs.acme.example" }],
+      "evidence": "Official docs and verified contract reads identify the mint route and controlling authority.",
+      "reviewer": "Codex stablecoin addition",
+      "reviewedAt": "2026-05-25",
+      "unresolvedQuestions": ["Verify whether the multisig has off-chain operational policy constraints."]
+    }
+  }
+}
+```
+
+Use `sourceFreeRationale` instead of `review.sources` only when the review is intentionally source-free, for example a documented absence after exhaustive source review. Privileged mint paths require at least one `controls[]` entry unless confidence is `unknown`. Verified Safe/multisig controls require `threshold`, `signerCount`, and `modulesOrGuardsStatus`; verified or probable controls cannot use `modulesOrGuardsStatus: "unknown"` because unknown modules or guards cap confidence at `manual-review`. A verified Safe control with an on-chain or Safe API `safe.source` also needs `safe.observedBlock`. Wrapped or variant inherited profiles must use `mintPath: "wrapped-or-variant-inherited"` and provide `inheritedFrom` or `variantOf` (both must match when both are present).
+
 ### Current registry editing checklist
 
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
@@ -413,6 +465,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
   - Fiat assets not in DefiLlama need `detailProvider: "coingecko"` plus either `geckoId` or a supported on-chain total-supply contract.
   - Gold/silver assets need a `geckoId` for the commodity supplemental path.
   - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
+- If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
 - Use `npm run check:stablecoin-data` before moving on.
 
 ---
@@ -522,7 +575,18 @@ Current practice:
 
 Mint Authority review is descriptive, not scored. It should answer whether durable supply can be created directly or indirectly by privileged minters, minter admins, proxy/cap admins, facilitators, bridge/OFT routes, backend signers, governance, timelocks, Safes/multisigs, custodians, or only through user/protocol mechanics.
 
-For new high-value active additions, record either a reviewed authority note or an intentional gap. Missing data is acceptable, but the detail page omits the Mint Authority section until reviewed data exists; do not imply unknown means safe.
+For new high-value active additions and pre-launch promotions, record either a reviewed `mintAuthority` profile or an intentional gap. High-value means top-60 canonical rank, market cap ≥ $50M, or an obvious issuer/operator mint control. Missing data is acceptable, but the detail page omits the Mint Authority section until reviewed data exists; do not imply unknown means safe.
+
+When authoring `mintAuthority`, verify:
+
+- `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review` are present.
+- `review` includes `evidence`, `reviewer`, `reviewedAt`, and either `sources[]` or `sourceFreeRationale`.
+- privileged paths such as `issuer-direct-mint`, `permissioned-minter`, `offchain-attested-minter`, `facilitator-bucket-mint`, `amo-or-custodian-hybrid`, `bridge-or-oft-synthetic`, and `m0-permissioned-minter` include at least one `controls[]` entry unless confidence is `unknown`.
+- each control identifies `label`, `role`, `authorityType`, and `directMintAbility`; addressed or mint-capable controls need control-level sources/evidence or profile-level sources.
+- Safe/multisig controls with `verified` confidence include `threshold`, `signerCount`, and `modulesOrGuardsStatus`; `modulesOrGuardsStatus: "unknown"` caps verified or probable confidence at `manual-review`.
+- direct chain reads, proxy/admin reads, cap/facilitator registries, bridge route checks, and Safe state include observed block or source notes when they are part of the evidence.
+- wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and set `inheritedFrom` or `variantOf`; if both are present they must match.
+- `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.
 
 If you use the local scanner POC, run it as a candidate producer only:
 
@@ -638,6 +702,7 @@ Before running commands, confirm the addition-specific artifacts:
 - active assets have a documented Phase 1a price + market-cap path
 - `data/logos.json` has a canonical-ID key and the referenced local file exists, or the skip reason is documented
 - `data/ai-summaries.json` has a canonical-ID key, or the skip reason is documented
+- high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
 - downstream coverage decision notes cover every Phase 5 branch
 
 For a normal stablecoin addition, run at least:
@@ -728,6 +793,7 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 - [ ] If `yieldConfig` or yield runtime config was added, the asset appears correctly on `/yield/` or in the detail yield section after the next yield sync
 - [ ] If a redemption backstop was added, `GET /api/redemption-backstops` includes the coin after the next four-hour reserve/redemption lane
 - [ ] If mint/burn coverage was added, the coin appears in `/api/mint-burn-flows` / `/api/mint-burn-events` after the next lane run
+- [ ] If `mintAuthority` was added, the detail page shows the Mint Authority section and `/coverage/`, the homepage table, and `/screener/` reflect the expected bucket
 - [ ] If the asset is live and backfillable, the market-cap chart is no longer empty after Phase 8
 
 ---
@@ -787,6 +853,36 @@ Do not hardcode branch or PR creation into the process. Follow the repo's curren
 - `synthetic-delta-neutral`
 - `algorithmic`
 - `rwa-credit-fund`
+
+### Current Mint Authority mint paths
+
+- `immutable-user-collateralized`
+- `user-collateralized-governed`
+- `issuer-direct-mint`
+- `permissioned-minter`
+- `offchain-attested-minter`
+- `facilitator-bucket-mint`
+- `amo-or-custodian-hybrid`
+- `bridge-or-oft-synthetic`
+- `m0-permissioned-minter`
+- `wrapped-or-variant-inherited`
+- `unknown`
+
+### Current Mint Authority postures
+
+- `none-resolved`
+- `bounded-admin`
+- `partially-bounded-admin`
+- `concentrated-admin`
+- `unbounded-or-compromised`
+- `unknown`
+
+### Current Mint Authority confidence values
+
+- `verified`
+- `probable`
+- `manual-review`
+- `unknown`
 
 ### Current live-reserve semantics
 

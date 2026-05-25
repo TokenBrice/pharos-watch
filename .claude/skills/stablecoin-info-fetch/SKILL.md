@@ -1,6 +1,6 @@
 ---
 name: stablecoin-info-fetch
-description: Use when asked to verify, populate, or audit a single tracked stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in `shared/data/stablecoins/coins/*.json`.
+description: Use when asked to verify, populate, or audit a single tracked stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts, proof of reserves, or Mint Authority review context). Run per-coin to fill gaps or validate existing data in `shared/data/stablecoins/coins/*.json`.
 user_invocable: true
 ---
 
@@ -24,6 +24,7 @@ The user provides a stablecoin **name**, **symbol**, or **ID** (ticker-issuer fo
 | `cmcSlug` | CoinMarketCap | Fallback when both DL + CG miss price |
 | `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `shared/lib/chains.ts` only |
 | `proofOfReserves` | Official site | `{ type, url, provider? }` — types: `"independent-audit"` / `"real-time"` / `"self-reported"` |
+| `mintAuthority` | Official docs + verified contract/proxy/role/Safe/bridge reads | Descriptive only. For high-value active additions or pre-launch promotions, either publish a sourced profile or record an intentional gap |
 
 This skill gathers metadata. It does not prove that an active asset is addable. For active additions and pre-launch promotions, run `stablecoin-runtime-price-marketcap-gate` before applying registry edits.
 
@@ -62,6 +63,7 @@ Run these searches **in parallel** to maximize efficiency:
 - **Official website**: `WebFetch` the coin's website (from existing links or search) for: collateral description, peg mechanism docs, jurisdiction/legal info, proof of reserves
 - **Web search**: `WebSearch` for `"{coin name}" stablecoin collateral mechanism jurisdiction` to find: regulatory filings, news articles, protocol docs
 - **Docs site**: If a docs link exists or is found, `WebFetch` it for technical details on collateral and peg mechanism. Also look for a "Deployed Contracts", "Contract Addresses", or "Technical Reference" page — many projects publish a full multi-chain address list in their docs
+- **Mint Authority sources**: verified contract source, proxy/admin reads, role registries, minter caps, facilitator/bucket registries, Safe/multisig threshold and modules/guards, bridge/OFT route docs, issuer/backend signer docs, timelocks, governance contracts, and observed block/source notes. The local scanner (`tsx scripts/maintenance/audit-mint-authority.ts --coin <id>`) is only a candidate producer and never evidence ready for publication
 
 For **contract addresses** specifically:
 - **Official docs first**: Many projects list contract addresses in their documentation (e.g. a "Deployed Contracts" or "Contract Addresses" page). Check the docs site for this — it's the most reliable and complete source, often listing all chains at once
@@ -78,6 +80,7 @@ Before presenting findings, run these checks on **existing** fields:
 - **Link liveness**: `WebFetch` each existing link (website, twitter, docs) to confirm it still resolves. Flag any dead URLs, redirects to different domains, or rebranded handles
 - **Proof of reserves liveness**: If a `proofOfReserves` entry exists, fetch the URL to confirm it's still live and the provider name is still correct. Attestation pages move or get replaced
 - **Contract address cross-validation**: For each existing contract address, verify via block explorer API that the token name and symbol still match (catches proxy migrations or token upgrades)
+- **Mint Authority validation**: If `mintAuthority` exists, confirm it has `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review`; the review has `evidence`, `reviewer`, `reviewedAt`, and sources or `sourceFreeRationale`; privileged paths have `controls[]` unless confidence is `unknown`; verified Safe or multisig controls include threshold, signer count, and modules/guards status. If modules/guards are unknown, confidence should be `manual-review`, not `verified` or `probable`
 
 #### Step 3 — Present findings
 
@@ -94,6 +97,7 @@ Present a structured summary to the user:
 - geckoId: {current value or MISSING}
 - contracts: {list current chains or MISSING}
 - proofOfReserves: {current value or MISSING}
+- mintAuthority: {current value, intentional gap, or MISSING}
 
 ### Proposed changes
 For each field that needs updating:
@@ -130,6 +134,7 @@ After user approval:
 - **contracts**: Include the **primary** deployment chain(s) where meaningful supply exists. Don't add chains with negligible or bridged supply. Cross-validate every address via block explorer API before proposing it
 - **links**: Use `x.com` (not `twitter.com`). Verify URLs actually resolve before proposing them
 - **geckoId**: Should be populated for every tracked coin that exists on CoinGecko. Use the CoinGecko search API (`api.coingecko.com/api/v3/search?query={symbol}`) to find the correct slug rather than guessing
+- **mintAuthority**: Describes who can create durable supply or change mint routes; it does not affect Safety Score, report-card inputs, selector exclusions, or rankings. Admin mint authority belongs here, not in `canBeBlacklisted` / FreezeWatch. Missing reviewed data means the detail page omits the section and should be recorded as an intentional gap for high-value additions
 
 ### What NOT to change
 
@@ -146,3 +151,4 @@ After user approval:
 - Don't populate jurisdiction for decentralized protocols (even if a DAO has a legal wrapper, the protocol itself may be jurisdiction-agnostic)
 - Don't change existing correct data just because a different source phrases it differently
 - Don't scrape web pages when a structured API endpoint exists — APIs are more reliable and less likely to 403
+- Don't copy Mint Authority scanner output directly into metadata. Curate source links, controls, confidence, and unresolved questions manually first
