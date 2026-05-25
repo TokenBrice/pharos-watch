@@ -74,6 +74,8 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 
 Mint Authority is a descriptive review taxonomy, not a Safety Score dimension. It focuses on who can create durable supply or alter minting paths through direct minters, minter admins, proxy/cap admins, facilitators, bridges, off-chain signer systems, governance, or wrapper inheritance. Missing data means the stablecoin detail page omits the Mint Authority section until a review is curated.
 
+Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into display/filter labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`) without feeding Safety Score inputs, report-card raw inputs, or ranking methodology.
+
 Mint path labels:
 
 | Value                           | Meaning                                                                                                                                      |

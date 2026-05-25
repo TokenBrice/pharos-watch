@@ -27,6 +27,7 @@ const row: ScreenerRow = {
   safetyDecentralizationScore: 42,
   safetyDependencyRiskScore: 70,
   blacklistable: "yes",
+  mintAuthority: "issuer-or-backend-mint",
 };
 
 function makeSort(overrides: Partial<DataTableSortControls<ScreenerSortKey>> = {}): DataTableSortControls<ScreenerSortKey> {

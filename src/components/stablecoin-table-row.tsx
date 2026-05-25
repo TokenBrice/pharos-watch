@@ -22,6 +22,7 @@ import type { MintBurnCoinFlow } from "@shared/types/mint-burn";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { confidenceClass } from "@/lib/confidence";
+import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getStablecoinTableRowRiskLevel } from "@/components/stablecoin-table-logic";
@@ -113,6 +114,7 @@ function StablecoinVirtualRowBase({
   const variantDisplay = meta?.variantKind ? getVariantDisplay(meta.variantKind) : null;
   const variantContext = meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
+  const mintAuthorityStatus = resolveMintAuthorityStatus(meta?.mintAuthoritySummary);
   const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
   const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
   const supplySparklineValues = [prevWeek, prevDay, circulating];
@@ -369,6 +371,17 @@ function StablecoinVirtualRowBase({
           ) : (
             <span className="text-muted-foreground">—</span>
           )}
+        </TableCell>
+      )}
+      {isVisible("mintAuthority") && (
+        <TableCell className="text-center">
+          <Badge
+            variant="outline"
+            className={`text-xs ${mintAuthorityStatus.badgeClassName}`}
+            title={mintAuthorityStatus.detail}
+          >
+            {mintAuthorityStatus.label}
+          </Badge>
         </TableCell>
       )}
       {isVisible("backing") && (

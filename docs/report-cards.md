@@ -39,7 +39,7 @@ Those reasons are documentation and handoff guards, not hidden penalties. Any fu
 
 ## Mint Authority Boundary
 
-Mint Authority review is descriptive and not scored in the current methodology. Detail pages may show reviewed mint path, authority posture, confidence, primary controls, and source links when compact review data exists; pages without reviewed data omit the section. None of those fields affect Safety Score, raw report-card inputs, selector exclusions, or rankings. Any future use of mint authority data in Resilience, Decentralization, Dependency Risk, or overall grades requires a separate methodology/version change and timeline entry.
+Mint Authority review is descriptive and not scored in the current methodology. Detail pages may show reviewed mint path, authority posture, confidence, primary controls, and source links when compact review data exists; pages without reviewed data omit the section. The homepage table and `/screener/` may display or filter the same compact review buckets so users can inspect who can create or route durable supply. None of those fields affect Safety Score, raw report-card inputs, selector exclusions, or rankings. Any future use of mint authority data in Resilience, Decentralization, Dependency Risk, or overall grades requires a separate methodology/version change and timeline entry.
 
 ## Dimensions
 

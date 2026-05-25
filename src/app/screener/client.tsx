@@ -22,6 +22,7 @@ import {
   hasActiveFilters,
   normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
+  projectMintAuthority,
   sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
@@ -33,6 +34,7 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { CsvColumn } from "@/lib/exports/csv";
@@ -62,6 +64,10 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "safety_decentralization", accessor: (row) => row.safetyDecentralizationScore ?? "" },
   { header: "safety_dependency_risk", accessor: (row) => row.safetyDependencyRiskScore ?? "" },
   { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
+  {
+    header: "mint_authority",
+    accessor: (row) => MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel,
+  },
 ];
 
 function subscribeHydrationStore() {
@@ -254,6 +260,7 @@ export function ScreenerClient() {
         safetyDecentralizationScore: safety?.decentralization ?? null,
         safetyDependencyRiskScore: safety?.dependencyRisk ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
+        mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
         pegDeviationSeries: buildPegDeviationSeries(pegCoin),
         supplySeries: supplySeriesById.get(meta.id),
       });

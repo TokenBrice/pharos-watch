@@ -1,6 +1,7 @@
 import { downloadCsv } from "@/lib/csv-export";
 import { createTableComparator } from "@/lib/table-comparator";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
+import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import {
   GRADE_FILTER_TAGS,
@@ -245,6 +246,13 @@ export function exportStablecoinsCsv(
         accessor: (row) => {
           if (!TRACKED_META_BY_ID.has(row.id)) return null;
           return getResolvedBlacklistStatusLabel(row.id, reportCards?.[row.id]);
+        },
+      },
+      {
+        header: "Mint Authority",
+        accessor: (row) => {
+          const meta = TRACKED_META_BY_ID.get(row.id);
+          return resolveMintAuthorityStatus(meta?.mintAuthoritySummary).spokenLabel;
         },
       },
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },

@@ -134,6 +134,8 @@ The homepage table seeds every available column as enabled by default, keeps its
 
 When pinning is enabled from the homepage, each table row shows a locked star column to the left of the rank column. Starred rows are shown at the top of the table, ahead of unstarred rows; filters and search still decide which rows are eligible to appear in the table.
 
+The `Mint Auth` column reads `coin.mintAuthoritySummary` from the slim client registry and shows the same descriptive buckets used by `/coverage/` and `/screener/`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`. This column is informational only and does not change the homepage sort default, Safety Score inputs, or report-card methodology.
+
 `PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally.
 
 ---

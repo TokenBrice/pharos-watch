@@ -13,9 +13,15 @@
  * server-side `StablecoinMeta`). Deferred to v2 per brief escalation rule.
  */
 import { createTableComparator } from "@/lib/table-comparator";
+import {
+  MINT_AUTHORITY_FILTER_VALUES,
+  resolveMintAuthorityStatusKind,
+  type MintAuthorityStatusKind,
+} from "@/lib/mint-authority-display";
 import type { UrlStateSchema } from "@/lib/url-state";
 import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
 import { PEG_METADATA } from "@shared/lib/classification";
+import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { GovernanceType, MechanismArchetype, PegCurrency, ReportCardGrade, StablecoinStatus } from "@shared/types";
 
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
@@ -48,6 +54,7 @@ export interface ScreenerFilters {
   pegs: readonly PegCurrency[];
   lifecycle: readonly StablecoinStatus[];
   blacklistable: readonly BlacklistableValue[];
+  mintAuthority: readonly MintAuthorityStatusKind[];
 }
 
 /** Default scalar ranges. A value at the bound counts as "no filter". */
@@ -67,6 +74,7 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   pegs: [],
   lifecycle: [],
   blacklistable: [],
+  mintAuthority: [],
 };
 
 /**
@@ -156,6 +164,11 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.blacklistable,
     allowedValues: BLACKLISTABLE_VALUES,
   },
+  mintAuthority: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.mintAuthority,
+    allowedValues: MINT_AUTHORITY_FILTER_VALUES,
+  },
 };
 
 export interface ScreenerRow {
@@ -189,6 +202,8 @@ export interface ScreenerRow {
   safetyDependencyRiskScore: number | null;
   /** Blacklistability bucket. null = unspecified (no per-coin override). */
   blacklistable: BlacklistableValue | null;
+  /** Curated mint-authority review bucket. "unknown" = no compact review. */
+  mintAuthority: MintAuthorityStatusKind;
   /** Compact peg-deviation samples for the desktop 30d peg sparkline. */
   pegDeviationSeries?: ReadonlyArray<number | null>;
   /** Compact supply samples for the desktop 30d supply sparkline. */
@@ -290,6 +305,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   const pegSet = filters.pegs.length > 0 ? new Set(filters.pegs) : null;
   const lifecycleSet = filters.lifecycle.length > 0 ? new Set(filters.lifecycle) : null;
   const blacklistableSet = filters.blacklistable.length > 0 ? new Set(filters.blacklistable) : null;
+  const mintAuthoritySet = filters.mintAuthority.length > 0 ? new Set(filters.mintAuthority) : null;
 
   return rows.filter((row) => {
     if (!passesRange(row.dewsScore, filters.dewsMin, filters.dewsMax, dewsActive)) return false;
@@ -311,6 +327,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (blacklistableSet) {
       if (!row.blacklistable || !blacklistableSet.has(row.blacklistable)) return false;
     }
+    if (mintAuthoritySet && !mintAuthoritySet.has(row.mintAuthority)) return false;
     return true;
   });
 }
@@ -366,6 +383,12 @@ export function projectBlacklistable(value: boolean | "possible" | undefined): B
   return null;
 }
 
+export function projectMintAuthority(
+  summary?: MintAuthorityCoverageSummary | null,
+): MintAuthorityStatusKind {
+  return resolveMintAuthorityStatusKind(summary);
+}
+
 /** Detects whether any filter is non-default. Used for the "Reset" CTA. */
 export function hasActiveFilters(filters: ScreenerFilters): boolean {
   return (
@@ -403,5 +426,6 @@ export function countActiveScreenerFilters(filters: ScreenerFilters): number {
   count += filters.pegs.length;
   count += filters.lifecycle.length;
   count += filters.blacklistable.length;
+  count += filters.mintAuthority.length;
   return count;
 }

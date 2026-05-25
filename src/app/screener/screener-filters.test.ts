@@ -8,6 +8,7 @@ import {
   hasActiveFilters,
   normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
+  projectMintAuthority,
   sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
@@ -35,6 +36,7 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     safetyDecentralizationScore: 76,
     safetyDependencyRiskScore: 82,
     blacklistable: "yes",
+    mintAuthority: "issuer-or-backend-mint",
     ...overrides,
   };
 }
@@ -186,6 +188,7 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, types: ["decentralized"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, supplyMin: 1 })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["multisig-mint"] })).toBe(true);
   });
 
   it("counts active range groups once and selected pills individually", () => {
@@ -197,7 +200,8 @@ describe("hasActiveFilters", () => {
       safetyGrades: ["A", "B+"],
       types: ["centralized", "decentralized"],
       pegs: ["USD"],
-    })).toBe(7);
+      mintAuthority: ["multisig-mint"],
+    })).toBe(8);
   });
 });
 
@@ -369,6 +373,35 @@ describe("applyFilters — blacklistable", () => {
   });
 });
 
+describe("applyFilters — mint authority", () => {
+  const issuerRow = makeRow({ id: "issuer", mintAuthority: "issuer-or-backend-mint" });
+  const multisigRow = makeRow({ id: "multisig", mintAuthority: "multisig-mint" });
+  const noPrivRow = makeRow({ id: "no-priv", mintAuthority: "no-privileged-mint" });
+  const unknownRow = makeRow({ id: "unknown", mintAuthority: "unknown" });
+  const allRows = [issuerRow, multisigRow, noPrivRow, unknownRow] as const;
+
+  it("returns every row when the mint-authority filter is empty", () => {
+    const filtered = applyFilters(allRows, SCREENER_FILTER_DEFAULTS);
+    expect(filtered.map((r) => r.id)).toEqual(["issuer", "multisig", "no-priv", "unknown"]);
+  });
+
+  it("keeps only rows whose mint-authority bucket matches the active filter", () => {
+    const filtered = applyFilters(allRows, {
+      ...SCREENER_FILTER_DEFAULTS,
+      mintAuthority: ["issuer-or-backend-mint", "multisig-mint"],
+    });
+    expect(filtered.map((r) => r.id).sort()).toEqual(["issuer", "multisig"]);
+  });
+
+  it("can filter for unknown mint-authority review gaps", () => {
+    const filtered = applyFilters(allRows, {
+      ...SCREENER_FILTER_DEFAULTS,
+      mintAuthority: ["unknown"],
+    });
+    expect(filtered.map((r) => r.id)).toEqual(["unknown"]);
+  });
+});
+
 describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
   it("encodes and decodes the blacklistable multi-select", () => {
     const filters: ScreenerFilters = {
@@ -387,6 +420,40 @@ describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
       SCREENER_URL_SCHEMA,
     );
     expect(decoded.blacklistable).toEqual(["yes"]);
+  });
+});
+
+describe("SCREENER_URL_SCHEMA — mint authority round-trip", () => {
+  it("encodes and decodes the mint-authority multi-select", () => {
+    const filters: ScreenerFilters = {
+      ...SCREENER_FILTER_DEFAULTS,
+      mintAuthority: ["issuer-or-backend-mint", "multisig-mint"],
+    };
+    const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
+    expect(encoded).toContain("mintAuthority=issuer-or-backend-mint%2Cmultisig-mint");
+    const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
+    expect(decoded.mintAuthority).toEqual(["issuer-or-backend-mint", "multisig-mint"]);
+  });
+
+  it("drops unknown mint-authority URL values outside the known bucket list", () => {
+    const decoded = decodeState(
+      "mintAuthority=issuer-or-backend-mint,bogus",
+      SCREENER_URL_SCHEMA,
+    );
+    expect(decoded.mintAuthority).toEqual(["issuer-or-backend-mint"]);
+  });
+});
+
+describe("projectMintAuthority", () => {
+  it("maps missing summaries to unknown", () => {
+    expect(projectMintAuthority(undefined)).toBe("unknown");
+  });
+
+  it("maps issuer direct mint summaries to the issuer/backend bucket", () => {
+    expect(projectMintAuthority({
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "concentrated-admin",
+    })).toBe("issuer-or-backend-mint");
   });
 });
 

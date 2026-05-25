@@ -10,6 +10,7 @@ export type ColumnId =
   | "stability"
   | "liquidity"
   | "blacklistable"
+  | "mintAuthority"
   | "backing"
   | "type"
   | "flags";
@@ -33,6 +34,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { id: "stability", label: "Peg Score", hiddenMobile: true },
   { id: "liquidity", label: "Liq", hiddenMobile: true },
   { id: "blacklistable", label: "Blacklistable", hiddenMobile: true },
+  { id: "mintAuthority", label: "Mint Authority", hiddenMobile: true },
   { id: "backing", label: "Backing", hiddenMobile: true },
   { id: "type", label: "Type", hiddenMobile: true },
   { id: "flags", label: "Flags", hiddenMobile: true },

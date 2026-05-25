@@ -19,6 +19,7 @@ import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
+import { MINT_AUTHORITY_STATUS_CONFIG, type MintAuthorityStatusKind } from "@/lib/mint-authority-display";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
@@ -75,6 +76,12 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     sortKey: "safetyScore",
     className: "text-center",
     title: `Pharos Safety Grade (${SAFETY_SCORE_VERSION_LABEL})`,
+  },
+  {
+    id: "mintAuthority",
+    label: "Mint Auth",
+    className: "text-center",
+    title: "Curated descriptive mint-authority review. Not part of Safety Score.",
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },
@@ -237,6 +244,18 @@ function ScoreValue({ value }: { value: number | null }) {
   );
 }
 
+function MintAuthorityBadge({ kind }: { kind: MintAuthorityStatusKind }) {
+  const status = MINT_AUTHORITY_STATUS_CONFIG[kind];
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${status.badgeClassName}`}
+      title={status.detail}
+    >
+      {status.label}
+    </span>
+  );
+}
+
 function ScreenerEmptyState({
   hasActiveFilters,
   onClearFilters,
@@ -307,6 +326,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
           Liq <ScoreValue value={row.liquidityScore} />
         </span>
+        <MintAuthorityBadge kind={row.mintAuthority} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -320,6 +340,12 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
           <p className="text-muted-foreground">Peg</p>
           <p className="mt-0.5 font-medium text-foreground">
             {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+          <p className="text-muted-foreground">Mint authority</p>
+          <p className="mt-0.5 font-medium text-foreground">
+            {MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
           </p>
         </div>
       </div>
@@ -388,6 +414,9 @@ function ScreenerRow({
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
+      </TableCell>
+      <TableCell className="text-center">
+        <MintAuthorityBadge kind={row.mintAuthority} />
       </TableCell>
       <TableCell className="text-left text-muted-foreground">
         {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
