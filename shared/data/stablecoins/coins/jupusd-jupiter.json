@@ -96,5 +96,51 @@
     "provider": "JupUSD transparency page",
     "attestorTier": "self",
     "cadence": "real-time"
+  },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "JupUSD direct mint/redeem against USDC is restricted to onboarded, KYC/KYB-verified institutional participants via Solana mint/redeem contracts; Ethena Labs operates the Stablecoin-as-a-Service backend and reserve operations, with most users accessing JupUSD only on secondary markets.",
+    "controls": [
+      {
+        "chain": "solana",
+        "label": "JupUSD mint/redeem program (whitelisted minters)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "JupUSD's Solana mint/redeem contracts allow 1:1 mint against USDC only for approved, KYC/KYB-verified addresses; minting is gated to onboarded institutions/market makers rather than open to the public."
+      },
+      {
+        "label": "Ethena Labs issuance backend / reserve operator",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "JupUSD is issued on Ethena Labs' Stablecoin-as-a-Service infrastructure; Ethena manages reserve operations, custody coordination (Porto/Anchorage), and rebalancing between USDtb and USDC, operating the mint/redeem framework on Jupiter's behalf."
+      }
+    ],
+    "review": {
+      "evidence": "JupUSD launch coverage and project materials describe permissioned mint/redeem limited to KYC/KYB institutions through Ethena's Stablecoin-as-a-Service backend; reserves (90% USDtb, 10% USDC) are custodied by Porto via Anchorage. Public users access JupUSD via secondary markets, not direct mint.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "JupUSD website",
+          "url": "https://jupusd.money/"
+        },
+        {
+          "label": "The Block - JupUSD launch",
+          "url": "https://www.theblock.co/post/384366/jupiter-rolls-out-native-jupusd-stablecoin-backed-90-by-blackrock-and-ethenas-usdtb"
+        }
+      ],
+      "sourceFreeRationale": "Solana mint/redeem program ID and upgrade authority were not read live on-chain in this pass; classification rests on the documented whitelisted institutional mint model operated via Ethena.",
+      "unresolvedQuestions": [
+        "Read the JupUSD Solana mint authority and program upgrade authority (and any multisig) to confirm the controlling keys.",
+        "Confirm the allowlist mechanism gating approved minter addresses."
+      ]
+    }
   }
 }

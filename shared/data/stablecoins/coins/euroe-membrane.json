@@ -119,5 +119,49 @@
       "pct": 100,
       "risk": "very-low"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EUROe was a Finnish EMI-licensed euro EMT solely issued by Membrane Finance (later Paxos Issuance Europe). The token is an OpenZeppelin role-based ERC-20 whose MINTER_ROLE mints (direct or batch) against the issuer's euro reserves; all roles are internal to the issuer. The contract is UUPS-upgradeable with no on-chain timelock.",
+    "controls": [
+      {
+        "label": "Membrane/Paxos MINTER_ROLE backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "EUROe developer docs define a MINTER_ROLE that mints new EUROe via direct or backend-driven batch mint (checksummed batches supplied by the issuer's backend); all roles are strictly internal to the issuer against euro fiat reserves."
+      },
+      {
+        "label": "Admin / proxy-owner role (UUPS upgrade authority)",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Docs state admin and proxy-owner roles can reassign roles and upgrade the UUPS contract, with no smart-contract timelock; these roles were planned to migrate to a multisig but are operated internally by the issuer."
+      }
+    ],
+    "review": {
+      "evidence": "EUROe developer portal and Runtime Verification audit describe OpenZeppelin role-based access with a MINTER_ROLE for direct/batch issuance, plus admin and UUPS proxy-owner roles held internally by the issuer; no public on-chain Safe address or threshold was independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "EUROe Access & Admin Controls (developer portal)",
+          "url": "https://dev.euroe.com/docs/Stablecoin/access-controls"
+        },
+        {
+          "label": "membranefi/euroe-stablecoin (GitHub)",
+          "url": "https://github.com/membranefi/euroe-stablecoin"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism established from issuer docs and contract source; the live on-chain admin/minter address and any multisig migration were not independently resolved, and the issuer has moved EUROe to redemption-only wind-down.",
+      "unresolvedQuestions": [
+        "Confirm whether admin/proxy-owner roles ever migrated to a multisig and resolve the live on-chain MINTER_ROLE holder."
+      ]
+    }
+  }
 }

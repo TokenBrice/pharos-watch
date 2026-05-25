@@ -59,6 +59,32 @@
       "decimals": 6
     }
   ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "eUSD is issued by Telcoin Digital Asset Bank under a Nebraska Digital Asset Depository charter; the bank mints eUSD against USD deposits and Treasuries and burns on redemption through KYC-gated banking rails.",
+    "controls": [
+      {
+        "label": "Telcoin Digital Asset Bank issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Telcoin Digital Asset Bank minted the initial eUSD supply directly on Ethereum and Polygon and lets account holders mint/redeem against USD deposits and short-term Treasuries; supply is bank-controlled with no permissionless mint route."
+      }
+    ],
+    "review": {
+      "evidence": "Telcoin announcements describe the chartered bank minting eUSD as a bank-issued dollar stablecoin backed 1:1 by USD deposits and Treasuries with KYC-gated mint/redeem; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Telcoin Digital Asset Bank", "url": "https://bank.telco.in/" }
+      ],
+      "sourceFreeRationale": "Classification based on the bank-issuer model in Telcoin materials; the on-chain owner/minter admin for the shared eUSD contract address across chains was not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin for the eUSD contract (Ethereum/Base/Polygon) and the Solana mint authority before raising confidence."]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "canBeBlacklisted": "possible",

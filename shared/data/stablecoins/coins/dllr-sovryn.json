@@ -57,6 +57,50 @@
     "reviewedAt": "2026-05-12",
     "upstreamSuppressionRationale": "The reviewed override is scoped to the DLLR holder-facing token. The DOC reserve slice is de minimis reserve-side exposure and is intentionally not promoted to DLLR direct freezability in this metadata override."
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "DLLR is minted 1:1 by the Mynt MassetManager aggregator when users deposit accepted BTC-backed CDP stablecoins (ZUSD from Sovryn Zero, DOC from Money On Chain) as bAssets; it is an aggregator over already-overcollateralized stables, governed by Sovryn DAO which sets the accepted bAsset basket.",
+    "controls": [
+      {
+        "label": "Mynt MassetManager (1:1 aggregator mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "rootstock",
+        "address": "0x5f777270259e32f79589fe82269db6209f7b7582",
+        "capDescription": "Mints DLLR 1:1 only against deposited accepted bAssets (ZUSD, DOC); supply is bounded by deposited underlying stablecoins, not a fresh CDP.",
+        "canRaiseCap": "unknown",
+        "evidence": "Mynt's MassetManager mints/redeems DLLR 1:1 against accepted bAssets; the underlying ZUSD and DOC are themselves BTC-overcollateralized CDP stables."
+      },
+      {
+        "label": "Sovryn DAO (basket governance)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "Sovryn DAO governs the Mynt BasketManager (accepted bAssets and weights); adding a new bAsset effectively authorizes a new backing/mint route, a bounded governance surface."
+      }
+    ],
+    "review": {
+      "evidence": "Mynt (BabelFish-based) is a BTC-backed stablecoin aggregator, not a direct CDP: DLLR is the mAsset minted 1:1 from bAssets (ZUSD, DOC) via MassetManager 0x5f7772..., with Sovryn DAO governing the basket. Corrected framing from generic CDP to aggregator over user-collateralized stables.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Sovryn wiki: Sovryn Dollar",
+          "url": "https://wiki.sovryn.com/en/sovryn-dapp/sovryn-dollar"
+        },
+        {
+          "label": "Mynt & Zero bug bounty (contract list)",
+          "url": "https://immunefi.com/bug-bounty/myntandzero/"
+        }
+      ],
+      "sourceFreeRationale": "Aggregator mint model and MassetManager address confirmed from Sovryn/Mynt materials; on-chain BasketManager admin/owner and DAO execution path not independently read on-chain.",
+      "unresolvedQuestions": ["Confirm the on-chain Mynt BasketManager admin owner and Sovryn DAO authorization path for adding bAssets."]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

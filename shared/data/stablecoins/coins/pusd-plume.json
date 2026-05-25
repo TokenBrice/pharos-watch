@@ -85,5 +85,47 @@
       "risk": "medium",
       "coinId": "usdc-circle"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "pUSD is minted 1:1 against USDC through a Plume-managed Nucleus BoringVault; the Teller predicate proxy gates each mint with an off-chain OFAC compliance check, and a Manager/Strategist controls vault assets.",
+    "controls": [
+      {
+        "label": "Nucleus BoringVault Teller (predicate proxy, OFAC-gated mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "plume",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "pUSD minting runs through TellerWithMultiAssetSupportPredicateProxy, which requires an off-chain OFAC/compliance message before minting BoringVault shares; the BoringVault is managed by Plume."
+      },
+      {
+        "label": "BoringVault Manager / Strategist (Plume-controlled)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "plume",
+        "canRaiseCap": "unknown",
+        "evidence": "The Manager assigns merkle-root-bounded strategist permissions and the vault grants the Teller mint/burn rights; Plume controls the privileged roles that admit minters and deploy backing."
+      }
+    ],
+    "review": {
+      "evidence": "Plume docs and the Nucleus BoringVault framework describe pUSD as a USDC wrapper minted via a Teller predicate proxy with an OFAC compliance predicate, backed 1:1 in a Plume-managed BoringVault; mint is gated and issuer-controlled rather than permissionless or user-collateralized.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Plume pUSD docs",
+          "url": "https://docs.plume.org/plume/tokens/plume-usd"
+        },
+        {
+          "label": "Nucleus vault framework",
+          "url": "https://docs.nucleusearn.io/nucleus-architecture/vault-framework"
+        }
+      ],
+      "unresolvedQuestions": ["Confirm the live Teller/Manager owner addresses (multisig vs EOA) and the predicate proxy admin before raising confidence."]
+    }
   }
 }

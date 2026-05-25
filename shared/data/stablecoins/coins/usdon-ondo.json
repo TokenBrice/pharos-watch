@@ -89,6 +89,47 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDon is the native settlement token for Ondo Global Markets, issued via an Ondo GM BVI SPV; minting is issuer-controlled (USDC swapped 1:1 into USDon) against cash held at regulated US broker-dealers, verified daily by Ankura Trust.",
+    "controls": [
+      {
+        "label": "Ondo Global Markets issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Ondo GM mints/redeems USDon as the settlement stablecoin for tokenized assets, with USDC swapped 1:1 into USDon against custodied cash at regulated broker-dealers; issuance is issuer-controlled with Regulation S restrictions and no permissionless mint route.",
+        "sources": [
+          {
+            "label": "Ondo GM trust and transparency",
+            "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USDon is issued by an Ondo Global Markets SPV as the native settlement token; mint/redeem is issuer-controlled (1:1 USDC swap) against broker-dealer-held cash, verified daily by Ankura Trust, with Regulation S restrictions. No permissionless mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Ondo GM trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        },
+        {
+          "label": "Ondo contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Ondo GM materials; the on-chain USDon token minter/owner admin and proxy admin were not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain USDon token minter/owner admin and proxy admin across deployed chains before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "U.S. dollar cash and cash equivalents in Global Markets brokerage accounts",

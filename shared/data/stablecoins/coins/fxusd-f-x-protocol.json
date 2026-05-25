@@ -87,5 +87,50 @@
   "yieldConfig": {
     "yieldSource": "f(x) Protocol Stability Pool",
     "yieldType": "lending-vault"
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "fxUSD is minted CDP-style when users deposit wstETH/WBTC collateral into f(x) Protocol vaults; f(x) governance controls collateral onboarding, risk parameters, and protocol contracts.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "label": "f(x) Protocol vault/minter contracts",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "fxUSD is minted only against overcollateralized wstETH/WBTC CDP positions inside f(x) Protocol; supply expands and contracts with collateral and redemptions, not by an off-protocol issuer minter.",
+        "evidence": "f(x) Protocol docs describe fxUSD as a decentralized stablecoin minted from overcollateralized wstETH/WBTC CDP positions with a Stability Pool defending the peg."
+      },
+      {
+        "chain": "ethereum",
+        "label": "f(x) Protocol governance / parameter admin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "f(x) Protocol governance onboards collateral types, sets risk/liquidation parameters, and administers protocol contracts.",
+        "evidence": "f(x) Protocol materials describe governance over collateral onboarding and protocol risk parameters; on-chain admin owner/timelock not independently resolved."
+      }
+    ],
+    "review": {
+      "evidence": "f(x) Protocol documentation describes fxUSD as a CDP-minted dollar overcollateralized by wstETH/WBTC with governance-tuned risk parameters and a Stability Pool; no centralized issuer mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "f(x) Protocol docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        }
+      ],
+      "sourceFreeRationale": "CDP mint mechanism confirmed from f(x) Protocol docs; on-chain governance owner/timelock address not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain f(x) Protocol governance owner/timelock and the specific vault/minter contract authority before raising confidence."
+      ]
+    }
   }
 }

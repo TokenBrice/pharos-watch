@@ -120,5 +120,32 @@
   "yieldConfig": {
     "yieldSource": "Midas T-bill fund",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "mTBILL is Midas's tokenized T-Bill fund; new units are minted only by Midas's permissioned M_TBILL_MINT_OPERATOR_ROLE when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain at the Ankura Trust daily NAV.",
+    "controls": [
+      {
+        "label": "Midas issuance manager (M_TBILL_MINT_OPERATOR_ROLE / DepositVault)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Audited Midas vault architecture mints mTBILL via the permissioned M_TBILL_MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain at the issuer's daily NAV and the mTBILL/vault contracts are upgradeable with pause/blacklist controls behind MidasAccessControl."
+      }
+    ],
+    "review": {
+      "evidence": "mTBILL is minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + M_TBILL_MINT_OPERATOR_ROLE), with off-chain NAV pricing and upgradeable proxies; no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Midas mTBILL docs", "url": "https://docs.midas.app/tokens/mtbill" },
+        { "label": "Sherlock Midas audit (DepositVault/RedemptionVault/MidasAccessControl roles)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+      ],
+      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."]
+    }
   }
 }

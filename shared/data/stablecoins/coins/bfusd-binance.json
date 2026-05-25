@@ -77,5 +77,36 @@
       "title": "Binance account product",
       "message": "BFUSD is not a withdrawable on-chain token in Pharos metadata. Reserve and redemption claims depend on Binance product terms and account eligibility rather than independently verifiable collateral."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BFUSD is a Binance account product, not a withdrawable on-chain token; Binance creates and redeems BFUSD on its internal exchange ledger 1:1 against supported USD stablecoins, controlling fees, limits, delays, and suspension rights, with no public on-chain mint contract.",
+    "controls": [
+      {
+        "label": "Binance BFUSD product ledger",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Binance creates/redeems BFUSD inside its centralized exchange against an opaque collateral pool and hedging portfolio; supply, fees, limits, and suspension are fully Binance-controlled. No public on-chain mint contract is exposed in Pharos metadata."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Binance BFUSD FAQ",
+          "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97"
+        }
+      ],
+      "evidence": "Binance BFUSD terms describe an exchange account product redeemable 1:1 inside Binance against USD stablecoins, with Binance-controlled supply, fees, limits, and suspension; it is not a withdrawable on-chain token and exposes no public mint contract.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classified as an off-chain exchange-ledger product per Binance terms; there is no public on-chain mint contract or token owner to resolve.",
+      "unresolvedQuestions": [
+        "If Binance later exposes an on-chain BFUSD contract, resolve its owner/minter admin; currently the product is an off-chain exchange ledger."
+      ]
+    }
+  }
 }

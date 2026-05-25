@@ -113,5 +113,44 @@
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Liechtenstein",
     "attestorLicense": "FMA TVTG (Blockchain Act)"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "VGBP is issued by VNX Commodities AG, a Liechtenstein FMA-licensed entity; tokens are minted on demand for verified customers depositing GBP and the token's on-chain admin is an issuer-controlled upgradeable-proxy owner.",
+    "controls": [
+      {
+        "label": "VNX upgradeable-proxy admin/owner (Base)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "base",
+        "address": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "BaseScan shows the VGBP token at this address is an EIP-1967 TransparentUpgradeableProxy using OwnableUpgradeable + PausableUpgradeable with RBAC; proxy admin 0x1724768a253476159a622a1689146862d3b762c2 holds upgrade authority and the owner/deployer is 0xd63052e09af164cef57695d3b96043ea848b051f, both issuer-controlled.",
+        "sources": [
+          {
+            "label": "BaseScan VGBP contract",
+            "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "VNX docs and the Liechtenstein FMA TVTG license describe VGBP as a 1:1 GBP-redeemable token minted by VNX Commodities AG against bank-held GBP reserves; on-chain the Base contract is an upgradeable proxy with issuer-held Ownable/admin roles, so mint creation is centrally controlled by the issuer.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "BaseScan VGBP contract",
+          "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Confirm which exact role/address holds the live mint privilege in the implementation bytecode and whether the proxy admin is an EOA, multisig, or Safe."
+      ]
+    }
   }
 }

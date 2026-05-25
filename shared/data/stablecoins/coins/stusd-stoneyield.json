@@ -70,6 +70,48 @@
     "yieldSource": "StoneYield protocol",
     "yieldType": "lending-vault"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdc-circle",
+    "summary": "stUSD is StoneYield's strategy-vault wrapper over USDC routed through a Venus-linked strategy layer; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0x806dd21af6de051fb811760a5768d04a99160eb9",
+        "label": "StoneYield stUSD wrapper token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "stUSD shares are minted/burned by the StoneYield vault against USDC deposits and withdrawals; this share accounting cannot create or destroy base USDC supply.",
+        "evidence": "Strategy-vault receipt: stUSD shares represent a claim on USDC routed through StoneYield's Venus-linked strategy; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
+      },
+      {
+        "label": "Inherited USDC (Circle) issuer mint path",
+        "role": "other",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "stUSD (variantOf usdc-circle, variantKind strategy-vault) is a StoneYield yield wrapper whose shares track deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "StoneYield contract design docs",
+          "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
+    }
+  },
   "notices": [
     {
       "type": "warning",

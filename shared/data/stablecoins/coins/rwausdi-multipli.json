@@ -107,5 +107,37 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "rwaUSDi is Multipli's isolated, KYB-gated RWA collateral unit; verified institutions deposit supported tokenized RWAs and Multipli's issuance engine mints rwaUSDi 1:1 by NAV, restricting mint/redeem to KYB-verified entities.",
+    "controls": [
+      {
+        "label": "Multipli rwaUSDi issuance/peg module",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Multipli aggregates externally-issued tokenized RWAs into a single unit; KYB-verified institutions mint rwaUSDi against deposited collateral at NAV and redeem through scheduled windows, with Multipli controlling the compliance-gated issuance engine."
+      }
+    ],
+    "review": {
+      "evidence": "Multipli docs describe rwaUSDi as an isolated, compliance-gated (KYB) liquidity class where institutions deposit supported tokenized RWAs and mint a unified collateral unit at NAV; Multipli operates the issuance/peg module and access is restricted to KYB-verified entities, so this is an issuer-controlled mint rather than a single-parent wrapper or permissionless route.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Multipli docs",
+          "url": "https://docs.multipli.fi/"
+        },
+        {
+          "label": "Multipli unwind & peg module",
+          "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain minter/owner roles on the rwaUSDi contracts (Ethereum/Base/Monad/Arbitrum) and the peg-module admin before raising confidence."]
+    }
   }
 }

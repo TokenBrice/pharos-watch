@@ -171,5 +171,43 @@
         }
       ]
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "XUSD is BabelFish's meta-stablecoin aggregator on Rootstock: any user mints XUSD 1:1 by depositing an accepted bAsset stablecoin (DLLR, USDT, USDC, DAI, DOC) and redeems back, subject to basket-balance constraints and fees; the accepted-asset set and parameters are curated by the BabelFish FISH-token DAO.",
+    "controls": [
+      {
+        "label": "BabelFish masset (XUSD) mint/redeem aggregator contract",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "rootstock",
+        "address": "0xb5999795be0ebb5bab23144aa5fd6a02d080299f",
+        "canRaiseCap": "unknown",
+        "evidence": "BabelFish mints XUSD 1:1 from accepted bAsset stablecoins and allows redemption back to accepted bAssets via the basket contract; minting is user-driven against deposited collateral, not a discretionary minter, subject to basket-balance limits and balancing fees."
+      },
+      {
+        "label": "BabelFish FISH DAO (accepted-asset and parameter governance)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "chain": "rootstock",
+        "canRaiseCap": "unknown",
+        "evidence": "FISH governance token holders vote (with DAO consensus / forum process) on which stablecoins are accepted and on basket/lending parameters, tuning the mint route rather than minting directly."
+      }
+    ],
+    "review": {
+      "evidence": "BabelFish/Sovryn docs describe XUSD as a 1:1 stablecoin aggregator where users mint/redeem against a hedged basket of accepted bAssets under basket-balance constraints, with the accepted-asset set and parameters governed by the FISH-token DAO; no centralized discretionary minter is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Sovryn XUSD overview", "url": "https://wiki.sovryn.com/en/technical-documents/xusd-overview" },
+        { "label": "BabelFish", "url": "https://babelfish.money/" }
+      ],
+      "sourceFreeRationale": "User-collateralized basket mint and FISH-DAO parameter governance taken from BabelFish/Sovryn docs; the on-chain masset-manager admin/timelock and governance executor were not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain XUSD masset-manager admin/proxy owner and the FISH DAO executor/timelock controlling accepted bAssets."]
+    }
   }
 }

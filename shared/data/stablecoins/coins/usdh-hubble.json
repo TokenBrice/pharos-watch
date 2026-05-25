@@ -75,5 +75,44 @@
       "title": "Small float, dormant trading",
       "message": "Hubble's USDH circulating supply has contracted to roughly $1.2–1.5M with very low secondary-market volume. The Hubble team's focus has shifted to sister protocol Kamino, though no formal USDH wind-down has been announced and the borrow app remains operational."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDH is Hubble Protocol's MakerDAO-style CDP stablecoin on Solana: borrowers mint USDH against overcollateralized whitelisted SOL/mSOL/BTC/ETH vaults at a 150% minimum ratio, with the HBB governance process administering collateral whitelisting and parameters.",
+    "controls": [
+      {
+        "label": "Hubble borrowing-market program (USDH mint authority)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "solana",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint bounded by overcollateralized CDP vaults at a 150% minimum collateral ratio against whitelisted Solana assets.",
+        "evidence": "Hubble docs describe USDH as a CDP debt token minted by depositing whitelisted Solana collateral into borrowing-market vaults at a 150% minimum ratio; the USDH SPL mint authority is held by the Hubble program."
+      },
+      {
+        "label": "Hubble governance (HBB / collateral whitelisting + program admin)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "chain": "solana",
+        "canRaiseCap": "unknown",
+        "evidence": "Hubble docs describe collateral asset whitelisting and parameter control via the HBB governance process (transitioning toward a fully autonomous/immutable Hubble 2.0); the program upgrade/admin authority is not independently confirmed."
+      }
+    ],
+    "review": {
+      "evidence": "Hubble Protocol documentation describes USDH as a Solana MakerDAO-style overcollateralized CDP with HBB-token governance and collateral whitelisting; the on-chain USDH mint authority and Hubble program upgrade authority were not independently resolved.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Hubble docs", "url": "https://docs.hubbleprotocol.io" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the USDH SPL mint authority and the Hubble borrowing-market program upgrade authority on a Solana explorer (multisig vs. program-derived).",
+        "Confirm whether the documented Hubble 2.0 immutability transition has occurred for the live borrow app."
+      ]
+    }
+  }
 }

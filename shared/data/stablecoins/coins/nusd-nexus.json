@@ -73,5 +73,34 @@
       "title": "Legacy bridge-liquidity asset",
       "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge liquidity stable asset rather than a standalone modern issuer token. The canonical Ethereum contract is included for symbol disambiguation; legacy per-chain bridge deployments are not exhaustively modeled."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "bridge-or-oft-synthetic",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "NUSD is Synapse's cross-chain synthetic dollar: it is minted/burned by the Synapse bridge against the DAI/USDC/USDT nexus pool on Ethereum, so supply is created by bridge-controlled mint on each chain rather than by user collateral deposits.",
+    "controls": [
+      {
+        "label": "Synapse bridge mint authority",
+        "role": "bridge-admin",
+        "authorityType": "bridge",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Synapse routes bridge transfers by minting/burning the nUSD synthetic asset: assets enter the Ethereum nexus stableswap pool, nUSD is locked/burned on the source chain and minted on the destination chain by the bridge contracts. Mint authority is held by the Synapse bridge/router system, not by depositing users."
+      }
+    ],
+    "review": {
+      "evidence": "DefiLlama and Synapse/L2BEAT coverage describe nUSD as a lock-mint bridge synthetic backed by the Ethereum nexus pool (DAI/USDC/USDT); supply on each chain is created by the Synapse bridge mint route. This is a bridge-or-oft-synthetic path under a concentrated bridge admin; this is a legacy asset and the live signer set was not independently resolved.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "DefiLlama NUSD", "url": "https://defillama.com/stablecoin/nexus-usd" },
+        { "label": "Synapse on L2BEAT", "url": "https://l2beat.com/bridges/projects/synapse" }
+      ],
+      "sourceFreeRationale": "Mechanism resolved from DefiLlama/L2BEAT coverage of Synapse's nUSD lock-mint bridge model; the on-chain bridge mint admin/multisig for this legacy asset was not independently confirmed.",
+      "unresolvedQuestions": ["Confirm the current Synapse bridge contract that holds nUSD mint authority and whether its admin is an active multisig or has been retired."]
+    }
+  }
 }

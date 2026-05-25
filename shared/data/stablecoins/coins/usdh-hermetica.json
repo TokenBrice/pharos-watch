@@ -65,5 +65,45 @@
     "provider": "Hermetica custodian attestations",
     "attestorTier": "self",
     "cadence": "monthly"
+  },
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDh mints only after a two-step backend attestation: a KYC-whitelisted minter calls request-mint and deposits BTC, then Hermetica's trader opens the delta-neutral hedge off-chain and calls confirm-mint to release USDh, making supply gated by Hermetica's off-chain operator.",
+    "controls": [
+      {
+        "label": "Hermetica trader / minting backend (confirm-mint)",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "chain": "stacks",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Hermetica Stacks minting contract uses a request-mint to confirm-mint flow: a whitelisted minter deposits BTC, then a Hermetica-operated trader opens the off-chain perpetual hedge and calls confirm-mint to mint USDh; no permissionless on-chain mint exists.",
+        "sources": [
+          { "label": "Hermetica minting contract docs", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" }
+        ]
+      },
+      {
+        "label": "Minter whitelist (KYC/KYB gate)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "chain": "stacks",
+        "canRaiseCap": "unknown",
+        "evidence": "Only KYC/KYB-approved participants whitelisted by Hermetica can request mints/redemptions directly; access to the mint route is administered off-chain by the issuer."
+      }
+    ],
+    "review": {
+      "evidence": "Hermetica's technical docs describe a backend-attested mint: request-mint deposits BTC, an off-chain trader establishes the BTC short hedge, and confirm-mint then issues USDh; redemption mirrors this via confirm-redeem. Mint is gated by both whitelisting and the issuer's off-chain confirmation, consistent with an offchain-attested-minter under a concentrated operator.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Hermetica mint mechanism", "url": "https://docs.hermetica.fi/usdh/how-it-works/mint-mechanism" },
+        { "label": "Hermetica minting contract (Stacks)", "url": "https://hermetica.gitbook.io/hermetica-tech-docs/stacks/contracts/minting" }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain Stacks principal(s) authorized as trader/whitelist admin and any upgrade authority on the usdh-token-v1 contract before raising confidence."]
+    }
   }
 }

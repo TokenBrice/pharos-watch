@@ -81,5 +81,47 @@
   "yieldConfig": {
     "yieldSource": "Aster Earn asUSDF",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdf-astherus",
+    "summary": "asUSDF is the savings-passthrough staked wrapper of Aster USDF; shares are minted when USDF is staked and do not create base USDF supply, so its mint authority is inherited from USDF (usdf-astherus).",
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb",
+        "label": "Aster Earn asUSDF wrapper token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "asUSDF shares are minted/burned by the Aster Earn wrapper against staked USDF deposits and withdrawals; this share accounting cannot create or destroy base USDF supply.",
+        "evidence": "Savings-passthrough wrapper: staking USDF mints asUSDF shares whose NAV accrues from underlying strategy yield; minting shares only follows USDF deposits and does not expand the parent USDF supply."
+      },
+      {
+        "label": "Inherited USDF (Astherus) MINTER_AND_BURN_ROLE mint path",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USDF supply is created via an AccessControl MINTER_AND_BURN_ROLE with an owner/default-admin path (permissioned-minter, partially-bounded-admin); this wrapper holds USDF and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "asUSDF (variantOf usdf-astherus, variantKind savings-passthrough) is a staked wrapper whose shares track deposited USDF; base mint authority is the inherited USDF permissioned-minter path (partially-bounded-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Aster asUSDF FAQ",
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usdf-astherus, savings-passthrough, wrapper reserve); posture mirrors the USDF parent mint authority."
+    }
   }
 }

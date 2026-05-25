@@ -83,6 +83,43 @@
   },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "USDCV is issued by Societe Generale-FORGE, a MiCA-authorized e-money institution (ACPR); onboarded institutional investors subscribe by sending USD to SG-FORGE's bank account 1:1, and SG-FORGE mints and delivers the tokens against reserves segregated at BNY Mellon.",
+    "controls": [
+      {
+        "label": "SG-FORGE issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Per SG-FORGE materials, onboarded institutional investors buy USDCV 1:1 by sending USD to SG-FORGE's bank account, after which SG-FORGE sends the minted tokens to the investor wallet; redemption mirrors this. Centralized issuer-controlled mint, no permissionless route.",
+        "sources": [
+          {
+            "label": "SG-FORGE CoinVertible",
+            "url": "https://www.sgforge.com/product/coinvertible/"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "SG-FORGE (MiCA EMI, ACPR-authorized) is the sole issuer of USDCV; per SG-FORGE materials minting is a centralized 1:1 subscription against USD sent to SG-FORGE's bank account with reserves segregated at BNY Mellon. No permissionless mint path.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "SG-FORGE CoinVertible",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from SG-FORGE first-party materials; the on-chain USDCV token owner/minter admin and proxy admin were not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain USDCV token owner/minter admin and proxy admin (Ethereum/Solana) before raising to verified."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "USD cash deposits at BNY Mellon (segregated)",

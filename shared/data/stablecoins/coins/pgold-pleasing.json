@@ -89,5 +89,37 @@
       "label": "Physical gold bars (LBMA 99.99%)",
       "risk": "very-low"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "PGOLD is minted 1:1 against LBMA-certified physical gold by Pleasing International (Hong Kong) through role-gated program addresses after KYC/KYB; redemption burns tokens and releases allocated bars, with LayerZero used only for omnichain transport.",
+    "controls": [
+      {
+        "label": "Pleasing International issuance program (role-gated)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Pleasing docs state only role-gated program addresses controlled by the TaaS agreement perform issuance; PGOLD is minted 1:1 against certified reserves after KYC/KYB and burned on redemption against custodied bars."
+      }
+    ],
+    "review": {
+      "evidence": "Pleasing Golden documentation describes a KYC/KYB-gated mint where Pleasing International mints PGOLD 1:1 against certified, vaulted LBMA gold via role-gated program addresses and burns on physical redemption; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Pleasing Golden docs",
+          "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
+        },
+        {
+          "label": "Pleasing TaaS docs",
+          "url": "https://pleasing.gitbook.io/docs/solutions/tokenization-as-a-service-taas"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Arbitrum/ApeChain PGOLD contracts and the LayerZero OFT admin before raising confidence."]
+    }
   }
 }

@@ -68,5 +68,43 @@
       "title": "Hive-native asset",
       "message": "HBD is issued by the Hive protocol rather than an EVM-style token contract. Pharos does not list a contract address until Hive is supported in the chain metadata registry."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "HBD is created at the Hive protocol layer through a HIVE<->HBD conversion mechanism; supply expands when HIVE is converted to HBD, bounded by a debt-ratio cap and haircut rule, with the witness consensus set tuning conversion/interest parameters via soft-fork without a hard fork.",
+    "controls": [
+      {
+        "label": "Hive conversion mechanism (protocol-level mint/burn)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hive",
+        "capDescription": "HBD is minted via on-chain HIVE->HBD conversion (3.5-day time-averaged HIVE price); a dynamic debt-ratio cap stops HBD printing and a haircut reduces HBD->HIVE conversion value once HBD debt exceeds the configured share of HIVE market cap.",
+        "canRaiseCap": "unknown",
+        "evidence": "Conversion is enforced by Hive consensus code, not a permissioned minter; users mint HBD by converting HIVE and supply is bounded by the debt cap / haircut rule."
+      },
+      {
+        "label": "Hive witness consensus set (parameter governance)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "chain": "hive",
+        "canRaiseCap": "unknown",
+        "evidence": "Block-producing witnesses set HBD interest/savings APR and can adjust the haircut/debt-limit parameters via consensus without a hard fork; they tune issuance terms but do not directly mint to arbitrary accounts."
+      }
+    ],
+    "review": {
+      "evidence": "Hive docs and reputable coverage describe HBD as protocol-issued via a HIVE<->HBD conversion contract with a debt-ratio cap and haircut rule; witnesses tune conversion/interest parameters through consensus rather than a discretionary minter role.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Hive Dollar (HBD) overview", "url": "https://hive.io/en/hbd/" },
+        { "label": "Hive developer docs", "url": "https://developers.hive.io/" }
+      ],
+      "sourceFreeRationale": "Conversion/haircut mechanism and witness parameter control confirmed from Hive docs and coverage; exact current debt-ratio threshold values and per-witness authority not independently read from consensus code.",
+      "unresolvedQuestions": ["Confirm the current numeric debt-ratio cap and haircut activation threshold from live Hive consensus parameters."]
+    }
+  }
 }

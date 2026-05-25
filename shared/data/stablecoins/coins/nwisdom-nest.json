@@ -117,5 +117,43 @@
       "title": "NAV-style dollar asset",
       "message": "nWISDOM is a Nest vault share whose value tracks the underlying WisdomTree fund book. It behaves like a vault share rather than a hard 1:1 par stablecoin."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "nWISDOM is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs WisdomTree-fund allocation. There is no permissionless or user-collateralized mint route.",
+    "controls": [
+      {
+        "label": "Nest Wisdom Vault Teller (issuance/redemption)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xA1D572b63C963c6421236C22A10140305C6d41fd",
+        "canRaiseCap": "unknown",
+        "evidence": "In the Nest/Nucleus BoringVault model the Teller is the only contract that mints and burns vault receipt tokens against pUSD deposits at the Accountant-computed NAV; minting is permissioned through the vault rather than open."
+      },
+      {
+        "label": "Nest Wisdom Vault Manager (strategy/admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x8226B661EbaF1CBA4e2A92aE2616CCF2348F18cc",
+        "canRaiseCap": "unknown",
+        "evidence": "The Manager contract is Nest-controlled and oversees vault strategy, allocation, and configuration; it sits in the admin path over the BoringVault/Teller issuance."
+      }
+    ],
+    "review": {
+      "evidence": "Nest vaults run the Nucleus BoringVault stack (BoringVault token + Teller minter + Accountant pricing + Nest-controlled Manager); shares are minted only by the Teller on deposit and the Manager governs strategy, so supply creation is fully permissioned by Nest. Teller/Manager addresses taken from Nest's published contract list; on-chain role/owner not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Nest smart contracts (Teller/Manager addresses)", "url": "https://docs.nest.credit/developers/smart-contracts" },
+        { "label": "How Nest vaults work (BoringVault/Teller/Manager roles)", "url": "https://nest.credit/blog/how-nest-vaults-work" }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain owner/authority of the Teller and Manager (Safe vs EOA) before raising confidence."]
+    }
+  }
 }

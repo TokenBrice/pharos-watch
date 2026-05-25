@@ -63,5 +63,41 @@
       "pct": 100,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "inheritedFrom": "usde-ethena",
+    "summary": "suiUSDe is Sui's Ethena-whitelabel synthetic dollar; it inherits USDe's off-chain attested mint authority and exposure to Ethena's backend/Safe controls rather than creating an independent mint path on Sui.",
+    "controls": [
+      {
+        "label": "suiUSDe Sui wrapper/representation",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "sui",
+        "address": "0x41d587e5336f1c86cad50d38a7136db99333bb9bda91cea4ba69115defeb1402::sui_usde::SUI_USDE",
+        "canRaiseCap": "unknown",
+        "evidence": "suiUSDe is the Sui deployment of Ethena's whitelabel synthetic dollar; its supply tracks Ethena's USDe issuance rather than minting base USDe supply, so the wrapper itself holds no independent mint authority."
+      },
+      {
+        "label": "Inherited USDe off-chain attested mint authority",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying USDe minting uses Ethena signed-order flows with a contract minter and a 5/10 Safe token owner; suiUSDe inherits this authority posture from the parent USDe without adding its own mint route."
+      }
+    ],
+    "review": {
+      "evidence": "suiUSDe is a Sui-native Ethena whitelabel synthetic dollar (dependency weight 1 on usde-ethena, mechanismArchetype synthetic-delta-neutral). It inherits USDe's offchain-attested mint authority and unbounded/compromised admin posture; no independent on-chain mint authority was identified for the Sui deployment.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classified as a variant of usde-ethena from Pharos dependency/mechanism metadata; posture mirrored from the parent USDe mintAuthority. The Sui deployment's own admin surface was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the suiUSDe Sui object/package admin and confirm whether the Sui deployment can mint independently of Ethena's USDe issuance rails."
+      ]
+    }
+  }
 }

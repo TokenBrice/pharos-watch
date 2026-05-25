@@ -93,5 +93,50 @@
       "risk": "high",
       "coinId": "frax-frax"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "msUSD is minted in Metronome Synth by depositing crypto collateral (75-85% CF) to mint synths; there is no direct redemption (only debt repayment). The Metronome DAO (MET governance) controls collateral factors, debt parameters, and protocol admin.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "label": "Metronome Synth pool/minter contracts",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "msUSD is minted only against deposited collateral within Metronome Synth pools at governance-set collateral factors (75-85%); supply is bounded by collateralized debt with no off-protocol issuer minter and no direct redemption.",
+        "evidence": "Metronome Synth docs describe depositing collateral to mint synthetic assets (msUSD) at fixed collateral factors with debt repayment to reclaim collateral and intra-protocol synth-swap peg arbitrage."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Metronome DAO governance / parameter admin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MET is the Metronome DAO governance token; governance sets collateral factors, fees, debt parameters, and administers the synth pools and protocol contracts.",
+        "evidence": "Metronome docs state MET serves as the governance token for the Metronome DAO, which administers the synth protocol's collateral and risk parameters."
+      }
+    ],
+    "review": {
+      "evidence": "Metronome Synth documentation describes msUSD as an overcollateralized synth minted at governance-set collateral factors with no direct redemption, administered by the MET-governed Metronome DAO.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Metronome Synth docs",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+        }
+      ],
+      "sourceFreeRationale": "Synth-CDP mint mechanism and MET DAO governance confirmed from Metronome docs; the on-chain governance owner/multisig and pool admin addresses were not independently read.",
+      "unresolvedQuestions": [
+        "Resolve the Metronome DAO on-chain governance/admin authority (multisig/timelock) and the synth pool admin addresses before raising confidence."
+      ]
+    }
+  }
 }

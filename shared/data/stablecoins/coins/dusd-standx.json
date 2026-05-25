@@ -80,5 +80,49 @@
       "pct": 5,
       "risk": "medium"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "StandX DUSD is minted on-chain via the protocol Gateway when users deposit USDT/USDC into the StandX Secure Vault; the StandX off-chain Settler/backend manages delta-neutral CEX hedges and validates redemption order signatures, with an RSV Fund multisig bridging assets on/off-chain.",
+    "controls": [
+      {
+        "label": "StandX Gateway mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Docs describe a Gateway contract that, on collateral deposit to the Secure Vault and on-chain ratio verification, mints DUSD to the user; redemption is gated by the StandX server validating DUSD balance and signed order authenticity (7-day unwind lock).",
+        "sources": [
+          { "label": "Minting $DUSD", "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd" }
+        ]
+      },
+      {
+        "label": "StandX Settler / backend + RSV Fund multisig",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "The Settler manages delta-neutral positions across CEXes and the RSV Fund multisig bridges assets between on-chain and off-chain platforms; StandX can reject redemption orders, making the issuer backend a controlling party over the mint/redeem lifecycle.",
+        "sources": [
+          { "label": "$DUSD Solutions", "url": "https://docs.standx.com/docs/dusd-solutions" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Mint requires depositing USDT/USDC to the StandX Secure Vault; the protocol opens hedging shorts and mints DUSD. Redemption is backend-attested with a 7-day lock. Supply creation is fully issuer-controlled against delta-neutral collateral.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Minting $DUSD", "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd" },
+        { "label": "Redeeming $DUSD", "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd" }
+      ],
+      "sourceFreeRationale": "Mechanism confirmed from StandX docs; on-chain Gateway minter admin and RSV Fund multisig threshold/signers not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain admin/owner of the BSC Gateway (0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122) and Solana mint authority, plus the RSV Fund multisig threshold, before raising confidence."
+      ]
+    }
+  }
 }

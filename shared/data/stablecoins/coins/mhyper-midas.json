@@ -119,5 +119,33 @@
   "yieldConfig": {
     "yieldSource": "Midas mHYPER / Hyperithm NAV",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "mHYPER is a Midas liquid-yield token; new units are minted only by Midas's permissioned issuance role (MINT_OPERATOR_ROLE) when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain by the issuer.",
+    "controls": [
+      {
+        "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Midas vault architecture mints the token via a permissioned MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain by the issuer and token/vault contracts are upgradeable behind MidasAccessControl. Remote-chain supply is bridged from the Ethereum issuance."
+      }
+    ],
+    "review": {
+      "evidence": "Midas liquid-yield tokens are minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + mint operator); no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Midas docs", "url": "https://docs.midas.app/" },
+        { "label": "Midas mHYPER", "url": "https://midas.app/mhyper" },
+        { "label": "Sherlock Midas audit (vault/access-control architecture)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+      ],
+      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders and the bridge/OFT admin for the Monad/Plasma/Katana deployments before raising confidence."]
+    }
   }
 }

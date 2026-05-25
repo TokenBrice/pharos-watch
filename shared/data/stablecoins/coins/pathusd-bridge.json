@@ -94,5 +94,38 @@
       "title": "Tempo-native issuer rail",
       "message": "pathUSD is tracked as a Tempo quote token. Pharos models its Bridge redemption route, but there is no independent live reserve adapter for the Bridge reserve portfolio yet."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "pathUSD is Tempo's TIP-20 quote stablecoin issued via Bridge (a FinCEN-registered MSB); the administrative authority over the precompile token can mint and burn supply arbitrarily, and mint/redeem runs through Bridge against its reserve portfolio.",
+    "controls": [
+      {
+        "label": "pathUSD TIP-20 token administrator (Tempo/Bridge)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "tempo",
+        "canRaiseCap": "unknown",
+        "evidence": "pathUSD is a TIP-20 precompile token whose administrative authority can mint or burn arbitrarily; Tempo/Bridge controls supply creation, and primary mint/redeem flows through Bridge MSB rails against custodied reserves."
+      }
+    ],
+    "review": {
+      "evidence": "Tempo docs describe pathUSD as a TIP-20 precompile stablecoin where the administrative authority can mint/burn arbitrarily; Bridge (FinCEN MSB) operates issuance and redemption against a cash/Treasury/repo/MMF reserve, with no permissionless or user-collateralized mint route.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Tempo pathUSD docs",
+          "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
+        },
+        {
+          "label": "Tempo TIP-20 native stablecoins",
+          "url": "https://docs.tempo.xyz/learn/tempo/native-stablecoins"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain TIP-20 administrator address/role for pathUSD before raising confidence."]
+    }
+  }
 }

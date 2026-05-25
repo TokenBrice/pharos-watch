@@ -45,6 +45,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "CGO is issued by ComTech Gold, a UAE custodian/trust company; tokens are minted when physical gold is added to Transguard-vaulted reserves and burned on redemption, all through the issuer's controlled tokenization process.",
+    "controls": [
+      {
+        "label": "ComTech Gold issuance/tokenization backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "ComTech mints CGO on gold deposit and burns on redemption (≈0.2% tokenization fee) against gold held by Transguard under XDC Trust Company custody; supply is issuer-controlled with no permissionless mint."
+      }
+    ],
+    "review": {
+      "evidence": "Coverage and project materials describe ComTech Gold controlling a 1:1 mint/burn tied to physical gold deposits and redemptions on XDC; no user-collateralized or permissionless mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "ComTech Gold", "url": "https://www.comtechgold.com/" }
+      ],
+      "sourceFreeRationale": "Classification based on issuer/custodian model in project materials; the on-chain XRC-20 owner/minter address on XDC was not independently resolved (limited explorer transparency).",
+      "unresolvedQuestions": ["Resolve the on-chain XDC XRC-20 owner/minter authority for CGO before raising confidence."]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

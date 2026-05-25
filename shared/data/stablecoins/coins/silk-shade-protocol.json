@@ -85,5 +85,49 @@
   "yieldConfig": {
     "yieldSource": "SILK basket index appreciation",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "SILK is minted as an overcollateralized CDP via ShadeLend on Secret Network; ShadeDAO assemblies (multisig branches) tune risk parameters and govern a permissioned SILK minter that bond and arbitrage (AMO) modules can also access.",
+    "controls": [
+      {
+        "label": "ShadeLend CDP / SILK minter contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "ShadeLend issues SILK against overcollateralized user deposits (ATOM, SCRT, stables, SHD); the SILK minter is also permissioned to Shade bonds and Shade Arbitrage, so minting is mechanism-gated rather than fully permissionless.",
+        "sources": [
+          { "label": "SILK docs", "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk" }
+        ]
+      },
+      {
+        "label": "ShadeDAO governance assemblies (multisig branches)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "ShadeDAO governs via SHD tokenholders, representatives, and assembly multisigs with sanity-check votes; assemblies set collateral/peg parameters and historically held centralized control over bond/mint permissioning (Certik flagged) pending full governance rollout.",
+        "sources": [
+          { "label": "ShadeDAO docs", "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "SILK is a basket-pegged overcollateralized CDP minted through ShadeLend, with the SILK minter additionally permissioned to bonds and arbitrage AMOs and risk parameters set by ShadeDAO assembly multisigs. Secret Network's privacy model prevents live on-chain admin reads, but the mint mechanism and governance structure are documented.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Governance docs", "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/governance" },
+        { "label": "GitHub (securesecrets/shade)", "url": "https://github.com/securesecrets/shade" }
+      ],
+      "sourceFreeRationale": "Mechanism established from Shade docs/audit coverage; Secret Network privacy precludes live verification of current minter admin keys and assembly multisig thresholds.",
+      "unresolvedQuestions": [
+        "Resolve the current SILK minter admin and ShadeDAO assembly multisig thresholds/signers on Secret Network, and confirm whether bond/arbitrage minting centralization has been transferred to on-chain governance."
+      ]
+    }
   }
 }

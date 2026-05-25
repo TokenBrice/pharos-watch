@@ -55,6 +55,51 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "EUSD is a Reserve Protocol RToken: anyone can permissionlessly mint 1:1 by depositing the collateral basket (Aave/Compound USDC and USDT positions) and redeem for the basket, with RSR stakers as first-loss buffer; the per-RToken Governor + 7-day TimelockController controls basket and parameter changes.",
+    "controls": [
+      {
+        "label": "RToken contract (permissionless basket mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "capDescription": "Mint is 1:1 against the current collateral basket only; supply is bounded by deposited collateral, with arbitrage holding the peg.",
+        "canRaiseCap": "unknown",
+        "evidence": "RTokens are minted by depositing the basket and redeemed for the basket; eUSD's basket is Aave/Compound USDC and USDT positions, so minting is bounded by deposited collateral."
+      },
+      {
+        "label": "eUSD Governor + TimelockController (basket governance)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 604800,
+        "canRaiseCap": "unknown",
+        "evidence": "Each RToken is governed by its own RSR-staker Governor paired with a TimelockController; basket changes require a minimum ~7-day delay. Reserve factory contracts are immutable and not upgradeable."
+      }
+    ],
+    "review": {
+      "evidence": "Reserve docs describe eUSD as a permissionless basket-mint RToken backed by Aave/Compound deposits with RSR first-loss staking; basket/parameter changes run through a per-RToken Governor + ~7-day TimelockController, while factory contracts are immutable.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Reserve docs",
+          "url": "https://docs.reserve.org/"
+        },
+        {
+          "label": "Reserve Protocol GitHub",
+          "url": "https://github.com/reserve-protocol/protocol"
+        }
+      ],
+      "sourceFreeRationale": "Permissionless basket-mint + timelock governance model confirmed from Reserve docs; exact eUSD Governor/Timelock addresses and current quorum not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the deployed eUSD Governor and TimelockController addresses and the exact timelock delay/quorum on-chain."]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "reserves": [

@@ -108,5 +108,42 @@
       "title": "Separate Apollo credit wrapper",
       "message": "ACRDX overlaps economically with ACRED private-credit exposure, but uses a distinct Anemoy / Centrifuge issuer route and token contract set."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV, so the issuer mints and burns shares against fund inflows/outflows.",
+    "controls": [
+      {
+        "label": "Anemoy / Centrifuge fund issuance authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Permissioned fund-share issuance: Anemoy (through Centrifuge) mints ACRDX against KYC-gated NAV subscriptions and burns on redemption; transfers are restricted to whitelisted holders. No permissionless mint route.",
+        "sources": [
+          {
+            "label": "Anemoy ACRDX launch",
+            "url": "https://www.anemoy.io/news/acrdx-launched"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Anemoy ACRDX launch",
+          "url": "https://www.anemoy.io/news/acrdx-launched"
+        }
+      ],
+      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token with KYC-gated primary issuance and issuer/admin control over transfer and supply; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Mechanism established from issuer materials; on-chain token owner/minter admin on Ethereum, Plume, and Monad not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter role on Ethereum, Plume, and Monad before raising confidence."
+      ]
+    }
+  }
 }

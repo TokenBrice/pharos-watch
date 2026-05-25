@@ -143,5 +143,54 @@
   "yieldConfig": {
     "yieldSource": "BIMA savings (sUSBD)",
     "yieldType": "lending-vault"
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR); BimaCore governs collateral types, debt ceilings, and risk parameters, and a PSM adds near-1:1 USDC/USDP/GUSD swaps.",
+    "controls": [
+      {
+        "label": "BIMA BorrowerOperations (Liquity-v1 fork)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "chain": "ethereum",
+        "address": "0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc",
+        "capDescription": "Mint gated by per-collateral debt ceilings and a 150% minimum collateral ratio enforced by the TroveManager/Factory.",
+        "evidence": "BIMA docs and mainnet-addresses page describe a Liquity-fork stack (BorrowerOperations, Factory, TroveManager, SortedTroves, StabilityPool) minting the USBD DebtToken against locked BTC collateral.",
+        "sources": [
+          { "label": "BIMA Mainnet Addresses", "url": "https://docs.bima.money/security/mainnet-addresses" }
+        ]
+      },
+      {
+        "label": "BimaCore governance / parameter admin",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "chain": "ethereum",
+        "address": "0x227E9323D692578Ca3dF92b87d06625Df22380Ab",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "BimaCore is the central access-control hub; governance can add collateral types and adjust debt ceilings, stability fees, and collateral ratios. Owner/admin not disclosed or shown renounced in the docs.",
+        "sources": [
+          { "label": "BIMA Mainnet Addresses", "url": "https://docs.bima.money/security/mainnet-addresses" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USBD is minted permissionlessly by users via the BIMA BorrowerOperations contract against overcollateralized BTC LST vaults under Liquity-v1 mechanics, with BimaCore governing risk parameters and a PSM for stable swaps. Identical-address multichain deployments mint locally; no bridge mint is documented. Owner renouncement is not asserted.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Minting USBD", "url": "https://docs.bima.money/minting-usbd" },
+        { "label": "BIMA Mainnet Addresses", "url": "https://docs.bima.money/security/mainnet-addresses" }
+      ],
+      "sourceFreeRationale": "Liquity-fork mechanism and contract addresses confirmed from BIMA docs; the BimaCore owner/admin and any timelock/multisig were not independently read on-chain, so immutability cannot be claimed.",
+      "unresolvedQuestions": [
+        "Read BimaCore owner/guardian on Etherscan to determine whether parameter/upgrade authority is renounced, timelocked, or held by an EOA/multisig before raising confidence."
+      ]
+    }
   }
 }

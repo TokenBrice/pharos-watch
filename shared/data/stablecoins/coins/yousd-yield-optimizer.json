@@ -138,5 +138,45 @@
   "yieldConfig": {
     "yieldSource": "Yield Optimizer strategies",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "yoUSD is an ERC-4626 vault on Base where any user mints share tokens by depositing USDC; the privileged surface is an admin multisig (under 4 signers per project disclosure) that controls strategy/protocol whitelisting and rebalancing across 50+ DeFi venues.",
+    "controls": [
+      {
+        "label": "yoUSD admin multisig (strategy whitelist / rebalancing)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "chain": "base",
+        "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "evidence": "yoUSD is an ERC-4626 yoVault on Base; per project materials an admin multisig with under 4 signers controls protocol whitelisting and rebalancing across the curated DeFi strategy set, while share issuance itself is user-driven deposit/mint."
+      },
+      {
+        "label": "yoUSD ERC-4626 vault (share mint on deposit)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "base",
+        "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "canRaiseCap": "unknown",
+        "evidence": "Users deposit USDC via yoGateway and receive yoUSD vault shares at NAV; the vault contract performs ERC-4626 share accounting and does not create discretionary supply."
+      }
+    ],
+    "review": {
+      "evidence": "YO Protocol docs and the coin's own collateral note describe yoUSD as an ERC-4626 yoVault on Base accepting USDC deposits, rebalanced across 50+ whitelisted DeFi strategies ranked by Exponential.fi, with an admin multisig (under 4 signers) controlling whitelisting and five audits reporting no critical/high findings.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "YO Protocol docs", "url": "https://docs.yo.xyz" },
+        { "label": "yoUSD vault", "url": "https://app.yo.xyz/vault/base/0x0000000f2eB9f69274678c76222B35eEc7588a65" }
+      ],
+      "sourceFreeRationale": "Admin-multisig-controlled whitelisting and ERC-4626 deposit-mint taken from YO docs and the coin record; the multisig signer set/threshold and any guards were not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the yoUSD admin multisig address, threshold, and signer set, and the yoGateway/strategy-allocation admin on Base."]
+    }
   }
 }

@@ -61,6 +61,46 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates; Felix is a licensed, security-enhanced fork retaining multisig admin controls, per-asset and global mint caps, and an emergency pause.",
+    "controls": [
+      {
+        "label": "Felix CDP branch contracts (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "capDescription": "Per-asset and global feUSD mint caps plus block-level mint/redemption caps; bounded by per-trove collateral ratio with $1-of-collateral redemption.",
+        "canRaiseCap": "unknown",
+        "evidence": "feUSD is minted by depositing HYPE/LSTs/UBTC to open troves at user-set interest rates, with per-asset and global mint caps enforced by the protocol."
+      },
+      {
+        "label": "Felix admin multisig (parameters, caps, pause)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "evidence": "Felix is a security-enhanced Liquity-v2 fork with multisig-held admin rights, adjustable parameters, mint caps, and an emergency pause; ownership is not renounced (progressive-decentralization roadmap), so immutable classification is not asserted."
+      }
+    ],
+    "review": {
+      "evidence": "Felix is a licensed Liquity-v2 fork on Hyperliquid; coverage and the coin's blacklistability review confirm it retains multisig admin controls, mint caps, and emergency pause rather than full immutability, so the admin surface is bounded but present.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Felix docs",
+          "url": "https://usefelix.gitbook.io/docs"
+        }
+      ],
+      "sourceFreeRationale": "Liquity-v2-fork mechanism and admin/pause/caps confirmed from Felix materials; exact admin multisig signers, threshold, and Safe internals not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the Felix admin multisig signers/threshold and the on-chain pause/cap authority on HyperEVM."]
+    }
+  },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [

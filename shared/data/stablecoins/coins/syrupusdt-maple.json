@@ -107,5 +107,47 @@
   "yieldConfig": {
     "yieldSource": "Maple Finance lending",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdt-tether",
+    "summary": "syrupUSDT is Maple's ERC-4626 strategy-vault receipt for USDT lent to institutional borrowers; shares are minted against USDT deposits and do not create base USDT supply, so its mint authority is inherited from USDT (usdt-tether).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+        "label": "Maple syrupUSDT ERC-4626 vault token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "syrupUSDT shares are minted/burned by the Maple ERC-4626 vault against USDT deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDT supply.",
+        "evidence": "Strategy-vault receipt: syrupUSDT shares represent a claim on USDT lent as overcollateralized institutional loans; minting shares only follows USDT deposits and does not expand the parent USDT monetary base."
+      },
+      {
+        "label": "Inherited USDT (Tether) issuer mint path",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USDT supply is issuer-minted by Tether; on Ethereum the token owner is a 3/6 multisig-style owner with direct supply authority (issuer-direct-mint, concentrated-admin); this wrapper holds USDT and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT; base mint authority is the inherited Tether USDT issuer path (concentrated-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Maple Finance",
+          "url": "https://maple.finance/"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdt-tether, strategy-vault, wrapper reserve); posture mirrors the USDT parent mint authority."
+    }
   }
 }

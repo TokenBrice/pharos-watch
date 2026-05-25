@@ -69,5 +69,50 @@
       "title": "Perpetuals liquidity-layer stablecoin",
       "message": "lvUSD is included through CoinGecko price and market-cap coverage, but its collateral and redemption model are tied to LeverUp's trading system rather than a conventional issuer reserve."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "lvUSD is minted inside LeverUp's Virtual Market Making Vault (VMMV) trading engine on Monad when traders open positions against USDC/MON collateral; minting is controlled by the protocol's trading-engine contracts under a project multisig rather than a permissionless or renounced system.",
+    "controls": [
+      {
+        "chain": "monad",
+        "label": "LeverUp VMMV trading-engine (minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "lvUSD is auto-minted by the LeverUp trading engine when a trader opens a position using USDC/MON collateral (one independent pool per collateral); all positions are denominated and settled in lvUSD inside the VMMV, so supply is tied to open collateralized positions.",
+        "evidence": "LeverUp docs state the system automatically mints lvUSD when a trader opens a position with USDC (or MON) collateral, with each token managed in its own trading pool under the VMMV design."
+      },
+      {
+        "chain": "monad",
+        "label": "LeverUp protocol admin multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "A LeverUp project multisig administers the managed liquidity layer and trading engine on a new chain; specific signer set, threshold, and pause/upgrade powers are unresolved.",
+        "evidence": "lvUSD metadata flags governance as a multisig over a managed perpetuals liquidity layer on Monad; the docs do not prove a renounced or permissionless minter, leaving admin control unresolved."
+      }
+    ],
+    "review": {
+      "evidence": "LeverUp documentation describes lvUSD as an engine-minted liquidity-layer stablecoin auto-issued against USDC/MON collateral inside the VMMV; the project is managed by a multisig on Monad and does not document a renounced or permissionless mint authority.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "LeverUp lvUSD docs",
+          "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+        }
+      ],
+      "sourceFreeRationale": "Engine-mint mechanism confirmed from LeverUp docs; the controlling multisig's signer set, threshold, and upgrade/pause powers were not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the LeverUp admin multisig (signers, threshold) and the trading-engine/token upgrade and pause authority before raising confidence."
+      ]
+    }
+  }
 }

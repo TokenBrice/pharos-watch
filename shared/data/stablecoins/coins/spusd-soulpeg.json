@@ -78,5 +78,44 @@
       "title": "Redemption backstop not modeled",
       "message": "SoulPeg materials describe protocol controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "spUSD is a role-gated BNB Chain wrapper: only SoulPeg's authorized wrapper contract holds MINTER_ROLE/BURNER_ROLE to mint or burn spUSD 1:1 against soul-bound sUSDC, with the underlying USDC routed into Venus by a SoulPeg operator.",
+    "controls": [
+      {
+        "label": "SoulPeg spUSD wrapper (MINTER_ROLE / BURNER_ROLE)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "canRaiseCap": "unknown",
+        "capDescription": "OpenZeppelin AccessControl MINTER_ROLE/BURNER_ROLE restricted to the authorized wrapper contract; a 1 billion supply safety cap is documented.",
+        "evidence": "Verified BscScan contract source and SoulPeg docs describe spUSD as a tradeable wrapper for soul-bound sUSDC where only the authorized wrapper contract (MINTER_ROLE/BURNER_ROLE) can mint or burn, with a 1B max-supply cap."
+      },
+      {
+        "label": "SoulPeg operator (sUSDC issuance + Venus routing + MM bot)",
+        "role": "custodian",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "SoulPeg docs describe an operator that mints sUSDC 1:1 against deposited USDC, routes USDC into Venus lending, and runs a peg market-making bot; mint of the wrapped spUSD is gated behind this operator-controlled flow."
+      }
+    ],
+    "review": {
+      "evidence": "SoulPeg documentation and the verified BscScan SPUSD contract describe an operator-controlled, role-gated wrapper (MINTER_ROLE/BURNER_ROLE on the wrapper contract) over soul-bound sUSDC, not a user-collateralized CDP; on-chain role holders were not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "SoulPeg docs", "url": "https://docs.soulpeg.io/docs/introducing/what-is-soulpeg" },
+        { "label": "SPUSD contract (BscScan)", "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the exact address holding MINTER_ROLE/BURNER_ROLE on the spUSD wrapper and the SoulPeg admin/operator multisig.",
+        "Confirm whether the documented 1B supply cap is governance-mutable."
+      ]
+    }
+  }
 }

@@ -88,5 +88,47 @@
         "expectedAssetAddress": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "fxusd-f-x-protocol",
+    "summary": "fxSAVE is a strategy-vault receipt over f(x) Protocol's fxUSD savings strategy; shares are minted against deposited fxUSD and do not create base fxUSD supply, so its mint authority is inherited from fxUSD (fxusd-f-x-protocol).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+        "label": "f(x) fxSAVE vault receipt token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "fxSAVE shares are minted/burned by the f(x) saving vault against fxUSD deposits and redemptions; this share accounting cannot create or destroy base fxUSD supply.",
+        "evidence": "Strategy-vault receipt: fxSAVE shares represent a claim on fxUSD deposited into the f(x) saving/stability strategy; minting shares only follows fxUSD deposits and does not expand the parent fxUSD supply."
+      },
+      {
+        "label": "Inherited fxUSD CDP mint path",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying fxUSD supply is minted CDP-style against overcollateralized wstETH/WBTC positions with governance-tuned risk parameters (user-collateralized-governed, partially-bounded-admin); fxSAVE holds fxUSD and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt whose shares track deposited fxUSD; base mint authority is the inherited fxUSD CDP path (partially-bounded-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "f(x) Protocol docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf fxusd-f-x-protocol, strategy-vault, wrapper reserve); posture mirrors the fxUSD parent mint authority."
+    }
   }
 }

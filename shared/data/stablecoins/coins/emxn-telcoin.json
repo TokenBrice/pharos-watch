@@ -49,6 +49,32 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "eMXN is issued by Telcoin (operating under a Nebraska Digital Asset Depository charter) as a Mexican-peso Digital Cash stablecoin on Polygon; minting and redemption run through Telcoin's centralized banking backend against MXN reserves.",
+    "controls": [
+      {
+        "label": "Telcoin Digital Cash issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Telcoin mints/burns eMXN through its bank-operated Digital Cash rails against MXN reserves; supply is issuer-controlled with no permissionless or user-collateralized mint route."
+      }
+    ],
+    "review": {
+      "evidence": "Telcoin materials describe issuer-managed Digital Cash stablecoins minted by the Telcoin bank against fiat reserves; eMXN follows the same centralized issuance model with no permissionless mint.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Telcoin Digital Cash", "url": "https://www.telco.in/en/digital-cash" }
+      ],
+      "sourceFreeRationale": "Classification based on Telcoin's issuer model; the on-chain Polygon owner/minter admin for eMXN was not independently resolved, and eMXN-specific reserve attestations are not yet published.",
+      "unresolvedQuestions": ["Resolve the on-chain Polygon owner/minter admin for eMXN before raising confidence."]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-unregulated",
   "reserves": [

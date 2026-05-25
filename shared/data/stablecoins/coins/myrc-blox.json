@@ -111,5 +111,33 @@
       "title": "Small float, single-jurisdiction",
       "message": "Total circulating supply is approximately MYR 5.3M (~USD 1.3M) and reserves are concentrated in a single Malaysian bank (Maybank) under a single Malaysian trustee."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "MYRC is issued by Blox Blockchain Sdn Bhd against 1:1 MYR reserves held in trust at Maybank under UTMB; mint authority on each chain is restricted to a Blox-controlled key, and users mint/burn only after Malaysian eKYC through the Blox platform.",
+    "controls": [
+      {
+        "label": "Blox-controlled minter key",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+        "canRaiseCap": "unknown",
+        "evidence": "Project materials state MYRC mint authority on each chain is restricted to a Blox-controlled key; minting requires Malaysian eKYC (MyKad) and a linked Malaysian bank account, with deposit-backed 1:1 issuance through the Blox platform."
+      }
+    ],
+    "review": {
+      "evidence": "Blox runs a centralized eKYC-gated 1:1 mint/redeem against ring-fenced MYR reserves at Maybank (UTMB trustee); the whitepaper/docs state mint authority on each chain is a Blox-controlled key, so supply creation is fully issuer-controlled with no permissionless route. Live key/owner address not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Blox docs", "url": "https://docs.blox.my" },
+        { "label": "MYRC whitepaper", "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf" }
+      ],
+      "unresolvedQuestions": ["Read the on-chain minter/owner key per chain (Ethereum/Arbitrum/Base + Solana mint authority) to confirm Blox control before raising confidence."]
+    }
+  }
 }

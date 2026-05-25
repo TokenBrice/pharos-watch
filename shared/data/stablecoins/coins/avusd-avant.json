@@ -93,5 +93,63 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "avUSD is minted 1:1 against USDC deposited into Avant's AvantMintingV2 contract on Avalanche; issuance is operated by Avant Protocol with MPC-custodied keys (Fireblocks/Fordefi), a policy engine, RBAC, and whitelisting rather than a disclosed public multisig.",
+    "controls": [
+      {
+        "chain": "avalanche",
+        "address": "0xcb43139E90f019624e3B76C56FB05394B162A49c",
+        "label": "Avant avUSD AvantMintingV2 contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Avant docs identify AvantMintingV2 on Avalanche as the contract that mints avUSD 1:1 on USDC deposit and burns on redemption; the named address is from the project's contract-addresses page.",
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
+      },
+      {
+        "label": "Avant Protocol operations backend (MPC + policy engine)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "Avant secures privileged operations through MPC wallets (Fireblocks/Fordefi), a transaction policy engine, role-based access control, and address whitelisting; no public Safe/multisig threshold for the minter role is disclosed.",
+        "sources": [
+          {
+            "label": "Avant secure asset management",
+            "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Avant Protocol docs",
+          "url": "https://docs.avantprotocol.com/"
+        },
+        {
+          "label": "Avant contract addresses",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses"
+        }
+      ],
+      "evidence": "Avant docs describe avUSD as fully USDC-backed, minted via the AvantMintingV2 contract and redeemable 1:1; privileged keys sit behind MPC custody plus a policy engine and RBAC. avUSD is the parent of the savUSD strategy vault.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Mint contract address taken from Avant's published contract-addresses page; on-chain MINTER_ROLE/DEFAULT_ADMIN_ROLE holders not independently read.",
+      "unresolvedQuestions": [
+        "Read the on-chain MINTER_ROLE and DEFAULT_ADMIN_ROLE holders on AvantMintingV2 and the avUSD token across Avalanche, Ethereum, and Linea before raising confidence."
+      ]
+    }
   }
 }

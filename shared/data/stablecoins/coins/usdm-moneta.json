@@ -74,6 +74,43 @@
   },
   "chainTier": "established-alt-l1",
   "custodyModel": "institutional-regulated",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDM is issued on Cardano by Moneta (USA issuance) and NBX (EEA, MiCA-notified EMT); mint/redeem is centralized and KYC-gated 1:1 against segregated reserves, with a Charli3 oracle verifying reserve backing on-chain before each mint.",
+    "controls": [
+      {
+        "label": "Moneta / NBX issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Moneta (USA) and NBX (EEA) operate the centralized 1:1 mint/redeem for USDM against segregated reserves; a Charli3 oracle attests reserve backing on-chain before each mint, but issuance remains issuer-controlled with no permissionless route.",
+        "sources": [
+          {
+            "label": "Charli3 USDM reserves feed",
+            "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USDM is issued by Moneta (USA) / NBX (EEA, MiCA-notified) on Cardano; mint/redeem is centralized and KYC-gated against reserves at Fidelity/Western Asset/Amundi, with a Charli3 reserve oracle checked before mint. No permissionless mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Charli3 USDM reserves feed",
+          "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled, oracle-gated mint model confirmed from Moneta/Charli3 materials; the Cardano minting-policy controller / policy keys for USDM were not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the Cardano minting-policy controller / policy keys for USDM and how the Charli3 oracle gate is enforced before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "USD bank deposits",

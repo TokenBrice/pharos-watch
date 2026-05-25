@@ -56,5 +56,44 @@
       "title": "Non-indexed issuance chain",
       "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WEMIX$ is issued through the WEMIX3.0 MINT contract under Authorized Mint Access (AMA), granted only to the WEMIX foundation at launch, against USDC deposited into the Treasury; an algorithmic DIOS stabilizer manages the peg but the mint permission is concentrated in the issuer.",
+    "controls": [
+      {
+        "label": "WEMIX Authorized Mint Access (AMA) holder",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "wemix",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "WEMIX docs state issuance is controlled by the MINT contract and that the AMA (Authorized Mint Access) right was granted only to the WEMIX foundation at launch, minting WEMIX$ 1:1 against USDC deposited to the Treasury; DIOS (TIP/TOP) is an automated stabilizer rather than an open mint route, so supply creation is permissioned to the issuer.",
+        "sources": [
+          {
+            "label": "WEMIX$ stabilizer docs",
+            "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "WEMIX$ is the WEMIX3.0 ecosystem stablecoin minted via the MINT contract under Authorized Mint Access held by the WEMIX foundation, with USDC Treasury collateral and an automated DIOS price stabilizer; there is no permissionless or user-collateralized mint path.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "WEMIX$ stabilizer docs",
+          "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+        }
+      ],
+      "sourceFreeRationale": "WEMIX chain is non-EVM-indexed and no contract is stored in Pharos; mint mechanism resolved from issuer docs (AMA + MINT + DIOS) rather than a live on-chain admin read.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain AMA/MINT contract owner on WEMIX chain and whether AMA has been extended beyond the foundation."
+      ]
+    }
+  }
 }

@@ -41,6 +41,46 @@
       "decimals": 6
     }
   ],
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "cgUSD is an ERC-4626 rebasing vault on Base where users mint by depositing USDC/USDT (incl. cross-chain via Axelar), but Cygnus custodies the off-chain U.S. Treasury reserves, controls the daily oracle-reported NAV rebase, and runs an AMO managing on-chain liquidity.",
+    "controls": [
+      {
+        "label": "Cygnus oracle/rebase + reserve custodian",
+        "role": "custodian",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "The cgUSD vault contract exposes an owner-gated oracle-report path (handleOracleReport) that synchronizes total supply to off-chain T-bill NAV on NYC banking days; Cygnus custodies the off-chain Treasuries and authorizes the supply adjustment that user deposits cannot perform alone.",
+        "sources": [
+          { "label": "Cygnus cgUSD mint mechanics", "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint" }
+        ]
+      },
+      {
+        "label": "cgUSD vault owner (mint/pause admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "chain": "base",
+        "address": "0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "The Base cgUSD contract is an OpenZeppelin Ownable ERC-4626 vault with a mint() that issues shares for deposited assets and owner-controlled pause/resume; the owner address itself was not independently resolved on-chain."
+      }
+    ],
+    "review": {
+      "evidence": "Cygnus documentation describes user mint with USDC at $1 (0% fee, Axelar cross-chain) backed by off-chain U.S. Treasuries with a daily issuer-controlled NAV rebase and an AMO managing on-chain liquidity; this is a custodian/AMO hybrid rather than a pure issuer fiat mint or a permissionless user-collateralized CDP.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Cygnus cgUSD v1 docs", "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1" }
+      ],
+      "sourceFreeRationale": "Path corrected from issuer-direct-mint to amo-or-custodian-hybrid: backing is off-chain T-bills custodied by the issuer with oracle-driven rebase and an on-chain AMO, while users mint against on-chain stablecoins. Live owner/oracle admin addresses not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain owner and oracle-reporter addresses of the Base cgUSD vault, and the AMO controller, before raising confidence."]
+    }
+  },
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,

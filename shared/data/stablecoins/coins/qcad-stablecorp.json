@@ -105,5 +105,37 @@
       },
       "reserveSourceLabel": "Stablecorp balances API"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "QCAD is minted and redeemed 1:1 for CAD by Stablecorp (FINTRAC MSB) acting as servicer to the QCAD Digital Trust; authorized dealers and qualified holders mint/redeem through Stablecorp against trust-held fiat reserves.",
+    "controls": [
+      {
+        "label": "Stablecorp issuance backend (servicer to QCAD Digital Trust)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Stablecorp (FINTRAC MSB) administers the QCAD Program as servicer; authorized dealers/qualified holders mint QCAD 1:1 on CAD deposit and redeem at par against trust-held reserves, so Stablecorp controls supply creation."
+      }
+    ],
+    "review": {
+      "evidence": "QCAD prospectus/Stablecorp materials describe a non-algorithmic mint-and-redeem run by Stablecorp as servicer to the QCAD Digital Trust, with authorized dealers minting/redeeming 1:1 against CAD reserves held at regulated institutions; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Stablecorp QCAD",
+          "url": "https://stablecorp.ca/"
+        },
+        {
+          "label": "QCAD Token Terms (SEDAR+)",
+          "url": "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Ethereum and Base QCAD contracts before raising confidence."]
+    }
   }
 }

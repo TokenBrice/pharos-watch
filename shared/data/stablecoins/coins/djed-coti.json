@@ -56,6 +56,45 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "DJED is minted and burned permissionlessly against a shared ADA reserve pool by a formally verified autonomous smart-contract bank, with SHEN reserve-coin holders absorbing volatility; minting is gated by the 400%-800% reserve-ratio band rather than a per-user CDP, and COTI/IOG operate the contracts and oracle.",
+    "controls": [
+      {
+        "label": "Djed autonomous bank contract (reserve mint/burn)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "cardano",
+        "capDescription": "DJED mint allowed only while the ADA reserve ratio stays at or above 400% (and within the 400%-800% band); mint price set by oracle ADA/USD.",
+        "canRaiseCap": "unknown",
+        "evidence": "The Djed smart contract autonomously mints/burns DJED against the shared ADA reserve, forbidding new DJED minting below a 400% reserve ratio; SHEN absorbs surplus reserve volatility."
+      },
+      {
+        "label": "COTI / IOG operator (oracle and parameters)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Djed is designed by IOG and issued/operated by COTI, which supplies the ADA/USD oracle feed and protocol parameters; coin metadata flags single-entity governance."
+      }
+    ],
+    "review": {
+      "evidence": "Djed is a formally verified autonomous reserve/seigniorage stablecoin (not a per-user CDP): DJED is minted/burned against a shared ADA reserve under a 400%-800% reserve-ratio rule, with SHEN as the reserve coin and COTI as operator/oracle.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Djed mainnet announcement (COTI)",
+          "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+        }
+      ],
+      "sourceFreeRationale": "Autonomous-bank reserve-ratio mechanism confirmed from COTI/Djed materials; on-chain script governance/oracle admin not independently resolved on Cardano.",
+      "unresolvedQuestions": ["Confirm the on-chain Djed parameter/oracle admin authority and any upgrade path on Cardano; the mint mechanism is a reserve-coin model rather than a classic per-user CDP."]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",

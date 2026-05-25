@@ -91,5 +91,43 @@
       "title": "Prolonged depeg",
       "message": "sUSD has traded materially below its $1 target since the SIP-420 C-ratio reduction. Use live runtime data for the current price; peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "Synthetix sUSD is an overcollateralized debt-pool stablecoin; post-SIP-420 the legacy per-staker SNX mint is deprecated and minting/debt now sit in a protocol-owned pool, with the Synthetix DAO setting issuance and collateral parameters via SIP governance.",
+    "controls": [
+      {
+        "label": "Synthetix V3 / 420-pool minting contracts",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "capDescription": "Minting is bounded by the protocol-owned debt pool issuance ratio (~200% post-SIP-420) across SNX/ETH/USDC collateral types.",
+        "evidence": "SIP-420 docs and Synthetix coverage describe minting moving from individual SNX stakers to a protocol-owned debt pool; sUSD is issued by V3 collateral pools bounded by the pool issuance ratio."
+      },
+      {
+        "label": "Synthetix governance (SIP process / DAO)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Synthetix Improvement Proposals (SIPs), including SIP-420, set issuance ratios, accepted collateral, and pool parameters; the DAO/governance can authorize protocol minting of sUSD into products."
+      }
+    ],
+    "review": {
+      "evidence": "Synthetix SIP repository (notably SIP-420) and protocol coverage describe sUSD as an overcollateralized debt-pool stablecoin governed via the SIP process, with legacy per-staker SNX minting deprecated in favor of a protocol-owned debt pool; on-chain admin not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "SIP-420 (Synthetix SIPs)", "url": "https://sips.synthetix.io/sips/sip-420/" },
+        { "label": "Synthetix 420 Pool blog", "url": "https://blog.synthetix.io/420-stake-it/" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the on-chain owner/admin of the V3 core, 420-pool, and legacy sUSD token contracts and the Synthetix governance multisig/timelock.",
+        "Clarify the live split between legacy V2 sUSD and V3-issued sUSD and which contracts retain mint authority."
+      ]
+    }
+  }
 }

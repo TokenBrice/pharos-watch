@@ -124,5 +124,41 @@
         "expectedAssetAddress": "0x24de8771bc5ddb3362db529fc3358f2df3a0e346"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "avusd-avant",
+    "summary": "savUSD is Avant's staked wrapper of avUSD; shares are minted only by staking avUSD into the savings vault, so it inherits avUSD's issuer-direct mint authority rather than creating new avUSD supply.",
+    "controls": [
+      {
+        "label": "savUSD savings vault (share accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "avalanche",
+        "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
+        "canRaiseCap": "unknown",
+        "evidence": "savUSD shares are minted when avUSD is staked into Avant's savings vault (expected asset 0x24de8771bc5ddb3362db529fc3358f2df3a0e346) and burned on exit; share price compounds with strategy yield. The wrapper cannot create base avUSD supply."
+      },
+      {
+        "label": "Inherited avUSD issuer mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying avUSD is minted 1:1 against USDC via Avant's AvantMintingV2 contract, with privileged operations behind MPC custody (Fireblocks/Fordefi), a policy engine, and RBAC. savUSD inherits this concentrated-admin posture from the parent."
+      }
+    ],
+    "review": {
+      "evidence": "savUSD (variantOf avusd-avant, variantKind strategy-vault) is an ERC-4626 staked wrapper over avUSD across Avalanche, Ethereum, Linea, Plasma, Berachain, and BSC. It inherits avUSD's issuer-direct mint path and concentrated-admin posture; the wrapper only mints/burns shares against avUSD deposits.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classified as the staked variant of avusd-avant per coin metadata; posture mirrored from the parent avUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the savUSD vault admin/upgrade controls across its multi-chain deployments."
+      ]
+    }
   }
 }

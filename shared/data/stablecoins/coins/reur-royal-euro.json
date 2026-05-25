@@ -97,5 +97,28 @@
       "label": "Euro cash reserves at top-tier international banks",
       "risk": "low"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "REUR is issued by The RIB Digital Holdings Limited (Royal Coins, Hong Kong); minting and redemption run through the issuer's centralized backend targeting 1 REUR = 1 EUR against euro cash reserves at top-tier banks.",
+    "controls": [
+      {
+        "label": "RIB Digital Holdings issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "RIB/Royal Coins operates a centralized mint/redeem targeting 1:1 EUR backing subject to reserve sufficiency and redemption terms; a single issuer controls supply creation against custodied euro reserves."
+      }
+    ],
+    "review": {
+      "evidence": "Royal Coins materials describe an issuer-managed mint and redemption route targeting 1 REUR = 1 EUR backed by euro cash reserves at top-tier international banks; the same issuer (RIB Digital Holdings) operates RUSD, and no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classification based on the issuer model described in RIB/Royal Coins materials; on-chain token owner/minter admin not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron REUR contracts before raising confidence."]
+    }
   }
 }

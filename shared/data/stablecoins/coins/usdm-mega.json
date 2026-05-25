@@ -91,5 +91,39 @@
     "params": {
       "rpcUrl": "https://mainnet.megaeth.com/rpc"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdtb-ethena",
+    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb; its supply tracks USDtb-backed issuance, so it inherits USDtb's Ethena-operated mint authority rather than running an independent mint path.",
+    "controls": [
+      {
+        "label": "USDM USDtb-rails representation (share accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "USDM is issued on Ethena's USDtb rails and reserve-backed ~90% by USDtb (plus liquid stablecoins for redemptions); its supply changes against USDtb-denominated backing rather than creating base USDtb supply."
+      },
+      {
+        "label": "Inherited USDtb off-chain attested mint authority",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying USDtb is minted via Ethena issuer/backend-mediated (signed order) rails with LayerZero OFT distribution. USDM inherits this concentrated-admin posture from the USDtb parent."
+      }
+    ],
+    "review": {
+      "evidence": "USDM (MegaUSD) is issued on Ethena's USDtb rails and backed ~90% by USDtb (reserves coinId usdtb-ethena, depType implicit wrapper). It inherits USDtb's offchain-attested mint path and concentrated-admin posture; no independent MegaETH mint authority was identified. inheritedFrom set to usdtb-ethena (coin has no variantOf field).",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "USDM classified as a USDtb-rails variant per MegaETH/Ethena materials and reserve metadata; posture mirrored from the parent USDtb mintAuthority. The USDM token's own on-chain admin on MegaETH/Ethereum was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter admin of the USDM token on MegaETH and Ethereum and confirm it cannot mint beyond USDtb-backed issuance."
+      ]
+    }
   }
 }

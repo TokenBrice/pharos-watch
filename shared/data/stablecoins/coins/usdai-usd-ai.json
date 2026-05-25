@@ -66,6 +66,62 @@
   ],
   "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDai is minted by KYC'ed institutions depositing stablecoins (PYUSD) into the USDai contract's deposit() function, which mints 1:1; privileged protocol operations run under role-based access (STRATEGY_ADMIN_ROLE executed by a multisig, BRIDGE_ADMIN_ROLE for omnichain mint/burn), with a stated future transition to DAO governance.",
+    "controls": [
+      {
+        "label": "USDai deposit/mint contract (KYC-gated deposit())",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Per USD.AI technical docs, KYC'ed institutions call deposit(uint256 depositAmount, uint256 usdaiAmountMinimum) to transfer PYUSD into the USDai contract, which mints equivalent USDai; minting is gated to KYC'ed institutions rather than fully permissionless.",
+        "sources": [
+          {
+            "label": "USD.AI technical protocol overview",
+            "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+          }
+        ]
+      },
+      {
+        "label": "STRATEGY_ADMIN_ROLE (multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "STRATEGY_ADMIN_ROLE governs position managers and services redemptions; per USD.AI docs these operations are currently scheduled off-chain and executed by a multisig, with a stated future move to on-chain governance.",
+        "sources": [
+          {
+            "label": "USD.AI technical protocol overview",
+            "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USD.AI technical docs confirm USDai is minted via a contract deposit() function by KYC'ed institutions depositing PYUSD (1:1), not by a fiat issuer backend. Privileged operations use STRATEGY_ADMIN_ROLE (currently a multisig) and BRIDGE_ADMIN_ROLE for omnichain mint/burn; governance is slated to move to the USD.AI DAO. This is the parent of sUSDai (susdai-usd-ai).",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "USD.AI technical protocol overview",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+        },
+        {
+          "label": "USD.AI docs",
+          "url": "https://docs.usd.ai"
+        }
+      ],
+      "sourceFreeRationale": "Mint mechanism and role model confirmed from USD.AI first-party docs; the live multisig address, signer set, and threshold for STRATEGY_ADMIN_ROLE were not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the live STRATEGY_ADMIN_ROLE multisig address, signer count, and threshold, plus the on-chain USDai contract owner/upgrade admin, before raising to verified."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "USDC / USDT stablecoin reserves (variable mix)",

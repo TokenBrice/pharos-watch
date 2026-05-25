@@ -74,6 +74,47 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "TBILL is the share token of OpenEden's BVI-registered professional fund; mint/redeem is KYC-gated institutional subscription processed by the issuer at NAV, with reserves custodied by BNY and NAV published via Chainlink.",
+    "controls": [
+      {
+        "label": "OpenEden fund issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "OpenEden's BVI Registered Professional Fund issues/redeems TBILL for KYC-verified institutional subscribers at NAV against BNY-custodied T-bills; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "OpenEden TBILL transparency",
+            "url": "https://openeden.com/tbill/transparency"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "OpenEden's BVI-registered professional fund is the sole issuer of TBILL; minting/redemption is KYC-gated institutional subscription at NAV with reserves at BNY and EY attestations, with no permissionless mint path per OpenEden materials.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "OpenEden TBILL transparency",
+          "url": "https://openeden.com/tbill/transparency"
+        },
+        {
+          "label": "OpenEden docs",
+          "url": "https://docs.openeden.com/"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled fund mint model confirmed from OpenEden materials; on-chain token minter/owner admin not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain TBILL token minter/owner admin and proxy admin before raising confidence."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [

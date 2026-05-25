@@ -84,5 +84,42 @@
       "pct": 100,
       "risk": "very-low"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDsui is issued through Bridge's Open Issuance platform: Bridge (a Stripe-owned, FinCEN-registered MSB) mints USDsui when deposits are allocated to reserves and burns it on redemption, controlling the Sui TreasuryCap-backed mint through its centralized issuance API.",
+    "controls": [
+      {
+        "label": "Bridge Open Issuance mint/burn backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "sui",
+        "address": "0x44f838219cf67b058f3b37907b655f226153c18e33dfcd0da559a844fea9b1c1::usdsui::USDSUI",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Bridge issuance docs and the Sui launch announcement describe Open Issuance as a modular custody/compliance/mint-burn platform where Bridge mints USDsui against allocated fiat or supported crypto deposits and burns it on redemption; supply creation runs through Bridge's centralized issuance rail with reserves held 1:1 in segregated bankruptcy-remote accounts."
+      }
+    ],
+    "review": {
+      "evidence": "USDsui is the native Sui dollar issued by Bridge (Stripe company, FinCEN MSB NMLS #2450917) via its Open Issuance mint/burn workflow against short-dated Treasury, repo, MMF, and cash reserves; minting is controlled by the regulated issuer's backend, not by a permissionless or user-collateralized route.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Bridge issuance overview",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
+        },
+        {
+          "label": "Sui Dollar launch (Bridge)",
+          "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Resolve the on-chain holder of the Sui TreasuryCap / mint authority object for the USDsui coin type."
+      ]
+    }
+  }
 }

@@ -116,5 +116,42 @@
     "params": {
       "rpcUrl": "https://mainnet.base.org"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BRLV is issued by Crown; KYC-gated primary-market mint and redemption run 1:1 for BRL through the issuer, backed by Brazilian federal Treasury bonds pledged to holders via a security-agent/fiduciary-assignment structure.",
+    "controls": [
+      {
+        "label": "Crown issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated mint/redeem: Crown creates BRLV supply against segregated, bankruptcy-remote Brazilian Treasury bond reserves via KYC-gated primary issuance and redeems 1:1 for BRL; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "Crown BRLV whitepaper",
+            "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Crown BRLV whitepaper",
+          "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+        }
+      ],
+      "evidence": "Crown materials describe a single issuer minting BRLV against segregated Brazilian Treasury bond reserves pledged to holders through a security-agent structure, with KYC-gated primary issuance and daily Fact Finance attestations.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins on Base and Ethereum not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin on Base (0xd204...7d36) and Ethereum (0xd7ca...e2f5) before raising confidence."
+      ]
+    }
   }
 }

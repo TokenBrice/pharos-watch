@@ -77,6 +77,47 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "thBILL is a NAV-accreting token issued by Theo Network wrapping tULTRA (Standard Chartered Libeara's tokenized T-bill fund); mint/redeem is KYC-gated to institutional/non-US accredited investors and processed by the issuer, not permissionlessly.",
+    "controls": [
+      {
+        "label": "Theo Network issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Theo Network mints/redeems thBILL for KYC-verified institutional and non-US accredited investors against tULTRA collateral, settling in USDC; there is no permissionless or user-collateralized mint route.",
+        "sources": [
+          {
+            "label": "Theo Network docs",
+            "url": "https://docs.theo.xyz"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Theo Network is the issuer of thBILL, a KYC-gated NAV token backed 100% by tULTRA; mint/redeem is restricted to eligible institutional/non-US accredited investors via the issuer, with no permissionless mint path per project materials.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Theo Network docs",
+          "url": "https://docs.theo.xyz"
+        },
+        {
+          "label": "Theo Network website",
+          "url": "https://theo.xyz"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled KYC-gated mint model confirmed from Theo materials; on-chain token minter/owner admin not independently resolved. thBILL has no tracked parent coin, so it is authored as a self-contained issuer mint rather than inherited.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain thBILL token minter/owner admin and proxy admin before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "tULTRA — Standard Chartered Libeara tokenized U.S. T-bills (Wellington Mgmt)",

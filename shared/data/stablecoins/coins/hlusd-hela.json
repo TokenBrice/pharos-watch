@@ -43,6 +43,32 @@
     "reviewer": "Codex coverage expansion",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "HLUSD is issued and managed by HeLa Labs (Singapore) as the HeLa ecosystem's centralized dollar settlement asset, minted against fiat and fiat-equivalent reserves through an issuer/ecosystem-controlled backend on HeLa's native chain.",
+    "controls": [
+      {
+        "label": "HeLa Labs issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "HeLa Labs / the HeLa ecosystem mints and manages HLUSD against fiat-equivalent reserves as the chain's settlement asset per its governance docs; supply is issuer-controlled with no permissionless or user-collateralized mint route."
+      }
+    ],
+    "review": {
+      "evidence": "HeLa documentation describes HLUSD as an issuer/ecosystem-managed stablecoin backed by fiat and fiat-equivalent reserves and used as the HeLa runtime settlement asset; minting is centralized at the issuer.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "HLUSD governance", "url": "https://docs.helalabs.com/hlusd/stablecoin-governance" }
+      ],
+      "sourceFreeRationale": "Classification based on the issuer/ecosystem model in HeLa documentation; the on-chain minter/admin could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
+      "unresolvedQuestions": ["Resolve the HLUSD mint authority/admin on HeLa's native chain once that chain is modeled before raising confidence."]
+    }
+  },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",

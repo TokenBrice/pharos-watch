@@ -101,5 +101,54 @@
       "type": "collateral",
       "weight": 1
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "GHSm is minted CDP-style on Celo by depositing USDm as collateral in Mento V3 (a Liquity v2 fork); Mento DAO (veMENTO) governs via a timelock, with stablecoin contract ownership held by a 4/7 multisig during the V3 rollout.",
+    "controls": [
+      {
+        "chain": "celo",
+        "label": "Mento V3 borrower/minter contracts",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "GHSm mints only against USDm CDP collateral in the Mento V3 Liquity-v2-fork system; supply tracks collateralized borrowing and redemptions rather than an issuer minter.",
+        "evidence": "Mento V3 docs describe FX stablecoins minted by depositing USDm as CDP collateral with Liquity-style redemptions and Stability Pool liquidations."
+      },
+      {
+        "chain": "celo",
+        "label": "Mento DAO governance / stablecoin contract owner",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Mento DAO (veMENTO) governs via a timelock; per MGP-14 the owner role of Mento V3 stablecoin contracts was transferred to a 4/7 multisig to orchestrate the V3 rollout.",
+        "evidence": "Mento governance docs describe a veMENTO DAO with a governance timelock; MGP-14 transferred Mento V3 stablecoin contract ownership to a 4/7 multisig for the deployment rollout."
+      }
+    ],
+    "review": {
+      "evidence": "Mento V3 docs and the MGP-14 deployment proposal describe collateralized CDP minting of FX stables against USDm, governed by the Mento DAO timelock with a 4/7 multisig owning the stablecoin contracts during rollout.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento governance docs",
+          "url": "https://docs.mento.org/mento/protocol-concepts/governance"
+        }
+      ],
+      "sourceFreeRationale": "Mint mechanism and governance model confirmed from Mento docs and MGP-14; the live GHSm Celo token owner address was not independently read.",
+      "unresolvedQuestions": [
+        "Resolve the live GHSm Celo token owner (Mento Timelock vs 4/7 multisig) and borrower-operations/circuit-breaker admins before raising confidence."
+      ]
+    }
+  }
 }

@@ -84,5 +84,47 @@
       "title": "Liquidity-gated unstaking",
       "message": "sdUSD unstaking depends on available dUSD liquidity in dLEND; when utilization is high, holders may need to wait for borrowers to repay or sell sdUSD on secondary markets."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "dusd-dtrinity",
+    "summary": "sdUSD is dTRINITY's staked dUSD vault receipt; shares are minted only by staking dUSD into the dSTAKE vault (supplied into dLEND), so it inherits dUSD's AMO-or-custodian-hybrid mint authority rather than creating new dUSD supply.",
+    "controls": [
+      {
+        "label": "dSTAKE sdUSD vault (share accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+        "canRaiseCap": "unknown",
+        "evidence": "sdUSD receipts are minted when dUSD is staked into the dSTAKE vault and supplied into dLEND, and burned (up to 10 bps retained) on liquidity-gated unstake; NAV accrues dLEND supply APY. The wrapper cannot create base dUSD supply. Deployments are chain-isolated and non-fungible across networks."
+      },
+      {
+        "label": "Inherited dUSD AMO/governed-reserve mint authority",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying dUSD is minted 1:1 against a governance-set whitelist of reserve stablecoins, with AMO pre-minting dUSD into Curve pools and contributor governance (pre-TGE multisig) controlling the whitelist, AMO/SMO, and a mint kill-switch. sdUSD inherits this concentrated-admin posture, plus the March 17 2026 dTRINITY exploit exposure noted on the dUSD profile."
+      }
+    ],
+    "review": {
+      "evidence": "sdUSD (variantOf dusd-dtrinity, variantKind strategy-vault) is a dSTAKE vault receipt over dUSD on Ethereum and Fraxtal. It inherits dUSD's amo-or-custodian-hybrid mint path and concentrated-admin posture; the wrapper only mints/burns receipts against dUSD deposits supplied into dLEND.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "dTRINITY sdUSD docs",
+          "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+        }
+      ],
+      "sourceFreeRationale": "Classified as the staked variant of dusd-dtrinity per coin metadata; posture mirrored from the parent dUSD mintAuthority. The dSTAKE vault's own admin was not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the dSTAKE sdUSD vault admin/upgrade controls on Ethereum and Fraxtal and confirm exposure scope of the March 2026 dTRINITY/dLEND exploit on the staking path."
+      ]
+    }
+  }
 }

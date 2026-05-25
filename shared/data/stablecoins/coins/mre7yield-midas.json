@@ -107,5 +107,33 @@
       "assetRisk": "high",
       "maxOracleAgeSec": 604800
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "mRe7YIELD is a Midas liquid-yield token; new units are minted only by Midas's permissioned issuance role (MINT_OPERATOR_ROLE) when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain by the issuer.",
+    "controls": [
+      {
+        "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Midas vault architecture mints the token via a permissioned MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain by the issuer and token/vault contracts are upgradeable behind MidasAccessControl."
+      }
+    ],
+    "review": {
+      "evidence": "Midas liquid-yield tokens are minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + mint operator); no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Midas docs", "url": "https://docs.midas.app/" },
+        { "label": "Midas mRe7YIELD", "url": "https://midas.app/mre7yield" },
+        { "label": "Sherlock Midas audit (vault/access-control architecture)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+      ],
+      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders and any bridge admin for the Etherlink/Starknet deployments before raising confidence."]
+    }
   }
 }

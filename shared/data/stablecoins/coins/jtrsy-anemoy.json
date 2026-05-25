@@ -150,5 +150,49 @@
       "title": "Centrifuge V3 multi-chain availability",
       "message": "JTRSY is also distributed across Centrifuge V3 to additional chains. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "JTRSY is a permissioned Anemoy/Centrifuge ERC-7540 fund-share token; shares are minted only when the Centrifuge pool/Hub manager approves a whitelisted subscription and issues shares at NAV, with transfers restricted to verified Professional Investors by a compliance hook.",
+    "controls": [
+      {
+        "label": "Centrifuge pool/Hub manager (share issuance)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "JTRSY shares mint only after the Centrifuge pool/Hub manager approves an async subscription request and issues shares at NAV via the BalanceSheet/manager role; the share token exposes mint/burn/authTransferFrom/checkTransferRestriction with a restriction hook limiting holders to whitelisted investors."
+      },
+      {
+        "label": "Anemoy / Janus Henderson issuer rail",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Anemoy operates the permissioned same-day subscription/redemption rail for JTRSY on Centrifuge, restricted to whitelisted non-U.S. Professional Investors at fund NAV."
+      }
+    ],
+    "review": {
+      "evidence": "Centrifuge docs and the JTRSY share contract (mint/burn/authTransferFrom/checkTransferRestriction pattern) confirm permissioned, manager-gated share issuance: minting occurs only on manager approval of subscriptions at NAV, with a transfer-restriction hook. This is a role-gated fund-share mint, not a free issuer mint.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Anemoy JTRSY fund",
+          "url": "https://anemoy.io/funds/jtrsy"
+        },
+        {
+          "label": "Centrifuge protocol docs - vaults",
+          "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Resolve the JTRSY on-chain manager/ward (Root) admin and the configured restriction module across Ethereum, Base, Arbitrum, Avalanche, Plume, BSC, Monad, and Solana.",
+        "Confirm which Safe/multisig holds the Centrifuge pool admin role for the JTRSY pool."
+      ]
+    }
+  }
 }

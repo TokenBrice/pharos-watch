@@ -76,6 +76,44 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "tGBP is a UUPS-upgradeable OFT token (StableTokenV1OFT) by BCP Technologies whose owner can mint and burn; minting occurs once an equivalent GBP deposit is verified off-chain by the team, with no separate role-gated minter.",
+    "controls": [
+      {
+        "label": "StableTokenV1OFT owner (mint/burn + upgrade authority)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Per the OpenZeppelin audit, the owner of the StableTokenV1OFT contract can mint and burn tokens (no separate MINTER role) and holds UUPS upgrade authority; mint follows off-chain GBP deposit verification by the team.",
+        "sources": [
+          {
+            "label": "OpenZeppelin tGBP audit",
+            "url": "https://www.openzeppelin.com/news/tgbp-audit"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "OpenZeppelin's audit of BCP Technologies' tGBP (StableTokenV1OFT) confirms a single owner controls mint and burn with UUPS upgradeability and no separate minter role; minting is gated on off-chain GBP deposit verification. This is owner-gated permissioned minting rather than a pure backend-only model.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "OpenZeppelin tGBP audit",
+          "url": "https://www.openzeppelin.com/news/tgbp-audit"
+        }
+      ],
+      "sourceFreeRationale": "Owner-controlled mint/burn and UUPS upgradeability confirmed from the OpenZeppelin audit; the live owner address (EOA vs Safe/multisig) was not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve whether the live StableTokenV1OFT owner is an EOA, multisig, or Safe, and the proxy admin, before raising to verified."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "GBP reserves and short-term UK government paper",

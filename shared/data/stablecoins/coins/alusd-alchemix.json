@@ -69,6 +69,49 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "alUSD is minted by the AlchemistV2 contract when users deposit DAI/USDC/USDT collateral; only whitelisted Alchemix contracts can mint the token, and the ALCX DAO (timelocked multisig) sets global mint limits and risk parameters.",
+    "controls": [
+      {
+        "label": "AlchemistV2 (whitelisted minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Per-synthetic global mint limit that linearly cools down over time; minting only against deposited collateral up to ~50% LTV.",
+        "canRaiseCap": "unknown",
+        "evidence": "The alUSD token's setWhitelist/setBlacklist functions restrict minting to authorized Alchemix contracts; AlchemistV2 issues alUSD against deposited collateral within governance-set mint limits."
+      },
+      {
+        "label": "Alchemix DAO timelocked multisig (parameter governance)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "evidence": "ALCX-governed timelocked multisig configures mint limits, loss thresholds, and emergency Sentinel/Governance recall functions; it tunes parameters rather than minting directly."
+      }
+    ],
+    "review": {
+      "evidence": "Alchemix docs describe AlchemistV2 as the sole alUSD minter (token whitelist), with governance-set per-synthetic mint limits and ALCX DAO/timelock parameter control; no centralized direct-mint route exists outside the CDP contracts.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Alchemix V2 Developer Docs",
+          "url": "https://alchemix-finance.gitbook.io/v2"
+        },
+        {
+          "label": "The Transmuter, Elaborated",
+          "url": "https://v2-docs.alchemix.fi/resources/guides/the-transmuter-elaborated"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism and governance confirmed from Alchemix docs; on-chain owner/admin Safe internals and exact multisig threshold not independently resolved.",
+      "unresolvedQuestions": ["Confirm the live AlchemistV2 admin owner, the ALCX timelock/multisig threshold, and current mint-limit parameters on-chain."]
+    }
+  },
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "reserves": [

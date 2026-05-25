@@ -86,5 +86,48 @@
       "title": "Aggregate reserve disclosure",
       "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API. The modeled redemption backstop is limited to approved/whitelisted participants and a documented 0.5% instant reserve buffer; the live feed validates Solana token supply only, while reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDv is a synthetic dollar where only KYC'd approved market makers and institutions can mint or burn directly against Solomon's Ceffu-custodied delta-neutral collateral; general users enter and exit via Solana pools, and Solomon's programs and admin operations are governed by a Squads multisig.",
+    "controls": [
+      {
+        "label": "Solomon direct mint/burn permission (approved participants)",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions that complete KYC/AML onboarding, while ordinary users only enter/exit through Solana stablecoin pools; minting is gated by the issuer against off-exchange collateral."
+      },
+      {
+        "label": "Ceffu custodian (backing collateral)",
+        "role": "custodian",
+        "authorityType": "custodian",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Backing assets for USDv (delta-neutral spot-long / perp-short positions) are held in segregated, insured custody with Ceffu, and Solomon's Solana programs are described as restricted to custody transfers with admin operations secured by a Squads multisig."
+      }
+    ],
+    "review": {
+      "evidence": "Solomon Labs operates USDv as a Solana-native synthetic dollar backed by a delta-neutral basis trade in Ceffu custody; direct mint/burn is permissioned to whitelisted KYC'd participants and the protocol's admin operations run through a Squads multisig, so supply creation is concentrated in the issuer rather than permissionless.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Solomon docs - introduction",
+          "url": "https://docs.solomonlabs.org/introduction"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism resolved from Solomon docs and project coverage (permissioned mint, Ceffu custody, Squads multisig admin); the live Squads signer set/threshold and Solana mint authority were not independently read.",
+      "unresolvedQuestions": [
+        "Resolve the live Squads multisig signer count/threshold and the Solana token mint authority backing USDv."
+      ]
+    }
+  }
 }

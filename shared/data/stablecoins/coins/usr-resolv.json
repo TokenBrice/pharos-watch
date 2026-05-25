@@ -138,5 +138,50 @@
       "risk": "low",
       "coinId": "usdt-tether"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "USR minting was gated by an off-chain backend: users deposited collateral on-chain via requestSwap, then an off-chain SERVICE_ROLE signer attested the USR amount and completed the mint via completeSwap. The minting contract performed no oracle, ratio, per-tx, or max-supply check, and the SERVICE_ROLE was a single EOA whose compromise let an attacker mint 80M unbacked USR in March 2026.",
+    "controls": [
+      {
+        "label": "Resolv SERVICE_ROLE off-chain minting signer",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "Post-mortem and incident analyses describe a requestSwap/completeSwap flow where the minted USR amount is supplied by an off-chain SERVICE_ROLE backend (single EOA, AWS-KMS key) with no on-chain validation tying minted amount to deposited collateral; its compromise produced 80M unbacked USR."
+      },
+      {
+        "label": "Admin / role-management multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Reporting notes the admin role that assigns SERVICE_ROLE was a multisig, while the minting SERVICE_ROLE itself was a single EOA; exact Safe threshold/signers were not independently confirmed."
+      }
+    ],
+    "review": {
+      "evidence": "The Block coverage and multiple incident post-mortems document Resolv's off-chain-attested mint design (requestSwap/completeSwap with an off-chain SERVICE_ROLE signer and no on-chain mint caps), and the March 2026 single-EOA key compromise that minted 80M unbacked USR. On-chain admin/Safe internals were not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "The Block — Resolv USR depeg / 80M unbacked mint",
+          "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
+        },
+        {
+          "label": "resolv-im/resolv-contracts-public (GitHub)",
+          "url": "https://github.com/resolv-im/resolv-contracts-public"
+        }
+      ],
+      "sourceFreeRationale": "Off-chain-attested mint path and the unbounded single-EOA SERVICE_ROLE established from the public post-mortem and incident coverage; live Safe threshold/signers were not independently confirmed.",
+      "unresolvedQuestions": [
+        "Confirm the on-chain admin multisig threshold/signers and whether any on-chain mint guard was added before the wind-down."
+      ]
+    }
+  }
 }

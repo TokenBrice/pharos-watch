@@ -79,5 +79,30 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain"
+  "deploymentModel": "native-multichain",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "AxCNH is issued by AnchorX Ltd (Kazakhstan, AFSA-licensed); minting and 1:1 CNH redemption run through the issuer's centralized backend against offshore-yuan cash reserves.",
+    "controls": [
+      {
+        "label": "AnchorX Ltd issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated mint/redeem: AnchorX creates AxCNH supply against custodied CNH reserves and redeems 1:1 for CNH transfers; no permissionless or user-collateralized mint route is described."
+      }
+    ],
+    "review": {
+      "evidence": "AnchorX materials describe a single AFSA-regulated issuer minting AxCNH against off-chain CNH reserves with a published transparency page; mint/redeem is centralized.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins on Conflux and Ethereum not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin on Conflux and Ethereum (0x2925...8239) before raising confidence."
+      ]
+    }
+  }
 }

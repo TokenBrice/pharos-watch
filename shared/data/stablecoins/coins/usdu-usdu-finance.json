@@ -76,5 +76,42 @@
       "title": "Conflicting issuer disclosures",
       "message": "USDU Finance's own surfaces disagree: the transparency page headline reports ~40.69% CR while a separate JSON endpoint reports ~97% CR and the gitbook says 'fully backed'. Pharos surfaces the public-page headline as the conservative reference; treat collateralization figures as advisory until USDU publishes a single canonical methodology."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDU cannot be minted by users directly; only DAO-approved/whitelisted adapter contracts (Curve, TermMax, Morpho) can mint or burn USDU, and the set of approved adapters is curated under USDU Finance DAO risk governance.",
+    "controls": [
+      {
+        "label": "Whitelisted USDU adapters (Curve / TermMax / Morpho)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "USDU Finance docs/transparency state users cannot mint USDU directly; only whitelisted adapters can mint/burn USDU while executing their strategy, with each adapter holding the on-chain backing assets."
+      },
+      {
+        "label": "USDU DAO / curator (adapter whitelist authority)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "The DAO/curator governs adapter approval and risk parameters, controlling which contracts hold mint/burn rights; published as core token/DAO/adapter contracts on Ethereum."
+      }
+    ],
+    "review": {
+      "evidence": "USDU Finance transparency and docs describe a restricted mint model where only DAO-approved adapter contracts (Curve, TermMax, Morpho) mint/burn USDU and users cannot mint directly; the adapter whitelist is set by the DAO/curator. USDU Core was audited by BlockBite (July 2025).",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "USDU transparency", "url": "https://usdu.finance/transparency/" },
+        { "label": "USDU docs", "url": "https://usdu.gitbook.io/docs/" }
+      ],
+      "sourceFreeRationale": "Adapter-only mint and DAO-curated whitelist taken from USDU's transparency/docs surfaces; the specific DAO/curator and adapter contract addresses and any timelock were not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the on-chain DAO/curator address (EOA, multisig, or governor) and the adapter MINTER_ROLE grants and any timelock."]
+    }
+  }
 }

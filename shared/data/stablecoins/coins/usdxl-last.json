@@ -86,5 +86,46 @@
       "title": "No direct public redemption rail",
       "message": "USDXL is minted and repaid through HypurrFi debt positions. Pharos does not model a redemption backstop because public Last/HypurrFi materials reviewed do not expose an enabled direct 1:1 holder redemption route."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM): users mint USDXL as debt against overcollateralized deposits, repayment burns it, and a HypurrFi/Last multisig administers facilitator buckets, collateral, and risk parameters.",
+    "controls": [
+      {
+        "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint bounded by overcollateralized borrow positions and GHO-style facilitator bucket capacity within the HypurrFi pooled market.",
+        "evidence": "HypurrFi docs describe USDXL as modeled on Aave's GHO: a CDP-style synthetic dollar minted against deposited collateral in the pooled (Aave-v3-fork) market and burned on repayment."
+      },
+      {
+        "label": "HypurrFi / Last governance (ACL admin multisig)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "chain": "hyperevm",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "This coin's metadata marks governanceQuality as multisig; HypurrFi (Aave-v3 fork) uses ACL-manager roles and demonstrated pause authority (markets frozen during the March 2026 Aave-v3 rounding-error disclosure), indicating an admin multisig controls facilitator/risk parameters."
+      }
+    ],
+    "review": {
+      "evidence": "HypurrFi documentation and coverage describe USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control (pause authority exercised in March 2026); on-chain admin addresses not independently confirmed. Note: an orderly wind-down handing HypurrFi markets to Euler has been reported.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "HypurrFi USDXL docs", "url": "https://docs.hypurrfi.com/products/usdxl" },
+        { "label": "HypurrFi USDXL launch", "url": "https://hypurrfi.beehiiv.com/p/on-usdxl-stability-and-pegs" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the HypurrFi ACL-admin / pool-admin multisig threshold and signer set on HyperEVM.",
+        "Confirm the impact of the reported Euler wind-down on USDXL mint administration and whether new issuance remains enabled."
+      ]
+    }
+  }
 }

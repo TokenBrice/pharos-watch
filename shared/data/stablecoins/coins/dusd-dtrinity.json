@@ -128,5 +128,41 @@
       "title": "Sonic deployment paused",
       "message": "dUSD minting and redemption on Sonic is currently paused per the dTRINITY app."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "dUSD is minted 1:1 against whitelisted reserve stablecoins, while dTRINITY's Algorithmic Market Operations programmatically pre-mint dUSD into Curve pools to defend the peg; pre-TGE contributor governance controls the reserve whitelist, AMO/SMO operations, and can pause minting.",
+    "controls": [
+      {
+        "label": "AMO/SMO peg operations controller",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Algorithmic Market Operations pre-mint dUSD into designated Curve liquidity pools to support the peg, and Stability Market Operations buy back and burn dUSD at a discount; the AMO can create dUSD supply programmatically into pools rather than only against deposited collateral."
+      },
+      {
+        "label": "dTRINITY contributor governance (pre-TGE)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Pre-decentralization, dTRINITY contributors administer the protocol: they set the whitelisted reserve assets that gate permissionless minting, run AMO/SMO, and can temporarily or permanently suspend minting; TGE/decentralization is planned for H2 2026."
+      }
+    ],
+    "review": {
+      "evidence": "dTRINITY docs describe permissionless 1:1 mint/redeem against a governance-set whitelist of reserve stablecoins, plus AMO that pre-mints dUSD into Curve pools and SMO that buys back/burns it; governance (currently contributors, pre-TGE) controls the whitelist, AMO/SMO, and a mint kill-switch. The March 17 2026 exploit hit the separate dLEND Aave-fork lending market via an index-inflation bug, not the dUSD mint mechanism itself. This is an AMO-plus-governed-reserve hybrid under a concentrated admin.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "dUSD Stablecoin docs", "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin" },
+        { "label": "dTRINITY dUSD on DefiLlama", "url": "https://defillama.com/protocol/dtrinity-dusd" }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain owner/admin of the dUSD issuer and AMO contracts and the contributor multisig threshold; confirm whether the March 2026 dLEND pause affected dUSD mint controls."]
+    }
+  }
 }

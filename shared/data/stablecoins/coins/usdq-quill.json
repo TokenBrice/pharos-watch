@@ -149,5 +149,34 @@
       ]
     }
   },
-  "geckoId": "quill-usdq"
+  "geckoId": "quill-usdq",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "manual-review",
+    "summary": "USDQ is minted only when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's immutable Liquity-v2 (BOLD) fork on Scroll; mint is restricted to the registered branch contracts and no admin can mint or freeze the token.",
+    "controls": [
+      {
+        "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "scroll",
+        "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Quill is an exclusive Liquity-v2 fork; per the Liquity-v2 BoldToken design, mint/burn rights are fixed to the registered per-branch protocol contracts at deployment and the token is non-upgradeable, so no owner/admin can mint outside CDP borrowing or freeze holders. QUILL governance only directs collateral incentives, not core minting."
+      }
+    ],
+    "review": {
+      "evidence": "Quill is a Liquity-v2 (BOLD codebase) fork on Scroll; minting follows the immutable Liquity-v2 model where users mint USDQ by borrowing against overcollateralized troves and redemption is permissionless. Prior Pharos review confirmed the token has no freeze/blacklist/seizure/proxy-upgrade surface. Renouncement here is grounded in the documented, audited immutable Liquity-v2 architecture (mint confined to registered branch contracts, non-upgradeable core), not an independent on-chain owner() read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Quill & Liquity v2 docs", "url": "https://docs.quill.finance/faq/quill-and-liquity-v2" },
+        { "label": "USDQ docs", "url": "https://docs.quill.finance/faq/usdusdq" }
+      ],
+      "unresolvedQuestions": ["Confirm on-chain that the BoldToken branch addresses are locked and no setBranchAddresses/owner authority remains active for 0xdb9e8f82d6d45fff803161f2a5f75543972b229a."]
+    }
+  }
 }

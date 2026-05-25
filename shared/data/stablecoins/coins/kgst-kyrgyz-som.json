@@ -77,5 +77,37 @@
       "label": "Kyrgyz som fiat reserves and cash equivalents",
       "risk": "medium"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "KGST is a Kyrgyzstan-based som-pegged token with an issuer-managed mint and redemption route claiming 1:1 KGS bank reserves; supply creation runs through the centralized issuer backend with limited public transparency.",
+    "controls": [
+      {
+        "label": "KGST issuer backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "KGST is described as an issuer-managed mint/redeem token backed 1:1 by Kyrgyz som bank reserves; a centralized operator controls supply creation, with no permissionless or user-collateralized route described."
+      }
+    ],
+    "review": {
+      "evidence": "KGST project materials describe a centralized issuer-managed mint and redemption route backed by som reserves on BSC; there is no independent audit and limited public transparency, but the mechanism is a single centralized issuer mint.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "KGST website",
+          "url": "https://www.kgstoken.kg/"
+        }
+      ],
+      "sourceFreeRationale": "Issuer model inferred from limited project materials; on-chain BSC token owner/minter admin was not independently resolved and no third-party audit exists.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter admin and any proxy admin for the KGST BSC contract (0x94be0bba8e1e303fe998c9360b57b826f1a4f828).",
+        "Confirm reserve backing and any independent attestation, currently unverified."
+      ]
+    }
   }
 }

@@ -128,5 +128,52 @@
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USSD is a Sonic Labs dollar built on Frax's frxUSD infrastructure: users mint/redeem 1:1 and non-custodially against an issuer-administered set of approved USD assets, while the issuer/Frax framework custodies tokenized U.S. Treasury reserves (BUIDL/USTB/WTGXX) and manages reserve deployment.",
+    "controls": [
+      {
+        "label": "frxUSD-based USSD mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "chain": "sonic",
+        "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "capDescription": "Permissionless 1:1 mint against an issuer-administered approved-collateral set (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX); the approved-asset list and parameters are controlled by the issuer/Frax framework.",
+        "evidence": "Sonic Labs docs state USSD is built on Frax's frxUSD infrastructure with non-custodial 1:1 mint/redeem and zero fees; the set of approved minting collateral is defined by the issuer.",
+        "sources": [
+          { "label": "USSD docs", "url": "https://docs.soniclabs.com/sonic/ussd" }
+        ]
+      },
+      {
+        "label": "Sonic Labs / Frax reserve custodian + treasury management",
+        "role": "custodian",
+        "authorityType": "custodian",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Reserves are custodied tokenized U.S. Treasury products (BlackRock BUIDL, Superstate USTB, WisdomTree WTGXX) with deployment/management run through Frax's infrastructure; yield is directed to the Sonic ecosystem, indicating issuer/custodian control over reserves and the approved-asset roster.",
+        "sources": [
+          { "label": "Frax balance sheet", "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USSD's mint/redeem is permissionless 1:1 against approved USD assets via Frax frxUSD smart contracts, but the approved-collateral set, RWA reserve custody (BUIDL/USTB/WTGXX), and reserve deployment are administered by Sonic Labs / the Frax framework. This is an AMO/custodian-hybrid rather than a pure user-collateralized or pure fiat-issuer model.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "USSD docs", "url": "https://docs.soniclabs.com/sonic/ussd" },
+        { "label": "Frax balance sheet", "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf" }
+      ],
+      "sourceFreeRationale": "frxUSD-based mechanism and reserve composition confirmed from Sonic/Frax materials; the on-chain owner/admin of the USSD contract and the controller of the approved-collateral roster were not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain admin/owner of 0x000000000eccff26b795f73fb0a70d48da657fef and who can modify the approved-collateral set (Sonic Labs multisig vs Frax governance) before raising confidence."
+      ]
+    }
   }
 }

@@ -80,5 +80,41 @@
     "yieldType": "nav-appreciation"
   },
   "chainTier": "established-alt-l1",
-  "custodyModel": "institutional-unregulated"
+  "custodyModel": "institutional-unregulated",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "ISC is a Solana SPL token whose mint authority is held by the ISC protocol/team; new ISC is created against assets deposited into the ISC Reserve and the team has pre-minted and released supply, with INTL governance over basket composition.",
+    "controls": [
+      {
+        "chain": "solana",
+        "label": "ISC Reserve / team SPL mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "ISC is an uncapped SPL token with an active mint authority controlled by the ISC team/Reserve System; the team has pre-minted RWA-collateralized ISC and released it into circulation, confirming centralized supply control."
+      }
+    ],
+    "review": {
+      "evidence": "ISC project materials describe a Solana SPL token with active (uncapped) mint authority held by the protocol/team; ISC is minted against deposits into the ISC Reserve and via team pre-mints, with INTL governance only over basket composition. No permissionless mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "ISC website",
+          "url": "https://www.isc.money/"
+        },
+        {
+          "label": "ISC mint notification",
+          "url": "https://medium.com/@ISC_money/notification-of-isc-mint-were-growing-7ebb637b5f63"
+        }
+      ],
+      "sourceFreeRationale": "SPL mint-authority address was not read live on a Solana explorer in this pass; classification rests on issuer-described team-controlled minting and documented pre-mints.",
+      "unresolvedQuestions": [
+        "Read the on-chain SPL mint authority and freeze authority for mint J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD on a Solana explorer to confirm the controlling keypair/program."
+      ]
+    }
+  }
 }

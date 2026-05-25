@@ -98,5 +98,48 @@
   "yieldConfig": {
     "yieldSource": "Strategy Inc. STRC dividends (BTC-backed preferred equity)",
     "yieldType": "rebase"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BUCK was issued by Buck Labs as an RWA-backed savings coin; access-gated stewards minted and refunded BUCK through the issuer-controlled LiquidityWindow contract, pricing against an off-chain STRC collateral attestation with USDC settling into the LiquidityReserve. No permissionless or user-collateralized mint route existed.",
+    "controls": [
+      {
+        "label": "Buck Labs LiquidityWindow mint/refund desk",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Per the buck-v1 contract docs, access-gated stewards mint/refund BUCK through the LiquidityWindow against a collateral-aware peg with per-account caps and oracle freshness; primary-market access is AML-gated and operator-controlled."
+      },
+      {
+        "label": "PolicyManager / CollateralAttestation (off-chain STRC valuation)",
+        "role": "other",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "CollateralAttestation is the on-chain copy of off-chain STRC valuation; PolicyManager gates fees, spreads and mint/refund allowances via Green/Yellow/Red/Emergency bands, so issuer-controlled off-chain attestation governs whether mints are permitted."
+      }
+    ],
+    "review": {
+      "evidence": "Buck Labs documentation and the buck-v1 contract architecture describe a centralized, AML-gated primary market: only access-gated stewards mint/refund via the LiquidityWindow against issuer-attested STRC collateral. No public on-chain admin/Safe state was independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "buck-v1 contracts (GitHub)",
+          "url": "https://github.com/buck-labs/buck-v1"
+        },
+        {
+          "label": "BUCK Stablecoin docs",
+          "url": "https://0xbuck.gitbook.io/buck-stablecoin/"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism established from issuer docs/contract READMEs; the live on-chain owner/minter admin was not independently resolved and the project has wound down.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter-admin and any proxy admin of the LiquidityWindow before raising confidence."
+      ]
+    }
   }
 }

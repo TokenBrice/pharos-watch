@@ -57,6 +57,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "DGLD is issued by Gold Token SA (Swiss VQF/FINMA SRO); each token is minted against an allocated troy ounce of PAMP gold in Swiss vaults and burned on physical redemption, through the issuer's controlled backend.",
+    "controls": [
+      {
+        "label": "Gold Token SA issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Gold Token SA mints DGLD against allocated PAMP gold bars (1 DGLD = 1 troy ounce) and burns on 1:1 physical redemption; supply is issuer-controlled with no permissionless mint route."
+      }
+    ],
+    "review": {
+      "evidence": "Project materials describe a single regulated issuer minting DGLD against allocated LBMA PAMP gold in Swiss vaults with direct physical redemption; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "DGLD Official", "url": "https://dgld.ch/" }
+      ],
+      "sourceFreeRationale": "Classification based on issuer/custodian model in project materials; the on-chain owner/minter admin on Ethereum and the Base bridge deployment was not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin on Ethereum and the Base bridge mint authority for DGLD before raising confidence."]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

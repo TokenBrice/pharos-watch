@@ -92,5 +92,41 @@
       "pct": 0.2,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "manual-review",
+    "summary": "USND was a Liquity-v2 friendly fork on Arbitrum: USND is minted only when users open Troves and borrow against approved collateral branches through immutable, governance-minimized BorrowerOperations contracts. The core code can never be upgraded and there is no privileged admin able to mint USND directly.",
+    "controls": [
+      {
+        "label": "Nerite BorrowerOperations / CollateralRegistry (immutable Liquity-v2 fork)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Nerite is a Liquity-v2 fork with immutable, governance-minimized contracts; USND mints only via per-branch BorrowerOperations against user collateral, with a single BoldToken and CollateralRegistry, and no upgrade path or admin mint."
+      }
+    ],
+    "review": {
+      "evidence": "Nerite docs and the NeriteOrg/nerite Liquity-v2 monorepo fork describe immutable, non-upgradeable core contracts where USND is minted only through user Troves/BorrowerOperations; mechanism matches Liquity v2's renounced-admin design, though live owner() renouncement was not independently read on-chain.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Nerite Protocol",
+          "url": "https://www.nerite.org/"
+        },
+        {
+          "label": "NeriteOrg/nerite (Liquity-v2 fork, GitHub)",
+          "url": "https://github.com/NeriteOrg/nerite"
+        }
+      ],
+      "sourceFreeRationale": "Immutability/no-admin-mint established from project docs and the Liquity-v2 fork lineage; the on-chain owner()/renouncement state was not independently read, hence manual-review rather than verified.",
+      "unresolvedQuestions": [
+        "Confirm on-chain that no system contract retains an owner/admin able to mint or alter collateral branches."
+      ]
+    }
+  }
 }

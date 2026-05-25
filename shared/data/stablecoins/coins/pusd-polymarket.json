@@ -82,5 +82,35 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "PUSD is a Polygon ERC-20 wrapper minted 1:1 when users deposit USDC.e through Polymarket's CollateralOnramp wrap() function; the onramp is admin-pausable and operated by Polymarket.",
+    "controls": [
+      {
+        "label": "Polymarket CollateralOnramp (wrap, admin-pausable)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "polygon",
+        "address": "0x93070a847efEf7F70739046A929D47a521F5B8ee",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Polymarket docs describe wrap(address,address,uint256) on the CollateralOnramp minting pUSD 1:1 against deposited USDC.e; an admin can pause the onramp (reverts OnlyUnpaused), so issuance is contract-mediated but issuer-controlled."
+      }
+    ],
+    "review": {
+      "evidence": "Polymarket pUSD docs describe a CollateralOnramp/CollateralOfframp pair that wraps/unwraps USDC.e 1:1 into pUSD with on-chain enforcement and an admin pause control; minting is issuer-controlled via the onramp contract, not permissionless or user-collateralized governance.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Polymarket pUSD docs",
+          "url": "https://docs.polymarket.com/concepts/pusd"
+        }
+      ],
+      "unresolvedQuestions": ["Confirm the CollateralOnramp pause/admin owner address (multisig vs EOA) on Polygon before raising confidence."]
+    }
   }
 }

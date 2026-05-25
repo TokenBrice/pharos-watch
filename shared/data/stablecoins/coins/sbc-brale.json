@@ -108,6 +108,43 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "SBC is issued by Brale, a FinCEN-registered MSB and licensed US money transmitter; all minting and redemption run through Brale's centralized issuance backend against segregated cash and Treasury reserves.",
+    "controls": [
+      {
+        "label": "Brale issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Brale operates the centralized mint/redeem for SBC, creating supply 1:1 against custodied cash and short-duration US Treasuries; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "Brale SBC proof of reserve",
+            "url": "https://brale.xyz/stablecoins/SBC"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Brale (FinCEN MSB / US money transmitter) is the sole issuer; SBC mint/redeem is operated 1:1 through Brale's backend against segregated reserves with monthly CPA attestations. No on-chain permissionless mint path.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Brale SBC proof of reserve",
+          "url": "https://brale.xyz/stablecoins/SBC"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Brale first-party materials; on-chain token owner/minter admin and any proxy admin not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain SBC token owner/minter admin and any proxy admin across deployed chains before raising to verified."
+      ]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

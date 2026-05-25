@@ -91,5 +91,31 @@
       "title": "Redemption backstop not modeled",
       "message": "JUSD metadata is tracked from public materials, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "JUSD is an issuer-managed, self-described asset-backed dollar token on BSC and Polygon; the issuer periodically adjusts supply through mint/burn against a claimed reserve, but no verifiable whitepaper, audited attestation, or holder-exercisable redemption route is published.",
+    "controls": [
+      {
+        "label": "JUSD issuer mint/burn authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "JUSD materials describe issuer-controlled mint/burn with periodic supply adjustment aligned to a claimed asset reserve; supply creation is centralized to the issuer with no permissionless or user-collateralized mint route documented."
+      }
+    ],
+    "review": {
+      "evidence": "JUSD's public site and token listings describe a centrally issuer-managed asset-backed stablecoin with generic mint/burn and reserve-adjustment language across BSC and Polygon, but no verifiable whitepaper, audited reserve attestation, or holder redemption route was found; issuance is treated as issuer-controlled.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "JUSD site", "url": "https://jusd.app/" }
+      ],
+      "sourceFreeRationale": "Issuer-managed mint/burn taken from JUSD's marketing materials; the on-chain token owner/minter admin and any reserve backing are unverified, and detailed mechanism documentation could not be located.",
+      "unresolvedQuestions": ["Resolve the on-chain JUSD owner/minter admin on BSC and Polygon and whether any audited reserve actually backs issued supply."]
+    }
+  }
 }

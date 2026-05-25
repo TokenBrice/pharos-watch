@@ -92,5 +92,30 @@
       "risk": "low"
     }
   ],
-  "chainTier": "established-alt-l1"
+  "chainTier": "established-alt-l1",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BRLA is issued by Avenia (formerly BRLA Digital); after KYC, users mint and redeem 1:1 for BRL through the issuer's centralized platform, backed by Brazilian government bonds and BRL cash in regulated custody.",
+    "controls": [
+      {
+        "label": "Avenia issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated mint/redeem: Avenia creates BRLA supply against custodied BRL bonds and cash and redeems 1:1 for BRL after KYC; no permissionless or user-collateralized mint route exists across its native multichain deployments."
+      }
+    ],
+    "review": {
+      "evidence": "BRLA materials describe a single issuer (Avenia) minting BRLA against off-chain Brazilian government bonds and BRL cash in regulated custody, with monthly attestations; mint/redeem is KYC-gated and centralized.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins across Polygon, Gnosis, Celo, and Moonbeam not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin across Polygon, Gnosis, Celo, and Moonbeam before raising confidence."
+      ]
+    }
+  }
 }

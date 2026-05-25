@@ -93,5 +93,34 @@
       "pct": 100,
       "risk": "low"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "MXNB is issued by Juno/Bitso (now Nvio Pagos El Salvador under CNAD) against 1:1 MXN reserves; the token is a Circle FiatToken-style proxy where a masterMinter controls minter allowances, so supply is created by issuer-controlled minter roles.",
+    "controls": [
+      {
+        "label": "MXNB masterMinter / issuer minter roles (Nvio/Bitso)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "MXNB is forked from Circle's FiatToken contracts: a masterMinter address configures the set of minters and per-minter mint allowances, behind an upgradeable proxy; the issuer (Juno/Bitso, now Nvio Pagos El Salvador under CNAD) holds these privileged roles."
+      }
+    ],
+    "review": {
+      "evidence": "MXNB's published architecture is a Circle FiatToken fork using a masterMinter/minter allowance model behind a proxy upgrade pattern; mint and redeem are issuer-managed against 1:1 MXN reserves with quarterly attestations, with issuance authority held by Juno/Bitso and reassigned to Nvio Pagos El Salvador (CNAD-authorized). Live masterMinter/proxy admin addresses not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "MXNB whitepaper (FiatToken fork, masterMinter)", "url": "https://mxnb.mx/whitepaper.pdf" },
+        { "label": "Bitso/Juno docs", "url": "https://docs.bitso.com/juno" }
+      ],
+      "unresolvedQuestions": ["Resolve the live masterMinter, minter, and proxy-admin addresses (and whether they are now Nvio-controlled) before raising confidence."]
+    }
+  }
 }

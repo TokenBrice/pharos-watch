@@ -122,5 +122,43 @@
         "Bybit": "medium"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: users mint UTY 1:1 from USDC and the XSY operator deploys the backing into long AVAX spot + short perps under Ceffu/Copper Clearloop custody, redeeming after a 7-day unbonding; mint/redeem is operator-run, not a user-collateralized CDP.",
+    "controls": [
+      {
+        "label": "XSY issuance/minter backend (USDC -> UTY)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "avalanche",
+        "canRaiseCap": "unknown",
+        "evidence": "XSY docs/site describe minting UTY by swapping in USDC, with the operator running the delta-neutral hedge (long AVAX spot, short perps) and a 7-day unbonding to redeem back to USDC; this is an operator-gated synthetic mint, not a user-opened CDP."
+      },
+      {
+        "label": "Ceffu & Copper Clearloop custody / hedging venues",
+        "role": "custodian",
+        "authorityType": "custodian",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "XSY materials state backing is held via Ceffu and Copper Clearloop custody and hedged on CEX/perp venues; custody is centralized off the mint chain and Accountable provides real-time reserve attestation."
+      }
+    ],
+    "review": {
+      "evidence": "XSY documentation and launch coverage describe UTY as an operator-run delta-neutral synthetic dollar: USDC mint, CEX/perp hedging under Ceffu/Copper custody, and a 7-day redemption unbonding, with Accountable real-time PoR. This is a synthetic/operator-minted model, not the proposed user-collateralized CDP. On-chain minter admin not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "XSY docs", "url": "https://xsy-1.gitbook.io/xsy-main" },
+        { "label": "XSY site", "url": "https://xsy.fi/" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the on-chain owner/minter of the UTY token (0xdbc5...2b4a) on Snowtrace and whether mint is gated by an EOA, multisig, or backend signer.",
+        "Confirm the precise custodian split and any attestation quorum behind issuance."
+      ]
+    }
   }
 }

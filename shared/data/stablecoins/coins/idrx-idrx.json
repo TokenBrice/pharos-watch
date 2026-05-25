@@ -113,5 +113,50 @@
     "provider": "IDRX transparency and audit documents",
     "attestorTier": "niche",
     "cadence": "ad-hoc"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "IDRX is issued by PT IDRX with centralized KYC-gated 1:1 mint/redeem against IDR fiat and government bonds; CertiK-audited contracts use multi-member approval and a 24-hour timelock to bound privileged admin actions.",
+    "controls": [
+      {
+        "label": "PT IDRX issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "PT IDRX operates centralized KYC-gated mint and redeem of IDRX against custodied IDR reserves and government bonds across its native-multichain deployment."
+      },
+      {
+        "label": "IDRX multisig + 24h timelock admin",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "IDRX security disclosures describe multi-member (multisig) approval for transactions and a 24-hour timelock on changes, bounding privileged admin/role operations; exact signer set and threshold not independently confirmed."
+      }
+    ],
+    "review": {
+      "evidence": "IDRX materials and CertiK-audit coverage describe a centralized fiat issuer with KYC-gated mint/redeem plus multi-member approval and a 24-hour timelock on privileged actions; minting is issuer-operated rather than permissionless.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "IDRX docs",
+          "url": "https://docs.idrx.co/"
+        },
+        {
+          "label": "IDRX website",
+          "url": "https://idrx.co/"
+        }
+      ],
+      "sourceFreeRationale": "Multisig/timelock controls reported in IDRX security disclosures; exact on-chain multisig signer/threshold and which operations the timelock governs were not independently confirmed in this pass.",
+      "unresolvedQuestions": [
+        "Confirm the on-chain multisig signer set/threshold and whether the 24h timelock governs the mint path itself or only role/upgrade changes.",
+        "Resolve per-chain minter-admin and proxy admin across Polygon, Base, BSC, Klaytn, Gnosis, Etherlink, Worldchain, and Solana."
+      ]
+    }
   }
 }

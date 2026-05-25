@@ -54,6 +54,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "GLDY is issued by Streamex Ltd (a Cayman open-ended fund) as a gold-backed tokenized security; tokens are minted and credited to accredited/institutional investors only after KYC, subscription signing, and fund settlement, through the issuer's compliance-gated process.",
+    "controls": [
+      {
+        "label": "Streamex Ltd issuance backend (compliance-gated)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Streamex mints GLDY only after investors complete KYC, sign subscription documents, fund, and the gold purchase settles; mint/redeem is operationally serviced by the issuer (with market makers for instant mint/redeem). Supply is issuer-controlled with no permissionless route."
+      }
+    ],
+    "review": {
+      "evidence": "Streamex launch materials and coverage describe a compliance-gated issuer mint for accredited investors (Cayman open-ended fund, $25k minimum), with Chainlink PoR over physical gold; no permissionless or user-collateralized mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Streamex GLDY", "url": "https://www.streamex.com/GLDY" }
+      ],
+      "sourceFreeRationale": "Classification based on the issuer/fund model in launch materials and coverage; the on-chain Base owner/minter admin for GLDY was not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain Base owner/minter admin for GLDY before raising confidence."]
+    }
+  },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
   "collateralQuality": "rwa",

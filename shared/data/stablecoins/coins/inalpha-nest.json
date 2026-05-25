@@ -109,5 +109,49 @@
       "title": "NAV-style dollar asset",
       "message": "inALPHA is tracked because it references a dollar base, but the token behaves like a vault share rather than a pure par stablecoin."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "inALPHA is a Nest Alpha Vault receipt token on a BoringVault-style architecture; depositors stake pUSD to mint vault shares and an Accountant prices them at NAV, while Manager/Solver roles gate share issuance and redemption processing.",
+    "controls": [
+      {
+        "label": "Nest Alpha Vault minter (BoringVault Teller/Manager)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Nest vaults use the BoringVault architecture with an Accountant pricing contract; vault receipt tokens (e.g. nALPHA/inALPHA) are minted against deposited pUSD, with manager-gated share issuance rather than free issuer mint."
+      },
+      {
+        "label": "Nest / Plume Foundation vault manager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "Nest is created and managed by the Plume Foundation; manager/curator roles configure vault strategy, gate redemption processing, and hold privileged control over the BoringVault contracts."
+      }
+    ],
+    "review": {
+      "evidence": "Nest Credit docs describe inALPHA as a BoringVault receipt minted when users stake pUSD, priced at NAV by an Accountant; minting is gated by vault manager/solver roles, not a permissionless or single issuer-backend route. Plume enforces sequencer-level AML rather than a tracked-parent wrapper relationship.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Nest docs - how to use Nest",
+          "url": "https://docs.nest.credit/introduction/how-to-use-nest"
+        },
+        {
+          "label": "Nest docs - liquidity and redemptions",
+          "url": "https://docs.nest.credit/about/liquidity-and-redemptions"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Resolve the on-chain BoringVault/Teller/Manager and Accountant addresses and the manager/solver role holders on Ethereum and Plume.",
+        "Confirm whether vault share minting is fully open-deposit or restricted to gated counterparties beyond sequencer-level AML screening."
+      ]
+    }
+  }
 }

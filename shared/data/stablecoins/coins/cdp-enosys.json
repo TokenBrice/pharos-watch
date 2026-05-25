@@ -55,6 +55,45 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "CDP is minted from Enosys Loans overcollateralized vaults on Flare when users deposit Flare-ecosystem collateral; the Enosys team administers the lending contracts and tunes collateral and liquidation parameters.",
+    "controls": [
+      {
+        "label": "Enosys Loans CDP contract (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "flare",
+        "capDescription": "Mint bounded by per-position overcollateralization against accepted Flare-ecosystem collateral, with liquidation and repayment rules.",
+        "canRaiseCap": "unknown",
+        "evidence": "CDP is minted against Enosys Loans collateral and managed through liquidation and repayment rules, per Enosys docs."
+      },
+      {
+        "label": "Enosys protocol admin",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Enosys administers the Loans contracts and configures accepted collateral and risk parameters; coin metadata flags centralized-dependent governance and a possible admin intervention surface."
+      }
+    ],
+    "review": {
+      "evidence": "Enosys docs describe an overcollateralized CDP on Flare minting the CDP stable against Enosys Loans collateral; the deployment is operator-administered with no on-chain renouncement confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Enosys Loans docs",
+          "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+        }
+      ],
+      "sourceFreeRationale": "CDP mechanism confirmed from Enosys docs; on-chain Loans contract admin owner and upgrade authority not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain Enosys Loans admin/owner and upgrade authority on Flare."]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "reserves": [

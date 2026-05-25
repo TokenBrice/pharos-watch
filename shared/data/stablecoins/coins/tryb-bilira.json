@@ -94,6 +94,47 @@
   },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-unregulated",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "TRYB is issued by BiLira, which mints and redeems 1:1 against Turkish-lira cash reserves through its centralized backend across issuer-managed native deployments on multiple chains.",
+    "controls": [
+      {
+        "label": "BiLira issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "BiLira operates the centralized 1:1 mint/redeem for TRYB against TRY cash reserves and manages native deployments across chains; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "BiLira audit reports",
+            "url": "https://www.bilira.co/en/audit-reports"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "BiLira is the sole issuer of TRYB; minting/redemption runs 1:1 through BiLira's backend against TRY cash reserves with quarterly audit reports, and no permissionless mint path is described in issuer materials.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "BiLira audit reports",
+          "url": "https://www.bilira.co/en/audit-reports"
+        },
+        {
+          "label": "BiLira TRYB product page",
+          "url": "https://www.bilira.co/en/product/tryb-stablecoin"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from BiLira materials; on-chain token minter/owner admin across chains not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain TRYB token minter/owner admin and proxy admin across deployed chains before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "TRY cash reserves",

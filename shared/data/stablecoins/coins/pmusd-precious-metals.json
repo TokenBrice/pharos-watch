@@ -59,5 +59,34 @@
       "pct": 100,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "pmUSD is RAAC's f(x)-fork RWf(x) fToken minted against TokenBlender/ION.au gold collateral; per project materials minting and system operations are manager-only through authorized silo multisigs, with the RAAC team holding security-admin control over contracts during the beta phase.",
+    "controls": [
+      {
+        "label": "RAAC RWf(x) silo manager / security admin",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "evidence": "RAAC docs and the Curve gauge proposal describe pmUSD minting/system operations as manager-only through authorized silo multisigs, with the RAAC team retaining security-admin control over contracts during beta before partial DAO handover at TGE."
+      }
+    ],
+    "review": {
+      "evidence": "RAAC documentation and the Curve governance proposal describe pmUSD as an f(x) V1 fork where collateral silos mint the pmUSD fToken under manager/admin control via authorized multisigs; no permissionless user-open mint route is described and public multisig addresses are not yet disclosed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "pmUSD site", "url": "https://pmusd.raac.io/" },
+        { "label": "RAAC docs", "url": "https://docs.raac.io/" }
+      ],
+      "sourceFreeRationale": "Manager-only/silo-multisig mint control taken from RAAC materials and the Curve proposal; the project states no public multisig addresses are available yet and on-chain admin was not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain silo manager/security-admin Safe addresses and thresholds, and the post-TGE DAO handover scope."]
+    }
+  }
 }

@@ -72,5 +72,33 @@
       "pct": 100,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "manual-review",
+    "summary": "HCHF is minted only by HLiquity's immutable Liquity-v1-fork protocol contracts when users borrow against overcollateralized HBAR Troves; the Hedera token has no admin/freeze/wipe/pause key, only a protocol supply key, so no privileged party can mint or seize.",
+    "controls": [
+      {
+        "label": "HLiquity protocol supply key (Trove borrowing)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "hedera",
+        "address": "0.0.6070123",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Hedera Mirror Node token metadata for 0.0.6070123 shows admin_key, freeze_key, wipe_key, and pause_key all null; only supply_key is set. Minting is therefore confined to the HLiquity protocol contracts that issue HCHF against HBAR Trove collateral, with no holder-freeze or unbounded admin-mint path."
+      }
+    ],
+    "review": {
+      "evidence": "HLiquity is an immutable, governance-free Liquity v1 fork on Hedera; HCHF is debt minted against overcollateralized HBAR Troves. I confirmed renouncement on-chain via the Hedera Mirror Node: token 0.0.6070123 has null admin/freeze/wipe/pause keys and only a protocol supply key, so there is no privileged owner or freeze authority. This satisfies immutable-user-collateralized / none-resolved.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Hedera Mirror Node token 0.0.6070123", "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123" },
+        { "label": "HLiquity docs", "url": "https://docs.hliquity.org/overview/overview" }
+      ]
+    }
+  }
 }

@@ -238,5 +238,61 @@
         }
       ]
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "NECT is a Liquity v2-style overcollateralized stablecoin on Berachain, minted from collateral-vault (Den) branches such as iBGT, WBERA, BTC/ETH variants, and Kodiak Island LPs. Beraborrow retains admin/governance control over collateral branch onboarding (some collateral is permissioned); renouncement is not confirmed.",
+    "controls": [
+      {
+        "chain": "berachain",
+        "address": "0x1cE0a25D13CE4d52071aE7e02Cf1F6606F4C79d3",
+        "label": "NECT token / registered Beraborrow branch minters",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "NECT mints only via registered Beraborrow collateral-vault (Den) branches against overcollateralized positions, with Liquity-style $1-face-value redemptions; supply is bounded by collateralized borrowing rather than an issuer minter.",
+        "evidence": "Beraborrow docs describe Dens depositing collateral to mint the overcollateralized stablecoin NECT (Liquity v2-style), with NECT token at 0x1cE0a25D13CE4d52071aE7e02Cf1F6606F4C79d3.",
+        "sources": [
+          {
+            "label": "Beraborrow contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          }
+        ]
+      },
+      {
+        "chain": "berachain",
+        "label": "Beraborrow protocol admin / governance",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Beraborrow retains admin control to onboard collateral-vault branches (some collateral assets are labeled permissioned) and set risk parameters; unlike upstream Liquity, renouncement/immutability is not confirmed for this fork.",
+        "evidence": "Beraborrow docs label certain collateral assets permissioned, indicating retained access controls; the contract-addresses page does not document a renounced owner, so admin control is assumed unresolved (treated as governed, not immutable)."
+      }
+    ],
+    "review": {
+      "evidence": "Beraborrow documentation describes NECT as a Liquity v2-style overcollateralized stablecoin minted via collateral branches; permissioned collateral and the absence of a documented renouncement mean the fork is treated as governed/admin-bounded rather than immutable.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Beraborrow docs",
+          "url": "https://beraborrow.gitbook.io/docs"
+        },
+        {
+          "label": "Beraborrow contract addresses",
+          "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+        }
+      ],
+      "sourceFreeRationale": "Liquity-v2-fork CDP mint mechanism confirmed from Beraborrow docs; admin renouncement is NOT confirmed (permissioned collateral implies retained controls), so user-collateralized-governed is used per spec rather than immutable-user-collateralized.",
+      "unresolvedQuestions": [
+        "Read the NECT token owner()/minter registration and any admin/timelock on-chain to confirm whether Beraborrow has renounced control; if renounced, reclassify to immutable-user-collateralized/none-resolved."
+      ]
+    }
   }
 }

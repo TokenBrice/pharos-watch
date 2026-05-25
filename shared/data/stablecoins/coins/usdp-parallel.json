@@ -215,5 +215,43 @@
       "depType": "collateral"
     }
   ],
-  "geckoId": "parallel-usdp"
+  "geckoId": "parallel-usdp",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDp is minted and burned through the Parallelizer (a licensed Angle Transmuter fork): users mint/burn at oracle value against a whitelisted overcollateralized stablecoin basket with adaptive fees, while the PRL/sPRL DAO governor (with a guardian multisig) sets accepted collateral, fees, and exposure limits.",
+    "controls": [
+      {
+        "label": "Parallelizer module (Angle Transmuter fork, diamond proxy)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint at oracle value against the whitelisted basket, bounded by per-asset exposure limits and adaptive fees that widen on depeg; redemption is proportional across the basket.",
+        "evidence": "Parallel docs describe the Parallelizer as an authorized fork of Angle's Transmuter using a diamond-proxy pattern; USDp is minted/burned at oracle value against the governed basket with adaptive fees and per-asset exposure caps."
+      },
+      {
+        "label": "Parallel DAO governor (PRL/sPRL) + guardian multisig",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Parallel docs describe the governor role (onchain governance / multisig) holding upgrade and parameter rights and a guardian multisig that can freeze assets; sPRL stakers vote on accepted collateral, fees, and exposure limits per stablecoin."
+      }
+    ],
+    "review": {
+      "evidence": "Parallel Protocol documentation and the parallel-parallelizer GitHub describe USDp as minted/burned through a licensed Angle Transmuter fork (Parallelizer) against a DAO-governed overcollateralized basket, with a governor (onchain/multisig) and guardian multisig; on-chain governor/guardian addresses were not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Parallelizer module docs", "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module" },
+        { "label": "parallel-parallelizer (GitHub)", "url": "https://github.com/parallel-protocol/parallel-parallelizer" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the on-chain governor and guardian addresses (and multisig thresholds) on the Parallelizer diamond across deployments.",
+        "Confirm whether the governor is currently an onchain governance contract or a team multisig."
+      ]
+    }
+  }
 }

@@ -106,5 +106,45 @@
       "title": "Curated reserves are self-reported",
       "message": "The curated-validated live-reserves adapter points at the Jade Labs / VNDC issuer website because no third-party attestation page has been verified. Reserve composition reflects the issuer's own disclosure only until an independent auditor or proof-of-reserves feed is published."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "VNDC is issued by Jade Labs (Singapore) and operated through the ONUS/VNDC Hub platforms; minting and redemption run through an issuer-controlled, admin-gated token with no third-party audit and no permissionless mint route.",
+    "controls": [
+      {
+        "label": "Jade Labs / VNDC issuer admin (owner-controlled issue/redeem)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0xa276dc434a366c62ef010585b3885d0c85154389",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "VNDC contracts are Tether-style centralized tokens: the legacy Ethereum VNDCToken exposes owner-gated issue()/burn() with blacklist/pause, and the BNB Chain deployment uses an adminMap plus currency whitelists and a MinMaxSetting mint/redeem struct, so the issuer's admin accounts control supply creation against self-reported VND reserves.",
+        "sources": [
+          {
+            "label": "BscScan VNDC token",
+            "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "VNDC is a 1:1 VND-pegged token developed by Jade Labs and tied to the ONUS ecosystem; its on-chain contracts use owner-controlled issue/burn and an admin map with whitelists, confirming a centralized issuer mint with no third-party audit cadence published.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "BscScan VNDC token",
+          "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism confirmed from explorer contract structure (Tether-style owner-controlled issue/burn plus admin map) and issuer materials; specific live admin address ownership not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve which exact EOA/multisig holds the contract owner and admin-map privileges across the Polygon and BSC deployments."
+      ]
+    }
+  }
 }

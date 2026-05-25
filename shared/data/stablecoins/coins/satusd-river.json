@@ -133,5 +133,43 @@
         "url": "https://api.satoshiprotocol.org/protocol-info"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "satUSD (River, formerly Satoshi Protocol) is a Liquity-v1-derived omni-CDP: users lock BTC/ETH/BNB/LSTs on a source chain and LayerZero OFT messaging authorizes a native satUSD mint on the destination chain, with the RIVER governance token steering parameters.",
+    "controls": [
+      {
+        "label": "River omni-CDP borrower-operations / OFT mint",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint capped by per-branch overcollateralized CDP debt; cross-chain mint is authorized by LayerZero OFT messages confirming source-chain collateral lockup.",
+        "evidence": "River docs and LayerZero integration coverage describe a Liquity-v1-style CDP whose collateral stays source-chain; OFT _lzSend/_lzReceive messages relay collateral state to authorize satUSD mint on the destination chain."
+      },
+      {
+        "label": "RIVER governance / cross-chain OFT peer admin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "RIVER token holders govern protocol parameters; the OFT/peer and message-relay configuration is admin-controlled rather than the immutable admin-key-free Liquity-v1 baseline."
+      }
+    ],
+    "review": {
+      "evidence": "River/Satoshi Protocol documentation, the Satoshi-Protocol GitHub org, and LayerZero integration coverage describe a Liquity-v1-derived omni-CDP with cross-chain OFT mint authorization and RIVER-token governance; no on-chain owner/peer admin was independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "River docs", "url": "https://docs.river.inc" },
+        { "label": "Satoshi-Protocol GitHub", "url": "https://github.com/Satoshi-Protocol" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the on-chain owner/admin of the OFT mint contracts and the cross-chain peer configuration on each deployment.",
+        "Confirm whether any core CDP contracts have renounced ownership versus retaining an upgrade/admin multisig."
+      ]
+    }
   }
 }

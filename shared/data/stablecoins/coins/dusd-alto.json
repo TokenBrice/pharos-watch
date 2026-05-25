@@ -45,6 +45,45 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "DUSD is minted by users overcollateralizing assets in isolated on-chain mint markets (ETH/LSTs, sUSDe, Syrup USDC) on Ethereum, backstopped by a 5M USDC PSM for 1:1 swaps; ALTO token holders govern markets and per-asset risk parameters.",
+    "controls": [
+      {
+        "label": "Alto isolated mint markets (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "capDescription": "Mint bounded by per-market isolated collateral risk parameters; PSM enables 1:1 USDC<->DUSD swaps at 0.20% fee capped at 5M USDC.",
+        "canRaiseCap": "unknown",
+        "evidence": "DUSD is minted via overcollateralized isolated lending markets with per-asset risk parameters, plus a 5M-cap USDC PSM for peg arbitrage, per Alto docs."
+      },
+      {
+        "label": "ALTO token governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "All markets and risk parameters are governed by ALTO token holder votes; governance tunes parameters and the PSM cap rather than minting directly."
+      }
+    ],
+    "review": {
+      "evidence": "Alto docs describe DUSD as an overcollateralized stable minted from isolated on-chain markets with a 5M USDC PSM backstop, all governed by ALTO token votes; no centralized direct-mint route is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Alto docs",
+          "url": "https://docs.alto.money/"
+        }
+      ],
+      "sourceFreeRationale": "Market/PSM mechanism and ALTO governance confirmed from Alto docs; on-chain market admin owner and governance execution path not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the on-chain Alto market admin/owner and ALTO governance execution authority on Ethereum."]
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

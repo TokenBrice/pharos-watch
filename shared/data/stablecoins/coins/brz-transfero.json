@@ -93,6 +93,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BRZ is issued by Transfero, a VQF-regulated Swiss entity; KYC'd users mint and redeem 1:1 against BRL cash held at a regulated Brazilian institution through Transfero's centralized backend.",
+    "controls": [
+      {
+        "label": "Transfero issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Transfero operates centralized mint on BRL deposit and burn on redemption (1% fee in Brazil) against custodied fiat reserves; supply creation is fully issuer-controlled across all chain deployments."
+      }
+    ],
+    "review": {
+      "evidence": "Transfero project materials describe a single centralized issuer minting BRZ against BRL cash reserves with KYC-gated mint/redeem; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Transfero BRZ", "url": "https://transfero.com/stablecoins/brz/" }
+      ],
+      "sourceFreeRationale": "Classification based on issuer model in project materials; on-chain token owner/minter admin and per-chain proxy admin not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin on each BRZ deployment before raising confidence."]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

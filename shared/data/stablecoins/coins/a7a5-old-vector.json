@@ -96,5 +96,30 @@
       "risk": "very-high"
     }
   },
-  "deploymentModel": "native-multichain"
+  "deploymentModel": "native-multichain",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits at Promsvyazbank, with no permissionless or user-collateralized mint route.",
+    "controls": [
+      {
+        "label": "Old Vector LLC issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated primary-market mint/redeem: Old Vector LLC creates A7A5 supply against custodied RUB bank deposits via KYC-verified partners (e.g. a7a5.kg); no on-chain permissionless mint exists."
+      }
+    ],
+    "review": {
+      "evidence": "A7A5 project documentation and Pharos metadata describe a single centralized RUB issuer (Old Vector LLC) minting against off-chain bank reserves; redemption is restricted to authorized partners.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classification based on the issuer model in project materials; on-chain Ethereum/Tron token owner/minter admin not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain Ethereum (0x6fa0...0fc9) and Tron token owner/minter admin and any proxy admin before raising confidence."
+      ]
+    }
+  }
 }

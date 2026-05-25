@@ -112,5 +112,43 @@
       "title": "Private credit strategy, not par stablecoin",
       "message": "nOPAL holds BlackOpal LiquidStone II tokenised credit positions. The token references a dollar base but behaves like a credit vault share rather than a 1:1 par stablecoin."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "nOPAL is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs strategy allocation. There is no permissionless or user-collateralized mint route.",
+    "controls": [
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xA5F8e5843dd597a179453bF782844e8Bf808A90b",
+        "canRaiseCap": "unknown",
+        "evidence": "In the Nest/Nucleus BoringVault model the Teller is the only contract that mints and burns vault receipt tokens against pUSD deposits at the Accountant-computed NAV; minting is permissioned through the vault rather than open."
+      },
+      {
+        "label": "Nest BlackOpal LiquidStone II Vault Manager (strategy/admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xea452B14FC86847182F8DD0486206eb56dDA0393",
+        "canRaiseCap": "unknown",
+        "evidence": "The Manager contract is Nest-controlled and oversees vault strategy, allocation, and configuration; it sits in the admin path over the BoringVault/Teller issuance."
+      }
+    ],
+    "review": {
+      "evidence": "Nest vaults run the Nucleus BoringVault stack (BoringVault token + Teller minter + Accountant pricing + Nest-controlled Manager); shares are minted only by the Teller on deposit and the Manager governs strategy, so supply creation is fully permissioned by Nest. Teller/Manager addresses taken from Nest's published contract list; on-chain role/owner not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Nest smart contracts (Teller/Manager addresses)", "url": "https://docs.nest.credit/developers/smart-contracts" },
+        { "label": "How Nest vaults work (BoringVault/Teller/Manager roles)", "url": "https://nest.credit/blog/how-nest-vaults-work" }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain owner/authority of the Teller and Manager (Safe vs EOA) before raising confidence."]
+    }
+  }
 }

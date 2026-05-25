@@ -113,5 +113,47 @@
   "yieldConfig": {
     "yieldSource": "Maple Finance lending",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdc-circle",
+    "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "label": "Maple syrupUSDC ERC-4626 vault token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "syrupUSDC shares are minted/burned by the Maple ERC-4626 vault against USDC deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDC supply.",
+        "evidence": "Strategy-vault receipt: syrupUSDC shares represent a claim on USDC lent as overcollateralized institutional loans; minting shares only follows USDC deposits and does not expand the parent USDC monetary base."
+      },
+      {
+        "label": "Inherited USDC (Circle) issuer mint path",
+        "role": "other",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter and token owner/admin (issuer-direct-mint, concentrated-admin); this wrapper holds USDC and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "syrupUSDC (variantOf usdc-circle, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDC; base mint authority is the inherited Circle USDC issuer path (concentrated-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Maple Finance",
+          "url": "https://maple.finance/"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
+    }
   }
 }

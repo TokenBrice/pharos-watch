@@ -46,6 +46,45 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "FXD is minted from collateralized debt positions on XDC when users overcollateralize XDC and protocol collateral-pool assets, with liquidations and a StableSwap Module defending the peg; the FTHM DAO governs collateral and risk parameters.",
+    "controls": [
+      {
+        "label": "Fathom CDP contracts (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "xdc",
+        "capDescription": "Mint bounded by per-position overcollateralization against XDC and collateral-pool assets, with liquidations and a StableSwap Module supporting the peg.",
+        "canRaiseCap": "unknown",
+        "evidence": "Users mint FXD from CDPs and burn FXD on repayment, relying on liquidations plus the StableSwap Module to hold the dollar peg, per Fathom docs."
+      },
+      {
+        "label": "Fathom (FTHM) DAO governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "The FTHM DAO governs collateral types, risk parameters, and the StableSwap Module; it tunes parameters rather than minting directly."
+      }
+    ],
+    "review": {
+      "evidence": "Fathom docs describe FXD as a DAO-governed overcollateralized CDP on XDC with liquidations and a StableSwap Module for peg support; no centralized direct-mint route is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Fathom docs",
+          "url": "https://docs.fathom.fi/"
+        }
+      ],
+      "sourceFreeRationale": "CDP mechanism and FTHM DAO governance confirmed from Fathom docs; on-chain CDP admin owner and DAO execution path not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the on-chain Fathom CDP admin/owner and FTHM DAO execution authority on XDC."]
+    }
+  },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "collateralQuality": "exotic",

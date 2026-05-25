@@ -90,5 +90,40 @@
       "type": "collateral",
       "weight": 0.33
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "XMD is minted/redeemed 1:1 by users depositing whitelisted reserve stablecoins (USDC/PYUSD/USDP) into Metallicus's smart-contract treasury on XPR Network; Metal DAO (MTL) governs which stablecoins enter the basket and their weights, so the mint is user-funded but the eligible-collateral set is governance-controlled.",
+    "controls": [
+      {
+        "label": "Metal DAO (MTL) basket governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Metal DAO (MTL governance token) votes on which stablecoins are eligible for the XMD reserve basket and their weightings; it does not mint XMD directly but bounds the whitelist of reserve assets against which users mint/redeem 1:1."
+      },
+      {
+        "label": "XMD treasury mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "The smart-contract-managed treasury mints XMD when users deposit basket stablecoins (USDC/PYUSD/USDP) and burns/redeems on the reverse; supply tracks user deposits 1:1 rather than discretionary issuer minting."
+      }
+    ],
+    "review": {
+      "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins, while Metal DAO (MTL) governs basket composition and weights. This is a user-collateralized mint bounded by a governance-controlled collateral whitelist. XMD runs on non-EVM XPR Network, so the on-chain admin/owner of the treasury was not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "What is Metal Dollar (XMD)?", "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD" },
+        { "label": "How do I mint Metal Dollar (XMD)?", "url": "https://help.xprnetwork.org/hc/en-us/articles/11560121183383-How-do-I-mint-Metal-Dollar-XMD" }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain owner/admin of the XMD treasury contract on XPR Network and whether Metallicus retains a unilateral mint or pause authority beyond Metal DAO basket votes."]
+    }
+  }
 }

@@ -111,5 +111,42 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDz is minted 1:1 against Anzen's permissioned SPCT private-credit collateral token; direct mint/redeem access is gated to KYC/KYB-approved Qualified Market Makers (retail users only trade USDz on AMMs), so issuance is controlled by Anzen and a closed set of authorized minters.",
+    "controls": [
+      {
+        "label": "Anzen issuer / Qualified Market Maker mint",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "Anzen docs state USDz is minted 1:1 by depositing the permissioned SPCT token and that direct mint/redeem is restricted to KYC/KYB-approved Qualified Market Makers; ordinary users only buy/sell USDz on AMMs."
+      },
+      {
+        "label": "SPCT permissioned collateral token (Percent-underwritten private credit)",
+        "role": "custodian",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "SPCT is a permissioned token representing Percent-underwritten U.S. private credit RWAs; it is the collateral deposited to mint USDz and is issuer/admin-controlled, not user-mintable."
+      }
+    ],
+    "review": {
+      "evidence": "Anzen documentation describes USDz minting as 1:1 against the permissioned SPCT private-credit collateral token, with direct mint/redeem limited to KYC/KYB-approved Qualified Market Makers and contracts audited by Zellic/PeckShield/Halborn; no permissionless user mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Anzen USDz overview", "url": "https://docs.anzen.finance/usdz-101/overview" },
+        { "label": "How to mint USDz", "url": "https://docs.anzen.finance/overview/anzen-protocol/getting-started/how-to-mint-usdz" }
+      ],
+      "sourceFreeRationale": "Permissioned SPCT-collateral mint and Qualified-Market-Maker gating taken from Anzen docs; the on-chain minter role holders / admin owner across the five deployments were not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain mint/admin owner of the USDz token and SPCT contract and the set of authorized Qualified Market Maker minters."]
+    }
   }
 }

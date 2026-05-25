@@ -141,5 +141,50 @@
   "tags": [
     "korea",
     "rwa"
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "KRWQ issuance (canonical on Ethereum) is restricted to KYC-verified institutional counterparties — exchanges, market makers, and integrated partners — minting 1:1 against reserves; unified cross-chain supply propagates via LayerZero OFT v2 burn-and-mint.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "label": "KRWQ issuer mint (whitelisted institutions)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "IQ (BrainDAO), with Frax, runs a controlled mint/redeem framework: only KYC'd eligible counterparties (exchanges, market makers, integrated partners) can mint/redeem KRWQ 1:1 against won reserves; Ethereum is the canonical mint chain."
+      },
+      {
+        "label": "LayerZero OFT v2 cross-chain transport",
+        "role": "bridge-admin",
+        "authorityType": "bridge",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "KRWQ uses LayerZero's OFT v2 standard: cross-chain movement burns on the source chain and mints 1:1 on the destination, giving a single unified asset rather than wrapped variants; the OFT mint is transport, not new issuance."
+      }
+    ],
+    "review": {
+      "evidence": "IQ/LayerZero materials describe KRWQ as a fiat-backed token with mint/redeem limited to KYC'd institutional counterparties on the canonical Ethereum chain, and a burn-and-mint LayerZero OFT v2 standard for cross-chain unified supply. No public permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "LayerZero - KRWQ multi-chain Korean won stablecoin",
+          "url": "https://layerzero.network/blog/krwq-first-multi-chain-korean-won-stablecoin"
+        },
+        {
+          "label": "KRWQ website",
+          "url": "https://krwq.cash"
+        }
+      ],
+      "sourceFreeRationale": "On-chain mint role / OFT peer and delegate admin were not read live in this pass; classification rests on the documented KYC-gated institutional mint plus OFT v2 transport model.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner and OFT delegate admin for the Ethereum KRWQ contract and confirm the OFT peer configuration across Base, Polygon, Fraxtal, Codex, and Morph.",
+        "Confirm whether issuer minting is EOA, multisig, or Safe-controlled."
+      ]
+    }
+  }
 }

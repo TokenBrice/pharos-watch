@@ -106,5 +106,34 @@
         "url": "https://app.asymmetry.finance/api/stats"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "manual-review",
+    "summary": "USDaf is minted only when users borrow against overcollateralized CDPs (BTC and savings-stablecoin collateral) in Asymmetry's immutable Liquity-v2 fork on Ethereum; mint is fixed to the registered branch contracts and the core is non-upgradeable with no admin-mint or freeze surface.",
+    "controls": [
+      {
+        "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "address": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Asymmetry licensed and deployed the Liquity-v2 codebase; its docs state the core logic is immutable and cannot be altered once deployed. Per the Liquity-v2 BoldToken design, minting is confined to the registered per-branch protocol contracts and the token is non-upgradeable, so no owner/admin can mint outside CDP borrowing or freeze holders. veASF governance directs incentives only, not core minting."
+      }
+    ],
+    "review": {
+      "evidence": "USDaf is an exclusive Liquity-v2 fork on Ethereum (audited 10x across the BOLD codebase plus Asymmetry's collateral changes); Asymmetry docs state the system is entirely immutable, permissionless, and non-upgradeable. Minting is user-collateralized CDP borrowing confined to the registered branch contracts. Renouncement is grounded in the documented, audited immutable Liquity-v2 architecture rather than an independent on-chain owner() read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "What is USDaf?", "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf" },
+        { "label": "Electisec USDaf v2 review", "url": "https://reports.electisec.com/2025-05-Asymmetry-USDaf-V2" }
+      ],
+      "unresolvedQuestions": ["Confirm on-chain that BoldToken branch addresses are locked and no owner/setBranchAddresses authority remains active for 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8."]
+    }
   }
 }

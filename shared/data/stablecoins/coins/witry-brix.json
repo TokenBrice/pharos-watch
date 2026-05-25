@@ -79,5 +79,42 @@
         "rpcMode": "alchemy"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY; the underlying iTRY is mint/redeem-permissioned to institutional participants on a primary market against a BVI-regulated TRY money-market fund, and Brix mints fresh iTRY via NAV-driven supply expansion that flows into the wiTRY staking contract.",
+    "controls": [
+      {
+        "label": "Brix issuer (institutional primary iTRY mint / NAV supply expansion)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "Brix docs/coverage state institutional participants mint/redeem iTRY on the primary market while retail trades permissionlessly; the protocol mints additional iTRY proportional to money-market fund NAV growth and routes it into the wiTRY staking contract."
+      },
+      {
+        "label": "wiTRY staking wrapper (NAV accrual accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "wiTRY shares appreciate against iTRY as vested fund yield is forwarded into the vault; the wrapper performs share accounting and does not itself create discretionary supply."
+      }
+    ],
+    "review": {
+      "evidence": "Brix materials describe iTRY as backed 1:1 by a BVI-regulated TRY money-market fund (Zodia custody, Accountable proof-of-solvency, Zellic/Code4rena audits), with institutional-permissioned primary mint/redeem and NAV-driven supply expansion locked into the wiTRY staking wrapper; iTRY is not a separately tracked Pharos coin, so this profile is authored self-contained.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Brix iTRY", "url": "https://brix.money/itry" },
+        { "label": "Brix", "url": "https://brix.money/" }
+      ],
+      "sourceFreeRationale": "Institutional-permissioned mint and NAV-accrual wrapper taken from Brix materials and coverage; the on-chain iTRY/wiTRY minter/owner admin and OFT adapter admin were not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain iTRY minter/owner and the wiTRY staking-wrapper and LayerZero OFT adapter admins across Ethereum and MegaETH."]
+    }
   }
 }

@@ -62,6 +62,50 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "CJPY is minted permissionlessly from Yamato's Liquity-v1-style ETH pledges (130% MCR, one-time fee, no interest); the DeFiGeek Community / Yamato DAO (YMT/veYMT) leads versioned, upgradeable contracts and parameter governance.",
+    "controls": [
+      {
+        "label": "Yamato pledge contract (ETH CDP mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
+        "capDescription": "Mint bounded by the 130% minimum collateralization ratio on ETH pledges, with redemption-based peg defense.",
+        "canRaiseCap": "unknown",
+        "evidence": "Users mint CJPY by overcollateralizing ETH at a 130% MCR via the Yamato pledge contract; redemption of the riskiest pledge enforces the hard floor."
+      },
+      {
+        "label": "Yamato DAO (YMT/veYMT) governance and upgrade authority",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Unlike immutable Liquity v1, Yamato is upgradeable and DAO-governed via YMT/veYMT, with the development team leading version upgrades and parameter changes; no holder-balance freeze on CJPY."
+      }
+    ],
+    "review": {
+      "evidence": "Yamato docs and DeFiGeek materials describe a Liquity-v1-style permissionless ETH CDP minting CJPY, but with an upgradeable, DAO-governed (YMT/veYMT) architecture rather than Liquity v1's immutability, so immutable classification is not asserted.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Yamato docs",
+          "url": "https://docs.yamato.fi/v/en"
+        },
+        {
+          "label": "Yamato contract addresses",
+          "url": "https://docs.yamato.fi/en/readme/contract-addresses"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism and upgradeable DAO governance confirmed from Yamato docs; exact upgrade-admin/proxy owner and governance threshold not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the Yamato upgrade admin/proxy owner and the YMT/veYMT governance execution path on-chain."]
+    }
+  },
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

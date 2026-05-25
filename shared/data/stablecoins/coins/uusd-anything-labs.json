@@ -70,5 +70,34 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; supply is issuer/owner-controlled and the implementation can be upgraded by the owner, but the project publishes no verifiable collateral or mint-route documentation.",
+    "controls": [
+      {
+        "label": "UUSD owner / proxy upgrade admin",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "BscScan shows UUSD is an upgradeable proxy (implementation 0xA4f44c290CC693fC0c985d679281c61e99d9Be9a) with an Ownable owner; the owner can upgrade the implementation and controls supply, but the mint route and collateral process are not documented."
+      }
+    ],
+    "review": {
+      "evidence": "BscScan shows the UUSD token is an upgradeable proxy with Ownable owner control over the implementation; the issuer (Anything Labs) markets UUSD as reserve-backed for an AI-agent economy but publishes no audited reserve attestation or specific mint mechanism, so issuance is treated as issuer/owner-controlled.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "UUSD contract (BscScan)", "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000" }
+      ],
+      "sourceFreeRationale": "Owner-controlled upgradeable proxy confirmed from BscScan; the actual mint authorization path and collateral backing are undocumented, so the issuer-direct/owner-controlled classification is the best-supported reading rather than a fully opaque unknown.",
+      "unresolvedQuestions": ["Resolve the on-chain owner/upgrade-admin address and whether a distinct minter role or off-chain reserve backs issued UUSD supply."]
+    }
   }
 }

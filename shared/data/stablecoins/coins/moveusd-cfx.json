@@ -73,5 +73,33 @@
       "title": "Tokenized-deposit profile",
       "message": "MoveUSD is tracked because DefiLlama reports a current price and circulating supply, but its public materials present it as a CFX-issued stable token for approved customers rather than an open DeFi-native stablecoin."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "MOVEUSD is a tokenized bank deposit minted by CFX Labs (FinCEN MSB) when approved customers deposit USD into FDIC-insured partner banks; CFX retains full control of the SPL mint authority and cross-chain burn-and-mint, so supply creation is fully issuer-controlled.",
+    "controls": [
+      {
+        "label": "CFX Labs issuance backend (SPL mint authority)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "canRaiseCap": "unknown",
+        "evidence": "CFX Labs mints MOVEUSD when USD is deposited at partner FDIC-insured banks and controls the token contracts/mint authority on every chain via Wormhole NTT burn-and-mint; no permissionless or user-collateralized mint route exists."
+      }
+    ],
+    "review": {
+      "evidence": "Public CFX/MoveUSD materials describe a centralized, fully-permissioned tokenized deposit: CFX Labs (registered MSB) mints against bank deposits and retains complete control over token contracts and mint authority across Solana/Base/Ethereum. SPL mint authority address not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "CFX docs (key features)", "url": "https://docs.cfx.to/docs/key-features" },
+        { "label": "Wormhole: MOVEUSD adopts NTT (issuer-controlled burn-and-mint)", "url": "https://wormhole.com/blog/moveusd-stablecoin-chooses-wormholes-ntt-standard-for-multichain-expansion" }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model is established from CFX materials and NTT coverage; the live Solana SPL mint/freeze authority address was not independently resolved.",
+      "unresolvedQuestions": ["Read the Solana mint account to confirm the mint authority and any freeze authority held by CFX."]
+    }
+  }
 }

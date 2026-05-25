@@ -60,6 +60,45 @@
     "reviewer": "Opus med-confidence verification",
     "reviewedAt": "2026-05-23"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "DOC is minted against rBTC locked in Money On Chain's overcollateralized contracts on Rootstock with permissionless DOC-for-rBTC redemption; the MoC token DAO governs the proxy-upgradeable contract suite via the Governor/Changer pattern.",
+    "controls": [
+      {
+        "label": "Money On Chain MoC contract (rBTC mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "rootstock",
+        "capDescription": "Mint bounded by the protocol's rBTC overcollateralization; DOC targets 1 USD with permissionless redemption to rBTC.",
+        "canRaiseCap": "unknown",
+        "evidence": "DOC is minted against rBTC locked in Money On Chain smart contracts, with permissionless DOC-to-rBTC redemption maintaining the peg."
+      },
+      {
+        "label": "Money On Chain DAO governance (Governor/Changer, proxy-upgradeable)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "The MoC suite is DAO-governed (MOC token) and proxy-upgradeable via the Governor/Changer pattern; upgrades could alter mint/redeem logic, an indirect intervention surface noted in the coin's blacklistability review."
+      }
+    ],
+    "review": {
+      "evidence": "Money On Chain docs describe a permissionless rBTC CDP minting DOC with no holder-balance freeze, but a DAO-governed, proxy-upgradeable contract suite (Governor/Changer), giving an indirect admin surface rather than full immutability.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Money On Chain main concepts docs",
+          "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+        }
+      ],
+      "sourceFreeRationale": "CDP mechanism and DAO/proxy governance confirmed from MoC docs and prior Pharos blacklistability review; on-chain Governor/ProxyAdmin owner and changer authority not independently read this pass.",
+      "unresolvedQuestions": ["Resolve the on-chain MoC Governor/ProxyAdmin owner and upgrade-authorization threshold on Rootstock."]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "third-party-bridge",
   "reserves": [

@@ -90,5 +90,54 @@
       "pct": 5,
       "risk": "very-high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "HOLLAR is minted on the Hydration appchain by depositing DOT/ETH/BTC/stablecoin collateral into an Aave v3 (GHO-derived) money market, with the HOLLAR Stability Module anchoring the peg; Hydration governance controls collateral and risk parameters.",
+    "controls": [
+      {
+        "chain": "hydration",
+        "label": "Hydration Aave-v3 fork money market (minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market, subject to a per-asset supply cap; the launch supply cap was 2,000,000 HOLLAR.",
+        "evidence": "Coverage describes HOLLAR as a GHO-derived facilitator mint on Hydration's Aave v3 fork with overcollateralized positions and an initial supply cap of 2,000,000 HOLLAR."
+      },
+      {
+        "chain": "hydration",
+        "label": "Hydration governance / parameter admin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Hydration governance sets collateral onboarding, risk parameters, supply caps, and the HSM configuration; HOLLAR is governed by Hydration rather than Polkadot OpenGov directly.",
+        "evidence": "Coverage notes HOLLAR is governed by Hydration (not DOT holders), which controls collateral rules, risk parameters, and the on-chain HOLLAR Stability Module."
+      }
+    ],
+    "review": {
+      "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Hydration HOLLAR launch (Polkadot newsroom)",
+          "url": "https://polkadot.com/newsroom/press-releases/hydration-launches-hollar-decentralized-stablecoin-polkadot-defi/"
+        },
+        {
+          "label": "Hydration HOLLAR docs",
+          "url": "https://docs.hydration.net/quick_start/hollar/"
+        }
+      ],
+      "sourceFreeRationale": "Aave-v3/GHO fork mint model and Hydration governance confirmed from coverage and docs; the appchain pallet/governance admin authority was not independently read on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the Hydration on-chain governance/admin authority over the HOLLAR money market and HSM parameters before raising confidence."
+      ]
+    }
+  }
 }

@@ -93,5 +93,33 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "RUSD is RIB / Royal Coins' centralized dollar stablecoin (Hong Kong, same issuer as REUR); mint and redemption run through the issuer's backend for approved users against issuer-managed cash and short-term liquid reserves.",
+    "controls": [
+      {
+        "label": "RIB / Royal Coins issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "RIB/Royal Coins operates a centralized 1:1 mint/redeem for approved users against issuer-managed fiat and short-term liquid reserves; a single issuer controls supply creation."
+      }
+    ],
+    "review": {
+      "evidence": "RUSD whitepaper/Royal Coins materials describe a centralized 1:1 dollar token with issuer-managed mint and redemption for approved users against issuer-held cash and liquid reserves; the same issuer (RIB Digital Holdings) operates REUR, and no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "RUSD whitepaper",
+          "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron RUSD contracts before raising confidence."]
+    }
   }
 }

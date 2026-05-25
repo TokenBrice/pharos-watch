@@ -60,5 +60,51 @@
       "coinId": "usdc-circle",
       "depType": "wrapper"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdc-circle",
+    "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract; each USDCx is backed by locked Circle USDC and supply only changes against USDC deposits/redemptions via CCTP/Gateway, so it inherits USDC's issuer-direct mint authority.",
+    "controls": [
+      {
+        "label": "Circle xReserve mint/redeem wrapper (USDCx 1:1 against locked USDC)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "movement",
+        "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+        "canRaiseCap": "unknown",
+        "evidence": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve contract (1:1) and redeem by burning USDCx to release the locked USDC; xReserve also moves 1:1 between USDCx and USDC across chains via Circle CCTP and Gateway. This is a Circle-operated bridge/lockbox mint over USDC, not an independent issuer of base USDC supply."
+      },
+      {
+        "label": "Inherited Circle USDC issuer mint authority",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying USDC is issuer-minted by Circle (Ethereum MasterMinter + token owner/admin). USDCx's value and supply derive from USDC locked in xReserve, so it inherits USDC's concentrated-admin issuer posture."
+      }
+    ],
+    "review": {
+      "evidence": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve contract, with CCTP/Gateway transfers to/from USDC on other chains (reserves 100% USDC, depType wrapper, coinId usdc-circle). It is a Circle-operated bridge/lockbox wrapper rather than a new issuer, so it inherits USDC's issuer-direct mint path and concentrated-admin posture. inheritedFrom set to usdc-circle (coin has no variantOf field).",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Movement: Introducing USDCx",
+          "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+        },
+        {
+          "label": "Circle xReserve",
+          "url": "https://www.circle.com/xreserve"
+        }
+      ],
+      "sourceFreeRationale": "USDCx classified as a Circle xReserve USDC representation per Movement/Circle materials; posture mirrored from the parent USDC mintAuthority. The xReserve contract's on-chain admin on Movement was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain admin/upgrade controls of Circle's xReserve contract on Movement and confirm the CCTP/Gateway lockbox cannot mint USDCx beyond locked USDC."
+      ]
+    }
+  }
 }

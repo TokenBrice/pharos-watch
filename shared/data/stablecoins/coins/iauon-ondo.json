@@ -99,5 +99,40 @@
       "title": "Tokenized ETF exposure",
       "message": "Ondo GM Tokens provide economic exposure to the underlying ETF but do not give holders direct rights to hold or receive the underlying ETF shares; eligibility restrictions apply."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "IAUon is a centrally issued Ondo Global Markets tokenized ETF tracker; subscription/redemption and supply creation run through Ondo GM's issuer-controlled, eligibility-gated infrastructure against custodied ETF exposure.",
+    "controls": [
+      {
+        "label": "Ondo Global Markets issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Ondo GM operates issuer-controlled subscription, redemption, and transfer infrastructure for IAUon with eligibility restrictions; supply is created/destroyed against custodied IAU economic exposure rather than via a permissionless route."
+      }
+    ],
+    "review": {
+      "evidence": "Ondo Global Markets documentation describes IAUon as a centrally issued tokenized ETF product with issuer-controlled subscription, redemption, and transfer rails and KYC/eligibility gating; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Ondo Global Markets overview",
+          "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+        },
+        {
+          "label": "Ondo Global Markets important notes",
+          "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+        }
+      ],
+      "sourceFreeRationale": "Issuer model is established from Ondo GM materials; on-chain token owner/minter admin and proxy admin were not independently resolved in this pass.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain mint/minter-admin and proxy admin for the IAUon token across its Ethereum, BSC, Solana, and HyperEVM deployments."
+      ]
+    }
+  }
 }

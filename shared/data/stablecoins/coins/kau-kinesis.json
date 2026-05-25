@@ -83,5 +83,40 @@
       "assetRisk": "very-low",
       "reserveUnit": "XAU"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "KAU is issued by Kinesis (Cayman VASP); each token is minted by the issuer when LBMA-approved physical gold is allocated into ABX vaults and redeemed against physical gold, with supply controlled by the centralized issuer backend.",
+    "controls": [
+      {
+        "label": "Kinesis issuance backend (gold allocation)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Kinesis mints KAU against allocated LBMA-approved physical gold held in fully allocated, insured ABX/Brink's/Loomis vaults (audited by Bureau Veritas) and burns on physical redemption; the regulated issuer controls supply creation."
+      }
+    ],
+    "review": {
+      "evidence": "Kinesis materials describe KAU as a 1:1 claim on one gram of allocated LBMA-approved gold, minted/redeemed through the issuer against vaulted bullion with semi-annual Bureau Veritas audits; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Kinesis gold",
+          "url": "https://kinesis.money/gold/"
+        },
+        {
+          "label": "Kinesis audits",
+          "url": "https://kinesis.money/audits/"
+        }
+      ],
+      "sourceFreeRationale": "On-chain token owner/minter admin for the Ethereum KAU contract was not read live in this pass; classification rests on the issuer-allocated-bullion mint model.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter admin and any proxy admin for the KAU Ethereum contract."
+      ]
+    }
   }
 }

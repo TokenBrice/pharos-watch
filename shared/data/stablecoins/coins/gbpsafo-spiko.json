@@ -94,6 +94,48 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "GBPSAFO is the GBP share class of Spiko's AMF-authorized UCITS fund; tokens are minted to KYC'd investor addresses by Spiko's in-house 'daily-operator' relayer and burned by a dedicated redemption contract, under a multisig super-admin that can upgrade contracts and manage permissions.",
+    "controls": [
+      {
+        "label": "Spiko daily-operator relayer (minter)",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Spiko's published contract design assigns an in-house 'daily-operator' relayer responsibility for minting tokens to investor addresses and handling redemptions; minting is gated to investors who pass KYC and join permission groups.",
+        "sources": [
+          { "label": "Spiko smart contracts", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/" }
+        ]
+      },
+      {
+        "label": "Spiko super-admin multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "A multisig 'super-admin' permission group holds full access to upgrade the UUPS-proxy contracts and manage permission groups (including the minter/burner roles); exact signer set and threshold not independently confirmed on-chain.",
+        "sources": [
+          { "label": "Spiko smart contracts", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Spiko's smart-contract post describes a permission-group RBAC: an in-house daily-operator relayer mints to KYC'd investors, a redemption contract holds the sole burn role, and a super-admin multisig controls UUPS upgrades and permissions. This is centralized issuer-direct minting, not a user-collateralized path.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Spiko smart contracts", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/" },
+        { "label": "Spiko Pound", "url": "https://www.spiko.io/spiko-pound" }
+      ],
+      "sourceFreeRationale": "Roles and minter design taken from Spiko's first-party contract documentation; live on-chain super-admin multisig signers/threshold and the relayer address were not independently read on-chain, so confidence is probable rather than verified.",
+      "unresolvedQuestions": ["Confirm the on-chain super-admin multisig signers/threshold and the daily-operator relayer address for the GBPSAFO deployments to reach verified."]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",

@@ -65,6 +65,47 @@
       "decimals": 18
     }
   ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker; subscriptions and redemptions are processed by Ondo GM for KYC-eligible non-US investors, with issuer-controlled mint/burn and transfer infrastructure.",
+    "controls": [
+      {
+        "label": "Ondo Global Markets issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Ondo GM mints/redeems SLVon against custodied SLV economic exposure for eligible investors only; no permissionless or user-collateralized mint route exists and eligibility/transfer restrictions are enforced by the issuer.",
+        "sources": [
+          {
+            "label": "Ondo Global Markets overview",
+            "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Ondo Global Markets is the sole issuer of SLVon; mint/redeem is gated to KYC-eligible investors and processed through Ondo GM against collateral accounts, with no permissionless mint path per Ondo GM documentation.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Ondo Global Markets overview",
+          "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+        },
+        {
+          "label": "Ondo GM important notes",
+          "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled tokenized-ETF mint model confirmed from Ondo GM materials; on-chain token minter/owner admin not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain SLVon token minter/owner admin and proxy admin before raising confidence."
+      ]
+    }
+  },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

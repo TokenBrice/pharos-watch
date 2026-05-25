@@ -73,5 +73,54 @@
       "pct": 100,
       "risk": "medium"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "bounded-admin",
+    "confidence": "manual-review",
+    "summary": "JUSD is a Frankencoin/d-EURO fork on Citrea with immutable, ownerless contracts; minting is performed by approved minter plugins and overcollateralized BTC positions that pass a qualified-holder veto period, with JUICE pool-share holders holding veto governance.",
+    "controls": [
+      {
+        "chain": "citrea",
+        "label": "JUSD Frankencoin-style minter registry",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "JUSD is minted only by registered positions/minter modules that survive the application/veto period; positions mint against overcollateralized BTC on Citrea with oracle-free on-chain liquidations. The token has no owner and contracts are immutable.",
+        "evidence": "JUSD is an Oracle-Free-Dollar/Frankencoin fork: immutable contracts with no owner, minting via plugins/positions accepted unless qualified pool-share holders veto during the application period."
+      },
+      {
+        "chain": "citrea",
+        "label": "JUICE pool-share holder veto governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Qualified JUICE pool-share holders (time-weighted votes) can veto proposed minters/positions during the application period and adjust certain parameters; there is no admin key able to alter the system unilaterally.",
+        "evidence": "Frankencoin-style veto governance: qualified pool-share holders (JUICE) can deny new minters/positions; the system is immutable with adjustable parameters but no owner/admin key."
+      }
+    ],
+    "review": {
+      "evidence": "Coverage and the Oracle-Free-Dollar/Frankencoin reference confirm JUSD is an immutable, ownerless Frankencoin fork on Citrea minting against overcollateralized BTC via plugin/position modules subject to a qualified-holder veto; mirrors the verified Frankencoin (ZCHF) governed-minter model.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Juice Dollar (JUSD) site",
+          "url": "https://juicedollar.com/"
+        },
+        {
+          "label": "Oracle Free Dollar (Frankencoin concept) reference",
+          "url": "https://github.com/oraclefreedollar/ofd"
+        }
+      ],
+      "sourceFreeRationale": "Frankencoin-fork ownerless veto-governed minter model confirmed from coverage and the OFD reference; the live Citrea JUSD contract owner()/registry state was not independently read on-chain.",
+      "unresolvedQuestions": [
+        "Confirm on-chain that the Citrea JUSD contract has no owner and that minting is gated solely by the registered-minter/veto registry before raising confidence."
+      ]
+    }
+  }
 }

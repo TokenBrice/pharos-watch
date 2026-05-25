@@ -107,5 +107,37 @@
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "SAFO is the USD share of a Spiko/Amundi UCITS SICAV sub-fund; Spiko acts as transfer agent and mints/burns the UUPS-upgradeable ERC-20 fund-share tokens through privileged roles governed by a central Permission Manager, with KYC-gated subscriptions at NAV.",
+    "controls": [
+      {
+        "label": "Spiko token minter role (governed by Permission Manager)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Spiko's token is a UUPS-upgradeable ERC-20 whose privileged functions (including mint/burn) are governed by a central Permission Manager; Spiko, as transfer agent for the SICAV, mints fund shares on KYC-gated subscription at the published NAV."
+      }
+    ],
+    "review": {
+      "evidence": "Spiko tech docs describe a UUPS-upgradeable ERC-20 with a redemption contract, Chainlink NAV oracle, and a central Permission Manager governing privileged functions; Spiko acts as transfer agent and broker for the AMF-regulated UCITS sub-fund, minting/redeeming shares at NAV through KYC-gated rails with no permissionless or user-collateralized mint route.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Spiko smart contracts (tech blog)",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Spiko contracts repo",
+          "url": "https://github.com/spiko-tech/contracts"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the live Permission Manager owner/role-holder addresses (multisig vs EOA) before raising confidence."]
+    }
   }
 }

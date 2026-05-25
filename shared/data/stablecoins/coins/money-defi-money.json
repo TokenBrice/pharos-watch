@@ -74,5 +74,54 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "MONEY is an authorized crvUSD fork on Arbitrum/Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using crvUSD's controller/LLAMMA design; defi.money governance/admin controls market onboarding and risk parameters.",
+    "controls": [
+      {
+        "chain": "arbitrum",
+        "label": "defi.money market controllers (crvUSD-style minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MONEY is minted only against overcollateralized loans in defi.money markets under per-market debt ceilings, using crvUSD's controller and LLAMMA soft-liquidation mechanics; supply tracks collateralized borrowing, not an issuer minter.",
+        "evidence": "defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics."
+      },
+      {
+        "chain": "arbitrum",
+        "label": "defi.money governance / admin",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "defi.money governance/admin (analogous to Curve's admin and emergency-DAO layer) onboards markets, sets debt ceilings and risk parameters, and can authorize new minting markets.",
+        "evidence": "As an authorized crvUSD fork, defi.money carries a Curve-style admin/emergency-control layer that adds markets and tunes parameters; the specific multisig signers/threshold were not resolved."
+      }
+    ],
+    "review": {
+      "evidence": "defi.money documentation and coverage confirm MONEY is an authorized crvUSD fork using LLAMMA, minted against overcollateralized loans with governance/admin control over markets and parameters; no centralized issuer mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "defi.money docs",
+          "url": "https://docs.defi.money/"
+        },
+        {
+          "label": "defi.money contracts (GitHub)",
+          "url": "https://github.com/defidotmoney"
+        }
+      ],
+      "sourceFreeRationale": "crvUSD-fork mint mechanism confirmed from defi.money docs/coverage; the admin multisig/emergency-DAO signers, threshold, and per-market controllers were not independently read on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the defi.money admin/emergency multisig (signers, threshold) and the per-market controller/factory authority before raising confidence."
+      ]
+    }
   }
 }

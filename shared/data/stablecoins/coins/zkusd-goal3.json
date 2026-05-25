@@ -54,5 +54,39 @@
       "pct": 100,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "zkUSD is issued and redeemed only through the Goal3 Portal on ZKsync Era at 1 zkUSD = 1 USDC; Goal3 operates the mint/redeem gateway against an undisclosed sportsbook collateral pool, with no permissionless or user-collateralized mint route.",
+    "controls": [
+      {
+        "label": "Goal3 Portal mint/redeem operator",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "zksync",
+        "address": "0xfc7e56298657b002b3e656400e746b7212912757",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Goal3 docs state the official mint/redemption gateway is the Goal3 Portal, where 1 zkUSD is always redeemable for 1 USDC and supply is asserted to be over-collateralized by assets Goal3 holds in the sportsbook; minting is operator-controlled with no open user-deposit CDP route."
+      }
+    ],
+    "review": {
+      "evidence": "Goal3 documents zkUSD as a synthetic dollar minted and redeemed through the Goal3 Portal at 1:1 with USDC, backed by an undisclosed over-collateralized sportsbook asset pool; the only documented holder exit is portal redemption, indicating a centralized issuer-controlled mint rather than a permissionless vault.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Goal3 zkUSD docs",
+          "url": "https://docs.goal3.xyz/sportsbook/technical-overview/usdzkusd"
+        }
+      ],
+      "sourceFreeRationale": "Mechanism resolved from Goal3 documentation (portal-gated 1:1 mint/redeem); the ZKsync Era token's on-chain mint authority was not independently read.",
+      "unresolvedQuestions": [
+        "Resolve the zkUSD token owner/minter role on ZKsync Era and the actual collateral composition and ratio behind the over-collateralization claim."
+      ]
+    }
+  }
 }

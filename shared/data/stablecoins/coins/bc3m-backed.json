@@ -137,5 +137,42 @@
       "title": "No on-chain reserve feed today",
       "message": "Unlike bIB01, Backed has not published a Chainlink LedgerLens Proof-of-Reserve or NAV feed for bC3M on any chain. Reserves remain on the curated path until an on-chain feed is available."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "bC3M is a NAV-accreting tracker token issued by Backed Assets (Jersey) Limited under the Swiss DLT Act; primary mint/redemption is KYC-gated 1:1 via Backed, which holds transfer-agent freeze and burn authority over balances.",
+    "controls": [
+      {
+        "label": "Backed Assets issuance / transfer-agent authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Backed Assets mints bC3M against custodied AMUNDI ETF holdings via KYC-gated primary issuance and retains transfer-agent freeze/burn authority over balances; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "Backed Finance docs",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Backed Finance docs",
+          "url": "https://docs.backed.fi/"
+        }
+      ],
+      "evidence": "Backed Finance documentation describes Backed Assets (Jersey) Limited as a single regulated issuer minting tracker tokens against segregated ETF custody with transfer-agent freeze/burn authority and KYC-gated primary issuance.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer model established from Backed materials; on-chain token owner/minter admin across the seven listed deployments not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin and any proxy admin across Ethereum, Gnosis, Base, Polygon, BSC, Arbitrum, and Avalanche before raising confidence."
+      ]
+    }
+  }
 }

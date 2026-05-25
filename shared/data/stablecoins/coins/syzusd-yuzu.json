@@ -102,5 +102,41 @@
   "yieldConfig": {
     "yieldSource": "Yuzu staking (syzUSD)",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "yzusd-yuzu",
+    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD; shares are minted only by staking yzUSD into the ERC-4626 vault, so it inherits yzUSD's permissioned (eligible-investor-gated) mint authority rather than creating new yzUSD supply.",
+    "controls": [
+      {
+        "label": "syzUSD ERC-4626 staking vault (share accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "plasma",
+        "address": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "canRaiseCap": "unknown",
+        "evidence": "syzUSD is an ERC-4626 vault that mints/burns shares against yzUSD deposits (expected asset 0x6695c0f8706c5ace3bdf8995073179cca47926dc); share price appreciates as strategy yield accrues. The wrapper cannot create base yzUSD supply."
+      },
+      {
+        "label": "Inherited yzUSD permissioned mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying yzUSD primary mint/redeem is gated to KYC'ed eligible investors 1:1 with USDT0, with collateral managed in a Fordefi MPC workspace. syzUSD inherits this concentrated-admin posture from the parent."
+      }
+    ],
+    "review": {
+      "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the syzUSD vault admin/upgrade controls across Plasma and Monad deployments."
+      ]
+    }
   }
 }

@@ -44,6 +44,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "GGBR is issued by Goldfish Gold (I-On Digital Corp); each token references 1/1000th of a troy ounce of issuer-managed gold exposure and is minted/managed by the issuer rather than through any on-chain user redemption logic.",
+    "controls": [
+      {
+        "label": "Goldfish Gold / I-On Digital issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer materials describe GGBR as issuer-managed gold exposure on I-On Digital's balance sheet with no on-chain redemption logic; supply creation is controlled by the issuer with no permissionless mint route."
+      }
+    ],
+    "review": {
+      "evidence": "Project materials and CoinGecko describe GGBR as an issuer-managed fractional gold token (1/1000 troy ounce) without on-chain redemption; minting is fully centralized at the issuer.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Goldfish Gold", "url": "https://goldfishgold.com/" }
+      ],
+      "sourceFreeRationale": "Classification based on the issuer-managed model in project materials; the on-chain Ethereum owner/minter admin for GGBR was not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain Ethereum owner/minter admin for GGBR before raising confidence."]
+    }
+  },
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

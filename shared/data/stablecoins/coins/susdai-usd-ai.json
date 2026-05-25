@@ -112,5 +112,39 @@
     "provider": "USD.AI proof-of-reserves API",
     "attestorTier": "self",
     "cadence": "real-time"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdai-usd-ai",
+    "summary": "sUSDai is USD.AI's staked wrapper of USDai; shares are minted only by depositing USDai into the staking vault, so it inherits USDai's permissioned-minter authority rather than creating new base USDai supply.",
+    "controls": [
+      {
+        "label": "sUSDai staking vault (share accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "sUSDai shares are minted when USDai is staked into the vault and burned on the queued (30-day) exit; share price appreciates as yield accrues. The wrapper accounts for deposited USDai and cannot create base USDai supply."
+      },
+      {
+        "label": "Inherited USDai permissioned mint authority",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "Underlying USDai is minted 1:1 by KYC'ed institutions via the USDai deposit() contract under role-based access (STRATEGY_ADMIN_ROLE multisig, BRIDGE_ADMIN_ROLE). sUSDai inherits this concentrated-admin posture from the parent."
+      }
+    ],
+    "review": {
+      "evidence": "sUSDai (variantOf usdai-usd-ai, variantKind strategy-vault) is an ERC-4626-style staked wrapper over USDai. It inherits USDai's permissioned-minter mint path and concentrated-admin posture; the wrapper itself only mints/burns shares against USDai deposits.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classified as the staked variant of usdai-usd-ai per coin metadata; posture mirrored from the parent USDai mintAuthority. The vault's own admin and the parent's live STRATEGY_ADMIN_ROLE multisig were not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the sUSDai vault admin/upgrade controls and confirm exit-queue parameters cannot be used to mint base USDai supply."
+      ]
+    }
   }
 }

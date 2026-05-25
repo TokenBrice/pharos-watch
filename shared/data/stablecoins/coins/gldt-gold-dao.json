@@ -74,5 +74,52 @@
       "pct": 100,
       "risk": "low"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "GLDT is minted by the Gold DAO swap canister on the Internet Computer when users lock GLD NFTs at 100 GLDT per gram; the swap canister holds the GLDT ledger minting rights and is governed/upgradeable by the Gold DAO SNS.",
+    "controls": [
+      {
+        "label": "GLDT swap canister (minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The GLDT swap canister holds minting rights on the GLDT ledger and mints only when GLD NFTs are locked (100 GLDT per gram); reverse swaps burn GLDT and release NFTs, so supply is collateral-bounded by locked gold NFTs.",
+        "evidence": "Gold DAO docs state the GLDT swap canister has minting rights to the GLDT ledger and mints new GLDT when GLD NFTs are locked at a fixed 100 GLDT per gram ratio."
+      },
+      {
+        "label": "Gold DAO SNS governance (canister controller)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Internet Computer SNS DAO is the controlling authority of the GLDT swap and ledger canisters and can upgrade their code; GLDT is issued and governed by the Gold DAO.",
+        "evidence": "Gold DAO docs state the SNS holds the controller key for the swap/ledger canisters and can push code upgrades, making GLDT a DAO-issued and DAO-governed token."
+      }
+    ],
+    "review": {
+      "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister that mints against locked GLD NFTs at a fixed gold ratio; there is no centralized off-chain issuer minter, but the SNS DAO can upgrade the canisters.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Gold DAO technology docs",
+          "url": "https://docs.gold-dao.org/gold-dao-whitepaper/technology/technology"
+        },
+        {
+          "label": "Gold DAO key canisters",
+          "url": "https://docs.gold-dao.org/other/key-canisters"
+        }
+      ],
+      "sourceFreeRationale": "Mint and SNS-governance model confirmed from Gold DAO docs; specific canister principal IDs and live SNS controller state not independently verified.",
+      "unresolvedQuestions": [
+        "Confirm the live SNS controller/governance canister state for the GLDT swap and ledger canisters before raising confidence."
+      ]
+    }
+  }
 }

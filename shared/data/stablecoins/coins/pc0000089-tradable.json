@@ -67,5 +67,34 @@
       "title": "Contract-priced private credit",
       "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "PC0000089 is a Tradable-issued private-credit instrument on zkSync backed by Latin American residential lending; tokens are minted only by Tradable's permissioned, KYC/KYB-gated issuance contracts for verified investors.",
+    "controls": [
+      {
+        "label": "Tradable issuance/deal-representation contracts (zkSync)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "zksync",
+        "canRaiseCap": "unknown",
+        "evidence": "Tradable operates permissioned smart contracts for deal representation with AML/KYC/KYB/KYT gating; primary issuance of the note token is controlled by Tradable for verified investors, with no permissionless mint."
+      }
+    ],
+    "review": {
+      "evidence": "Tradable tokenizes institutional private-credit deals on zkSync through permissioned, compliance-gated issuance contracts; the note is minted by Tradable's issuer rails for KYC/KYB-verified investors and is contract-priced at $1 par with no permissionless or user-collateralized mint route.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Tradable",
+          "url": "https://www.tradable.xyz/"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain minter/admin role on the zkSync note contract before raising confidence."]
+    }
+  }
 }

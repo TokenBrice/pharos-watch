@@ -80,6 +80,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "EURS is issued by STSS (Malta) Limited / STASIS; tokens are minted on euro deposit and redeemed by sending EURS to the issuer treasury wallet, after which euros are paid out and the returned tokens are frozen or burned, all through the issuer's controlled backend.",
+    "controls": [
+      {
+        "label": "STASIS / STSS (Malta) treasury and issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "STASIS mints EURS against euro balances at licensed EU institutions; redemption routes tokens to the treasury wallet where they are frozen or burned. Supply is issuer-controlled with no permissionless mint route."
+      }
+    ],
+    "review": {
+      "evidence": "STASIS documentation describes a single centralized issuer minting EURS against custodied euro reserves with treasury-wallet redemption and freeze/burn; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "STASIS Transparency", "url": "https://stasis.net/transparency" }
+      ],
+      "sourceFreeRationale": "Classification based on issuer model in project materials; the on-chain owner/minter admin on Ethereum/Polygon and the Stellar issuer account were not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin (Ethereum/Polygon) and Stellar issuer account for EURS before raising confidence."]
+    }
+  },
   "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [

@@ -148,5 +148,42 @@
       "title": "Multi-chain fund with limited on-chain telemetry",
       "message": "BENJI is the multi-chain share token of Franklin Templeton's FOBXX money market fund. Pharos tracks the Ethereum, Stellar, Polygon, Arbitrum, Avalanche, Aptos, Base, and Solana deployments; BNB Chain and Canton issuances are not yet integrated. Live reserves use a curated weekly snapshot of the official fund factsheet until an on-chain NAV oracle becomes available."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BENJI is the on-chain share record for Franklin Templeton's FOBXX SEC-registered government money market fund; Franklin Templeton acts as transfer agent, minting/burning shares to KYC-verified Benji wallets on subscription and redemption.",
+    "controls": [
+      {
+        "label": "Franklin Templeton transfer-agent issuance",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Franklin Templeton operates Benji as FOBXX's transfer agent, recording share issuance and redemption on-chain and rebasing share counts for yield; transfers are restricted to KYC-verified holders and the issuer holds freeze/burn authority. No permissionless mint route exists.",
+        "sources": [
+          {
+            "label": "Franklin Templeton FOBXX",
+            "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Franklin Templeton FOBXX",
+          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+        }
+      ],
+      "evidence": "Franklin Templeton materials describe BENJI as the on-chain share record of the '40-Act-registered FOBXX fund with Franklin as transfer agent controlling permissioned issuance, freeze, and burn; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer/transfer-agent model established from Franklin Templeton materials; per-chain on-chain token owner/minter admin not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin across Aptos, Arbitrum, Avalanche, Base, Ethereum, Polygon, Solana, and Stellar before raising confidence."
+      ]
+    }
+  }
 }

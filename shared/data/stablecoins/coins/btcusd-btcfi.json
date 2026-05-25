@@ -50,6 +50,44 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "BtcUSD is minted from Liquity-v1-style CDP vaults when users overcollateralize with BTC variants (WBTC, BTCB, cbBTC, native BTC); the BTCfi/Bifrost team administers the deployment and tunes vault parameters.",
+    "controls": [
+      {
+        "label": "BTCfi CDP vault (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Mint bounded by the per-vault overcollateralization ratio against BTC-variant collateral, with liquidation below the minimum ratio.",
+        "canRaiseCap": "unknown",
+        "evidence": "BtcUSD is minted by depositing BTC variants into overcollateralized Liquity-v1-style CDP vaults with liquidation mechanisms, per BTCfi materials."
+      },
+      {
+        "label": "BTCfi / Bifrost protocol admin",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "The BTCfi (Bifrost Network) team administers the deployment and configures accepted collateral and vault parameters; classified centralized-dependent in coin metadata."
+      }
+    ],
+    "review": {
+      "evidence": "BTCfi docs describe an overcollateralized BTC-backed CDP minting BtcUSD via Liquity-v1-style vaults on Bifrost/Base; the project is operator-administered with no independent on-chain renouncement confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "BTCfi docs",
+          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+        }
+      ],
+      "sourceFreeRationale": "CDP mechanism confirmed from BTCfi/Bifrost materials; on-chain vault admin owner and any renouncement not independently resolved, so immutable classification is not asserted.",
+      "unresolvedQuestions": ["Resolve the on-chain BtcUSD minter/vault admin and whether owner() is renounced before raising confidence."]
+    }
+  },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [

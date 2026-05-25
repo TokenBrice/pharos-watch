@@ -85,5 +85,48 @@
       "title": "Active depeg",
       "message": "WEUSD has been trading near $0.91 despite documented 1:1 USDT backing; redemption pipeline may be impaired."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via an AccessControl token whose MINTER_ROLE is held by PicWe's mint/redeem contract; minting is permissioned to the issuer, and the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
+    "controls": [
+      {
+        "label": "PicWe WEUSD MINTER_ROLE / mint-redeem contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "BscScan shows the WEUSD token uses OpenZeppelin AccessControl with DEFAULT_ADMIN_ROLE and a MINTER_ROLE-gated mint(address,uint256); the deployer 0xc12233455beac4e094a5de022be692a264c0c0bc initially holds DEFAULT_ADMIN_ROLE and can grant the MINTER_ROLE, and PicWe docs name a dedicated mint/redeem contract (0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C) as the issuance handler.",
+        "sources": [
+          {
+            "label": "BscScan WEUSD contract",
+            "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "WEUSD is PicWe's omni-chain settlement currency minted/redeemed via PicWe's protocol; the token contract is OpenZeppelin AccessControl with a MINTER_ROLE gating mint, and the basket economic model (about 9 USDT + 1 MOVE per 10 WEUSD) is the documented reason for the sub-$1 floor rather than a pure 1:1 USDT wrapper.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "BscScan WEUSD contract",
+          "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+        },
+        {
+          "label": "PicWe WEUSD docs",
+          "url": "https://docs.picwe.org/what-is-weusd"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the current MINTER_ROLE holder address(es) via RoleGranted logs and whether DEFAULT_ADMIN_ROLE is held by an EOA, multisig, or Safe."
+      ]
+    }
+  }
 }

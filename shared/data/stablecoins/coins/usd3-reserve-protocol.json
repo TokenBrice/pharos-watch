@@ -153,5 +153,43 @@
   "yieldConfig": {
     "yieldSource": "Reserve Protocol collateral yield",
     "yieldType": "nav-appreciation"
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USD3 is a Reserve Protocol Yield RToken/DTF: anyone can permissionlessly mint by depositing the governed collateral basket and redeem for it, while RSR stakers govern the basket composition and parameters via the RToken's Governor and provide first-loss overcollateralization.",
+    "controls": [
+      {
+        "label": "USD3 RToken mint/redeem (BasketHandler)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "capDescription": "Permissionless mint requires depositing the full governed collateral basket in proportion; mint/redeem are throttled by protocol issuance/redemption rate limits.",
+        "evidence": "Reserve docs describe RTokens as permissionlessly minted by depositing the governed basket and redeemed for it, with the BasketHandler defining basket composition and issuance throttles holding the NAV peg via arbitrage."
+      },
+      {
+        "label": "RSR stakers / RToken Governor (Governor Anastasius)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Reserve docs describe RSR stakers governing the USD3 Yield DTF via its Governor (basket composition, parameters, upgrades) and providing first-loss, slashable overcollateralization."
+      }
+    ],
+    "review": {
+      "evidence": "Reserve Protocol documentation describes USD3 as a Yield RToken/DTF with permissionless basket-backed mint/redeem governed by RSR stakers through the RToken's Governor; on-chain Governor/owner addresses were not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Reserve Yield DTF overview", "url": "https://reserve.org/protocol/yield_dtfs/overview/" },
+        { "label": "Introducing USD3 (Reserve forum)", "url": "https://forum.reserve.org/t/rfc-introducing-usd3/691" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the on-chain Governor/owner and any guardian/pauser roles on the USD3 RToken deployments (Ethereum and Base).",
+        "Confirm current issuance/redemption throttle parameters."
+      ]
+    }
   }
 }

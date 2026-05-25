@@ -76,5 +76,54 @@
       "title": "DefiLlama vs CoinGecko supply mismatch",
       "message": "DefiLlama (llamaId 135) now includes Agoric-native and Osmosis IST rows, but still differs from CoinGecko's cross-chain supply treatment. Pharos uses the DefiLlama series as the primary feed; reserve dependency scoring keeps the mixed USDC/USDT/DAI PSM slice unlinked until the live source exposes stablecoin-level weights."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "IST is minted on Agoric two ways: Inter Protocol vaults against overcollateralized IBC crypto collateral, and the Parity Stability Module swapping approved IBC stablecoins 1:1; BLD stakers and an elected Economic Committee govern parameters, mint limits, and emergency pauses.",
+    "controls": [
+      {
+        "chain": "agoric",
+        "label": "Inter Protocol vaults + PSM (minter contracts)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "IST mints only via overcollateralized Inter Protocol vaults or the PSM (1:1 against approved IBC stablecoins), each subject to a governance-set MintLimit; there is no centralized issuer minter.",
+        "evidence": "Inter Protocol docs describe IST minting through overcollateralized vaults and a Parity Stability Module, each with a governance-set mint limit."
+      },
+      {
+        "chain": "agoric",
+        "label": "BLD stakers + Economic Committee governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BLD stakers approve collateral onboarding and contract upgrades; the elected Economic Committee sets risk parameters and PSM/vault mint limits and can pause contracts in emergencies.",
+        "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing."
+      }
+    ],
+    "review": {
+      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Inter Protocol governance docs",
+          "url": "https://docs.inter.trade/inter-protocol-system-documentation/protocol-and-chain-governance"
+        },
+        {
+          "label": "Inter Protocol docs",
+          "url": "https://docs.inter.trade/"
+        }
+      ],
+      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from Inter Protocol docs; the live on-chain Economic Committee membership and governance contract state were not independently read.",
+      "unresolvedQuestions": [
+        "Resolve the current on-chain Economic Committee membership and governance/timelock contract authority before raising confidence."
+      ]
+    }
+  }
 }

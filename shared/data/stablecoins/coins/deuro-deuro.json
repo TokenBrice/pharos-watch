@@ -68,6 +68,49 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "DEURO is minted permissionlessly by users opening overcollateralized, oracle-free positions in Frankencoin-style minting modules; contracts are immutable but nDEPS protocol-share holders can veto proposals, adjust the savings rate, and approve new minting modules.",
+    "controls": [
+      {
+        "label": "Frankencoin-style minting module (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "capDescription": "Mint bounded by per-position overcollateralization with oracle-free auction liquidation; users self-mint against approved collateral.",
+        "canRaiseCap": "unknown",
+        "evidence": "Anyone can mint dEURO by overcollateralizing crypto in immutable minting-module contracts using the Frankencoin oracle-free auction model."
+      },
+      {
+        "label": "nDEPS veto governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "Protocol-share (nDEPS) holders use Frankencoin-style veto governance to approve new minting modules and adjust parameters such as the savings rate; new modules can be added that gain mint capability, so the admin surface is not fully renounced."
+      }
+    ],
+    "review": {
+      "evidence": "dEURO is a Frankencoin v2024 fork: contracts are immutable and DFX retains no direct control, but the main contract can onboard new minting modules via nDEPS veto governance, which is a bounded but real authorization surface.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "dEURO docs",
+          "url": "https://docs.deuro.com/"
+        },
+        {
+          "label": "Frankencoin governance docs",
+          "url": "https://docs.frankencoin.com/governance"
+        }
+      ],
+      "sourceFreeRationale": "Immutable-contract + veto-governance model confirmed from dEURO/Frankencoin docs; exact deployed module set and nDEPS quorum not independently read on-chain.",
+      "unresolvedQuestions": ["Enumerate the currently approved dEURO minting modules and the nDEPS veto quorum on-chain."]
+    }
+  },
   "deploymentModel": "canonical-bridge",
   "reserves": [
     {

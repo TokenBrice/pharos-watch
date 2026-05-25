@@ -64,5 +64,33 @@
       "risk": "low",
       "coinId": "cetes-etherfuse"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "MXNe is issued by Brale (FinCEN MSB / state money transmitter) in partnership with Etherfuse; approved businesses mint and redeem 1:1 directly from their Brale accounts against CETES-backed reserves, so supply creation runs entirely through the issuer's permissioned backend.",
+    "controls": [
+      {
+        "label": "Brale issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "base",
+        "address": "0x269cae7dc59803e5c596c95756faeebb6030e0af",
+        "canRaiseCap": "unknown",
+        "evidence": "Brale mints and burns MXNe for KYC-onboarded businesses minting/redeeming 1:1 with USDC/USDP directly in Brale accounts; issuance is fully permissioned by the issuer with no open mint route."
+      }
+    ],
+    "review": {
+      "evidence": "Brale (registered MSB, NMLS #2376957) operates the centralized mint/redeem for MXNe across Base, Solana, and Stellar, backed by Etherfuse CETES stablebonds; only Brale-onboarded businesses can mint/redeem, so supply is issuer-controlled with no permissionless route. On-chain mint authority not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Brale MXNe", "url": "https://brale.xyz/stablecoins/MXNe" },
+        { "label": "Brale: Introducing MXNe", "url": "https://brale.xyz/blog/introducing-mxne" }
+      ],
+      "unresolvedQuestions": ["Read the on-chain minter/owner role on Base and the Solana/Stellar mint authorities to confirm Brale control before raising confidence."]
+    }
+  }
 }

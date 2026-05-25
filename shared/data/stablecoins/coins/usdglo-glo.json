@@ -109,6 +109,47 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "USDGLO (Glo Dollar) is issued by Brale, a FinCEN-registered MSB / state money transmitter; minting and redemption run 1:1 through Brale's centralized backend against cash and US government debt, with reserve yield directed to charity.",
+    "controls": [
+      {
+        "label": "Brale issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Brale operates the centralized 1:1 mint/redeem for USDGLO for eligible Brale customers against segregated cash and US government-backed debt; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "Brale USDGLO proof of reserve",
+            "url": "https://brale.xyz/stablecoins/USDGLO"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Brale (FinCEN MSB / money transmitter, NMLS #2376957) is the issuer of USDGLO; mint/redeem is centralized 1:1 through Brale against segregated reserves with monthly CPA attestations. No permissionless mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Brale USDGLO proof of reserve",
+          "url": "https://brale.xyz/stablecoins/USDGLO"
+        },
+        {
+          "label": "Glo Dollar smart contract addresses",
+          "url": "https://www.glodollar.org/articles/smart-contract-addresses"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Brale/Glo Dollar materials; on-chain token owner/minter admin and proxy admin across chains not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain USDGLO token owner/minter admin and proxy admin across deployed chains before raising to verified."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "Cash and cash equivalents",

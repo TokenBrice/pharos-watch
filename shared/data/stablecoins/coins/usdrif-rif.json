@@ -68,5 +68,52 @@
       "pct": 100,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDRIF is minted by users against overcollateralized RIF (and, since V3, DOC) collateral via the RIF On Chain (Money on Chain) protocol on Rootstock; on-chain governance tunes parameters and upgrades contracts through the MoC Governor/Changer pattern on upgradeable proxies.",
+    "controls": [
+      {
+        "label": "RIF On Chain (MoC) mint/redeem contracts",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "chain": "rootstock",
+        "address": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+        "capDescription": "Users mint USDRIF by depositing RIF/DOC collateral subject to the protocol's overcollateralization rules; the V3 Multi-Collateral Guard manages collateral across buckets.",
+        "evidence": "RIF On Chain docs/Rootstock coverage describe users minting USDRIF against RIF collateral via the MoC-architecture dApp; V3 added DOC as second collateral and a Multi-Collateral Guard, preserving the core mint/redeem logic.",
+        "sources": [
+          { "label": "How to mint USDRIF", "url": "https://wiki.rifonchain.com/getting-started/how-to-get-tokens/how-to-mint-rdoc" }
+        ]
+      },
+      {
+        "label": "MoC Governor / Changer governance",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "RIF On Chain uses the Money on Chain Governor/Changer pattern: parameter changes and proxy upgrades are executed on-chain via changer contracts after community votes (e.g., V2.0 and V3 upgrades were governance-executed proxy upgrades).",
+        "sources": [
+          { "label": "USDRIF V2.0 upgrade", "url": "https://rif.technology/content-hub/usdrif-v2/" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USDRIF is an overcollateralized crypto-backed stablecoin on the Money on Chain architecture (Rootstock). Minting is user-initiated against RIF/DOC collateral; governance runs through MoC Governor/Changer contracts on upgradeable proxies, giving governance parameter and upgrade authority over the mint system.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Rootstock: Introducing USDRIF", "url": "https://rootstock.io/blog/new-stablecoin-protocol-launched-on-rootstock-introducing-usdrif/" },
+        { "label": "MoC integration docs", "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc" }
+      ],
+      "sourceFreeRationale": "MoC mint/governance architecture confirmed from RIF/Rootstock docs and coverage; the on-chain Governor admin (multisig/timelock vs EOA) and proxy admin were not independently read.",
+      "unresolvedQuestions": [
+        "Resolve the MoC Governor/proxy-admin controller on Rootstock (multisig/timelock vs EOA) and the Arbitrum bridge/mint authority before raising confidence."
+      ]
+    }
+  }
 }

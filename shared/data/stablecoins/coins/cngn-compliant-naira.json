@@ -84,6 +84,32 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "cNGN is issued by WrappedCBDC Ltd under the Africa Stablecoin Consortium and SEC Nigeria oversight; tokens are minted by the consortium treasury through a multi-party-authorized mint request after naira is deposited at partner banks, and burned on redemption.",
+    "controls": [
+      {
+        "label": "Africa Stablecoin Consortium issuance backend (multi-party authorized)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Mint requests require treasury verification of the naira deposit plus approval by several authorized staff before tokens are created; burn occurs on redemption. Authorized exchange partners can also mint/burn against consortium reserves. Supply is fully issuer/consortium-controlled with no permissionless route."
+      }
+    ],
+    "review": {
+      "evidence": "cNGN coverage and issuer materials describe a fully reserved consortium mint-and-burn with multi-party authorization tied to naira bank deposits across its multi-chain deployments; no user-collateralized or permissionless mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "cNGN docs", "url": "https://docs.cngn.co/integrations/contract-addresses" }
+      ],
+      "sourceFreeRationale": "Classification based on consortium issuer model in project materials/coverage; the on-chain minter/owner admin on each chain (and the Solana mint authority) was not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain minter/owner admin per chain and the Solana SPL mint authority for cNGN before raising confidence."]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",

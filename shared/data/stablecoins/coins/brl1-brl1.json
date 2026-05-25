@@ -93,5 +93,42 @@
       "label": "Brazilian Treasury ETFs, repo agreements, and cash equivalents",
       "risk": "medium"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BRL1 is issued by a consortium of Brazilian exchanges (Bitso, Mercado Bitcoin, Foxbit, Cainvest); whitelisted institutional partners deposit BRL via PIX to mint and redeem 1:1 through the issuer backend against a BRL reserve portfolio.",
+    "controls": [
+      {
+        "label": "BRL1 consortium issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Mint/burn restricted to whitelisted institutional partners who deposit BRL via PIX; the consortium backend creates BRL1 supply against custodied BRL reserves. No permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "BRL1",
+            "url": "https://brl1.io/en/"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "BRL1",
+          "url": "https://brl1.io/en/"
+        }
+      ],
+      "evidence": "BRL1 materials describe issuance by a consortium of Bitso, Mercado Bitcoin, Foxbit, and Cainvest, with mint/redeem limited to whitelisted institutional clients against BRL reserves; Fact Finance provides proof of reserves.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer/consortium model established from project materials; the on-chain Polygon token owner/minter admin was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain Polygon token owner/minter admin (0x5c06...40b5) and any proxy admin before raising confidence."
+      ]
+    }
   }
 }

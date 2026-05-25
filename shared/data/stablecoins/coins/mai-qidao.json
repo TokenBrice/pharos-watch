@@ -158,5 +158,50 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "MAI is minted across 15 chains by borrowing against overcollateralized QiDao vault positions; QiDao governance (QI holders) plus an admin multisig control vault onboarding, debt ceilings, and risk parameters.",
+    "controls": [
+      {
+        "chain": "polygon",
+        "label": "QiDao vault/minter contracts",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MAI is minted only by borrowers against overcollateralized QiDao vaults under per-vault debt ceilings; supply expands and contracts with collateralized borrowing and repayment/liquidation, not an issuer minter.",
+        "evidence": "QiDao docs describe borrowers minting MAI against overcollateralized vault positions and repaying or being liquidated per market rules across supported chains."
+      },
+      {
+        "chain": "polygon",
+        "label": "QiDao governance + admin multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "QiDao governance (QI holders) and an admin multisig onboard new vaults, set debt ceilings and risk parameters, and can authorize new minting vaults across the 15 supported chains.",
+        "evidence": "QiDao governance (QI) plus an admin multisig administer vault onboarding and debt-ceiling/risk parameters; MAI metadata records a direct admin/upgrade control surface beyond reserve-only exposure."
+      }
+    ],
+    "review": {
+      "evidence": "QiDao documentation describes MAI as an overcollateralized multi-chain CDP stablecoin minted from vault positions, with QI governance and an admin multisig controlling vault onboarding and debt ceilings.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "QiDao docs",
+          "url": "https://docs.mai.finance/"
+        }
+      ],
+      "sourceFreeRationale": "CDP mint mechanism and QI-governance/multisig control confirmed from QiDao docs; the admin multisig signer set/threshold and per-chain vault admins were not independently read on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the QiDao admin multisig (signers, threshold) and per-chain vault/minter authorization addresses before raising confidence."
+      ]
+    }
   }
 }

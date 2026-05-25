@@ -53,6 +53,44 @@
     "reviewer": "Codex DefiLlama path addition",
     "reviewedAt": "2026-05-14"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "EURO3 is minted from user-owned 3A Vaults on Polygon and Linea against whitelisted crypto and stablecoin collateral; the 3A DAO governs the accepted collateral whitelist and redemption/risk parameters.",
+    "controls": [
+      {
+        "label": "3A Vault contracts (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Mint bounded by per-vault overcollateralization against whitelisted collateral; users repay to burn EURO3 and redemptions are allowed under protocol conditions.",
+        "canRaiseCap": "unknown",
+        "evidence": "Users mint EURO3 loans against approved collateral in 3A Vaults and burn EURO3 on repayment, per 3A docs."
+      },
+      {
+        "label": "3A DAO governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "The 3A DAO governs the whitelisted collateral set and redemption/risk parameters; it tunes parameters rather than minting directly."
+      }
+    ],
+    "review": {
+      "evidence": "3A docs describe EURO3 as an overcollateralized vault stablecoin on Polygon and Linea with DAO-governed collateral whitelisting and redemption mechanics; no centralized direct-mint route is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "3A docs: EURO3 coin",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+        }
+      ],
+      "sourceFreeRationale": "Vault mechanism and DAO governance confirmed from 3A docs; on-chain vault admin owner and DAO execution path not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the on-chain 3A vault admin/owner and DAO execution authority on Polygon/Linea."]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",

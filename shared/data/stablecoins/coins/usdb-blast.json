@@ -85,5 +85,45 @@
   "yieldConfig": {
     "yieldSource": "Blast native yield",
     "yieldType": "governance-set"
+  },
+  "mintAuthority": {
+    "mintPath": "bridge-or-oft-synthetic",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDB is the Blast L2 native dollar minted by the OP-stack L1 standard bridge / stablecoin yield manager: stablecoins (USDC/USDT/DAI) deposited into Blast's L1 bridge are escrowed and routed to MakerDAO/DSR while USDB is minted as an OptimismMintableERC20 on Blast, redeemable on bridging back.",
+    "controls": [
+      {
+        "label": "Blast L1 standard bridge / stablecoin yield manager",
+        "role": "bridge-admin",
+        "authorityType": "bridge",
+        "directMintAbility": "direct",
+        "chain": "blast",
+        "address": "0xa230285d5683C74935aD14c446e137c8c8828438",
+        "canRaiseCap": "unknown",
+        "capDescription": "USDB supply tracks stablecoins escrowed in the L1 bridge/yield manager; mint/burn is driven by L1 deposits and withdrawals, not a fixed cap.",
+        "evidence": "Blast docs describe USDB (0x4300...0003) as an OptimismMintableERC20 minted/burned by the L1 standard bridge when stablecoins are deposited/withdrawn, with a stablecoin yield-manager contract escrowing funds into MakerDAO DSR; the yield-manager address is read from this coin's liveReservesConfig params."
+      },
+      {
+        "label": "Blast bridge operators (Blast multisig)",
+        "role": "bridge-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "evidence": "L2BEAT and Blast docs describe Blast operators controlling the bridge and yield-provider configuration that backs USDB; this is a privileged admin surface rather than a permissionless user-collateralized mint."
+      }
+    ],
+    "review": {
+      "evidence": "Blast documentation and L2BEAT describe USDB as a bridge-minted OP-stack stablecoin: deposits into the L1 bridge mint USDB on Blast while a yield manager escrows the stablecoins into MakerDAO DSR; this is a bridge/synthetic mint, not the proposed user-collateralized CDP. On-chain bridge/multisig admin not independently confirmed beyond the yield-manager address already in this file.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Blast docs", "url": "https://docs.blast.io/" },
+        { "label": "Blast on L2BEAT", "url": "https://l2beat.com/scaling/projects/blast" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the bridge/yield-manager owner and the Blast operator multisig threshold and signer set on-chain.",
+        "Confirm whether the OptimismMintableERC20 minter is solely the L1 bridge predeploy."
+      ]
+    }
   }
 }

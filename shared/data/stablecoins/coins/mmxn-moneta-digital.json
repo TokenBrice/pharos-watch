@@ -101,5 +101,34 @@
       "title": "Curated reserves are self-reported",
       "message": "The curated-validated live-reserves adapter currently points at the issuer website root because no third-party attestation page has been verified for MMXN. Until an independent auditor or proof-of-reserves feed is published, the reserve composition reflects Moneta Digital's own disclosure only."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "MMXN is issued by Moneta Digital against self-reported MXN bank reserves; the verified ERC-20 contract is mintable/burnable/pausable with role-gated minters, so supply is created at the issuer's discretion through privileged minter roles.",
+    "controls": [
+      {
+        "label": "Moneta Digital minter role (ERC20Mintable)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x95c2e7cbc7ae370e28160bd04297c53f96d092b4",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Etherscan-verified non-proxy ERC-20 implements mint()/burn()/pause with addMinter/renounceMinter and addPauser/renouncePauser role management; new MMXN is created by issuer-held minter roles against off-chain MXN reserves."
+      }
+    ],
+    "review": {
+      "evidence": "Moneta Digital operates a centralized 1:1 mint/redeem against MXN bank deposits, and the on-chain token (Etherscan-verified) exposes mintable/burnable/pausable functionality gated by minter/pauser roles held by the issuer; no permissionless or user-collateralized mint route exists. Live role holders not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Etherscan MMXN token (verified source: Mintable/Burnable/Pausable)", "url": "https://etherscan.io/token/0x95c2e7cbc7ae370e28160bd04297c53f96d092b4#code" },
+        { "label": "Moneta Digital website", "url": "https://monetadigital.com/" }
+      ],
+      "unresolvedQuestions": ["Resolve the live minter/pauser role holders and the Tron deployment's mint authority before raising confidence."]
+    }
+  }
 }

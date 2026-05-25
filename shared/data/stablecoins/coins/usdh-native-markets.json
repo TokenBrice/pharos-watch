@@ -70,6 +70,47 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDH is designed by Native Markets and issued by Bridge Building, Inc. (a Stripe company, FinCEN MSB); minting and redemption run 1:1 through Bridge's centralized backend against cash, US Treasuries, repos, and tokenized treasuries with monthly attestations.",
+    "controls": [
+      {
+        "label": "Bridge (Stripe) issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Bridge Building, Inc. operates the 1:1 mint/redeem for USDH against high-quality liquid reserves; supply is created by the issuer backend rather than any permissionless or user-collateralized route.",
+        "sources": [
+          {
+            "label": "USDH reserves",
+            "url": "https://usdh.com/reserves"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USDH is issued by Bridge Building, Inc. (a Stripe company, FinCEN MSB) and designed by Native Markets; mint/redeem is centralized 1:1 through Bridge against HQLA reserves with monthly BPM LLP attestations. No permissionless mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "USDH reserves",
+          "url": "https://usdh.com/reserves"
+        },
+        {
+          "label": "USDH docs",
+          "url": "https://docs.usdh.com"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from USDH/Bridge materials; the on-chain USDH token owner/minter admin on HyperEVM and HyperCore was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain USDH token owner/minter admin on HyperEVM (and HyperCore tokenId controller) before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "Short-term U.S. Treasuries (BlackRock-managed, JP Morgan custody)",

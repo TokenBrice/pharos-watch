@@ -72,6 +72,32 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "CADC is issued by Loon (a FINTRAC-registered MSB, formerly PayTrie); the issuer mints on CAD deposit and burns on redemption against segregated trust reserves through a centralized backend.",
+    "controls": [
+      {
+        "label": "Loon (CADC) issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Loon controls 1:1 mint on deposit and burn on redemption against CAD/short-term securities held in segregated trust; minting is issuer-operated with no permissionless route."
+      }
+    ],
+    "review": {
+      "evidence": "Loon/PayTrie documentation describes a single centralized issuer minting CADC against segregated CAD trust reserves with direct 1:1 redemption; no user-collateralized mint exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Loon Finance", "url": "https://loon.finance/" }
+      ],
+      "sourceFreeRationale": "Classification based on issuer model in project materials; on-chain owner/minter admin across deployments not independently resolved.",
+      "unresolvedQuestions": ["Resolve the on-chain owner/minter admin on the CADC contracts before raising confidence."]
+    }
+  },
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

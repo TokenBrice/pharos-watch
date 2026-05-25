@@ -69,6 +69,44 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "bnUSD is minted on ICON when users borrow against overcollateralized sICX (and bridged Hub) collateral through the Balanced Loans contract; the Balanced DAO governs collateral ratios, fees, and accepted collateral, with cross-chain balances circulating via xCall.",
+    "controls": [
+      {
+        "label": "Balanced Loans contract (CDP mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Mint bounded by the per-position collateral ratio against sICX/Hub collateral; 0.2% origination fee and 2% annualized interest.",
+        "canRaiseCap": "unknown",
+        "evidence": "Users borrow bnUSD against eligible collateral on the ICON Hub via the Balanced Loans contract, with liquidation enforced below the protocol collateral ratio."
+      },
+      {
+        "label": "Balanced DAO governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Balanced DAO governs collateral ratios, fees, accepted collateral, and xCall connections; it tunes parameters rather than minting directly."
+      }
+    ],
+    "review": {
+      "evidence": "Balanced docs describe a DAO-governed overcollateralized CDP on ICON where the Loans contract mints bnUSD against sICX and bridged Hub collateral; the same supply circulates cross-chain via xCall rather than via independent wrapper mints.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Balanced docs",
+          "url": "https://docs.balanced.network"
+        }
+      ],
+      "sourceFreeRationale": "CDP mechanism and DAO governance confirmed from Balanced docs/metadata; ICON Loans contract admin owner and DAO execution path not independently read on-chain.",
+      "unresolvedQuestions": ["Confirm the ICON Loans contract admin/owner and the Balanced DAO execution authority; track the v2 re-anchoring of issuance to Sonic."]
+    }
+  },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

@@ -52,6 +52,47 @@
   ],
   "deploymentModel": "single-chain",
   "custodyModel": "institutional-regulated",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "probable",
+    "summary": "SOFID is issued by SoFi Bank, N.A. (OCC-chartered) with BitGo Bank & Trust providing Stablecoin-as-a-Service; mint, burn, custody, and smart-contract management run through BitGo's centralized infrastructure against 1:1 USD reserves.",
+    "controls": [
+      {
+        "label": "BitGo issuance backend (Stablecoin-as-a-Service for SoFi)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "BitGo Bank & Trust operates mint, burn, custody, and smart-contract management for SOFID on behalf of issuer SoFi Bank; supply is created 1:1 against cash at SoFi's Federal Reserve master account. No permissionless mint route.",
+        "sources": [
+          {
+            "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
+            "url": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "SoFi Bank, N.A. is the issuer; BitGo Bank & Trust provides the mint/burn/custody/smart-contract-management plumbing per BitGo's announcement. Centralized issuer-controlled mint against bank-held reserves, no permissionless path.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
+          "url": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+        },
+        {
+          "label": "SoFi launches fully reserved stablecoin",
+          "url": "https://investors.sofi.com/news/news-details/2025/SoFi-Launches-Fully-Reserved-Stablecoin-to-Power-Financial-Infrastructure-for-Banks-Fintechs-and-Enterprise-Partners/default.aspx"
+        }
+      ],
+      "sourceFreeRationale": "Issuer/operator mint model confirmed from BitGo and SoFi first-party materials; on-chain token owner/minter admin not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain SOFID token owner/minter admin (BitGo-managed contract) and proxy admin before raising to verified."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "USD cash and cash equivalents at SoFi Bank Federal Reserve master account",

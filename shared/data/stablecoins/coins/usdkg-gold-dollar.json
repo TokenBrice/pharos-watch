@@ -70,6 +70,47 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "deploymentModel": "native-multichain",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDKG is issued by Gold Dollar under a Kyrgyz Republic virtual-asset license; minting and redemption run 1:1 through the issuer (against USD, som, physical gold, or approved crypto) with mandatory KYC/AML, backed by physical LBMA gold bars.",
+    "controls": [
+      {
+        "label": "Gold Dollar issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Gold Dollar operates the centralized 1:1 mint/redeem for USDKG against custodied physical gold, with KYC/AML required for all redemptions; no permissionless or user-collateralized mint route exists.",
+        "sources": [
+          {
+            "label": "USDKG transparency",
+            "url": "https://www.usdkg.com/transparency"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Gold Dollar is the sole issuer of USDKG under Kyrgyz virtual-asset regulation; mint/redeem is centralized and KYC/AML-gated against physical gold reserves audited by Kreston Global. No permissionless mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "USDKG transparency",
+          "url": "https://www.usdkg.com/transparency"
+        },
+        {
+          "label": "USDKG website",
+          "url": "https://www.usdkg.com/"
+        }
+      ],
+      "sourceFreeRationale": "Issuer-controlled mint model confirmed from Gold Dollar materials; the on-chain USDKG token owner/minter admin on Tron and Ethereum was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain USDKG token owner/minter admin and proxy admin on Tron and Ethereum before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "Physical gold (LBMA Good Delivery bars)",

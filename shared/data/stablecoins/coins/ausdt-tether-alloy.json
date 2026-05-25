@@ -61,6 +61,50 @@
       "decimals": 6
     }
   ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "aUSDT is minted by KYC-verified, whitelisted users depositing XAUT into Tether's CMPVault at up to 75% MTV, but Tether centrally controls the whitelist (PermissionControl), can blacklist/freeze, and administers the upgradeable vault contracts.",
+    "controls": [
+      {
+        "label": "Alloy CMPVault (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "capDescription": "Mint capped at 75% maximum mint-to-value of deposited XAUT collateral per CMP.",
+        "canRaiseCap": "unknown",
+        "evidence": "Verified, whitelisted addresses mint aUSDT by depositing XAUT into the CMPVault up to a 75% MTV liquidation point; minting is permissionless only for KYC-passed addresses."
+      },
+      {
+        "label": "Tether PermissionControl whitelist + token admin",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "PermissionControl is the on-chain KYC whitelist gating who may mint; Tether (via Moon Gold El Salvador) administers the upgradeable contracts and retains blacklist/freeze authority over aUSDT."
+      }
+    ],
+    "review": {
+      "evidence": "Alloy docs and the published Ethereum-mainnet deployment describe a KYC-gated CMPVault mint with a PermissionControl whitelist and Tether-retained blacklist/freeze and upgrade authority, making minting user-collateralized but centrally gated.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Alloy Vaults docs",
+          "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults"
+        },
+        {
+          "label": "Alloy Ethereum Mainnet deployment",
+          "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet"
+        }
+      ],
+      "sourceFreeRationale": "Whitelist gating, freeze authority, and vault model confirmed from Alloy docs; exact contract-admin owner address and upgrade-admin threshold not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the on-chain CMPVault/PermissionControl admin owner and upgrade authority address for aUSDT."]
+    }
+  },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

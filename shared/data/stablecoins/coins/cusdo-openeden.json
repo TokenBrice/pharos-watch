@@ -88,6 +88,48 @@
     "yieldSource": "OpenEden cUSDO wrapper",
     "yieldType": "nav-appreciation"
   },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usdo-openeden",
+    "summary": "cUSDO is OpenEden's non-rebasing savings-passthrough wrapper of USDO; shares are minted when USDO is wrapped and do not create base USDO supply, so its mint authority is inherited from USDO (usdo-openeden).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "label": "OpenEden cUSDO wrapper token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "cUSDO shares are minted/burned by the OpenEden ERC-4626-style wrapper against USDO wrap/unwrap; this share accounting cannot create or destroy base USDO supply.",
+        "evidence": "Savings-passthrough wrapper: wrapping USDO mints cUSDO whose redeemable USDO per token grows via NAV appreciation; minting only follows USDO deposits and does not expand the parent USDO supply."
+      },
+      {
+        "label": "Inherited USDO (OpenEden) MINTER_ROLE mint path",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USDO supply is created via AccessControl MINTER_ROLE held by an EOA default-admin, the USDOExpressV2 mint/redeem contract, and a CCIP burn/mint token pool (permissioned-minter, concentrated-admin); cUSDO holds USDO and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "cUSDO (variantOf usdo-openeden, variantKind savings-passthrough) is a non-rebasing wrapper whose shares track wrapped USDO; base mint authority is the inherited USDO permissioned-minter path (concentrated-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "OpenEden cUSDO token docs",
+          "url": "https://docs.openeden.com/usdo/cusdo-token"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usdo-openeden, savings-passthrough, wrapper reserve); posture mirrors the USDO parent mint authority."
+    }
+  },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
     "version": 1,

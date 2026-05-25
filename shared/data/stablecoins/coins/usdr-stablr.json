@@ -100,5 +100,48 @@
       "label": "Cash & short-term government bonds",
       "risk": "very-low"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API against segregated cash and short-term EU government bond reserves, and the Ethereum token is an issuer-controlled upgradeable proxy.",
+    "controls": [
+      {
+        "label": "StablR upgradeable-proxy owner/admin (Ethereum)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Etherscan shows USDR is an EIP-1967 TransparentUpgradeableProxy (implementation 0x76E0BAEf381656d51d733cf9aa60d7bf8017f958) using OpenZeppelin upgradeable token contracts; proxy admin 0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c holds upgrade authority and StablR's issuance API mints/redeems against reserves, so mint creation is issuer-controlled.",
+        "sources": [
+          {
+            "label": "Etherscan USDR contract",
+            "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "USDR is a MiCAR-compliant EMT issued by StablR Ltd under MFSA EMI supervision, redeemable 1:1 via StablR's API; the Ethereum token is an OpenZeppelin upgradeable proxy with issuer-held admin, confirming centralized issuer mint against segregated cash and short-term government bond reserves.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Etherscan USDR contract",
+          "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
+        },
+        {
+          "label": "StablR USDR page",
+          "url": "https://www.stablr.com/usdr"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Confirm whether the proxy admin and the implementation's mint privilege are held by an EOA, multisig, or Safe, and the exact minter role configuration."
+      ]
+    }
   }
 }

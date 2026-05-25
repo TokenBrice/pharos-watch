@@ -88,5 +88,33 @@
       "title": "Contract-priced strategy token",
       "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats MGLOBAL as a NAV-priced tokenized certificate."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "mGLOBAL is a Midas tokenized certificate; new units are minted only by Midas's permissioned issuance role (MINT_OPERATOR_ROLE) when greenlisted users deposit through the Midas DepositVault, with NAV conversion settled off-chain by the issuer.",
+    "controls": [
+      {
+        "label": "Midas issuance manager (MINT_OPERATOR_ROLE / DepositVault)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Midas vault architecture mints the certificate token via a permissioned MINT_OPERATOR_ROLE through the DepositVault against greenlisted deposits; conversion rate is set off-chain by the issuer and token/vault contracts are upgradeable behind MidasAccessControl."
+      }
+    ],
+    "review": {
+      "evidence": "Midas certificates are minted and redeemed exclusively through Midas's permissioned DepositVault/RedemptionVault contracts gated by MidasAccessControl roles (greenlist + mint operator); no permissionless or user-collateralized mint route exists. On-chain owner/role holders not independently read.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Midas docs", "url": "https://docs.midas.app/" },
+        { "label": "Midas mGLOBAL", "url": "https://midas.app/mglobal" },
+        { "label": "Sherlock Midas audit (vault/access-control architecture)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+      ],
+      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."]
+    }
+  }
 }

@@ -49,6 +49,31 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "USDA is issued by Anzens, a FinCEN-registered MSB; minting and redemption run 1:1 through Anzens' centralized backend via KYC-verified bank transfers against USD cash and Treasuries custodied at BitGo Trust on Cardano.",
+    "controls": [
+      {
+        "label": "Anzens issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Anzens mints/burns USDA 1:1 against segregated USD reserves and Treasuries custodied at BitGo Trust, gated by KYC bank transfers; no permissionless or user-collateralized mint route exists on the Cardano native policy."
+      }
+    ],
+    "review": {
+      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. No permissionless mint path is described in project materials.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classification based on the Anzens issuer model in project materials; the Cardano native-asset minting policy controller and any policy keys were not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the Cardano minting-policy controller / policy keys for USDA before raising confidence."
+      ]
+    }
+  },
   "reserves": [
     {
       "name": "USD cash deposits",

@@ -46,6 +46,48 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "ebUSD is minted from Liquity-v2-style CDP branches on Ethereum and Plasma when users open troves against weETH, sUSDe, WBTC, LBTC, and stcUSD at user-set interest rates; Ebisu is a licensed friendly fork that modified core (per-branch redemption fees) and is not confirmed-immutable.",
+    "controls": [
+      {
+        "label": "Ebisu CDP branch contracts (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Mint bounded per branch by collateral ratio and Liquity-v2-style redemption/liquidation; users set their own interest rate.",
+        "canRaiseCap": "unknown",
+        "evidence": "ebUSD is minted via Liquity-v2-style branches with user-set interest rates and redemptions, deployed natively on Ethereum and Plasma."
+      },
+      {
+        "label": "Ebisu protocol admin / governance",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Liquity friendly forks may implement mutability; Ebisu modified core (per-branch redemption fees, Chainlink oracle standard) and administers branch onboarding/parameters, so renouncement is not confirmed and immutable classification is not asserted."
+      }
+    ],
+    "review": {
+      "evidence": "Ebisu is a licensed Liquity-v2 friendly fork minting ebUSD from overcollateralized branches on Ethereum and Plasma; the fork program lets forks add mutability and Ebisu modified core logic, so the admin surface is treated as bounded but present rather than renounced.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Liquity Friendly Fork Program",
+          "url": "https://docs.liquity.org/v2-documentation/friendly-fork-program"
+        },
+        {
+          "label": "Ebisu website",
+          "url": "https://ebisu.money/"
+        }
+      ],
+      "sourceFreeRationale": "Liquity-v2 fork mechanism confirmed; Ebisu's exact admin/upgrade owner, multisig threshold, and immutability status not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve Ebisu's on-chain branch admin/owner and whether ownership is renounced; if renounced, reconsider immutable-user-collateralized."]
+    }
+  },
   "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [

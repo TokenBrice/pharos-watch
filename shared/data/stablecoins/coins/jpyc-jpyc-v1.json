@@ -103,5 +103,43 @@
       "title": "Legacy token series",
       "message": "JPYC v1 is tracked separately from the current JPYC funds-transfer-token deployment."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "JPYC v1 is a non-upgradeable legacy ERC-20 ('JPYC is ERC20, owned') with an owner-restricted mint(address,uint256) function; JPYC Inc. as contract owner is the sole minter against yen reserves.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x2370f9d504c7a6e775bf6e14b3f12846b594cd53",
+        "label": "JPYC v1 owner/minter",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Verified source on Etherscan shows the v1 contract is 'JPYC is ERC20, owned' exposing an owner-restricted mint(address,uint256); the single owner (JPYC Inc.) controls all minting. Non-upgradeable, no proxy."
+      }
+    ],
+    "review": {
+      "evidence": "Etherscan-verified source for the JPYC v1 legacy contract (0x2370f9d5...594cd53) shows an 'owned' ERC-20 with an owner-gated mint function; JPYC Inc. is the FSA-regulated issuer holding the owner/minter role. No permissionless mint path exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Ethereum JPYC v1 contract",
+          "url": "https://etherscan.io/address/0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
+        },
+        {
+          "label": "JPYC GitHub",
+          "url": "https://github.com/jpycoin/jpyc"
+        }
+      ],
+      "sourceFreeRationale": "Owner() address was not read live on-chain in this pass; classification rests on the Etherscan-verified 'owned' source exposing the owner-gated mint function.",
+      "unresolvedQuestions": [
+        "Read owner() live on Ethereum, Polygon, and Gnosis to resolve the current JPYC v1 owner address and confirm it is the JPYC Inc. issuer key or a Safe/multisig."
+      ]
+    }
+  }
 }

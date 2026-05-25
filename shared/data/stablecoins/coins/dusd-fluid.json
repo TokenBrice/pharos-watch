@@ -71,5 +71,37 @@
       "title": "Self-reported on-chain reserves",
       "message": "Fluid Finance publishes the safeguarded-bank balance to Arbitrum via an oracle; reserves are not independently audited in real time."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "DUSD is issued by Fluid Finance SA; mint/redeem run through the issuer's whitelisted-wallet flow against USD safeguarded at European banks, with supply capped by an oracle-published verifiedOffchainAssetBalance.",
+    "controls": [
+      {
+        "label": "Fluid Finance issuance + reserve-balance oracle",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "capDescription": "Contract refuses to mint above verifiedOffchainAssetBalance, an oracle-published figure controlled by the issuer reflecting the attested treasury balance.",
+        "evidence": "Fluid materials describe a whitelisted-wallet mint/redeem against the issuer treasury; an issuer-controlled oracle publishes the safeguarded-bank balance on-chain, and the contract caps minted supply at that balance.",
+        "sources": [
+          { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Fluid Finance SA centrally issues DUSD against off-chain USD reserves; minting is bounded by an issuer-controlled oracle (verifiedOffchainAssetBalance) and redemption burns DUSD on-chain crediting USD to the user's IBAN. No permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Fluid DUSD", "url": "https://fluid.ch/dusd/" }
+      ],
+      "sourceFreeRationale": "Issuer/oracle model confirmed from project materials; on-chain proxy admin and oracle-update authority not independently resolved on Arbiscan.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain proxy admin / owner of 0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709 and the address authorized to update the reserve-balance oracle before raising confidence."
+      ]
+    }
+  }
 }

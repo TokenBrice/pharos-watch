@@ -70,5 +70,45 @@
       "pct": 10,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "uUSD is minted by Youves vaults on Tezos: users lock XTZ/tzBTC/USDt/SIRS collateral at collateral-specific target ratios to mint uUSD, and the Youves DAO contract (Murmuration-derived, YOU governance) is set as administrator over the minting engine, with a keyholder break-glass guardian.",
+    "controls": [
+      {
+        "label": "Youves minting engine / vault contracts",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "tezos",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint bounded by collateral-specific target ratios (e.g. ~200% XTZ, ~115% stablecoins) enforced by the Youves vault/engine with oracle-driven liquidation.",
+        "evidence": "Youves docs describe users opening vaults that lock collateral and mint uUSD against collateral-specific target ratios, with a price oracle setting liquidation thresholds."
+      },
+      {
+        "label": "Youves DAO contract (YOU governance) + break-glass guardian",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "chain": "tezos",
+        "canRaiseCap": "unknown",
+        "evidence": "Youves docs state the Murmuration-derived DAO contract is set as administrator over all Youves contracts (changing parameters via YOU-staker-voted Michelson lambdas), with a keyholder multisig retained as a break-glass guardian."
+      }
+    ],
+    "review": {
+      "evidence": "Youves documentation describes uUSD as an overcollateralized Tezos CDP whose minting engine is administered by the Murmuration-derived Youves DAO contract (YOU governance) with a keyholder break-glass guardian; the live on-chain admin wiring and guardian threshold were not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Youves governance docs", "url": "https://docs.youves.com/governance/Governance-Mechanism/" },
+        { "label": "Minting on youves (deep-dive)", "url": "https://medium.com/@youves/minting-on-youves-a-deep-dive-1d27dbefa5b7" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm on Tezos that the DAO contract is the sole admin of the minting engine and the current state of the keyholder break-glass guardian multisig.",
+        "Confirm live target/emergency collateral ratios per collateral type."
+      ]
+    }
+  }
 }

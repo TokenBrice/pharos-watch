@@ -96,5 +96,36 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Indonesia",
     "attestorLicense": "Public Accountant License No. AP. 1456"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "IDRT is issued by PT Rupiah Token Indonesia; all 1:1 mint and redemption runs through the issuer's KYC-gated centralized backend against IDR bank deposits.",
+    "controls": [
+      {
+        "label": "PT Rupiah Token Indonesia issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "PT Rupiah Token Indonesia operates centralized KYC-gated mint and redeem against custodied IDR bank deposits; a single regulated issuer controls supply creation."
+      }
+    ],
+    "review": {
+      "evidence": "Issuer materials and monthly CPA attestations describe IDRT as a centralized fiat-backed token with 1:1 issuer-operated mint/redeem after KYC; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Rupiah Token website",
+          "url": "https://www.rupiahtoken.com/"
+        }
+      ],
+      "sourceFreeRationale": "Classification based on the centralized issuer model described in project materials; on-chain token owner/minter admin across Ethereum, BSC, Harmony, and Polygon was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin and any proxy admin for IDRT across its deployments before raising confidence."
+      ]
+    }
   }
 }

@@ -107,5 +107,30 @@
     "yieldType": "nav-appreciation"
   },
   "chainTier": "ethereum",
-  "deploymentModel": "native-multichain"
+  "deploymentModel": "native-multichain",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "AZND is a KYC-gated, NAV-bearing fund token issued by Mu Digital against a MAS-regulated Asia credit fund; the issuer mints 1:1 on USDC/USDT/AUSD subscriptions and burns on weekly redemptions, with a muBOND junior tranche absorbing losses.",
+    "controls": [
+      {
+        "label": "Mu Digital fund issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated mint/redeem: Mu Digital mints AZND against KYC-gated subscriptions (USDC/USDT/AUSD) at fund NAV and burns on weekly redemptions; secondary DEX swaps are permissionless but primary issuance is issuer-gated."
+      }
+    ],
+    "review": {
+      "evidence": "Mu Digital materials and the Accountable proof-of-reserve dashboard describe a KYC-gated NAV fund token minted by the issuer against a MAS-regulated Asia credit portfolio; no user-collateralized or permissionless mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer/fund model established from project materials; on-chain token owner/minter admins on Ethereum and Monad not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin on Ethereum (0x52c6...08A0) and Monad before raising confidence."
+      ]
+    }
+  }
 }

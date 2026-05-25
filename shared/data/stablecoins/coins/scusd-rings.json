@@ -78,5 +78,46 @@
       "pct": 30,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "scUSD is a Veda BoringVault receipt token: users deposit accepted stablecoins to mint scUSD shares via a Teller, but the BoringVault role set (minter/teller/solver/queue) is administered under a 4/6 Veda/Paladin governance multisig with role-based timelocks, making the privileged surface a concentrated admin.",
+    "controls": [
+      {
+        "label": "Veda/Paladin governance multisig (BoringVault role admin)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": "unknown",
+        "evidence": "LlamaRisk review states Rings governance uses 4/6 multisigs managed by Veda and Paladin contributors, with role-based timelocks controlling each BoringVault contract set and some EOAs administering the BoringOnChainQueue and BoringSolver."
+      },
+      {
+        "label": "Veda BoringVault Teller (scUSD share mint on deposit)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "canRaiseCap": "unknown",
+        "evidence": "scUSD is a BoringVault receipt token minted by the Teller when supported stablecoins are deposited; share issuance is deposit-driven but the minter/teller roles are granted under the governance multisig."
+      }
+    ],
+    "review": {
+      "evidence": "Veda and Rings docs plus the LlamaRisk security review describe scUSD as a Veda BoringVault receipt token minted on stablecoin deposit, with a 4/6 Veda/Paladin governance multisig and role-based timelocks controlling the minter/teller/solver/queue contract set; canonical backing addresses are not yet fully published.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Rings on Veda", "url": "https://docs.veda.tech/vault-deployments/rings" },
+        { "label": "LlamaRisk Rings review", "url": "https://www.llamarisk.com/research/2025-03-27t21-51-19-000z" }
+      ],
+      "sourceFreeRationale": "4/6 multisig and BoringVault role architecture taken from the LlamaRisk review and Veda/Rings docs; the exact governance multisig address, timelock delays, and module/guard status were not independently read on-chain.",
+      "unresolvedQuestions": ["Resolve the on-chain Rings governance multisig address and role-timelock delays, and the published BoringVault/treasury backing addresses."]
+    }
+  }
 }

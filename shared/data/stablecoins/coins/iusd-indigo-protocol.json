@@ -55,5 +55,50 @@
       "pct": 100,
       "risk": "high"
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "iUSD is minted on Cardano by opening overcollateralized CDPs in Indigo Protocol against approved Cardano-native collateral; INDY token holders govern collateral onboarding, parameters, and stability mechanisms.",
+    "controls": [
+      {
+        "chain": "cardano",
+        "label": "Indigo CDP minting validators",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "iUSD (an iAsset) is minted only against overcollateralized Indigo CDP vaults of approved Cardano collateral; supply expands and contracts with collateralized positions and liquidations, not an issuer minter.",
+        "evidence": "Indigo docs describe iUSD as a synthetic iAsset minted against overcollateralized CDPs on Cardano with Stability Pool liquidations."
+      },
+      {
+        "chain": "cardano",
+        "label": "Indigo INDY DAO governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "INDY stakers vote on collateral types, CDP risk parameters, and protocol stability mechanisms through Indigo on-chain governance.",
+        "evidence": "Indigo docs describe INDY token-based governance (staking and voting) controlling accepted collateral types, parameters, and protocol stability mechanisms."
+      }
+    ],
+    "review": {
+      "evidence": "Indigo Protocol documentation describes iUSD as a CDP-minted synthetic dollar on Cardano governed by INDY token holders who control collateral onboarding and risk parameters; no centralized issuer minter exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Indigo Protocol docs",
+          "url": "https://docs.indigoprotocol.io/"
+        }
+      ],
+      "sourceFreeRationale": "CDP mint mechanism and INDY DAO governance confirmed from Indigo docs; Cardano-native validator/governance script authority not independently resolved on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the Indigo on-chain governance script authority and CDP minting policy parameters before raising confidence."
+      ]
+    }
+  }
 }

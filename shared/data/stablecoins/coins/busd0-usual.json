@@ -79,5 +79,47 @@
     "defiLlamaPoolId": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
     "yieldSource": "Usual bUSD0 daily USUAL coupons",
     "yieldType": "fee-sharing"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "inheritedFrom": "usd0-usual",
+    "summary": "bUSD0 is Usual's bond-maturity wrapper of USD0; depositing 1 USD0 mints 1 bUSD0 against locked USD0, which does not create base USD0 supply, so its mint authority is inherited from USD0 (usd0-usual).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "label": "Usual bUSD0 bond-leg token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "bUSD0 is minted/burned by the Usual bond contract against locked USD0 (1 USD0 in -> 1 bUSD0 + 1 rt-bUSD0 out, redeemable at maturity); this bond accounting cannot create or destroy base USD0 supply.",
+        "evidence": "Bond-maturity wrapper: bUSD0 represents a fixed-notional bond claim on locked USD0; minting follows USD0 deposits into the bond contract and does not expand the parent USD0 monetary base."
+      },
+      {
+        "label": "Inherited USD0 (Usual) issuer mint path",
+        "role": "other",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USD0 supply is created via Usual's protocol-operated issuer mint authority against RWA collateral (issuer-direct-mint, concentrated-admin); bUSD0 locks USD0 and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "bUSD0 (variantOf usd0-usual, variantKind bond-maturity) is a bond-leg wrapper whose supply tracks locked USD0; base mint authority is the inherited Usual USD0 issuer path (concentrated-admin) and is mirrored here.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Usual bUSD0 fact sheet",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper classification follows from coin metadata (variantOf usd0-usual, bond-maturity, locked-USD0 wrapper reserve); posture mirrors the USD0 parent mint authority."
+    }
   }
 }

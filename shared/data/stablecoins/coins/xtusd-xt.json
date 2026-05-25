@@ -58,5 +58,31 @@
       "title": "Redemption backstop not modeled",
       "message": "XTUSD is tracked from market and issuer metadata, but Pharos has not source-reviewed a public holder redemption route for backstop scoring."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "XTUSD is a centralized dollar token issued by the XT.com exchange (Seychelles) on its own XSC chain; new tokens are minted against USD deposits and burned on redemption through XT.com infrastructure, with limited public disclosure of the on-chain mint authority.",
+    "controls": [
+      {
+        "label": "XT.com issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Listing and aggregator coverage describe XTUSD as a deposit-and-redemption stablecoin where the XT.com exchange mints new tokens when USD is deposited and burns them on redemption; supply creation is controlled by the exchange operator with no permissionless mint route disclosed."
+      }
+    ],
+    "review": {
+      "evidence": "XTUSD is described across exchange listing and aggregator pages as an XT.com-issued, reserve-backed dollar token using an exchange-operated mint-on-deposit / burn-on-redemption model; no first-party technical docs expose the on-chain minter, and XSC is not indexed by Pharos.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Classification based on the centralized exchange-issuer model described in third-party coverage; no first-party docs or on-chain admin read available for the XSC deployment, so confidence is held at manual-review.",
+      "unresolvedQuestions": [
+        "Locate first-party XT.com documentation for the XTUSD mint/redeem terms and resolve the on-chain mint authority on XSC."
+      ]
+    }
+  }
 }

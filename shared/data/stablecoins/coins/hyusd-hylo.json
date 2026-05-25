@@ -70,5 +70,50 @@
         "kind": "onchain-solana"
       }
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "hyUSD is minted on Solana by depositing LSTs (jitoSOL, mSOL, bSOL, JupSOL) into Hylo's overcollateralized pool, with the companion xSOL token absorbing volatility under the Hylo invariant; the Hylo program authority controls parameters and upgrades.",
+    "controls": [
+      {
+        "chain": "solana",
+        "label": "Hylo collateral pool program (minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "hyUSD mints only against LST collateral deposited into the Hylo pool under the invariant that hyUSD + xSOL market value equals total collateral TVL; supply is bounded by deposited LST collateral and the 150%+ overcollateralization target.",
+        "evidence": "Hylo docs describe hyUSD minting from a Solana LST collateral pool governed by the Hylo invariant equation, with xSOL absorbing SOL volatility to hold the peg."
+      },
+      {
+        "chain": "solana",
+        "label": "Hylo program upgrade/admin authority",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Hylo Solana program authority can upgrade the program and administer pool parameters (collateral set, ratios); the specific authority (multisig vs governance) was not independently resolved.",
+        "evidence": "Hylo operates as an upgradeable Solana program; an upgrade/parameter authority governs the collateral pool, though the docs reviewed do not enumerate the controlling key."
+      }
+    ],
+    "review": {
+      "evidence": "Hylo documentation describes hyUSD as an overcollateralized LST-backed stablecoin minted via the Hylo pool invariant with xSOL as the volatility absorber; a Solana program authority governs parameters and upgrades.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Hylo hyUSD & xSOL docs",
+          "url": "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL"
+        }
+      ],
+      "sourceFreeRationale": "Collateral-pool mint mechanism confirmed from Hylo docs; the Solana program upgrade/admin authority (multisig/governance) was not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the Hylo Solana program upgrade authority and pool parameter admin (multisig vs governance) before raising confidence."
+      ]
+    }
   }
 }

@@ -86,5 +86,53 @@
       "title": "Redemption backstop not modeled",
       "message": "Ring Protocol materials describe protocol liquidity controls, but Pharos has not source-reviewed a holder-exercisable redemption route for backstop scoring."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "Ring USD (USDR) is a Fei-fork ERC20Burnable whose Minter-role holders can mint to any address uncapped; minting is gated by Ring Protocol's Core access-control contract, with supply primarily sourced through PCV bonding-curve issuance.",
+    "controls": [
+      {
+        "label": "USDR Minter role (Core-gated)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "chain": "ethereum",
+        "address": "0x4ea40dcee961675683e0a2e1721bd49cb9bca913",
+        "capDescription": "Minting and burning to any address are uncapped and accessible to any contract granted the Minter/Burner role by Ring Protocol's Core.",
+        "evidence": "Etherscan read of the verified USDR token (name 'Ring USD', symbol 'USDR') shows ERC20Burnable + CoreRef: Minter role can mint to any address with no cap; Burner role can burn; a Guardian/Governor can trigger emergency mode and the Core admin updates the Core reference.",
+        "sources": [
+          { "label": "USDR token (Etherscan)", "url": "https://etherscan.io/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913" },
+          { "label": "RUSD docs", "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin/rusd" }
+        ]
+      },
+      {
+        "label": "Ring Protocol Core / Governor-Guardian",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "The Core contract assigns Minter/Burner roles; the Governor/Guardian can grant roles, manage the Core address, and trigger emergency mode, so the Core admin can authorize new minters at will.",
+        "sources": [
+          { "label": "Ring Protocol Core docs", "url": "https://docs.ring.exchange/protocol-core/protocol-controlled-value" }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Ring USD is a Fei-Protocol-style stablecoin (CoreRef access control, PCV bonding-curve issuance). The on-chain verified token confirms Minter-role holders can mint uncapped to any address, with role assignment controlled by the Core/Governor. No holder-exercisable redemption is documented; supply expansion is fully admin/role controlled.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "USDR token (Etherscan)", "url": "https://etherscan.io/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913" },
+        { "label": "Ring stablecoin docs", "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin" }
+      ],
+      "sourceFreeRationale": "Token role model confirmed via Etherscan verified source read; the concrete Core/Governor admin address (EOA vs multisig) and current Minter-role holders were not enumerated.",
+      "unresolvedQuestions": [
+        "Enumerate the current Minter-role holders and resolve whether the Ring Core Governor/Guardian is an EOA, multisig, or timelock before raising confidence."
+      ]
+    }
+  }
 }

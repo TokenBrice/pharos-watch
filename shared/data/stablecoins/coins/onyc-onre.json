@@ -93,5 +93,38 @@
     "provider": "OnRe transparency dashboard",
     "attestorTier": "self",
     "cadence": "daily-nav"
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "ONYC is minted and redeemed at NAV through OnRe's KYC-gated primary interface; OnRe (a Bermuda BMA-regulated SAC) operates the issuance programs and controls supply creation against its segregated reinsurance account.",
+    "controls": [
+      {
+        "label": "OnRe issuance/redemption programs (Solana)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "canRaiseCap": "unknown",
+        "evidence": "OnRe operates audited Solana issuance/redemption programs; primary mint occurs at NAV through OnRe's KYC-gated interface (USDC/USDG swap), so OnRe controls supply creation against the segregated account."
+      }
+    ],
+    "review": {
+      "evidence": "OnRe docs describe minting ONYC directly at NAV through OnRe's primary interface (KYC-gated), with audited Solana issuance/redemption programs operated by OnRe SAC Ltd. against a BMA-regulated segregated reinsurance account; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "OnRe ONYC docs",
+          "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+        },
+        {
+          "label": "OnRe FAQ",
+          "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+        }
+      ],
+      "unresolvedQuestions": ["Resolve the on-chain Solana mint authority address (multisig vs program PDA) before raising confidence."]
+    }
   }
 }

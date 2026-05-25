@@ -143,5 +143,57 @@
         }
       ]
     }
+  },
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "HONEY is minted through the Berachain HoneyFactory by depositing whitelisted stablecoin collateral (USDC, USDT0, pyUSD/BYUSD, USDe) into per-asset vaults; collateral whitelisting and mint/redeem rates are configured by Berachain governance, with Basket Mode safety controls.",
+    "controls": [
+      {
+        "chain": "berachain",
+        "address": "0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401",
+        "label": "HoneyFactory mint hub",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "HONEY mints only when whitelisted stablecoin collateral is deposited through the HoneyFactory into per-asset vaults; Basket Mode restricts mint/redeem when a collateral asset depegs.",
+        "evidence": "Berachain docs describe HoneyFactory as the central hub routing whitelisted collateral deposits to per-asset vaults and minting HONEY 1:1, with Basket Mode safety controls.",
+        "sources": [
+          {
+            "label": "Berachain HONEY docs",
+            "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+          }
+        ]
+      },
+      {
+        "chain": "berachain",
+        "label": "Berachain governance (collateral whitelist & rate admin)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Berachain governance adds collateral assets and configures per-asset mint/redeem rates and fee distribution for the HoneyFactory.",
+        "evidence": "Berachain docs state new collateral assets are added through governance and mint/redeem rates are configurable per collateral asset by governance."
+      }
+    ],
+    "review": {
+      "evidence": "Berachain HONEY documentation describes a governed basket-collateral mint via the HoneyFactory contract with per-asset vaults, governance-controlled collateral whitelisting and rates, and Basket Mode safety controls.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Berachain HONEY docs",
+          "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+        }
+      ],
+      "sourceFreeRationale": "HoneyFactory mint mechanism and governance whitelist confirmed from Berachain docs; the live HoneyFactory owner/governance admin address was not independently read on-chain.",
+      "unresolvedQuestions": [
+        "Resolve the live HoneyFactory owner/admin and the governance executor that controls collateral whitelisting and rates before raising confidence."
+      ]
+    }
   }
 }

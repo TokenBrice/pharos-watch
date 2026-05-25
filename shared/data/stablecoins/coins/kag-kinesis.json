@@ -87,5 +87,40 @@
       "assetRisk": "very-low",
       "reserveUnit": "XAG"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "KAG is issued by Kinesis (Cayman VASP); each token is minted by the issuer when physical silver bullion is allocated into ABX vaults and redeemed against physical silver, with supply controlled by the centralized issuer backend.",
+    "controls": [
+      {
+        "label": "Kinesis issuance backend (silver allocation)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Kinesis mints KAG against allocated physical silver bullion held in ABX/Brink's/Loomis vaults (audited by Bureau Veritas) and burns on physical redemption; the regulated issuer controls supply creation."
+      }
+    ],
+    "review": {
+      "evidence": "Kinesis materials describe KAG as a 1:1 claim on allocated physical silver, minted/redeemed through the issuer against vaulted bullion with semi-annual Bureau Veritas audits; no permissionless or user-collateralized mint route exists.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Kinesis silver",
+          "url": "https://kinesis.money/silver/"
+        },
+        {
+          "label": "Kinesis trust & security",
+          "url": "https://kinesis.money/trust-security/"
+        }
+      ],
+      "sourceFreeRationale": "On-chain token owner/minter admin for the Ethereum KAG contract was not read live in this pass; classification rests on the issuer-allocated-bullion mint model.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/minter admin and any proxy admin for the KAG Ethereum contract."
+      ]
+    }
   }
 }

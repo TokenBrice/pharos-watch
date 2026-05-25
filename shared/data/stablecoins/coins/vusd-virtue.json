@@ -57,5 +57,44 @@
       "title": "IOTA contract excluded",
       "message": "CoinGecko verifies the IOTA VUSD object, but IOTA is not yet a supported Pharos chain. Runtime coverage uses the CoinGecko supplemental path and leaves contracts[] empty."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "VUSD is a Liquity-V2-friendly-fork CDP on IOTA EVM: users open overcollateralized positions in IOTA/stIOTA/IBTC to mint VUSD at user-set interest rates, with liquidations and redemptions defending the peg; the Liquity-v2 branch/admin model on IOTA is not independently verified as renounced.",
+    "controls": [
+      {
+        "label": "Virtue Money borrower-operations / branch contracts (Liquity V2 fork)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint bounded by overcollateralized CDPs across IOTA/stIOTA/IBTC branches with user-set interest rates, per the Liquity V2 multi-collateral design.",
+        "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs (IOTA/stIOTA/IBTC) on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
+      },
+      {
+        "label": "Virtue Money admin (multisig)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "This coin's metadata marks governanceQuality as multisig; Liquity V2 forks add new collateral branches via an admin, and IOTA contract metadata is not indexed, so owner renouncement could not be verified and an admin surface is assumed."
+      }
+    ],
+    "review": {
+      "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA/IBTC; the IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "What is VUSD (Virtue docs)", "url": "https://docs.virtue.money/overview/what-is-vusd" },
+        { "label": "Virtue on IOTA (iota.org)", "url": "https://www.iota.org/learn/showcases/virtue" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm the on-chain owner/admin of the Virtue Money core/branch contracts on IOTA EVM and whether ownership is renounced (which would warrant immutable-user-collateralized).",
+        "Confirm whether a separate governance token / DAO exists beyond a team multisig."
+      ]
+    }
+  }
 }

@@ -102,5 +102,47 @@
   "yieldConfig": {
     "yieldSource": "Origin lending + DeFi strategies",
     "yieldType": "rebase"
+  },
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "OUSD is minted 1:1 when users deposit USDC into the Origin OUSD Vault, but the protocol also runs a Curve AMO that pre-mints OUSD into protocol-owned liquidity and deploys USDC into Morpho/Curve strategies under privileged owner/Governor/Strategist roles.",
+    "controls": [
+      {
+        "label": "OUSD Vault (user mint/redeem)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70",
+        "evidence": "Users mint OUSD by depositing USDC to the Vault and redeem 1:1; the Vault contract gates the user mint/redeem flow and deploys backing into Morpho/Curve strategies."
+      },
+      {
+        "label": "Origin Governor / Strategist (AMO + strategy admin)",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "canRaiseCap": "unknown",
+        "evidence": "Origin governance whitelists strategies and authorizes the Strategist/Guardian to allocate Vault USDC; the Curve AMO uses mintForStrategy/burnForStrategy to pre-mint protocol-owned OUSD that is collateralized on swap, a privileged supply-control path beyond user deposits."
+      }
+    ],
+    "review": {
+      "evidence": "Origin docs and the OpenZeppelin audit describe a Vault-based 1:1 mint/redeem plus a Curve AMO that pre-mints OUSD (mintForStrategy/burnForStrategy) into protocol-owned liquidity, governed by privileged owner/Strategist/Harvester roles, so this is an AMO/strategy hybrid rather than a pure single-parent wrapper or backend issuer.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Origin OUSD AMO docs",
+          "url": "https://docs.originprotocol.com/introduction/core-concepts/amo"
+        },
+        {
+          "label": "OpenZeppelin Origin Dollar audit",
+          "url": "https://blog.openzeppelin.com/origin-dollar-audit-2/"
+        }
+      ],
+      "unresolvedQuestions": ["Confirm the live owner/Governor/Strategist addresses (timelock vs multisig) and current AMO strategy whitelist before raising confidence."]
+    }
   }
 }

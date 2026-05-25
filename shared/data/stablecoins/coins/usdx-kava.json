@@ -55,5 +55,43 @@
       "title": "Legacy depeg risk",
       "message": "USDX is trading at roughly a 45% discount to its dollar peg, sustained by legacy debt positions on Kava Mint CDPs. Pharos tracks the active provider entry separately from the historical cemetery incident."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "USDX is minted by Kava Mint's x/cdp module: users lock crypto collateral and draw USDX up to a governance-set debt limit, with Kava (KAVA) on-chain governance and a Stability Committee controlling the global debt limit, accepted collateral, ratios, and fees.",
+    "controls": [
+      {
+        "label": "Kava x/cdp module (USDX mint)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "capDescription": "Mint bounded by per-collateral and global USDX debt limits and collateral ratios enforced by the Kava x/cdp module.",
+        "evidence": "Kava docs describe the x/cdp module as managing CDPs that mint USDX against locked collateral up to governance-set per-asset and global debt limits."
+      },
+      {
+        "label": "Kava on-chain governance + Stability Committee (KAVA)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "Kava docs state KAVA stakers govern critical CDP parameters (global debt limit, accepted collateral and per-asset limits, collateral ratios, fees, savings rate), and a Stability Committee can adjust a subset of parameters quickly without a full vote."
+      }
+    ],
+    "review": {
+      "evidence": "Kava Network documentation describes USDX as minted by the x/cdp module against overcollateralized positions, with KAVA on-chain governance and a Stability Committee controlling debt limits, collateral, ratios, and fees; specific live parameters and module admin not independently confirmed.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        { "label": "Kava CDP module docs", "url": "https://docs.kava.io/docs/cosmos/modules/cdp/" },
+        { "label": "Kava Mint help", "url": "https://help.app.kava.io/article/15-what-is-kava-mint" }
+      ],
+      "unresolvedQuestions": [
+        "Confirm current x/cdp parameters (global debt limit, fees) and whether new USDX issuance is still enabled given the sustained depeg.",
+        "Confirm the Stability Committee membership/threshold."
+      ]
+    }
+  }
 }

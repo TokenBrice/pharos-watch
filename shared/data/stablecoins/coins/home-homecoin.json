@@ -99,5 +99,51 @@
       "title": "Illiquid RWA collateral",
       "message": "HomeCoin collateral is property-backed receivables, so the fallback is not comparable to liquid fiat or Treasury redemption capacity."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "HOME is minted by Bacon Protocol 'Pan' smart contracts when a borrower draws an overcollateralized loan against a recorded property lien (ERC-721); BACON governance can add Pans and licensed servicers originate the underlying loans.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "label": "Bacon Protocol Pan lending/mint contract",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "HOME supply expands only as new overcollateralized home loans are originated through a Pan; minting is tied to lien-backed loan creation rather than free issuer mint.",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Bacon Protocol docs describe 'Pans' as the core lending contracts that pool funds and mint HOME when a homeowner takes a lien-backed loan; supply is uncapped and demand-driven, not minted at issuer discretion."
+      },
+      {
+        "label": "BACON governance / licensed servicers",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "BACON is the governance token able to add new Pans and tune loan criteria; licensed servicers/LoanSnap originate and service the loans, gating which liens can mint HOME."
+      }
+    ],
+    "review": {
+      "evidence": "Project materials describe collateralized mint: HOME is created by Pan contracts at loan origination against recorded property liens, with BACON governance over Pan parameters and licensed servicers originating loans. No central issuer-discretion mint path is described.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "HomeCoin / Bacon Protocol docs",
+          "url": "https://github.com/homecoin-finance/gitbook"
+        },
+        {
+          "label": "Bacon Protocol launch coverage",
+          "url": "https://cointelegraph.com/news/bacon-protocol-launches-decentralized-mortgage-platform"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Resolve the on-chain Pan/minter contract address and any owner/proxy admin on Ethereum, and confirm whether HOME minting can be triggered outside the loan-origination path.",
+        "Confirm current BACON governance scope and whether servicer onboarding is fully decentralized or admin-gated."
+      ]
+    }
+  }
 }

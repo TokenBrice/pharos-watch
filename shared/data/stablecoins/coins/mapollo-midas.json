@@ -111,5 +111,51 @@
       "title": "Not the Apollo credit fund",
       "message": "mAPOLLO is a Midas / Apollo Crypto liquid-yield token and is distinct from ACRED or ACRDX private-credit fund shares."
     }
-  ]
+  ],
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "mAPOLLO is a Midas liquid-yield token minted through role-gated DepositVault/RedemptionVault contracts: only addresses with the Midas MINT_OPERATOR role (managed by MidasAccessControl) can mint, deposits/redemptions are greenlist-gated, and the upgradeable contracts use an off-chain NAV conversion rate.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "label": "Midas mint operator (role-gated mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Midas tokens can only be minted/burned by addresses holding the MINT/BURN_OPERATOR role granted through MidasAccessControl; the DepositVault mints mTokens against greenlisted deposits at an off-chain conversion rate, with admin-set mint/redeem limits."
+      },
+      {
+        "label": "Midas DEFAULT_ADMIN_ROLE (MidasAccessControl)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Midas DEFAULT_ADMIN_ROLE grants/revokes the mint/burn/pause/greenlist/blacklist operator roles and can change the price aggregator; Midas docs acknowledge management roles create a centralized, trust-based system over upgradeable contracts."
+      }
+    ],
+    "review": {
+      "evidence": "Midas smart-contract architecture (audited) uses MidasAccessControl with role-gated MINT_OPERATOR minting via DepositVault, greenlist/blacklist access control, off-chain conversion pricing, and upgradeable contracts; mAPOLLO follows the same Midas mToken pattern. This is a role-gated permissioned mint, refining the issuer-direct-mint lead.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sources": [
+        {
+          "label": "Midas smart contracts docs",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        },
+        {
+          "label": "Midas mAPOLLO",
+          "url": "https://midas.app/mapollo"
+        }
+      ],
+      "sourceFreeRationale": "mAPOLLO-specific on-chain MidasAccessControl/DepositVault addresses and the DEFAULT_ADMIN_ROLE holder (EOA/multisig) were not read live in this pass; classification rests on the documented Midas mToken role architecture.",
+      "unresolvedQuestions": [
+        "Resolve the mAPOLLO DepositVault/RedemptionVault and MidasAccessControl addresses and the DEFAULT_ADMIN_ROLE / mint-operator holders on Ethereum, and whether admin is a Safe/multisig."
+      ]
+    }
+  }
 }

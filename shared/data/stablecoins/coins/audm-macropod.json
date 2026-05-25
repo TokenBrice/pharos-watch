@@ -124,5 +124,30 @@
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
       "fallbackRpcUrl": "https://eth.llamarpc.com"
     }
+  },
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "AUDM is issued by Macropod (AFSL 566313, AUSTRAC DCE100887005-001); approved clients deposit AUD into the AUDM Trust reserve to mint and return AUDM for 1:1 redemption, all gated through the issuer's compliance/onboarding backend.",
+    "controls": [
+      {
+        "label": "Macropod issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated mint/redeem: Macropod mints AUDM against AUD deposited into the AUDM Trust reserve by KYC/AML-approved clients and redeems 1:1; no permissionless or user-collateralized mint route exists."
+      }
+    ],
+    "review": {
+      "evidence": "Macropod docs describe a single regulated issuer minting AUDM against custodied AUD reserves at Westpac and Banking Circle, with client onboarding/KYC gating; mint/redeem is centralized.",
+      "reviewer": "DeepSeek-verified mint-authority sweep",
+      "reviewedAt": "2026-05-25",
+      "sourceFreeRationale": "Issuer model established from project materials; on-chain token owner/minter admins on Ethereum, Solana, and Redbelly not independently resolved.",
+      "unresolvedQuestions": [
+        "Resolve the on-chain token owner/minter admin on Ethereum (0x0815...cbdd), Solana, and Redbelly before raising confidence."
+      ]
+    }
   }
 }
