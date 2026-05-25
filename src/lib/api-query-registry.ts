@@ -15,6 +15,7 @@ import type {
   MintBurnFlowsResponse,
   MintBurnPerCoinResponse,
   PegSummaryResponse,
+  DdrrResponse,
   ReportCardsResponse,
   RedemptionBackstopsResponse,
   SafetyScoreHistoryResponse,
@@ -29,6 +30,7 @@ import type {
   YieldRankingsResponse,
 } from "@shared/types";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
+import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { TelegramPulseSchema, type TelegramPulse } from "@shared/types/status";
 import { StablecoinChartResponseSchema, UsdsStatusResponseSchema } from "@shared/types/digest";
 import {
@@ -238,6 +240,13 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     producerIntervalMs: CRON_15MIN,
     schema: DdrResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
+  }),
+  depegResolverReview: pollingDescriptor<DdrrResponse>({
+    queryKey: ["depeg-resolver-review"],
+    path: API_PATHS.depegResolverReview(),
+    producerIntervalMs: CRON_15MIN,
+    schema: DdrrResponseSchema,
+    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
   }),
   redemptionBackstops: pollingDescriptor<RedemptionBackstopsResponse>({
     queryKey: ["redemption-backstops"],

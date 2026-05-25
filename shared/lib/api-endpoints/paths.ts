@@ -79,6 +79,7 @@ export const API_PATHS = {
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCards: () => "/api/report-cards",
   depegResolver: () => "/api/depeg-resolver",
+  depegResolverReview: () => "/api/depeg-resolver-review",
   redemptionBackstops: () => "/api/redemption-backstops",
   mintBurnFlowsBase: () => "/api/mint-burn-flows",
   mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),

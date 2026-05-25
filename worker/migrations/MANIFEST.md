@@ -78,6 +78,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0132     | `0132_yield_history_pys_snapshot.sql`                    | Add `pys_at_publish`, `safety_at_publish`, `variance_at_publish` snapshot columns to `yield_history` for honest reconstruction                  |
 | 0133     | `0133_yield_decision_alternatives.sql`                   | Add sibling `yield_source_decision_alternatives` table for the bounded, public-safe retained alternates surfaced on `/api/yield-rankings`        |
 | 0134     | `0134_yield_decision_retention_reason.sql`               | Add nullable `retention_reason` column to `yield_source_decisions` for per-row trend/audit classification and selective pruning                   |
+| 0135     | `0135_depeg_resolver_assessments.sql`                    | Add durable DDR assessment checkpoints for reviewer comparisons against later depeg outcomes                                                     |
 
 ## Retired Individual Migrations
 

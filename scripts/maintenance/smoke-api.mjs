@@ -22,6 +22,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stability-index",
   "/api/report-cards",
   "/api/depeg-resolver",
+  "/api/depeg-resolver-review",
   "/api/redemption-backstops",
   "/api/blacklist",
   "/api/blacklist-summary",
@@ -35,6 +36,7 @@ export const CANARY_CONTRACT_SMOKE_PATHS = [
   "/api/stablecoins",
   "/api/peg-summary",
   "/api/report-cards",
+  "/api/depeg-resolver-review",
   "/api/mint-burn-flows",
   "/api/stress-signals",
 ];
@@ -528,6 +530,25 @@ export const ENDPOINT_ASSERTIONS = {
       "/api/depeg-resolver missing methodology.version",
     );
     return `${body.rows.length} active`;
+  },
+  "/api/depeg-resolver-review": (result) => {
+    assert(result.status === 200, `/api/depeg-resolver-review returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.rows), "/api/depeg-resolver-review missing rows[]");
+    assert(body.summary && typeof body.summary === "object", "/api/depeg-resolver-review missing summary");
+    assert(
+      typeof body.summary.recoveryLikelihoodScoredCount === "number",
+      "/api/depeg-resolver-review missing recovery likelihood scored count",
+    );
+    assert(
+      typeof body.summary.durationScoredCount === "number",
+      "/api/depeg-resolver-review missing duration scored count",
+    );
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/depeg-resolver-review missing methodology.version",
+    );
+    return `${body.rows.length} reviewed`;
   },
   "/api/stability-index": (result) => {
     assert(result.status === 200, `/api/stability-index returned ${result.status}`);

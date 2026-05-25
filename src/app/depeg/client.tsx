@@ -9,8 +9,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useStressSignals } from "@/hooks/api-hooks";
-import { useDepegResolver } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
+import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { usePreference } from "@/hooks/use-preferences";
@@ -26,9 +26,9 @@ import { PegCohortRidge } from "@/components/peg-cohort-ridge";
 import { DepegFeed } from "@/components/depeg-feed";
 import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
+import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
-import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -36,9 +36,76 @@ import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, PEG_FILTER_OPTIONS, GOVERNANCE_FILTER_OPTIONS } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
+interface DepegCoverageMetrics {
+  dewsCoverageCount: number;
+  oldestAgeSec: number | null;
+  malformedRows: number;
+  coverageLimitedCount: number;
+  activeCount: number;
+  pendingCount: number;
+}
+
+function DepegLoadingState() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
+        <Skeleton className="h-[500px] rounded-xl" />
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="rounded-xl">
+                <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
+                <CardContent><Skeleton className="h-8 w-32" /></CardContent>
+              </Card>
+            ))}
+          </div>
+          <Skeleton className="flex-1 min-h-[200px] rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DepegCoverageCard({ reliability }: { reliability: DepegCoverageMetrics }) {
+  return (
+    <Card className="rounded-xl">
+      <CardHeader className="pb-2">
+        <h2 className="pharos-kicker">Coverage</h2>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+        <div>
+          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.activeCount}</div>
+          <div className="text-xs text-muted-foreground">live confirmed</div>
+        </div>
+        <div>
+          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.pendingCount}</div>
+          <div className="text-xs text-muted-foreground">pending</div>
+        </div>
+        <div>
+          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.dewsCoverageCount}</div>
+          <div className="text-xs text-muted-foreground">DEWS current</div>
+        </div>
+        <div>
+          <div className="font-mono text-lg font-semibold tabular-nums">
+            {reliability.oldestAgeSec != null ? formatElapsedSeconds(reliability.oldestAgeSec) : "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">oldest DEWS</div>
+        </div>
+        <div>
+          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.coverageLimitedCount}</div>
+          <div className="text-xs text-muted-foreground">event floor</div>
+        </div>
+        <div>
+          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.malformedRows}</div>
+          <div className="text-xs text-muted-foreground">malformed</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export function DepegClient() {
-  const resolverEnabled = isDepegResolverEnabled();
   const [nowSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const {
     data: pegData,
@@ -66,12 +133,19 @@ export function DepegClient() {
     isFetchingNextPage,
   } = useInfiniteDepegEvents({ includePending: true });
   const {
-    data: resolverData,
-    error: resolverError,
-    dataUpdatedAt: resolverUpdatedAt,
-    meta: resolverMeta,
-    refetch: refetchResolver,
-  } = useDepegResolver({ enabled: resolverEnabled });
+    resolverEnabled,
+    resolverReviewerEnabled,
+    resolverData,
+    resolverError,
+    resolverUpdatedAt,
+    resolverMeta,
+    refetchResolver,
+    resolverReviewData,
+    resolverReviewError,
+    resolverReviewUpdatedAt,
+    resolverReviewMeta,
+    refetchResolverReview,
+  } = useDepegResolverSurfaces();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -156,31 +230,25 @@ export function DepegClient() {
   const handleRowClick = useCallback((id: string) => {
     router.push(buildStablecoinUrl(id));
   }, [router]);
-  const globalError = pegError ?? dewsError ?? eventsError ?? (resolverEnabled ? resolverError : null);
+  const globalError =
+    pegError ??
+    dewsError ??
+    eventsError ??
+    (resolverEnabled ? resolverError : null) ??
+    (resolverReviewerEnabled ? resolverReviewError : null);
   const handleRetry = useCallback(() => {
-    return refetchQueryGroup([refetchPeg, refetchDews, refetchEvents, refetchResolver]);
-  }, [refetchDews, refetchEvents, refetchPeg, refetchResolver]);
+    return refetchQueryGroup([
+      refetchPeg,
+      refetchDews,
+      refetchEvents,
+      ...(resolverEnabled ? [refetchResolver] : []),
+      ...(resolverReviewerEnabled ? [refetchResolverReview] : []),
+    ]);
+  }, [refetchDews, refetchEvents, refetchPeg, refetchResolver, refetchResolverReview, resolverEnabled, resolverReviewerEnabled]);
 
   // Loading state
   if (isPegLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
-          <Skeleton className="h-[500px] rounded-xl" />
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="rounded-xl">
-                  <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
-                  <CardContent><Skeleton className="h-8 w-32" /></CardContent>
-                </Card>
-              ))}
-            </div>
-            <Skeleton className="flex-1 min-h-[200px] rounded-xl" />
-          </div>
-        </div>
-      </div>
-    );
+    return <DepegLoadingState />;
   }
 
   return (
@@ -194,6 +262,7 @@ export function DepegClient() {
           { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
           { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
           ...(resolverEnabled ? [{ label: "Depeg Resolver", staleTime: 900_000, dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta }] : []),
+          ...(resolverReviewerEnabled ? [{ label: "DDR Reviewer", staleTime: 900_000, dataUpdatedAt: resolverReviewUpdatedAt, error: resolverReviewError, hasData: resolverReviewData != null, meta: resolverReviewMeta }] : []),
         ]}
       />
 
@@ -203,39 +272,7 @@ export function DepegClient() {
           <SectionErrorBoundary name="dews">
             <DEWSSummary logos={logos} />
           </SectionErrorBoundary>
-          <Card className="rounded-xl">
-            <CardHeader className="pb-2">
-              <h2 className="pharos-kicker">Coverage</h2>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-              <div>
-                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.activeCount}</div>
-                <div className="text-xs text-muted-foreground">live confirmed</div>
-              </div>
-              <div>
-                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.pendingCount}</div>
-                <div className="text-xs text-muted-foreground">pending</div>
-              </div>
-              <div>
-                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.dewsCoverageCount}</div>
-                <div className="text-xs text-muted-foreground">DEWS current</div>
-              </div>
-              <div>
-                <div className="font-mono text-lg font-semibold tabular-nums">
-                  {reliability.oldestAgeSec != null ? formatElapsedSeconds(reliability.oldestAgeSec) : "—"}
-                </div>
-                <div className="text-xs text-muted-foreground">oldest DEWS</div>
-              </div>
-              <div>
-                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.coverageLimitedCount}</div>
-                <div className="text-xs text-muted-foreground">event floor</div>
-              </div>
-              <div>
-                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.malformedRows}</div>
-                <div className="text-xs text-muted-foreground">malformed</div>
-              </div>
-            </CardContent>
-          </Card>
+          <DepegCoverageCard reliability={reliability} />
         </div>
         <div className="flex flex-col gap-6 xl:self-stretch">
           {pegData?.summary && (
@@ -258,6 +295,11 @@ export function DepegClient() {
       {resolverEnabled ? (
         <SectionErrorBoundary name="depeg-resolver">
           <DepegResolverModule data={resolverData} logos={logos} />
+        </SectionErrorBoundary>
+      ) : null}
+      {resolverReviewerEnabled ? (
+        <SectionErrorBoundary name="depeg-resolver-reviewer">
+          <DepegResolverReviewerModule data={resolverReviewData} error={resolverReviewError} logos={logos} />
         </SectionErrorBoundary>
       ) : null}
 

@@ -124,6 +124,7 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 | `GET /api/usds-status`      | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`   | 3600          | Manual injection after live safety hydration |
 | `GET /api/depeg-resolver`   | 900           | `worker/src/api/depeg-resolver.ts`           |
+| `GET /api/depeg-resolver-review` | 900      | `worker/src/api/depeg-resolver-review.ts`    |
 
 Array-typed responses (e.g., endpoints returning a JSON array at the top level) do not include `_meta`. They receive `X-Data-Age` / `Warning` only when their handler wires freshness metadata explicitly. Supply history, safety score history, and non-USD share are explicit history-endpoint exceptions that emit freshness headers; DEX liquidity history currently exposes cache headers but no freshness headers.
 
@@ -140,7 +141,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | Profile            | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | realtime           | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                                          |
-| standard           | `public, s-maxage=300, max-age=60`     | stablecoin-charts, depeg-resolver, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                                          |
+| standard           | `public, s-maxage=300, max-age=60`     | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                    |
 | custom             | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                                              |
 | per-coin           | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                  |
 | slow               | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                                                 |
@@ -301,7 +302,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **37**.
+Total documented public operations: **38**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -312,6 +313,7 @@ Total documented public operations: **37**.
 | GET | `/api/daily-digest` | Daily digest | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-events` | Depeg events | Peg Monitoring | X-API-Key | `stablecoin?`, `limit?`, `offset?`, `cursor?`, `active?`, `includeTotal?`, `includePending?` | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-resolver` | Depeg Duration Resolver | Risk, Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/depeg-resolver-review` | Depeg Duration Resolver Reviewer | Risk, Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity` | DEX liquidity | Liquidity | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity-history` | DEX liquidity history | Liquidity, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-archive` | Digest archive | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -1074,6 +1076,53 @@ Cache-backed Depeg Duration Resolver readouts for active confirmed depeg events.
 ```
 
 `DdrRow.resolution.tier` is one of `recovery_likely`, `at_risk`, `recovery_unlikely`, or `insufficient_signal`. `resolution.factors[]` contains stable K/R factor codes and public reason labels. `duration` is suppressed for terminal, insufficient-signal, stale, or unsupported rows; otherwise it includes the stratum used, median remaining seconds, IQR remaining seconds, age status, and 6h / 24h / 7d / 30d horizon cells.
+
+---
+
+### `GET /api/depeg-resolver-review`
+
+Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored first DDR assessment for each event under the current DDR methodology with later canonical `depeg_events` outcomes; it does not replay current DDR code over older events. Later checkpoints are retained in D1 for audit/drill-down expansion, but the public v1 headline stats are event-level.
+
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true`, an empty summary, and `rows: []`; stale snapshots keep review rows but set `_meta.degraded=true` and `degradedReason="stale-cache"`.
+
+**Headline fields**
+
+| Field | Type | Meaning |
+| ----- | ---- | ------- |
+| `summary.recoveryLikelihoodAccuracyPct` | `number \| null` | Strict scored DDR recovery-verdict accuracy. Numerator is correct recoverable + correct terminal calls; denominator also includes false terminal, false recoverable, and risk-noted-terminal rows. |
+| `summary.averageSignedDurationErrorSec` | `number \| null` | Mean observed-minus-DDR duration error for recovered rows with a DDR median remaining-time estimate. Positive means observed recovery was slower than DDR predicted; negative means faster. |
+| `summary.averageAbsoluteDurationErrorSec` | `number \| null` | Mean absolute duration miss for the same scored recovered rows. |
+| `summary.durationScoredCount` | `number` | Number of recovered, duration-scored rows included in duration-error averages. |
+
+**Response**
+
+```text
+{
+  "_meta": {
+    "computedAt": 1779700000,
+    "expiresAt": 1779701800,
+    "degraded": false,
+    "degradedReason": null,
+    "reviewerVersion": "ddr-reviewer-v1",
+    "assessedEventCount": 12,
+    "reviewedEventCount": 12,
+    "pendingEventCount": 8,
+    "durationScoredCount": 6,
+    "verdictScoredCount": 10,
+    "methodologyVersions": ["1.0"]
+  },
+  "summary": {
+    "recoveryLikelihoodAccuracyPct": 0.7,
+    "averageSignedDurationErrorSec": 3600,
+    "averageAbsoluteDurationErrorSec": 7200,
+    "horizonHitRates": [{ "horizon": "6h", "scored": 5, "hits": 3, "misses": 2, "hitRate": 0.6 }]
+  },
+  "rows": [DdrrRow, ...],
+  "methodology": { "version": "1.0", "versionLabel": "v1.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+}
+```
+
+`DdrrRow.verdictReview` is one of `correct_recoverable`, `correct_terminal`, `false_terminal`, `false_recoverable`, `risk_noted_terminal`, `unscored_insufficient_signal`, `pending`, or `data_issue`. `DdrrRow.durationReview` reports whether the observed recovery was inside the original IQR, faster/slower than the band, or unscored. `signedErrorSec` is always `actualRemainingSec - predictedRemainingSec`.
 
 ---
 

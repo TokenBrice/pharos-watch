@@ -483,6 +483,17 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
+    key: "depeg-resolver-review",
+    path: API_PATHS.depegResolverReview(),
+    summary: "Depeg Duration Resolver Reviewer",
+    description:
+      "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error.",
+    tags: ["Risk", "Peg Monitoring"],
+    postman: {
+      folder: "Risk and market structure",
+    },
+  },
+  {
     key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
     summary: "Redemption backstops",

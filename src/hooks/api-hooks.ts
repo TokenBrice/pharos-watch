@@ -5,6 +5,7 @@ import {
   type BluechipRatingsMap,
   type DailyDigestResponse,
   type DdrResponse,
+  type DdrrResponse,
   type DexLiquidityHistoryPoint,
   type DexLiquidityMap,
   type DigestArchiveResponse,
@@ -181,6 +182,13 @@ export function useReportCards(overrides?: QueryControlOverrides) {
 export function useDepegResolver(overrides?: QueryControlOverrides) {
   return useRegisteredApiQueryWithMeta<DdrResponse>(
     FRONTEND_API_QUERY_REGISTRY.depegResolver,
+    { keepPreviousData: true, ...overrides },
+  );
+}
+
+export function useDepegResolverReview(overrides?: QueryControlOverrides) {
+  return useRegisteredApiQueryWithMeta<DdrrResponse>(
+    FRONTEND_API_QUERY_REGISTRY.depegResolverReview,
     { keepPreviousData: true, ...overrides },
   );
 }

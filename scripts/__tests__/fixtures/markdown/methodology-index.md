@@ -86,6 +86,8 @@ When Pharos confirms an active depeg, the Depeg Duration Resolver (DDR) answers 
 
 Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landmark-survival estimate over the clean corpus of recovered incidents, conditioned on the depeg's structural stratum (depth, direction, structural class, and peg currency) most-dependable-first. It reports a median time-to-repeg with an interquartile band plus per-horizon resolution probabilities, support-gated and Wilson-bounded so thin cells show their support state instead of a fabricated number.
 
+The Depeg Duration Resolver Reviewer (DDRR) stores DDR assessment checkpoints and scores the first checkpoint for each event under the current methodology against later canonical depeg-event outcomes. It surfaces recovery-likelihood accuracy and average observed-minus-DDR recovery-duration error while excluding pending, insufficient-signal, and data-issue rows from scored headline accuracy.
+
 DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is a probabilistic estimate from historical data, not investment advice and not a credit rating.
 
 

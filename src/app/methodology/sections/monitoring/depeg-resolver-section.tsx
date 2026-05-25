@@ -43,6 +43,13 @@ export function DepegResolverMethodologySection() {
         Wilson-bounded so thin cells show their support state instead of a fabricated number.
       </p>
       <p>
+        The Depeg Duration Resolver Reviewer (DDRR) is the companion audit layer. It stores DDR assessment checkpoints,
+        scores the first checkpoint for each event under the current methodology against later canonical depeg-event
+        outcomes, and surfaces two headline checks: recovery-likelihood accuracy and the average observed-minus-DDR
+        recovery-duration error. Pending, insufficient-signal, and data-issue rows remain visible but are excluded from
+        scored headline accuracy.
+      </p>
+      <p>
         DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is
         a probabilistic estimate from historical data, not investment advice and not a credit rating &mdash; a Recovery
         Unlikely verdict is a structural read, not a guarantee, and vice versa.
@@ -50,7 +57,7 @@ export function DepegResolverMethodologySection() {
       <MethodologyFacts
         facts={[
           { label: "Trigger", value: "Active confirmed depeg events (ended_at IS NULL), both directions" },
-          { label: "Readouts", value: "Resolution Outlook (verdict + reasons) + Expected Duration band" },
+          { label: "Readouts", value: "DDR outlook/duration bands + DDRR recovery-likelihood and duration-error review" },
           { label: "Update frequency", value: "Precomputed in the sync-stablecoins flow; served from D1 cache" },
         ]}
       />
@@ -70,6 +77,11 @@ export function DepegResolverMethodologySection() {
             bands must contain realized resolution times at the documented coverage rate, with leave-one-coin stability
             and a stable canonical lineage hash. Abandoned slow-deaths that never present a sharp depeg are out of
             scope. The full methodology, limitations, and backtest plan live in docs/depeg-resolver.md.
+          </p>
+          <p>
+            DDRR does not replay today&rsquo;s resolver over historical rows. It compares the stored DDR readout with the
+            later event outcome, caps the public row sample while computing headline stats across the loaded current
+            methodology ledger, and marks the snapshot degraded when that ledger is truncated or contains invalid rows.
           </p>
         </div>
       </MethodologyDetails>

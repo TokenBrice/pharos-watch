@@ -15,6 +15,10 @@ Launched the two-stage Depeg Duration Resolver: a mechanistic Resolution Outlook
 - **Provenance handling.** Audit-verdict gating is not used because the depeg-event provenance side-table is unpopulated in production. Corpus quality comes from incident grouping, quarantine of flappy coins, and a minimum-severity/duration floor instead.
 - **Sub-component versions seeded:** `resolution-rubric-v1`, `duration-landmark-v1`, `incident-group-v1`, `support-rules-v1`.
 
+### v1.0 reviewer companion — DDRR (May 25, 2026)
+
+Added the Depeg Duration Resolver Reviewer without changing the DDR methodology version. DDRR stores quarter-hourly DDR assessment checkpoints and compares them with later canonical `depeg_events` outcomes. The public `/depeg/` module and `GET /api/depeg-resolver-review` endpoint expose strict recovery-likelihood accuracy plus average observed-minus-DDR recovery-duration error. Pending, insufficient-signal, and data-issue rows are visible but excluded from scored headline accuracy.
+
 ---
 
 ## Notes

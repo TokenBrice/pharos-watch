@@ -144,7 +144,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Frontend hooks
 
-- `src/hooks/api-hooks.ts` - dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings, useDailyDigest, useDepegResolver, useDexLiquidity
+- `src/hooks/api-hooks.ts` - dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings, useDailyDigest, useDepegResolver, useDepegResolverReview
 - `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
 - `src/hooks/use-api-key-request-form-state.ts` - useApiKeyRequestFormState
 - `src/hooks/use-api-key-requests.ts` - useApiKeyRequests
@@ -166,6 +166,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-count-up.ts` - useCountUp
 - `src/hooks/use-coverage-matrix-model.ts` - useCoverageMatrixModel
 - `src/hooks/use-depeg-events.ts` - depegEventsInfiniteQueryOptions, useActiveDepegEvents, useInfiniteDepegEvents
+- `src/hooks/use-depeg-resolver-surfaces.ts` - useDepegResolverSurfaces
 - `src/hooks/use-endpoint-probes.ts` - ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY, collectEndpointProbes, useEndpointProbes, usePublicEndpointProbes
 - `src/hooks/use-entrance-sequence.ts` - useEntranceSequence
 - `src/hooks/use-events.ts` - TAPE_FILTER_SEVERITY_VALUES, UseEventsFilter, UseEventsOptions, UseLatestEventsOptions, useEvents, useLatestEvents
@@ -193,8 +194,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-sidebar-nav-signals.ts` - useSidebarNavSignals
 - `src/hooks/use-sort.ts` - SortDirection, SortState, getNextSortState, shouldToggleSortOnKeyDown, useSort
 - `src/hooks/use-sorted-paginated-table.ts` - useSortedPaginatedTable
-- `src/hooks/use-sorted-table-rows.ts` - TableSortState, sortTableRows, useSortedTableRows
-- ... 20 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 21 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
 - `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
 - `src/components/command-palette.tsx` - CommandPalette
-- ... 332 more files omitted; use `rg --files src/components` for the full list.
+- ... 334 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -365,6 +365,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
 - `shared/lib/depeg-dews-version.ts`
+- `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDepegResolverAssessments
+- `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrReviewInput, lookupActualEvent
+- `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, hasTerminalEvidence
+- `shared/lib/depeg-resolver-review/review.ts` - DDRR_HORIZON_SECONDS, reviewDepegResolverAssessment, reviewDuration, reviewHorizons, reviewVerdict
+- `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrRows
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
@@ -372,12 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
 - `shared/lib/depeg-resolver/resolution.ts` - resolveOutlook
 - `shared/lib/depeg-resolver/strata.ts` - DdrCurrencyClass, DdrDepthBucket, DdrStratumCandidate, DdrStratumKey, DdrStructuralClass, STRATUM_ANY
-- `shared/lib/dependency-derivation.ts` - DependencyDerivationBaseSource, DependencyDerivationSource, DerivedDependencySet, deriveDependencies, deriveEffectiveDependencies, deriveEffectiveDependencySet
-- `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, buildDependencyGraphEdgesFromDependencies, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
-- `shared/lib/dews-config.ts` - DEWS_SIGNAL_DESCRIPTIONS, DEWS_SIGNAL_LABELS, DEWS_SIGNAL_SHORT_LABELS, DEWS_SIGNAL_WEIGHTS, DEWS_THREAT_BANDS, DewsSignalKey
-- `shared/lib/digest-risk.ts` - ACTIVE_DEPEG_PROMPT_LIMIT, getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk
-- `shared/lib/env-contract.ts` - renderEnvExample
-- ... 220 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 225 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -522,6 +522,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/chains.ts` - handleChains
 - `worker/src/api/daily-digest.ts` - handleDailyDigest
 - `worker/src/api/depeg-events.ts` - handleDepegEvents
+- `worker/src/api/depeg-resolver-review.ts` - handleDepegResolverReview
 - `worker/src/api/depeg-resolver.ts` - handleDepegResolver
 - `worker/src/api/dex-liquidity-history.ts` - handleDexLiquidityHistory
 - `worker/src/api/dex-liquidity-response.ts` - DexHistoryRow, DexLiquidityCronRow, DexLiquidityRow, DexPriceRow, buildDexLiquidityWarning, classifyLiquidityEvidence
@@ -532,8 +533,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
 - `worker/src/api/events.ts` - handleEvents
-- `worker/src/api/feedback.ts` - handleFeedback
-- ... 114 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 115 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -548,6 +548,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/shared.ts` - BlacklistRow, BlacklistScanResult, buildExplorerAddressUrl, buildExplorerTxUrl, shouldSuppressAsMirrorZero
 - `worker/src/cron/blacklist/sync-support.ts` - applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
 - `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental, parseTronEvent
+- `worker/src/cron/compute-depeg-resolver-review.ts` - buildDepegResolverReviewSnapshot, buildEmptyDdrrSummary, computeAndStoreDepegResolverReview
 - `worker/src/cron/compute-depeg-resolver.ts` - computeDepegResolver
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
@@ -616,8 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-crawlers.ts` - fetchCgPools, fetchGtPools, mergeCgPools, mergeGtPools
 - `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` - fetchCgTickersFallback, fetchDsFallbackPools, getFallbackTargets
 - `worker/src/cron/dex-liquidity/fetch-fluid.ts` - fetchFluidPools
-- `worker/src/cron/dex-liquidity/fetch-meteora.ts` - fetchMeteoraPools
-- ... 285 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 286 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 206 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 208 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

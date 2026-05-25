@@ -452,6 +452,9 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).toContain("cd worker && npx --no-install wrangler deploy");
     expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
     expect(deployWorkerJob).toContain("Run worker-only live smokes");
+    expect(deployWorkerJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
+    expect(deployWorkerJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
+    expect(deployWorkerJob).not.toContain("--mode live --skip-overflow");
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
     expect(pagesReleaseJob).toContain("needs:");
@@ -493,7 +496,9 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain("Deploy Pages with retry");
     expect(consolidatedPagesReleaseJob).toContain("Capture Pages release metrics");
     expect(consolidatedPagesReleaseJob).toContain("Run post-publish smokes in parallel");
-    expect(consolidatedPagesReleaseJob).toContain("--mode live --skip-overflow");
+    expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
+    expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
+    expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
     expectTextInOrder(consolidatedPagesReleaseJob, [

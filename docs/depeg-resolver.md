@@ -116,6 +116,26 @@ No leakage: a closed event's final peak severity is never used to estimate a liv
 - Horizon cells with a resolution probability where gates pass, otherwise the support state.
 - A `chronic_tail` indicator when the open event is already past the stratum's P99.
 
+## DDRR — Depeg Duration Resolver Reviewer
+
+The Depeg Duration Resolver Reviewer (DDRR) is the audit companion to DDR. DDR answers an open-event question; DDRR asks whether a stored DDR answer later matched canonical Pharos event data.
+
+DDRR does **not** replay today's resolver over old events. The quarter-hourly DDR writer stores assessment checkpoints in `depeg_resolver_assessments` (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) with the original verdict tier, duration median/IQR, horizon cells, factors, methodology version, and source row JSON. Public v1 scores the `first` checkpoint for the current DDR methodology so headline stats are event-level, while later checkpoints remain in D1 for audit/drill-down expansion. The review layer compares the stored assessment with the later `depeg_events` row and tracked-coin lifecycle status.
+
+The public module on `/depeg/` sits directly below DDR and surfaces two headline reviewer stats first:
+
+- **Recovery likelihood** — strict accuracy for scored DDR recovery verdicts. Correct recoverable and correct terminal calls count in the numerator; false terminal, false recoverable, and `at_risk` terminal outcomes are scored in the denominator. Pending, insufficient-signal, and data-issue rows are excluded.
+- **Recovery duration** — average signed observed-minus-DDR duration error for recovered rows with a duration estimate. Positive means the observed recovery took longer than DDR's median remaining-time estimate; negative means it recovered faster. The module also shows the average absolute error as context.
+
+Review outcomes are deliberately conservative:
+
+- A still-open event remains `pending`; it is never counted as proof that a terminal call was right.
+- A closed event with a recovery price is `recovered`.
+- A terminal/frozen tracked asset without a recovery price is `terminal_observed`.
+- Missing source rows or closed rows without recovery/terminal evidence are data issues, not wins or losses.
+
+The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same review snapshot used by the UI. Headline stats are computed across the loaded current-methodology assessment ledger, while public review rows are capped to the newest 100 rows to keep the D1 cache row bounded; `_meta.publicRowsTruncated` and `_meta.assessmentRowsTruncated` disclose truncation. Missing or invalid snapshots return a degraded `200` with empty rows, matching DDR's public failure mode. Stale review snapshots keep their rows and mark `_meta.degraded=true` / `degradedReason="stale-cache"`.
+
 ## Honest Limitations & Failure Modes
 
 - **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set. We state this plainly and never dress a verdict up as a probability.
@@ -140,9 +160,11 @@ DDR is validated by a replay harness over historical events plus the label corpu
 
 ## Data Plumbing
 
-Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by a single cache-backed endpoint. The frontend reads the cache only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes a degraded run on failure rather than failing the parent sync.
+Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by cache-backed endpoints. After the DDR snapshot is written, the same job best-effort persists assessment checkpoints and rebuilds the DDRR review snapshot from the assessment ledger plus current `depeg_events`; DDRR persistence or snapshot failures are recorded in cron metadata without failing the already-written DDR run unless the cron abort signal has fired. The frontend reads the caches only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes a degraded run on failure rather than failing the parent sync.
 
 The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer and the cache-backed `GET /api/depeg-resolver` handler degrade to a `200` with empty rows when the cache is missing, and serve stale rows with a warning (suppressing duration cells, keeping verdicts) when the cache is stale.
+
+The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`.
 
 ## Key Files
 
@@ -155,5 +177,10 @@ The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `
 | `shared/lib/depeg-resolver/incident-groups.ts` | Incident grouping + quarantine of flappy coins |
 | `shared/lib/depeg-resolver/inputs.ts` | Engine input shapes (active event, structural, supply, live context) |
 | `shared/types/depeg-resolver.ts` | Shared DDR types + Zod schemas |
+| `shared/lib/depeg-resolver-review/` | Runtime-neutral DDRR outcome, duration-error, horizon-review, and summary logic |
+| `shared/types/depeg-resolver-review.ts` | Shared DDRR assessment, review row, summary, meta, and response schemas |
+| `worker/src/lib/depeg-resolver-assessment-store.ts` | DDR assessment checkpoint persistence for later review |
+| `worker/src/cron/compute-depeg-resolver-review.ts` | DDRR snapshot builder from stored assessments and actual event outcomes |
+| `worker/src/api/depeg-resolver-review.ts` | Cache-backed public DDRR endpoint |
 | `shared/lib/methodology-versions/depeg-resolver.ts` | Methodology version constants + changelog |
 | `shared/lib/depeg-resolver-version.ts` | Re-export of the version constants |

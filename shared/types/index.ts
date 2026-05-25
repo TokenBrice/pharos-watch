@@ -8,6 +8,7 @@ export * from "./discovery";
 export * from "./digest";
 export * from "./market";
 export * from "./depeg-resolver";
+export * from "./depeg-resolver-review";
 export * from "./pricing-source-health";
 export * from "./report-cards";
 export * from "./stability";

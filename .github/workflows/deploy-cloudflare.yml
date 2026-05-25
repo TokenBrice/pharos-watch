@@ -260,7 +260,7 @@ jobs:
         run: |
           set +e
 
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow &
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
           ui_pid=$!
           npm run test:smoke-ops &
           ops_pid=$!
@@ -281,6 +281,7 @@ jobs:
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
+          SMOKE_UI_OVERFLOW_ROUTES: /depeg/
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"

@@ -32,6 +32,8 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
 import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
+import { computeAndStoreDepegResolverReview } from "./compute-depeg-resolver-review";
+import { writeDepegResolverAssessments } from "../lib/depeg-resolver-assessment-store";
 import { writeDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -142,6 +144,34 @@ async function buildCurrentDeviationMap(
 
 function placeholders(n: number): string {
   return Array.from({ length: n }, () => "?").join(", ");
+}
+
+function formatDdrrFailure(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function persistDepegResolverReviewArtifacts(
+  db: D1Database,
+  snapshot: DdrResponse,
+  signal?: AbortSignal,
+): Promise<{ assessmentWriteCount: number; reviewRows: number; reviewError: string | null }> {
+  let assessmentWriteCount = 0;
+  let reviewRows = 0;
+
+  try {
+    assessmentWriteCount = await writeDepegResolverAssessments(db, snapshot);
+    const reviewResult = await computeAndStoreDepegResolverReview(db, signal);
+    reviewRows = reviewResult.itemCount ?? 0;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return {
+      assessmentWriteCount,
+      reviewRows,
+      reviewError: formatDdrrFailure(error),
+    };
+  }
+
+  return { assessmentWriteCount, reviewRows, reviewError: null };
 }
 
 export async function computeDepegResolver(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
@@ -344,11 +374,16 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
   };
 
   await writeDepegResolverSnapshot(db, snapshot);
+  const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, snapshot, signal);
 
   return {
     itemCount: rows.length,
     metadata: JSON.stringify({
       activeEvents: rows.length,
+      assessmentWriteCount: reviewArtifacts.assessmentWriteCount,
+      reviewRows: reviewArtifacts.reviewRows,
+      ddrrDegraded: reviewArtifacts.reviewError != null,
+      ddrrDegradedReason: reviewArtifacts.reviewError,
       incidentCount: lineage?.incidentCount ?? 0,
       quarantinedCoins: lineage?.quarantinedCoins ?? 0,
     }),

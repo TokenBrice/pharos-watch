@@ -847,6 +847,42 @@
         }
       }
     },
+    "/api/depeg-resolver-review": {
+      "get": {
+        "tags": [
+          "Risk",
+          "Peg Monitoring"
+        ],
+        "summary": "Depeg Duration Resolver Reviewer",
+        "description": "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error.",
+        "operationId": "depegResolverReview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/redemption-backstops": {
       "get": {
         "tags": [

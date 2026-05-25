@@ -20,6 +20,7 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT` | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion) | on unless explicitly `false` | n/a (default-on, no expiry) |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | Idea 4 (curated + tape event-annotated charts) | off | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER` | Depeg Duration Resolver module on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-09-01 |
 
 `expiresAt` is advisory — each default-off gate in code carries the same date in a comment (the default-on `HERO_VERDICT` has no expiry). Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check (`scripts/ci/check-stale-flags.mjs`) runs in `validate:prebuild` and fails the build when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
 
@@ -56,6 +57,13 @@ What must be true before turning each flag on in production:
 - [x] Curated annotation layer at `shared/data/annotations/curated-annotations.ts`.
 - [x] ≥10 historical annotations seeded across top 4 coins (USDC / USDT / DAI / USDe). Coverage gate enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
 - [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk for the annotation layer.**
+
+### `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER`
+
+- [x] Runtime-neutral DDRR review logic and schemas validate stored DDR assessments against later `depeg_events`.
+- [x] `/api/depeg-resolver-review` is cache-backed, freshness-aware, and returns degraded empty rows before the first snapshot.
+- [x] `/depeg/` renders DDRR directly below DDR with prominent Recovery likelihood and Recovery duration headline tiles.
+- [ ] Production snapshot has at least one stored DDR assessment after launch; until then the module shows the empty review state.
 
 ## Spec source
 

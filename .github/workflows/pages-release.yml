@@ -69,6 +69,7 @@ jobs:
       NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY: ${{ vars.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY }}
       NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS }}
       NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER }}
+      NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER: ${{ vars.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -164,9 +165,9 @@ jobs:
           PAGES_UI_CHANGED: ${{ inputs.pages_ui_changed }}
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
+          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_UI_OVERFLOW_WORKERS: "6"
-          SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
+          SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_MOBILE_UI_VIEWPORTS: 360x740,390x844
           SMOKE_MOBILE_UI_SKIP_DESKTOP: "1"
           SMOKE_MOBILE_UI_WORKERS: "3"
@@ -228,7 +229,7 @@ jobs:
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
-          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
+          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/
           SMOKE_UI_OVERFLOW_WORKERS: "6"
         run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
       - name: Dump local export smoke server log
@@ -262,6 +263,7 @@ jobs:
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
+          SMOKE_UI_OVERFLOW_ROUTES: /depeg/
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
@@ -270,7 +272,7 @@ jobs:
         run: |
           set +e
 
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow &
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live &
           ui_pid=$!
           npm run test:smoke-ops &
           ops_pid=$!

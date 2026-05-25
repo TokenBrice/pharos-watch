@@ -385,6 +385,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   }),
   publicGet({
+    key: "depeg-resolver-review",
+    path: API_PATHS.depegResolverReview(),
+    strictContract: true,
+    probeGroup: "public",
+  }),
+  publicGet({
     key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
     strictContract: true,

@@ -37,6 +37,9 @@ export const FEATURE_FLAGS = {
     process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
   // expiresAt: 2026-09-01 — DDR emergency rollback
   depegResolver: process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER !== "false",
+  // expiresAt: 2026-09-01 — DDRR emergency rollback
+  depegResolverReviewer:
+    process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER !== "false",
 } as const;
 
 export function isHeroVerdictEnabled(): boolean {
@@ -61,4 +64,8 @@ export function isChartAnnotationsEnabled(): boolean {
 
 export function isDepegResolverEnabled(): boolean {
   return FEATURE_FLAGS.depegResolver;
+}
+
+export function isDepegResolverReviewerEnabled(): boolean {
+  return FEATURE_FLAGS.depegResolverReviewer;
 }

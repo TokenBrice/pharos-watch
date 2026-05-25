@@ -370,6 +370,25 @@
           "response": []
         },
         {
+          "name": "Depeg Duration Resolver Reviewer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/depeg-resolver-review",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "depeg-resolver-review"
+              ]
+            },
+            "description": "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error."
+          },
+          "response": []
+        },
+        {
           "name": "Redemption backstops",
           "request": {
             "method": "GET",
