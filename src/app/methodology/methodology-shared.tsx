@@ -13,6 +13,7 @@ export const METHODOLOGY_SECTIONS = [
   { id: "mint-burn-flow-methodology", label: "Mint/Burn Flow" },
   { id: "yield-intelligence-methodology", label: "Yield Intelligence" },
   { id: "pegscore-dews-methodology", label: "PegScore + DEWS" },
+  { id: "depeg-resolver-methodology", label: "Depeg Duration Resolver" },
   { id: "contagion-stress-test-methodology", label: "Contagion Test" },
   { id: "blacklist-tracker-methodology", label: "Blacklist Tracker" },
   { id: "chain-health-score", label: "Chain Health Score" },
