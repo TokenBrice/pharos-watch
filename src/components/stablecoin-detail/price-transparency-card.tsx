@@ -34,6 +34,41 @@ function formatSourceDepthTargetLabel(sourceCount: number): string {
   return sourceCount >= 3 ? "3+/3" : `${sourceCount}/3`;
 }
 
+type RenderedSourceStatus = Exclude<SourceStatus, "not-applicable">;
+
+const SOURCE_CHIP_STYLES: Record<RenderedSourceStatus, { wrap: string; label: string; badge: string; text: string }> = {
+  used: {
+    wrap: "border-emerald-500/20 bg-emerald-500/[0.03]",
+    label: "font-medium",
+    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+    text: "Used",
+  },
+  available: {
+    wrap: "border-border",
+    label: "font-medium text-muted-foreground",
+    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+    text: "Available",
+  },
+  "no-data": {
+    wrap: "border-border/60",
+    label: "font-medium text-muted-foreground/60",
+    badge: "bg-muted/40 text-muted-foreground border-border/40",
+    text: "No feed",
+  },
+};
+
+function SourceChip({ label, status }: { label: string; status: RenderedSourceStatus }) {
+  const style = SOURCE_CHIP_STYLES[status];
+  return (
+    <div className={cn("flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm", style.wrap)}>
+      <span className={cn("min-w-0 truncate", style.label)} title={label}>{label}</span>
+      <Badge variant="outline" className={cn("shrink-0 text-[11px]", style.badge)}>
+        {style.text}
+      </Badge>
+    </div>
+  );
+}
+
 export function PriceTransparencyCard({
   coinData,
   consensusSources,
@@ -151,65 +186,36 @@ export function PriceTransparencyCard({
           </div>
         ) : null}
 
-        {/* Source Grid - Grouped by Status */}
-        <div className="rounded-lg border overflow-hidden">
-          {isProtocolRedeem ? (
-            <div className="flex items-center justify-between border-b px-3 py-2 text-sm bg-emerald-500/5">
-              <span className="font-medium">Protocol Redemption</span>
-              <Badge variant="outline" className="text-[11px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                Used
-              </Badge>
-            </div>
-          ) : null}
+        {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width */}
+        <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {isProtocolRedeem ? <SourceChip label="Protocol Redemption" status="used" /> : null}
 
-          {/* Used Sources */}
-          {usedSources.map((source) => (
-            <div
-              key={source.key}
-              className="flex items-center justify-between px-3 py-2 text-sm border-b last:border-b-0 bg-emerald-500/[0.02]"
-            >
-              <span className="font-medium">{source.label}</span>
-              <Badge variant="outline" className="text-[11px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-                Used
-              </Badge>
-            </div>
-          ))}
+            {/* Used Sources */}
+            {usedSources.map((source) => (
+              <SourceChip key={source.key} label={source.label} status="used" />
+            ))}
 
-          {/* Available Sources */}
-          {availableSources.map((source) => (
-            <div
-              key={source.key}
-              className="flex items-center justify-between px-3 py-2 text-sm border-b last:border-b-0"
-            >
-              <span className="font-medium text-muted-foreground">{source.label}</span>
-              <Badge variant="outline" className="text-[11px] bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">
-                Available
-              </Badge>
-            </div>
-          ))}
+            {/* Available Sources */}
+            {availableSources.map((source) => (
+              <SourceChip key={source.key} label={source.label} status="available" />
+            ))}
 
-          {/* Expandable No-Data Sources */}
-          {noDataSources.length > 0 && (
-            <>
-              {showAll && noDataSources.map((source) => (
-                <div
-                  key={source.key}
-                  className="flex items-center justify-between px-3 py-2 text-sm border-b last:border-b-0"
-                >
-                  <span className="font-medium text-muted-foreground/60">{source.label}</span>
-                  <Badge variant="outline" className="text-[11px] bg-muted/40 text-muted-foreground border-border/40">
-                    No feed
-                  </Badge>
-                </div>
+            {/* Expandable No-Data Sources */}
+            {showAll &&
+              noDataSources.map((source) => (
+                <SourceChip key={source.key} label={source.label} status="no-data" />
               ))}
-              <button
-                onClick={() => setShowAll(!showAll)}
-                className="pharos-focus-ring w-full flex items-center justify-center gap-1 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors rounded-md"
-              >
-                <ChevronDown aria-hidden="true" className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")} />
-                {showAll ? "Show fewer sources" : `Show ${noDataSources.length} more sources`}
-              </button>
-            </>
+          </div>
+
+          {noDataSources.length > 0 && (
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+            >
+              <ChevronDown aria-hidden="true" className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")} />
+              {showAll ? "Show fewer sources" : `Show ${noDataSources.length} more sources`}
+            </button>
           )}
         </div>
       </CardContent>
