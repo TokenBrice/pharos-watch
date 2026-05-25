@@ -341,29 +341,23 @@ Default card composition in production:
 
 ### Accent Border Palette (Live)
 
-`border-l-[3px]` is actively used with:
+The decorative per-card colored left stripe (`border-l-[3px] border-l-*-500`) has been **retired from analytics, discovery, and methodology surfaces** (May 2026 harmonization). KPI stat cards (`MetricStatCard` with no `borderColorClass`), feature/section cards (`/about`, `/funding`, `/methodology` and its changelogs), the `/status` sections, the `/liquidity`, `/depeg`, `/freezewatch` heroes, the `/cemetery` autopsy box, the digest snapshot cards, and the stablecoin-detail Yield Intelligence + blacklist cards now render as flat homepage-style cards (`rounded-xl border bg-card shadow-sm`, no colored edge, neutral `pharos-kicker` eyebrows).
 
-- `border-l-cyan-500`
-- `border-l-amber-500`
-- `border-l-violet-500`
-- `border-l-sky-500`
-- `border-l-zinc-500`
-- `border-l-rose-500`
-- `border-l-orange-500`
-- `border-l-emerald-500`
-- `border-l-teal-500`
-- `border-l-red-500`
-- `border-l-blue-500`
+`border-l-[3px]` (with a semantic color) remains reserved for **data-driven indicators**, not card chrome:
+
+- depeg table row severity accents (`rowAccentClass` → `border-l-red-500` / `border-l-orange-500` / `border-l-amber-500`)
+- stablecoin-detail hero metric accents (`accentClass` in `hero-card-metrics`)
+- internal admin status sections (`StatusSection` still accepts an optional `accentClassName`)
 
 Navigation active state uses `border-l-frost-blue`.
 
 ### Interactive Card Pattern
 
-`pharos-interactive-card` is the richer hover-lift utility used on the about-page feature grid. Homepage callouts currently stay on lighter `pharos-card-shell` variants without the extra interactive-card class.
+`pharos-interactive-card` is the richer hover-lift utility used on the about-page feature grid. Homepage callouts currently stay on lighter `pharos-card-shell` variants without the extra interactive-card class. Following the May 2026 harmonization these surfaces no longer carry a colored left stripe.
 
 ```tsx
 className =
-  "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent p-4";
+  "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 bg-gradient-to-b from-background/40 to-transparent p-4";
 ```
 
 ### Logo Containers
