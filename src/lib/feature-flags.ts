@@ -35,6 +35,8 @@ export const FEATURE_FLAGS = {
   // expiresAt: 2026-09-01 — pending curation owner + cadence
   chartAnnotations:
     process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
+  // expiresAt: 2026-09-01 — DDR emergency rollback
+  depegResolver: process.env.NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER !== "false",
 } as const;
 
 export function isHeroVerdictEnabled(): boolean {
@@ -55,4 +57,8 @@ export function isMobileStickySummaryEnabled(): boolean {
 
 export function isChartAnnotationsEnabled(): boolean {
   return FEATURE_FLAGS.chartAnnotations;
+}
+
+export function isDepegResolverEnabled(): boolean {
+  return FEATURE_FLAGS.depegResolver;
 }

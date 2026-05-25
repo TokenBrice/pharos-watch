@@ -3,6 +3,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type {
   BluechipRatingsMap,
   DailyDigestResponse,
+  DdrResponse,
   DexLiquidityHistoryPoint,
   DexLiquidityMap,
   DigestArchiveResponse,
@@ -27,6 +28,7 @@ import type {
   YieldHistoryResponse,
   YieldRankingsResponse,
 } from "@shared/types";
+import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { TelegramPulseSchema, type TelegramPulse } from "@shared/types/status";
 import { StablecoinChartResponseSchema, UsdsStatusResponseSchema } from "@shared/types/digest";
 import {
@@ -229,6 +231,13 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     producerIntervalMs: CRON_15MIN,
     schema: ReportCardsResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+  }),
+  depegResolver: pollingDescriptor<DdrResponse>({
+    queryKey: ["depeg-resolver"],
+    path: API_PATHS.depegResolver(),
+    producerIntervalMs: CRON_15MIN,
+    schema: DdrResponseSchema,
+    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
   }),
   redemptionBackstops: pollingDescriptor<RedemptionBackstopsResponse>({
     queryKey: ["redemption-backstops"],

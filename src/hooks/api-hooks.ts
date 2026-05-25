@@ -4,6 +4,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
   type BluechipRatingsMap,
   type DailyDigestResponse,
+  type DdrResponse,
   type DexLiquidityHistoryPoint,
   type DexLiquidityMap,
   type DigestArchiveResponse,
@@ -174,6 +175,13 @@ export function useReportCards(overrides?: QueryControlOverrides) {
     // Keep the prior cards visible across background refetches so toggling a
     // grade filter doesn't blank the table. Callers can still override.
     { keepPreviousData: true, ...overrides },
+  );
+}
+
+export function useDepegResolver() {
+  return useRegisteredApiQueryWithMeta<DdrResponse>(
+    FRONTEND_API_QUERY_REGISTRY.depegResolver,
+    { keepPreviousData: true },
   );
 }
 

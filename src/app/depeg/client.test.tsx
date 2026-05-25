@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 const mocks = vi.hoisted(() => ({
   usePegSummary: vi.fn(),
   useStressSignals: vi.fn(),
+  useDepegResolver: vi.fn(),
   useInfiniteDepegEvents: vi.fn(),
   useLogos: vi.fn(),
   useUrlFilters: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   usePegSummary: mocks.usePegSummary,
   useStressSignals: mocks.useStressSignals,
+  useDepegResolver: mocks.useDepegResolver,
 }));
 
 vi.mock("@/hooks/use-depeg-events", () => ({
@@ -74,6 +76,10 @@ vi.mock("@/components/depeg-pending-incidents", () => ({
 
 vi.mock("@/components/peg-heatmap", () => ({
   PegHeatmap: () => <div data-testid="peg-heatmap" />,
+}));
+
+vi.mock("@/components/depeg-resolver-module", () => ({
+  DepegResolverModule: () => <div data-testid="depeg-resolver" />,
 }));
 
 afterEach(() => {
@@ -139,6 +145,30 @@ describe("DepegClient", () => {
       hasNextPage: false,
       isFetchingNextPage: false,
     });
+    mocks.useDepegResolver.mockReturnValue({
+      data: {
+        _meta: {
+          dataAsOf: 0,
+          modelAsOf: 0,
+          computedAt: 0,
+          expiresAt: 0,
+          degraded: false,
+          degradedReason: null,
+          publicWarning: "",
+          resolutionRubricVersion: "v1",
+          durationModelVersion: "v1",
+          incidentGroupingVersion: "v1",
+          supportRulesVersion: "v1",
+          lineage: null,
+        },
+        rows: [],
+        methodology: {},
+      },
+      error: null,
+      dataUpdatedAt: 0,
+      meta: null,
+      refetch: vi.fn(),
+    });
     mocks.useLogos.mockReturnValue({ data: {} });
     mocks.useUrlFilters.mockReturnValue({
       getParam: (_key: string, fallback = "") => fallback,
@@ -153,5 +183,6 @@ describe("DepegClient", () => {
     expect(screen.getByTestId("feed-Active Incidents").textContent).toBe("1");
     expect(screen.getByTestId("feed-Recent Depeg Events").textContent).toBe("1");
     expect(screen.getByTestId("pending-incidents").textContent).toBe("1");
+    expect(screen.getByTestId("depeg-resolver")).toBeTruthy();
   });
 });

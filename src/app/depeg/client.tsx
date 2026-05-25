@@ -9,6 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useStressSignals } from "@/hooks/api-hooks";
+import { useDepegResolver } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -24,6 +25,7 @@ import { PegDeviationStrip } from "@/components/peg-deviation-strip";
 import { PegCohortRidge } from "@/components/peg-cohort-ridge";
 import { DepegFeed } from "@/components/depeg-feed";
 import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
+import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
@@ -61,6 +63,13 @@ export function DepegClient() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteDepegEvents({ includePending: true });
+  const {
+    data: resolverData,
+    error: resolverError,
+    dataUpdatedAt: resolverUpdatedAt,
+    meta: resolverMeta,
+    refetch: refetchResolver,
+  } = useDepegResolver();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -147,8 +156,8 @@ export function DepegClient() {
   }, [router]);
   const globalError = pegError ?? dewsError ?? eventsError;
   const handleRetry = useCallback(() => {
-    return refetchQueryGroup([refetchPeg, refetchDews, refetchEvents]);
-  }, [refetchDews, refetchEvents, refetchPeg]);
+    return refetchQueryGroup([refetchPeg, refetchDews, refetchEvents, refetchResolver]);
+  }, [refetchDews, refetchEvents, refetchPeg, refetchResolver]);
 
   // Loading state
   if (isPegLoading) {
@@ -182,6 +191,7 @@ export function DepegClient() {
           { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
           { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
           { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
+          { label: "Depeg Resolver", staleTime: 900_000, dataUpdatedAt: resolverUpdatedAt, error: resolverError, hasData: resolverData != null, meta: resolverMeta },
         ]}
       />
 
@@ -241,6 +251,11 @@ export function DepegClient() {
           </SectionErrorBoundary>
         </div>
       </div>
+
+      {/* Depeg Duration Resolver — recovery verdict + expected duration per open event */}
+      <SectionErrorBoundary name="depeg-resolver">
+        <DepegResolverModule data={resolverData} logos={logos} />
+      </SectionErrorBoundary>
 
       {/* Cohort deviation shape (Council D15) — standalone ridge plot */}
       <SectionErrorBoundary name="cohort-ridge">
