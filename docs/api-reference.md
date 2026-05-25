@@ -300,7 +300,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **36**.
+Total documented public operations: **37**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -310,6 +310,7 @@ Total documented public operations: **36**.
 | GET | `/api/chains` | Chains | Chains | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/daily-digest` | Daily digest | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-events` | Depeg events | Peg Monitoring | X-API-Key | `stablecoin?`, `limit?`, `offset?`, `cursor?`, `active?`, `includeTotal?`, `includePending?` | 200, 400, 401, 429, 503 |
+| GET | `/api/depeg-resolver` | Depeg Duration Resolver | Risk, Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity` | DEX liquidity | Liquidity | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity-history` | DEX liquidity history | Liquidity, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/digest-archive` | Digest archive | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |

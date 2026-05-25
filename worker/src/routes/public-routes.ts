@@ -13,6 +13,7 @@ import { handleDigestArchive } from "../api/digest-archive";
 import { handleDigestSnapshot } from "../api/digest-snapshot";
 import { handleStabilityIndex } from "../api/stability-index";
 import { handleReportCards } from "../api/report-cards";
+import { handleDepegResolver } from "../api/depeg-resolver";
 import { handleRedemptionBackstops } from "../api/redemption-backstops";
 import { handleYieldHistory } from "../api/yield-history";
 import { handleYieldAdapterManifest } from "../api/yield-adapter-manifest";
@@ -47,6 +48,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("snapshots-index", ({ db }) => handleSnapshotsIndex(db)),
   defineStaticRoute("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
   defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
+  defineStaticRoute("depeg-resolver", ({ db }) => handleDepegResolver(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),
   defineStaticRoute("yield-rankings", ({ db }) => handleYieldRankings(db)),
   defineStaticRoute("yield-adapter-manifest", () => handleYieldAdapterManifest()),

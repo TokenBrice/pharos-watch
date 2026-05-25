@@ -351,6 +351,25 @@
           "response": []
         },
         {
+          "name": "Depeg Duration Resolver",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/depeg-resolver",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "depeg-resolver"
+              ]
+            },
+            "description": "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood."
+          },
+          "response": []
+        },
+        {
           "name": "Redemption backstops",
           "request": {
             "method": "GET",

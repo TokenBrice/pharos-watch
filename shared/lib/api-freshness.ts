@@ -125,6 +125,7 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   depegEvents: 900,
   stressSignals: CACHE_FRESHNESS_LANES.dews.endpointMaxAgeSec,
   reportCards: 900,
+  depegResolver: 900,
   redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,
   supplyHistory: DAY_SECONDS,
   mintBurnFlows: CRON_INTERVALS["sync-mint-burn"] * 2,

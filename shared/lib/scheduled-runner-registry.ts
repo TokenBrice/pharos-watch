@@ -22,6 +22,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "snapshot-supply",
       "snapshot-chain-supply",
       "publish-report-card-cache",
+      "compute-depeg-resolver",
     ]],
   },
   statusSelfCheckOffset: {

@@ -472,6 +472,17 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
+    key: "depeg-resolver",
+    path: API_PATHS.depegResolver(),
+    summary: "Depeg Duration Resolver",
+    description:
+      "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood.",
+    tags: ["Risk", "Peg Monitoring"],
+    postman: {
+      folder: "Risk and market structure",
+    },
+  },
+  {
     key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
     summary: "Redemption backstops",

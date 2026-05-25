@@ -811,6 +811,42 @@
         }
       }
     },
+    "/api/depeg-resolver": {
+      "get": {
+        "tags": [
+          "Risk",
+          "Peg Monitoring"
+        ],
+        "summary": "Depeg Duration Resolver",
+        "description": "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood.",
+        "operationId": "depegResolver",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/redemption-backstops": {
       "get": {
         "tags": [

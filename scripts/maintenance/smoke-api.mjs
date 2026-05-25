@@ -518,6 +518,16 @@ export const ENDPOINT_ASSERTIONS = {
     );
     return `${body.cards.length} cards`;
   },
+  "/api/depeg-resolver": (result) => {
+    assert(result.status === 200, `/api/depeg-resolver returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.rows), "/api/depeg-resolver missing rows[]");
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/depeg-resolver missing methodology.version",
+    );
+    return `${body.rows.length} active`;
+  },
   "/api/stability-index": (result) => {
     assert(result.status === 200, `/api/stability-index returned ${result.status}`);
     const body = stripMeta(result.body);

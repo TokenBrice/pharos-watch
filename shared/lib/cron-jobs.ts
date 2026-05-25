@@ -366,6 +366,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "quarter-hourly-chain",
   },
   {
+    job: "compute-depeg-resolver",
+    label: "Depeg Duration Resolver",
+    group: "quarter-hourly",
+    scheduleKey: "quarterHourly",
+    triggerMode: "shared",
+    maxConnections: 0,
+    connectionGroup: "quarter-hourly-chain",
+  },
+  {
     job: "snapshot-safety-grade-history",
     label: "Safety grade snapshot",
     group: "daily",
