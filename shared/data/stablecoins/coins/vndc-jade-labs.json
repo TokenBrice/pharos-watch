@@ -115,14 +115,14 @@
     "controls": [
       {
         "label": "Jade Labs / VNDC issuer admin (owner-controlled issue/redeem)",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
         "chain": "bsc",
-        "address": "0xa276dc434a366c62ef010585b3885d0c85154389",
+        "address": "0x557D55E71204CE7DfDc5C839446Dd34F1b299354",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
-        "evidence": "VNDC contracts are Tether-style centralized tokens: the legacy Ethereum VNDCToken exposes owner-gated issue()/burn() with blacklist/pause, and the BNB Chain deployment uses an adminMap plus currency whitelists and a MinMaxSetting mint/redeem struct, so the issuer's admin accounts control supply creation against self-reported VND reserves.",
+        "evidence": "VNDC contracts are Tether-style centralized tokens; BSC owner() returned this EOA and cast code returned 0x, so the issuer admin can authorize owner-controlled supply operations against self-reported VND reserves.",
         "sources": [
           {
             "label": "BscScan VNDC token",
@@ -141,7 +141,7 @@
           "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
         }
       ],
-      "sourceFreeRationale": "Mechanism confirmed from explorer contract structure (Tether-style owner-controlled issue/burn plus admin map) and issuer materials; specific live admin address ownership not independently resolved.",
+      "sourceFreeRationale": "Mechanism confirmed from explorer contract structure (Tether-style owner-controlled issue/burn plus admin map), issuer materials, and live BSC owner() read.",
       "unresolvedQuestions": [
         "Resolve which exact EOA/multisig holds the contract owner and admin-map privileges across the Polygon and BSC deployments."
       ]

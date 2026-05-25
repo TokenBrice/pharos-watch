@@ -116,30 +116,47 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "VGBP is issued by VNX Commodities AG, a Liechtenstein FMA-licensed entity; tokens are minted on demand for verified customers depositing GBP and the token's on-chain admin is an issuer-controlled upgradeable-proxy owner.",
+    "summary": "VGBP is issued by VNX Commodities AG; live Base reads resolve mint/admin control to a VNX EOA with a large minter allowance and the current proxy admin owned by the same EOA.",
     "controls": [
       {
-        "label": "VNX upgradeable-proxy admin/owner (Base)",
-        "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
+        "label": "VGBP owner/minter admin EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
         "chain": "base",
-        "address": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "address": "0xD63052E09AF164CEF57695D3b96043EA848B051F",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "BaseScan shows the VGBP token at this address is an EIP-1967 TransparentUpgradeableProxy using OwnableUpgradeable + PausableUpgradeable with RBAC; proxy admin 0x1724768a253476159a622a1689146862d3b762c2 holds upgrade authority and the owner/deployer is 0xd63052e09af164cef57695d3b96043ea848b051f, both issuer-controlled.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Base owner() returned this EOA; minterAllowance(address) returned a large allowance for the same address, indicating live direct mint ability.",
         "sources": [
           {
             "label": "BaseScan VGBP contract",
             "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
           }
         ]
+      },
+      {
+        "label": "VGBP proxy admin contract",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "chain": "base",
+        "address": "0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Base EIP-1967 admin slot returned this proxy admin contract, and its owner() returned the same VNX EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F.",
+        "sources": [
+          {
+            "label": "BaseScan VGBP proxy admin",
+            "url": "https://basescan.org/address/0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8#code"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "VNX docs and the Liechtenstein FMA TVTG license describe VGBP as a 1:1 GBP-redeemable token minted by VNX Commodities AG against bank-held GBP reserves; on-chain the Base contract is an upgradeable proxy with issuer-held Ownable/admin roles, so mint creation is centrally controlled by the issuer.",
+      "evidence": "VNX docs and the Liechtenstein FMA TVTG license describe VGBP as a 1:1 GBP-redeemable token minted by VNX Commodities AG against bank-held GBP reserves; live Base reads identify owner/minter EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F and proxy admin 0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8 owned by the same EOA.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -149,7 +166,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Confirm which exact role/address holds the live mint privilege in the implementation bytecode and whether the proxy admin is an EOA, multisig, or Safe."
+        "Confirm whether the VNX owner/minter EOA is controlled by a multisig, MPC, or other policy layer."
       ]
     }
   }

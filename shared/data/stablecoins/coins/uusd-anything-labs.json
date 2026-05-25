@@ -75,29 +75,60 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; supply is issuer/owner-controlled and the implementation can be upgraded by the owner, but the project publishes no verifiable collateral or mint-route documentation.",
+    "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; live reads resolve the token owner to a 4/6 Safe that can mint/burn directly and controls the proxy-admin ownership chain.",
     "controls": [
       {
-        "label": "UUSD owner / proxy upgrade admin",
-        "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
+        "label": "UUSD owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
         "chain": "bsc",
-        "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "address": "0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4",
+        "threshold": 4,
+        "signerCount": 6,
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "BscScan shows UUSD is an upgradeable proxy (implementation 0xA4f44c290CC693fC0c985d679281c61e99d9Be9a) with an Ownable owner; the owner can upgrade the implementation and controls supply, but the mint route and collateral process are not documented."
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 4,
+          "owners": [
+            "0x887818A767C2B3cE9FEfF05e81236cA4a02F5AFD",
+            "0x2477Dc7EE0730610B8Bc5Ff0F5630D6b6367cF4a",
+            "0x2Cc89432315D20FfC6973ec4fcB9DC97cc8812Ac",
+            "0xD6d3375456Dd057b77082bdf58c79f14BFE24bef",
+            "0x06D08a182bc72719392f8C608750eD7ba355B984",
+            "0x4BC41b6E4A6De9d08B185578F05B861dF438D402"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api"
+        },
+        "evidence": "BSC owner() returned this Safe; Safe Transaction Service returned threshold 4, six owners, no enabled modules, and the zero guard. The owner can mint/burn directly under the UUSD implementation."
+      },
+      {
+        "label": "UUSD proxy-admin ownership chain",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "chain": "bsc",
+        "address": "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "EIP-1967 proxy-admin slot returned this contract; owner() returned 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6, whose owner() resolves to the same 4/6 Safe."
       }
     ],
     "review": {
-      "evidence": "BscScan shows the UUSD token is an upgradeable proxy with Ownable owner control over the implementation; the issuer (Anything Labs) markets UUSD as reserve-backed for an AI-agent economy but publishes no audited reserve attestation or specific mint mechanism, so issuance is treated as issuer/owner-controlled.",
+      "evidence": "BSC reads show the UUSD token is an upgradeable proxy with Safe owner control over mint/burn and a proxy-admin ownership chain controlled by the same Safe; Anything Labs markets UUSD as reserve-backed for an AI-agent economy, but reserve attestation remains unresolved.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "UUSD contract (BscScan)", "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000" }
+        {
+          "label": "UUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        }
       ],
       "sourceFreeRationale": "Owner-controlled upgradeable proxy confirmed from BscScan; the actual mint authorization path and collateral backing are undocumented, so the issuer-direct/owner-controlled classification is the best-supported reading rather than a fully opaque unknown.",
-      "unresolvedQuestions": ["Resolve the on-chain owner/upgrade-admin address and whether a distinct minter role or off-chain reserve backs issued UUSD supply."]
+      "unresolvedQuestions": ["Resolve whether a distinct off-chain reserve process backs issued UUSD supply."]
     }
   }
 }

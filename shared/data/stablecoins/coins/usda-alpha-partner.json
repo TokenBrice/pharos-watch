@@ -87,8 +87,8 @@
     "summary": "Alpha Partners' USDA is a BSC ERC-20 whose verified contract exposes a role-gated mint() callable only by holders of a MINT role, with role-based admin controls for minting, blacklisting and tax parameters and no on-chain supply cap; the backing mechanism is otherwise undocumented.",
     "controls": [
       {
-        "label": "USDA MINT role holder",
-        "role": "minter-admin",
+        "label": "USDA MINT role-gated token contract",
+        "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "bsc",
@@ -96,7 +96,7 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Contract has no maximum supply cap; addresses granted the MINT role can issue USDA without an on-chain limit.",
-        "evidence": "The verified USDA token contract on BscScan exposes a mint() function restricted to a MINT role and role-based admin controls (mint, blacklist, tax ratios) with no supply cap, read from the BscScan contract page."
+        "evidence": "The verified USDA token contract on BscScan exposes a mint() function restricted to a MINT role and role-based admin controls (mint, blacklist, tax ratios) with no supply cap. Actual MINT role holder addresses remain unresolved."
       }
     ],
     "review": {
@@ -104,10 +104,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "USDA contract (BscScan)", "url": "https://bscscan.com/token/0x17eafd08994305d8ace37efb82f1523177ec70ee" }
+        {
+          "label": "USDA contract (BscScan)",
+          "url": "https://bscscan.com/token/0x17eafd08994305d8ace37efb82f1523177ec70ee"
+        }
       ],
       "sourceFreeRationale": "Role-gated mint confirmed from the verified BscScan contract; the specific role-holder address/operator identity was not resolved and the collateral/backing process is undocumented in project materials.",
-      "unresolvedQuestions": ["Resolve which address(es) hold the MINT role and the role admin, and whether any off-chain reserve actually backs issued supply."]
+      "unresolvedQuestions": [
+        "Resolve which address(es) hold the MINT role and the role admin, and whether any off-chain reserve actually backs issued supply."
+      ]
     }
   }
 }

@@ -20,37 +20,67 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "USD0 issuance is modeled as protocol-operated mint authority backed by RWA/custody rails pending deeper role review.",
+    "summary": "USD0 issuance runs through Usual's RWA/custody-backed protocol contracts: DaoCollateral and SwapperEngine mint against eligible collateral and governance controls collateral/risk parameters.",
     "controls": [
       {
-        "label": "Issuer-operated mint authority",
+        "chain": "ethereum",
+        "address": "0xde6e1F680C4816446C8D515989E2358636A38b04",
+        "label": "Usual DaoCollateral",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
-            "label": "Usual docs",
-            "url": "https://docs.usual.money/"
+            "label": "Usual USD0 flow and architecture",
+            "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
           }
         ],
-        "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting."
+        "evidence": "Usual docs describe DaoCollateral as the collateral admission/mint path for USD0 against eligible RWA/custody-backed collateral."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB969B0d14F7682bAF37ba7c364b351B830a812B2",
+        "label": "Usual SwapperEngine",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Usual docs describe SwapperEngine as part of USD0 mint/swap routing against eligible collateral under protocol controls."
+      },
+      {
+        "label": "USUAL governance / collateral admin",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Usual docs describe governance/collateral-admin control over accepted RWA collateral and protocol parameters."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Usual docs",
-          "url": "https://docs.usual.money/"
+          "label": "USD0 docs",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0"
+        },
+        {
+          "label": "USD0 flow and architecture",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+        },
+        {
+          "label": "USD0 RWA collateral",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral"
         }
       ],
-      "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting.",
+      "evidence": "Usual documentation describes USD0 issuance through DaoCollateral and SwapperEngine collateral/routing contracts backed by RWA/custody rails, with governance/collateral-admin parameter control rather than a generic issuer backend.",
       "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewedAt": "2026-05-25"
     }
   },
   "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",

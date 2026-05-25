@@ -91,7 +91,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM): users mint USDXL as debt against overcollateralized deposits, repayment burns it, and a HypurrFi/Last multisig administers facilitator buckets, collateral, and risk parameters.",
+    "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM), but HypurrFi has announced wind-down terms: pooled new borrows are suspended, USDXL rates are set to 30%, and Legacy/Pooled settlement targets July 30, 2026.",
     "controls": [
       {
         "label": "HypurrFi USDXL facilitator / borrow contracts (Aave-v3 fork, GHO model)",
@@ -115,7 +115,7 @@
       }
     ],
     "review": {
-      "evidence": "HypurrFi documentation and coverage describe USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control (pause authority exercised in March 2026); on-chain admin addresses not independently confirmed. Note: an orderly wind-down handing HypurrFi markets to Euler has been reported.",
+      "evidence": "HypurrFi documentation describes USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control. Current HypurrFi wind-down materials state Pooled new borrows are suspended, USDXL rates are set to 30%, and full Legacy/Pooled settlement targets July 30, 2026.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -124,7 +124,7 @@
       ],
       "unresolvedQuestions": [
         "Confirm the HypurrFi ACL-admin / pool-admin multisig threshold and signer set on HyperEVM.",
-        "Confirm the impact of the reported Euler wind-down on USDXL mint administration and whether new issuance remains enabled."
+        "Confirm contract-level enforcement of suspended Pooled borrows and any remaining Legacy issuance caps during wind-down."
       ]
     }
   }

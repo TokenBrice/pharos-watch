@@ -60,16 +60,18 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, so the owner address can directly mint; no Safe, multisig, or timelock setup was verified.",
+    "confidence": "manual-review",
+    "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, and live reads resolve the owner to a non-Safe 3/5 multisig-style contract; no timelock or Safe module/guard setup was verified.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x62b3a0f6ffc5efd7692053A9040fE44F9AC8c5Cb",
         "label": "USAT owner-only minter",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
@@ -81,7 +83,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
           }
         ],
-        "evidence": "The USAT proxy owner() returned this address; verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
+        "evidence": "The USAT proxy owner() returned this address; required() and owners() reads returned a 3/5 multisig-style owner. Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
       }
     ],
     "review": {
@@ -103,11 +105,11 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
         }
       ],
-      "evidence": "Ethereum reads identified the USAT proxy implementation and owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
+      "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
       "reviewer": "Codex mint-authority top100 batch-a",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-        "Verify operational custody for the owner address.",
+        "Verify operational custody and signer identities for the owner multisig-style contract.",
         "Check whether additional chain deployments exist and share the same issuer control."
       ]
     }

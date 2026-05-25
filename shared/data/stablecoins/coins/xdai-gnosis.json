@@ -59,7 +59,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk.",
+    "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk with a 4/7 bridge validator threshold and 8/15 governance owner threshold.",
     "inheritedFrom": "usds-sky",
     "controls": [
       {
@@ -68,12 +68,14 @@
         "role": "bridge-admin",
         "authorityType": "bridge",
         "directMintAbility": "cap-limited",
+        "threshold": 4,
+        "signerCount": 7,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "routeChecks": {
           "lockboxOrEscrow": "Official Gnosis bridge routes lock or account for upstream USDS/DAI backing native xDAI.",
-          "trustedPeerOrRemote": "Official bridge route; exact current bridge contract threshold not decoded in this pass.",
-          "pausersAdminsUpgraders": "Bridge governance/admin controls not decoded in this pass."
+          "trustedPeerOrRemote": "Official bridge route with current validator threshold resolved as 4-of-7.",
+          "pausersAdminsUpgraders": "Bridge governance owner threshold resolved as 8-of-15; individual owner custody and module details were not decoded in this pass."
         },
         "sources": [
           {
@@ -85,7 +87,7 @@
             "url": "https://chainlog.sky.money/api/mainnet/active.json"
           }
         ],
-        "evidence": "Gnosis docs describe xDAI as the native token used on Gnosis Chain and backed through official bridge/token routes; local metadata models xDAI as backed by USDS locked or bridged through Gnosis infrastructure."
+        "evidence": "Gnosis docs describe xDAI as the native token used on Gnosis Chain and backed through official bridge/token routes; local metadata models xDAI as backed by USDS locked or bridged through Gnosis infrastructure. Follow-up bridge reads resolved a 4/7 validator threshold and 8/15 governance owner threshold."
       }
     ],
     "review": {
@@ -99,11 +101,11 @@
           "url": "https://chainlog.sky.money/api/mainnet/active.json"
         }
       ],
-      "evidence": "xDAI should inherit upstream USDS mint authority while explicitly retaining bridge route risk.",
+      "evidence": "xDAI should inherit upstream USDS mint authority while explicitly retaining bridge route risk. Follow-up bridge review resolved a 4/7 validator threshold and 8/15 governance owner threshold.",
       "reviewer": "Codex mint-authority full-gap batch-6",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-        "Decode current Gnosis bridge admin/signature threshold before adding Safe or module details."
+        "Decode current Gnosis bridge owner addresses, custody layer, modules, and upgrade/pause contracts before adding Safe/module details."
       ]
     }
   },

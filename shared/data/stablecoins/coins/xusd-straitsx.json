@@ -69,7 +69,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern; token and master-minter controls resolve to verified 3/5 Safes, with a guard present on the MasterMinter Safe.",
+    "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
     "controls": [
       {
         "chain": "ethereum",
@@ -145,6 +145,19 @@
           }
         ],
         "evidence": "Safe API returned threshold 3, five owners, no modules, and zero guard on 2026-05-24."
+      },
+      {
+        "chain": "solana",
+        "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+        "label": "StraitsX Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 10,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Solana mint-account review resolved this address as the XUSD mint authority and decoded it as a 3-of-10 multisig."
       }
     ],
     "review": {
@@ -154,7 +167,7 @@
           "url": "https://www.straitsx.com/xusd"
         }
       ],
-      "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls.",
+      "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
       "reviewer": "Codex mint-authority full-gap batch-6",
       "reviewedAt": "2026-05-24"
     }

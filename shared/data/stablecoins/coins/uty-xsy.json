@@ -124,39 +124,47 @@
     }
   },
   "mintAuthority": {
-    "mintPath": "offchain-attested-minter",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: users mint UTY 1:1 from USDC and the XSY operator deploys the backing into long AVAX spot + short perps under Ceffu/Copper Clearloop custody, redeeming after a 7-day unbonding; mint/redeem is operator-run, not a user-collateralized CDP.",
+    "summary": "UTY is XSY/YieldPoint's delta-neutral synthetic dollar on Avalanche: token mint/burn is restricted to the MANAGEMENT_SMART_CONTRACT_ROLE holder, while DEFAULT_ADMIN_ROLE controls that role and upgrades.",
     "controls": [
       {
-        "label": "XSY issuance/minter backend (USDC -> UTY)",
+        "label": "UTY management smart contract role holder",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "avalanche",
+        "address": "0x9b9CF4f6255f6b451132BDf7a3682c7299D4C77A",
         "canRaiseCap": "unknown",
-        "evidence": "XSY docs/site describe minting UTY by swapping in USDC, with the operator running the delta-neutral hedge (long AVAX spot, short perps) and a 7-day unbonding to redeem back to USDC; this is an operator-gated synthetic mint, not a user-opened CDP."
+        "evidence": "Avalanche source and live role reads show mint() and burn() are restricted to MANAGEMENT_SMART_CONTRACT_ROLE; hasRole confirmed this address holds that role."
       },
       {
-        "label": "Ceffu & Copper Clearloop custody / hedging venues",
-        "role": "custodian",
-        "authorityType": "custodian",
-        "directMintAbility": "none",
+        "label": "UTY DEFAULT_ADMIN_ROLE / owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "avalanche",
+        "address": "0xA78062AC8D1a3a882d9D7fc3487C342903B742F4",
         "canRaiseCap": "unknown",
-        "evidence": "XSY materials state backing is held via Ceffu and Copper Clearloop custody and hedged on CEX/perp venues; custody is centralized off the mint chain and Accountable provides real-time reserve attestation."
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "owner() and hasRole(DEFAULT_ADMIN_ROLE) returned this address; DEFAULT_ADMIN_ROLE can grant/revoke the management role and authorize upgrades."
       }
     ],
     "review": {
-      "evidence": "XSY documentation and launch coverage describe UTY as an operator-run delta-neutral synthetic dollar: USDC mint, CEX/perp hedging under Ceffu/Copper custody, and a 7-day redemption unbonding, with Accountable real-time PoR. This is a synthetic/operator-minted model, not the proposed user-collateralized CDP. On-chain minter admin not independently confirmed.",
+      "evidence": "XSY/YieldPoint docs describe Unity/UTY as a synthetic dollar; verified Avalanche source shows mint/burn restricted to MANAGEMENT_SMART_CONTRACT_ROLE, with live role reads resolving 0x9b9C...C77A as the management role holder and 0xA780...42F4 as DEFAULT_ADMIN_ROLE/owner.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
         { "label": "XSY docs", "url": "https://xsy-1.gitbook.io/xsy-main" },
-        { "label": "XSY site", "url": "https://xsy.fi/" }
+        { "label": "YieldPoint", "url": "https://yieldpoint.io/" },
+        {
+          "label": "UTY contract source",
+          "url": "https://routescan.io/address/0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a/contract/43114/code"
+        }
       ],
       "unresolvedQuestions": [
-        "Confirm the on-chain owner/minter of the UTY token (0xdbc5...2b4a) on Snowtrace and whether mint is gated by an EOA, multisig, or backend signer.",
+        "Resolve whether the DEFAULT_ADMIN_ROLE EOA is controlled by a multisig, MPC, or other policy layer.",
         "Confirm the precise custodian split and any attestation quorum behind issuance."
       ]
     }

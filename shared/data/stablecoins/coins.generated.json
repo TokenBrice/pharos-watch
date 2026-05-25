@@ -42471,16 +42471,18 @@
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
-      "confidence": "verified",
-      "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, so the owner address can directly mint; no Safe, multisig, or timelock setup was verified.",
+      "confidence": "manual-review",
+      "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions, and live reads resolve the owner to a non-Safe 3/5 multisig-style contract; no timelock or Safe module/guard setup was verified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x62b3a0f6ffc5efd7692053A9040fE44F9AC8c5Cb",
           "label": "USAT owner-only minter",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "multisig",
           "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 5,
           "modulesOrGuardsStatus": "unknown",
           "sources": [
             {
@@ -42492,7 +42494,7 @@
               "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
             }
           ],
-          "evidence": "The USAT proxy owner() returned this address; verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
+          "evidence": "The USAT proxy owner() returned this address; required() and owners() reads returned a 3/5 multisig-style owner. Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
         }
       ],
       "review": {
@@ -42514,11 +42516,11 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
           }
         ],
-        "evidence": "Ethereum reads identified the USAT proxy implementation and owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
+        "evidence": "Ethereum reads identified the USAT proxy implementation and a 3/5 multisig-style owner address, while verified HadronToken source confirms owner-only mint and redeem authority.",
         "reviewer": "Codex mint-authority top100 batch-a",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Verify operational custody for the owner address.",
+          "Verify operational custody and signer identities for the owner multisig-style contract.",
           "Check whether additional chain deployments exist and share the same issuer control."
         ]
       }
@@ -42895,37 +42897,67 @@
       "country": "France"
     },
     "mintAuthority": {
-      "mintPath": "issuer-direct-mint",
-      "authorityPosture": "concentrated-admin",
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USD0 issuance is modeled as protocol-operated mint authority backed by RWA/custody rails pending deeper role review.",
+      "summary": "USD0 issuance runs through Usual's RWA/custody-backed protocol contracts: DaoCollateral and SwapperEngine mint against eligible collateral and governance controls collateral/risk parameters.",
       "controls": [
         {
-          "label": "Issuer-operated mint authority",
+          "chain": "ethereum",
+          "address": "0xde6e1F680C4816446C8D515989E2358636A38b04",
+          "label": "Usual DaoCollateral",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
           "sources": [
             {
-              "label": "Usual docs",
-              "url": "https://docs.usual.money/"
+              "label": "Usual USD0 flow and architecture",
+              "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
             }
           ],
-          "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting."
+          "evidence": "Usual docs describe DaoCollateral as the collateral admission/mint path for USD0 against eligible RWA/custody-backed collateral."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xB969B0d14F7682bAF37ba7c364b351B830a812B2",
+          "label": "Usual SwapperEngine",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Usual docs describe SwapperEngine as part of USD0 mint/swap routing against eligible collateral under protocol controls."
+        },
+        {
+          "label": "USUAL governance / collateral admin",
+          "role": "governor",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Usual docs describe governance/collateral-admin control over accepted RWA collateral and protocol parameters."
         }
       ],
       "review": {
         "sources": [
           {
-            "label": "Usual docs",
-            "url": "https://docs.usual.money/"
+            "label": "USD0 docs",
+            "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0"
+          },
+          {
+            "label": "USD0 flow and architecture",
+            "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+          },
+          {
+            "label": "USD0 RWA collateral",
+            "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral"
           }
         ],
-        "evidence": "Usual documentation describes USD0 issuance through protocol-controlled RWA-backed mechanics rather than immutable user-collateral minting.",
+        "evidence": "Usual documentation describes USD0 issuance through DaoCollateral and SwapperEngine collateral/routing contracts backed by RWA/custody rails, with governance/collateral-admin parameter control rather than a generic issuer backend.",
         "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewedAt": "2026-05-25"
       }
     },
     "contracts": [
@@ -43489,14 +43521,14 @@
         {
           "chain": "bsc",
           "address": "0x17eafd08994305d8ace37efb82f1523177ec70ee",
-          "label": "USDA MINT role holder",
-          "role": "minter-admin",
+          "label": "USDA MINT role-gated token contract",
+          "role": "direct-minter",
           "authorityType": "contract",
           "directMintAbility": "direct",
           "capDescription": "Contract has no maximum supply cap; addresses granted the MINT role can issue USDA without an on-chain limit.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "The verified USDA token contract on BscScan exposes a mint() function restricted to a MINT role and role-based admin controls (mint, blacklist, tax ratios) with no supply cap, read from the BscScan contract page."
+          "evidence": "The verified USDA token contract on BscScan exposes a mint() function restricted to a MINT role and role-based admin controls (mint, blacklist, tax ratios) with no supply cap. Actual MINT role holder addresses remain unresolved."
         }
       ],
       "review": {
@@ -43706,7 +43738,7 @@
           "sources": [
             {
               "label": "USDa Ethereum source",
-              "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+              "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
             }
           ],
           "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
@@ -43722,7 +43754,7 @@
           "sources": [
             {
               "label": "USDa Ethereum source",
-              "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+              "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
             }
           ],
           "evidence": "Role scan at Ethereum block 25165905 found this address holding MINT_ROLE on the verified USDa contract."
@@ -43738,7 +43770,7 @@
           "sources": [
             {
               "label": "USDa Sourcify source",
-              "url": "https://sourcify.dev/server/v2/contract/1/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2?fields=sources,abi"
+              "url": "https://sourcify.dev/server/v2/contract/1/0x8a60e489004ca22d775c5f2c657598278d17d9c2?fields=sources,abi"
             }
           ],
           "evidence": "At Ethereum block 25165905, owner(), DEFAULT_ADMIN_ROLE, and ADMIN_ROLE resolved to this address; the verified source defines MINT_ROLE and admin-controlled grant/revoke paths."
@@ -43752,11 +43784,11 @@
           },
           {
             "label": "USDa Ethereum source",
-            "url": "https://etherscan.io/address/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2#code"
+            "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           },
           {
             "label": "USDa Sourcify source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x8a60CbB11eA96aEbb06462E27f40b4d03A5529c2?fields=sources,abi"
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8a60e489004ca22d775c5f2c657598278d17d9c2?fields=sources,abi"
           }
         ],
         "evidence": "Verified USDa source defines MINT_ROLE and admin roles; role reads at Ethereum block 25165905 identified two live MINT_ROLE holders plus the default/admin role holder.",
@@ -44371,15 +44403,15 @@
       "summary": "USDB is the Blast L2 native dollar minted by the OP-stack L1 standard bridge / stablecoin yield manager: stablecoins (USDC/USDT/DAI) deposited into Blast's L1 bridge are escrowed and routed to MakerDAO/DSR while USDB is minted as an OptimismMintableERC20 on Blast, redeemable on bridging back.",
       "controls": [
         {
-          "chain": "blast",
+          "chain": "ethereum",
           "address": "0xa230285d5683C74935aD14c446e137c8c8828438",
-          "label": "Blast L1 standard bridge / stablecoin yield manager",
+          "label": "Blast USDYieldManager (L1 stablecoin escrow/yield manager)",
           "role": "bridge-admin",
           "authorityType": "bridge",
           "directMintAbility": "direct",
           "capDescription": "USDB supply tracks stablecoins escrowed in the L1 bridge/yield manager; mint/burn is driven by L1 deposits and withdrawals, not a fixed cap.",
           "canRaiseCap": "unknown",
-          "evidence": "Blast docs describe USDB (0x4300...0003) as an OptimismMintableERC20 minted/burned by the L1 standard bridge when stablecoins are deposited/withdrawn, with a stablecoin yield-manager contract escrowing funds into MakerDAO DSR; the yield-manager address is read from this coin's liveReservesConfig params."
+          "evidence": "Metalayer/Blast docs list 0xa230285d5683C74935aD14c446e137c8c8828438 as the Ethereum L1 USDYieldManager that escrows stablecoins and routes yield; USDB on Blast is minted/burned by the bridge path against L1 deposits and withdrawals."
         },
         {
           "label": "Blast bridge operators (Blast multisig)",
@@ -44393,15 +44425,15 @@
       "review": {
         "sources": [
           {
-            "label": "Blast docs",
-            "url": "https://docs.blast.io/"
+            "label": "Metalayer contracts",
+            "url": "https://metalayerlabs.mintlify.app/building/contracts"
           },
           {
-            "label": "Blast on L2BEAT",
-            "url": "https://l2beat.com/scaling/projects/blast"
+            "label": "Metalayer WETH yield guide",
+            "url": "https://metalayerlabs.mintlify.app/building/guides/weth-yield"
           }
         ],
-        "evidence": "Blast documentation and L2BEAT describe USDB as a bridge-minted OP-stack stablecoin: deposits into the L1 bridge mint USDB on Blast while a yield manager escrows the stablecoins into MakerDAO DSR; this is a bridge/synthetic mint, not the proposed user-collateralized CDP. On-chain bridge/multisig admin not independently confirmed beyond the yield-manager address already in this file.",
+        "evidence": "Blast/Metalayer documentation describes USDB as a bridge-minted OP-stack stablecoin: deposits into the L1 bridge mint USDB on Blast while the Ethereum L1 USDYieldManager escrows stablecoins into yield strategies; this is a bridge/synthetic mint, not a user-collateralized CDP.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -49415,21 +49447,38 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "immutable-user-collateralized",
-      "authorityPosture": "none-resolved",
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDQ is minted only when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's immutable Liquity-v2 (BOLD) fork on Scroll; mint is restricted to the registered branch contracts and no admin can mint or freeze the token.",
+      "summary": "USDQ is minted when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's Liquity-v2/BOLD fork on Scroll; minting is restricted to registered branch contracts, while the UUPS/AccessManager authority means the core is not immutable.",
       "controls": [
         {
           "chain": "scroll",
           "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
           "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
-          "role": "other",
+          "role": "direct-minter",
           "authorityType": "contract",
-          "directMintAbility": "none",
-          "canRaiseCap": false,
-          "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "Quill is an exclusive Liquity-v2 fork; per the Liquity-v2 BoldToken design, mint/burn rights are fixed to the registered per-branch protocol contracts at deployment and the token is non-upgradeable, so no owner/admin can mint outside CDP borrowing or freeze holders. QUILL governance only directs collateral incentives, not core minting."
+          "directMintAbility": "cap-limited",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Quill docs and source review show branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps; Scroll source also shows UUPS/AccessManager authority, so the token should not be treated as immutable."
+        },
+        {
+          "chain": "scroll",
+          "address": "0xBe589551397d0F28255e429DDB478620b1C2f08a",
+          "label": "Quill AccessManager / UUPS authority",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Quill USDQ docs",
+              "url": "https://docs.quill.finance/faq/usdusdq"
+            }
+          ],
+          "evidence": "Scroll source and RPC review identify this AccessManager/UUPS authority controlling upgrade/admin paths for the USDQ token system."
         }
       ],
       "review": {
@@ -49443,11 +49492,11 @@
             "url": "https://docs.quill.finance/faq/usdusdq"
           }
         ],
-        "evidence": "Quill is a Liquity-v2 (BOLD codebase) fork on Scroll; minting follows the immutable Liquity-v2 model where users mint USDQ by borrowing against overcollateralized troves and redemption is permissionless. Prior Pharos review confirmed the token has no freeze/blacklist/seizure/proxy-upgrade surface. Renouncement here is grounded in the documented, audited immutable Liquity-v2 architecture (mint confined to registered branch contracts, non-upgradeable core), not an independent on-chain owner() read.",
+        "evidence": "Quill is a Liquity-v2 (BOLD codebase) fork on Scroll; users mint USDQ by borrowing against overcollateralized troves and redemption is permissionless. Source/RPC review shows UUPS/AccessManager authority, so admin risk remains partially bounded rather than none-resolved/immutable.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm on-chain that the BoldToken branch addresses are locked and no setBranchAddresses/owner authority remains active for 0xdb9e8f82d6d45fff803161f2a5f75543972b229a."
+          "Enumerate AccessManager roles and signer threshold for 0xBe589551397d0F28255e429DDB478620b1C2f08a before raising confidence."
         ]
       }
     },
@@ -49791,15 +49840,17 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API against segregated cash and short-term EU government bond reserves, and the Ethereum token is an issuer-controlled upgradeable proxy.",
+      "summary": "USDR is a MiCA e-money token issued by StablR Ltd (Malta MFSA-supervised EMI); tokens are minted and redeemed 1:1 through StablR's regulated issuance API, with live Ethereum owner and proxy-admin authority resolving to multisig-style contracts.",
       "controls": [
         {
           "chain": "ethereum",
-          "address": "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8",
-          "label": "StablR upgradeable-proxy owner/admin (Ethereum)",
+          "address": "0xC7Dcd41682C7Fd246e48b30ad39BcEe82968A0E4",
+          "label": "USDR token owner",
           "role": "minter-admin",
-          "authorityType": "contract",
+          "authorityType": "multisig",
           "directMintAbility": "can-authorize",
+          "threshold": 2,
+          "signerCount": 2,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present",
           "sources": [
@@ -49808,7 +49859,20 @@
               "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
             }
           ],
-          "evidence": "Etherscan shows USDR is an EIP-1967 TransparentUpgradeableProxy (implementation 0x76E0BAEf381656d51d733cf9aa60d7bf8017f958) using OpenZeppelin upgradeable token contracts; proxy admin 0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c holds upgrade authority and StablR's issuance API mints/redeems against reserves, so mint creation is issuer-controlled."
+          "evidence": "Live owner() read returned this token owner; multisig method reads returned 2 required signatures and 2 owners."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c",
+          "label": "USDR EIP-1967 proxy admin",
+          "role": "proxy-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "upgrade-only",
+          "threshold": 1,
+          "signerCount": 1,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "present",
+          "evidence": "EIP-1967 proxy-admin slot returned this address; multisig method reads returned 1 required signature and 1 owner."
         }
       ],
       "review": {
@@ -49822,11 +49886,11 @@
             "url": "https://www.stablr.com/usdr"
           }
         ],
-        "evidence": "USDR is a MiCAR-compliant EMT issued by StablR Ltd under MFSA EMI supervision, redeemable 1:1 via StablR's API; the Ethereum token is an OpenZeppelin upgradeable proxy with issuer-held admin, confirming centralized issuer mint against segregated cash and short-term government bond reserves.",
+        "evidence": "USDR is a MiCAR-compliant EMT issued by StablR Ltd under MFSA EMI supervision, redeemable 1:1 via StablR's API; live Ethereum reads resolve the token owner to a 2/2 multisig-style contract and the proxy admin to a 1/1 multisig-style contract.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm whether the proxy admin and the implementation's mint privilege are held by an EOA, multisig, or Safe, and the exact minter role configuration."
+          "Confirm the exact implementation minter-role configuration and whether the 1/1 proxy-admin signer has any further organizational controls."
         ]
       }
     },
@@ -50912,45 +50976,62 @@
       "license": "Federal Bank Charter"
     },
     "mintAuthority": {
-      "mintPath": "offchain-attested-minter",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "USDTB minting is modeled as Ethena issuer/backend-mediated authority pending deeper role and cap review.",
+      "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves; on-chain mint/burn uses MINTER_BURNER_ROLE administration rather than Ethena USDe signed-order minting.",
       "controls": [
         {
-          "label": "Off-chain order/signature mint authority",
-          "role": "backend-signer",
+          "label": "USDtb MINTER_BURNER_ROLE mint/burn authority",
+          "role": "direct-minter",
           "authorityType": "issuer-backend",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
           "sources": [
             {
-              "label": "Ethena mint and redeem docs",
-              "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+              "label": "USDtb introduction",
+              "url": "https://docs.usdtb.money/introduction"
             },
             {
-              "label": "Ethena trust assumptions",
-              "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+              "label": "USDtb mint and redeem docs",
+              "url": "https://docs.usdtb.money/mint-and-redeem"
             }
           ],
-          "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting."
+          "evidence": "USDtb docs describe Anchorage Digital Bank USDtb issuance/redemption against reserves; verified implementation exposes MINTER_BURNER_ROLE for mint/burn rather than USDe signed-order rails."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd93826BB299765c87D13AeBa2A7E5d9B27A03956",
+          "label": "USDtb DEFAULT_ADMIN_ROLE",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "USDtb implementation source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9d6d2510c2f4e2949cc3f85c38f5d58f1f8b9589?fields=abi,metadata"
+            }
+          ],
+          "evidence": "Role review identifies this address as DEFAULT_ADMIN_ROLE, which can grant/revoke MINTER_BURNER_ROLE."
         }
       ],
       "review": {
         "sources": [
           {
-            "label": "Ethena mint and redeem docs",
-            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+            "label": "USDtb introduction",
+            "url": "https://docs.usdtb.money/introduction"
           },
           {
-            "label": "Ethena trust assumptions",
-            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+            "label": "USDtb mint and redeem docs",
+            "url": "https://docs.usdtb.money/mint-and-redeem"
           }
         ],
-        "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting.",
+        "evidence": "USDtb docs describe Anchorage Digital Bank issuer-operated mint/redeem rails backed by BUIDL and cash reserves, and implementation review shows MINTER_BURNER_ROLE plus DEFAULT_ADMIN_ROLE rather than Ethena USDe signed-order minting.",
         "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewedAt": "2026-05-25"
       }
     },
     "contracts": [
@@ -51336,14 +51417,14 @@
       "controls": [
         {
           "chain": "solana",
-          "address": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+          "address": "7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa",
           "label": "Solomon direct mint/burn permission (approved participants)",
           "role": "backend-signer",
-          "authorityType": "issuer-backend",
+          "authorityType": "unknown",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present",
-          "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions that complete KYC/AML onboarding, while ordinary users only enter/exit through Solana stablecoin pools; minting is gated by the issuer against off-exchange collateral."
+          "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions; Solana RPC returned this live SPL mint authority for token Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C and null freeze authority."
         },
         {
           "label": "Ceffu custodian (backing collateral)",
@@ -51363,11 +51444,11 @@
           }
         ],
         "sourceFreeRationale": "Mechanism resolved from Solomon docs and project coverage (permissioned mint, Ceffu custody, Squads multisig admin); the live Squads signer set/threshold and Solana mint authority were not independently read.",
-        "evidence": "Solomon Labs operates USDv as a Solana-native synthetic dollar backed by a delta-neutral basis trade in Ceffu custody; direct mint/burn is permissioned to whitelisted KYC'd participants and the protocol's admin operations run through a Squads multisig, so supply creation is concentrated in the issuer rather than permissionless.",
+        "evidence": "Solomon Labs operates USDv as a Solana-native synthetic dollar backed by a delta-neutral basis trade in Ceffu custody; direct mint/burn is permissioned to whitelisted KYC'd participants. Solana RPC resolves live mint authority to 7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa and null freeze authority.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the live Squads multisig signer count/threshold and the Solana token mint authority backing USDv."
+          "Decode whether the live Solana mint authority is a Squads multisig, PDA, or other signer model."
         ]
       }
     },
@@ -51744,7 +51825,7 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM): users mint USDXL as debt against overcollateralized deposits, repayment burns it, and a HypurrFi/Last multisig administers facilitator buckets, collateral, and risk parameters.",
+      "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM), but HypurrFi has announced wind-down terms: pooled new borrows are suspended, USDXL rates are set to 30%, and Legacy/Pooled settlement targets July 30, 2026.",
       "controls": [
         {
           "chain": "hyperevm",
@@ -51778,12 +51859,12 @@
             "url": "https://hypurrfi.beehiiv.com/p/on-usdxl-stability-and-pegs"
           }
         ],
-        "evidence": "HypurrFi documentation and coverage describe USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control (pause authority exercised in March 2026); on-chain admin addresses not independently confirmed. Note: an orderly wind-down handing HypurrFi markets to Euler has been reported.",
+        "evidence": "HypurrFi documentation describes USDXL as a GHO-style CDP synthetic dollar on an Aave-v3 fork on HyperEVM with admin/ACL multisig control. Current HypurrFi wind-down materials state Pooled new borrows are suspended, USDXL rates are set to 30%, and full Legacy/Pooled settlement targets July 30, 2026.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
           "Confirm the HypurrFi ACL-admin / pool-admin multisig threshold and signer set on HyperEVM.",
-          "Confirm the impact of the reported Euler wind-down on USDXL mint administration and whether new issuance remains enabled."
+          "Confirm contract-level enforcement of suspended Pooled borrows and any remaining Legacy issuance caps during wind-down."
         ]
       }
     },
@@ -51896,7 +51977,7 @@
       "controls": [
         {
           "chain": "ethereum",
-          "address": "0x1A694a09494e214A3BE3652E4B343b7B81a73Ad7",
+          "address": "0x1a694A09494E214a3Be3652e4B343B7B81A73ad7",
           "label": "USDY default admin / minter Safe",
           "role": "direct-minter",
           "authorityType": "safe",
@@ -52819,7 +52900,7 @@
           "label": "ParetoDollar collateral mint path",
           "role": "direct-minter",
           "authorityType": "contract",
-          "directMintAbility": "parameter-only",
+          "directMintAbility": "cap-limited",
           "capDescription": "mint(collateralToken, amount) mints USP only for allowed collateral and only while queue collateralization checks pass.",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "not-applicable",
@@ -53000,8 +53081,29 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "probable",
-      "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters and a cap. The owner is an EOA; current allowed minter set was not enumerated in this batch.",
+      "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters and a cap. The owner is an EOA, and the Funding Manager is verified as an active allowed minter.",
       "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0x7e0305B212dF3FB56366251C054c07748Bf9a797",
+          "label": "Piku Funding Manager",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
+          "sources": [
+            {
+              "label": "Piku mint/redeem docs",
+              "url": "https://docs.piku.co/piku/piku/minting-and-redemption/mint-and-redeem-usp-at-the-contract-level"
+            },
+            {
+              "label": "USP implementation",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+            }
+          ],
+          "evidence": "allowedMinters(0x7e0305B212dF3FB56366251C054c07748Bf9a797) returned true; Piku docs identify the Funding Manager contract-level mint/redeem path."
+        },
         {
           "chain": "ethereum",
           "address": "0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a",
@@ -53031,11 +53133,11 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
           }
         ],
-        "evidence": "Owner and implementation evidence identify an EOA-controlled allowedMinters/cap configuration for USP, but the current allowed minter set was not enumerated.",
+        "evidence": "Owner and implementation evidence identify an EOA-controlled allowedMinters/cap configuration for USP; allowedMinters reads confirm the Funding Manager as an active direct minter.",
         "reviewer": "Codex mint-authority top100 batch-c",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Enumerate current MinterSet events and call allowedMinters(address) before finalizing direct-minter controls.",
+          "Enumerate current MinterSet events for any additional allowed minters before finalizing the complete direct-minter set.",
           "Confirm whether the cap is fixed, owner-raiseable, or implementation-constrained."
         ]
       }
@@ -53888,10 +53990,10 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "USX uses dForce's MSD token model: owner-controlled minters can mint directly, and the current Ethereum minter list contains one contract address.",
+      "summary": "USX is minted via dForce/Unitus overcollateralized borrow routes through the MSD controller/minter, while the token owner can manage minters and direct token-level mint authority.",
       "controls": [
         {
           "chain": "ethereum",
@@ -53937,7 +54039,7 @@
             "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe3ec7de9375bfc22f4481c4605431d67ed5bd260/sources/contracts/msd/MSD.sol"
           }
         ],
-        "evidence": "MSD source exposes owner-managed minters and direct mint(address,uint256); Ethereum reads identify current owner, proxy admin, and minter list.",
+        "evidence": "dForce/Unitus docs describe USX minting through overcollateralized borrow routes; MSD source exposes owner-managed minters and direct mint(address,uint256), and Ethereum reads identify current owner, proxy admin, and minter list.",
         "reviewer": "Codex mint-authority full-gap batch-6",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
@@ -54361,27 +54463,31 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "offchain-attested-minter",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "UTY is XSY's delta-neutral synthetic dollar on Avalanche: users mint UTY 1:1 from USDC and the XSY operator deploys the backing into long AVAX spot + short perps under Ceffu/Copper Clearloop custody, redeeming after a 7-day unbonding; mint/redeem is operator-run, not a user-collateralized CDP.",
+      "summary": "UTY is XSY/YieldPoint's delta-neutral synthetic dollar on Avalanche: token mint/burn is restricted to the MANAGEMENT_SMART_CONTRACT_ROLE holder, while DEFAULT_ADMIN_ROLE controls that role and upgrades.",
       "controls": [
         {
           "chain": "avalanche",
-          "label": "XSY issuance/minter backend (USDC -> UTY)",
+          "address": "0x9b9CF4f6255f6b451132BDf7a3682c7299D4C77A",
+          "label": "UTY management smart contract role holder",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "evidence": "XSY docs/site describe minting UTY by swapping in USDC, with the operator running the delta-neutral hedge (long AVAX spot, short perps) and a 7-day unbonding to redeem back to USDC; this is an operator-gated synthetic mint, not a user-opened CDP."
+          "evidence": "Avalanche source and live role reads show mint() and burn() are restricted to MANAGEMENT_SMART_CONTRACT_ROLE; hasRole confirmed this address holds that role."
         },
         {
-          "label": "Ceffu & Copper Clearloop custody / hedging venues",
-          "role": "custodian",
-          "authorityType": "custodian",
-          "directMintAbility": "none",
+          "chain": "avalanche",
+          "address": "0xA78062AC8D1a3a882d9D7fc3487C342903B742F4",
+          "label": "UTY DEFAULT_ADMIN_ROLE / owner",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
-          "evidence": "XSY materials state backing is held via Ceffu and Copper Clearloop custody and hedged on CEX/perp venues; custody is centralized off the mint chain and Accountable provides real-time reserve attestation."
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "owner() and hasRole(DEFAULT_ADMIN_ROLE) returned this address; DEFAULT_ADMIN_ROLE can grant/revoke the management role and authorize upgrades."
         }
       ],
       "review": {
@@ -54391,15 +54497,19 @@
             "url": "https://xsy-1.gitbook.io/xsy-main"
           },
           {
-            "label": "XSY site",
-            "url": "https://xsy.fi/"
+            "label": "YieldPoint",
+            "url": "https://yieldpoint.io/"
+          },
+          {
+            "label": "UTY contract source",
+            "url": "https://routescan.io/address/0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a/contract/43114/code"
           }
         ],
-        "evidence": "XSY documentation and launch coverage describe UTY as an operator-run delta-neutral synthetic dollar: USDC mint, CEX/perp hedging under Ceffu/Copper custody, and a 7-day redemption unbonding, with Accountable real-time PoR. This is a synthetic/operator-minted model, not the proposed user-collateralized CDP. On-chain minter admin not independently confirmed.",
+        "evidence": "XSY/YieldPoint docs describe Unity/UTY as a synthetic dollar; verified Avalanche source shows mint/burn restricted to MANAGEMENT_SMART_CONTRACT_ROLE, with live role reads resolving 0x9b9C...C77A as the management role holder and 0xA780...42F4 as DEFAULT_ADMIN_ROLE/owner.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm the on-chain owner/minter of the UTY token (0xdbc5...2b4a) on Snowtrace and whether mint is gated by an EOA, multisig, or backend signer.",
+          "Resolve whether the DEFAULT_ADMIN_ROLE EOA is controlled by a multisig, MPC, or other policy layer.",
           "Confirm the precise custodian split and any attestation quorum behind issuance."
         ]
       }
@@ -54528,18 +54638,46 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; supply is issuer/owner-controlled and the implementation can be upgraded by the owner, but the project publishes no verifiable collateral or mint-route documentation.",
+      "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; live reads resolve the token owner to a 4/6 Safe that can mint/burn directly and controls the proxy-admin ownership chain.",
       "controls": [
         {
           "chain": "bsc",
-          "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
-          "label": "UUSD owner / proxy upgrade admin",
-          "role": "minter-admin",
-          "authorityType": "contract",
-          "directMintAbility": "can-authorize",
+          "address": "0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4",
+          "label": "UUSD owner Safe",
+          "role": "direct-minter",
+          "authorityType": "safe",
+          "directMintAbility": "direct",
+          "threshold": 4,
+          "signerCount": 6,
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "not-applicable",
-          "evidence": "BscScan shows UUSD is an upgradeable proxy (implementation 0xA4f44c290CC693fC0c985d679281c61e99d9Be9a) with an Ownable owner; the owner can upgrade the implementation and controls supply, but the mint route and collateral process are not documented."
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "owners": [
+              "0x887818A767C2B3cE9FEfF05e81236cA4a02F5AFD",
+              "0x2477Dc7EE0730610B8Bc5Ff0F5630D6b6367cF4a",
+              "0x2Cc89432315D20FfC6973ec4fcB9DC97cc8812Ac",
+              "0xD6d3375456Dd057b77082bdf58c79f14BFE24bef",
+              "0x06D08a182bc72719392f8C608750eD7ba355B984",
+              "0x4BC41b6E4A6De9d08B185578F05B861dF438D402"
+            ],
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+            "source": "safe-api"
+          },
+          "evidence": "BSC owner() returned this Safe; Safe Transaction Service returned threshold 4, six owners, no enabled modules, and the zero guard. The owner can mint/burn directly under the UUSD implementation."
+        },
+        {
+          "chain": "bsc",
+          "address": "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE",
+          "label": "UUSD proxy-admin ownership chain",
+          "role": "proxy-admin",
+          "authorityType": "contract",
+          "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "EIP-1967 proxy-admin slot returned this contract; owner() returned 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6, whose owner() resolves to the same 4/6 Safe."
         }
       ],
       "review": {
@@ -54550,11 +54688,11 @@
           }
         ],
         "sourceFreeRationale": "Owner-controlled upgradeable proxy confirmed from BscScan; the actual mint authorization path and collateral backing are undocumented, so the issuer-direct/owner-controlled classification is the best-supported reading rather than a fully opaque unknown.",
-        "evidence": "BscScan shows the UUSD token is an upgradeable proxy with Ownable owner control over the implementation; the issuer (Anything Labs) markets UUSD as reserve-backed for an AI-agent economy but publishes no audited reserve attestation or specific mint mechanism, so issuance is treated as issuer/owner-controlled.",
+        "evidence": "BSC reads show the UUSD token is an upgradeable proxy with Safe owner control over mint/burn and a proxy-admin ownership chain controlled by the same Safe; Anything Labs markets UUSD as reserve-backed for an AI-agent economy, but reserve attestation remains unresolved.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the on-chain owner/upgrade-admin address and whether a distinct minter role or off-chain reserve backs issued UUSD supply."
+          "Resolve whether a distinct off-chain reserve process backs issued UUSD supply."
         ]
       }
     },
@@ -55157,14 +55295,16 @@
     ],
     "mintAuthority": {
       "mintPath": "permissioned-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "vCRED has Pharos token-source evidence for privileged mint/admin authority; Mint Authority records it as a permissioned minter path pending threshold and cap review.",
+      "summary": "vCRED source shows onlyOwner mint authority; live Hemi owner() reads resolve the direct minter to an EOA.",
       "controls": [
         {
-          "label": "Privileged token mint/admin authority",
+          "chain": "hemi",
+          "address": "0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be",
+          "label": "vCRED token owner",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
@@ -55174,7 +55314,7 @@
               "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
             }
           ],
-          "evidence": "vCRED has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification."
+          "evidence": "Hemi verified source shows mint() is onlyOwner; live owner() reads resolve the owner/direct minter to this EOA."
         }
       ],
       "review": {
@@ -55184,9 +55324,9 @@
             "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
           }
         ],
-        "evidence": "vCRED has Pharos token-source evidence for privileged mint or mint-admin authority; Mint Authority records that authority pending deeper threshold/cap verification.",
+        "evidence": "vCRED verified source shows owner-gated mint authority, and Hemi RPC resolves owner() to 0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be.",
         "reviewer": "Codex mint-authority MVP",
-        "reviewedAt": "2026-05-24"
+        "reviewedAt": "2026-05-25"
       }
     },
     "contracts": [
@@ -55525,26 +55665,43 @@
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
-      "authorityPosture": "concentrated-admin",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "VGBP is issued by VNX Commodities AG, a Liechtenstein FMA-licensed entity; tokens are minted on demand for verified customers depositing GBP and the token's on-chain admin is an issuer-controlled upgradeable-proxy owner.",
+      "summary": "VGBP is issued by VNX Commodities AG; live Base reads resolve mint/admin control to a VNX EOA with a large minter allowance and the current proxy admin owned by the same EOA.",
       "controls": [
         {
           "chain": "base",
-          "address": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
-          "label": "VNX upgradeable-proxy admin/owner (Base)",
-          "role": "minter-admin",
-          "authorityType": "contract",
-          "directMintAbility": "can-authorize",
+          "address": "0xD63052E09AF164CEF57695D3b96043EA848B051F",
+          "label": "VGBP owner/minter admin EOA",
+          "role": "direct-minter",
+          "authorityType": "eoa",
+          "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "BaseScan VGBP contract",
               "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
             }
           ],
-          "evidence": "BaseScan shows the VGBP token at this address is an EIP-1967 TransparentUpgradeableProxy using OwnableUpgradeable + PausableUpgradeable with RBAC; proxy admin 0x1724768a253476159a622a1689146862d3b762c2 holds upgrade authority and the owner/deployer is 0xd63052e09af164cef57695d3b96043ea848b051f, both issuer-controlled."
+          "evidence": "Base owner() returned this EOA; minterAllowance(address) returned a large allowance for the same address, indicating live direct mint ability."
+        },
+        {
+          "chain": "base",
+          "address": "0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8",
+          "label": "VGBP proxy admin contract",
+          "role": "proxy-admin",
+          "authorityType": "contract",
+          "directMintAbility": "upgrade-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "BaseScan VGBP proxy admin",
+              "url": "https://basescan.org/address/0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8#code"
+            }
+          ],
+          "evidence": "Base EIP-1967 admin slot returned this proxy admin contract, and its owner() returned the same VNX EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F."
         }
       ],
       "review": {
@@ -55554,11 +55711,11 @@
             "url": "https://basescan.org/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411#code"
           }
         ],
-        "evidence": "VNX docs and the Liechtenstein FMA TVTG license describe VGBP as a 1:1 GBP-redeemable token minted by VNX Commodities AG against bank-held GBP reserves; on-chain the Base contract is an upgradeable proxy with issuer-held Ownable/admin roles, so mint creation is centrally controlled by the issuer.",
+        "evidence": "VNX docs and the Liechtenstein FMA TVTG license describe VGBP as a 1:1 GBP-redeemable token minted by VNX Commodities AG against bank-held GBP reserves; live Base reads identify owner/minter EOA 0xD63052E09AF164CEF57695D3b96043EA848B051F and proxy admin 0x35bb28FEEf0499d7580eD8E8eF1A19Ab346B79E8 owned by the same EOA.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm which exact role/address holds the live mint privilege in the implementation bytecode and whether the proxy admin is an EOA, multisig, or Safe."
+          "Confirm whether the VNX owner/minter EOA is controlled by a multisig, MPC, or other policy layer."
         ]
       }
     },
@@ -55667,11 +55824,11 @@
       "controls": [
         {
           "chain": "bsc",
-          "address": "0xa276dc434a366c62ef010585b3885d0c85154389",
+          "address": "0x557D55E71204CE7DfDc5C839446Dd34F1b299354",
           "label": "Jade Labs / VNDC issuer admin (owner-controlled issue/redeem)",
-          "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "role": "minter-admin",
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "present",
           "sources": [
@@ -55680,7 +55837,7 @@
               "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
             }
           ],
-          "evidence": "VNDC contracts are Tether-style centralized tokens: the legacy Ethereum VNDCToken exposes owner-gated issue()/burn() with blacklist/pause, and the BNB Chain deployment uses an adminMap plus currency whitelists and a MinMaxSetting mint/redeem struct, so the issuer's admin accounts control supply creation against self-reported VND reserves."
+          "evidence": "VNDC contracts are Tether-style centralized tokens; BSC owner() returned this EOA and cast code returned 0x, so the issuer admin can authorize owner-controlled supply operations against self-reported VND reserves."
         }
       ],
       "review": {
@@ -55690,7 +55847,7 @@
             "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
           }
         ],
-        "sourceFreeRationale": "Mechanism confirmed from explorer contract structure (Tether-style owner-controlled issue/burn plus admin map) and issuer materials; specific live admin address ownership not independently resolved.",
+        "sourceFreeRationale": "Mechanism confirmed from explorer contract structure (Tether-style owner-controlled issue/burn plus admin map), issuer materials, and live BSC owner() read.",
         "evidence": "VNDC is a 1:1 VND-pegged token developed by Jade Labs and tied to the ONUS ecosystem; its on-chain contracts use owner-controlled issue/burn and an admin map with whitelists, confirming a centralized issuer mint with no third-party audit cadence published.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
@@ -55996,16 +56153,16 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "VUSD is a Liquity-V2-friendly-fork CDP on IOTA EVM: users open overcollateralized positions in IOTA/stIOTA/IBTC to mint VUSD at user-set interest rates, with liquidations and redemptions defending the peg; the Liquity-v2 branch/admin model on IOTA is not independently verified as renounced.",
+      "summary": "VUSD is a Liquity-V2-friendly-fork CDP on IOTA EVM: users open overcollateralized positions in IOTA/stIOTA to mint VUSD at user-set interest rates, with liquidations and redemptions defending the peg; future collateral beyond IOTA/stIOTA was not independently verified.",
       "controls": [
         {
           "label": "Virtue Money borrower-operations / branch contracts (Liquity V2 fork)",
           "role": "minter-admin",
           "authorityType": "contract",
           "directMintAbility": "cap-limited",
-          "capDescription": "Mint bounded by overcollateralized CDPs across IOTA/stIOTA/IBTC branches with user-set interest rates, per the Liquity V2 multi-collateral design.",
+          "capDescription": "Mint bounded by overcollateralized CDPs across IOTA/stIOTA branches with user-set interest rates, per the Liquity V2 multi-collateral design.",
           "canRaiseCap": "unknown",
-          "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs (IOTA/stIOTA/IBTC) on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
+          "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs using IOTA/stIOTA on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
         },
         {
           "label": "Virtue Money admin (multisig)",
@@ -56028,7 +56185,7 @@
             "url": "https://www.iota.org/learn/showcases/virtue"
           }
         ],
-        "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA/IBTC; the IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
+        "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA; IBTC collateral was not supported by reviewed official sources. The IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -56114,18 +56271,51 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WARS is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve the current DEFAULT_ADMIN_ROLE and only current MINTER_ROLE holder to Ripio's shared admin account; non-Ethereum deployments remain unverified.",
+      "summary": "WARS is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "label": "Ripio shared WARS admin and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as both DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Prior admin/minter 0x5ca3f8...f20f was revoked at block 24995207; signer custody was not decoded."
+          "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Prior admin/minter 0x5ca3f8...f20f was revoked at block 24995207; signer policy was not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "label": "WARS secondary DEFAULT_ADMIN_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "label": "WARS secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+          "label": "WARS secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         }
       ],
       "review": {
@@ -56139,13 +56329,13 @@
             "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#events"
           }
         ],
-        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WARS as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WARS as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
         "reviewer": "Codex mint-authority follow-up Ripio lane",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
           "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
           "Ethereum implementation source for 0xba0030...21b9 remains unresolved.",
-          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved."
+          "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
         ]
       }
     },
@@ -56271,29 +56461,51 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WBRL is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus two current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "summary": "WBRL is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "label": "Ripio shared WBRL admin and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+          "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Signer policy was not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "label": "WBRL secondary DEFAULT_ADMIN_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
           "label": "WBRL secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+          "label": "WBRL secondary Ethereum MINTER_ROLE holder",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         }
       ],
       "review": {
@@ -56307,14 +56519,13 @@
             "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#events"
           }
         ],
-        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WBRL as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WBRL as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
         "reviewer": "Codex mint-authority follow-up Ripio lane",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
           "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
           "Ethereum implementation source for 0xfbab5d...7f9d remains unresolved.",
-          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
-          "Secondary MINTER_ROLE holder identity/source for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 is unresolved."
+          "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
         ]
       }
     },
@@ -56418,40 +56629,51 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WCLP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "summary": "WCLP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "label": "Ripio shared WCLP admin and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+          "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Signer policy was not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "label": "WCLP secondary DEFAULT_ADMIN_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
           "label": "WCLP secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
           "label": "WCLP secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         }
       ],
       "review": {
@@ -56465,14 +56687,13 @@
             "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#events"
           }
         ],
-        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCLP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCLP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
         "reviewer": "Codex mint-authority follow-up Ripio lane",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
           "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
           "Ethereum implementation source for 0x889878...d6ba remains unresolved.",
-          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
-          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+          "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
         ]
       }
     },
@@ -56589,40 +56810,51 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WCOP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "summary": "WCOP is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "label": "Ripio shared WCOP admin and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+          "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Signer policy was not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "label": "WCOP secondary DEFAULT_ADMIN_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
           "label": "WCOP secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
           "label": "WCOP secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         }
       ],
       "review": {
@@ -56636,14 +56868,13 @@
             "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76#events"
           }
         ],
-        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCOP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WCOP as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
         "reviewer": "Codex mint-authority follow-up Ripio lane",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
           "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
           "Ethereum implementation source for 0x6f6206...6652 remains unresolved.",
-          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
-          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+          "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
         ]
       }
     },
@@ -56852,24 +57083,41 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via an AccessControl token whose MINTER_ROLE is held by PicWe's mint/redeem contract; minting is permissioned to the issuer, and the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
+      "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
       "controls": [
         {
           "chain": "bsc",
-          "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
-          "label": "PicWe WEUSD MINTER_ROLE / mint-redeem contract",
+          "address": "0xc12233455beac4e094a5de022be692a264c0c0bc",
+          "label": "PicWe WEUSD DEFAULT_ADMIN_ROLE and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "contract",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "present",
+          "modulesOrGuardsStatus": "not-applicable",
           "sources": [
             {
               "label": "BscScan WEUSD contract",
               "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
             }
           ],
-          "evidence": "BscScan shows the WEUSD token uses OpenZeppelin AccessControl with DEFAULT_ADMIN_ROLE and a MINTER_ROLE-gated mint(address,uint256); the deployer 0xc12233455beac4e094a5de022be692a264c0c0bc initially holds DEFAULT_ADMIN_ROLE and can grant the MINTER_ROLE, and PicWe docs name a dedicated mint/redeem contract (0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C) as the issuance handler."
+          "evidence": "Live role checks on BSC, Base, and Arbitrum resolve this EOA as DEFAULT_ADMIN_ROLE holder and a current MINTER_ROLE holder; signer policy was not decoded."
+        },
+        {
+          "chain": "bsc",
+          "address": "0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C",
+          "label": "PicWe WEUSD mint/redeem contract",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "PicWe WEUSD docs",
+              "url": "https://docs.picwe.org/what-is-weusd"
+            }
+          ],
+          "evidence": "PicWe docs identify this contract as the WEUSD mint/redeem handler, and live role checks on BSC, Base, and Arbitrum resolve it as a current MINTER_ROLE holder."
         }
       ],
       "review": {
@@ -56883,11 +57131,11 @@
             "url": "https://docs.picwe.org/what-is-weusd"
           }
         ],
-        "evidence": "WEUSD is PicWe's omni-chain settlement currency minted/redeemed via PicWe's protocol; the token contract is OpenZeppelin AccessControl with a MINTER_ROLE gating mint, and the basket economic model (about 9 USDT + 1 MOVE per 10 WEUSD) is the documented reason for the sub-$1 floor rather than a pure 1:1 USDT wrapper.",
+        "evidence": "WEUSD is PicWe's omni-chain settlement currency minted/redeemed via PicWe's protocol; the token contract is OpenZeppelin AccessControl with a MINTER_ROLE gating mint. Live BSC/Base/Arbitrum checks resolve PicWe EOA 0xc12233455beac4e094a5de022be692a264c0c0bc as DEFAULT_ADMIN_ROLE and one MINTER_ROLE holder, and 0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C as an additional mint/redeem MINTER_ROLE holder. The basket economic model (about 9 USDT + 1 MOVE per 10 WEUSD) is the documented reason for the sub-$1 floor rather than a pure 1:1 USDT wrapper.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Confirm the current MINTER_ROLE holder address(es) via RoleGranted logs and whether DEFAULT_ADMIN_ROLE is held by an EOA, multisig, or Safe."
+          "Confirm Plume and Movement WEUSD role holders and whether the admin EOA is controlled by a multisig, MPC, or other policy layer."
         ]
       }
     },
@@ -57329,40 +57577,51 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WMXN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "summary": "WMXN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "label": "Ripio shared WMXN admin and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+          "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Signer policy was not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "label": "WMXN secondary DEFAULT_ADMIN_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
           "label": "WMXN secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
           "label": "WMXN secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         }
       ],
       "review": {
@@ -57376,14 +57635,13 @@
             "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#events"
           }
         ],
-        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WMXN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WMXN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
         "reviewer": "Codex mint-authority follow-up Ripio lane",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
           "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
           "Ethereum implementation source for 0x425abe...bbf7 remains unresolved.",
-          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
-          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+          "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
         ]
       }
     },
@@ -57487,40 +57745,51 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "WPEN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+      "summary": "WPEN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
       "controls": [
         {
           "chain": "ethereum",
           "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
           "label": "Ripio shared WPEN admin and MINTER_ROLE holder",
           "role": "minter-admin",
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+          "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Signer policy was not decoded."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+          "label": "WPEN secondary DEFAULT_ADMIN_ROLE holder",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
           "label": "WPEN secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         },
         {
           "chain": "ethereum",
           "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
           "label": "WPEN secondary Ethereum MINTER_ROLE holder",
           "role": "direct-minter",
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+          "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
         }
       ],
       "review": {
@@ -57534,14 +57803,13 @@
             "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe#events"
           }
         ],
-        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WPEN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+        "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WPEN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
         "reviewer": "Codex mint-authority follow-up Ripio lane",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
           "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
           "Ethereum implementation source for 0x9d6266...7969 remains unresolved.",
-          "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
-          "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+          "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
         ]
       }
     },
@@ -58632,7 +58900,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "XAUm MToken minting is operator-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
+      "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
       "controls": [
         {
           "chain": "ethereum",
@@ -58658,6 +58926,24 @@
         },
         {
           "chain": "ethereum",
+          "address": "0x67dcC9C33363Cc0e650738528Fe4Fef1d658C7EE",
+          "label": "XAUm receipt NFT mint path",
+          "role": "direct-minter",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
+          "capDescription": "Verified source allows mintTo by the operator or configured receipt NFT contract only within mintBudget.",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "sources": [
+            {
+              "label": "Sourcify Matrixdock MToken source",
+              "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+            }
+          ],
+          "evidence": "The verified MToken mintTo path permits calls from the configured NFT contract as well as the operator, subject to the same mintBudget accounting."
+        },
+        {
+          "chain": "ethereum",
           "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
           "label": "Matrixdock token owner",
           "role": "minter-admin",
@@ -58679,7 +58965,7 @@
             "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
           }
         ],
-        "evidence": "Matrixdock source and direct reads identify operator-based budgeted minting plus owner-controlled operator changes.",
+        "evidence": "Matrixdock source and direct reads identify operator/NFT-contract budgeted minting plus owner-controlled operator changes.",
         "reviewer": "Codex mint-authority full-gap batch-6",
         "reviewedAt": "2026-05-24"
       }
@@ -58998,7 +59284,7 @@
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk.",
+      "summary": "xDAI is Gnosis Chain native gas-token accounting backed by bridged Sky USDS/DAI routes; base mint authority is inherited from reviewed USDS while bridge/native accounting remains a separate route risk with a 4/7 bridge validator threshold and 8/15 governance owner threshold.",
       "inheritedFrom": "usds-sky",
       "controls": [
         {
@@ -59007,12 +59293,14 @@
           "role": "bridge-admin",
           "authorityType": "bridge",
           "directMintAbility": "cap-limited",
+          "threshold": 4,
+          "signerCount": 7,
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
           "routeChecks": {
             "lockboxOrEscrow": "Official Gnosis bridge routes lock or account for upstream USDS/DAI backing native xDAI.",
-            "trustedPeerOrRemote": "Official bridge route; exact current bridge contract threshold not decoded in this pass.",
-            "pausersAdminsUpgraders": "Bridge governance/admin controls not decoded in this pass."
+            "trustedPeerOrRemote": "Official bridge route with current validator threshold resolved as 4-of-7.",
+            "pausersAdminsUpgraders": "Bridge governance owner threshold resolved as 8-of-15; individual owner custody and module details were not decoded in this pass."
           },
           "sources": [
             {
@@ -59024,7 +59312,7 @@
               "url": "https://chainlog.sky.money/api/mainnet/active.json"
             }
           ],
-          "evidence": "Gnosis docs describe xDAI as the native token used on Gnosis Chain and backed through official bridge/token routes; local metadata models xDAI as backed by USDS locked or bridged through Gnosis infrastructure."
+          "evidence": "Gnosis docs describe xDAI as the native token used on Gnosis Chain and backed through official bridge/token routes; local metadata models xDAI as backed by USDS locked or bridged through Gnosis infrastructure. Follow-up bridge reads resolved a 4/7 validator threshold and 8/15 governance owner threshold."
         }
       ],
       "review": {
@@ -59038,11 +59326,11 @@
             "url": "https://chainlog.sky.money/api/mainnet/active.json"
           }
         ],
-        "evidence": "xDAI should inherit upstream USDS mint authority while explicitly retaining bridge route risk.",
+        "evidence": "xDAI should inherit upstream USDS mint authority while explicitly retaining bridge route risk. Follow-up bridge review resolved a 4/7 validator threshold and 8/15 governance owner threshold.",
         "reviewer": "Codex mint-authority full-gap batch-6",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Decode current Gnosis bridge admin/signature threshold before adding Safe or module details."
+          "Decode current Gnosis bridge owner addresses, custody layer, modules, and upgrade/pause contracts before adding Safe/module details."
         ]
       }
     },
@@ -59124,7 +59412,7 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "XMD is minted/redeemed 1:1 by users depositing whitelisted reserve stablecoins (USDC/PYUSD/USDP) into Metallicus's smart-contract treasury on XPR Network; Metal DAO (MTL) governs which stablecoins enter the basket and their weights, so the mint is user-funded but the eligible-collateral set is governance-controlled.",
+      "summary": "XMD is minted/redeemed 1:1 by users depositing whitelisted reserve stablecoins (USDC/PYUSD/XPAX) into Metallicus's smart-contract treasury on XPR Network; Metal DAO (MTL) governs which stablecoins enter the basket and their weights, so the mint is user-funded but the eligible-collateral set is governance-controlled.",
       "controls": [
         {
           "label": "Metal DAO (MTL) basket governance",
@@ -59141,7 +59429,7 @@
           "authorityType": "contract",
           "directMintAbility": "direct",
           "canRaiseCap": "unknown",
-          "evidence": "The smart-contract-managed treasury mints XMD when users deposit basket stablecoins (USDC/PYUSD/USDP) and burns/redeems on the reverse; supply tracks user deposits 1:1 rather than discretionary issuer minting."
+          "evidence": "The smart-contract-managed treasury mints XMD when users deposit basket stablecoins (USDC/PYUSD/XPAX) and burns/redeems on the reverse; supply tracks user deposits 1:1 rather than discretionary issuer minting."
         }
       ],
       "review": {
@@ -59155,7 +59443,7 @@
             "url": "https://help.xprnetwork.org/hc/en-us/articles/11560121183383-How-do-I-mint-Metal-Dollar-XMD"
           }
         ],
-        "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins, while Metal DAO (MTL) governs basket composition and weights. This is a user-collateralized mint bounded by a governance-controlled collateral whitelist. XMD runs on non-EVM XPR Network, so the on-chain admin/owner of the treasury was not independently read.",
+        "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins (USDC, PYUSD, and XPAX), while Metal DAO (MTL) governs basket composition and weights. This is a user-collateralized mint bounded by a governance-controlled collateral whitelist. XMD runs on non-EVM XPR Network, so the on-chain admin/owner of the treasury was not independently read.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
@@ -59442,7 +59730,7 @@
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway and Solana movement relies on M0 portal infrastructure.",
+      "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and the XO mint authority is a Solana account.",
       "controls": [
         {
           "chain": "ethereum",
@@ -59491,6 +59779,17 @@
             }
           ],
           "evidence": "Official M0 deployments list the Solana Portal program; an XO-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
+        },
+        {
+          "chain": "solana",
+          "address": "F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu",
+          "label": "XO Solana mint authority",
+          "role": "direct-minter",
+          "authorityType": "unknown",
+          "directMintAbility": "direct",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Solana mint-account review resolved this address as the current mint authority. A separate non-mint privileged authority beginning AgNSjv and ending KbCR was observed but not classified as a mint control."
         }
       ],
       "review": {
@@ -59504,7 +59803,7 @@
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
           }
         ],
-        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+        "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins, and Solana mint-account review resolved F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu as XO's current Solana mint authority.",
         "reviewer": "Codex mint-authority MVP",
         "reviewedAt": "2026-05-24"
       }
@@ -59619,7 +59918,7 @@
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes.",
+      "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes through the Mento timelock.",
       "controls": [
         {
           "chain": "celo",
@@ -59646,13 +59945,13 @@
         {
           "chain": "celo",
           "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-          "label": "Mento stable token owner",
-          "role": "minter-admin",
-          "authorityType": "contract",
+          "label": "Mento Timelock",
+          "role": "timelock",
+          "authorityType": "timelock",
           "directMintAbility": "can-authorize",
           "canRaiseCap": true,
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "owner() returned this contract address; Safe threshold/modules/guard were not verified."
+          "evidence": "owner() returned this timelock contract address. The same Mento timelock returned a 172800 second delay during the GHSm review; executor/proposer configuration and any upstream multisig threshold were not decoded for XOFm."
         }
       ],
       "review": {
@@ -59666,11 +59965,11 @@
             "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
           }
         ],
-        "evidence": "Mento token source and Celo reads identify broker/validator-gated minting plus owner-controlled route updates.",
+        "evidence": "Mento token source and Celo reads identify broker/validator-gated minting plus owner-controlled route updates through the Mento timelock.",
         "reviewer": "Codex mint-authority full-gap batch-6",
         "reviewedAt": "2026-05-24",
         "unresolvedQuestions": [
-          "Resolve current Mento owner contract governance and any threshold or timelock."
+          "Resolve current Mento timelock proposer/executor configuration and any upstream governance threshold."
         ]
       }
     },
@@ -59761,7 +60060,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "StraitsX tokens use a Circle-style MasterMinter pattern; token and master-minter controls resolve to verified 3/5 Safes, with guards present on the MasterMinter Safes.",
+      "summary": "StraitsX tokens use a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
       "controls": [
         {
           "chain": "ethereum",
@@ -59837,6 +60136,19 @@
             }
           ],
           "evidence": "Safe API returned threshold 3, five owners, no modules, and zero guard on 2026-05-24."
+        },
+        {
+          "chain": "solana",
+          "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+          "label": "StraitsX Solana mint authority",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 10,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Solana mint-account review resolved this address as the XSGD mint authority and decoded it as a 3-of-10 multisig."
         }
       ],
       "review": {
@@ -59850,7 +60162,7 @@
             "url": "https://www.straitsx.com/xusd"
           }
         ],
-        "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls.",
+        "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
         "reviewer": "Codex mint-authority full-gap batch-6",
         "reviewedAt": "2026-05-24"
       }
@@ -59976,28 +60288,42 @@
       "country": "Seychelles"
     },
     "mintAuthority": {
-      "mintPath": "issuer-direct-mint",
-      "authorityPosture": "concentrated-admin",
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "XTUSD is a centralized dollar token issued by the XT.com exchange (Seychelles) on its own XSC chain; new tokens are minted against USD deposits and burned on redemption through XT.com infrastructure, with limited public disclosure of the on-chain mint authority.",
+      "summary": "XTUSD is described by XT.com as an XTDao/MakerDAO-style vault stablecoin, with users minting against protocol collateral while DAO/protocol governance controls collateral parameters; the on-chain XSC admin remains unresolved.",
       "controls": [
         {
-          "label": "XT.com issuance backend",
+          "label": "XTDao vault/protocol mint route",
           "role": "direct-minter",
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct",
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited",
           "canRaiseCap": "unknown",
           "modulesOrGuardsStatus": "unknown",
-          "evidence": "Listing and aggregator coverage describe XTUSD as a deposit-and-redemption stablecoin where the XT.com exchange mints new tokens when USD is deposited and burns them on redemption; supply creation is controlled by the exchange operator with no permissionless mint route disclosed."
+          "evidence": "XT.com's TAI-to-XTUSD announcement describes XTUSD's economic system as an XTDao smart-contract project based on MakerDAO, with vault collateral and auctions used to keep enough collateral against outstanding debt."
+        },
+        {
+          "label": "XTDao collateral-parameter governance",
+          "role": "governor",
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "XT.com's announcement describes XTDao as the governance/protocol layer that can support multiple collateral assets over time, making the mint path user-collateralized but parameter-governed."
         }
       ],
       "review": {
-        "sourceFreeRationale": "Classification based on the centralized exchange-issuer model described in third-party coverage; no first-party docs or on-chain admin read available for the XSC deployment, so confidence is held at manual-review.",
-        "evidence": "XTUSD is described across exchange listing and aggregator pages as an XT.com-issued, reserve-backed dollar token using an exchange-operated mint-on-deposit / burn-on-redemption model; no first-party technical docs expose the on-chain minter, and XSC is not indexed by Pharos.",
+        "sources": [
+          {
+            "label": "XT.COM TAI to XTUSD announcement",
+            "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+          }
+        ],
+        "evidence": "XT.com's first-party TAI-to-XTUSD announcement describes XTUSD as built on an XTDao smart-contract project based on MakerDAO, with vault collateral, auctions, and future collateral support. No first-party technical docs expose the current XSC owner/admin, so the governance/admin surface remains manual-review.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Locate first-party XT.com documentation for the XTUSD mint/redeem terms and resolve the on-chain mint authority on XSC."
+          "Resolve the current XSC XTDao vault contracts, owner/admin, pause, and upgrade authority."
         ]
       }
     },
@@ -60299,7 +60625,7 @@
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "confidence": "manual-review",
-      "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern; token and master-minter controls resolve to verified 3/5 Safes, with a guard present on the MasterMinter Safe.",
+      "summary": "StraitsX XUSD uses a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
       "controls": [
         {
           "chain": "ethereum",
@@ -60375,6 +60701,19 @@
             }
           ],
           "evidence": "Safe API returned threshold 3, five owners, no modules, and zero guard on 2026-05-24."
+        },
+        {
+          "chain": "solana",
+          "address": "5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj",
+          "label": "StraitsX Solana mint authority",
+          "role": "direct-minter",
+          "authorityType": "multisig",
+          "directMintAbility": "direct",
+          "threshold": 3,
+          "signerCount": 10,
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Solana mint-account review resolved this address as the XUSD mint authority and decoded it as a 3-of-10 multisig."
         }
       ],
       "review": {
@@ -60384,7 +60723,7 @@
             "url": "https://www.straitsx.com/xusd"
           }
         ],
-        "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls.",
+        "evidence": "Direct Ethereum and Safe API reads identify StraitsX XUSD MasterMinter and token owner controls; Solana mint-account review resolved 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj as a 3-of-10 mint-authority multisig.",
         "reviewer": "Codex mint-authority full-gap batch-6",
         "reviewedAt": "2026-05-24"
       }
@@ -60779,25 +61118,45 @@
       }
     ],
     "mintAuthority": {
-      "mintPath": "permissioned-minter",
-      "authorityPosture": "concentrated-admin",
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
       "confidence": "manual-review",
-      "summary": "yoUSD is an ERC-4626 vault on Base where any user mints share tokens by depositing USDC; the privileged surface is an admin multisig (under 4 signers per project disclosure) that controls strategy/protocol whitelisting and rebalancing across 50+ DeFi venues.",
+      "summary": "yoUSD is an ERC-4626 vault on Base where any user mints share tokens by depositing USDC; base asset issuance is inherited from Circle, while the privileged surface is a verified 4/6 Safe and authority contract controlling strategy/protocol whitelisting and rebalancing.",
+      "inheritedFrom": "usdc-circle",
       "controls": [
         {
           "chain": "base",
-          "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-          "label": "yoUSD admin multisig (strategy whitelist / rebalancing)",
+          "address": "0x67b6F699F1c8040414032a3C2C88a54db144FCd2",
+          "label": "yoUSD admin Safe",
           "role": "minter-admin",
-          "authorityType": "multisig",
+          "authorityType": "safe",
           "directMintAbility": "can-authorize",
+          "threshold": 4,
+          "signerCount": 6,
           "canRaiseCap": "unknown",
-          "modulesOrGuardsStatus": "unknown",
-          "evidence": "yoUSD is an ERC-4626 yoVault on Base; per project materials an admin multisig with under 4 signers controls protocol whitelisting and rebalancing across the curated DeFi strategy set, while share issuance itself is user-driven deposit/mint."
+          "modulesOrGuardsStatus": "none-detected",
+          "safe": {
+            "threshold": 4,
+            "enabledModules": [],
+            "guard": "0x0000000000000000000000000000000000000000",
+            "source": "safe-api"
+          },
+          "evidence": "Safe API resolved this Base Safe as 4-of-6 with no enabled modules and zero guard; it owns/controls the yoUSD authority surface for strategy and protocol management."
         },
         {
           "chain": "base",
-          "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+          "address": "0x9524e25079b1b04D904865704783A5aA0202d44D",
+          "label": "yoUSD authority contract",
+          "role": "minter-admin",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Base authority review resolved this contract as the yoUSD authority layer owned by the 4/6 admin Safe; it controls privileged vault/strategy permissions rather than discretionary creation of underlying USDC."
+        },
+        {
+          "chain": "base",
+          "address": "0x0000000f2eB9f69274678c76222B35eEc7588a65",
           "label": "yoUSD ERC-4626 vault (share mint on deposit)",
           "role": "wrapper",
           "authorityType": "contract",
@@ -60817,12 +61176,11 @@
             "url": "https://app.yo.xyz/vault/base/0x0000000f2eB9f69274678c76222B35eEc7588a65"
           }
         ],
-        "sourceFreeRationale": "Admin-multisig-controlled whitelisting and ERC-4626 deposit-mint taken from YO docs and the coin record; the multisig signer set/threshold and any guards were not independently read on-chain.",
-        "evidence": "YO Protocol docs and the coin's own collateral note describe yoUSD as an ERC-4626 yoVault on Base accepting USDC deposits, rebalanced across 50+ whitelisted DeFi strategies ranked by Exponential.fi, with an admin multisig (under 4 signers) controlling whitelisting and five audits reporting no critical/high findings.",
+        "evidence": "YO Protocol docs and the coin's own collateral note describe yoUSD as an ERC-4626 yoVault on Base accepting USDC deposits, rebalanced across 50+ whitelisted DeFi strategies ranked by Exponential.fi. Follow-up Base checks resolved the admin Safe as 0x67b6F699F1c8040414032a3C2C88a54db144FCd2 (4-of-6, no modules, zero guard), the authority contract as 0x9524e25079b1b04D904865704783A5aA0202d44D, and the vault wrapper as 0x0000000f2eB9f69274678c76222B35eEc7588a65.",
         "reviewer": "DeepSeek-verified mint-authority sweep",
         "reviewedAt": "2026-05-25",
         "unresolvedQuestions": [
-          "Resolve the yoUSD admin multisig address, threshold, and signer set, and the yoGateway/strategy-allocation admin on Base."
+          "Resolve the current yoGateway and strategy-allocation admin paths beyond the vault authority contract."
         ]
       }
     },

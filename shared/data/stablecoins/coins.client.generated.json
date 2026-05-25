@@ -18878,7 +18878,7 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "multisig",
           "directMintAbility": "direct"
         }
       ]
@@ -19121,12 +19121,20 @@
     "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USTBL by Spiko, and indirect USDC gateway liquidity",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "issuer-direct-mint",
-      "authorityPosture": "concentrated-admin",
+      "mintPath": "amo-or-custodian-hybrid",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
+        {
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -22018,12 +22026,16 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
-      "mintPath": "immutable-user-collateralized",
-      "authorityPosture": "none-resolved",
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "none"
+          "directMintAbility": "cap-limited"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "upgrade-only"
         }
       ]
     }
@@ -22162,8 +22174,12 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "contract",
+          "authorityType": "multisig",
           "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "upgrade-only"
         }
       ]
     }
@@ -22559,12 +22575,16 @@
     "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash or cash-equivalent redemption reserves; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
     "blacklistStatus": true,
     "mintAuthoritySummary": {
-      "mintPath": "offchain-attested-minter",
+      "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
           "authorityType": "issuer-backend",
           "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -22756,7 +22776,7 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
+          "authorityType": "unknown",
           "directMintAbility": "direct"
         },
         {
@@ -23404,7 +23424,7 @@
       "controls": [
         {
           "authorityType": "contract",
-          "directMintAbility": "parameter-only"
+          "directMintAbility": "cap-limited"
         },
         {
           "authorityType": "safe",
@@ -23464,6 +23484,10 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "controls": [
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct"
+        },
         {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize"
@@ -23830,7 +23854,7 @@
     "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
     "blacklistStatus": "inherited",
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
+      "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
@@ -24068,16 +24092,16 @@
     "collateralQuality": "exotic",
     "blacklistStatus": "possible",
     "mintAuthoritySummary": {
-      "mintPath": "offchain-attested-minter",
+      "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
+          "authorityType": "contract",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "custodian",
-          "directMintAbility": "none"
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -24130,8 +24154,12 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
+          "authorityType": "safe",
+          "directMintAbility": "direct"
+        },
+        {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "upgrade-only"
         }
       ]
     }
@@ -24414,10 +24442,10 @@
     "blacklistStatus": false,
     "mintAuthoritySummary": {
       "mintPath": "permissioned-minter",
-      "authorityPosture": "unbounded-or-compromised",
+      "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         }
       ]
@@ -24582,11 +24610,15 @@
     "blacklistStatus": true,
     "mintAuthoritySummary": {
       "mintPath": "issuer-direct-mint",
-      "authorityPosture": "concentrated-admin",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
+          "authorityType": "eoa",
+          "directMintAbility": "direct"
+        },
+        {
           "authorityType": "contract",
-          "directMintAbility": "can-authorize"
+          "directMintAbility": "upgrade-only"
         }
       ]
     }
@@ -24648,8 +24680,8 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "authorityType": "eoa",
+          "directMintAbility": "can-authorize"
         }
       ]
     }
@@ -24845,7 +24877,19 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
+          "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "direct"
         }
       ]
@@ -24891,11 +24935,19 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
+          "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "direct"
         }
       ]
@@ -24933,15 +24985,19 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct"
         }
       ]
@@ -24987,15 +25043,19 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct"
         }
       ]
@@ -25070,6 +25130,10 @@
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
       "controls": [
+        {
+          "authorityType": "eoa",
+          "directMintAbility": "direct"
+        },
         {
           "authorityType": "contract",
           "directMintAbility": "direct"
@@ -25253,15 +25317,19 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct"
         }
       ]
@@ -25299,15 +25367,19 @@
       "authorityPosture": "concentrated-admin",
       "controls": [
         {
-          "authorityType": "unknown",
+          "authorityType": "eoa",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "direct"
         }
       ]
@@ -25776,6 +25848,10 @@
           "directMintAbility": "cap-limited"
         },
         {
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
+        {
           "authorityType": "eoa",
           "directMintAbility": "can-authorize"
         }
@@ -26088,6 +26164,10 @@
         {
           "authorityType": "bridge",
           "directMintAbility": "cap-limited"
+        },
+        {
+          "authorityType": "unknown",
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -26138,7 +26218,7 @@
           "directMintAbility": "cap-limited"
         },
         {
-          "authorityType": "contract",
+          "authorityType": "timelock",
           "directMintAbility": "can-authorize"
         }
       ]
@@ -26222,6 +26302,10 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -26253,12 +26337,16 @@
     "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
     "blacklistStatus": true,
     "mintAuthoritySummary": {
-      "mintPath": "issuer-direct-mint",
-      "authorityPosture": "concentrated-admin",
+      "mintPath": "user-collateralized-governed",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
-          "authorityType": "issuer-backend",
-          "directMintAbility": "direct"
+          "authorityType": "contract",
+          "directMintAbility": "cap-limited"
+        },
+        {
+          "authorityType": "dao-governor",
+          "directMintAbility": "parameter-only"
         }
       ]
     }
@@ -26498,6 +26586,10 @@
         {
           "authorityType": "safe",
           "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "direct"
         }
       ]
     }
@@ -26754,11 +26846,15 @@
     "collateralQuality": "exotic",
     "blacklistStatus": true,
     "mintAuthoritySummary": {
-      "mintPath": "permissioned-minter",
-      "authorityPosture": "concentrated-admin",
+      "mintPath": "wrapped-or-variant-inherited",
+      "authorityPosture": "partially-bounded-admin",
       "controls": [
         {
-          "authorityType": "multisig",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "contract",
           "directMintAbility": "can-authorize"
         },
         {

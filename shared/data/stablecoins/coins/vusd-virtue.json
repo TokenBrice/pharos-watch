@@ -62,7 +62,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "VUSD is a Liquity-V2-friendly-fork CDP on IOTA EVM: users open overcollateralized positions in IOTA/stIOTA/IBTC to mint VUSD at user-set interest rates, with liquidations and redemptions defending the peg; the Liquity-v2 branch/admin model on IOTA is not independently verified as renounced.",
+    "summary": "VUSD is a Liquity-V2-friendly-fork CDP on IOTA EVM: users open overcollateralized positions in IOTA/stIOTA to mint VUSD at user-set interest rates, with liquidations and redemptions defending the peg; future collateral beyond IOTA/stIOTA was not independently verified.",
     "controls": [
       {
         "label": "Virtue Money borrower-operations / branch contracts (Liquity V2 fork)",
@@ -70,8 +70,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
-        "capDescription": "Mint bounded by overcollateralized CDPs across IOTA/stIOTA/IBTC branches with user-set interest rates, per the Liquity V2 multi-collateral design.",
-        "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs (IOTA/stIOTA/IBTC) on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
+        "capDescription": "Mint bounded by overcollateralized CDPs across IOTA/stIOTA branches with user-set interest rates, per the Liquity V2 multi-collateral design.",
+        "evidence": "Virtue docs describe VUSD as minted by opening overcollateralized CDPs using IOTA/stIOTA on a Liquity V2 friendly fork on IOTA EVM with user-set rates, flash minting, and liquidation/redemption peg defense."
       },
       {
         "label": "Virtue Money admin (multisig)",
@@ -84,7 +84,7 @@
       }
     ],
     "review": {
-      "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA/IBTC; the IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
+      "evidence": "Virtue Money documentation and launch coverage describe VUSD as a Liquity-V2-friendly-fork CDP on IOTA EVM minted against IOTA/stIOTA; IBTC collateral was not supported by reviewed official sources. The IOTA deployment is not indexed in Pharos contract metadata and owner renouncement / admin wiring could not be independently verified, so a governed-CDP classification is used rather than immutable.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [

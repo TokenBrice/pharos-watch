@@ -66,40 +66,51 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "WPEN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve Ripio's shared admin as DEFAULT_ADMIN_ROLE plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
+    "summary": "WPEN is an issuer-managed Ripio wFIAT token. Ethereum role logs resolve two current DEFAULT_ADMIN_ROLE holders plus three current MINTER_ROLE holders; non-Ethereum deployments remain unverified.",
     "controls": [
       {
         "chain": "ethereum",
         "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
         "label": "Ripio shared WPEN admin and MINTER_ROLE holder",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Ethereum role logs resolve this account as DEFAULT_ADMIN_ROLE and a current MINTER_ROLE holder. Signer custody was not decoded as EOA, backend, Safe, or contract."
+        "evidence": "Ethereum role logs resolve this EOA as a current DEFAULT_ADMIN_ROLE and MINTER_ROLE holder. Signer policy was not decoded."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "label": "WPEN secondary DEFAULT_ADMIN_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Ethereum role logs resolve this contract as a current DEFAULT_ADMIN_ROLE holder. Contract owner/policy was not decoded in the lane review."
       },
       {
         "chain": "ethereum",
         "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
         "label": "WPEN secondary Ethereum MINTER_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
       },
       {
         "chain": "ethereum",
         "address": "0xD168CFbBE260D48cd119497a9a2eE8482080C5E7",
         "label": "WPEN secondary Ethereum MINTER_ROLE holder",
         "role": "direct-minter",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Ethereum role logs resolve this account as a current MINTER_ROLE holder. The account/source identity was not decoded in the lane review."
+        "evidence": "Ethereum role logs resolve this contract as a current MINTER_ROLE holder. Contract owner/policy was not decoded in the lane review."
       }
     ],
     "review": {
@@ -113,14 +124,13 @@
           "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe#events"
         }
       ],
-      "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WPEN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves current Ethereum DEFAULT_ADMIN_ROLE and MINTER_ROLE holders.",
+      "evidence": "Review is scoped to Ethereum role-holder coverage: Ripio identifies WPEN as a wrapped local stablecoin, and the lane-2 role reconstruction resolves two current Ethereum DEFAULT_ADMIN_ROLE holders and three current MINTER_ROLE holders.",
       "reviewer": "Codex mint-authority follow-up Ripio lane",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
         "Base, World Chain, BSC, Polygon, and Gnosis role holders and admins are not yet reconstructed.",
         "Ethereum implementation source for 0x9d6266...7969 remains unresolved.",
-        "Custody/type of 0x466c02e2cc67b81a696af5afdb61605c41fe247b and any per-chain equivalent admin is unresolved.",
-        "Secondary MINTER_ROLE holder identities/sources for 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 and 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 are unresolved."
+        "Policy/custody layer for the current Ethereum role holders and any per-chain equivalent admin remains unresolved."
       ]
     }
   },

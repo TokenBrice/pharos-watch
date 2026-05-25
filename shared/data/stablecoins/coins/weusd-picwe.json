@@ -90,28 +90,45 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via an AccessControl token whose MINTER_ROLE is held by PicWe's mint/redeem contract; minting is permissioned to the issuer, and the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
+    "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
     "controls": [
       {
-        "label": "PicWe WEUSD MINTER_ROLE / mint-redeem contract",
+        "label": "PicWe WEUSD DEFAULT_ADMIN_ROLE and MINTER_ROLE holder",
         "role": "minter-admin",
-        "authorityType": "contract",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "chain": "bsc",
-        "address": "0xdd73ea766b80417c0607a3f08e34a0c415d89d56",
+        "address": "0xc12233455beac4e094a5de022be692a264c0c0bc",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "present",
-        "evidence": "BscScan shows the WEUSD token uses OpenZeppelin AccessControl with DEFAULT_ADMIN_ROLE and a MINTER_ROLE-gated mint(address,uint256); the deployer 0xc12233455beac4e094a5de022be692a264c0c0bc initially holds DEFAULT_ADMIN_ROLE and can grant the MINTER_ROLE, and PicWe docs name a dedicated mint/redeem contract (0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C) as the issuance handler.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Live role checks on BSC, Base, and Arbitrum resolve this EOA as DEFAULT_ADMIN_ROLE holder and a current MINTER_ROLE holder; signer policy was not decoded.",
         "sources": [
           {
             "label": "BscScan WEUSD contract",
             "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
           }
         ]
+      },
+      {
+        "label": "PicWe WEUSD mint/redeem contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "PicWe docs identify this contract as the WEUSD mint/redeem handler, and live role checks on BSC, Base, and Arbitrum resolve it as a current MINTER_ROLE holder.",
+        "sources": [
+          {
+            "label": "PicWe WEUSD docs",
+            "url": "https://docs.picwe.org/what-is-weusd"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "WEUSD is PicWe's omni-chain settlement currency minted/redeemed via PicWe's protocol; the token contract is OpenZeppelin AccessControl with a MINTER_ROLE gating mint, and the basket economic model (about 9 USDT + 1 MOVE per 10 WEUSD) is the documented reason for the sub-$1 floor rather than a pure 1:1 USDT wrapper.",
+      "evidence": "WEUSD is PicWe's omni-chain settlement currency minted/redeemed via PicWe's protocol; the token contract is OpenZeppelin AccessControl with a MINTER_ROLE gating mint. Live BSC/Base/Arbitrum checks resolve PicWe EOA 0xc12233455beac4e094a5de022be692a264c0c0bc as DEFAULT_ADMIN_ROLE and one MINTER_ROLE holder, and 0x5D54f1092FD1750A3ab96972dc1867c5B23eF22C as an additional mint/redeem MINTER_ROLE holder. The basket economic model (about 9 USDT + 1 MOVE per 10 WEUSD) is the documented reason for the sub-$1 floor rather than a pure 1:1 USDT wrapper.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -125,7 +142,7 @@
         }
       ],
       "unresolvedQuestions": [
-        "Confirm the current MINTER_ROLE holder address(es) via RoleGranted logs and whether DEFAULT_ADMIN_ROLE is held by an EOA, multisig, or Safe."
+        "Confirm Plume and Movement WEUSD role holders and whether the admin EOA is controlled by a multisig, MPC, or other policy layer."
       ]
     }
   }

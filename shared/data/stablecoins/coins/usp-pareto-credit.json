@@ -66,7 +66,7 @@
         "label": "ParetoDollar collateral mint path",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "mint(collateralToken, amount) mints USP only for allowed collateral and only while queue collateralization checks pass.",
@@ -92,9 +92,7 @@
         "safe": {
           "version": "1.3.0",
           "threshold": 3,
-          "enabledModules": [
-            "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
-          ],
+          "enabledModules": ["0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
           "source": "safe-api"

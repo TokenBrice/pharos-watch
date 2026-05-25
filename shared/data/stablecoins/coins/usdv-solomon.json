@@ -96,13 +96,13 @@
       {
         "label": "Solomon direct mint/burn permission (approved participants)",
         "role": "backend-signer",
-        "authorityType": "issuer-backend",
+        "authorityType": "unknown",
         "directMintAbility": "direct",
         "chain": "solana",
-        "address": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+        "address": "7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "present",
-        "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions that complete KYC/AML onboarding, while ordinary users only enter/exit through Solana stablecoin pools; minting is gated by the issuer against off-exchange collateral."
+        "evidence": "Solomon docs state direct 1:1 mint/burn/redeem of USDv is permissioned to approved market makers and compliant institutions; Solana RPC returned this live SPL mint authority for token Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C and null freeze authority."
       },
       {
         "label": "Ceffu custodian (backing collateral)",
@@ -115,7 +115,7 @@
       }
     ],
     "review": {
-      "evidence": "Solomon Labs operates USDv as a Solana-native synthetic dollar backed by a delta-neutral basis trade in Ceffu custody; direct mint/burn is permissioned to whitelisted KYC'd participants and the protocol's admin operations run through a Squads multisig, so supply creation is concentrated in the issuer rather than permissionless.",
+      "evidence": "Solomon Labs operates USDv as a Solana-native synthetic dollar backed by a delta-neutral basis trade in Ceffu custody; direct mint/burn is permissioned to whitelisted KYC'd participants. Solana RPC resolves live mint authority to 7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa and null freeze authority.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
@@ -126,7 +126,7 @@
       ],
       "sourceFreeRationale": "Mechanism resolved from Solomon docs and project coverage (permissioned mint, Ceffu custody, Squads multisig admin); the live Squads signer set/threshold and Solana mint authority were not independently read.",
       "unresolvedQuestions": [
-        "Resolve the live Squads multisig signer count/threshold and the Solana token mint authority backing USDv."
+        "Decode whether the live Solana mint authority is a Squads multisig, PDA, or other signer model."
       ]
     }
   }

@@ -74,45 +74,62 @@
     "reviewedAt": "2026-05-12"
   },
   "mintAuthority": {
-    "mintPath": "offchain-attested-minter",
+    "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "USDTB minting is modeled as Ethena issuer/backend-mediated authority pending deeper role and cap review.",
+    "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves; on-chain mint/burn uses MINTER_BURNER_ROLE administration rather than Ethena USDe signed-order minting.",
     "controls": [
       {
-        "label": "Off-chain order/signature mint authority",
-        "role": "backend-signer",
+        "label": "USDtb MINTER_BURNER_ROLE mint/burn authority",
+        "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
-            "label": "Ethena mint and redeem docs",
-            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+            "label": "USDtb introduction",
+            "url": "https://docs.usdtb.money/introduction"
           },
           {
-            "label": "Ethena trust assumptions",
-            "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+            "label": "USDtb mint and redeem docs",
+            "url": "https://docs.usdtb.money/mint-and-redeem"
           }
         ],
-        "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting."
+        "evidence": "USDtb docs describe Anchorage Digital Bank USDtb issuance/redemption against reserves; verified implementation exposes MINTER_BURNER_ROLE for mint/burn rather than USDe signed-order rails."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd93826BB299765c87D13AeBa2A7E5d9B27A03956",
+        "label": "USDtb DEFAULT_ADMIN_ROLE",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USDtb implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9d6d2510c2f4e2949cc3f85c38f5d58f1f8b9589?fields=abi,metadata"
+          }
+        ],
+        "evidence": "Role review identifies this address as DEFAULT_ADMIN_ROLE, which can grant/revoke MINTER_BURNER_ROLE."
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Ethena mint and redeem docs",
-          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+          "label": "USDtb introduction",
+          "url": "https://docs.usdtb.money/introduction"
         },
         {
-          "label": "Ethena trust assumptions",
-          "url": "https://docs.ethena.fi/solution-design/key-trust-assumptions"
+          "label": "USDtb mint and redeem docs",
+          "url": "https://docs.usdtb.money/mint-and-redeem"
         }
       ],
-      "evidence": "Ethena/USDTB materials describe issuer-operated mint/redeem rails rather than immutable user-collateralized minting.",
+      "evidence": "USDtb docs describe Anchorage Digital Bank issuer-operated mint/redeem rails backed by BUIDL and cash reserves, and implementation review shows MINTER_BURNER_ROLE plus DEFAULT_ADMIN_ROLE rather than Ethena USDe signed-order minting.",
       "reviewer": "Codex mint-authority MVP",
-      "reviewedAt": "2026-05-24"
+      "reviewedAt": "2026-05-25"
     }
   },
   "deploymentModel": "third-party-bridge",

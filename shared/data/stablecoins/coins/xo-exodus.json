@@ -11,9 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "infrastructures": [
-    "m0"
-  ],
+  "infrastructures": ["m0"],
   "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
   "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
   "mechanismArchetype": "fiat-cash",
@@ -73,7 +71,7 @@
     "mintPath": "m0-permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway and Solana movement relies on M0 portal infrastructure.",
+    "summary": "XO Cash is an M0-backed Solana extension; base M issuance remains on the Ethereum MinterGateway, Solana movement relies on M0 portal infrastructure, and the XO mint authority is a Solana account.",
     "controls": [
       {
         "chain": "ethereum",
@@ -122,6 +120,17 @@
           }
         ],
         "evidence": "Official M0 deployments list the Solana Portal program; an XO-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
+      },
+      {
+        "chain": "solana",
+        "address": "F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu",
+        "label": "XO Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Solana mint-account review resolved this address as the current mint authority. A separate non-mint privileged authority beginning AgNSjv and ending KbCR was observed but not classified as a mint control."
       }
     ],
     "review": {
@@ -135,7 +144,7 @@
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
         }
       ],
-      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins.",
+      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins, and Solana mint-account review resolved F4fpAN5ZSFm9QJ5WTWemgnV6ktwwWQS5DPB4m1pCJinu as XO's current Solana mint authority.",
       "reviewer": "Codex mint-authority MVP",
       "reviewedAt": "2026-05-24"
     }

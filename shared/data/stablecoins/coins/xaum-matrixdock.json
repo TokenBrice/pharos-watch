@@ -90,7 +90,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "XAUm MToken minting is operator-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
+    "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator and the current owner is an EOA.",
     "controls": [
       {
         "chain": "ethereum",
@@ -116,6 +116,24 @@
       },
       {
         "chain": "ethereum",
+        "address": "0x67dcC9C33363Cc0e650738528Fe4Fef1d658C7EE",
+        "label": "XAUm receipt NFT mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "Verified source allows mintTo by the operator or configured receipt NFT contract only within mintBudget.",
+        "sources": [
+          {
+            "label": "Sourcify Matrixdock MToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+          }
+        ],
+        "evidence": "The verified MToken mintTo path permits calls from the configured NFT contract as well as the operator, subject to the same mintBudget accounting."
+      },
+      {
+        "chain": "ethereum",
         "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
         "label": "Matrixdock token owner",
         "role": "minter-admin",
@@ -137,7 +155,7 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
         }
       ],
-      "evidence": "Matrixdock source and direct reads identify operator-based budgeted minting plus owner-controlled operator changes.",
+      "evidence": "Matrixdock source and direct reads identify operator/NFT-contract budgeted minting plus owner-controlled operator changes.",
       "reviewer": "Codex mint-authority full-gap batch-6",
       "reviewedAt": "2026-05-24"
     }

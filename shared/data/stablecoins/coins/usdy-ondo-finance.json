@@ -120,7 +120,7 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x1A694a09494e214A3BE3652E4B343b7B81a73Ad7",
+        "address": "0x1a694A09494E214a3Be3652e4B343B7B81A73ad7",
         "label": "USDY default admin / minter Safe",
         "role": "direct-minter",
         "authorityType": "safe",

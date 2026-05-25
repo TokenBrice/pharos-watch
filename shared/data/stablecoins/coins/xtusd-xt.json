@@ -60,28 +60,42 @@
     }
   ],
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "XTUSD is a centralized dollar token issued by the XT.com exchange (Seychelles) on its own XSC chain; new tokens are minted against USD deposits and burned on redemption through XT.com infrastructure, with limited public disclosure of the on-chain mint authority.",
+    "summary": "XTUSD is described by XT.com as an XTDao/MakerDAO-style vault stablecoin, with users minting against protocol collateral while DAO/protocol governance controls collateral parameters; the on-chain XSC admin remains unresolved.",
     "controls": [
       {
-        "label": "XT.com issuance backend",
+        "label": "XTDao vault/protocol mint route",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Listing and aggregator coverage describe XTUSD as a deposit-and-redemption stablecoin where the XT.com exchange mints new tokens when USD is deposited and burns them on redemption; supply creation is controlled by the exchange operator with no permissionless mint route disclosed."
+        "evidence": "XT.com's TAI-to-XTUSD announcement describes XTUSD's economic system as an XTDao smart-contract project based on MakerDAO, with vault collateral and auctions used to keep enough collateral against outstanding debt."
+      },
+      {
+        "label": "XTDao collateral-parameter governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "XT.com's announcement describes XTDao as the governance/protocol layer that can support multiple collateral assets over time, making the mint path user-collateralized but parameter-governed."
       }
     ],
     "review": {
-      "evidence": "XTUSD is described across exchange listing and aggregator pages as an XT.com-issued, reserve-backed dollar token using an exchange-operated mint-on-deposit / burn-on-redemption model; no first-party technical docs expose the on-chain minter, and XSC is not indexed by Pharos.",
+      "evidence": "XT.com's first-party TAI-to-XTUSD announcement describes XTUSD as built on an XTDao smart-contract project based on MakerDAO, with vault collateral, auctions, and future collateral support. No first-party technical docs expose the current XSC owner/admin, so the governance/admin surface remains manual-review.",
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
-      "sourceFreeRationale": "Classification based on the centralized exchange-issuer model described in third-party coverage; no first-party docs or on-chain admin read available for the XSC deployment, so confidence is held at manual-review.",
+      "sources": [
+        {
+          "label": "XT.COM TAI to XTUSD announcement",
+          "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+        }
+      ],
       "unresolvedQuestions": [
-        "Locate first-party XT.com documentation for the XTUSD mint/redeem terms and resolve the on-chain mint authority on XSC."
+        "Resolve the current XSC XTDao vault contracts, owner/admin, pause, and upgrade authority."
       ]
     }
   }

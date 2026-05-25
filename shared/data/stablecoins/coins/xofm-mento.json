@@ -59,7 +59,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes.",
+    "summary": "Mento V3 FX stable tokens use StableTokenV2 minting restricted to broker/validator paths; owner-controlled parameters can update those mint routes through the Mento timelock.",
     "controls": [
       {
         "chain": "celo",
@@ -86,13 +86,13 @@
       {
         "chain": "celo",
         "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento stable token owner",
-        "role": "minter-admin",
-        "authorityType": "contract",
+        "label": "Mento Timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "owner() returned this contract address; Safe threshold/modules/guard were not verified."
+        "evidence": "owner() returned this timelock contract address. The same Mento timelock returned a 172800 second delay during the GHSm review; executor/proposer configuration and any upstream multisig threshold were not decoded for XOFm."
       }
     ],
     "review": {
@@ -106,11 +106,11 @@
           "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
         }
       ],
-      "evidence": "Mento token source and Celo reads identify broker/validator-gated minting plus owner-controlled route updates.",
+      "evidence": "Mento token source and Celo reads identify broker/validator-gated minting plus owner-controlled route updates through the Mento timelock.",
       "reviewer": "Codex mint-authority full-gap batch-6",
       "reviewedAt": "2026-05-24",
       "unresolvedQuestions": [
-        "Resolve current Mento owner contract governance and any threshold or timelock."
+        "Resolve current Mento timelock proposer/executor configuration and any upstream governance threshold."
       ]
     }
   },
@@ -135,7 +135,5 @@
       "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
     }
   ],
-  "infrastructures": [
-    "liquity-v2"
-  ]
+  "infrastructures": ["liquity-v2"]
 }
