@@ -29,6 +29,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
   ],
   [
+    "bnusd-balanced::Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)::USDC",
+    "Balanced reports this as one mixed Hub/Stability Fund collateral bucket, so a single USDC coinId would overstate the reserve dependency.",
+  ],
+  [
+    "bnusd-balanced::Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)::USDT",
+    "Balanced reports this as one mixed Hub/Stability Fund collateral bucket, so a single USDT coinId would overstate the reserve dependency.",
+  ],
+  [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
   ],
@@ -47,6 +55,18 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDT",
     "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
+  ],
+  [
+    "jusd-juicedollar::USDC/USDT bridge reserves::USDC",
+    "JUSD's bridge reserve slice is a de minimis combined USDC/USDT bucket without stablecoin-level weights, so no single coinId is representative.",
+  ],
+  [
+    "jusd-juicedollar::USDC/USDT bridge reserves::USDT",
+    "JUSD's bridge reserve slice is a de minimis combined USDC/USDT bucket without stablecoin-level weights, so no single coinId is representative.",
+  ],
+  [
+    "nxusd-nereus::Nereus overcollateralized crypto positions including DAI collateral::DAI",
+    "Nereus reports DAI as part of a broader overcollateralized crypto collateral set, so a single DAI coinId would overstate the reserve dependency.",
   ],
   [
     "frax-frax::Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity::FRAX",
