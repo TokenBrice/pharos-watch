@@ -149,7 +149,7 @@ function ReviewerHeader() {
           <Tooltip>
             <TooltipTrigger
               aria-label="About the Depeg Duration Resolver Reviewer"
-              className="pharos-focus-ring inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+              className="pharos-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground sm:h-5 sm:w-5"
             >
               <Info className="h-3.5 w-3.5" aria-hidden="true" />
             </TooltipTrigger>

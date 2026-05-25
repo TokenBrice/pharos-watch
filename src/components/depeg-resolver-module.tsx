@@ -163,7 +163,7 @@ function RelatedContextDetails({ row }: { row: DdrRow }) {
 
   return (
     <details className="group mt-3">
-      <summary className="pharos-focus-ring cursor-pointer list-none text-xs text-muted-foreground hover:text-foreground">
+      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center rounded-md text-xs text-muted-foreground hover:text-foreground">
         Related context
         <span className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
       </summary>
@@ -310,7 +310,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
             <Tooltip>
               <TooltipTrigger
                 aria-label="About the Depeg Duration Resolver"
-                className="pharos-focus-ring inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+                className="pharos-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground sm:h-5 sm:w-5"
               >
                 <Info className="h-3.5 w-3.5" aria-hidden="true" />
               </TooltipTrigger>
