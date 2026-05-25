@@ -190,7 +190,7 @@ export function resolveRadarClick(
 }
 
 export function getAggregateFreshnessTimestamp(data: DewsAggregateFreshnessLike): number {
-  return data.oldestComputedAt ?? data.updatedAt;
+  return data.updatedAt;
 }
 
 export function buildDewsSummaryViewModel(

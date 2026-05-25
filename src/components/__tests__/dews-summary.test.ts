@@ -56,11 +56,11 @@ describe("resolveRadarClick", () => {
 });
 
 describe("getAggregateFreshnessTimestamp", () => {
-  it("uses oldestComputedAt when aggregate rows are not uniformly fresh", () => {
+  it("uses the aggregate publication timestamp even when some rows are retained last-valid values", () => {
     expect(getAggregateFreshnessTimestamp({
       updatedAt: 1_775_898_800,
       oldestComputedAt: 1_775_889_800,
-    })).toBe(1_775_889_800);
+    })).toBe(1_775_898_800);
   });
 
   it("falls back to updatedAt for older API responses", () => {
