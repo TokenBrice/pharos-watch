@@ -22,16 +22,6 @@ export const PSI_BAND_CLASSES: Record<ConditionBand, string> = {
   MELTDOWN: "text-red-800 dark:text-red-300",
 };
 
-/** Static Tailwind border-l color classes for each PSI condition band. */
-export const PSI_BORDER_CLASSES: Record<ConditionBand, string> = {
-  BEDROCK: "border-l-green-500",
-  STEADY: "border-l-teal-500",
-  TREMOR: "border-l-yellow-500",
-  FRACTURE: "border-l-orange-500",
-  CRISIS: "border-l-red-500",
-  MELTDOWN: "border-l-red-800",
-};
-
 /** Static Tailwind background overlay classes for each PSI condition band (low opacity for nav accent). */
 export const PSI_BG_OVERLAY_CLASSES: Record<ConditionBand, string> = {
   BEDROCK: "bg-green-500/15",
