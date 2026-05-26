@@ -16,7 +16,7 @@
     "dateCreated": "2026-02-19T17:42:02+01:00"
   },
   "worker-and-api-limits": {
-    "dateModified": "2026-05-24T21:13:35+02:00",
+    "dateModified": "2026-05-26T13:24:02+02:00",
     "dateCreated": "2026-03-01T13:33:58+01:00"
   },
   "classification": {
@@ -60,7 +60,7 @@
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "yield-intelligence": {
-    "dateModified": "2026-05-22T23:26:49+02:00",
+    "dateModified": "2026-05-26T13:24:02+02:00",
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "shadow-stablecoins": {
@@ -72,11 +72,11 @@
     "dateCreated": "2026-03-11T10:55:15+01:00"
   },
   "design-language": {
-    "dateModified": "2026-05-26T09:19:48+02:00",
+    "dateModified": "2026-05-26T13:24:02+02:00",
     "dateCreated": "2026-02-28T11:03:51+01:00"
   },
   "design-tokens": {
-    "dateModified": "2026-05-15T21:51:10+02:00",
+    "dateModified": "2026-05-26T13:24:02+02:00",
     "dateCreated": "2026-02-26T14:37:11+01:00"
   }
 }
