@@ -25,9 +25,10 @@ Sub-component versions are surfaced in the API `_meta` for reproducibility: `res
 One DDR readout per **active confirmed** depeg event:
 
 - `depeg_events.ended_at IS NULL` (the event is still open), and
+- the tracked stablecoin has not already entered a terminal lifecycle state (`frozen`, `dead`, `defunct`, `failed`, or `cemetery`), and
 - the event passes confirmation (provenance `auditVerdict` is not `false_positive`, `disputed`, or `no_data` where provenance exists).
 
-Closed events feed the historical corpus, not live readouts. DDR inherits the clean confirmed-event stream from the [depeg detection pipeline](./depeg-detection.md) (100 bps USD / 150 bps non-USD thresholds plus multi-source confirmation), so it does not re-run depeg detection.
+Closed events feed the historical corpus, not live readouts. Terminal lifecycle events also leave the live DDR board even when the raw depeg row remains open: once registry status proves the asset is frozen/dead, the "time to repeg" question has no finite observable answer, so DDRR owns the audit result instead of DDR publishing an infinite-duration live incident. DDR inherits the clean confirmed-event stream from the [depeg detection pipeline](./depeg-detection.md) (100 bps USD / 150 bps non-USD thresholds plus multi-source confirmation), so it does not re-run depeg detection.
 
 **Both directions are in scope.** For a below-peg break (underpeg) the kill signals do real work — this is where the terminal-vs-recoverable call matters. For an above-peg break (overpeg) recovery is quasi-certain (a premium mean-reverts as soon as minting/arbitrage works), so Stage 1 is almost always `recovery_likely` and the headline shifts to Stage 2 duration: how long the premium persists. The exception is a structurally sticky premium (minting paused or capped, or a NAV/yield token), which Stage 1 surfaces as `at_risk` rather than terminal.
 
@@ -129,9 +130,9 @@ The public module on `/depeg/` sits directly below DDR and surfaces two headline
 
 Review outcomes are deliberately conservative:
 
-- A still-open event remains `pending`; it is never counted as proof that a terminal call was right.
+- A still-open event remains `pending` unless tracked lifecycle status supplies terminal evidence; open status alone is never counted as proof that a terminal call was right.
 - A closed event with a recovery price is `recovered`.
-- A terminal/frozen tracked asset without a recovery price is `terminal_observed`.
+- A terminal/frozen tracked asset without a recovery price is `terminal_observed`, even if the underlying depeg row remains open; that lifecycle evidence matures the review as a terminal outcome rather than a pending duration case.
 - Missing source rows or closed rows without recovery/terminal evidence are data issues, not wins or losses.
 
 The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same review snapshot used by the UI. Headline stats are computed across the loaded current-methodology assessment ledger, while public review rows are capped to the newest 100 rows to keep the D1 cache row bounded; `_meta.publicRowsTruncated` and `_meta.assessmentRowsTruncated` disclose truncation. Missing or invalid snapshots return a degraded `200` with empty rows, matching DDR's public failure mode. Stale review snapshots keep their rows and mark `_meta.degraded=true` / `degradedReason="stale-cache"`.

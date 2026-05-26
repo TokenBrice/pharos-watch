@@ -27,6 +27,7 @@ import {
   type DdrSupplyContext,
 } from "@shared/lib/depeg-resolver";
 import { TRACKED_META_BY_ID, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { StablecoinMeta } from "@shared/types/core";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
@@ -202,7 +203,10 @@ export async function computeDepegResolver(db: D1Database, signal?: AbortSignal)
       started_at: number;
       peg_reference: number;
     }>();
-  const activeRows = activeResult.results ?? [];
+  const activeRows = (activeResult.results ?? []).filter((row) => {
+    const status = TRACKED_META_BY_ID.get(row.stablecoin_id)?.status ?? null;
+    return !isTerminalStablecoinStatus(status);
+  });
 
   let rows: DdrRow[] = [];
   let lineage: DdrResponse["_meta"]["lineage"] = {

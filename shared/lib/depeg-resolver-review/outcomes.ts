@@ -1,7 +1,6 @@
 import type { DdrrActualOutcome } from "../../types/depeg-resolver-review";
 import type { DdrrActualEventInput, DdrrAssessmentInput } from "./inputs";
-
-const TERMINAL_STATUS_VALUES = new Set(["dead", "defunct", "failed", "frozen", "cemetery"]);
+import { isTerminalStablecoinStatus } from "../stablecoin-lifecycle";
 
 export interface DdrrDerivedOutcome {
   actualOutcome: DdrrActualOutcome;
@@ -16,13 +15,8 @@ function isFiniteNonnegativeInteger(value: number): boolean {
   return Number.isFinite(value) && Number.isInteger(value) && value >= 0;
 }
 
-function isTerminalStatus(status: string | null | undefined): boolean {
-  if (!status) return false;
-  return TERMINAL_STATUS_VALUES.has(status.trim().toLowerCase());
-}
-
 export function hasTerminalEvidence(event: DdrrActualEventInput): boolean {
-  return event.terminalObserved === true || isTerminalStatus(event.stablecoinStatus);
+  return event.terminalObserved === true || isTerminalStablecoinStatus(event.stablecoinStatus);
 }
 
 function dataIssue(reason: string, actualEndedAt: number | null = null): DdrrDerivedOutcome {

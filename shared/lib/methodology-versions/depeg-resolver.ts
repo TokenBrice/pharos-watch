@@ -15,6 +15,7 @@ const ddr = createMethodologyVersion({
         "Stores quarter-hourly DDR assessment checkpoints and reviews the first checkpoint for each event under the current methodology",
         "Publishes recovery-likelihood accuracy and average observed-minus-DDR recovery-duration error on /depeg/ and GET /api/depeg-resolver-review",
         "Keeps pending, insufficient-signal, and data-issue rows visible while excluding them from scored headline accuracy",
+        "Removes terminal-lifecycle assets from live DDR readouts while DDRR scores their stored predictions as terminal outcomes",
       ],
       commits: [],
       reconstructed: false,

@@ -12,7 +12,8 @@ Added the Depeg Duration Resolver Reviewer (DDRR), the audit layer that scores s
 
 - **Assessment checkpoints.** The DDR writer now stores quarter-hourly checkpoints in `depeg_resolver_assessments` (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) with the original verdict tier, duration median/IQR, horizon cells, factors, methodology version, and source row JSON.
 - **Public review stats.** The `/depeg/` module and `GET /api/depeg-resolver-review` endpoint expose strict recovery-likelihood accuracy plus average observed-minus-DDR recovery-duration error. Public reviewer v1 scoring uses the `first` checkpoint for each event under the current methodology so headline stats stay event-level.
-- **Conservative outcome handling.** Pending, insufficient-signal, and data-issue rows are visible but excluded from scored headline accuracy; still-open events remain pending and are never counted as proof that a terminal call was right.
+- **Conservative outcome handling.** Pending, insufficient-signal, and data-issue rows are visible but excluded from scored headline accuracy; still-open events remain pending unless tracked lifecycle status supplies terminal evidence, and open status alone is never counted as proof that a terminal call was right.
+- **Terminal lifecycle cutoff.** Open rows for tracked assets already marked `frozen`, `dead`, `defunct`, `failed`, or `cemetery` leave the live DDR board and are owned by DDRR instead. A dead stablecoin cannot produce an observable time-to-repeg, so duration review remains unscored for terminal outcomes.
 - **No historical replay.** DDRR compares stored DDR readouts with later `depeg_events` outcomes and tracked-coin lifecycle state; it does not replay today's resolver over old events.
 
 ## v1.0 — Initial Depeg Duration Resolver (May 25, 2026)
