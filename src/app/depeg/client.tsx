@@ -79,7 +79,7 @@ function DepegCoverageBand({ reliability }: { reliability: DepegCoverageMetrics 
     { value: String(reliability.malformedRows), label: "malformed" },
   ];
   return (
-    <div className="pharos-subtle-band flex flex-wrap items-center gap-x-5 gap-y-1.5">
+    <div className="pharos-subtle-band flex flex-wrap items-center gap-x-5 gap-y-1.5 sm:justify-between">
       <h2 className="pharos-kicker mr-1">Coverage</h2>
       {items.map((item) => (
         <span key={item.label} className="text-xs text-muted-foreground">
@@ -193,6 +193,16 @@ export function DepegClient() {
     () => (eventsData?.events ?? []).filter((event) => event.endedAt === null),
     [eventsData],
   );
+  // Coins currently in an active depeg — same source as the activeDepegCount headline, so the
+  // hero logo cluster always matches the count. Worst deviation first.
+  const activeDepegCoins = useMemo(
+    () =>
+      (pegData?.coins ?? [])
+        .filter((coin) => coin.activeDepeg)
+        .sort((a, b) => Math.abs(b.currentDeviationBps ?? 0) - Math.abs(a.currentDeviationBps ?? 0))
+        .map((coin) => ({ id: coin.id, symbol: coin.symbol })),
+    [pegData],
+  );
   const recentClosedEvents = useMemo(
     () => (eventsData?.events ?? []).filter((event) => event.endedAt !== null),
     [eventsData],
@@ -254,14 +264,14 @@ export function DepegClient() {
       />
 
       {/* DEWS radar (left) + prioritized stats and alert queue (right) — 2-column on desktop */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
         <SectionErrorBoundary name="dews">
-          <DEWSSummary logos={logos} />
+          <DEWSSummary logos={logos} className="xl:h-full" />
         </SectionErrorBoundary>
         <div className="flex flex-col gap-6 xl:self-stretch">
           {pegData?.summary && (
             <SectionErrorBoundary name="depeg-stats">
-              <DepegTrackerStats stats={pegData.summary} />
+              <DepegTrackerStats stats={pegData.summary} activeDepegCoins={activeDepegCoins} logos={logos} />
             </SectionErrorBoundary>
           )}
           <SectionErrorBoundary name="dews-alert-feed">

@@ -1,12 +1,20 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
-import { MetricStatCard } from "@/components/metric-stat-card";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import type { PegSummaryStats } from "@shared/types";
 
+export interface ActiveDepegCoin {
+  id: string;
+  symbol: string;
+}
+
 interface DepegTrackerStatsProps {
   stats: PegSummaryStats;
+  activeDepegCoins?: ActiveDepegCoin[];
+  logos?: Record<string, string>;
 }
 
 /** Live/clear status for the Active Depegs hero — a data-driven indicator, not card chrome. */
@@ -30,6 +38,57 @@ function ActiveStatusPill({ active }: { active: boolean }) {
   );
 }
 
+/** Overlapping logo cluster of the coins currently in an active depeg — fills the hero space. */
+function DepegLogoStack({
+  coins,
+  logos,
+}: {
+  coins: ActiveDepegCoin[];
+  logos?: Record<string, string>;
+}) {
+  if (coins.length === 0) return null;
+  return (
+    <div
+      className="hidden min-w-0 items-center justify-end sm:flex"
+      role="img"
+      aria-label={`Currently off peg: ${coins.map((c) => c.symbol).join(", ")}`}
+    >
+      <div className="flex flex-wrap justify-end -space-x-4">
+        {coins.map((coin) => (
+          <span
+            key={coin.id}
+            title={coin.symbol}
+            className="inline-flex rounded-full ring-2 ring-card"
+          >
+            <StablecoinLogo src={logos?.[coin.id]} name={coin.symbol} size={36} />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Compact peg-health tile: big number with a tight inline-ish label. */
+function PegStat({
+  title,
+  value,
+  subtext,
+}: {
+  title: ReactNode;
+  value: ReactNode;
+  subtext: string;
+}) {
+  return (
+    <div className="pharos-card-shell rounded-xl px-4 py-3">
+      <p className="pharos-kicker">{title}</p>
+      <p className="mt-1.5 flex items-baseline gap-2">
+        <span className="font-mono text-2xl font-bold tabular-nums leading-none">{value}</span>
+        <span className="text-xs text-muted-foreground">{subtext}</span>
+      </p>
+    </div>
+  );
+}
+
 function StripStat({
   value,
   label,
@@ -47,7 +106,7 @@ function StripStat({
   );
 }
 
-export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
+export function DepegTrackerStats({ stats, activeDepegCoins = [], logos }: DepegTrackerStatsProps) {
   const eventDelta = stats.depegEventsToday - stats.depegEventsYesterday;
   const deltaLabel =
     eventDelta > 0 ? `+${eventDelta} vs yesterday` :
@@ -59,8 +118,8 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
     <div className="flex flex-col gap-3">
       {/* Tier 1 — the headline: are coins actively broken right now? */}
       <Card className="rounded-xl p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="shrink-0">
             <p className="pharos-kicker">
               <MethodologyLabel topic="activeDepegs">Active Depegs</MethodologyLabel>
             </p>
@@ -71,24 +130,21 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
               <span className="text-sm text-muted-foreground">ongoing events</span>
             </p>
           </div>
-          <ActiveStatusPill active={hasActive} />
+          <div className="flex min-w-0 items-center justify-end gap-3">
+            <DepegLogoStack coins={activeDepegCoins} logos={logos} />
+            <ActiveStatusPill active={hasActive} />
+          </div>
         </div>
       </Card>
 
       {/* Tier 2 — peg health: how much of the tracked set is holding? */}
       <div className="grid grid-cols-2 gap-3">
-        <MetricStatCard
+        <PegStat
           title={<MethodologyLabel topic="coinsAtPeg">Coins at Peg</MethodologyLabel>}
           value={stats.coinsAtPeg}
-          valueClassName="text-2xl font-bold font-mono tabular-nums"
           subtext="holding peg now"
         />
-        <MetricStatCard
-          title="Peg Monitored"
-          value={stats.totalTracked}
-          valueClassName="text-2xl font-bold font-mono tabular-nums"
-          subtext="with live peg status"
-        />
+        <PegStat title="Peg Monitored" value={stats.totalTracked} subtext="with live peg status" />
       </div>
 
       {/* Tier 3 — supporting context, demoted to a single quiet line */}
