@@ -41,9 +41,12 @@ describe("adaptAsymmetry", () => {
         capacityRatioOfSupply: 1,
         capacityKind: "live-direct-bounded",
         freshnessKind: "verified-source-timestamp",
+        sourceTimestamp: 1776239429,
         routeStatus: "open",
       },
     });
+    const adapter = getReserveAdapter("asymmetry") ?? undefined;
+    expect(validateAdapterOutput(slices, { adapter, now: 1776239430 }).valid).toBe(true);
     expect(slices.warnings).toBeUndefined();
   });
 

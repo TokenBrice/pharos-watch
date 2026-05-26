@@ -151,6 +151,7 @@ export function adaptJupUsdData(
         ...(ratio != null ? { capacityRatioOfSupply: ratio } : {}),
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
+        ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
         routeStatus,
         routeStatusSource: "protocol-api",
         ...(routeStatusReason ? { routeStatusReason } : {}),
