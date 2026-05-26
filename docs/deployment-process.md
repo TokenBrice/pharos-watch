@@ -203,6 +203,10 @@ Optional dedicated Pages data-sync secrets:
 - `DEPEG_EVENTS_API_KEY` (falls back to `DIGEST_API_KEY`)
 - `PUBLIC_DATASETS_API_KEY` (falls back to `DIGEST_API_KEY`)
 
+Optional GitHub Actions checkout fallback:
+
+- `ACTIONS_CHECKOUT_TOKEN` — a repo-scoped read token used by production deploy checkout steps only when the default `github.token` fetch path is rejected by GitHub. The workflows fall back to `github.token` when this secret is absent.
+
 Repository variables:
 
 - Required: `API_BASE_URL`

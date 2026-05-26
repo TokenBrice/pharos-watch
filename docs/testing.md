@@ -216,6 +216,7 @@ Current GitHub repository secrets required by the deploy path:
 Optional dedicated GitHub repository secrets for the deploy path:
 
 - `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` for dedicated Pages prebuild data sync credentials when those routes diverge from the digest credential; both fall back to `DIGEST_API_KEY`
+- `ACTIONS_CHECKOUT_TOKEN` for production deploy checkout fallback when GitHub rejects the default Actions token during repository fetch; absent by default, and workflows fall back to `github.token`
 
 Current GitHub repository secrets required by scheduled monitors:
 
