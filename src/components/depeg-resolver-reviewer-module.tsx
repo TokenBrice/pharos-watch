@@ -35,10 +35,12 @@ interface DepegResolverReviewerModuleProps {
 /** Below this many scored verdicts, accuracy is presented as a raw fraction, not a percentage. */
 const CALIBRATION_THRESHOLD = 5;
 const ROW_DISPLAY_LIMIT = 8;
+/** Track-record timeline node cap — enough to read the streak without clutter. */
+const TIMELINE_NODE_LIMIT = 36;
 
 const VERDICT_LABELS: Record<DdrrVerdictReview, string> = {
-  correct_recoverable: "Correct",
-  correct_terminal: "Correct",
+  correct_recoverable: "Correct recoverable",
+  correct_terminal: "Correct terminal",
   false_terminal: "False terminal",
   false_recoverable: "False recoverable",
   risk_noted_terminal: "Risk noted",
@@ -111,6 +113,83 @@ function formatSignedDuration(seconds: number | null): string {
   const rounded = Math.round(seconds);
   if (rounded === 0) return "0s";
   return `${rounded > 0 ? "+" : "−"}${formatElapsedSeconds(Math.abs(rounded))}`;
+}
+
+// --- track-record timeline -------------------------------------------------
+
+type NodeKind = "correct" | "miss" | "risk" | "pending" | "muted";
+
+function nodeKind(verdict: DdrrVerdictReview): NodeKind {
+  switch (verdict) {
+    case "correct_recoverable":
+    case "correct_terminal":
+      return "correct";
+    case "false_terminal":
+    case "false_recoverable":
+      return "miss";
+    case "risk_noted_terminal":
+      return "risk";
+    case "pending":
+      return "pending";
+    default:
+      return "muted";
+  }
+}
+
+/**
+ * Vertical seat encodes outcome: correct calls ride above the rail, misses drop
+ * below it, risk-noted sits just above, maturing/unscored stay on the line. So the
+ * track record reads at a glance — a mostly-high run is a mostly-right engine.
+ */
+const NODE_TONE: Record<NodeKind, { dot: string; pos: string }> = {
+  correct: { dot: "bg-emerald-500", pos: "top-1" },
+  risk: { dot: "bg-amber-500", pos: "top-3" },
+  pending: { dot: "bg-sky-500/20 ring-1 ring-inset ring-sky-500", pos: "top-1/2 -translate-y-1/2" },
+  miss: { dot: "bg-red-500", pos: "bottom-1" },
+  muted: { dot: "bg-muted-foreground/30", pos: "top-1/2 -translate-y-1/2" },
+};
+
+function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
+  // Oldest call on the left, the most recent at "now" on the right.
+  const ordered = [...rows]
+    .sort((a, b) => a.assessedAt - b.assessedAt)
+    .slice(-TIMELINE_NODE_LIMIT);
+  if (ordered.length === 0) return null;
+
+  const correct = ordered.filter((r) => nodeKind(r.verdictReview) === "correct").length;
+  const miss = ordered.filter((r) => nodeKind(r.verdictReview) === "miss").length;
+  const pending = ordered.filter((r) => nodeKind(r.verdictReview) === "pending").length;
+
+  return (
+    <div
+      className="relative h-14 w-full"
+      role="img"
+      aria-label={`Track record across ${ordered.length} graded DDR calls: ${correct} correct, ${miss} missed, ${pending} still maturing, oldest left, most recent right.`}
+    >
+      {/* the rail */}
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" aria-hidden="true" />
+      {/* now cap */}
+      <span className="absolute right-0 top-1/2 h-3 w-px -translate-y-1/2 bg-foreground/40" aria-hidden="true" />
+      <span className="absolute -top-0.5 right-0 font-mono text-[8px] uppercase tracking-wide text-muted-foreground">
+        now
+      </span>
+
+      {ordered.map((row, i) => {
+        const kind = nodeKind(row.verdictReview);
+        const tone = NODE_TONE[kind];
+        const left = ordered.length === 1 ? 50 : (i / (ordered.length - 1)) * 96 + 2;
+        return (
+          <span
+            key={`${row.eventId}:${row.checkpoint}:${row.assessedAt}`}
+            className={cn("absolute h-2 w-2 -translate-x-1/2 rounded-full", tone.dot, tone.pos)}
+            style={{ left: `${left}%` }}
+            title={`${row.symbol} · ${VERDICT_LABELS[row.verdictReview]} · ${OUTCOME_LABELS[row.actualOutcome]}`}
+            aria-hidden="true"
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 // --- primitives ------------------------------------------------------------
@@ -334,40 +413,50 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
   const meta = data?._meta;
   const scored = data?.summary?.recoveryLikelihoodScoredCount ?? 0;
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1.5">
-      <div className="flex items-center gap-2">
-        <h2 className="pharos-kicker">Depeg Duration Resolver Reviewer</h2>
-        <Badge
-          variant="outline"
-          className={cn(
-            "px-1.5 py-0 text-[10px] uppercase tracking-wide",
-            calibrating
-              ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-              : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
-          )}
-        >
-          {calibrating ? "Calibrating" : "Review"}
-        </Badge>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger
-              aria-label="About the Depeg Duration Resolver Reviewer"
-              className="pharos-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground sm:h-5 sm:w-5"
-            >
-              <Info className="h-3.5 w-3.5" aria-hidden="true" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-[300px]">
-              Each stored DDR readout is graded against later confirmed event data once the event
-              closes. Open events stay pending and are excluded from scored accuracy.
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <div className="flex items-center gap-2.5">
+          <span className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-cyan-700 dark:text-cyan-300">
+            DDRR
+          </span>
+          <h2 className="pharos-section-title">Depeg Duration Resolver Reviewer</h2>
+          <Badge
+            variant="outline"
+            className={cn(
+              "px-1.5 py-0 text-[10px] uppercase tracking-wide",
+              calibrating
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+            )}
+          >
+            {calibrating ? "Calibrating" : "Review"}
+          </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                aria-label="About the Depeg Duration Resolver Reviewer"
+                className="pharos-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground sm:h-5 sm:w-5"
+              >
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[300px]">
+                Each stored DDR readout is graded against later confirmed event data. Open events stay
+                pending unless terminal lifecycle evidence, such as frozen or dead status, matures the
+                call.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        {meta ? (
+          <p className="font-mono text-[10px] text-muted-foreground">
+            comparing {meta.assessedEventCount} stored readouts · {scored} scored
+          </p>
+        ) : null}
       </div>
-      {meta ? (
-        <p className="font-mono text-[10px] text-muted-foreground">
-          comparing {meta.assessedEventCount} stored readouts · {scored} scored
-        </p>
-      ) : null}
+      <p className="text-pretty text-sm text-muted-foreground">
+        Grades every past DDR call against what actually happened —{" "}
+        <span className="text-foreground">the wins and the misses</span>, never cherry-picked.
+      </p>
     </div>
   );
 }
@@ -431,11 +520,24 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             </p>
           ) : null}
 
+          {/* Track record — every graded call on one time axis, oldest to now */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3">
-              <Kicker>Reviewed readouts</Kicker>
+              <Kicker>Track record</Kicker>
               <ReviewLegend />
             </div>
+            <div className="pharos-card-shell px-4 py-3 sm:px-5">
+              <TrackRecordTimeline rows={rows} />
+              <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-wide text-muted-foreground/70">
+                <span>older calls</span>
+                <span>recent</span>
+              </div>
+            </div>
+          </div>
+
+          {/* The record itself, row by row */}
+          <div className="space-y-2.5">
+            <Kicker>Reviewed readouts</Kicker>
             <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-card/40">
               {shownRows.map((row) => (
                 <ReviewRow key={`${row.eventId}:${row.checkpoint}:${row.assessedAt}`} row={row} logos={logos} />

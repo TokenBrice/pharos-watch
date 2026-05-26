@@ -297,6 +297,13 @@ export function DepegClient() {
           <DepegResolverModule data={resolverData} logos={logos} />
         </SectionErrorBoundary>
       ) : null}
+      {resolverEnabled && resolverReviewerEnabled ? (
+        <div className="flex items-center justify-center gap-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+          <span className="h-px w-10 bg-gradient-to-r from-transparent to-border" aria-hidden="true" />
+          <span>Live forecasts above · graded below</span>
+          <span className="h-px w-10 bg-gradient-to-l from-transparent to-border" aria-hidden="true" />
+        </div>
+      ) : null}
       {resolverReviewerEnabled ? (
         <SectionErrorBoundary name="depeg-resolver-reviewer">
           <DepegResolverReviewerModule data={resolverReviewData} error={resolverReviewError} logos={logos} />

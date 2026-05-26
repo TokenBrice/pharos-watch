@@ -28,7 +28,7 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 
 ## Aesthetic Direction
 
-- **Theme**: Dark-first financial dashboard (light mode supported)
+- **Theme**: Light theme by default, with the same dense financial-dashboard hierarchy preserved in dark mode
 - **References**: DeFi-native research products with strong data density and practical crypto analytics, but Pharos should not collapse into looking like another interchangeable dashboard
 - **Brand accent**: Frost-blue `oklch(0.72 0.14 248)` — used sparingly for navigation active states and brand touches
 - **Fonts**: Geist Sans (UI) + Geist Mono (all numbers) — monospace numbers signal precision and trust. Three intentional non-Geist carve-outs: Newsreader serif (Daily Digest editorial), Georgia serif (`AiSummary` paragraph on stablecoin detail), Courier New + Geist Mono (Tape / `/timeline/` wire-service stream)

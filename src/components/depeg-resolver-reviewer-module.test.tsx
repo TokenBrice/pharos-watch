@@ -133,7 +133,7 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.getByText("2 scored · 1 maturing")).toBeTruthy();
     // Reviewed readout row renders with its verdict.
     expect(screen.getByText("LUSD")).toBeTruthy();
-    expect(screen.getByText("Correct")).toBeTruthy();
+    expect(screen.getByText("Correct recoverable")).toBeTruthy();
   });
 
   it("promotes the percentage once enough verdicts are scored", () => {

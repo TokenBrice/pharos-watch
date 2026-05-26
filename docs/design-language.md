@@ -8,14 +8,14 @@ Use this as the visual source of truth for product-facing design decisions. For 
 
 ## Visual Direction
 
-Pharos ships as a **dark-first financial dashboard**:
+Pharos ships as a **light-default financial dashboard**:
 
 - Dense data presentation
 - Conservative card-and-table surfaces
 - Small, meaningful color accents (risk, status, category)
 - Heavy use of monospace for numeric trust and scanability
 
-The default theme class on load is `dark`, with a user toggle for light mode.
+The default theme on load is light, with a user toggle for dark mode.
 
 Light mode keeps the same hierarchy as dark mode, but status/accent text is calibrated one step darker to preserve readability on pale surfaces (typical pattern: `text-*-700 dark:text-*-400`).
 
@@ -591,7 +591,7 @@ Live app-wide patterns:
 
 ## Draw the Metaphor
 
-When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines.
+When a page introduces a metaphor, render it — don't just name it. The Stablecoin Cemetery draws actual tombstones with arched caps, crosses, and flower scatter. The Alt-Peg Atlas draws a starfield with celestial bands and constellation cohorts. The Chains Harbor Chart draws ships with flags, cargo, wakes, and depth lines. On `/depeg/`, the Depeg Duration Resolver (DDR) draws each open event as a forecast timeline — the deviation path *so far* (peak → now spark), the verdict at a pulsing **NOW** marker, and the projected resolution band (median diamond + IQR over the 6h/24h/7d/30d landmark axis) reaching into the future — while its Reviewer (DDRR) draws a track-record timeline where every graded past call seats above the rail (correct) or below it (miss), so accuracy reads at a glance. The kill-vs-anchor tug-of-war and the DDRR calibration ledger remain beneath these as the "why" and the honesty check.
 
 Rules that keep this from drifting into decoration:
 
