@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { handlePegSummary } from "../peg-summary";
@@ -47,6 +47,43 @@ function makePegSummaryDbWithDexPrice(
     },
     { match: "supply_history", rows: [] },
   ]);
+}
+
+function makeDepegEventRow(overrides: Partial<{
+  id: number;
+  stablecoin_id: string;
+  symbol: string;
+  peg_type: string;
+  direction: "above" | "below";
+  peak_deviation_bps: number;
+  started_at: number;
+  ended_at: number | null;
+  start_price: number;
+  peak_price: number | null;
+  recovery_price: number | null;
+  peg_reference: number;
+  source: "live" | "backfill";
+  confirmation_sources: string | null;
+  pending_reason: string | null;
+}> = {}) {
+  return {
+    id: 1,
+    stablecoin_id: "usdt-tether",
+    symbol: "USDT",
+    peg_type: "peggedUSD",
+    direction: "below" as const,
+    peak_deviation_bps: 120,
+    started_at: nowSec,
+    ended_at: null,
+    start_price: 0.99,
+    peak_price: 0.988,
+    recovery_price: null,
+    peg_reference: 1,
+    source: "live" as const,
+    confirmation_sources: null,
+    pending_reason: null,
+    ...overrides,
+  };
 }
 
 describe("handlePegSummary", () => {
@@ -177,6 +214,37 @@ describe("handlePegSummary", () => {
     };
     const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin?.dexPriceCheck).toBeUndefined();
+  });
+
+  it("falls back to empty DEX prices when the optional DEX table query fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+      const cacheValue = JSON.stringify({ peggedAssets: [asset] });
+      const db = mockD1([
+        {
+          match: "cache",
+          rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
+          first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+        },
+        { match: "depeg_events", rows: [] },
+        { match: "dex_prices", rows: [], throwError: new Error("no such table: dex_prices") },
+        { match: "supply_history", rows: [] },
+      ]);
+
+      const res = await handlePegSummary(db);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
+      };
+      expect(body.coins.find((c) => c.id === "usdt-tether")?.dexPriceCheck).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[peg-summary] DEX price query failed, falling back to empty:",
+        "no such table: dex_prices",
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("keeps dexPriceCheck even when the primary price is temporarily missing", async () => {
@@ -384,6 +452,39 @@ describe("handlePegSummary", () => {
       };
     };
     expect(body.summary.coinsAtPeg).toBeGreaterThanOrEqual(1);
+  });
+
+  it("counts depeg events that started today and yesterday", async () => {
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const cacheValue = JSON.stringify({ peggedAssets: [asset] });
+    const todayStart = Math.floor(nowSec / 86_400) * 86_400;
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+      },
+      {
+        match: "depeg_events",
+        rows: [
+          makeDepegEventRow({ id: 1, started_at: Math.max(todayStart, nowSec - 60) }),
+          makeDepegEventRow({ id: 2, started_at: todayStart - 60 }),
+          makeDepegEventRow({ id: 3, started_at: todayStart - 86_460 }),
+        ],
+      },
+      { match: "dex_prices", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      summary: {
+        depegEventsToday: number;
+        depegEventsYesterday: number;
+      };
+    };
+    expect(body.summary.depegEventsToday).toBe(1);
+    expect(body.summary.depegEventsYesterday).toBe(1);
   });
 
   it("marks low-cap coins as depeg-event coverage limited", async () => {
