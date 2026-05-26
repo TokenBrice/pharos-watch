@@ -55,16 +55,8 @@ export default createClientFeaturePage({
     },
     headerActions: <ShareButton ogPath="/api/og/depeg" />,
     leadParagraphs: [
-      "A live incident board for confirmed peg deviations, pending confirmation, and early stress signals.",
+      "A live incident board for confirmed peg deviations, pending confirmation, and early stress signals. DEWS anticipate upcoming depeg risk. DDR predicts depeg resolution chances and duration.",
     ],
-    headerSupplement: (
-      <p className="pharos-lead hidden sm:block">
-        DEWS scans 8 sub-signals every 30 minutes across {ACTIVE_STABLECOIN_COUNT} stablecoins — supply velocity, pool
-        drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and
-        yield anomaly — to score pre-price and live-market stress signals. When systemic risk rises, the radar sweeps
-        faster.
-      </p>
-    ),
   },
   beforeClient: (
     <CalloutBanner

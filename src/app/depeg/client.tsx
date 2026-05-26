@@ -66,41 +66,28 @@ function DepegLoadingState() {
   );
 }
 
-function DepegCoverageCard({ reliability }: { reliability: DepegCoverageMetrics }) {
+function DepegCoverageBand({ reliability }: { reliability: DepegCoverageMetrics }) {
+  const items: Array<{ value: string; label: string }> = [
+    { value: String(reliability.activeCount), label: "live confirmed" },
+    { value: String(reliability.pendingCount), label: "pending" },
+    { value: String(reliability.dewsCoverageCount), label: "DEWS current" },
+    {
+      value: reliability.oldestAgeSec != null ? formatElapsedSeconds(reliability.oldestAgeSec) : "—",
+      label: "oldest DEWS",
+    },
+    { value: String(reliability.coverageLimitedCount), label: "event floor" },
+    { value: String(reliability.malformedRows), label: "malformed" },
+  ];
   return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-2">
-        <h2 className="pharos-kicker">Coverage</h2>
-      </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-        <div>
-          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.activeCount}</div>
-          <div className="text-xs text-muted-foreground">live confirmed</div>
-        </div>
-        <div>
-          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.pendingCount}</div>
-          <div className="text-xs text-muted-foreground">pending</div>
-        </div>
-        <div>
-          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.dewsCoverageCount}</div>
-          <div className="text-xs text-muted-foreground">DEWS current</div>
-        </div>
-        <div>
-          <div className="font-mono text-lg font-semibold tabular-nums">
-            {reliability.oldestAgeSec != null ? formatElapsedSeconds(reliability.oldestAgeSec) : "—"}
-          </div>
-          <div className="text-xs text-muted-foreground">oldest DEWS</div>
-        </div>
-        <div>
-          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.coverageLimitedCount}</div>
-          <div className="text-xs text-muted-foreground">event floor</div>
-        </div>
-        <div>
-          <div className="font-mono text-lg font-semibold tabular-nums">{reliability.malformedRows}</div>
-          <div className="text-xs text-muted-foreground">malformed</div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="pharos-subtle-band flex flex-wrap items-center gap-x-5 gap-y-1.5">
+      <h2 className="pharos-kicker mr-1">Coverage</h2>
+      {items.map((item) => (
+        <span key={item.label} className="text-xs text-muted-foreground">
+          <span className="font-mono font-semibold tabular-nums text-foreground">{item.value}</span>{" "}
+          {item.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -266,14 +253,11 @@ export function DepegClient() {
         ]}
       />
 
-      {/* DEWS radar + stat boxes — 2-column on desktop */}
+      {/* DEWS radar (left) + prioritized stats and alert queue (right) — 2-column on desktop */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
-        <div className="flex flex-col gap-6 xl:self-stretch">
-          <SectionErrorBoundary name="dews">
-            <DEWSSummary logos={logos} />
-          </SectionErrorBoundary>
-          <DepegCoverageCard reliability={reliability} />
-        </div>
+        <SectionErrorBoundary name="dews">
+          <DEWSSummary logos={logos} />
+        </SectionErrorBoundary>
         <div className="flex flex-col gap-6 xl:self-stretch">
           {pegData?.summary && (
             <SectionErrorBoundary name="depeg-stats">
@@ -290,6 +274,9 @@ export function DepegClient() {
           </SectionErrorBoundary>
         </div>
       </div>
+
+      {/* Coverage — full-width, low-prominence reliability band */}
+      <DepegCoverageBand reliability={reliability} />
 
       {/* Depeg Duration Resolver — recovery verdict + expected duration per open event */}
       {resolverEnabled ? (
