@@ -15,8 +15,10 @@ export function usePrefetchStablecoin() {
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      const timer = timerRef.current;
+      if (timer) {
+        clearTimeout(timer);
+        timerRef.current = null;
       }
     };
   }, []);

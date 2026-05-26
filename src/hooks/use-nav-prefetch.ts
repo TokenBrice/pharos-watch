@@ -122,7 +122,11 @@ export function useNavPrefetch() {
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      const timeout = timeoutRef.current;
+      if (timeout) {
+        clearTimeout(timeout);
+        timeoutRef.current = null;
+      }
     };
   }, []);
 
