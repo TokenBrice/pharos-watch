@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -44,6 +45,7 @@ jobs:
           git checkout -B "$BRANCH"
           git add public/og-*.png
           git commit -m "chore(og): refresh static OG screenshots"
+          gh auth setup-git
           git push --force-with-lease -u origin "$BRANCH"
           if gh pr view "$BRANCH" --json state --jq '.state' 2>/dev/null | grep -qx OPEN; then
             echo "Existing open PR for $BRANCH updated by force-push."
