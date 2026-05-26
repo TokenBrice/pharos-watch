@@ -58,8 +58,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(399);
-    expect(canonicalOrder).toHaveLength(399);
+    expect(perCoinGenerated).toHaveLength(400);
+    expect(canonicalOrder).toHaveLength(400);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -86,12 +86,12 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(26);
+    expect(preLaunchCoins).toHaveLength(27);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(399);
+    expect(TRACKED_STABLECOINS).toHaveLength(400);
     expect(ACTIVE_STABLECOINS).toHaveLength(369);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
@@ -120,6 +120,7 @@ describe("tracked stablecoin metadata", () => {
       "usd-nubank",
       "krw-imbank",
       "gynusd-gyndore",
+      "gelt-tether",
     ]);
   });
 

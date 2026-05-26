@@ -63,7 +63,7 @@ export function DepegResolverMethodologySection() {
       <MethodologyDetails summary="Technical details: limitations and backtest gates">
         <div className="space-y-3">
           <p>
-            Supply history is daily and mint/burn coverage is partial (about 141 of 399 coins), so coins with neither
+            Supply history is daily and mint/burn coverage is partial (about 141 of 400 coins), so coins with neither
             usable source degrade to Insufficient Signal on supply-dependent kill signals rather than guessing. The
             depeg-event provenance side-table is unpopulated in production, so audit-verdict gating is not used; corpus
             quality comes from incident grouping, quarantine of flappy coins, and a minimum-severity floor. Terminal

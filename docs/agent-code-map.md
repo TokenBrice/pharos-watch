@@ -381,9 +381,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 399 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 399 entries
-- `shared/data/stablecoins/coins.generated.json` - 399 entries
+- `shared/data/stablecoins/canonical-order.json` - 400 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 400 entries
+- `shared/data/stablecoins/coins.generated.json` - 400 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 22 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 23 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 26 keys
@@ -421,7 +421,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brlv-crown.json` - 24 keys
 - `shared/data/stablecoins/coins/brz-transfero.json` - 22 keys
 - `shared/data/stablecoins/coins/btcusd-btcfi.json` - 20 keys
-- ... 369 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 370 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 

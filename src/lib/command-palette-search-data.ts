@@ -408,4 +408,5 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usdh-hubble", "Hubble USDH", "USDH"],
   ["zkusd-goal3", "zkUSD Dollar", "zkUSD"],
   ["gynusd-gyndore", "Gyndore", "gynUSD", "pre-launch"],
+  ["gelt-tether", "Tether Georgian Lari Stablecoin", "GEL₮", "pre-launch"],
 ] as const satisfies readonly CommandPaletteStablecoinSearchItem[];
