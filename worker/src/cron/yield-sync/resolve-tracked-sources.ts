@@ -37,6 +37,16 @@ import {
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
 
+function buildConfigByStablecoinId<T extends { stablecoinId: string }>(configs: readonly T[]): Map<string, T> {
+  const byId = new Map<string, T>();
+  for (const config of configs) {
+    if (!byId.has(config.stablecoinId)) {
+      byId.set(config.stablecoinId, config);
+    }
+  }
+  return byId;
+}
+
 function getBenchmarkSourceObservedAt(meta: ParsedYieldBenchmarkMeta, fallbackObservedAt: number): number {
   return meta.lastMarketFetchedAt ?? meta.fetchedAt ?? fallbackObservedAt;
 }
@@ -88,9 +98,20 @@ export async function resolveTrackedYieldSources(params: {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
-  const tier1CandidateIds = ACTIVE_YIELD_BEARING_STABLECOINS
-    .map((meta) => meta.id)
-    .filter((id) => ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id) && params.onChainRates.has(id));
+  const onChainRateConfigById = buildConfigByStablecoinId(ON_CHAIN_RATE_CONFIGS);
+  const rateDerivedConfigById = buildConfigByStablecoinId(RATE_DERIVED_CONFIGS);
+  const dlPoolByPoolId = new Map<string, DlPool>();
+  for (const pool of params.dlPools) {
+    if (!dlPoolByPoolId.has(pool.pool)) {
+      dlPoolByPoolId.set(pool.pool, pool);
+    }
+  }
+  const tier1CandidateIds: string[] = [];
+  for (const meta of ACTIVE_YIELD_BEARING_STABLECOINS) {
+    if (onChainRateConfigById.has(meta.id) && params.onChainRates.has(meta.id)) {
+      tier1CandidateIds.push(meta.id);
+    }
+  }
   const tier1PrevRateRows = await loadTier1PrevRateRows(params.db, tier1CandidateIds, params.sevenDaysAgoSec);
 
   for (const meta of ACTIVE_YIELD_BEARING_STABLECOINS) {
@@ -103,7 +124,7 @@ export async function resolveTrackedYieldSources(params: {
     const id = meta.id;
     const symbol = meta.symbol;
     let hasAnySource = false;
-    const rateConfig = ON_CHAIN_RATE_CONFIGS.find((config) => config.stablecoinId === id);
+    const rateConfig = onChainRateConfigById.get(id);
     if (rateConfig && params.onChainRates.has(id)) {
       const { rate } = params.onChainRates.get(id)!;
       const prevRow = tier1PrevRateRows.get(id);
@@ -181,7 +202,7 @@ export async function resolveTrackedYieldSources(params: {
         continue;
       }
 
-      const fullPool = params.dlPools.find((pool) => pool.pool === dlPool.pool);
+      const fullPool = dlPoolByPoolId.get(dlPool.pool);
       if (!fullPool) continue;
 
       const variant = YIELD_VARIANT_MAP[id];
@@ -239,7 +260,7 @@ export async function resolveTrackedYieldSources(params: {
       }
     }
 
-    const rateDerivedConfig = RATE_DERIVED_CONFIGS.find((config) => config.stablecoinId === id);
+    const rateDerivedConfig = rateDerivedConfigById.get(id);
     if (rateDerivedConfig) {
       const benchmarkSelection = resolveBenchmarkForStablecoin({
         stablecoinId: id,

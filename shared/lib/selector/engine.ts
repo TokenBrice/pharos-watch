@@ -209,6 +209,12 @@ const CRITICAL_SIGNALS_BY_PROFILE: Readonly<Record<SelectorProfile, readonly Wei
   trading: ["liquidity", "pegScoreNow", "dewsInverted", "effectiveExit"],
 };
 
+const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
+  treasury: new Set(CRITICAL_SIGNALS_BY_PROFILE.treasury),
+  yield: new Set(CRITICAL_SIGNALS_BY_PROFILE.yield),
+  trading: new Set(CRITICAL_SIGNALS_BY_PROFILE.trading),
+};
+
 function missingPolicy(
   key: WeightKey,
   profile: SelectorProfile,
@@ -273,7 +279,7 @@ function scoreRow(
   const confidenceReasons = new Set<SelectorConfidenceReason>();
   const present: NormalizedSlot[] = [];
   const neutralMissing = new Set<NormalizedSlot>();
-  const criticalSignals = CRITICAL_SIGNALS_BY_PROFILE[profile];
+  const criticalSignals = CRITICAL_SIGNAL_SET_BY_PROFILE[profile];
   for (const slot of slots) {
     if (slot.rawValue != null && slot.normalizedValue != null) {
       present.push(slot);
@@ -283,7 +289,7 @@ function scoreRow(
     if (policy === "penalty") {
       redistributedSlots += 1;
     }
-    if (criticalSignals.includes(slot.key)) {
+    if (criticalSignals.has(slot.key)) {
       confidenceReasons.add(`missing-critical-${slot.key}`);
       scoreCap = Math.min(scoreCap, 78);
     }
@@ -331,8 +337,9 @@ function scoreRow(
 
   // Also emit redistributed slots (the ones we dropped) so consumers see the
   // full original vector and can render "we couldn't read X" affordances.
+  const presentSet = new Set(present);
   for (const slot of slots) {
-    if (present.includes(slot)) continue;
+    if (presentSet.has(slot)) continue;
     components.push({
       key: slot.key,
       weight: 0,

@@ -180,12 +180,15 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       );
       const historyRows = historySelection.rows;
       const historyRowsForStats = getHistoryRowsForStats(y.dataSource, historyRows);
-      const samples = historyRowsForStats.map((row) => row.apy);
+      const samples: number[] = [];
+      const apy7dSamples: number[] = [];
+      for (const row of historyRowsForStats) {
+        samples.push(row.apy);
+        if (row.recorded_at >= input.sevenDaysAgoSec) {
+          apy7dSamples.push(row.apy);
+        }
+      }
       samples.push(y.currentApy);
-
-      const apy7dSamples = historyRowsForStats
-        .filter((row) => row.recorded_at >= input.sevenDaysAgoSec)
-        .map((row) => row.apy);
       apy7dSamples.push(y.currentApy);
 
       const apy7d = apy7dSamples.reduce((sum, value) => sum + value, 0) / apy7dSamples.length;
@@ -208,7 +211,9 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         stablecoinId,
         benchmarks: input.riskFreeRates,
       });
-      const excessYield = apy30d - benchmarkSelection.meta.rate;
+      const benchmarkMeta = benchmarkSelection.meta;
+      const benchmarkRate = benchmarkMeta.rate;
+      const excessYield = apy30d - benchmarkRate;
       const previousBestSourceKey = input.prevBestSourceKeyByCoin.get(stablecoinId) ?? null;
       const priorSwitches30d = input.sourceSwitchCount30dByCoin?.get(stablecoinId) ?? 0;
       const candidateSwitchCount30d =
@@ -244,7 +249,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         apy30d,
         safetyScore,
         apyVarianceScore,
-        benchmarkRate: benchmarkSelection.meta.rate,
+        benchmarkRate,
         sourceRiskPenalty: sourceRiskPenaltyInput,
       });
       const pharosYieldScore = computePYS({
@@ -252,7 +257,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         safetyScore,
         apyVarianceScore,
         scalingFactor: PYS_SCALING_FACTOR,
-        benchmarkRate: benchmarkSelection.meta.rate,
+        benchmarkRate,
         sourceRiskPenalty: sourceRiskPenaltyInput,
       });
       const pysNullReason = pharosYieldScore > 0
@@ -262,7 +267,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
             safetyScore,
             apyVarianceScore,
             scalingFactor: PYS_SCALING_FACTOR,
-            benchmarkRate: benchmarkSelection.meta.rate,
+            benchmarkRate,
             sourceRiskPenalty: sourceRiskPenaltyInput,
           });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
@@ -307,15 +312,15 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         yieldToRisk,
         excessYield,
         benchmarkKey: benchmarkSelection.key,
-        benchmarkLabel: benchmarkSelection.meta.label ?? benchmarkSelection.key,
-        benchmarkCurrency: benchmarkSelection.meta.currency ?? benchmarkSelection.key,
-        benchmarkRate: benchmarkSelection.meta.rate,
-        benchmarkRecordDate: benchmarkSelection.meta.recordDate,
-        benchmarkIsFallback: benchmarkSelection.meta.isFallback,
-        benchmarkFallbackMode: benchmarkSelection.meta.fallbackMode,
+        benchmarkLabel: benchmarkMeta.label ?? benchmarkSelection.key,
+        benchmarkCurrency: benchmarkMeta.currency ?? benchmarkSelection.key,
+        benchmarkRate,
+        benchmarkRecordDate: benchmarkMeta.recordDate,
+        benchmarkIsFallback: benchmarkMeta.isFallback,
+        benchmarkFallbackMode: benchmarkMeta.fallbackMode,
         benchmarkSelectionMode: benchmarkSelection.selectionMode,
-        benchmarkIsProxy: benchmarkSelection.meta.isProxy ?? false,
-        benchmarkMeta: benchmarkSelection.meta,
+        benchmarkIsProxy: benchmarkMeta.isProxy ?? false,
+        benchmarkMeta,
         pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
         pysNullReason,
         prevExchangeRate,
@@ -333,9 +338,13 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       } satisfies EvaluatedYieldSource;
     });
 
-    const canonicalReference = [...provisional]
-      .filter((candidate) => candidate.confidenceTier !== "discovered")
-      .sort(compareCandidates)[0];
+    let canonicalReference: EvaluatedYieldSource | undefined;
+    for (const candidate of provisional) {
+      if (candidate.confidenceTier === "discovered") continue;
+      if (!canonicalReference || compareCandidates(candidate, canonicalReference) < 0) {
+        canonicalReference = candidate;
+      }
+    }
 
     const candidates = provisional.map((candidate) => {
       const anomalies = [...candidate.anomalies];

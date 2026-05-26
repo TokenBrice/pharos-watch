@@ -97,10 +97,17 @@ function pickMetaYieldUrl(stablecoinId: string): string | null {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   if (!meta) return null;
 
+  const linkByLabel = new Map<string, string>();
+  for (const link of meta.links ?? []) {
+    if (link.url && !linkByLabel.has(link.label)) {
+      linkByLabel.set(link.label, link.url);
+    }
+  }
+
   for (const label of APP_LINK_LABEL_PRIORITY) {
-    const link = meta.links?.find((entry) => entry.label === label);
-    if (link?.url) {
-      return link.url;
+    const url = linkByLabel.get(label);
+    if (url) {
+      return url;
     }
   }
 
@@ -110,9 +117,9 @@ function pickMetaYieldUrl(stablecoinId: string): string | null {
   }
 
   for (const label of FALLBACK_LINK_LABEL_PRIORITY) {
-    const link = meta.links?.find((entry) => entry.label === label);
-    if (link?.url) {
-      return link.url;
+    const url = linkByLabel.get(label);
+    if (url) {
+      return url;
     }
   }
 
