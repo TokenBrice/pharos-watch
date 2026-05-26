@@ -126,7 +126,7 @@ Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLAS
 - **Infinite scroll:** the first `Load more` click flips a sentinel `IntersectionObserver` on, after which subsequent pages auto-load.
 - **End-of-feed footer:** when the cursor is exhausted, the page prints a mono terminal footer (`END OF TAPE · N EVT · WINDOW ... · CURSOR: NULL · LAST FILE: ...`) instead of a generic sentence.
 - **Empty state:** if filters return nothing, the CTA resets filters or widens the window to `alltime` (whichever applies).
-- **Stale data banner + retry:** standard `StaleDataBanner` and `QueryErrorNotice` wrap the feed.
+- **Stale data banner + retry:** the feed is wrapped by `QueryFreshnessNotices` (the shared freshness/error banner).
 
 ---
 

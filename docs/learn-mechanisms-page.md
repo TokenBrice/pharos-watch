@@ -78,7 +78,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 - Description: hand-tuned per archetype, ≤160 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
-- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, plus Article JSON-LD from `buildMechanismArticleJsonLd(...)` on each archetype page.
+- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 
 ---
 

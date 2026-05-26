@@ -116,7 +116,7 @@ Currently configured for 11 generic vaults (all use selector `0x07a2d13a` — `c
 | `sfrxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
 | `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
 | `usdf-falcon` | sUSDf | `0xc8cf...4b0` | Ethereum |
-| `usn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
+| `susn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
 | `ustb-superstate` | USTB | ERC-4626 (6 decimals) | Ethereum |
 | `thbill-theo` | thBILL | ERC-4626 (6 decimals) | Ethereum |
 

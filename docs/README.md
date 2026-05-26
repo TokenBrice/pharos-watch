@@ -200,6 +200,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 | `/methodology/pricing-pipeline-changelog/`  | [methodology-page.md](./methodology-page.md), [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md)     |
 | `/methodology/scoring-changelog/`           | [methodology-page.md](./methodology-page.md), [report-cards-timeline.md](./report-cards-timeline.md)             |
 | `/methodology/depeg-changelog/`             | [methodology-page.md](./methodology-page.md), [depeg-dews-timeline.md](./depeg-dews-timeline.md)                 |
+| `/methodology/depeg-resolver-changelog/`    | [methodology-page.md](./methodology-page.md), [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)         |
 | `/methodology/liquidity-score-changelog/`   | [methodology-page.md](./methodology-page.md), [liquidity-score-timeline.md](./liquidity-score-timeline.md)       |
 | `/methodology/stability-index-changelog/`   | [methodology-page.md](./methodology-page.md), [stability-index-timeline.md](./stability-index-timeline.md)       |
 | `/methodology/blacklist-tracker-changelog/` | [methodology-page.md](./methodology-page.md), [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md)   |
@@ -215,6 +216,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [bluechip-ratings.md](./bluechip-ratings.md) - Bluechip sync coverage, cache shape, and frontend consumers
 - [depeg-detection.md](./depeg-detection.md) - two-stage depeg detection, confirmation, event lifecycle, and peg score inputs
 - [dews.md](./dews.md) - DEWS formula, sub-signals, bands, and API contract
+- [depeg-resolver.md](./depeg-resolver.md) - Depeg Duration Resolver (DDR): two-stage will-it-repeg / expected-duration outlook, verdict tiers, and API contract
 - [dex-liquidity.md](./dex-liquidity.md) - liquidity score algorithm, discovery pipeline, and DEX price cross-validation
 - [stability-index.md](./stability-index.md) - PSI formula, bands, storage, and API surface
 - [report-cards.md](./report-cards.md) - report-card scoring, portfolio analyzer, and stress test
@@ -244,6 +246,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [chain-health-timeline.md](./chain-health-timeline.md) - Chain Health Score methodology version history
 - [blacklist-tracker-timeline.md](./blacklist-tracker-timeline.md) - blacklist methodology version history
 - [depeg-dews-timeline.md](./depeg-dews-timeline.md) - depeg tracker and DEWS version history
+- [depeg-resolver-timeline.md](./depeg-resolver-timeline.md) - Depeg Duration Resolver methodology version history
 - [liquidity-score-timeline.md](./liquidity-score-timeline.md) - liquidity score version history
 - [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) - mint/burn methodology version history
 - [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) - pricing pipeline methodology version history

@@ -798,8 +798,8 @@ The handler now exposes only unsuppressed rows for the live-supported symbols: U
   "methodology": {
     "version": "3.9",
     "versionLabel": "v3.9",
-    "currentVersion": "3.993",
-    "currentVersionLabel": "v3.993",
+    "currentVersion": "3.995",
+    "currentVersionLabel": "v3.995",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": false

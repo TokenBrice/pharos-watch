@@ -98,7 +98,7 @@ Existing shadcn/ui variables (`--background`, `--card`, `--foreground`, etc.) ar
 
 Authored shell utilities live in `src/app/globals.css` under `@layer components`. They are not tokens (they consume tokens through `@apply` + `var(...)`), but they are referenced often enough from product code to be worth indexing here:
 
-- `pharos-control-pill` — canonical small-control shell (`src/app/globals.css` line 431). Use for time-range controls, density toggles, lens pills, hero tertiary chips, scrollspy pills, and any dense secondary action surface. See [`design-language.md`](design-language.md#control-pills) for the visual contract.
+- `pharos-control-pill` — canonical small-control shell (`src/app/globals.css` line 490). Use for time-range controls, density toggles, lens pills, hero tertiary chips, scrollspy pills, and any dense secondary action surface. See [`design-language.md`](design-language.md#control-pills) for the visual contract.
 
 Other shared utilities (`pharos-card-shell`, `pharos-kicker`, `pharos-focus-ring`, `pharos-interactive-card`, `pharos-chart-stage`, `pharos-table-shell`, etc.) are catalogued in [`design-language.md`](design-language.md#shared-utility-classes).
 

@@ -401,7 +401,7 @@ The preferred finish-level control language is now the shared pill system:
 - used on time-range controls, density toggles, lens pills, and lightweight route context summaries
 - pills should feel dense and precise, not marketing-chip playful
 
-`pharos-control-pill` is the **canonical small-control shell** for any dense, secondary action surface — defined in `src/app/globals.css` line 431. Following the May 2026 detail-page pass, this includes the hero tertiary chips (chains pill, proof-of-reserves tier chip, freezable pill), per-section freshness stamps, and the longform scrollspy. New surfaces should reach for this utility before constructing ad-hoc rounded-full button shells.
+`pharos-control-pill` is the **canonical small-control shell** for any dense, secondary action surface — defined in `src/app/globals.css` line 490. Following the May 2026 detail-page pass, this includes the hero tertiary chips (chains pill, proof-of-reserves tier chip, freezable pill), per-section freshness stamps, and the longform scrollspy. New surfaces should reach for this utility before constructing ad-hoc rounded-full button shells.
 
 ### Proof-of-Reserves Attestor Tier Ladder
 
