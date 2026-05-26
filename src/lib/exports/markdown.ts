@@ -4,7 +4,10 @@ import { formatPreambleMarkdown } from "./preamble";
 
 function escapeMarkdownCell(value: string | number | null): string {
   if (value === null || value === undefined) return "";
-  return String(value).replace(/\|/g, "\\|").replace(/\n/g, " ");
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/[\r\n]+/g, " ");
 }
 
 /**

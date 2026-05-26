@@ -46,6 +46,16 @@ describe("buildMarkdownWithPreamble", () => {
     const lines = md.split("\n");
     expect(lines.at(-1)).toBe("| a\\|b c |");
   });
+
+  it("escapes backslashes before table pipes", () => {
+    const md = buildMarkdownWithPreamble(
+      [{ note: "a\\|b\r\nc" }],
+      [{ header: "Note", accessor: (row) => row.note }],
+      PREAMBLE,
+    );
+    const lines = md.split("\n");
+    expect(lines.at(-1)).toBe("| a\\\\\\|b c |");
+  });
 });
 
 describe("copyMarkdownWithPreamble", () => {
