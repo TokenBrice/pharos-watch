@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useLogos } from "@/hooks/use-logos";
 import { useCompareSelection } from "@/hooks/use-compare-selection";
@@ -188,6 +188,7 @@ export function buildCompareSelectionInsights({
 
 export function CompareClient() {
   const { data: logos } = useLogos();
+  const [nowSeconds, setNowSeconds] = useState<number | null>(null);
   const {
     applyPreset,
     coinOptions,
@@ -259,6 +260,13 @@ export function CompareClient() {
     },
   );
 
+  useEffect(() => {
+    const updateNow = () => setNowSeconds(Math.floor(Date.now() / 1000));
+    updateNow();
+    const interval = window.setInterval(updateNow, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const cohortBaseline = useMemo(() => {
     const allCards = reportCardsData?.cards ?? [];
     if (allCards.length === 0 || radarCards.length === 0) {
@@ -295,6 +303,10 @@ export function CompareClient() {
     () => buildCompareSelectionInsights({ selectedIds, selectedCoins, comparisonCoins }),
     [comparisonCoins, selectedCoins, selectedIds],
   );
+  const flowUpdatedMinutes =
+    flowData?.updatedAt && nowSeconds != null
+      ? Math.max(0, Math.round((nowSeconds - flowData.updatedAt) / 60))
+      : null;
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
@@ -448,9 +460,9 @@ export function CompareClient() {
                 <h3 className="pharos-kicker">
                   Live Flow Signals
                 </h3>
-                {flowData?.updatedAt && (
+                {flowUpdatedMinutes != null && (
                   <span className="text-xs text-muted-foreground">
-                    Updated {Math.round((Date.now() / 1000 - flowData.updatedAt) / 60)} min ago · Ethereum
+                    Updated {flowUpdatedMinutes} min ago · Ethereum
                   </span>
                 )}
               </div>

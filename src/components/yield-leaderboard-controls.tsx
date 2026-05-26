@@ -244,9 +244,10 @@ export function YieldLeaderboardControls({
     <div className="space-y-3 border-b border-border/60 pb-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full min-w-[200px] flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <input
             type="search"
+            aria-label="Search yield opportunities"
             value={filters.q}
             onChange={(event) => onFilterChange("q", event.target.value)}
             placeholder="Search stablecoin..."
