@@ -383,16 +383,16 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
         );
       })}
 
-      {/* the headline: expected median, drawn as a marker on the axis */}
+      {/* the headline: expected median, drawn as a marker centered on the axis */}
       {medianX != null && duration.medianSec != null ? (
         <div
-          className="absolute top-0 flex -translate-x-1/2 flex-col items-center"
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ left: `${medianX}%` }}
         >
-          <span className="whitespace-nowrap font-mono text-[11px] font-semibold leading-none text-foreground">
+          <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] font-semibold leading-none text-foreground">
             ~{formatDurationSec(duration.medianSec)}
           </span>
-          <span className="mt-0.5 h-2 w-2 rotate-45 bg-sky-500" aria-hidden="true" />
+          <span className="block h-2 w-2 rotate-45 bg-sky-500" aria-hidden="true" />
         </div>
       ) : null}
     </div>
