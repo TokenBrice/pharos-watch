@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
 - `shared/lib/depeg-resolver/resolution.ts` - resolveOutlook
 - `shared/lib/depeg-resolver/strata.ts` - DdrCurrencyClass, DdrDepthBucket, DdrStratumCandidate, DdrStratumKey, DdrStructuralClass, STRATUM_ANY
-- ... 225 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 226 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 

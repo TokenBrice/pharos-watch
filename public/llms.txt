@@ -464,7 +464,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Fathom Dollar (FXD)](https://pharos.watch/stablecoin/fxd-fathom/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Solomon USDv (USDV)](https://pharos.watch/stablecoin/usdv-solomon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [US Sonic Dollar (USSD)](https://pharos.watch/stablecoin/ussd-sonic-labs/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Tangent USD (USG)](https://pharos.watch/stablecoin/usg-tangent/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Tangent USD (USG)](https://pharos.watch/stablecoin/usg-tangent/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Flying Tulip USD (ftUSD)](https://pharos.watch/stablecoin/ftusd-flying-tulip/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [BRLA Digital (BRLA)](https://pharos.watch/stablecoin/brla-brla-digital/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [SILK (SILK)](https://pharos.watch/stablecoin/silk-shade-protocol/): decentralized stablecoin collateralized by crypto assets pegged to CPI.
