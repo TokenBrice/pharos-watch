@@ -382,7 +382,7 @@ export function Sidebar() {
         <PharosIcon icon={Search} className="shrink-0" />
         {expanded && <span className="text-sm">Search</span>}
         {expanded && (
-          <kbd className="ml-auto text-[10px] font-mono text-muted-foreground/70 border border-border/75 rounded-md px-1.5 py-0.5">
+          <kbd className="ml-auto rounded-md border border-border/75 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
             Ctrl+K
           </kbd>
         )}
