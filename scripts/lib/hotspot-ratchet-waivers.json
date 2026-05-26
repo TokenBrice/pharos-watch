@@ -127,6 +127,14 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
+  "src/app/compare/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Compare client remains a large route shell combining query-state parsing, selection controls, metric assembly, and comparison rendering. The React Doctor cleanup touched memoized lookup construction here but intentionally avoided widening scope into a structural route decomposition.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-26",
+    "reviewAfter": "2026-08-26",
+    "nextAction": "Split query-state orchestration, row projection, and comparison sections into focused helpers in the next compare-page cleanup pass."
+  },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass.",
