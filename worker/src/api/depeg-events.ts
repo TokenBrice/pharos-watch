@@ -147,8 +147,10 @@ async function loadPendingIncidents(
   const rows = pendingResult.results ?? [];
   if (rows.length === 0) return [];
 
-  const dexAvailability = await loadDexAvailability(db, stablecoinId, nowSec);
-  const poolAvailability = await loadPoolAvailability(db, stablecoinId, nowSec);
+  const [dexAvailability, poolAvailability] = await Promise.all([
+    loadDexAvailability(db, stablecoinId, nowSec),
+    loadPoolAvailability(db, stablecoinId, nowSec),
+  ]);
 
   return rows.map((row) => {
     const pending = normalizePendingDepegRow(row);

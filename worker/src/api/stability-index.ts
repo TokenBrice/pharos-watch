@@ -87,32 +87,29 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = now - (now % DAY_SECONDS);
 
-  // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
-  // the previous sample remains the source of truth.
-  const latestSample = await db
-    .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-    .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>();
-
-  // 24h rolling average
-  const avg24hRow = await db
-    .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-    .bind(now - DAY_SECONDS)
-    .first<{ avg: number | null }>();
-
-  // Today's running average (for appending to history)
-  const todayAvgRow = await db
-    .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at >= ?")
-    .bind(todayMidnight)
-    .first<{ avg: number | null }>();
-
   // Daily history from stability_index
   const historyQuery = detail
     ? "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC"
     : "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 91";
 
-  const rows = await db
-    .prepare(historyQuery)
-    .all<{ computed_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>();
+  // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
+  // the previous sample remains the source of truth.
+  const [latestSample, avg24hRow, todayAvgRow, rows] = await Promise.all([
+    db
+      .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>(),
+    db
+      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
+      .bind(now - DAY_SECONDS)
+      .first<{ avg: number | null }>(),
+    db
+      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at >= ?")
+      .bind(todayMidnight)
+      .first<{ avg: number | null }>(),
+    db
+      .prepare(historyQuery)
+      .all<{ computed_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>(),
+  ]);
   const results = rows.results ?? [];
 
   // If no sample and no history, return empty

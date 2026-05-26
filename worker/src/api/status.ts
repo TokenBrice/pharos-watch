@@ -58,17 +58,28 @@ export function handleStatus(
       };
 
       const effectiveOverallStatus = resolvedState.currentStatus;
-      const probe = await getLatestStatusProbe(db, collectPersistenceIssue);
-      const discrepancyStreak = await getDiscrepancyStreak(db, collectPersistenceIssue);
+      const probeIssues: StatusPersistenceIssue[] = [];
+      const discrepancyIssues: StatusPersistenceIssue[] = [];
+      const timelineIssues: StatusPersistenceIssue[] = [];
+      const [
+        probe,
+        discrepancyStreak,
+        timeline,
+        supplements,
+      ] = await Promise.all([
+        getLatestStatusProbe(db, (issue) => probeIssues.push(issue)),
+        getDiscrepancyStreak(db, (issue) => discrepancyIssues.push(issue)),
+        listRecentStatusTransitions(db, 40, undefined, (issue) => timelineIssues.push(issue)),
+        loadStatusSupplements(
+          db,
+          now,
+          raw.crons,
+          coingeckoApiKey,
+          cloudflareD1StatusBindings,
+        ),
+      ]);
+      persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
-      const timeline = await listRecentStatusTransitions(db, 40, undefined, collectPersistenceIssue);
-      const supplements = await loadStatusSupplements(
-        db,
-        now,
-        raw.crons,
-        coingeckoApiKey,
-        cloudflareD1StatusBindings,
-      );
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
 
       const body: StatusResponse = {

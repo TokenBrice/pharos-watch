@@ -310,8 +310,10 @@ export async function prepareTelegramDigestAppendices(
   }
 
   const trackedSnapshotPayload = buildTrackedSnapshotPayload();
-  const cachedTrackedSnapshot = await getCache(db, TRACKED_SNAPSHOT_CACHE_KEY);
-  const cachedTrackedPending = await getCache(db, TRACKED_PENDING_CACHE_KEY);
+  const [cachedTrackedSnapshot, cachedTrackedPending] = await Promise.all([
+    getCache(db, TRACKED_SNAPSHOT_CACHE_KEY),
+    getCache(db, TRACKED_PENDING_CACHE_KEY),
+  ]);
   const parsedTrackedPending = cachedTrackedPending ? parseSnapshotKeys(cachedTrackedPending.value) : null;
   const pendingTrackedIds = new Set(
     Array.from(parsedTrackedPending ?? [], String).filter((id) => TRACKED_META_BY_ID.has(id)),

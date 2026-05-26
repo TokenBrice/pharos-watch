@@ -145,18 +145,24 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
-  const latestSample = await db
-    .prepare("SELECT score, band, components, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-    .first<{ score: number; band: string; components: string; stored_at: number }>();
-  const latestDaily = await db
-    .prepare("SELECT score, band, components, computed_at as stored_at FROM stability_index ORDER BY computed_at DESC LIMIT 1")
-    .first<{ score: number; band: string; components: string; stored_at: number }>();
+  const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
+    db
+      .prepare("SELECT score, band, components, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ score: number; band: string; components: string; stored_at: number }>(),
+    db
+      .prepare("SELECT score, band, components, computed_at as stored_at FROM stability_index ORDER BY computed_at DESC LIMIT 1")
+      .first<{ score: number; band: string; components: string; stored_at: number }>(),
+    db
+      .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
+      .bind(nowSec - SECONDS.ONE_DAY)
+      .first<{ avg: number | null }>(),
+    db
+      .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
+      .bind(yesterdayTs)
+      .first<{ score: number; band: string }>(),
+  ]);
   const currentPsiSource = latestSample ?? latestDaily;
 
-  const avg24hRow = await db
-    .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-    .bind(nowSec - SECONDS.ONE_DAY)
-    .first<{ avg: number | null }>();
   const avg24h = avg24hRow?.avg != null
     ? Math.round(avg24hRow.avg * 10) / 10
     : null;
@@ -186,10 +192,6 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     ? { score: displayScore, band: displayBand, components: parsedComponents }
     : null;
 
-  const yesterdayRow = await db
-    .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
-    .bind(yesterdayTs)
-    .first<{ score: number; band: string }>();
   const yesterdayIndex = yesterdayRow
     ? { score: yesterdayRow.score, band: yesterdayRow.band }
     : null;

@@ -209,13 +209,19 @@ export async function cleanupStaleLiveReserveArtifacts(
     Array.from(activeBreakerKeys, (breakerKey) => `circuit:${breakerKey}`),
   );
 
-  const existingSyncStateIds = await loadStringColumn(db, "SELECT stablecoin_id FROM reserve_sync_state", "stablecoin_id");
-  const existingCompositionIds = await loadStringColumn(db, "SELECT stablecoin_id FROM reserve_composition", "stablecoin_id");
-  const existingBreakerCacheKeys = await loadStringColumn(
-    db,
-    "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
-    "key",
-  );
+  const [
+    existingSyncStateIds,
+    existingCompositionIds,
+    existingBreakerCacheKeys,
+  ] = await Promise.all([
+    loadStringColumn(db, "SELECT stablecoin_id FROM reserve_sync_state", "stablecoin_id"),
+    loadStringColumn(db, "SELECT stablecoin_id FROM reserve_composition", "stablecoin_id"),
+    loadStringColumn(
+      db,
+      "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
+      "key",
+    ),
+  ]);
 
   const staleSyncStateIds = existingSyncStateIds.filter((stablecoinId) => !activeCoinIdSet.has(stablecoinId));
   const staleCompositionIds = existingCompositionIds.filter((stablecoinId) => !activeCoinIdSet.has(stablecoinId));

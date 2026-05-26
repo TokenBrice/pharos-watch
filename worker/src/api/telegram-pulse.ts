@@ -213,7 +213,7 @@ async function buildTelegramPulseSnapshot(
   const currentSnapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec);
   await refreshTelegramLifecycleSnapshotIfStale(db, nowSec, currentSnapshot);
   const unavailableFields = new Set(currentSnapshot.unavailableFields ?? []);
-  const [topRows, snapshotHistory, miniAppDailyAggregate] = await Promise.all([
+  const [topRows, snapshotHistory, miniAppDailyAggregate, fallbackHistory] = await Promise.all([
     loadTelegramTopFollowedCoins(db, 5).catch((error) => {
       console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
       unavailableFields.add("topCoins");
@@ -225,12 +225,12 @@ async function buildTelegramPulseSnapshot(
       unavailableFields.add("miniAppDailyAggregate");
       return null;
     }),
+    loadFallbackWatcherHistory(db).catch((error) => {
+      console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
+      unavailableFields.add("watcherHistory");
+      return [];
+    }),
   ]);
-  const fallbackHistory = await loadFallbackWatcherHistory(db).catch((error) => {
-    console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
-    unavailableFields.add("watcherHistory");
-    return [];
-  });
   const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
   const suppressedFields = new Set<string>();
   const publicWatcherHistory = sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields);
