@@ -76,10 +76,14 @@ function decodeSnapValue(raw) {
   return raw.replace(/\\"/g, '"').replace(/\\n/g, "\n");
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function extractDesktopSvg(slug) {
   // eslint-disable-next-line security/detect-non-literal-regexp
   const re = new RegExp(
-    `exports\\[\`mechanismDiagramFor > renders the ${slug.replace(/[-]/g, "\\-")} diagram 1\`\\] = \`"(.*?)"\`;`,
+    `exports\\[\`mechanismDiagramFor > renders the ${escapeRegExp(slug)} diagram 1\`\\] = \`"(.*?)"\`;`,
     "s",
   );
   const m = snap.match(re);
