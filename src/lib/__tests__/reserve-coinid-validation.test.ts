@@ -113,6 +113,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
   ],
   [
+    "usg-tangent::Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)::USDC",
+    "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
+  ],
+  [
     "ylds-figure::Digital assets (USDC + USDT, operational)::USDC",
     "YLDS reports this as a de minimis mixed operational digital-asset bucket without stablecoin-level weights.",
   ],
