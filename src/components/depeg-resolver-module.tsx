@@ -278,12 +278,11 @@ function PastDeviationSpark({ row }: { row: DdrRow }) {
   const max = Math.max(peak, now, 1);
   const below = row.direction === "below";
 
-  // depth fraction (0 = peg, 1 = peak) → y, drawn off the calm edge.
-  const depthY = (frac: number) => {
-    const d = 4 + frac * 32; // 4..36 within the 40-tall viewBox
-    return below ? d : 40 - d;
-  };
-  const pegY = below ? 4 : 36;
+  // Peg ($1) sits on the timeline's center line, shared with the NOW dot and the
+  // forward axis. Deviation draws off it — below-peg dips down, above-peg rises up —
+  // so the center line reads consistently as $1. (frac: 0 = peg, 1 = peak)
+  const pegY = 20; // center of the 40-tall viewBox
+  const depthY = (frac: number) => (below ? pegY + frac * 16 : pegY - frac * 16);
   const peakY = depthY(peak / max);
   const nowY = depthY(now / max);
   const line = `0,${pegY} 48,${peakY} 100,${nowY}`;
