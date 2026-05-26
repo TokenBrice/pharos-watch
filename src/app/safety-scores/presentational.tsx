@@ -283,7 +283,7 @@ export function SafetyLandscapeCard({
                 const pct = (count / totalCards) * 100;
                 const isActive = activeFilter === range;
                 return (
-                  <button
+                  <button type="button"
                     key={range}
                     onClick={() => onFilterChange(activeFilter === range ? "all" : range)}
                     aria-label={`Filter by grade ${range}, ${count} coins, ${pct.toFixed(1)}%`}
@@ -316,7 +316,7 @@ export function SafetyLandscapeCard({
               if (count === 0) return null;
               const isActive = activeFilter === range;
               return (
-                <button
+                <button type="button"
                   key={range}
                   onClick={() => onFilterChange(activeFilter === range ? "all" : range)}
                   aria-label={`Filter by grade ${range}, ${count} coins`}

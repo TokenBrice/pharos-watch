@@ -233,7 +233,7 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
   const { isDark, label, toggleTheme } = useThemeToggle();
 
   return (
-    <button
+    <button type="button"
       onClick={toggleTheme}
       title={expanded ? undefined : label}
       aria-label={label}
@@ -272,7 +272,7 @@ function SidebarGroup({
   return (
     <div>
       {sidebarExpanded && (
-        <button
+        <button type="button"
           onClick={onToggle}
           className="flex min-h-7 w-full items-center justify-between px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground transition-colors hover:text-foreground"
           aria-expanded={isGroupExpanded}
@@ -371,7 +371,7 @@ export function Sidebar() {
       </div>
 
       {/* Search */}
-      <button
+      <button type="button"
         onClick={openCommandPalette}
         title={expanded ? undefined : "Search (Ctrl+K)"}
         aria-label="Search (Ctrl+K)"
@@ -445,7 +445,7 @@ export function Sidebar() {
           />
         ))}
         <ThemeSidebarItem expanded={expanded} />
-        <button
+        <button type="button"
           onClick={togglePin}
           title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
           aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}

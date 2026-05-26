@@ -106,7 +106,7 @@ export function CollateralUsageSection({ entries }: CollateralUsageSectionProps)
         )}
       </div>
       {needsCollapse && (
-        <button
+        <button type="button"
           onClick={() => setShowAll((prev) => !prev)}
           className="pharos-focus-ring inline-flex min-h-11 w-fit items-center px-2.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline lg:min-h-9"
         >

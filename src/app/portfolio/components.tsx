@@ -104,7 +104,7 @@ function HoldingRow({
             aria-label={`Amount in USD for ${meta.name}`}
           />
         </div>
-        <button
+        <button type="button"
           onClick={() => onRemove(coinId)}
           className="pharos-focus-ring text-muted-foreground hover:text-destructive transition-colors min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 sm:p-1 flex items-center justify-center rounded"
           aria-label={`Remove ${meta.name}`}

@@ -54,7 +54,7 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
           <p className="mt-1 text-sm opacity-90">{message}</p>
           {detail ? <p className="mt-1 text-xs opacity-80">{detail}</p> : null}
           {onRetry && (
-            <button
+            <button type="button"
               onClick={onRetry}
               className="pharos-focus-ring mt-2.5 inline-flex items-center gap-1.5 rounded-md border border-current/20 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/10 dark:hover:bg-black/10"
             >

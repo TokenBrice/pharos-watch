@@ -74,7 +74,7 @@ export function PoolSourceLabel({
     <span className="text-xs text-muted-foreground">
       {summary}{tvlSuffix}
       {" "}
-      <button
+      <button type="button"
         onClick={() => setExpanded((v) => !v)}
         className="pharos-focus-ring rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
       >

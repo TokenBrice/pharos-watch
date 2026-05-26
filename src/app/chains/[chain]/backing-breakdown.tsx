@@ -49,7 +49,7 @@ export function BackingBreakdown({
           })}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <button type="button"
             onClick={() => onFilterChange(null)}
             className={cn(
               "pharos-focus-ring inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
@@ -69,7 +69,7 @@ export function BackingBreakdown({
             if (pct <= 0) return null;
             const isActive = activeFilter === type;
             return (
-              <button
+              <button type="button"
                 key={type}
                 onClick={() => onFilterChange(isActive ? null : type)}
                 className={cn(
@@ -89,7 +89,7 @@ export function BackingBreakdown({
         {activeFilter && (
           <p className="text-xs text-muted-foreground">
             Showing only {BACKING_LABELS_SHORT[activeFilter as keyof typeof BACKING_LABELS_SHORT] ?? activeFilter} stablecoins.{" "}
-            <button onClick={() => onFilterChange(null)} className="pharos-focus-ring underline hover:text-foreground">
+            <button type="button" onClick={() => onFilterChange(null)} className="pharos-focus-ring underline hover:text-foreground">
               Clear filter
             </button>
           </p>

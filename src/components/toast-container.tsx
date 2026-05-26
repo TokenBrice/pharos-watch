@@ -49,7 +49,7 @@ function ToastItem({
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
-      <button
+      <button type="button"
         onClick={() => onRemove(toast.id)}
         className="shrink-0 rounded-md p-1 opacity-60 transition-opacity hover:opacity-100"
         aria-label="Dismiss notification"

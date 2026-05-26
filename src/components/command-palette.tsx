@@ -590,7 +590,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   )}
                 </span>
                 {group.section === "Recent" && history.length > 0 && (
-                  <button
+                  <button type="button"
                     onClick={clearHistory}
                     className="pharos-focus-ring -mr-2 flex min-h-11 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground sm:mr-0 sm:min-h-0 sm:px-0 sm:hover:bg-transparent"
                     title="Clear recent items"
@@ -605,7 +605,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 const isSelected = currentIndex === selectedIndex;
 
                 return (
-                  <button
+                  <button type="button"
                     key={item.id}
                     id={`cp-item-${item.id}`}
                     role="option"

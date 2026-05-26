@@ -180,7 +180,7 @@ export function Header() {
                     }`}
                     style={{ animationDelay: `${(mobileLeadItemCount + groupIndex) * 50}ms`, animationDuration: "200ms" }}
                   >
-                    <button
+                    <button type="button"
                       onClick={() => toggle(group.key)}
                       className="flex w-full items-center justify-between mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65 hover:text-muted-foreground transition-colors"
                       aria-expanded={groupExpanded}

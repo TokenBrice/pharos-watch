@@ -378,7 +378,7 @@ export function CompareClient() {
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
           {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
-          <button
+          <button type="button"
             onClick={handleTwitterShare}
             disabled={shareLoading}
             className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
@@ -388,7 +388,7 @@ export function CompareClient() {
             <X className="h-3.5 w-3.5" />
             Tweet
           </button>
-          <button
+          <button type="button"
             onClick={handleWebShare}
             disabled={shareLoading}
             className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
@@ -398,7 +398,7 @@ export function CompareClient() {
             <Share2 className="h-3.5 w-3.5" />
             Share
           </button>
-          <button
+          <button type="button"
             onClick={handleDownload}
             disabled={shareLoading}
             className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"

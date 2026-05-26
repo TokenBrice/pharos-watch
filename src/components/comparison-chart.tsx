@@ -119,7 +119,7 @@ export function ComparisonChart({
         <div className="flex flex-col items-stretch gap-2 sm:items-end">
           {normalizable && (
             <div className="flex gap-1">
-              <button
+              <button type="button"
                 onClick={() => setNormalized(false)}
                 aria-pressed={!normalized}
                 className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 ${
@@ -128,7 +128,7 @@ export function ComparisonChart({
               >
                 Absolute
               </button>
-              <button
+              <button type="button"
                 onClick={() => setNormalized(true)}
                 aria-pressed={normalized}
                 className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 ${

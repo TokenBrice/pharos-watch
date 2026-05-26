@@ -472,7 +472,7 @@ export function KeyInfoCard({
               ))}
             </div>
             {hiddenMobileContractCount > 0 ? (
-              <button
+              <button type="button"
                 onClick={() => {
                   if (showAllContractsMobile && openChain && !mobileContractsPreview.some((c) => c.chain === openChain)) {
                     setOpenChain(null);
@@ -503,7 +503,7 @@ export function KeyInfoCard({
                       <span className="font-mono text-xs text-muted-foreground truncate">
                         {formatAddress(openContract.address)}
                       </span>
-                      <button
+                      <button type="button"
                         onClick={() => copyContractAddress(openContract.chain, openContract.address)}
                         className="pharos-focus-ring relative inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
                         title="Copy address"
@@ -575,7 +575,7 @@ function ContractChainButton({
   const chain = CHAIN_META[chainKey];
 
   return (
-    <button
+    <button type="button"
       onClick={onToggle}
       className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
         isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"

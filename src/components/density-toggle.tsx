@@ -32,7 +32,7 @@ export function DensityToggle({ value, onChange, className }: DensityToggleProps
         const isActive = value === option.value;
 
         return (
-          <button
+          <button type="button"
             key={option.value}
             role="radio"
             aria-checked={isActive}

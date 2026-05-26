@@ -20,7 +20,7 @@ export function DetailedSectionsNotice({
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <div className="space-y-2">
           <p className="text-sm text-amber-900 dark:text-amber-100">{message}</p>
-          <button
+          <button type="button"
             onClick={onRetry}
             className="pharos-focus-ring text-xs font-medium text-amber-800 underline hover:text-amber-900 dark:text-amber-200 dark:hover:text-amber-100"
           >

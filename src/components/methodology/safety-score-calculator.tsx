@@ -41,7 +41,7 @@ export function SafetyScoreCalculator() {
     <div className="space-y-4 rounded-2xl border border-border/60 bg-background/45 p-4">
       <div className="flex items-center justify-between">
         <p className="pharos-kicker">Interactive: Try your own inputs</p>
-        <button
+        <button type="button"
           onClick={() => setValues(INITIAL_VALUES)}
           className="pharos-focus-ring rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
         >

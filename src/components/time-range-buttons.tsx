@@ -12,7 +12,7 @@ export function TimeRangeButtons({ options, value, onChange }: TimeRangeButtonsP
   return (
     <div className="flex min-w-0 max-w-full flex-1 gap-1 overflow-x-auto scrollbar-none sm:flex-none">
       {options.map((r) => (
-        <button
+        <button type="button"
           key={r}
           onClick={() => onChange(r)}
           aria-pressed={value === r}

@@ -41,7 +41,7 @@ export function PageError({
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
         <h2 className="text-2xl font-bold font-mono tabular-nums">{title}</h2>
         <p className="text-muted-foreground text-sm">{message}</p>
-        <button
+        <button type="button"
           onClick={handleRetry}
           className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
         >

@@ -42,7 +42,7 @@ function FilterChips<T extends string>({
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((opt) => (
-        <button
+        <button type="button"
           key={opt.value}
           onClick={() => onChange(opt.value)}
           aria-pressed={value === opt.value}
@@ -111,7 +111,7 @@ export function PegHeatmap({
                     aria-label="Search stablecoins by name or symbol"
                   />
                   {searchQuery && (
-                    <button
+                    <button type="button"
                       onClick={() => onSearchChange("")}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Clear search"

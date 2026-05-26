@@ -50,7 +50,7 @@ export function HeroCardHeader({
       <Breadcrumb items={[{ label: "Dashboard", href: "/" }, { label: coinName }]} />
 
       <div className="flex items-center gap-1.5">
-        <button
+        <button type="button"
           onClick={onOpenFeedback}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
         >

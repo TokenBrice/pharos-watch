@@ -39,7 +39,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
             {this.props.supportingText ?? "Please try again. Existing page content is still safe to use."}
           </p>
           {canRetry ? (
-            <button
+            <button type="button"
               onClick={() => this.setState((prev) => ({ hasError: false, retryCount: prev.retryCount + 1 }))}
               className="mt-2 text-sm font-medium text-foreground hover:underline pharos-focus-ring"
             >

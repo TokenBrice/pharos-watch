@@ -174,7 +174,7 @@ export function UpcomingClient() {
             <p className="pharos-meta">Narrow the tracked pre-launch set by launch phase, peg, backing, and sort order.</p>
           </div>
           {hasActiveFilters ? (
-            <button
+            <button type="button"
               onClick={() => {
                 setPhaseFilter(new Set());
                 setPegFilter(new Set());
@@ -193,7 +193,7 @@ export function UpcomingClient() {
               <p className="pharos-kicker">Phase</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_PHASES.map((phase) => (
-                  <button
+                  <button type="button"
                     key={phase}
                     aria-pressed={phaseFilter.has(phase)}
                     onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
@@ -210,7 +210,7 @@ export function UpcomingClient() {
                 <p className="pharos-kicker">Backing</p>
                 <div className="flex flex-wrap gap-2">
                   {ALL_BACKINGS.map((backing) => (
-                    <button
+                    <button type="button"
                       key={backing}
                       aria-pressed={backingFilter.has(backing)}
                       onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
@@ -229,7 +229,7 @@ export function UpcomingClient() {
               <p className="pharos-kicker">Peg</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_PEGS.map((peg) => (
-                  <button
+                  <button type="button"
                     key={peg}
                     aria-pressed={pegFilter.has(peg)}
                     onClick={() => setPegFilter(toggleSet(pegFilter, peg))}
@@ -246,7 +246,7 @@ export function UpcomingClient() {
             <p className="pharos-kicker">Sort By</p>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="pharos-focus-ring pharos-toggle-pill inline-flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 sm:min-h-9">
+                <button type="button" className="pharos-focus-ring pharos-toggle-pill inline-flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 sm:min-h-9">
                   <span className="truncate">{SORT_OPTIONS.find((opt) => opt.key === sortKey)?.label}</span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 </button>
@@ -269,7 +269,7 @@ export function UpcomingClient() {
       {filtered.length === 0 ? (
         <div className="pharos-empty-note flex flex-col items-center gap-3 py-12 text-center">
           <p>No pre-launch coins match. Drop a filter or two.</p>
-          <button
+          <button type="button"
             onClick={() => {
               setPhaseFilter(new Set());
               setPegFilter(new Set());

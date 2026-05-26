@@ -99,7 +99,7 @@ export function PegBrowseStrip({
       <div className="flex items-center justify-between">
         <h3 className="pharos-kicker">Browse by peg</h3>
         {hasFiatOverflow && (
-          <button
+          <button type="button"
             onClick={() => setExpanded((v) => !v)}
             className="pharos-focus-ring min-h-11 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:py-0"
           >
