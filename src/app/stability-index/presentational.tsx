@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { CHART_AMBER, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
 import { formatCurrency, formatScore } from "@shared/lib/format";
@@ -30,11 +31,14 @@ export interface StabilityComponentScores {
   trend: number;
 }
 
+// Aligned 1:1 with the Beam Dimmer tone colors (severity=red, breadth=orange,
+// stressBreadth=amber, trend=green) so the hero snapshot and the over-time
+// panels read as the same four signals.
 export const STABILITY_COMPONENT_COLORS = {
-  severity: "var(--chart-2)",
-  breadth: "var(--chart-1)",
-  stressBreadth: "var(--chart-4)",
-  trend: "var(--chart-3)",
+  severity: CHART_RED,
+  breadth: CHART_ORANGE,
+  stressBreadth: CHART_AMBER,
+  trend: CHART_GREEN,
 } as const;
 
 export const STABILITY_COMPONENT_DETAIL: Array<{
