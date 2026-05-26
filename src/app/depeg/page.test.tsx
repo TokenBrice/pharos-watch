@@ -26,7 +26,7 @@ describe("DepegPage", () => {
     expect(html).toContain("same-direction corroboration");
     expect(html).toContain("CoinGecko or DefiLlama");
     expect(html).toContain("Binance");
-    expect(html).toContain("score pre-price and live-market stress signals");
+    expect(html).toContain("surface pre-price and live-market stress signals");
     expect(html).not.toContain("before it hits the price");
   });
 });
