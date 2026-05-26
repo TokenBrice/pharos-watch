@@ -8,9 +8,9 @@ const SEC = 1_700_000_000;
 // raw SQL emitted by the projector, so each pattern only has to be unique
 // enough to disambiguate the projector's two queries.
 const MATCH_FETCH_HISTORY = "is_best = 1 AND recorded_at > ?";
-const MATCH_PRIOR_HISTORY = "stablecoin_id = ? AND is_best = 1 AND recorded_at <= ?";
+const MATCH_PRIOR_HISTORY = "MAX(recorded_at) as max_at";
 const MATCH_FETCH_DECISIONS = "WHERE created_at > ?";
-const MATCH_PRIOR_DECISIONS = "stablecoin_id = ? AND created_at <= ?";
+const MATCH_PRIOR_DECISIONS = "MAX(created_at) as max_at";
 const MATCH_CACHE = "FROM cache WHERE key";
 
 function extractInsertBinds(db: MockD1Database): unknown[][] {
@@ -32,15 +32,20 @@ function historyTables(
   priors: Record<string, unknown>[] = [],
   watermark: number = SEC - 1,
 ): MockTableConfig[] {
+  const defaultStablecoinId = samples.find((sample) => typeof sample.stablecoin_id === "string")?.stablecoin_id;
+  const priorRows = priors.map((row) => ({
+    ...(defaultStablecoinId && typeof row.stablecoin_id !== "string" ? { stablecoin_id: defaultStablecoinId } : {}),
+    ...row,
+  }));
   return [
     {
       match: MATCH_CACHE,
-      rows: priors.length > 0
+      rows: priorRows.length > 0
         ? [{ key: "tape-projector:cursor:yield.warning_emitted", value: String(watermark) }]
         : [],
     },
     { match: MATCH_FETCH_HISTORY, rows: samples },
-    { match: MATCH_PRIOR_HISTORY, rows: priors },
+    { match: MATCH_PRIOR_HISTORY, rows: priorRows },
   ];
 }
 
@@ -51,15 +56,20 @@ function decisionTables(
   priors: Record<string, unknown>[] = [],
   watermark: number = SEC - 1,
 ): MockTableConfig[] {
+  const defaultStablecoinId = samples.find((sample) => typeof sample.stablecoin_id === "string")?.stablecoin_id;
+  const priorRows = priors.map((row) => ({
+    ...(defaultStablecoinId && typeof row.stablecoin_id !== "string" ? { stablecoin_id: defaultStablecoinId } : {}),
+    ...row,
+  }));
   return [
     {
       match: MATCH_CACHE,
-      rows: priors.length > 0
+      rows: priorRows.length > 0
         ? [{ key: "tape-projector:cursor:yield.pys_dropped", value: String(watermark) }]
         : [],
     },
     { match: MATCH_FETCH_DECISIONS, rows: samples },
-    { match: MATCH_PRIOR_DECISIONS, rows: priors },
+    { match: MATCH_PRIOR_DECISIONS, rows: priorRows },
   ];
 }
 

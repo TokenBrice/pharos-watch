@@ -28,7 +28,7 @@
 // writes to stress_signals + stress_signal_history.
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import type { CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { runWithAbort } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
@@ -36,6 +36,7 @@ import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { loadDewsSourceState } from "./dews/source-state";
 import { buildDewsScoringResult } from "./dews/scoring";
 import { persistDewsResults } from "./dews/persistence";
+import { buildStablecoinsCacheFailureResult, reportDewsProgress } from "./dews/progress";
 import type {
   MalformedPersistedInput,
   PersistedJsonDecodeReason,
@@ -75,6 +76,7 @@ const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
 export async function computeAndStoreDEWS(
   db: D1Database,
   signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
   const eligibleIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((meta) => meta.id));
@@ -85,30 +87,15 @@ export async function computeAndStoreDEWS(
   let malformedCoreInputRows = 0;
 
   // 1. Read stablecoins cache
+  await reportDewsProgress(reportProgress, "stablecoins-cache", { validationFailures });
   const stablecoinsCache = await runWithAbort(signal, () => loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }));
   if (stablecoinsCache.kind !== "ok") {
-    const failure: SourceFailure = {
-      source: "stablecoins-cache",
-      reason: stablecoinsCache.reason,
-      bootstrapAllowed: false,
-    };
-    return {
-      itemCount: 0,
-      status: "degraded",
-      metadata: JSON.stringify({
-        rowsRead: 0,
-        rowsWritten: 0,
-        rowsDropped: 0,
-        sourceCoverage: { stablecoins: 0 },
-        sourceFailures: [failure],
-        fallbackMode: "stablecoins-cache-unavailable",
-        validationFailures: 1,
-      }),
-    };
+    return buildStablecoinsCacheFailureResult(stablecoinsCache.reason);
   }
 
   const { peggedAssets: assets, fxFallbackRates } = stablecoinsCache.payload;
   sourceCoverage.stablecoins = assets.length;
+  await reportDewsProgress(reportProgress, "stablecoins-cache-loaded", { rowsComputed: assets.length, validationFailures });
   const assetById = new Map(assets.map((a) => [a.id, a]));
   const bootstrapPending = (await runWithAbort(signal, () => getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY))) == null;
 
@@ -165,6 +152,7 @@ export async function computeAndStoreDEWS(
     counts: pegRateContributorCounts,
   } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
+  await reportDewsProgress(reportProgress, "source-hydration", { validationFailures });
   const sourceState = await runWithAbort(signal, () =>
     loadDewsSourceState({
       db,
@@ -175,7 +163,9 @@ export async function computeAndStoreDEWS(
     })
   );
   Object.assign(sourceCoverage, sourceState.sourceCoverage);
+  await reportDewsProgress(reportProgress, "source-hydration-loaded", { sourceFailures: sourceFailures.length, validationFailures });
 
+  await reportDewsProgress(reportProgress, "scoring", { validationFailures });
   const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
     assetById,
     pegRates,
@@ -184,6 +174,9 @@ export async function computeAndStoreDEWS(
     sourceState,
     registerMalformedPersistedInput,
   });
+  await reportDewsProgress(reportProgress, "scoring-complete", { rowsComputed: results.length, validationFailures });
+
+  await reportDewsProgress(reportProgress, "persistence", { rowsComputed: results.length, validationFailures });
   const { rowsDropped, rowsRetiredCurrent } = await runWithAbort(signal, () =>
     persistDewsResults({
       db,
@@ -193,6 +186,7 @@ export async function computeAndStoreDEWS(
       nowSec,
     })
   );
+  await reportDewsProgress(reportProgress, "persistence-complete", { rowsComputed: results.length, rowsWritten: results.length, validationFailures });
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
   if (results.length > 0 && liqHistCoverage < 0.5) {

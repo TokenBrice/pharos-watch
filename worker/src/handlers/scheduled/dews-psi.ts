@@ -22,7 +22,7 @@ function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlot
       tasks: [
         {
           job: "compute-dews",
-          run: (signal) => computeAndStoreDEWS(runtime.db, signal),
+          run: (signal, reportProgress) => computeAndStoreDEWS(runtime.db, signal, reportProgress),
         },
         {
           job: "stability-index",
@@ -30,7 +30,7 @@ function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlot
         },
         {
           job: "project-tape",
-          run: (signal) => projectTape(runtime.db, signal),
+          run: (signal, reportProgress) => projectTape(runtime.db, signal, reportProgress),
         },
       ],
     },

@@ -586,6 +586,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/detect-depegs.ts` - detectDepegEvents, shouldCloseOrphanedDepeg
 - `worker/src/cron/dews/contracts.ts` - ContagionAmplifiers, DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState, DexLiquidityRow
 - `worker/src/cron/dews/persistence.ts` - computeStressSignalPruneIds, persistDewsResults
+- `worker/src/cron/dews/progress.ts` - DewsProgressMetadata, buildStablecoinsCacheFailureResult, reportDewsProgress
 - `worker/src/cron/dews/scoring.ts` - buildDewsScoringResult
 - `worker/src/cron/dews/source-state.ts` - loadDewsSourceState
 - `worker/src/cron/dews/source-state/fallback.ts` - isBootstrapAllowedMissingTableSource, isMissingTableError, resolveBootstrapAllowed
@@ -616,8 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-balancer.ts` - fetchBalancerPools
 - `worker/src/cron/dex-liquidity/fetch-crawlers.ts` - fetchCgPools, fetchGtPools, mergeCgPools, mergeGtPools
 - `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` - fetchCgTickersFallback, fetchDsFallbackPools, getFallbackTargets
-- `worker/src/cron/dex-liquidity/fetch-fluid.ts` - fetchFluidPools
-- ... 286 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 287 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 

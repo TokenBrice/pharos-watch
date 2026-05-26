@@ -24,6 +24,7 @@ import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
+import { buildInClause, chunkArray } from "../db";
 import {
   getProjectorWatermark,
   insertTapeEvents,
@@ -67,7 +68,7 @@ async function fetchSamplesSince(
   const sql = `SELECT stablecoin_id, computed_at, score, band
                  FROM stress_signals
                  WHERE computed_at > ?${untilClause}
-                 ORDER BY stablecoin_id ASC, computed_at ASC
+                 ORDER BY computed_at ASC, stablecoin_id ASC
                  LIMIT ?`;
   const binds: unknown[] = until != null ? [since, until, limit] : [since, limit];
   const result = await db.prepare(sql).bind(...binds).all<StressSignalRow>();
@@ -87,20 +88,27 @@ async function fetchPriorBands(
   const map = new Map<string, StressSignalRow>();
   if (coinIds.length === 0 || since <= 0) return map;
 
-  // D1 has no array bind, so query per coin. The batch is bounded by
-  // DEFAULT_BATCH_LIMIT samples → at most that many distinct coin ids.
-  for (const coinId of coinIds) {
-    const row = await db
+  for (const chunk of chunkArray([...new Set(coinIds)])) {
+    const inClause = buildInClause(chunk);
+    const rows = await db
       .prepare(
-        `SELECT stablecoin_id, computed_at, score, band
-           FROM stress_signals
-           WHERE stablecoin_id = ? AND computed_at <= ?
-           ORDER BY computed_at DESC
-           LIMIT 1`,
+        `SELECT s.stablecoin_id, s.computed_at, s.score, s.band
+           FROM stress_signals s
+           INNER JOIN (
+             SELECT stablecoin_id, MAX(computed_at) as max_at
+             FROM stress_signals
+             WHERE stablecoin_id IN (${inClause.sql})
+               AND computed_at <= ?
+             GROUP BY stablecoin_id
+           ) latest
+             ON s.stablecoin_id = latest.stablecoin_id
+            AND s.computed_at = latest.max_at`,
       )
-      .bind(coinId, since)
-      .first<StressSignalRow>();
-    if (row) map.set(coinId, row);
+      .bind(...inClause.binds, since)
+      .all<StressSignalRow>();
+    for (const row of rows.results ?? []) {
+      map.set(row.stablecoin_id, row);
+    }
   }
   return map;
 }
@@ -206,6 +214,11 @@ async function projectDewsByVariant(
 
   const rows = await fetchSamplesSince(db, since, until, limit);
   if (rows.length === 0) return { projected: 0, advanced: null };
+  rows.sort((a, b) => (
+    a.stablecoin_id === b.stablecoin_id
+      ? a.computed_at - b.computed_at
+      : a.stablecoin_id.localeCompare(b.stablecoin_id)
+  ));
 
   const distinctCoinIds = Array.from(new Set(rows.map((r) => r.stablecoin_id)));
   const priorByCoin = await fetchPriorBands(db, distinctCoinIds, since);

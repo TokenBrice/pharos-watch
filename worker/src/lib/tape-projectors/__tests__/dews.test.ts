@@ -5,7 +5,7 @@ import { projectDewsEscalated, projectDewsDeescalated } from "../dews";
 const SEC = 1_700_000_000;
 
 const MATCH_FETCH_SAMPLES = "WHERE computed_at > ?";
-const MATCH_PRIOR_BAND = "WHERE stablecoin_id = ? AND computed_at <= ?";
+const MATCH_PRIOR_BAND = "MAX(computed_at) as max_at";
 
 function extractInsertBinds(db: MockD1Database): unknown[][] {
   return db

@@ -25,6 +25,7 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yiel
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
+import { buildInClause, chunkArray } from "../db";
 import {
   getProjectorWatermark,
   insertTapeEvents,
@@ -119,16 +120,29 @@ async function fetchPriorWarningSignals(
 ): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
   if (coinIds.length === 0 || since <= 0) return map;
-  for (const coinId of coinIds) {
-    const row = await db
+  for (const chunk of chunkArray([...new Set(coinIds)])) {
+    const inClause = buildInClause(chunk);
+    const rows = await db
       .prepare(
-        `SELECT warning_signals FROM yield_history
-           WHERE stablecoin_id = ? AND is_best = 1 AND recorded_at <= ?
-           ORDER BY recorded_at DESC LIMIT 1`,
+        `SELECT yh.stablecoin_id, yh.warning_signals
+           FROM yield_history yh
+           INNER JOIN (
+             SELECT stablecoin_id, MAX(recorded_at) as max_at
+             FROM yield_history
+             WHERE stablecoin_id IN (${inClause.sql})
+               AND is_best = 1
+               AND recorded_at <= ?
+             GROUP BY stablecoin_id
+           ) latest
+             ON yh.stablecoin_id = latest.stablecoin_id
+            AND yh.recorded_at = latest.max_at
+          WHERE yh.is_best = 1`,
       )
-      .bind(coinId, since)
-      .first<{ warning_signals: string | null }>();
-    map.set(coinId, parseSignals(row?.warning_signals ?? null));
+      .bind(...inClause.binds, since)
+      .all<{ stablecoin_id: string; warning_signals: string | null }>();
+    for (const row of rows.results ?? []) {
+      map.set(row.stablecoin_id, parseSignals(row.warning_signals));
+    }
   }
   return map;
 }
@@ -263,17 +277,28 @@ async function fetchPriorPysScores(
 ): Promise<Map<string, number | null>> {
   const map = new Map<string, number | null>();
   if (coinIds.length === 0 || since <= 0) return map;
-  for (const coinId of coinIds) {
-    const row = await db
+  for (const chunk of chunkArray([...new Set(coinIds)])) {
+    const inClause = buildInClause(chunk);
+    const rows = await db
       .prepare(
-        `SELECT selected_score FROM yield_source_decisions
-           WHERE stablecoin_id = ? AND created_at <= ?
-           ORDER BY created_at DESC LIMIT 1`,
+        `SELECT ysd.stablecoin_id, ysd.selected_score
+           FROM yield_source_decisions ysd
+           INNER JOIN (
+             SELECT stablecoin_id, MAX(created_at) as max_at
+             FROM yield_source_decisions
+             WHERE stablecoin_id IN (${inClause.sql})
+               AND created_at <= ?
+             GROUP BY stablecoin_id
+           ) latest
+             ON ysd.stablecoin_id = latest.stablecoin_id
+            AND ysd.created_at = latest.max_at`,
       )
-      .bind(coinId, since)
-      .first<{ selected_score: number | null }>();
-    const score = row?.selected_score ?? null;
-    map.set(coinId, score != null && Number.isFinite(score) ? score : null);
+      .bind(...inClause.binds, since)
+      .all<{ stablecoin_id: string; selected_score: number | null }>();
+    for (const row of rows.results ?? []) {
+      const score = row.selected_score;
+      map.set(row.stablecoin_id, score != null && Number.isFinite(score) ? score : null);
+    }
   }
   return map;
 }

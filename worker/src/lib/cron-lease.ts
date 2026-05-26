@@ -31,6 +31,7 @@ export function isRetriableD1OverloadError(err: unknown): boolean {
   return (
     msg.includes("D1 DB is overloaded") ||
     msg.includes("Requests queued for too long") ||
+    msg.includes("D1 DB storage operation exceeded timeout") ||
     msg.includes("D1_ERROR: internal error; reference")
   );
 }
