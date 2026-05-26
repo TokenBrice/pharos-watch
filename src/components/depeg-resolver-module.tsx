@@ -727,7 +727,7 @@ function ResolverHeader({ data }: { data: DdrResponse | undefined }) {
             <Tooltip>
               <TooltipTrigger
                 aria-label="About the Depeg Duration Resolver"
-                className="pharos-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+                className="pharos-focus-ring inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
               >
                 <Info className="h-3.5 w-3.5" aria-hidden="true" />
               </TooltipTrigger>
