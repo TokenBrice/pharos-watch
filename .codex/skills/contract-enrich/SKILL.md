@@ -43,7 +43,7 @@ curl -s "https://stablecoins.llama.fi/stablecoins?includePrices=true"
 - cross-check official docs or deployed-contract pages
 - verify via explorer API or explorer token page
 - patch the matching `shared/data/stablecoins/coins/*.json` entry
-- report unsupported chains instead of editing `shared/lib/chains.ts`
+- report unsupported chains instead of editing `shared/lib/chains/index.ts`
 
 7. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
 

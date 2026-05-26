@@ -1,6 +1,6 @@
 ---
 name: contract-populate
-description: Populate missing `contracts` entries for a tracked stablecoin in the Pharos dashboard from CoinGecko `detail_platforms` data while preserving curated addresses and using only chain IDs already present in `shared/lib/chains.ts`. Use when adding a stablecoin or filling known chain gaps in `shared/data/stablecoins/coins/*.json`.
+description: Populate missing `contracts` entries for a tracked stablecoin in the Pharos dashboard from CoinGecko `detail_platforms` data while preserving curated addresses and using only chain IDs already present in `shared/lib/chains/index.ts`. Use when adding a stablecoin or filling known chain gaps in `shared/data/stablecoins/coins/*.json`.
 ---
 
 # Contract Populate
@@ -9,7 +9,7 @@ Populate missing contract addresses from CoinGecko without overwriting curated d
 
 ## Read First
 
-- Read the current coin entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`) plus `shared/lib/chains.ts`.
+- Read the current coin entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`) plus `shared/lib/chains/index.ts`.
 - Treat the runtime stablecoin re-export as import-only; contract metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`.
 - Load [references/chain-mappings.md](references/chain-mappings.md) when translating CoinGecko platform names or deciding which platforms to skip.
 - If `geckoId` is missing or suspect, use `coingecko-id-verif` or `stablecoin-info-fetch` first.
@@ -57,5 +57,5 @@ After the batch, report:
 
 - Never overwrite an existing contract entry.
 - Never guess decimals.
-- Never invent a new chain ID if an equivalent one already exists in `shared/lib/chains.ts`.
+- Never invent a new chain ID if an equivalent one already exists in `shared/lib/chains/index.ts`.
 - If official docs and CoinGecko disagree, prefer official docs and note the conflict.

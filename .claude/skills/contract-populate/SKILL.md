@@ -148,7 +148,7 @@ For each entry in `detail_platforms`:
    - If not in the mapping → log as "unmapped: {cg_platform_name}" and skip
 2. **Check if chain already exists** in the coin's contracts
    - If yes → skip (preserve curated data)
-3. **Check if chain exists in `shared/lib/chains.ts`** (`CHAIN_META`)
+3. **Check if chain exists in `shared/lib/chains/index.ts`** (`CHAIN_META`)
    - If no → report it as "unsupported chain" and skip it unless the user explicitly requested a separate chain-support change
 4. **Add the contract** to the coin's contracts array:
    - `chain`: our chain ID
@@ -157,7 +157,7 @@ For each entry in `detail_platforms`:
 
 #### Step 4 — Unsupported chains
 
-When a mapped chain ID is not in `CHAIN_META`, do not modify `shared/lib/chains.ts` as part of this skill. Report the unsupported chain, the source platform name, supply or evidence if available, and whether a separate chain-support task is justified.
+When a mapped chain ID is not in `CHAIN_META`, do not modify `shared/lib/chains/index.ts` as part of this skill. Report the unsupported chain, the source platform name, supply or evidence if available, and whether a separate chain-support task is justified.
 
 #### Step 5 — Write changes
 
@@ -201,4 +201,4 @@ When processing multiple coins:
 - Don't add the same chain twice for a coin
 - Don't guess decimals — if CG returns null and it's unclear, skip
 - Don't modify any fields other than `contracts` in the stablecoin JSON entry
-- Don't modify `shared/lib/chains.ts` unless the user explicitly requested chain-support work outside this skill
+- Don't modify `shared/lib/chains/index.ts` unless the user explicitly requested chain-support work outside this skill

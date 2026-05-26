@@ -429,7 +429,7 @@ Build: PASS/FAIL
 - Don't add the same chain twice for a coin
 - Don't guess decimals — if CG returns null and it's unclear, skip
 - Don't modify any fields other than `contracts` in the stablecoin JSON entry
-- Don't modify `shared/lib/chains.ts` unless the user explicitly requested chain-support work outside this skill
+- Don't modify `shared/lib/chains/index.ts` unless the user explicitly requested chain-support work outside this skill
 - Don't skip block explorer verification — every address must be confirmed
 - Don't process coins without a `geckoId` — no CG lookup possible
 - Don't include chains below supply threshold even if CG has an address

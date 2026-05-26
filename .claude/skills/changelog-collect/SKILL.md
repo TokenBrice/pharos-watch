@@ -257,5 +257,5 @@ Per CLAUDE.md, run `npm run test:merge-gate` before any push.
 Not implemented yet — documented here so future sessions can pick them up without re-deriving the design:
 
 - **Diffstat in `stats`**: extending `ChangelogEntry.stats` with `filesChanged?: number; linesAdded?: number; linesRemoved?: number;` (via `git log --shortstat --no-merges --since=… --until=…`, summed) gives the card a denser at-a-glance metric than commit count alone. Requires adding the fields to `src/data/changelogs/types.ts` and rendering them in `ChangelogEntryCard`.
-- **PR-ref hyperlinks in the commit list**: commit messages already contain `(#NN)` in plain text. A small `String.prototype.replace` in the commit `<li>` of `ChangelogEntryCard` can turn them into links to `https://github.com/TokenBrice/stablecoin-dashboard/pull/NN`.
+- **PR-ref hyperlinks in the commit list**: commit messages already contain `(#NN)` in plain text. A small `String.prototype.replace` in the commit `<li>` of `ChangelogEntryCard` can turn them into links to `https://github.com/TokenBrice/pharos-watch/pull/NN`.
 - **Per-entry stats delta**: surface "+N stablecoins", "+N live-reserve adapters" automatically by comparing the previous entry's computed counts. Would require either a small metadata block per entry or an on-render computation against the tracked-coins data set.

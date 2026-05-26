@@ -22,7 +22,7 @@ The user provides a stablecoin **name**, **symbol**, or **ID** (ticker-issuer fo
 | `links` | Official site, Twitter, docs | Labels: `"Website"`, `"Twitter"`, `"Docs"`, `"Proof of Reserve"` |
 | `geckoId` | CoinGecko API | Should be populated for every tracked coin when it exists on CoinGecko |
 | `cmcSlug` | CoinMarketCap | Fallback when both DL + CG miss price |
-| `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `shared/lib/chains.ts` only |
+| `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `shared/lib/chains/index.ts` only |
 | `proofOfReserves` | Official site | `{ type, url, provider? }` — types: `"independent-audit"` / `"real-time"` / `"self-reported"` |
 | `mintAuthority` | Official docs + verified contract/proxy/role/Safe/bridge reads | Descriptive only. For high-value active additions or pre-launch promotions, either publish a sourced profile or record an intentional gap |
 
@@ -70,7 +70,7 @@ For **contract addresses** specifically:
 - **CoinGecko API second**: The `detail_platforms` field from `/coins/{id}` returns chain → address + decimals mappings. Cross-reference with official docs
 - **DefiLlama chain data**: If DL reports supply on a supported chain we have no contract for, actively search for that chain's contract address
 - **Block explorer APIs for verification**: For every contract address found from any source, verify via the explorer API that the token name, symbol, and decimals match. This prevents adding a proxy admin, vault, or wrapper address instead of the actual token. Use the Etherscan-family API pattern: `https://api.{explorer}/api?module=token&action=tokeninfo&contractaddress={addr}`
-- Only include chains defined in `shared/lib/chains.ts` (100+ supported chains — read the file for the full list)
+- Only include chains defined in `shared/lib/chains/index.ts` (100+ supported chains — read the file for the full list)
 - Note that the core protocol may only live on one chain (e.g. Ethereum) while the stablecoin token itself is bridged to many chains — look for both native and bridged deployments
 
 #### Step 2b — Verify existing data
@@ -123,7 +123,7 @@ After user approval:
    - Contract addresses: lowercase hex for EVM, original case for Tron and other non-EVM chains
    - Links order: Website, Twitter, Docs, Proof of Reserve (if applicable)
    - Keep entries concise
-4. Regenerate `shared/data/stablecoins/coins.generated.json` after metadata edits
+4. Regenerate generated artifacts after metadata edits: `shared/data/stablecoins/coins.generated.json`, then `node scripts/build-data/build-client-registry.mjs` (client-projected fields like `geckoId`, `proofOfReserves`, `reserves`, and `collateral` flow into `coins.client.generated.json`)
 5. Run `npm run check:stablecoin-data`; for full stablecoin additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`
 
 ### Quality Standards

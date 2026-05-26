@@ -43,11 +43,13 @@ Research the reserve composition, classify each slice with the repo's 5-tier res
 
 ## Risk Tiers
 
-- `very-low`: cash, insured deposits, short-dated Treasuries, overnight repos, physical gold or silver
-- `low`: stablecoins, tokenized Treasuries or money-market funds, high-quality on-chain LST-heavy collateral
-- `medium`: BTC, ETH, wBTC, delta-neutral positions, tokenized gold, structured yield products
-- `high`: altcoins, credit risk, LP tokens, complex DeFi strategies, off-exchange basis trades
-- `very-high`: opaque reserves, governance-token support, sanctioned or distressed assets, purely algorithmic stabilization
+- `very-low`: ETH/WETH (base asset, no counterparty layer), cash, insured deposits, short-dated Treasuries, overnight repos
+- `low`: stablecoins, tokenized Treasuries or money-market funds, ETH LSTs (stETH/wstETH/rETH), high-quality on-chain collateral
+- `medium`: BTC, wBTC and wrapped/bridged BTC, tokenized gold, delta-neutral positions, structured yield products
+- `high`: volatile native L1 assets (SOL/BNB/TRX), credit risk, LP tokens, complex DeFi strategies, off-exchange basis trades
+- `very-high`: governance-token support, opaque reserves, sanctioned or distressed assets, purely algorithmic stabilization
+
+Per-symbol source of truth: `shared/lib/reserve-asset-risk.ts`; use its tier when a symbol is listed there.
 
 When uncertain between two tiers, choose the riskier one and explain why.
 

@@ -45,17 +45,19 @@ The `ReserveRisk` type has 5 tiers. Apply these rules consistently:
 
 | Risk | Score | Criteria |
 |------|-------|----------|
-| `very-low` | 100 | U.S. Treasury Bills (≤1yr), overnight reverse repos, FDIC-insured cash deposits, regulated government MMFs, cash/cash equivalents |
-| `low` | 75 | Investment-grade corporate bonds, FDIC deposits with concentration risk, Chainlink-verified PoR with transparent composition, T-bills >1yr duration |
-| `medium` | 50 | ETH, BTC, wstETH, WBTC, regulated stablecoins used as collateral (USDC, USDT), tokenized treasuries (BUIDL, USYC, USTB) |
-| `high` | 25 | Altcoins (SOL, TRX, AVAX, etc.), perpetual futures positions, unsecured/undercollateralized loans |
-| `very-high` | 5 | Recursive DeFi strategies (LP tokens, leveraged loops), zero-audit exotic protocols, anything with <6mo track record and opaque backing |
+| `very-low` | 100 | U.S. Treasury Bills (≤1yr), overnight reverse repos, FDIC-insured cash deposits, regulated government MMFs, cash/cash equivalents; ETH/WETH (base asset, no counterparty layer) |
+| `low` | 75 | Investment-grade corporate bonds, T-bills >1yr duration, regulated stablecoins used as collateral (USDC, USDT, DAI, PYUSD, GHO), ETH LSTs (stETH, wstETH, rETH, weETH, sfrxETH), tokenized treasuries (BUIDL, USTB, USYC) |
+| `medium` | 50 | BTC and wrapped/bridged BTC (WBTC, cbBTC, LBTC, tBTC), tokenized gold (PAXG, XAUT), structured / centralized-custody crypto |
+| `high` | 25 | Volatile native L1 assets (SOL, BNB, TRX, HYPE, CELO, POL), perpetual futures positions, unsecured/undercollateralized loans |
+| `very-high` | 5 | Governance tokens (CRV, GNO, UNI), recursive DeFi strategies (LP tokens, leveraged loops), zero-audit exotic protocols, opaque backing |
+
+The per-symbol source of truth is `shared/lib/reserve-asset-risk.ts` (`CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL`) — consumed by every worker reserve adapter and enforced by `reserve-risk-consistency.test.ts`. When a symbol is listed there, use that tier verbatim; the rows above are the rubric for assets not yet in the canonical map.
 
 Edge cases:
-- **Delta-neutral positions** (spot + short perp): The spot side is `medium` (crypto), but the combined position is `high` (counterparty risk on CEX)
-- **Stablecoin collateral** (USDC/USDT as backing): `medium` (not low — introduces dependency risk)
-- **LSTs (wstETH, rETH)**: `medium` (smart contract + slashing risk on top of ETH)
-- **Tokenized T-bills (BUIDL, USYC, USTB)**: `medium` (the underlying is very-low but the tokenization layer adds smart contract/custodian risk)
+- **Delta-neutral positions** (spot + short perp): the combined position is `high` (CEX counterparty risk), even though the spot leg alone would be lower
+- **Stablecoin collateral** (USDC/USDT/DAI as backing): `low` per the canonical map (dependency risk is captured by the report card's dependency dimension, not by inflating the reserve tier)
+- **ETH LSTs (wstETH, rETH, weETH)**: `low` (canonical) — the LST layer sits on top of ETH, which is `very-low`
+- **Tokenized T-bills (BUIDL, USYC, USTB)**: `low` (canonical) — the tokenization layer adds smart-contract/custodian risk above the very-low underlying
 - **Segregated non-rehypothecated T-bill accounts**: `very-low` (bankruptcy-remote, no counterparty layering)
 
 ### Step 4: Present Findings

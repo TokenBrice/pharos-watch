@@ -2,7 +2,7 @@
 
 Use this file only when translating CoinGecko platform names to repo chain IDs.
 
-- Prefer the current `shared/lib/chains.ts` inventory when a chain already exists there.
+- Prefer the current `shared/lib/chains/index.ts` inventory when a chain already exists there.
 - Use the mapping below for external-name translation only.
 - Skip listed dead or legacy platforms silently.
 
@@ -109,7 +109,7 @@ binancecoin
 
 ## New Chain Checklist
 
-When a verified platform maps to a chain ID that is not yet in `shared/lib/chains.ts`, add:
+When a verified platform maps to a chain ID that is not yet in `shared/lib/chains/index.ts`, add:
 
 - `name`
 - `explorerUrl`

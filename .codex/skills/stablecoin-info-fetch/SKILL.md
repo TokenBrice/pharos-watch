@@ -12,7 +12,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - Read the current entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view).
 - Treat the runtime stablecoin re-export as import-only; tracked metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`.
 - If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow.
-- Read `shared/lib/chains.ts` if contracts may change.
+- Read `shared/lib/chains/index.ts` if contracts may change.
 - Read `docs/classification.md` or `docs/data-pipeline.md` only when those rules are directly relevant.
 - Do not change `flags`, `id`, `name`, `symbol`, `detailProvider`, `status`, or `commodityOunces` unless the user explicitly asked.
 
@@ -62,7 +62,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 
 8. Patch the coin's per-coin JSON file with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned and regenerate `shared/data/stablecoins/coins.generated.json`.
 
-9. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
+9. Regenerate `shared/data/stablecoins/coins.generated.json`, run `node scripts/build-data/build-client-registry.mjs` (client-projected fields like `geckoId`/`proofOfReserves`/`reserves` flow into `coins.client.generated.json`), then `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
 
 ## Guardrails
 

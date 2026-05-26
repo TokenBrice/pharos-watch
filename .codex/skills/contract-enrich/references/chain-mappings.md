@@ -2,7 +2,7 @@
 
 Use this file only when translating external chain names or applying supply thresholds.
 
-- Prefer existing IDs from `shared/lib/chains.ts` whenever the repo already supports the chain.
+- Prefer existing IDs from `shared/lib/chains/index.ts` whenever the repo already supports the chain.
 - This file is a curated translation map, not an exhaustive inventory of every current chain in the repo.
 - DefiLlama list endpoint values are already USD-denominated.
 
