@@ -116,6 +116,11 @@ function StackBar({
               <TooltipTrigger asChild>
                 <span
                   tabIndex={isTooNarrowForFocus ? undefined : 0}
+                  aria-label={
+                    isTooNarrowForFocus
+                      ? undefined
+                      : `${seg.label}: ${seg.count}. ${seg.description}`
+                  }
                   className={cn(
                     "block h-full",
                     isTooNarrowForFocus ? "pointer-events-none" : "pharos-focus-ring cursor-help",

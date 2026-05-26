@@ -68,8 +68,7 @@ export function MobileUtilityDock() {
             type="button"
             onClick={() => setFeedbackOpen(true)}
             aria-label="Send feedback"
-            aria-hidden={!showFeedback}
-            tabIndex={showFeedback ? 0 : -1}
+            tabIndex={showFeedback ? undefined : -1}
             className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_18px_oklch(0_0_0_/0.22)]"
           >
             <MessageSquarePlus className="h-4 w-4" />
@@ -78,11 +77,10 @@ export function MobileUtilityDock() {
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             aria-label="Scroll to top"
-            aria-hidden={!showScrollTop}
-            tabIndex={showScrollTop ? 0 : -1}
+            tabIndex={showScrollTop ? undefined : -1}
             className={cn(
               "pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-[opacity,transform,color,background-color,border-color] duration-200",
-              showScrollTop ? "opacity-100" : "pointer-events-none -translate-y-1 opacity-0",
+              showScrollTop ? "opacity-100" : "invisible pointer-events-none -translate-y-1 opacity-0",
             )}
           >
             <ChevronUp className="h-4 w-4" />
