@@ -15,6 +15,9 @@ afterEach(() => {
 const STARTED_AT = 1_000_000;
 const ASSESSED_AT = 1_010_000;
 const ELIGIBLE_AT = STARTED_AT + 86_400;
+const USR_FROZEN_AT = Math.floor(Date.UTC(2026, 3, 27, 0, 0, 0) / 1000);
+const USR_FROZEN_EVENT_STARTED_AT = Math.floor(Date.UTC(2026, 3, 27, 12, 0, 0) / 1000);
+const USR_FROZEN_ELIGIBLE_AT = USR_FROZEN_EVENT_STARTED_AT + 86_400;
 
 function assessmentRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -300,6 +303,145 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(states["ddr2:eq-recovered"]).toBe("missed_lock_recovered");
     expect(states["ddr2:deferral-closed"]).toBe("missed_lock_recovered");
     expect(states["ddr2:terminal-unknown-time"]).toBe("missed_lock_terminal");
+  });
+
+  it("classifies terminal_before_prediction from tracked frozenAt evidence", async () => {
+    const incident = {
+      incidentKey: "ddr2:usr-frozen-before-lock",
+      eventId: 91,
+      currentEventId: 91,
+      stablecoinId: "usr-resolv",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: USR_FROZEN_EVENT_STARTED_AT,
+      eligibleAt: USR_FROZEN_ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 91,
+            stablecoin_id: "usr-resolv",
+            started_at: USR_FROZEN_EVENT_STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, USR_FROZEN_ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      sourceEventState: "terminal",
+      predictionState: "terminal_before_prediction",
+      coverageCause: "pre_lock_terminal",
+      terminalEvidenceAt: USR_FROZEN_AT,
+      terminalEvidenceInterval: { start: USR_FROZEN_AT, end: USR_FROZEN_AT + 86_400 },
+      terminalEvidencePrecision: "day",
+      terminalEvidenceSourceDate: "2026-04-27",
+    });
+    expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(1);
+    expect(snapshot.summary.headline.missedLockTerminalCount).toBe(0);
+  });
+
+  it("uses tape lifecycle rows as terminal evidence when registry evidence is absent", async () => {
+    const incident = {
+      incidentKey: "ddr2:tape-terminal-before-lock",
+      eventId: 92,
+      currentEventId: 92,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const terminalTs = STARTED_AT + 3600;
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 92,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+      {
+        match: "FROM tape_events",
+        rows: [
+          {
+            coin_id: "lusd-liquity",
+            type: "lifecycle.tracked.frozen",
+            ts: terminalTs * 1000,
+            payload_json: JSON.stringify({}),
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      sourceEventState: "terminal",
+      predictionState: "terminal_before_prediction",
+      terminalEvidenceAt: terminalTs,
+      terminalEvidenceInterval: null,
+      terminalEvidencePrecision: "unknown",
+    });
+    expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(1);
+  });
+
+  it("does not backdate overlapping day-precision terminal evidence before lock", async () => {
+    const startedAt = USR_FROZEN_AT - 12 * 3600;
+    const eligibleAt = startedAt + 86_400;
+    const incident = {
+      incidentKey: "ddr2:usr-frozen-overlaps-lock",
+      eventId: 93,
+      currentEventId: 93,
+      stablecoinId: "usr-resolv",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt,
+      eligibleAt,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          { id: 93, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: null, recovery_price: null },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, eligibleAt + 3600, undefined, { storeContracts: stores });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      predictionState: "missed_lock_terminal",
+      terminalEvidenceAt: null,
+      terminalEvidenceInterval: { start: USR_FROZEN_AT, end: USR_FROZEN_AT + 86_400 },
+      terminalEvidencePrecision: "day",
+    });
+    expect(snapshot.summary.headline.terminalBeforePredictionCount).toBe(0);
+    expect(snapshot.summary.headline.missedLockTerminalCount).toBe(1);
   });
 
   it("marks sealed unpublished rows as publication failed once the source closes", async () => {

@@ -77,20 +77,26 @@ export function computeDdrPublicRowHash(row: unknown): string {
   const rowRecord = recordValue(row);
   if (!rowRecord) throw new Error("DDR public row hash payload must be an object");
   const kind = rowRecord.kind;
-  if (kind !== "prediction" && kind !== "no_call") {
-    throw new Error("DDR public row hash is only defined for prediction and no_call rows");
+  if (kind !== "prediction" && kind !== "no_call" && kind !== "invalidated_prediction") {
+    throw new Error("DDR public row hash is only defined for prediction, no_call, and invalidated rows");
   }
-  const outcomeKey = kind === "prediction" ? "frozen" : "noCall";
-  const outcome = rowRecord[outcomeKey];
+  const originalKind = kind === "invalidated_prediction" ? rowRecord.originalKind : kind;
+  if (originalKind !== "prediction" && originalKind !== "no_call") {
+    throw new Error("DDR invalidated row is missing original prediction kind");
+  }
+  const outcomeKey = originalKind === "prediction" ? "frozen" : "noCall";
+  const outcome = kind === "invalidated_prediction"
+    ? rowRecord.originalOutcome ?? rowRecord[outcomeKey]
+    : rowRecord[outcomeKey];
   if (outcome == null) throw new Error(`DDR ${kind} row is missing ${outcomeKey} payload`);
 
   const payload = {
     ...canonicalBaseRowForHash(rowRecord),
-    kind,
+    kind: originalKind,
     prediction: canonicalPredictionForHash(rowRecord),
     [outcomeKey]: outcome,
   };
-  const domain = kind === "prediction" ? DDR_HASH_DOMAINS.publicPrediction : DDR_HASH_DOMAINS.publicNoCall;
+  const domain = originalKind === "prediction" ? DDR_HASH_DOMAINS.publicPrediction : DDR_HASH_DOMAINS.publicNoCall;
   return stableJsonHashV1(domain, payload);
 }
 

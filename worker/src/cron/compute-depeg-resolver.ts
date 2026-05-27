@@ -1,6 +1,8 @@
 import {
+  DDR_ERRATUM_REASON_VALUES,
   DDR_PUBLIC_WARNING,
   type DdrResponse,
+  type DdrPredictionErratum,
   type DdrRow,
 } from "@shared/types/depeg-resolver";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -134,6 +136,14 @@ interface QueryRowsResult<T> {
   error: string | null;
 }
 
+interface DdrPendingPromotionOutcomeRow {
+  stablecoin_id: string;
+  peg_type: string;
+  direction: string;
+  first_seen_at: number;
+  outcome_at: number;
+}
+
 type DdrDiagnosticResponse = Omit<DdrResponse, "rows"> & { rows: DdrRow[] };
 
 function abortIf(signal: AbortSignal | undefined, label: string): void {
@@ -203,6 +213,22 @@ function safeJsonObject(value: string): Record<string, unknown> {
 
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function stringValue(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function nullableStringValue(value: unknown, fallback: string | null): string | null {
+  return value == null || typeof value === "string" ? value ?? fallback : fallback;
+}
+
+function numberValue(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function nullableNumberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function publicPredictionIdOf(row: DdrSealedPublicPrediction | StoreDdrSealedPublicPrediction): number {
@@ -561,6 +587,118 @@ function computeLockTiming(incident: DdrCanonicalIncident, lockedAt: number): Dd
   return "late_freeze";
 }
 
+function pendingPromotionKey(input: {
+  stablecoin_id: string;
+  peg_type: string;
+  direction: string;
+  started_at: number;
+}): string {
+  return `${input.stablecoin_id}\u0000${input.peg_type}\u0000${input.direction}\u0000${input.started_at}`;
+}
+
+function maybePendingPromotedEvent(row: DdrEventDbRow): boolean {
+  return row.pending_reason != null || row.confirmation_sources != null;
+}
+
+async function loadPendingPromotionConfirmationTimes(
+  db: D1Database,
+  events: DdrEventDbRow[],
+): Promise<{ byEventId: Map<number, number>; error: string | null }> {
+  const candidates = events.filter(maybePendingPromotedEvent);
+  if (candidates.length === 0) return { byEventId: new Map(), error: null };
+
+  const stablecoinIds = [...new Set(candidates.map((row) => row.stablecoin_id))];
+  const firstSeenAtValues = [...new Set(candidates.map((row) => row.started_at))];
+  const result = await queryRows("depeg_pending_outcomes", () => db
+    .prepare(
+      `SELECT stablecoin_id, peg_type, direction, first_seen_at, outcome_at
+       FROM depeg_pending_outcomes
+       WHERE outcome = 'promoted'
+         AND stablecoin_id IN (${placeholders(stablecoinIds.length)})
+         AND first_seen_at IN (${placeholders(firstSeenAtValues.length)})`,
+    )
+    .bind(...stablecoinIds, ...firstSeenAtValues)
+    .all<DdrPendingPromotionOutcomeRow>());
+  if (result.error) return { byEventId: new Map(), error: result.error };
+
+  const outcomeByKey = new Map<string, number>();
+  for (const row of result.rows) {
+    const key = pendingPromotionKey({
+      stablecoin_id: row.stablecoin_id,
+      peg_type: row.peg_type,
+      direction: row.direction,
+      started_at: row.first_seen_at,
+    });
+    const current = outcomeByKey.get(key);
+    if (current == null || row.outcome_at > current) outcomeByKey.set(key, row.outcome_at);
+  }
+
+  const byEventId = new Map<number, number>();
+  for (const event of candidates) {
+    const confirmationAt = outcomeByKey.get(pendingPromotionKey({
+      stablecoin_id: event.stablecoin_id,
+      peg_type: event.peg_type,
+      direction: event.direction,
+      started_at: event.started_at,
+    }));
+    if (confirmationAt != null) byEventId.set(event.id, confirmationAt);
+  }
+  return { byEventId, error: null };
+}
+
+function applyConfirmationTimes(
+  incidentsByEventId: Map<number, DdrCanonicalIncident>,
+  confirmedAtByEventId: Map<number, number>,
+): void {
+  for (const [eventId, confirmedAt] of confirmedAtByEventId) {
+    const incident = incidentsByEventId.get(eventId);
+    if (!incident) continue;
+    incidentsByEventId.set(eventId, { ...incident, confirmedAt });
+    incidentsByEventId.set(incident.currentEventId, { ...incident, confirmedAt });
+  }
+}
+
+async function recordConfirmedSeenOpportunities(input: {
+  stores: DdrV2StoreContracts | null | undefined;
+  db: D1Database;
+  activeRows: DdrEventDbRow[];
+  incidentsByEventId: Map<number, DdrCanonicalIncident>;
+  confirmedAtByEventId: Map<number, number>;
+  ddrRunId: string;
+  runAt: number;
+  syncCapabilities: Record<string, unknown>;
+}): Promise<number> {
+  if (!input.stores || input.confirmedAtByEventId.size === 0) return 0;
+
+  let count = 0;
+  for (const row of input.activeRows) {
+    const confirmedAt = input.confirmedAtByEventId.get(row.id);
+    if (confirmedAt == null) continue;
+    const incident = input.incidentsByEventId.get(row.id) ?? fallbackIncidentForEvent(row);
+    if (!incident.policyUniverseIncluded) continue;
+    if (confirmedAt <= incident.eligibleAt) continue;
+    if (incident.lockState?.lastState && incident.lockState.lastState !== "pending_lock" && incident.lockState.lastState !== "lock_deferred") {
+      continue;
+    }
+    await input.stores.recordLockDeferral(input.db, {
+      incidentKey: incident.incidentKey,
+      eventId: row.id,
+      runId: input.ddrRunId,
+      runAt: input.runAt,
+      eligibleAt: incident.eligibleAt,
+      predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+      healthStatus: "healthy",
+      action: "confirmed_seen",
+      reason: "pending-outcome-promoted",
+      confirmationAt: confirmedAt,
+      outcomeAt: confirmedAt,
+      syncCapabilities: input.syncCapabilities,
+    });
+    count += 1;
+  }
+  return count;
+}
+
 function buildFrozenDuration(row: DdrRow, lockedAt: number): Record<string, unknown> {
   const medianSec = row.duration.medianSec ?? null;
   const iqrSec = row.duration.iqrSec ?? null;
@@ -665,15 +803,136 @@ function buildLiveOverlay(row: DdrRow, nowSec: number): Record<string, unknown> 
   };
 }
 
+const DDR_ERRATUM_REASONS = new Set<string>(DDR_ERRATUM_REASON_VALUES);
+
+function normalizeErratumRecord(row: Record<string, unknown>): DdrPredictionErratum | null {
+  const id = nullableNumberValue(row.id);
+  const publicPredictionId = nullableNumberValue(row.publicPredictionId ?? row.public_prediction_id);
+  const eventId = nullableNumberValue(row.eventId ?? row.event_id);
+  const assessmentId = nullableNumberValue(row.assessmentId ?? row.assessment_id);
+  const createdAt = nullableNumberValue(row.createdAt ?? row.created_at);
+  const reason = row.reason;
+  const incidentKey = row.incidentKey ?? row.incident_key;
+  const operatorNote = row.operatorNote ?? row.operator_note;
+  const createdBy = row.createdBy ?? row.created_by;
+  if (
+    id == null ||
+    id <= 0 ||
+    publicPredictionId == null ||
+    publicPredictionId <= 0 ||
+    eventId == null ||
+    eventId <= 0 ||
+    assessmentId == null ||
+    assessmentId <= 0 ||
+    createdAt == null ||
+    createdAt <= 0 ||
+    typeof reason !== "string" ||
+    !DDR_ERRATUM_REASONS.has(reason) ||
+    typeof incidentKey !== "string" ||
+    typeof operatorNote !== "string" ||
+    typeof createdBy !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    state: "invalidated",
+    publicPredictionId,
+    incidentKey,
+    eventId,
+    assessmentId,
+    reason: reason as DdrPredictionErratum["reason"],
+    createdAt,
+    operatorNote,
+    rowHashBefore: nullableStringValue(row.rowHashBefore ?? row.row_hash_before, null),
+    replacementAssessmentId: nullableNumberValue(row.replacementAssessmentId ?? row.replacement_assessment_id),
+    replacementRowHash: nullableStringValue(row.replacementRowHash ?? row.replacement_row_hash, null),
+    createdBy,
+  };
+}
+
+function sortErrata(rows: DdrPredictionErratum[]): DdrPredictionErratum[] {
+  return [...rows].sort((left, right) => right.createdAt - left.createdAt || right.id - left.id);
+}
+
+function groupErrata(input: readonly DdrPredictionErratum[]): {
+  byPublicPredictionId: Map<number, DdrPredictionErratum[]>;
+  byIncidentKey: Map<string, DdrPredictionErratum[]>;
+} {
+  const byPublicPredictionId = new Map<number, DdrPredictionErratum[]>();
+  const byIncidentKey = new Map<string, DdrPredictionErratum[]>();
+  for (const erratum of input) {
+    byPublicPredictionId.set(erratum.publicPredictionId, sortErrata([...(byPublicPredictionId.get(erratum.publicPredictionId) ?? []), erratum]));
+    byIncidentKey.set(erratum.incidentKey, sortErrata([...(byIncidentKey.get(erratum.incidentKey) ?? []), erratum]));
+  }
+  return { byPublicPredictionId, byIncidentKey };
+}
+
+function errataForSealed(input: {
+  sealed: DdrSealedPublicPrediction;
+  byPublicPredictionId: Map<number, DdrPredictionErratum[]>;
+  byIncidentKey: Map<string, DdrPredictionErratum[]>;
+}): DdrPredictionErratum[] {
+  const publicPredictionId = publicPredictionIdOf(input.sealed);
+  const byId = input.byPublicPredictionId.get(publicPredictionId) ?? [];
+  const byIncident = input.byIncidentKey.get(input.sealed.incidentKey) ?? [];
+  const byErratumId = new Map<number, DdrPredictionErratum>();
+  for (const erratum of [...byId, ...byIncident]) byErratumId.set(erratum.id, erratum);
+  return sortErrata([...byErratumId.values()]);
+}
+
+async function loadErrataForSealedPredictions(input: {
+  stores: DdrV2StoreContracts | null | undefined;
+  db: D1Database;
+  sealed: DdrSealedPublicPrediction[];
+}): Promise<{ errata: DdrPredictionErratum[]; error: string | null }> {
+  if (!input.stores?.loadPredictionErrata || input.sealed.length === 0) return { errata: [], error: null };
+  try {
+    const rows = await input.stores.loadPredictionErrata(input.db, {
+      publicPredictionIds: input.sealed.map(publicPredictionIdOf),
+      incidentKeys: input.sealed.map((sealed) => sealed.incidentKey),
+    });
+    return {
+      errata: sortErrata(rows.map(normalizeErratumRecord).filter((row): row is DdrPredictionErratum => row != null)),
+      error: null,
+    };
+  } catch (error) {
+    return { errata: [], error: formatDdrrFailure(error) };
+  }
+}
+
+function buildBasePublicRowFromSealed(
+  sealed: DdrSealedPublicPrediction,
+  fallback: Record<string, unknown>,
+): Record<string, unknown> {
+  const payload = sealed.sealedPayload;
+  const fallbackDirection = fallback.direction === "above" || fallback.direction === "below" ? fallback.direction : "below";
+  return {
+    stablecoinId: stringValue(payload.stablecoinId, stringValue(fallback.stablecoinId, "")),
+    symbol: stringValue(payload.symbol, stringValue(fallback.symbol, "")),
+    name: stringValue(payload.name, stringValue(fallback.name, "")),
+    pegCurrency: stringValue(payload.pegCurrency, stringValue(fallback.pegCurrency, "USD")),
+    governance: stringValue(payload.governance, stringValue(fallback.governance, "unknown")),
+    status: nullableStringValue(payload.status, nullableStringValue(fallback.status, null)),
+    eventId: numberValue(payload.eventId, sealed.eventId),
+    incidentKey: sealed.incidentKey,
+    startedAt: numberValue(payload.startedAt, numberValue(fallback.startedAt, 0)),
+    direction: payload.direction === "above" || payload.direction === "below" ? payload.direction : fallbackDirection,
+  };
+}
+
 function buildPredictionMeta(input: {
-  state: "pending_lock" | "lock_deferred" | "publication_retry_pending" | "frozen" | "no_call";
+  state: "pending_lock" | "lock_deferred" | "publication_retry_pending" | "frozen" | "no_call" | "invalidated";
   incident: DdrCanonicalIncident;
   publicPredictionId: number | null;
   sealed: DdrSealedPublicPrediction | null;
   publication: DdrFirstPublicationMembership | null;
   deferralReason: string | null;
   modelAsOf: number;
+  errataHistory?: DdrPredictionErratum[];
 }): Record<string, unknown> {
+  const errataHistory = input.errataHistory ?? [];
   return {
     state: input.state,
     publicPredictionId: input.publicPredictionId,
@@ -692,15 +951,15 @@ function buildPredictionMeta(input: {
     snapshotGeneration: input.publication?.snapshotGeneration ?? null,
     eventAgeAtLockSec: input.sealed?.eventAgeAtLockSec ?? null,
     lockTiming: input.sealed?.lockTiming ?? null,
-    source: input.sealed ? "public_prediction" : "pending",
+    source: input.state === "invalidated" ? "erratum" : input.sealed ? "public_prediction" : "pending",
     deferralReason: input.deferralReason,
     deferralCount: input.incident.lockState?.deferralCount ?? null,
     rowHash: input.sealed?.rowHash ?? null,
     lineage: null,
     modelAsOf: input.modelAsOf,
-    latestErratum: null,
-    errataCount: 0,
-    errataHistory: [],
+    latestErratum: errataHistory[0] ?? null,
+    errataCount: errataHistory.length,
+    errataHistory,
   };
 }
 
@@ -734,10 +993,12 @@ function buildPublicRows(input: {
   sealed: DdrSealedPublicPrediction[];
   firstPublication: DdrFirstPublicationMembership[];
   manifest: DdrPublicationManifest | null;
+  errata: DdrPredictionErratum[];
   nowSec: number;
   storageAvailable: boolean;
 }): DdrResponse["rows"] {
   const sealedByKey = sealedByIncident(input.sealed);
+  const errata = groupErrata(input.errata);
   const publicationById = publicationBySealedId({
     firstPublication: input.firstPublication,
     manifest: input.manifest,
@@ -800,8 +1061,41 @@ function buildPublicRows(input: {
       };
     }
 
+    const errataHistory = errataForSealed({
+      sealed,
+      byPublicPredictionId: errata.byPublicPredictionId,
+      byIncidentKey: errata.byIncidentKey,
+    });
+
     if (sealed.outcomeKind === "no_call") {
       const sealedNoCall = recordValue(sealed.sealedPayload.noCall);
+      const noCall = sealedNoCall ?? {
+        lockedAt: sealed.lockedAt,
+        eventAgeAtLockSec: sealed.eventAgeAtLockSec,
+        missingReasons: row.resolution.insufficientReasons ?? [],
+        relatedContext: row.relatedContext,
+      };
+      if (errataHistory.length > 0) {
+        return {
+          ...buildBasePublicRowFromSealed(sealed, base),
+          kind: "invalidated_prediction",
+          prediction: buildPredictionMeta({
+            state: "invalidated",
+            incident,
+            publicPredictionId,
+            sealed,
+            publication,
+            deferralReason: null,
+            modelAsOf: sealed.lockedAt,
+            errataHistory,
+          }),
+          originalKind: "no_call",
+          originalOutcome: noCall,
+          noCall,
+          frozen: null,
+          live,
+        };
+      }
       return {
         ...base,
         kind: "no_call",
@@ -814,18 +1108,40 @@ function buildPublicRows(input: {
           deferralReason: null,
           modelAsOf: sealed.lockedAt,
         }),
-        noCall: sealedNoCall ?? {
-          lockedAt: sealed.lockedAt,
-          eventAgeAtLockSec: sealed.eventAgeAtLockSec,
-          missingReasons: row.resolution.insufficientReasons ?? [],
-          relatedContext: row.relatedContext,
-        },
+        noCall,
         frozen: null,
         live,
       };
     }
 
     const sealedFrozen = recordValue(sealed.sealedPayload.frozen);
+    const frozen = sealedFrozen ?? {
+      resolution: row.resolution,
+      duration: buildFrozenDuration(row, sealed.lockedAt),
+      relatedContext: row.relatedContext,
+      sourceRow: row,
+    };
+    if (errataHistory.length > 0) {
+      return {
+        ...buildBasePublicRowFromSealed(sealed, base),
+        kind: "invalidated_prediction",
+        prediction: buildPredictionMeta({
+          state: "invalidated",
+          incident,
+          publicPredictionId,
+          sealed,
+          publication,
+          deferralReason: null,
+          modelAsOf: sealed.lockedAt,
+          errataHistory,
+        }),
+        originalKind: "prediction",
+        originalOutcome: frozen,
+        frozen,
+        noCall: null,
+        live,
+      };
+    }
     return {
       ...base,
       kind: "prediction",
@@ -838,12 +1154,7 @@ function buildPublicRows(input: {
         deferralReason: null,
         modelAsOf: sealed.lockedAt,
       }),
-      frozen: sealedFrozen ?? {
-        resolution: row.resolution,
-        duration: buildFrozenDuration(row, sealed.lockedAt),
-        relatedContext: row.relatedContext,
-        sourceRow: row,
-      },
+      frozen,
       live,
     };
   }) as DdrResponse["rows"];
@@ -855,6 +1166,7 @@ function buildDdrResponse(input: {
   sealed: DdrSealedPublicPrediction[];
   firstPublication: DdrFirstPublicationMembership[];
   manifest: DdrPublicationManifest | null;
+  errata: DdrPredictionErratum[];
   lineage: DdrResponse["_meta"]["lineage"];
   nowSec: number;
   storageAvailable: boolean;
@@ -1188,6 +1500,7 @@ function buildV2PublicationBasePayload(input: {
   incidentsByEventId: Map<number, DdrCanonicalIncident>;
   sealed: DdrSealedPublicPrediction[];
   firstPublication: DdrFirstPublicationMembership[];
+  errata: DdrPredictionErratum[];
   snapshotToken: string;
   nowSec: number;
 }): Record<string, unknown> {
@@ -1226,6 +1539,7 @@ function buildV2PublicationBasePayload(input: {
       sealed: input.sealed,
       firstPublication: input.firstPublication,
       manifest: null,
+      errata: input.errata,
       nowSec: input.nowSec,
       storageAvailable: true,
     }),
@@ -1241,6 +1555,7 @@ async function writePublicationBeforeCache(input: {
   incidentsByEventId: Map<number, DdrCanonicalIncident>;
   sealed: DdrSealedPublicPrediction[];
   firstPublication: DdrFirstPublicationMembership[];
+  errata: DdrPredictionErratum[];
   ddrRunId: string;
   nowSec: number;
 }): Promise<{
@@ -1274,6 +1589,7 @@ async function writePublicationBeforeCache(input: {
     incidentsByEventId: input.incidentsByEventId,
     sealed: input.sealed,
     firstPublication,
+    errata: input.errata,
     snapshotToken,
     nowSec: input.nowSec,
   });
@@ -1376,6 +1692,9 @@ export async function computeDepegResolver(
   let v2PendingLocks = 0;
   let v2LockedPredictions = 0;
   let v2LockedNoCalls = 0;
+  let v2ConfirmedSeen = 0;
+  let v2ConfirmationTimingError: string | null = null;
+  let v2ErrataLoadError: string | null = null;
   let v2PublicationAttempted = false;
   let v2PublicationSucceeded = false;
   let v2PublicationError: string | null = null;
@@ -1409,6 +1728,10 @@ export async function computeDepegResolver(
       }),
     };
   }
+
+  const confirmationTiming = await loadPendingPromotionConfirmationTimes(db, activeRows);
+  v2ConfirmationTimingError = confirmationTiming.error;
+  applyConfirmationTimes(incidentsByEventId, confirmationTiming.byEventId);
 
   if (activeRows.length > 0) {
     const currentDeviation = await buildCurrentDeviationMap(db, nowSec);
@@ -1572,6 +1895,17 @@ export async function computeDepegResolver(
 
     abortIf(options.signal, "compute-depeg-resolver");
 
+    v2ConfirmedSeen = await recordConfirmedSeenOpportunities({
+      stores: storeContracts,
+      db,
+      activeRows,
+      incidentsByEventId,
+      confirmedAtByEventId: confirmationTiming.byEventId,
+      ddrRunId: options.ddrRunId,
+      runAt: options.runAt,
+      syncCapabilities: options.syncCapabilities,
+    });
+
     rows = active.map((ev) => {
       const meta = TRACKED_META_BY_ID.get(ev.stablecoinId);
       const coin = meta ? toStructural(meta) : fallbackStructural(ev.stablecoinId, ev.symbol, ev.pegType);
@@ -1665,6 +1999,13 @@ export async function computeDepegResolver(
   const refreshedPublicationState = storeContracts
     ? await loadSealedAndPublicationState({ stores: storeContracts, db, incidentKeys: activeIncidentKeys })
     : { sealed: lockResult.sealed, firstPublication: publicationState.firstPublication };
+  const errataState = await loadErrataForSealedPredictions({
+    stores: storeContracts,
+    db,
+    sealed: refreshedPublicationState.sealed,
+  });
+  v2ErrataLoadError = errataState.error;
+
   const publication = await writePublicationBeforeCache({
     stores: storeContracts,
     db,
@@ -1672,6 +2013,7 @@ export async function computeDepegResolver(
     incidentsByEventId,
     sealed: refreshedPublicationState.sealed,
     firstPublication: refreshedPublicationState.firstPublication,
+    errata: errataState.errata,
     ddrRunId: options.ddrRunId,
     nowSec,
   });
@@ -1685,6 +2027,7 @@ export async function computeDepegResolver(
     sealed: refreshedPublicationState.sealed,
     firstPublication: publication.firstPublication,
     manifest: publication.manifest,
+    errata: errataState.errata,
     lineage,
     nowSec,
     storageAvailable: storeContracts != null,
@@ -1715,9 +2058,12 @@ export async function computeDepegResolver(
       v2PendingLocks,
       v2LockedPredictions,
       v2LockedNoCalls,
+      v2ConfirmedSeen,
+      v2ConfirmationTimingError,
       v2PublicationAttempted,
       v2PublicationSucceeded,
       v2PublicationError,
+      v2ErrataLoadError,
     }),
   };
 }

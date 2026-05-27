@@ -68,45 +68,54 @@ describe("computeDepegResolver", () => {
         prediction: {},
       },
     };
-    return {
-      sealed,
-      stores: {
-        ensureCanonicalIncidents: vi.fn(async () => [
-          {
-            incidentKey,
-            eventId: 42,
-            currentEventId: 42,
-            stablecoinId: "lane-b-test",
-            pegCurrency: "USD",
-            direction: "below" as const,
-            startedAt: NOW_SEC - 90_000,
-            eligibleAt: NOW_SEC - 3_600,
-            policyUniverseIncluded: true,
-            rolloutActiveAtEnablement: true,
-            confirmedAt: null,
-            lockState: null,
-          },
-        ]),
-        recordLockDeferral: vi.fn(async () => undefined),
-        sealPublicPrediction: vi.fn(async () => {
-          throw new Error("unexpected prediction seal");
-        }),
-        sealPublicNoCall: vi.fn(async () => sealed),
-        loadSealedPublicPredictions: vi.fn()
-          .mockResolvedValueOnce([])
-          .mockResolvedValueOnce([sealed]),
-        loadFirstPublicationMembership: vi.fn(async () => []),
-        writePublicationManifest: vi.fn(async () => ({
-          snapshotToken: "ddr-public-1",
-          snapshotGeneration: 2,
-          snapshotSequence: 1,
-          publishedAt: NOW_SEC,
-          basePayloadHash: "b".repeat(64),
-          publicPredictionIds: [7],
-          firstPublishedPublicPredictionIds: [7],
-        })),
-      } satisfies DdrV2StoreContracts,
+    const stores: DdrV2StoreContracts = {
+      ensureCanonicalIncidents: vi.fn(async () => [
+        {
+          incidentKey,
+          eventId: 42,
+          currentEventId: 42,
+          stablecoinId: "lane-b-test",
+          pegCurrency: "USD",
+          direction: "below" as const,
+          startedAt: NOW_SEC - 90_000,
+          eligibleAt: NOW_SEC - 3_600,
+          policyUniverseIncluded: true,
+          rolloutActiveAtEnablement: true,
+          confirmedAt: null,
+          lockState: null,
+        },
+      ]),
+      recordLockDeferral: vi.fn(async () => undefined),
+      sealPublicPrediction: vi.fn(async () => {
+        throw new Error("unexpected prediction seal");
+      }),
+      sealPublicNoCall: vi.fn(async (_db, input) => ({
+        ...sealed,
+        lockedAt: input.lockedAt,
+        eventAgeAtLockSec: input.eventAgeAtLockSec,
+        lockTiming: input.lockTiming,
+        sealedPayload: input.sealedPayload,
+      })),
+      loadSealedPublicPredictions: vi.fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([sealed]),
+      loadFirstPublicationMembership: vi.fn(async (): Promise<
+        Awaited<ReturnType<DdrV2StoreContracts["loadFirstPublicationMembership"]>>
+      > => []),
+      loadPredictionErrata: vi.fn(async (): Promise<
+        Awaited<ReturnType<NonNullable<DdrV2StoreContracts["loadPredictionErrata"]>>>
+      > => []),
+      writePublicationManifest: vi.fn(async () => ({
+        snapshotToken: "ddr-public-1",
+        snapshotGeneration: 2,
+        snapshotSequence: 1,
+        publishedAt: NOW_SEC,
+        basePayloadHash: "b".repeat(64),
+        publicPredictionIds: [7],
+        firstPublishedPublicPredictionIds: [7],
+      })),
     };
+    return { sealed, stores };
   }
 
   it("excludes terminal lifecycle events from the live DDR snapshot", async () => {
@@ -215,5 +224,152 @@ describe("computeDepegResolver", () => {
     expect(stores.writePublicationManifest).toHaveBeenCalledTimes(1);
     expect(metadata.v2LockedNoCalls).toBe(1);
     expect(metadata.v2PublicationSucceeded).toBe(true);
+  });
+
+  it("projects first-published sealed no-calls as invalidated when errata exist", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores, sealed } = storesFor();
+    stores.loadSealedPublicPredictions = vi.fn(async () => [sealed]);
+    stores.loadFirstPublicationMembership = vi.fn(async () => [
+      {
+        publicPredictionId: 7,
+        incidentKey: sealed.incidentKey,
+        snapshotToken: "ddr-public-original",
+        snapshotGeneration: 2,
+        publishedAt: NOW_SEC - 600,
+        firstPublished: true,
+      },
+    ]);
+    stores.loadPredictionErrata = vi.fn(async () => [
+      {
+        id: 99,
+        publicPredictionId: 7,
+        incidentKey: sealed.incidentKey,
+        eventId: 42,
+        assessmentId: 70,
+        reason: "event_identity_error",
+        operatorNote: "Source event was repaired after first publication",
+        replacementAssessmentId: null,
+        replacementRowHash: null,
+        rowHashBefore: sealed.rowHash,
+        createdAt: NOW_SEC - 120,
+        createdBy: "operator",
+      },
+    ]);
+    let manifestBasePayload: unknown = null;
+    stores.writePublicationManifest = vi.fn(async (_db, input) => {
+      manifestBasePayload = input.basePayload;
+      return {
+        snapshotToken: "ddr-public-1",
+        snapshotGeneration: 2,
+        snapshotSequence: 1,
+        publishedAt: NOW_SEC,
+        basePayloadHash: "b".repeat(64),
+        publicPredictionIds: [7],
+        firstPublishedPublicPredictionIds: [],
+      };
+    });
+    const db = mockD1([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+    const ddrCacheWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot");
+    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+
+    expect(payload.rows[0]).toMatchObject({
+      kind: "invalidated_prediction",
+      originalKind: "no_call",
+      prediction: {
+        state: "invalidated",
+        publicPredictionId: 7,
+        publishedAt: NOW_SEC - 600,
+        publicationSnapshotToken: "ddr-public-original",
+        latestErratum: {
+          id: 99,
+          reason: "event_identity_error",
+          operatorNote: "Source event was repaired after first publication",
+        },
+        errataCount: 1,
+      },
+      frozen: null,
+    });
+    expect(payload.rows[0].noCall).toBeTruthy();
+    expect(payload.rows[0].prediction.errataHistory).toHaveLength(1);
+    expect((manifestBasePayload as { rows?: Array<{ kind?: string }> }).rows?.[0]?.kind).toBe("invalidated_prediction");
+  });
+
+  it("uses durable pending promotion outcome time for late confirmation locks", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent({
+      confirmation_sources: "dex:curve+dex:uniswap",
+      pending_reason: "large-cap",
+    });
+    const confirmationAt = NOW_SEC - 1_200;
+    const { stores } = storesFor();
+    const db = mockD1([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      {
+        match: "FROM depeg_pending_outcomes",
+        rows: [
+          {
+            stablecoin_id: "lane-b-test",
+            peg_type: "peggedUSD",
+            direction: "below",
+            first_seen_at: event.started_at,
+            outcome_at: confirmationAt,
+          },
+        ],
+      },
+      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+
+    expect(stores.recordLockDeferral).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        action: "confirmed_seen",
+        confirmationAt,
+        outcomeAt: confirmationAt,
+        reason: "pending-outcome-promoted",
+      }),
+    );
+    expect(stores.sealPublicNoCall).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        lockTiming: "late_confirmation",
+      }),
+    );
   });
 });

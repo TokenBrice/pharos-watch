@@ -38,6 +38,22 @@ class AuditMutationCommitError extends Error {
   }
 }
 
+class Ddrv2SealedRepairRequiredError extends Error {
+  constructor(
+    readonly operation: string,
+    readonly conflicts: DdrSealedEventConflict[],
+  ) {
+    super("DDRv2 sealed repair required");
+    this.name = "Ddrv2SealedRepairRequiredError";
+  }
+}
+
+interface DdrSealedEventConflict {
+  eventId: number;
+  incidentKey: string;
+  publicPredictionId: number;
+}
+
 interface AuditedEvent {
   id: number;
   symbol: string;
@@ -261,6 +277,68 @@ async function loadAllDepegEvents(db: D1Database): Promise<DepegRow[]> {
     )
     .all<DepegRow>();
   return allEvents.results ?? [];
+}
+
+async function loadSealedDdrEventConflicts(
+  db: D1Database,
+  eventIds: readonly number[],
+): Promise<DdrSealedEventConflict[]> {
+  const uniqueIds = [...new Set(eventIds)].filter((id) => Number.isSafeInteger(id) && id > 0);
+  if (uniqueIds.length === 0) return [];
+
+  const idClause = buildInClause(uniqueIds);
+  const rows = await db
+    .prepare(
+      `SELECT l.event_id AS event_id,
+              l.incident_key AS incident_key,
+              p.id AS public_prediction_id
+       FROM depeg_resolver_incident_event_links l
+       JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
+       WHERE l.event_id IN (${idClause.sql})
+       ORDER BY l.event_id`,
+    )
+    .bind(...idClause.binds)
+    .all<{ event_id: number; incident_key: string; public_prediction_id: number }>();
+
+  return (rows.results ?? []).map((row) => ({
+    eventId: row.event_id,
+    incidentKey: row.incident_key,
+    publicPredictionId: row.public_prediction_id,
+  }));
+}
+
+function ddrv2SealedRepairResponse(operation: string, conflicts: DdrSealedEventConflict[]): Response {
+  return jsonResponse(
+    {
+      error: "DDRv2 sealed repair required",
+      message:
+        "This endpoint will not directly mutate sealed depeg_events. Create/consume an append-only DDRv2 repair authorization with the required lineage and errata, then run a dedicated repair path for the sealed incident.",
+      operation,
+      conflicts,
+    },
+    { status: 409, noStore: true },
+  );
+}
+
+async function rejectSealedDdrEventMutation(
+  db: D1Database,
+  eventIds: readonly number[],
+  operation: string,
+): Promise<Response | null> {
+  const conflicts = await loadSealedDdrEventConflicts(db, eventIds);
+  if (conflicts.length === 0) return null;
+  return ddrv2SealedRepairResponse(operation, conflicts);
+}
+
+async function assertNoSealedDdrEventMutation(
+  db: D1Database,
+  eventIds: readonly number[],
+  operation: string,
+): Promise<void> {
+  const conflicts = await loadSealedDdrEventConflicts(db, eventIds);
+  if (conflicts.length > 0) {
+    throw new Ddrv2SealedRepairRequiredError(operation, conflicts);
+  }
 }
 
 function toDeletedEventSummary(event: DepegRow): { id: number; symbol: string; startedAt: number; peakBps: number } {
@@ -601,6 +679,13 @@ async function executeDirectDelete(
     });
   }
 
+  const sealedMutationResponse = await rejectSealedDdrEventMutation(
+    db,
+    toDelete.map((event) => event.id),
+    "audit-depeg-history:direct-delete",
+  );
+  if (sealedMutationResponse) return sealedMutationResponse;
+
   const mutationPlan = planDirectDelete(db, toDelete);
   const remainingDepegEvents = await loadRemainingDepegEvents(db, toDelete.map((event) => event.id));
   const daysRecomputed = await commitAuditMutation(
@@ -693,6 +778,13 @@ async function executeSyntheticSplitRepair(
     return jsonResponse(result);
   }
 
+  const sealedMutationResponse = await rejectSealedDdrEventMutation(
+    db,
+    paginatedGroups.flatMap((group) => group.map((event) => event.id)),
+    "audit-depeg-history:synthetic-splits",
+  );
+  if (sealedMutationResponse) return sealedMutationResponse;
+
   const mutationPlan = planSyntheticSplitRepair(db, paginatedGroups, Math.floor(Date.now() / 1000));
   result.repairedGroups = mutationPlan.summaries;
   result.repairedEventCount = mutationPlan.repairedEventCount;
@@ -739,6 +831,13 @@ async function executeContradictoryRecoveryRepair(
   if (request.dryRun || paginatedCandidates.length === 0) {
     return jsonResponse(result);
   }
+
+  const sealedMutationResponse = await rejectSealedDdrEventMutation(
+    db,
+    paginatedCandidates.map((candidate) => candidate.id),
+    "audit-depeg-history:contradictory-recovery-price",
+  );
+  if (sealedMutationResponse) return sealedMutationResponse;
 
   const statements = paginatedCandidates.map((candidate) =>
     db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
@@ -800,6 +899,9 @@ export async function handleAuditDepegHistoryTrusted(
 
       return jsonResponse(result);
     } catch (error) {
+      if (error instanceof Ddrv2SealedRepairRequiredError) {
+        return ddrv2SealedRepairResponse(error.operation, error.conflicts);
+      }
       if (error instanceof AuditMutationCommitError) {
         return errorResponse(500, error.message);
       }
@@ -883,6 +985,7 @@ export async function auditEvents(
 
   const affectedDays = new Set<number>();
   const provenanceStatements: D1PreparedStatement[] = [];
+  const invalidatingProvenanceEventIds: number[] = [];
 
   for (const event of paginatedEvents) {
     const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
@@ -958,6 +1061,7 @@ export async function auditEvents(
       if (validatedPrices.length === 0) {
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", Math.floor(Date.now() / 1000)));
+          invalidatingProvenanceEventIds.push(event.id);
         }
         result.auditedEvents.push({
           id: event.id,
@@ -1003,6 +1107,7 @@ export async function auditEvents(
       } else if (maxOppositeDirectionBps >= falsePositiveBar) {
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", Math.floor(Date.now() / 1000)));
+          invalidatingProvenanceEventIds.push(event.id);
         }
         result.auditedEvents.push({
           id: event.id,
@@ -1019,6 +1124,7 @@ export async function auditEvents(
         result.falsePositivesFound++;
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", Math.floor(Date.now() / 1000)));
+          invalidatingProvenanceEventIds.push(event.id);
         }
         result.auditedEvents.push({
           id: event.id,
@@ -1045,6 +1151,11 @@ export async function auditEvents(
   }
 
   if (!dryRun && provenanceStatements.length > 0) {
+    await assertNoSealedDdrEventMutation(
+      db,
+      invalidatingProvenanceEventIds,
+      "audit-depeg-history:provenance-invalidation",
+    );
     const remainingDepegEvents = await loadRemainingDepegEvents(db);
     result.daysRecomputed = await commitAuditMutation(
       db,

@@ -70,5 +70,33 @@ describe("stableJsonStringifyV1", () => {
     }, hash);
 
     expect(computeDdrPublicRowHash(published)).toBe(hash);
+    expect(computeDdrPublicRowHash({
+      ...published,
+      kind: "invalidated_prediction",
+      originalKind: "prediction",
+      originalOutcome: published.frozen,
+      prediction: {
+        ...published.prediction,
+        state: "invalidated",
+        source: "erratum",
+        latestErratum: {
+          state: "invalidated",
+          id: 1,
+          publicPredictionId: 7,
+          incidentKey: "ddr2:test",
+          eventId: 1,
+          assessmentId: 9,
+          reason: "input_corruption",
+          createdAt: 400,
+          operatorNote: "corrected input",
+          rowHashBefore: hash,
+          replacementAssessmentId: null,
+          replacementRowHash: null,
+          createdBy: "operator",
+        },
+        errataCount: 1,
+        errataHistory: [],
+      },
+    })).toBe(hash);
   });
 });

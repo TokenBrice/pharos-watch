@@ -168,6 +168,33 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(body.deletedEvents.map((event) => event.id)).toEqual([1, 2]);
   });
 
+  it("blocks direct deletes against sealed DDRv2 events", async () => {
+    const rows = makeSyntheticSplitRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      {
+        match: "FROM depeg_resolver_incident_event_links l",
+        rows: [{
+          event_id: 1,
+          incident_key: "ddr2:1234567890abcdef1234567890ab",
+          public_prediction_id: 77,
+        }],
+      },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?delete=1", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string; operation: string; conflicts: Array<{ eventId: number }> };
+    expect(body.error).toBe("DDRv2 sealed repair required");
+    expect(body.operation).toBe("audit-depeg-history:direct-delete");
+    expect(body.conflicts).toEqual([expect.objectContaining({ eventId: 1 })]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+  });
+
   it("returns a clear 500 when direct delete recompute commit fails", async () => {
     const rows = makeSyntheticSplitRows();
     const db = mockD1([
@@ -260,6 +287,34 @@ describe("handleAuditDepegHistory method safety", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("UPDATE depeg_events SET started_at"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?") && entry.binds[0] === 2)).toBe(true);
+  });
+
+  it("blocks synthetic split repairs that would mutate sealed DDRv2 events", async () => {
+    const rows = makeSyntheticSplitRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
+      {
+        match: "FROM depeg_resolver_incident_event_links l",
+        rows: [{
+          event_id: 2,
+          incident_key: "ddr2:1234567890abcdef1234567890ab",
+          public_prediction_id: 78,
+        }],
+      },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?repair=synthetic-splits", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { operation: string; conflicts: Array<{ eventId: number }> };
+    expect(body.operation).toBe("audit-depeg-history:synthetic-splits");
+    expect(body.conflicts).toEqual([expect.objectContaining({ eventId: 2 })]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE depeg_events SET started_at"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?"))).toBe(false);
   });
 
   it("surfaces backfill-to-live handoff repair candidates in dry-run mode", async () => {
@@ -387,6 +442,32 @@ describe("handleAuditDepegHistory method safety", () => {
     ).toBe(true);
   });
 
+  it("blocks contradictory recovery-price repairs against sealed DDRv2 events", async () => {
+    const rows = makeContradictoryRecoveryRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      {
+        match: "FROM depeg_resolver_incident_event_links l",
+        rows: [{
+          event_id: 21,
+          incident_key: "ddr2:1234567890abcdef1234567890ab",
+          public_prediction_id: 79,
+        }],
+      },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { operation: string; conflicts: Array<{ eventId: number }> };
+    expect(body.operation).toBe("audit-depeg-history:contradictory-recovery-price");
+    expect(body.conflicts).toEqual([expect.objectContaining({ eventId: 21 })]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE depeg_events SET recovery_price = NULL"))).toBe(false);
+  });
+
   it("does NOT delete a depeg event when CG prices fail live-pipeline validation", async () => {
     fetchWithRetryMock.mockReset();
     // Single CG price at $50 — far outside USD bounds [0.01, 1.19] so
@@ -429,6 +510,55 @@ describe("handleAuditDepegHistory method safety", () => {
 
     expect(result.deletedEvents).toHaveLength(0);
     expect(result.rejectedByValidationCount ?? 0).toBeGreaterThan(0);
+  });
+
+  it("blocks audit provenance invalidation against sealed DDRv2 events", async () => {
+    fetchWithRetryMock.mockReset();
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ prices: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const event = {
+      id: 45,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -150,
+      started_at: 1_800_000_000,
+      ended_at: 1_800_003_600,
+      start_price: 0.985,
+      peak_price: 0.985,
+      recovery_price: 0.999,
+      peg_reference: 1,
+      source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
+    };
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [event] },
+      {
+        match: "FROM depeg_resolver_incident_event_links l",
+        rows: [{
+          event_id: 45,
+          incident_key: "ddr2:1234567890abcdef1234567890ab",
+          public_prediction_id: 81,
+        }],
+      },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { operation: string; conflicts: Array<{ eventId: number }> };
+    expect(body.operation).toBe("audit-depeg-history:provenance-invalidation");
+    expect(body.conflicts).toEqual([expect.objectContaining({ eventId: 45 })]);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_event_provenance"))).toBe(false);
   });
 
   it("does not confirm a below-peg event with above-peg CoinGecko movement", async () => {

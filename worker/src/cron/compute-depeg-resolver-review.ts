@@ -11,6 +11,7 @@ import {
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
 } from "@shared/lib/depeg-resolver-version";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "@shared/types/depeg-resolver";
@@ -83,6 +84,24 @@ interface ActualEventDbRow {
   recovery_price: number | null;
 }
 
+interface TapeTerminalEvidenceRow {
+  coin_id: string | null;
+  type: string;
+  ts: number | null;
+  payload_json: string | null;
+}
+
+interface TerminalEvidence {
+  terminalEvidenceAt: number | null;
+  terminalEvidenceInterval: { start: number; end: number } | null;
+  terminalEvidencePrecision: "day" | "month" | "unknown" | null;
+  terminalEvidenceSourceDate: string | null;
+}
+
+interface DdrrActualEventWithTerminalEvidence extends DdrrActualEvent {
+  terminalEvidenceSourceDate: string | null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -117,6 +136,159 @@ function abortIf(signal: AbortSignal | undefined, label: string): void {
 
 function safeJsonParse(value: string): unknown {
   return JSON.parse(value);
+}
+
+function tryJsonParse(value: string | null | undefined): unknown {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function utcSec(year: number, monthIndex: number, day: number): number {
+  return Math.floor(Date.UTC(year, monthIndex, day) / 1000);
+}
+
+function dateIntervalFromSourceDate(sourceDate: string | null | undefined): TerminalEvidence | null {
+  if (!sourceDate) return null;
+
+  const dayMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(sourceDate);
+  if (dayMatch) {
+    const year = Number(dayMatch[1]);
+    const month = Number(dayMatch[2]);
+    const day = Number(dayMatch[3]);
+    const start = utcSec(year, month - 1, day);
+    const check = new Date(start * 1000);
+    if (
+      check.getUTCFullYear() !== year ||
+      check.getUTCMonth() !== month - 1 ||
+      check.getUTCDate() !== day
+    ) {
+      return null;
+    }
+    return {
+      terminalEvidenceAt: start,
+      terminalEvidenceInterval: { start, end: start + 86_400 },
+      terminalEvidencePrecision: "day",
+      terminalEvidenceSourceDate: sourceDate,
+    };
+  }
+
+  const monthMatch = /^(\d{4})-(\d{2})$/.exec(sourceDate);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const month = Number(monthMatch[2]);
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+    const start = utcSec(year, month - 1, 1);
+    const end = utcSec(year, month, 1);
+    return {
+      terminalEvidenceAt: start,
+      terminalEvidenceInterval: { start, end },
+      terminalEvidencePrecision: "month",
+      terminalEvidenceSourceDate: sourceDate,
+    };
+  }
+
+  return null;
+}
+
+function exactTerminalEvidenceFromTapeTs(tsMs: number | null | undefined): TerminalEvidence | null {
+  if (typeof tsMs !== "number" || !Number.isFinite(tsMs) || tsMs < 0) return null;
+  return {
+    terminalEvidenceAt: Math.floor(tsMs / 1000),
+    terminalEvidenceInterval: null,
+    terminalEvidencePrecision: "unknown",
+    terminalEvidenceSourceDate: null,
+  };
+}
+
+const CEMETERY_BY_ID = new Map(CEMETERY_ENTRIES.map((entry) => [entry.id, entry]));
+
+function registryTerminalEvidence(stablecoinId: string): TerminalEvidence | null {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (meta?.status === "frozen") {
+    const frozenEvidence = dateIntervalFromSourceDate(meta.frozenAt);
+    if (frozenEvidence) return frozenEvidence;
+  }
+
+  if (meta && isTerminalStablecoinStatus(meta.status)) {
+    const obituaryEvidence = dateIntervalFromSourceDate(meta.obituary?.deathDate);
+    if (obituaryEvidence) return obituaryEvidence;
+  }
+
+  const cemetery = CEMETERY_BY_ID.get(stablecoinId);
+  return dateIntervalFromSourceDate(cemetery?.deathDate);
+}
+
+function tapeTerminalEvidence(row: TapeTerminalEvidenceRow): TerminalEvidence | null {
+  const payload = recordValue(tryJsonParse(row.payload_json));
+  if (row.type === "lifecycle.tracked.frozen") {
+    return dateIntervalFromSourceDate(stringValue(payload.frozenAt)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
+  }
+  if (row.type === "cemetery.entry.added") {
+    return dateIntervalFromSourceDate(stringValue(payload.deathDate)) ?? exactTerminalEvidenceFromTapeTs(row.ts);
+  }
+  return null;
+}
+
+async function loadTapeTerminalEvidenceByStablecoinId(
+  db: D1Database,
+  stablecoinIdsInput: readonly string[],
+): Promise<Map<string, TerminalEvidence>> {
+  const stablecoinIds = [...new Set(stablecoinIdsInput)];
+  const evidenceByStablecoinId = new Map<string, TerminalEvidence>();
+
+  for (const ids of chunkArray(stablecoinIds)) {
+    if (ids.length === 0) continue;
+    const inClause = buildInClause(ids);
+    try {
+      const result = await db
+        .prepare(
+          `SELECT coin_id, type, ts, payload_json
+           FROM tape_events
+           WHERE coin_id IN (${inClause.sql})
+             AND type IN ('lifecycle.tracked.frozen', 'cemetery.entry.added')
+           ORDER BY ts ASC, id ASC`,
+        )
+        .bind(...inClause.binds)
+        .all<TapeTerminalEvidenceRow>();
+
+      for (const row of result.results ?? []) {
+        if (!row.coin_id || evidenceByStablecoinId.has(row.coin_id)) continue;
+        const evidence = tapeTerminalEvidence(row);
+        if (evidence) evidenceByStablecoinId.set(row.coin_id, evidence);
+      }
+    } catch {
+      // Older local/test databases may not have tape_events. Registry and
+      // cemetery metadata remain the authoritative terminal evidence sources.
+    }
+  }
+
+  return evidenceByStablecoinId;
+}
+
+function materializeTerminalEvidenceForEvent(row: ActualEventDbRow, evidence: TerminalEvidence | null): TerminalEvidence {
+  if (!evidence) {
+    return {
+      terminalEvidenceAt: null,
+      terminalEvidenceInterval: null,
+      terminalEvidencePrecision: null,
+      terminalEvidenceSourceDate: null,
+    };
+  }
+
+  if (row.ended_at != null && row.recovery_price != null && evidence.terminalEvidenceInterval != null) {
+    return {
+      ...evidence,
+      terminalEvidenceAt: evidence.terminalEvidenceInterval.end <= row.ended_at
+        ? evidence.terminalEvidenceInterval.start
+        : null,
+    };
+  }
+
+  return evidence;
 }
 
 function toIqrRemainingSec(row: AssessmentDbRow): DdrrAssessment["iqrRemainingSec"] {
@@ -188,16 +360,17 @@ async function loadAssessments(
 async function loadActualEventsById(
   db: D1Database,
   assessments: readonly DdrrAssessment[],
-): Promise<Map<number, DdrrActualEvent>> {
+): Promise<Map<number, DdrrActualEventWithTerminalEvidence>> {
   return loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId));
 }
 
 async function loadActualEventsByEventIds(
   db: D1Database,
   eventIdsInput: readonly number[],
-): Promise<Map<number, DdrrActualEvent>> {
+): Promise<Map<number, DdrrActualEventWithTerminalEvidence>> {
   const eventIds = [...new Set(eventIdsInput)];
-  const actualEventsById = new Map<number, DdrrActualEvent>();
+  const actualEventsById = new Map<number, DdrrActualEventWithTerminalEvidence>();
+  const sourceRows: ActualEventDbRow[] = [];
 
   for (const ids of chunkArray(eventIds)) {
     if (ids.length === 0) continue;
@@ -212,19 +385,39 @@ async function loadActualEventsByEventIds(
       .all<ActualEventDbRow>();
 
     for (const row of result.results ?? []) {
-      actualEventsById.set(row.id, {
-        eventId: row.id,
-        currentEventId: row.id,
-        startedAt: row.started_at,
-        endedAt: row.ended_at,
-        recoveryPrice: row.recovery_price,
-        stablecoinStatus: TRACKED_META_BY_ID.get(row.stablecoin_id)?.status ?? null,
-        terminalObserved: null,
-        terminalEvidenceAt: null,
-        terminalEvidenceInterval: null,
-        terminalEvidencePrecision: null,
-      });
+      sourceRows.push(row);
     }
+  }
+
+  const registryEvidenceByStablecoinId = new Map<string, TerminalEvidence>();
+  const idsNeedingTapeEvidence: string[] = [];
+  for (const row of sourceRows) {
+    const registryEvidence = registryTerminalEvidence(row.stablecoin_id);
+    if (registryEvidence) registryEvidenceByStablecoinId.set(row.stablecoin_id, registryEvidence);
+    else idsNeedingTapeEvidence.push(row.stablecoin_id);
+  }
+  const tapeEvidenceByStablecoinId = await loadTapeTerminalEvidenceByStablecoinId(db, idsNeedingTapeEvidence);
+
+  for (const row of sourceRows) {
+    const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
+    const rawEvidence = registryEvidenceByStablecoinId.get(row.stablecoin_id)
+      ?? tapeEvidenceByStablecoinId.get(row.stablecoin_id)
+      ?? null;
+    const terminalEvidence = materializeTerminalEvidenceForEvent(row, rawEvidence);
+    const terminalObserved = isTerminalStablecoinStatus(meta?.status) || rawEvidence != null;
+    actualEventsById.set(row.id, {
+      eventId: row.id,
+      currentEventId: row.id,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      recoveryPrice: row.recovery_price,
+      stablecoinStatus: meta?.status ?? null,
+      terminalObserved,
+      terminalEvidenceAt: terminalEvidence.terminalEvidenceAt,
+      terminalEvidenceInterval: terminalEvidence.terminalEvidenceInterval,
+      terminalEvidencePrecision: terminalEvidence.terminalEvidencePrecision,
+      terminalEvidenceSourceDate: terminalEvidence.terminalEvidenceSourceDate,
+    });
   }
 
   return actualEventsById;
@@ -336,10 +529,40 @@ function assessmentFromNoCall(
 
 function sourceEventState(actual: DdrrActualEvent | null): DdrrV2CoverageInput["sourceEventState"] {
   if (!actual) return "missing";
-  if (isTerminalStablecoinStatus(actual.stablecoinStatus)) return "terminal";
+  if (actual.terminalObserved === true || isTerminalStablecoinStatus(actual.stablecoinStatus)) return "terminal";
   if (actual.endedAt != null && actual.recoveryPrice != null) return "recovered";
   if (actual.endedAt != null) return "orphan_closed";
   return "active";
+}
+
+function terminalEvidenceAtForEligibility(
+  actual: DdrrActualEvent | null,
+  eligibleAt: number,
+): number | null {
+  if (!actual) return null;
+  const interval = actual.terminalEvidenceInterval ?? null;
+  if (interval) {
+    if (interval.end <= eligibleAt) return interval.start;
+    if (interval.start >= eligibleAt) return interval.start;
+    return null;
+  }
+  return actual.terminalEvidenceAt ?? null;
+}
+
+function hasTerminalBeforeEligibility(actual: DdrrActualEvent | null, eligibleAt: number): boolean {
+  const evidenceAt = terminalEvidenceAtForEligibility(actual, eligibleAt);
+  return evidenceAt != null && evidenceAt < eligibleAt;
+}
+
+function hasTerminalStatusOrEvidence(actual: DdrrActualEvent | null): boolean {
+  if (!actual) return false;
+  return actual.terminalObserved === true || isTerminalStablecoinStatus(actual.stablecoinStatus);
+}
+
+function terminalEvidenceSourceDate(actual: DdrrActualEvent | null): string | null {
+  if (!actual || !("terminalEvidenceSourceDate" in actual)) return null;
+  const value = actual.terminalEvidenceSourceDate;
+  return typeof value === "string" ? value : null;
 }
 
 function coverageStateForIncident(
@@ -365,7 +588,7 @@ function coverageStateForIncident(
       reason: null,
     };
   }
-  if (isTerminalStablecoinStatus(actual.stablecoinStatus) && actual.terminalEvidenceAt != null && actual.terminalEvidenceAt < incident.eligibleAt) {
+  if (hasTerminalStatusOrEvidence(actual) && hasTerminalBeforeEligibility(actual, incident.eligibleAt)) {
     return {
       predictionState: "terminal_before_prediction",
       coverageCause: "pre_lock_terminal",
@@ -401,7 +624,7 @@ function coverageStateForIncident(
       reason: "closed_without_recovery_or_terminal_evidence",
     };
   }
-  if (isTerminalStablecoinStatus(actual.stablecoinStatus)) {
+  if (hasTerminalStatusOrEvidence(actual)) {
     return {
       predictionState: "missed_lock_terminal",
       coverageCause: "lock_missed",
@@ -434,14 +657,15 @@ function coverageRowForIncident(
   nowSec: number,
 ): DdrrV2CoverageInput {
   const state = coverageStateForIncident(incident, actual, nowSec);
+  const terminalEvidenceAt = terminalEvidenceAtForEligibility(actual, incident.eligibleAt);
   return {
     ...baseFieldsForIncident(incident, {}),
     sourceEventState: sourceEventState(actual),
-    terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
+    terminalEvidenceAt,
     terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
     terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,
     actualEndedAt: actual?.endedAt ?? null,
-    terminalEvidenceSourceDate: null,
+    terminalEvidenceSourceDate: terminalEvidenceSourceDate(actual),
     failedPublication: null,
     ...state,
   };
@@ -454,7 +678,7 @@ function failedPublicationCoverageRow(
 ): DdrrV2CoverageInput {
   const publicationFailed = actual != null && (
     actual.endedAt != null ||
-    isTerminalStablecoinStatus(actual.stablecoinStatus)
+    hasTerminalStatusOrEvidence(actual)
   );
   const predictionState = publicationFailed ? "publication_failed" : "publication_retry_pending";
   return {
@@ -465,7 +689,7 @@ function failedPublicationCoverageRow(
     terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,
     predictionState,
     actualEndedAt: actual?.endedAt ?? null,
-    terminalEvidenceSourceDate: null,
+    terminalEvidenceSourceDate: terminalEvidenceSourceDate(actual),
     coverageCause: predictionState,
     operationalCoverageCause: predictionState,
     outcomeQualityState: publicationFailed ? "classified" : null,

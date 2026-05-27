@@ -3,8 +3,12 @@ import { jsonResponse } from "../lib/api-utils";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
-import { parseOptionalDayWindow, type BackfillReplayWindow } from "./backfill-depegs-window";
-import { buildBackfillDeleteStmt } from "./backfill-depegs-window";
+import {
+  buildBackfillDeleteStmt,
+  loadSealedBackfillReplayConflicts,
+  parseOptionalDayWindow,
+  type BackfillReplayWindow,
+} from "./backfill-depegs-window";
 import type { BackfillReplayPreview } from "./backfill-depegs-preview";
 import { buildBackfillPlan } from "./backfill-depegs/planning";
 import { executeBackfillForCoin } from "./backfill-depegs/execution";
@@ -39,6 +43,17 @@ export async function applyBackfillEvents(
   replayWindow: BackfillReplayWindow | null,
   run?: BackfillRunInput,
 ): Promise<void> {
+  const sealedConflicts = await loadSealedBackfillReplayConflicts(db, meta.id, replayWindow);
+  if (sealedConflicts.length > 0) {
+    const conflictList = sealedConflicts
+      .map((conflict) => `event ${conflict.eventId} / ${conflict.incidentKey}`)
+      .join(", ");
+    throw new Error(
+      `DDRv2 sealed repair required: backfill replay for ${meta.symbol} would delete sealed depeg_events (${conflictList}). ` +
+        "This endpoint does not consume append-only repair authorizations, lineage, or errata; use a dedicated DDRv2 repair endpoint before replaying this window.",
+    );
+  }
+
   const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow);
   const nowSec = Math.floor(Date.now() / 1000);
   if (run) {

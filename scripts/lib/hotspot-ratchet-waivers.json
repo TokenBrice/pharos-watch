@@ -95,6 +95,14 @@
     "reviewAfter": "2026-08-27",
     "nextAction": "Extract DDRv2 publication/cache orchestration into focused helpers after the initial v2 rollout stabilizes."
   },
+  "worker/src/cron/compute-depeg-resolver-review.ts": {
+    "disposition": "queued-p4",
+    "notes": "DDRv2 terminal-evidence completion added registry, cemetery, and tape lifecycle timestamp derivation to the review snapshot builder. Keep waived for the first v2 rollout; split terminal-evidence extraction and coverage-row assembly once the reviewer contract has production mileage.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-27",
+    "reviewAfter": "2026-08-27",
+    "nextAction": "Extract DDRR terminal-evidence derivation and no-prediction coverage projection into focused helpers after the v2 rollout stabilizes."
+  },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
     "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass.",

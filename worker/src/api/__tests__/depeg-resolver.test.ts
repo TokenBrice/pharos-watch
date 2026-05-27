@@ -286,6 +286,47 @@ describe("handleDepegResolver", () => {
     expect(body._meta.readOverlay.closedPendingReviewIncidentKeys).toContain("ddr2:11111111111111111111111111111111");
   });
 
+  it("overlays append-only errata as invalidated public rows", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_000_000 * 1000);
+    const payload = snapshot(1_998_000, 2_001_000);
+    const db = mockD1([
+      ...cacheRows(payload),
+      {
+        match: "FROM depeg_resolver_prediction_errata",
+        rows: [
+          {
+            id: 11,
+            public_prediction_id: 7,
+            incident_key: "ddr2:11111111111111111111111111111111",
+            event_id: 1,
+            assessment_id: 17,
+            reason: "input_corruption",
+            operator_note: "source input corrected",
+            replacement_assessment_id: null,
+            replacement_row_hash: null,
+            row_hash_before: ROW_HASH,
+            created_at: 1_999_500,
+            created_by: "operator",
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleDepegResolver(db);
+    const body = (await res.json()) as DdrResponse;
+
+    expect(res.status).toBe(200);
+    expect(body.rows[0].kind).toBe("invalidated_prediction");
+    if (body.rows[0].kind !== "invalidated_prediction") throw new Error("expected invalidated row");
+    expect(body.rows[0].originalKind).toBe("prediction");
+    expect(body.rows[0].prediction.state).toBe("invalidated");
+    expect(body.rows[0].prediction.source).toBe("erratum");
+    expect(body.rows[0].prediction.latestErratum?.reason).toBe("input_corruption");
+    expect(body.rows[0].prediction.errataCount).toBe(1);
+    expect(body.rows[0].originalOutcome).toEqual(body.rows[0].frozen);
+  });
+
   it("falls back to the latest finalized manifest when cache metadata is behind", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);
@@ -323,6 +364,49 @@ describe("handleDepegResolver", () => {
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("base-payload-hash-mismatch");
     expect(body.rows).toEqual([]);
+  });
+
+  it("appends degraded lock-deferral rows when no usable cache exists", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_000_000 * 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_resolver_prediction_lock_state",
+        rows: [
+          {
+            incident_key: "ddr2:22222222222222222222222222222222",
+            stablecoin_id: "lusd-liquity",
+            peg_currency: "USD",
+            direction: "below",
+            current_started_at: 1_910_000,
+            current_event_id: 2,
+            eligible_at: 1_996_400,
+            deferral_count: 2,
+            last_deferral_reason: "stablecoins-cache-unsafe",
+            last_attempted_at: 1_999_000,
+            updated_at: 1_999_000,
+            symbol: "LUSD",
+            peg_type: "peggedUSD",
+            peak_deviation_bps: -420,
+            started_at: 1_910_000,
+            ended_at: null,
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleDepegResolver(db);
+    const body = (await res.json()) as DdrResponse;
+
+    expect(res.status).toBe(200);
+    expect(body._meta.degraded).toBe(true);
+    expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");
+    expect(body.rows[0].kind).toBe("pending");
+    if (body.rows[0].kind !== "pending") throw new Error("expected pending row");
+    expect(body.rows[0].prediction.state).toBe("lock_deferred");
+    expect(body.rows[0].prediction.deferralCount).toBe(2);
+    expect(body.rows[0].frozen).toBeNull();
+    expect(body.rows[0].live.degradedReason).toBe("stablecoins-cache-unsafe");
   });
 
   it("keeps publication-retry-pending placeholders free of frozen payloads", async () => {

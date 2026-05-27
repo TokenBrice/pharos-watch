@@ -15,6 +15,12 @@ export interface BackfillReplayWindow {
   replayEndSec: number | null;
 }
 
+export interface DdrSealedBackfillConflict {
+  eventId: number;
+  incidentKey: string;
+  publicPredictionId: number;
+}
+
 function parseContextDaysParam(raw: string | null): number | null {
   if (!raw) return null;
   if (!/^\d+$/.test(raw)) return null;
@@ -191,4 +197,44 @@ export function buildBackfillDeleteStmt(
     binds.push(replayWindow.compareEndSec);
   }
   return db.prepare(sql).bind(...binds);
+}
+
+export async function loadSealedBackfillReplayConflicts(
+  db: D1Database,
+  stablecoinId: string,
+  replayWindow: BackfillReplayWindow | null,
+): Promise<DdrSealedBackfillConflict[]> {
+  let sql = `
+    SELECT e.id AS event_id,
+           l.incident_key AS incident_key,
+           p.id AS public_prediction_id
+    FROM depeg_events e
+    JOIN depeg_resolver_incident_event_links l ON l.event_id = e.id
+    JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
+    WHERE e.stablecoin_id = ?
+      AND e.source = 'backfill'`;
+  const binds: unknown[] = [stablecoinId];
+
+  if (replayWindow?.compareStartSec != null) {
+    sql += " AND COALESCE(e.ended_at, e.started_at) >= ?";
+    binds.push(replayWindow.compareStartSec);
+  }
+  if (replayWindow?.compareEndSec != null) {
+    sql += " AND e.started_at <= ?";
+    binds.push(replayWindow.compareEndSec);
+  }
+
+  sql += " ORDER BY e.started_at LIMIT 25";
+
+  const rows = await db.prepare(sql).bind(...binds).all<{
+    event_id: number;
+    incident_key: string;
+    public_prediction_id: number;
+  }>();
+
+  return (rows.results ?? []).map((row) => ({
+    eventId: row.event_id,
+    incidentKey: row.incident_key,
+    publicPredictionId: row.public_prediction_id,
+  }));
 }

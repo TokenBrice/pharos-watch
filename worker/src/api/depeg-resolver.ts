@@ -20,13 +20,17 @@ import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
+  DDR_PREDICTION_POLICY_VERSION,
   DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SUPPORT_RULES_VERSION,
 } from "@shared/lib/depeg-resolver-version";
 import { loadLatestPublicationManifest } from "../lib/depeg-resolver-publication-store";
+import { loadPredictionErrata } from "../lib/depeg-resolver-errata-store";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { DdrPublicationManifest } from "../lib/depeg-resolver-publication-store";
+import type { DdrPredictionErratum as StoreDdrPredictionErratum } from "../lib/depeg-resolver-errata-store";
+import type { DdrPredictionErratum } from "@shared/types/depeg-resolver";
 
 function degradedResponse(reason: string): DdrResponse {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -66,6 +70,25 @@ function degradedResponse(reason: string): DdrResponse {
 
 interface DdrApiEventStateRow {
   id: number;
+  ended_at: number | null;
+}
+
+interface DdrApiLockDeferralRow {
+  incident_key: string;
+  stablecoin_id: string;
+  peg_currency: string;
+  direction: "above" | "below";
+  current_started_at: number;
+  current_event_id: number;
+  eligible_at: number;
+  deferral_count: number;
+  last_deferral_reason: string | null;
+  last_attempted_at: number | null;
+  updated_at: number;
+  symbol: string;
+  peg_type: string;
+  peak_deviation_bps: number;
+  started_at: number;
   ended_at: number | null;
 }
 
@@ -109,6 +132,259 @@ async function loadApiEventState(db: D1Database, eventIds: number[]): Promise<Ma
   return out;
 }
 
+function toPublicErratum(row: StoreDdrPredictionErratum): DdrPredictionErratum {
+  return {
+    state: "invalidated",
+    id: row.id,
+    publicPredictionId: row.publicPredictionId,
+    incidentKey: row.incidentKey,
+    eventId: row.eventId,
+    assessmentId: row.assessmentId,
+    reason: row.reason,
+    createdAt: row.createdAt,
+    operatorNote: row.operatorNote,
+    rowHashBefore: row.rowHashBefore,
+    replacementAssessmentId: row.replacementAssessmentId,
+    replacementRowHash: row.replacementRowHash,
+    createdBy: row.createdBy,
+  };
+}
+
+function errataByPredictionId(rows: readonly StoreDdrPredictionErratum[]): Map<number, DdrPredictionErratum[]> {
+  const out = new Map<number, DdrPredictionErratum[]>();
+  for (const row of rows) {
+    const publicRow = toPublicErratum(row);
+    const existing = out.get(row.publicPredictionId);
+    if (existing) existing.push(publicRow);
+    else out.set(row.publicPredictionId, [publicRow]);
+  }
+  for (const history of out.values()) history.sort((left, right) => right.createdAt - left.createdAt || right.id - left.id);
+  return out;
+}
+
+async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
+  const publicPredictionIds = response.rows
+    .map((row) => row.prediction.publicPredictionId)
+    .filter((id): id is number => id != null);
+  if (publicPredictionIds.length === 0) return response;
+
+  let errata: Map<number, DdrPredictionErratum[]>;
+  try {
+    errata = errataByPredictionId(await loadPredictionErrata(db, { publicPredictionIds }));
+  } catch (error) {
+    console.warn(`[depeg-resolver] errata overlay unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return response;
+  }
+  if (errata.size === 0) return response;
+
+  const rows = response.rows.map((row): DdrV2ResponseRow => {
+    const publicPredictionId = row.prediction.publicPredictionId;
+    const history = publicPredictionId == null ? null : errata.get(publicPredictionId) ?? null;
+    if (!history || history.length === 0) return row;
+
+    if (row.kind !== "prediction" && row.kind !== "no_call" && row.kind !== "invalidated_prediction") {
+      return row;
+    }
+
+    const latestErratum = history[0];
+    if (row.kind === "invalidated_prediction") {
+      return {
+        ...row,
+        prediction: {
+          ...row.prediction,
+          state: "invalidated",
+          source: "erratum",
+          latestErratum,
+          errataCount: history.length,
+          errataHistory: history,
+        },
+      };
+    }
+
+    return {
+      ...row,
+      kind: "invalidated_prediction",
+      originalKind: row.kind,
+      originalOutcome: row.kind === "prediction" ? row.frozen : row.noCall,
+      frozen: row.kind === "prediction" ? row.frozen : null,
+      noCall: row.kind === "no_call" ? row.noCall : null,
+      prediction: {
+        ...row.prediction,
+        state: "invalidated",
+        source: "erratum",
+        latestErratum,
+        errataCount: history.length,
+        errataHistory: history,
+      },
+    };
+  });
+
+  return { ...response, rows };
+}
+
+async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralRow[]> {
+  try {
+    const result = await db
+      .prepare(
+        `SELECT i.incident_key,
+                i.stablecoin_id,
+                i.peg_currency,
+                i.direction,
+                i.current_started_at,
+                i.current_event_id,
+                ls.eligible_at,
+                ls.deferral_count,
+                ls.last_deferral_reason,
+                ls.last_attempted_at,
+                ls.updated_at,
+                e.symbol,
+                e.peg_type,
+                e.peak_deviation_bps,
+                e.started_at,
+                e.ended_at
+         FROM depeg_resolver_prediction_lock_state ls
+         JOIN depeg_resolver_incidents i
+           ON i.incident_key = ls.incident_key
+         JOIN depeg_resolver_incident_policy_membership m
+           ON m.incident_key = i.incident_key
+         JOIN depeg_events e
+           ON e.id = i.current_event_id
+         WHERE ls.last_state = 'lock_deferred'
+           AND i.incident_state = 'active'
+           AND m.policy_universe_included = 1
+           AND m.prediction_policy_version = ?
+           AND e.ended_at IS NULL
+         ORDER BY ls.updated_at DESC, i.incident_key
+         LIMIT 100`,
+      )
+      .bind(DDR_PREDICTION_POLICY_VERSION)
+      .all<DdrApiLockDeferralRow>();
+    return result.results ?? [];
+  } catch (error) {
+    console.warn(`[depeg-resolver] lock deferral overlay unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+}
+
+function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2ResponseRow | null {
+  const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
+  if (isTerminalStablecoinStatus(meta?.status ?? null)) return null;
+
+  return {
+    stablecoinId: row.stablecoin_id,
+    symbol: row.symbol,
+    name: meta?.name ?? row.symbol,
+    pegCurrency: row.peg_currency,
+    governance: meta?.flags.governance ?? "centralized",
+    status: meta?.status ?? null,
+    eventId: row.current_event_id,
+    incidentKey: row.incident_key,
+    startedAt: row.current_started_at,
+    direction: row.direction,
+    kind: "pending",
+    prediction: {
+      state: "lock_deferred",
+      publicPredictionId: null,
+      incidentKey: row.incident_key,
+      predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+      predictionMethodologyVersion: null,
+      predictionMethodologyVersionLabel: null,
+      resolutionRubricVersion: null,
+      durationModelVersion: null,
+      incidentGroupingVersion: null,
+      supportRulesVersion: null,
+      eligibleAt: row.eligible_at,
+      lockedAt: null,
+      publishedAt: null,
+      publicationSnapshotToken: null,
+      snapshotGeneration: null,
+      eventAgeAtLockSec: null,
+      lockTiming: null,
+      source: "pending",
+      deferralReason: row.last_deferral_reason,
+      deferralCount: row.deferral_count,
+      rowHash: null,
+      lineage: null,
+      modelAsOf: row.last_attempted_at ?? row.updated_at ?? nowSec,
+      latestErratum: null,
+      errataCount: 0,
+      errataHistory: [],
+    },
+    frozen: null,
+    live: {
+      currentEventId: row.current_event_id,
+      ageSec: Math.max(0, nowSec - row.current_started_at),
+      peakDeviationBps: row.peak_deviation_bps,
+      currentDeviationBps: null,
+      eventState: "active",
+      updatedAt: row.last_attempted_at ?? row.updated_at ?? nowSec,
+      stale: true,
+      degradedReason: row.last_deferral_reason ?? "lock-deferred",
+    },
+  };
+}
+
+async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
+  const deferrals = await loadApiLockDeferrals(db);
+  if (deferrals.length === 0) return response;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const deferralByIncidentKey = new Map(deferrals.map((row) => [row.incident_key, row]));
+  const deferralKeys = new Set(response._meta.readOverlay?.degradedLockDeferralIncidentKeys ?? []);
+  const seenKeys = new Set<string>();
+
+  const rows = response.rows.map((row): DdrV2ResponseRow => {
+    const deferral = deferralByIncidentKey.get(row.incidentKey);
+    if (!deferral || row.prediction.publicPredictionId != null) return row;
+    seenKeys.add(row.incidentKey);
+    deferralKeys.add(row.incidentKey);
+    if (row.kind !== "pending") return row;
+    return {
+      ...row,
+      prediction: {
+        ...row.prediction,
+        state: "lock_deferred",
+        deferralReason: deferral.last_deferral_reason,
+        deferralCount: deferral.deferral_count,
+        modelAsOf: deferral.last_attempted_at ?? deferral.updated_at ?? row.prediction.modelAsOf,
+      },
+      live: {
+        ...row.live,
+        stale: true,
+        degradedReason: row.live.degradedReason ?? deferral.last_deferral_reason ?? "lock-deferred",
+      },
+    };
+  });
+
+  for (const deferral of deferrals) {
+    if (seenKeys.has(deferral.incident_key) || rows.some((row) => row.incidentKey === deferral.incident_key)) continue;
+    const appended = buildLockDeferralRow(deferral, nowSec);
+    if (!appended) continue;
+    rows.push(appended);
+    deferralKeys.add(deferral.incident_key);
+  }
+
+  if (deferralKeys.size === 0) return response;
+
+  return {
+    ...response,
+    _meta: {
+      ...response._meta,
+      degraded: true,
+      degradedReason: response._meta.degradedReason ?? "lock-deferral-overlay",
+      readOverlay: {
+        ...(response._meta.readOverlay ?? DDR_EMPTY_READ_OVERLAY),
+        degradedLockDeferralIncidentKeys: [...deferralKeys].sort(),
+      },
+    },
+    rows,
+  };
+}
+
+async function decorateDdrResponse(db: D1Database, response: DdrResponse): Promise<DdrResponse> {
+  return applyLockDeferralOverlay(db, await applyErrataOverlay(db, response));
+}
+
 async function staleSnapshotResponse(db: D1Database, snapshot: DdrResponse): Promise<DdrResponse> {
   const eventState = await loadApiEventState(
     db,
@@ -149,7 +425,11 @@ async function staleSnapshotResponse(db: D1Database, snapshot: DdrResponse): Pro
 }
 
 function fallbackLiveOverlay(row: DdrV2Row, updatedAt: number, reason: string): DdrV2LiveOverlay {
-  const sourceRow = row.kind === "prediction" ? row.frozen.sourceRow : null;
+  const sourceRow = row.kind === "prediction"
+    ? row.frozen.sourceRow
+    : row.kind === "invalidated_prediction"
+      ? row.frozen?.sourceRow ?? null
+      : null;
   return {
     currentEventId: null,
     ageSec: 0,
@@ -212,7 +492,7 @@ async function manifestFallbackResponse(db: D1Database, reason: string): Promise
 
     if (!response.success) return null;
     const contract = validateDdrPublicCacheContract(response.data);
-    return contract.ok ? response.data : null;
+    return contract.ok ? await decorateDdrResponse(db, response.data) : null;
   } catch {
     return null;
   }
@@ -233,7 +513,8 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
       }
       console.warn(`[depeg-resolver] cache contract invalid; serving degraded reason=${contract.reason}`);
       const nowSec = Math.floor(Date.now() / 1000);
-      return jsonFreshResponse(degradedResponse(contract.reason), {
+      const payload = await decorateDdrResponse(db, degradedResponse(contract.reason));
+      return jsonFreshResponse(payload, {
         cacheControl: CACHE_PROFILES.standard,
         updatedAt: nowSec,
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
@@ -252,14 +533,16 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
       }
       console.warn(`[depeg-resolver] cache manifest mismatch; serving degraded reason=${manifestContract.reason}`);
       const nowSec = Math.floor(Date.now() / 1000);
-      return jsonFreshResponse(degradedResponse(manifestContract.reason), {
+      const payload = await decorateDdrResponse(db, degradedResponse(manifestContract.reason));
+      return jsonFreshResponse(payload, {
         cacheControl: CACHE_PROFILES.standard,
         updatedAt: nowSec,
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
       });
     }
     const nowSec = Math.floor(Date.now() / 1000);
-    const payload = nowSec > cached.payload._meta.expiresAt ? await staleSnapshotResponse(db, cached.payload) : cached.payload;
+    const basePayload = nowSec > cached.payload._meta.expiresAt ? await staleSnapshotResponse(db, cached.payload) : cached.payload;
+    const payload = await decorateDdrResponse(db, basePayload);
     return jsonFreshResponse(payload, {
       cacheControl: CACHE_PROFILES.standard,
       updatedAt: cached.payload._meta.computedAt,
@@ -272,7 +555,8 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
   // "unavailable" state and recovers on the next precompute.
   console.warn(`[depeg-resolver] snapshot unavailable; serving degraded reason=${cached.reason}`);
   const nowSec = Math.floor(Date.now() / 1000);
-  return jsonFreshResponse(degradedResponse(cached.reason), {
+  const payload = await decorateDdrResponse(db, degradedResponse(cached.reason));
+  return jsonFreshResponse(payload, {
     cacheControl: CACHE_PROFILES.standard,
     updatedAt: nowSec,
     maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,

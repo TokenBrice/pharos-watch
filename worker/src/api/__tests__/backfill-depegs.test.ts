@@ -66,6 +66,7 @@ describe("handleBackfillDepegs", () => {
         return {
           sql,
           bind(..._args: unknown[]) { return this; },
+          async all() { return { results: [], success: true, meta: {} }; },
           async run() { /* test helper only */ return {}; },
         } as unknown as D1PreparedStatement;
       },
@@ -103,11 +104,37 @@ describe("handleBackfillDepegs", () => {
   it("issues a lone delete when events.length === 0 and never crashes mid-loop", async () => {
     const calls: Array<{ size: number }> = [];
     const db = {
-      prepare(sql: string) { return { sql, bind() { return this; }, async run() { return {}; } } as unknown as D1PreparedStatement; },
+      prepare(sql: string) {
+        return {
+          sql,
+          bind() { return this; },
+          async all() { return { results: [], success: true, meta: {} }; },
+          async run() { return {}; },
+        } as unknown as D1PreparedStatement;
+      },
       async batch(stmts: D1PreparedStatement[]) { calls.push({ size: stmts.length }); return []; },
     } as unknown as D1Database;
     await applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [], { startDay: 0, endDay: 1e10 } as unknown as BackfillReplayWindow);
     expect(calls).toEqual([{ size: 1 }]);
+  });
+
+  it("blocks backfill replays that would delete sealed DDRv2 backfill events", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events e",
+        rows: [{
+          event_id: 101,
+          incident_key: "ddr2:1234567890abcdef1234567890ab",
+          public_prediction_id: 80,
+        }],
+      },
+    ]) as MockD1Database;
+
+    await expect(
+      applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [], null),
+    ).rejects.toThrow("DDRv2 sealed repair required");
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
   });
 
   it("records complete replay runs and inserts provenance for backfill rows", async () => {
