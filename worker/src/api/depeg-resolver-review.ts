@@ -2,11 +2,11 @@ import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
+  DDRR_REVIEWER_VERSION,
 } from "@shared/lib/depeg-resolver-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DDRR_PUBLIC_WARNING,
-  DDRR_REVIEWER_VERSION,
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
 import { buildMethodologyEnvelope, jsonFreshResponse, withErrorHandler } from "../lib/api-utils";

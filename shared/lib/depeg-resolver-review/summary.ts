@@ -1,5 +1,22 @@
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
-import type { DdrrHorizonHitRate, DdrrRow, DdrrSummary, DdrrVerdictReview } from "../../types/depeg-resolver-review";
+import { DDR_PREDICTION_POLICY_VERSION } from "../depeg-resolver-version";
+import type {
+  DdrrHorizonHitRate,
+  DdrrRow,
+  DdrrSummary,
+  DdrrV2PredictionReviewRow,
+  DdrrV2SummaryMetrics,
+  DdrrVerdictReview,
+} from "../../types/depeg-resolver-review";
+import { isOperationalMissCause } from "./review";
+
+const RECOVERY_LIKELIHOOD_SCORED_VERDICTS = new Set<DdrrVerdictReview>([
+  "correct_recoverable",
+  "correct_terminal",
+  "false_terminal",
+  "false_recoverable",
+  "risk_noted_terminal",
+]);
 
 function mean(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -14,7 +31,36 @@ function median(values: number[]): number | null {
   return (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function countVerdicts(rows: DdrrRow[]): Record<DdrrVerdictReview, number> {
+function pct(numerator: number, denominator: number): number | null {
+  return denominator === 0 ? null : numerator / denominator;
+}
+
+function countUniqueIncidents(rows: readonly DdrrRow[]): number {
+  return new Set(rows.map((row) => row.incidentKey)).size;
+}
+
+function summarizeHorizons(rows: readonly DdrrRow[]): DdrrHorizonHitRate[] {
+  return DDR_HORIZON_VALUES.map((horizon) => {
+    let hits = 0;
+    let misses = 0;
+    for (const row of rows) {
+      if (row.kind !== "prediction_review") continue;
+      const review = row.horizonReviews.find((h) => h.horizon === horizon);
+      if (review?.result === "hit") hits += 1;
+      else if (review?.result === "miss") misses += 1;
+    }
+    const scored = hits + misses;
+    return {
+      horizon,
+      scored,
+      hits,
+      misses,
+      hitRate: pct(hits, scored),
+    };
+  });
+}
+
+function countPredictionVerdicts(rows: readonly DdrrV2PredictionReviewRow[]): Record<DdrrVerdictReview, number> {
   return rows.reduce<Record<DdrrVerdictReview, number>>(
     (counts, row) => {
       counts[row.verdictReview] += 1;
@@ -33,64 +79,216 @@ function countVerdicts(rows: DdrrRow[]): Record<DdrrVerdictReview, number> {
   );
 }
 
-function summarizeHorizons(rows: DdrrRow[]): DdrrHorizonHitRate[] {
-  return DDR_HORIZON_VALUES.map((horizon) => {
-    let hits = 0;
-    let misses = 0;
-    for (const row of rows) {
-      const review = row.horizonReviews.find((h) => h.horizon === horizon);
-      if (review?.result === "hit") hits += 1;
-      else if (review?.result === "miss") misses += 1;
-    }
-    const scored = hits + misses;
-    return {
-      horizon,
-      scored,
-      hits,
-      misses,
-      hitRate: scored === 0 ? null : hits / scored,
-    };
-  });
-}
+export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMetrics {
+  const predictionRows = rows.filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review");
+  const noCallRows = rows.filter((row) => row.kind === "no_call_review");
+  const coverageRows = rows.filter((row) => row.kind === "coverage");
+  const invalidatedRows = rows.filter((row) => row.kind === "invalidated_prediction");
+  const verdicts = countPredictionVerdicts(predictionRows);
 
-export function summarizeDdrrRows(rows: DdrrRow[]): DdrrSummary {
-  const verdicts = countVerdicts(rows);
   const recoveryLikelihoodCorrectCount = verdicts.correct_recoverable + verdicts.correct_terminal;
-  const recoveryLikelihoodScoredCount =
-    verdicts.correct_recoverable +
-    verdicts.correct_terminal +
-    verdicts.false_terminal +
-    verdicts.false_recoverable +
-    verdicts.risk_noted_terminal;
+  const recoveryLikelihoodScoredCount = predictionRows.filter((row) =>
+    RECOVERY_LIKELIHOOD_SCORED_VERDICTS.has(row.verdictReview),
+  ).length;
 
-  const durationRows = rows.filter((row) => row.signedErrorSec != null && row.absoluteErrorSec != null);
-  const signedErrors = durationRows.map((row) => row.signedErrorSec as number);
-  const absoluteErrors = durationRows.map((row) => row.absoluteErrorSec as number);
-  const iqrRows = rows.filter((row) => row.withinIqr != null);
-  const withinIqrCount = rows.filter((row) => row.withinIqr === true).length;
+  const durationRows = predictionRows.filter(
+    (row) => row.signedDurationErrorSec != null && row.absoluteDurationErrorSec != null,
+  );
+  const signedErrors = durationRows.map((row) => row.signedDurationErrorSec as number);
+  const absoluteErrors = durationRows.map((row) => row.absoluteDurationErrorSec as number);
+
+  const pendingLockCount = coverageRows.filter((row) => row.predictionState === "pending_lock").length;
+  const lockDeferredCount = coverageRows.filter((row) => row.predictionState === "lock_deferred").length;
+  const resolvedBeforePredictionCount = coverageRows.filter(
+    (row) => row.predictionState === "resolved_before_prediction",
+  ).length;
+  const terminalBeforePredictionCount = coverageRows.filter(
+    (row) => row.predictionState === "terminal_before_prediction",
+  ).length;
+  const dataQualityGapCount = coverageRows.filter((row) => row.predictionState === "data_quality_gap").length;
+  const orphanClosedCount = coverageRows.filter((row) => row.predictionState === "orphan_closed").length;
+  const missedLockRecoveredCount = coverageRows.filter((row) => row.predictionState === "missed_lock_recovered").length;
+  const missedLockTerminalCount = coverageRows.filter((row) => row.predictionState === "missed_lock_terminal").length;
+  const missedLockOrphanClosedCount = coverageRows.filter(
+    (row) => row.predictionState === "orphan_closed" && isOperationalMissCause(row.operationalCoverageCause),
+  ).length;
+  const missedLockDataQualityGapCount = coverageRows.filter(
+    (row) => row.predictionState === "data_quality_gap" && isOperationalMissCause(row.operationalCoverageCause),
+  ).length;
+  const publicationFailedCount = coverageRows.filter((row) => row.predictionState === "publication_failed").length;
+  const publicationRetryPendingCount = coverageRows.filter(
+    (row) => row.predictionState === "publication_retry_pending",
+  ).length;
+  const confirmationTimeUnknownCount = coverageRows.filter(
+    (row) => row.operationalCoverageCause === "confirmation_time_unknown",
+  ).length;
+  const missedOperationalLockCount = coverageRows.filter((row) =>
+    isOperationalMissCause(row.operationalCoverageCause),
+  ).length;
+  const missedNoPredictionCount =
+    missedLockRecoveredCount + missedLockTerminalCount + missedLockOrphanClosedCount + missedLockDataQualityGapCount;
+  const lockedPredictionCount = predictionRows.length;
+  const noCallCount = noCallRows.length;
+  const invalidatedPredictionCount = invalidatedRows.length;
+  const policyUniverseIncidentCount = countUniqueIncidents(rows);
+  const activeEligibleIncidentCount = rows.filter((row) => row.sourceEventState === "active").length;
+  const currentEligibleOpportunityCount =
+    lockedPredictionCount +
+    noCallCount +
+    lockDeferredCount +
+    invalidatedPredictionCount +
+    publicationRetryPendingCount +
+    publicationFailedCount +
+    missedNoPredictionCount;
+  const finalizedOpportunityCount =
+    lockedPredictionCount + noCallCount + invalidatedPredictionCount + publicationFailedCount + missedNoPredictionCount;
+  const predictionRateDenominator =
+    lockedPredictionCount + noCallCount + invalidatedPredictionCount + publicationFailedCount + missedNoPredictionCount;
+  const stateAssignedCount =
+    lockedPredictionCount +
+    noCallCount +
+    pendingLockCount +
+    lockDeferredCount +
+    resolvedBeforePredictionCount +
+    terminalBeforePredictionCount +
+    dataQualityGapCount +
+    orphanClosedCount +
+    missedNoPredictionCount +
+    publicationRetryPendingCount +
+    publicationFailedCount +
+    invalidatedPredictionCount;
+  const finalizedCoverageCount =
+    lockedPredictionCount +
+    noCallCount +
+    resolvedBeforePredictionCount +
+    terminalBeforePredictionCount +
+    dataQualityGapCount +
+    orphanClosedCount +
+    missedNoPredictionCount +
+    publicationFailedCount +
+    invalidatedPredictionCount;
+  const invalidatedByReason = invalidatedRows.reduce<Record<string, number>>((counts, row) => {
+    const reason = row.latestErratum.reason;
+    counts[reason] = (counts[reason] ?? 0) + 1;
+    return counts;
+  }, {});
 
   return {
+    activeEligibleIncidentCount,
+    policyUniverseIncidentCount,
+    lockedPredictionCount,
+    pendingLockCount,
+    lockDeferredCount,
+    resolvedBeforePredictionCount,
+    terminalBeforePredictionCount,
+    dataQualityGapCount,
+    orphanClosedCount,
+    missedLockRecoveredCount,
+    missedLockTerminalCount,
+    missedLockOrphanClosedCount,
+    missedLockDataQualityGapCount,
+    missedNoPredictionCount,
+    publicationFailedCount,
+    publicationRetryPendingCount,
+    missedOperationalLockCount,
+    confirmationTimeUnknownCount,
+    noCallCount,
+    invalidatedPredictionCount,
+    currentEligibleOpportunityCount,
+    finalizedOpportunityCount,
+    predictionRatePct: pct(lockedPredictionCount, predictionRateDenominator),
+    invalidationAdjustedPredictionRatePct: pct(
+      lockedPredictionCount + invalidatedPredictionCount,
+      predictionRateDenominator,
+    ),
+    decisionProgressPct: pct(
+      lockedPredictionCount + noCallCount + invalidatedPredictionCount,
+      currentEligibleOpportunityCount,
+    ),
+    operationalMissRatePct: pct(missedOperationalLockCount + publicationFailedCount, finalizedOpportunityCount),
+    noCallRatePct: pct(noCallCount, finalizedOpportunityCount),
+    preLockRecoveredPct: pct(resolvedBeforePredictionCount, policyUniverseIncidentCount),
+    preLockTerminalPct: pct(terminalBeforePredictionCount, policyUniverseIncidentCount),
+    missedLockPct: pct(missedNoPredictionCount, policyUniverseIncidentCount),
+    stateAssignedPct: pct(stateAssignedCount, policyUniverseIncidentCount),
+    finalizedCoveragePct: pct(finalizedCoverageCount, policyUniverseIncidentCount),
     recoveryLikelihoodCorrectCount,
     recoveryLikelihoodScoredCount,
-    recoveryLikelihoodAccuracyPct:
-      recoveryLikelihoodScoredCount === 0 ? null : recoveryLikelihoodCorrectCount / recoveryLikelihoodScoredCount,
+    recoveryLikelihoodAccuracyPct: pct(recoveryLikelihoodCorrectCount, recoveryLikelihoodScoredCount),
     durationScoredCount: durationRows.length,
-    averageSignedDurationErrorSec: mean(signedErrors),
-    averageAbsoluteDurationErrorSec: mean(absoluteErrors),
-    correctRecoverable: verdicts.correct_recoverable,
-    correctTerminal: verdicts.correct_terminal,
-    falseTerminal: verdicts.false_terminal,
-    falseRecoverable: verdicts.false_recoverable,
-    riskNotedTerminal: verdicts.risk_noted_terminal,
-    unscoredInsufficientSignal: verdicts.unscored_insufficient_signal,
-    pending: verdicts.pending,
-    dataIssue: verdicts.data_issue,
-    verdictScoredCount: recoveryLikelihoodScoredCount,
-    durationUnscoredCount: Math.max(0, rows.length - durationRows.length),
-    withinIqrCount,
-    iqrScoredCount: iqrRows.length,
-    withinIqrPct: iqrRows.length === 0 ? null : withinIqrCount / iqrRows.length,
-    medianAbsoluteErrorSec: median(absoluteErrors),
+    meanSignedDurationErrorSec: mean(signedErrors),
+    medianSignedDurationErrorSec: median(signedErrors),
+    meanAbsoluteDurationErrorSec: mean(absoluteErrors),
+    medianAbsoluteDurationErrorSec: median(absoluteErrors),
+    invalidatedPct: pct(invalidatedPredictionCount, policyUniverseIncidentCount),
+    invalidatedByReason,
+    accuracyDenominatorLabel: "first-published frozen prediction outcomes with observed recovery or terminal evidence",
     horizonHitRates: summarizeHorizons(rows),
+  };
+}
+
+export function summarizeDdrrRows(rows: readonly DdrrRow[]): DdrrSummary {
+  const allMetrics = summarizeDdrrMetrics(rows);
+  const currentPolicyRows = rows.filter((row) =>
+    (row.kind === "prediction_review" || row.kind === "no_call_review" || row.kind === "invalidated_prediction") &&
+    row.predictionPolicyVersion === DDR_PREDICTION_POLICY_VERSION,
+  );
+  const currentPolicyMetrics = summarizeDdrrMetrics(currentPolicyRows);
+  const headlineScope =
+    currentPolicyMetrics.recoveryLikelihoodScoredCount >= 20
+      ? "current_policy"
+      : allMetrics.recoveryLikelihoodScoredCount >= 20
+        ? "all_ddrv2"
+        : "insufficient_data";
+  const headline =
+    headlineScope === "current_policy"
+      ? currentPolicyMetrics
+      : headlineScope === "all_ddrv2"
+        ? allMetrics
+        : allMetrics;
+  const headlineLabel =
+    headlineScope === "current_policy"
+      ? "Current DDRv2 public prediction policy"
+      : headlineScope === "all_ddrv2"
+        ? "All official DDRv2 public predictions"
+        : "Not enough reviewed outcomes for this policy";
+  const segments = new Map<string, DdrrRow[]>();
+  for (const row of rows) {
+    if (row.kind !== "prediction_review" && row.kind !== "no_call_review" && row.kind !== "invalidated_prediction") {
+      continue;
+    }
+    const key = `${row.predictionMethodologyVersion}\u0000${row.predictionPolicyVersion}`;
+    const existing = segments.get(key);
+    if (existing == null) segments.set(key, [row]);
+    else existing.push(row);
+  }
+
+  return {
+    headlineScope,
+    headlineLabel,
+    headline,
+    byPredictionPolicy: [
+      ...[...segments.entries()].map(([key, segmentRows]) => {
+        const [predictionMethodologyVersion, predictionPolicyVersion] = key.split("\u0000");
+        return {
+          segmentKind: "prediction_policy" as const,
+          predictionMethodologyVersion,
+          predictionPolicyVersion,
+          metrics: summarizeDdrrMetrics(segmentRows),
+        };
+      }),
+      {
+        segmentKind: "coverage" as const,
+        predictionMethodologyVersion: null,
+        predictionPolicyVersion: null,
+        metrics: summarizeDdrrMetrics(rows.filter((row) => row.kind === "coverage")),
+      },
+      {
+        segmentKind: "all" as const,
+        predictionMethodologyVersion: null,
+        predictionPolicyVersion: null,
+        metrics: allMetrics,
+      },
+    ],
   };
 }

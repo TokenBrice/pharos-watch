@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { DdrHorizon, DdrHorizonCell } from "../../../types/depeg-resolver";
 import {
+  DDRR_REVIEWER_VERSION,
   DdrrRowSchema,
   type DdrrActualEventInput,
   type DdrrAssessmentInput,
+  type DdrrV2CoverageInput,
+  type DdrrV2InvalidatedPredictionInput,
 } from "../index";
-import {
-  reviewDepegResolverAssessment,
-  reviewDepegResolverAssessments,
-  summarizeDdrrRows,
-} from "../index";
+import { buildDdrrCoverageRow, reviewDdrrV2Rows, reviewDepegResolverAssessment, summarizeDdrrRows } from "../index";
 
-const ASSESSED_AT = 100_000;
 const STARTED_AT = 90_000;
+const LOCKED_AT = STARTED_AT + 24 * 3_600;
+const ELIGIBLE_AT = LOCKED_AT;
+const PUBLISHED_AT = LOCKED_AT + 300;
+const REVIEWED_AT = LOCKED_AT + 10_000;
 
 function horizonCell(horizon: DdrHorizon, overrides: Partial<DdrHorizonCell> = {}): DdrHorizonCell {
   return {
@@ -32,6 +34,10 @@ function horizonCell(horizon: DdrHorizon, overrides: Partial<DdrHorizonCell> = {
 function assessment(overrides: Partial<DdrrAssessmentInput> = {}): DdrrAssessmentInput {
   return {
     eventId: 1,
+    currentEventId: 1,
+    incidentKey: "ddr2:fixture00000000000000000000000000",
+    publicPredictionId: 101,
+    assessmentId: 201,
     stablecoinId: "fixture-usd",
     symbol: "FXUSD",
     name: "Fixture USD",
@@ -39,21 +45,22 @@ function assessment(overrides: Partial<DdrrAssessmentInput> = {}): DdrrAssessmen
     governance: "decentralized",
     direction: "below",
     startedAt: STARTED_AT,
-    assessedAt: ASSESSED_AT,
-    eventAgeSec: ASSESSED_AT - STARTED_AT,
-    checkpoint: "first",
-    methodologyVersion: "v1.0",
+    eligibleAt: ELIGIBLE_AT,
+    lockedAt: LOCKED_AT,
+    publishedAt: PUBLISHED_AT,
+    publicationSnapshotToken: "snap-1",
+    assessedAt: LOCKED_AT,
+    eventAgeSec: LOCKED_AT - STARTED_AT,
+    checkpoint: "public_prediction",
+    methodologyVersion: "2.0",
+    predictionMethodologyVersion: "2.0",
+    predictionPolicyVersion: "sticky-24h-v1",
     resolutionTier: "recovery_likely",
     durationSuppressed: false,
     durationSuppressedReason: null,
     predictedRemainingSec: 3_600,
     iqrRemainingSec: [1_800, 7_200],
-    horizonCells: [
-      horizonCell("6h"),
-      horizonCell("24h"),
-      horizonCell("7d"),
-      horizonCell("30d"),
-    ],
+    horizonCells: [horizonCell("6h"), horizonCell("24h"), horizonCell("7d"), horizonCell("30d")],
     stratum: "below - moderate - robust - USD",
     factors: [],
     ...overrides,
@@ -63,191 +70,324 @@ function assessment(overrides: Partial<DdrrAssessmentInput> = {}): DdrrAssessmen
 function actualEvent(overrides: Partial<DdrrActualEventInput> = {}): DdrrActualEventInput {
   return {
     eventId: 1,
+    currentEventId: 1,
     startedAt: STARTED_AT,
-    endedAt: ASSESSED_AT + 3_600,
+    endedAt: LOCKED_AT + 3_600,
     recoveryPrice: 1,
     stablecoinStatus: "active",
     terminalObserved: null,
+    terminalEvidenceAt: null,
+    terminalEvidenceInterval: null,
+    terminalEvidencePrecision: null,
     ...overrides,
   };
 }
 
-function reviewed(
-  assessmentOverrides: Partial<DdrrAssessmentInput>,
-  eventOverrides: Partial<DdrrActualEventInput> | null,
-  nowSec = ASSESSED_AT + 10_000,
-) {
-  const a = assessment(assessmentOverrides);
-  return reviewDepegResolverAssessment(a, eventOverrides == null ? null : actualEvent({ eventId: a.eventId, ...eventOverrides }), nowSec);
+function coverage(overrides: Partial<DdrrV2CoverageInput> = {}): DdrrV2CoverageInput {
+  return {
+    eventId: 500,
+    currentEventId: 500,
+    incidentKey: "ddr2:coverage0000000000000000000000000",
+    stablecoinId: "coverage-usd",
+    symbol: "COV",
+    name: "Coverage USD",
+    pegCurrency: "USD",
+    governance: "centralized",
+    direction: "below",
+    startedAt: STARTED_AT,
+    eligibleAt: ELIGIBLE_AT,
+    sourceEventState: "recovered",
+    predictionState: "resolved_before_prediction",
+    actualEndedAt: ELIGIBLE_AT - 1,
+    coverageCause: "pre_lock_recovered",
+    operationalCoverageCause: null,
+    outcomeQualityState: "classified",
+    ...overrides,
+  };
 }
 
-describe("DDRR verdict review", () => {
-  it("classifies recovered, terminal, pending, and data issue cases", () => {
-    expect(reviewed({ resolutionTier: "recovery_likely" }, { endedAt: ASSESSED_AT + 100, recoveryPrice: 1 }).verdictReview).toBe(
-      "correct_recoverable",
-    );
-    expect(reviewed({ resolutionTier: "at_risk" }, { endedAt: ASSESSED_AT + 100, recoveryPrice: 1 }).verdictReview).toBe(
-      "correct_recoverable",
-    );
-    expect(reviewed({ resolutionTier: "recovery_unlikely" }, { endedAt: ASSESSED_AT + 100, recoveryPrice: 1 }).verdictReview).toBe(
-      "false_terminal",
-    );
-    expect(reviewed({ resolutionTier: "recovery_unlikely" }, { endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" }).verdictReview).toBe(
-      "correct_terminal",
-    );
-    expect(reviewed({ resolutionTier: "recovery_likely" }, { endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" }).verdictReview).toBe(
-      "false_recoverable",
-    );
-    expect(reviewed({ resolutionTier: "at_risk" }, { endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" }).verdictReview).toBe(
-      "risk_noted_terminal",
-    );
-    expect(reviewed({ resolutionTier: "insufficient_signal" }, { endedAt: ASSESSED_AT + 100, recoveryPrice: 1 }).verdictReview).toBe(
-      "unscored_insufficient_signal",
-    );
-    expect(reviewed({ resolutionTier: "recovery_likely" }, { endedAt: null, recoveryPrice: null }).verdictReview).toBe("pending");
+function invalidated(overrides: Partial<DdrrV2InvalidatedPredictionInput> = {}): DdrrV2InvalidatedPredictionInput {
+  const erratum = {
+    id: 1,
+    state: "invalidated" as const,
+    publicPredictionId: 901,
+    incidentKey: "ddr2:invalid00000000000000000000000000",
+    eventId: 900,
+    assessmentId: 902,
+    reason: "event_identity_error" as const,
+    createdAt: REVIEWED_AT,
+    operatorNote: "source event repaired",
+    rowHashBefore: "old-hash",
+    replacementAssessmentId: null,
+    replacementRowHash: null,
+    createdBy: "ddrr-test",
+  };
+  return {
+    eventId: 900,
+    currentEventId: 900,
+    incidentKey: "ddr2:invalid00000000000000000000000000",
+    stablecoinId: "invalid-usd",
+    symbol: "INV",
+    name: "Invalid USD",
+    pegCurrency: "USD",
+    governance: "decentralized",
+    direction: "below",
+    startedAt: STARTED_AT,
+    eligibleAt: ELIGIBLE_AT,
+    publicPredictionId: 901,
+    assessmentId: 902,
+    predictionMethodologyVersion: "2.0",
+    predictionPolicyVersion: "sticky-24h-v1",
+    lockedAt: LOCKED_AT,
+    publishedAt: PUBLISHED_AT,
+    publicationSnapshotToken: "snap-invalid",
+    originalKind: "no_call",
+    originalOutcome: {
+      lockedAt: LOCKED_AT,
+      eventAgeAtLockSec: LOCKED_AT - STARTED_AT,
+      missingReasons: ["insufficient_signal"],
+      relatedContext: {
+        dewsBand: null,
+        dewsScore: null,
+        liquidityScore: null,
+        safetyGrade: null,
+        safetyScore: null,
+        supplyChange7dPct: null,
+        supplyChange30dPct: null,
+        mintSurge: null,
+      },
+    },
+    latestErratum: erratum,
+    errataCount: 1,
+    errataHistory: [erratum],
+    ...overrides,
+  };
+}
 
-    const orphan = reviewed({ resolutionTier: "recovery_likely" }, { endedAt: ASSESSED_AT + 100, recoveryPrice: null });
-    expect(orphan.actualOutcome).toBe("orphan_closed");
-    expect(orphan.verdictReview).toBe("data_issue");
+describe("DDRR v2 row contract", () => {
+  it("bumps the public reviewer version and emits discriminated prediction rows", () => {
+    const row = reviewDepegResolverAssessment(assessment(), actualEvent(), REVIEWED_AT);
 
-    const missing = reviewed({ resolutionTier: "recovery_likely" }, null);
-    expect(missing.actualOutcome).toBe("source_event_missing");
-    expect(missing.verdictReview).toBe("data_issue");
+    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v2");
+    expect(row.kind).toBe("prediction_review");
+    expect(row.predictionState).toBe("frozen");
+    expect(row.lockedAt).toBe(LOCKED_AT);
+    expect(row.actual.kind).toBe("recovered");
+    expect(DdrrRowSchema.parse(row)).toEqual(row);
   });
 
-  it("marks impossible recovered timing as a data issue", () => {
-    const row = reviewed({ resolutionTier: "recovery_likely" }, { endedAt: ASSESSED_AT - 1, recoveryPrice: 1 });
+  it("emits coverage and invalidated rows that satisfy the public schema", () => {
+    const { rows } = reviewDdrrV2Rows({
+      coverageRows: [coverage()],
+      invalidatedPredictions: [invalidated()],
+      nowSec: REVIEWED_AT,
+    });
 
-    expect(row.actualOutcome).toBe("data_issue");
-    expect(row.verdictReview).toBe("data_issue");
+    expect(rows.map((row) => row.kind)).toEqual(["coverage", "invalidated_prediction"]);
+    expect(rows.map((row) => DdrrRowSchema.parse(row))).toEqual(rows);
+  });
+});
+
+describe("DDRR v2 scoring", () => {
+  it("computes duration errors from lockedAt instead of an earlier diagnostic assessment time", () => {
+    const row = reviewDepegResolverAssessment(
+      assessment({
+        assessedAt: STARTED_AT + 3_600,
+        lockedAt: LOCKED_AT,
+        predictedRemainingSec: 3_600,
+        iqrRemainingSec: [1_800, 7_200],
+      }),
+      actualEvent({ endedAt: LOCKED_AT + 4_000, recoveryPrice: 1 }),
+      REVIEWED_AT,
+    );
+
+    expect(row.actualRemainingSec).toBe(4_000);
+    expect(row.signedDurationErrorSec).toBe(400);
+    expect(row.absoluteDurationErrorSec).toBe(400);
+    expect(row.durationReview).toBe("inside_band");
+  });
+
+  it("treats event endings before lockedAt as duration data issues", () => {
+    const row = reviewDepegResolverAssessment(
+      assessment({ assessedAt: STARTED_AT + 3_600, lockedAt: LOCKED_AT }),
+      actualEvent({ endedAt: LOCKED_AT - 1, recoveryPrice: 1 }),
+      REVIEWED_AT,
+    );
+
+    expect(row.actual.kind).toBe("data_issue");
     expect(row.durationReview).toBe("data_issue");
     expect(row.actualRemainingSec).toBeNull();
   });
-});
 
-describe("DDRR duration review", () => {
-  it("computes signed duration error and IQR classifications", () => {
-    const inside = reviewed({ predictedRemainingSec: 3_600, iqrRemainingSec: [1_800, 7_200] }, { endedAt: ASSESSED_AT + 4_000, recoveryPrice: 1 });
-    expect(inside.durationReview).toBe("inside_band");
-    expect(inside.medianReview).toBe("median_late_by");
-    expect(inside.signedErrorSec).toBe(400);
-    expect(inside.absoluteErrorSec).toBe(400);
-    expect(inside.withinIqr).toBe(true);
+  it("scores terminal outcomes for verdict but leaves duration unscored", () => {
+    const row = reviewDepegResolverAssessment(
+      assessment({ resolutionTier: "recovery_unlikely" }),
+      actualEvent({ endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" }),
+      REVIEWED_AT,
+    );
 
-    const faster = reviewed({ predictedRemainingSec: 3_600, iqrRemainingSec: [1_800, 7_200] }, { endedAt: ASSESSED_AT + 1_000, recoveryPrice: 1 });
-    expect(faster.durationReview).toBe("faster_than_band");
-    expect(faster.medianReview).toBe("median_early_by");
-    expect(faster.signedErrorSec).toBe(-2_600);
-    expect(faster.withinIqr).toBe(false);
-
-    const slower = reviewed({ predictedRemainingSec: 3_600, iqrRemainingSec: [1_800, 7_200] }, { endedAt: ASSESSED_AT + 9_000, recoveryPrice: 1 });
-    expect(slower.durationReview).toBe("slower_than_band");
-    expect(slower.medianReview).toBe("median_late_by");
-    expect(slower.signedErrorSec).toBe(5_400);
-    expect(slower.withinIqr).toBe(false);
+    expect(row.actual.kind).toBe("terminal");
+    expect(row.verdictReview).toBe("correct_terminal");
+    expect(row.durationReview).toBe("duration_unscored");
   });
 
-  it("aggregates average signed and absolute duration error", () => {
-    const rows = [
-      reviewed({ eventId: 1, predictedRemainingSec: 3_600 }, { eventId: 1, endedAt: ASSESSED_AT + 7_200, recoveryPrice: 1 }),
-      reviewed({ eventId: 2, predictedRemainingSec: 3_600 }, { eventId: 2, endedAt: ASSESSED_AT + 1_800, recoveryPrice: 1 }),
-    ];
+  it("lets terminal evidence at or before recovery time take outcome precedence", () => {
+    const row = reviewDepegResolverAssessment(
+      assessment({ resolutionTier: "recovery_unlikely" }),
+      actualEvent({
+        endedAt: LOCKED_AT + 4_000,
+        recoveryPrice: 1,
+        terminalObserved: true,
+        terminalEvidenceAt: LOCKED_AT + 3_000,
+      }),
+      REVIEWED_AT,
+    );
 
-    const summary = summarizeDdrrRows(rows);
-    expect(summary.durationScoredCount).toBe(2);
-    expect(summary.averageSignedDurationErrorSec).toBe(900);
-    expect(summary.averageAbsoluteDurationErrorSec).toBe(2_700);
-    expect(summary.medianAbsoluteErrorSec).toBe(2_700);
-    expect(summary.withinIqrCount).toBe(2);
-    expect(summary.iqrScoredCount).toBe(2);
+    expect(row.actual.kind).toBe("terminal");
+    expect(row.verdictReview).toBe("correct_terminal");
+    expect(row.durationReview).toBe("duration_unscored");
   });
 });
 
-describe("DDRR headline stats", () => {
-  it("counts strict recovery-likelihood accuracy and excludes unscored rows", () => {
-    const assessments = [
-      assessment({ eventId: 1, resolutionTier: "recovery_likely" }),
-      assessment({ eventId: 2, resolutionTier: "recovery_unlikely" }),
-      assessment({ eventId: 3, resolutionTier: "recovery_unlikely" }),
-      assessment({ eventId: 4, resolutionTier: "recovery_likely" }),
-      assessment({ eventId: 5, resolutionTier: "at_risk" }),
-      assessment({ eventId: 6, resolutionTier: "recovery_likely" }),
-      assessment({ eventId: 7, resolutionTier: "insufficient_signal", durationSuppressed: true, predictedRemainingSec: null }),
-      assessment({ eventId: 8, resolutionTier: "recovery_likely" }),
-    ];
-    const { summary } = reviewDepegResolverAssessments({
-      assessments,
+describe("DDRR v2 coverage metrics", () => {
+  it("excludes no-calls and coverage rows from accuracy denominators", () => {
+    const { summary } = reviewDdrrV2Rows({
+      assessments: [
+        assessment({ eventId: 1, incidentKey: "ddr2:pred1", resolutionTier: "recovery_likely" }),
+        assessment({ eventId: 2, incidentKey: "ddr2:pred2", resolutionTier: "recovery_unlikely" }),
+      ],
+      noCalls: [
+        assessment({
+          eventId: 3,
+          incidentKey: "ddr2:nocall",
+          resolutionTier: "insufficient_signal",
+          durationSuppressed: true,
+          durationSuppressedReason: "insufficient_signal",
+          predictedRemainingSec: null,
+          iqrRemainingSec: null,
+        }),
+      ],
+      coverageRows: [coverage({ incidentKey: "ddr2:resolved", predictionState: "resolved_before_prediction" })],
       actualEventsById: new Map([
-        [1, actualEvent({ eventId: 1, endedAt: ASSESSED_AT + 100, recoveryPrice: 1 })],
-        [2, actualEvent({ eventId: 2, endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" })],
-        [3, actualEvent({ eventId: 3, endedAt: ASSESSED_AT + 100, recoveryPrice: 1 })],
-        [4, actualEvent({ eventId: 4, endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" })],
-        [5, actualEvent({ eventId: 5, endedAt: null, recoveryPrice: null, stablecoinStatus: "frozen" })],
-        [6, actualEvent({ eventId: 6, endedAt: null, recoveryPrice: null })],
-        [7, actualEvent({ eventId: 7, endedAt: ASSESSED_AT + 100, recoveryPrice: 1 })],
-        [8, actualEvent({ eventId: 8, endedAt: ASSESSED_AT + 100, recoveryPrice: null })],
+        [1, actualEvent({ eventId: 1, endedAt: LOCKED_AT + 100, recoveryPrice: 1 })],
+        [2, actualEvent({ eventId: 2, endedAt: LOCKED_AT + 100, recoveryPrice: 1 })],
+        [3, actualEvent({ eventId: 3, endedAt: LOCKED_AT + 100, recoveryPrice: 1 })],
       ]),
-      nowSec: ASSESSED_AT + 1_000,
+      nowSec: REVIEWED_AT,
     });
 
-    expect(summary.correctRecoverable).toBe(1);
-    expect(summary.correctTerminal).toBe(1);
-    expect(summary.falseTerminal).toBe(1);
-    expect(summary.falseRecoverable).toBe(1);
-    expect(summary.riskNotedTerminal).toBe(1);
-    expect(summary.pending).toBe(1);
-    expect(summary.unscoredInsufficientSignal).toBe(1);
-    expect(summary.dataIssue).toBe(1);
-    expect(summary.recoveryLikelihoodCorrectCount).toBe(2);
-    expect(summary.recoveryLikelihoodScoredCount).toBe(5);
-    expect(summary.recoveryLikelihoodAccuracyPct).toBe(0.4);
-    expect(summary.verdictScoredCount).toBe(5);
+    expect(summary.headline.lockedPredictionCount).toBe(2);
+    expect(summary.headline.noCallCount).toBe(1);
+    expect(summary.headline.resolvedBeforePredictionCount).toBe(1);
+    expect(summary.headline.recoveryLikelihoodScoredCount).toBe(2);
+    expect(summary.headline.recoveryLikelihoodAccuracyPct).toBe(0.5);
+    expect(summary.headline.predictionRatePct).toBe(2 / 3);
   });
-});
 
-describe("DDRR horizon review", () => {
-  it("marks hit, miss, pending, and unscored horizon states", () => {
-    const open = reviewed(
-      {
-        horizonCells: [
-          horizonCell("6h"),
-          horizonCell("24h"),
-          horizonCell("7d"),
-          horizonCell("30d", { state: "unsupported", probability: null, probabilityDisplay: null, probabilityInterval: null }),
-        ],
-      },
-      { endedAt: null, recoveryPrice: null },
-      ASSESSED_AT + 7 * 3_600,
+  it("uses denominator-safe percentages for empty policy universes", () => {
+    const summary = summarizeDdrrRows([]);
+
+    expect(summary.headline.policyUniverseIncidentCount).toBe(0);
+    expect(summary.headline.predictionRatePct).toBeNull();
+    expect(summary.headline.stateAssignedPct).toBeNull();
+    expect(summary.headline.invalidatedPct).toBeNull();
+  });
+
+  it("uses current policy as the headline once it has enough scored rows", () => {
+    const currentRows = Array.from({ length: 20 }, (_, index) =>
+      reviewDepegResolverAssessment(
+        assessment({ eventId: index + 1, incidentKey: `ddr2:current-${index}`, publicPredictionId: index + 1 }),
+        actualEvent({ eventId: index + 1, endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 }),
+        REVIEWED_AT,
+      ),
+    );
+    const oldRows = Array.from({ length: 20 }, (_, index) =>
+      reviewDepegResolverAssessment(
+        assessment({
+          eventId: 100 + index,
+          incidentKey: `ddr2:old-${index}`,
+          publicPredictionId: 100 + index,
+          predictionPolicyVersion: "legacy-policy",
+          resolutionTier: "recovery_unlikely",
+        }),
+        actualEvent({ eventId: 100 + index, endedAt: LOCKED_AT + 3_600, recoveryPrice: 1 }),
+        REVIEWED_AT,
+      ),
     );
 
-    expect(open.horizonReviews.map((h) => [h.horizon, h.result])).toEqual([
-      ["6h", "miss"],
-      ["24h", "pending"],
-      ["7d", "pending"],
-      ["30d", "unscored"],
-    ]);
+    const summary = summarizeDdrrRows([...oldRows, ...currentRows]);
 
-    const recovered = reviewed(
-      { eventId: 2, horizonCells: [horizonCell("6h"), horizonCell("24h"), horizonCell("7d"), horizonCell("30d")] },
-      { eventId: 2, endedAt: ASSESSED_AT + 5 * 3_600, recoveryPrice: 1 },
-      ASSESSED_AT + 5 * 3_600,
+    expect(summary.headlineScope).toBe("current_policy");
+    expect(summary.headline.recoveryLikelihoodScoredCount).toBe(20);
+    expect(summary.headline.recoveryLikelihoodAccuracyPct).toBe(1);
+  });
+
+  it("accounts for missed-lock coverage debt without scoring it as accuracy", () => {
+    const row = buildDdrrCoverageRow(
+      coverage({
+        incidentKey: "ddr2:missed",
+        predictionState: "missed_lock_recovered",
+        coverageCause: "lock_missed",
+        operationalCoverageCause: "lock_missed",
+        actualEndedAt: ELIGIBLE_AT,
+      }),
     );
+    const summary = summarizeDdrrRows([row]);
 
-    expect(recovered.horizonReviews.find((h) => h.horizon === "6h")?.result).toBe("hit");
+    expect(summary.headline.missedLockRecoveredCount).toBe(1);
+    expect(summary.headline.missedNoPredictionCount).toBe(1);
+    expect(summary.headline.missedOperationalLockCount).toBe(1);
+    expect(summary.headline.recoveryLikelihoodScoredCount).toBe(0);
+    expect(summary.headline.operationalMissRatePct).toBe(1);
+  });
 
-    const summary = summarizeDdrrRows([open, recovered]);
-    expect(summary.horizonHitRates.find((h) => h.horizon === "6h")).toEqual({
-      horizon: "6h",
-      scored: 2,
-      hits: 1,
-      misses: 1,
-      hitRate: 0.5,
+  it("counts publication retry and failure separately from scored predictions", () => {
+    const { summary } = reviewDdrrV2Rows({
+      coverageRows: [
+        coverage({
+          incidentKey: "ddr2:retry",
+          predictionState: "publication_retry_pending",
+          coverageCause: "publication_retry_pending",
+          sourceEventState: "active",
+        }),
+        coverage({
+          incidentKey: "ddr2:failed",
+          predictionState: "publication_failed",
+          coverageCause: "publication_failed",
+          sourceEventState: "recovered",
+          failedPublication: {
+            publicPredictionId: 1,
+            assessmentId: 2,
+            lockedAt: LOCKED_AT,
+            outcomeKind: "prediction",
+            rowHash: "hash",
+            sealedPayloadRedacted: true,
+            lastAttemptedAt: LOCKED_AT + 60,
+          },
+        }),
+      ],
+      nowSec: REVIEWED_AT,
     });
+
+    expect(summary.headline.publicationRetryPendingCount).toBe(1);
+    expect(summary.headline.publicationFailedCount).toBe(1);
+    expect(summary.headline.lockedPredictionCount).toBe(0);
+    expect(summary.headline.predictionRatePct).toBe(0);
   });
 
-  it("returns rows that satisfy the public schema", () => {
-    const row = reviewed({}, { endedAt: ASSESSED_AT + 4_000, recoveryPrice: 1 });
+  it("tracks invalidations separately and includes them in trust denominators", () => {
+    const { rows, summary } = reviewDdrrV2Rows({
+      assessments: [assessment({ incidentKey: "ddr2:locked" })],
+      invalidatedPredictions: [invalidated()],
+      actualEventsById: new Map([[1, actualEvent({ endedAt: LOCKED_AT + 100, recoveryPrice: 1 })]]),
+      nowSec: REVIEWED_AT,
+    });
 
-    expect(DdrrRowSchema.parse(row)).toEqual(row);
+    expect(rows.find((row) => row.kind === "invalidated_prediction")?.predictionState).toBe("invalidated");
+    expect(summary.headline.lockedPredictionCount).toBe(1);
+    expect(summary.headline.invalidatedPredictionCount).toBe(1);
+    expect(summary.headline.invalidatedByReason).toEqual({ event_identity_error: 1 });
+    expect(summary.headline.predictionRatePct).toBe(0.5);
+    expect(summary.headline.invalidationAdjustedPredictionRatePct).toBe(1);
   });
 });

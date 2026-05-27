@@ -1,14 +1,25 @@
 import type { DdrCellState, DdrHorizon } from "../../types/depeg-resolver";
 import type {
   DdrrActualOutcome,
+  DdrrCoverageCause,
   DdrrDurationReview,
   DdrrHorizonReview,
   DdrrMedianReview,
-  DdrrRow,
+  DdrrV2ActualOutcomeDetail,
+  DdrrV2BaseRow,
+  DdrrV2CoverageRow,
+  DdrrV2InvalidatedPredictionRow,
+  DdrrV2NoCallReviewRow,
+  DdrrV2PredictionReviewRow,
   DdrrVerdictReview,
 } from "../../types/depeg-resolver-review";
-import type { DdrrActualEventInput, DdrrAssessmentInput } from "./inputs";
-import { deriveActualOutcome, type DdrrDerivedOutcome } from "./outcomes";
+import type {
+  DdrrActualEventInput,
+  DdrrAssessmentInput,
+  DdrrV2CoverageInput,
+  DdrrV2InvalidatedPredictionInput,
+} from "./inputs";
+import { deriveActualOutcome, getAssessmentReviewAnchorSec, type DdrrDerivedOutcome } from "./outcomes";
 
 export const DDRR_HORIZON_SECONDS: Record<DdrHorizon, number> = {
   "6h": 6 * 3600,
@@ -26,7 +37,9 @@ interface DdrrDurationReviewResult {
 }
 
 function isDataIssueOutcome(outcome: DdrrActualOutcome): boolean {
-  return outcome === "source_event_missing" || outcome === "orphan_closed" || outcome === "data_issue";
+  return (
+    outcome === "source_missing" || outcome === "orphan_closed" || outcome === "data_issue" || outcome === "invalidated"
+  );
 }
 
 function isScoreableHorizonState(state: DdrCellState): boolean {
@@ -39,10 +52,7 @@ function medianReviewForSignedError(signedErrorSec: number): DdrrMedianReview {
   return "median_exact";
 }
 
-export function reviewVerdict(
-  assessment: DdrrAssessmentInput,
-  outcome: DdrrDerivedOutcome,
-): DdrrVerdictReview {
+export function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrVerdictReview {
   if (isDataIssueOutcome(outcome.actualOutcome)) return "data_issue";
   if (assessment.resolutionTier === "insufficient_signal") return "unscored_insufficient_signal";
   if (outcome.actualOutcome === "still_open") return "pending";
@@ -52,7 +62,7 @@ export function reviewVerdict(
     return "correct_recoverable";
   }
 
-  if (outcome.actualOutcome === "terminal_observed") {
+  if (outcome.actualOutcome === "terminal") {
     if (assessment.resolutionTier === "recovery_unlikely") return "correct_terminal";
     if (assessment.resolutionTier === "at_risk") return "risk_noted_terminal";
     return "false_recoverable";
@@ -61,10 +71,7 @@ export function reviewVerdict(
   return "data_issue";
 }
 
-export function reviewDuration(
-  assessment: DdrrAssessmentInput,
-  outcome: DdrrDerivedOutcome,
-): DdrrDurationReviewResult {
+export function reviewDuration(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrDurationReviewResult {
   if (isDataIssueOutcome(outcome.actualOutcome)) {
     return {
       durationReview: "data_issue",
@@ -150,9 +157,10 @@ export function reviewHorizons(
   nowSec: number,
 ): DdrrHorizonReview[] {
   const evaluationNow = Number.isFinite(nowSec) ? nowSec : assessment.assessedAt;
+  const anchorSec = getAssessmentReviewAnchorSec(assessment);
   return assessment.horizonCells.map((cell) => {
     const horizonSec = DDRR_HORIZON_SECONDS[cell.horizon];
-    const horizonEndAt = assessment.assessedAt + horizonSec;
+    const horizonEndAt = anchorSec + horizonSec;
     const horizonElapsed = evaluationNow >= horizonEndAt || outcome.actualEndedAt != null;
     const resolvedWithinHorizon =
       outcome.actualOutcome === "recovered" && outcome.actualEndedAt != null && outcome.actualEndedAt <= horizonEndAt;
@@ -182,18 +190,35 @@ export function reviewHorizons(
   });
 }
 
-export function reviewDepegResolverAssessment(
-  assessment: DdrrAssessmentInput,
-  actualEvent: DdrrActualEventInput | null,
-  nowSec: number,
-): DdrrRow {
-  const outcome = deriveActualOutcome(assessment, actualEvent);
-  const verdictReview = reviewVerdict(assessment, outcome);
-  const duration = reviewDuration(assessment, outcome);
-  const horizonReviews = reviewHorizons(assessment, outcome, nowSec);
+function fallbackIncidentKey(assessment: DdrrAssessmentInput): string {
+  return assessment.incidentKey ?? `legacy-event:${assessment.eventId}`;
+}
 
+function fallbackEligibleAt(assessment: DdrrAssessmentInput): number {
+  return assessment.eligibleAt ?? assessment.startedAt;
+}
+
+function fallbackPublicPredictionId(assessment: DdrrAssessmentInput): number {
+  return assessment.publicPredictionId ?? assessment.eventId;
+}
+
+function fallbackAssessmentId(assessment: DdrrAssessmentInput): number {
+  return assessment.assessmentId ?? assessment.eventId;
+}
+
+function fallbackPredictionPolicyVersion(assessment: DdrrAssessmentInput): string {
+  return assessment.predictionPolicyVersion ?? "legacy";
+}
+
+function fallbackPublicationSnapshotToken(assessment: DdrrAssessmentInput): string {
+  return assessment.publicationSnapshotToken ?? "legacy-unmanifested";
+}
+
+function baseRowFromAssessment(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrV2BaseRow {
   return {
     eventId: assessment.eventId,
+    currentEventId: assessment.currentEventId ?? assessment.eventId,
+    incidentKey: fallbackIncidentKey(assessment),
     stablecoinId: assessment.stablecoinId,
     symbol: assessment.symbol,
     name: assessment.name,
@@ -201,27 +226,160 @@ export function reviewDepegResolverAssessment(
     governance: assessment.governance,
     direction: assessment.direction,
     startedAt: assessment.startedAt,
-    assessedAt: assessment.assessedAt,
-    eventAgeSec: assessment.eventAgeSec,
-    checkpoint: assessment.checkpoint,
-    methodologyVersion: assessment.methodologyVersion,
-    resolutionTier: assessment.resolutionTier,
-    durationSuppressed: assessment.durationSuppressed,
-    durationSuppressedReason: assessment.durationSuppressedReason,
-    predictedRemainingSec: assessment.predictedRemainingSec,
-    iqrRemainingSec: assessment.iqrRemainingSec,
-    actualOutcome: outcome.actualOutcome,
+    eligibleAt: fallbackEligibleAt(assessment),
+    sourceEventState: outcome.sourceEventState,
+    terminalEvidenceAt: outcome.terminalEvidenceAt,
+    terminalEvidenceInterval: outcome.terminalEvidenceInterval,
+    terminalEvidencePrecision: outcome.terminalEvidencePrecision,
+  };
+}
+
+function actualDetail(outcome: DdrrDerivedOutcome, reviewedAt: number): DdrrV2ActualOutcomeDetail {
+  return {
+    kind: outcome.actualOutcome,
     actualEndedAt: outcome.actualEndedAt,
     actualRemainingSec: outcome.actualRemainingSec,
+    terminalEvidenceAt: outcome.terminalEvidenceAt,
+    terminalEvidenceInterval: outcome.terminalEvidenceInterval,
+    terminalEvidencePrecision: outcome.terminalEvidencePrecision,
+    reviewedAt,
+  };
+}
+
+export function reviewDepegResolverAssessment(
+  assessment: DdrrAssessmentInput,
+  actualEvent: DdrrActualEventInput | null,
+  nowSec: number,
+): DdrrV2PredictionReviewRow {
+  const outcome = deriveActualOutcome(assessment, actualEvent);
+  const verdictReview = reviewVerdict(assessment, outcome);
+  const duration = reviewDuration(assessment, outcome);
+  const horizonReviews = reviewHorizons(assessment, outcome, nowSec);
+  const lockedAt = getAssessmentReviewAnchorSec(assessment);
+
+  return {
+    ...baseRowFromAssessment(assessment, outcome),
+    kind: "prediction_review",
+    publicPredictionId: fallbackPublicPredictionId(assessment),
+    assessmentId: fallbackAssessmentId(assessment),
+    predictionState: "frozen",
+    predictionMethodologyVersion: assessment.predictionMethodologyVersion ?? assessment.methodologyVersion,
+    predictionPolicyVersion: fallbackPredictionPolicyVersion(assessment),
+    lockedAt,
+    publishedAt: assessment.publishedAt ?? lockedAt,
+    publicationSnapshotToken: fallbackPublicationSnapshotToken(assessment),
+    frozen: {
+      resolutionTier: assessment.resolutionTier,
+      predictedRemainingSec: assessment.predictedRemainingSec,
+      iqrRemainingSec: assessment.iqrRemainingSec,
+      horizonCells: assessment.horizonCells,
+      stratum: assessment.stratum,
+      factors: assessment.factors,
+    },
+    actual: actualDetail(outcome, nowSec),
     verdictReview,
     durationReview: duration.durationReview,
-    medianReview: duration.medianReview,
-    signedErrorSec: duration.signedErrorSec,
-    absoluteErrorSec: duration.absoluteErrorSec,
-    withinIqr: duration.withinIqr,
     horizonReviews,
-    stratum: assessment.stratum,
-    factors: assessment.factors,
-    sourceEventState: outcome.sourceEventState,
+    predictedRemainingSec: assessment.predictedRemainingSec,
+    actualRemainingSec: outcome.actualRemainingSec,
+    signedDurationErrorSec: duration.signedErrorSec,
+    absoluteDurationErrorSec: duration.absoluteErrorSec,
+    medianReview: duration.medianReview,
+    withinIqr: duration.withinIqr,
   };
+}
+
+export function reviewDepegResolverNoCall(
+  assessment: DdrrAssessmentInput,
+  actualEvent: DdrrActualEventInput | null,
+  nowSec: number,
+): DdrrV2NoCallReviewRow {
+  const outcome = deriveActualOutcome(assessment, actualEvent);
+  const lockedAt = getAssessmentReviewAnchorSec(assessment);
+  return {
+    ...baseRowFromAssessment(assessment, outcome),
+    kind: "no_call_review",
+    publicPredictionId: fallbackPublicPredictionId(assessment),
+    assessmentId: fallbackAssessmentId(assessment),
+    predictionState: "no_call",
+    predictionMethodologyVersion: assessment.predictionMethodologyVersion ?? assessment.methodologyVersion,
+    predictionPolicyVersion: fallbackPredictionPolicyVersion(assessment),
+    lockedAt,
+    publishedAt: assessment.publishedAt ?? lockedAt,
+    publicationSnapshotToken: fallbackPublicationSnapshotToken(assessment),
+    missingReasons: assessment.durationSuppressedReason == null ? [] : [assessment.durationSuppressedReason],
+    actual: actualDetail(outcome, nowSec),
+    verdictReview: "unscored_insufficient_signal",
+    durationReview: "duration_unscored",
+    horizonReviews: [],
+  };
+}
+
+export function buildDdrrCoverageRow(input: DdrrV2CoverageInput): DdrrV2CoverageRow {
+  return {
+    eventId: input.eventId,
+    currentEventId: input.currentEventId ?? input.eventId,
+    incidentKey: input.incidentKey,
+    stablecoinId: input.stablecoinId,
+    symbol: input.symbol,
+    name: input.name,
+    pegCurrency: input.pegCurrency,
+    governance: input.governance,
+    direction: input.direction,
+    startedAt: input.startedAt,
+    eligibleAt: input.eligibleAt,
+    sourceEventState: input.sourceEventState,
+    terminalEvidenceAt: input.terminalEvidenceAt ?? null,
+    terminalEvidenceInterval: input.terminalEvidenceInterval ?? null,
+    terminalEvidencePrecision: input.terminalEvidencePrecision ?? null,
+    kind: "coverage",
+    predictionState: input.predictionState,
+    actualEndedAt: input.actualEndedAt ?? null,
+    terminalEvidenceSourceDate: input.terminalEvidenceSourceDate ?? null,
+    coverageCause: input.coverageCause,
+    operationalCoverageCause: input.operationalCoverageCause ?? null,
+    outcomeQualityState: input.outcomeQualityState ?? null,
+    reason: input.reason ?? null,
+    failedPublication: input.failedPublication ?? null,
+  };
+}
+
+export function buildDdrrInvalidatedPredictionRow(
+  input: DdrrV2InvalidatedPredictionInput,
+): DdrrV2InvalidatedPredictionRow {
+  return {
+    eventId: input.eventId,
+    currentEventId: input.currentEventId ?? input.eventId,
+    incidentKey: input.incidentKey,
+    stablecoinId: input.stablecoinId,
+    symbol: input.symbol,
+    name: input.name,
+    pegCurrency: input.pegCurrency,
+    governance: input.governance,
+    direction: input.direction,
+    startedAt: input.startedAt,
+    eligibleAt: input.eligibleAt,
+    sourceEventState: input.sourceEventState ?? "invalidated",
+    terminalEvidenceAt: input.terminalEvidenceAt ?? null,
+    terminalEvidenceInterval: input.terminalEvidenceInterval ?? null,
+    terminalEvidencePrecision: input.terminalEvidencePrecision ?? null,
+    kind: "invalidated_prediction",
+    publicPredictionId: input.publicPredictionId,
+    assessmentId: input.assessmentId,
+    predictionState: "invalidated",
+    predictionMethodologyVersion: input.predictionMethodologyVersion,
+    predictionPolicyVersion: input.predictionPolicyVersion,
+    lockedAt: input.lockedAt,
+    publishedAt: input.publishedAt ?? null,
+    publicationSnapshotToken: input.publicationSnapshotToken ?? null,
+    originalKind: input.originalKind,
+    originalOutcome: input.originalOutcome,
+    latestErratum: input.latestErratum,
+    errataCount: input.errataCount,
+    errataHistory: input.errataHistory,
+  };
+}
+
+export function isOperationalMissCause(cause: DdrrCoverageCause | null): boolean {
+  return cause === "system_deferral" || cause === "cron_gap" || cause === "lock_missed";
 }

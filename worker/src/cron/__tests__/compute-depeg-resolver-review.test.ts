@@ -2,9 +2,11 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  buildEmptyDdrrSummary,
   buildDepegResolverReviewSnapshot,
   computeAndStoreDepegResolverReview,
 } from "../compute-depeg-resolver-review";
+import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -12,6 +14,7 @@ afterEach(() => {
 
 const STARTED_AT = 1_000_000;
 const ASSESSED_AT = 1_010_000;
+const ELIGIBLE_AT = STARTED_AT + 86_400;
 
 function assessmentRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -52,7 +55,137 @@ function assessmentRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function durableStores(overrides: Partial<DdrV2StoreContracts> = {}): DdrV2StoreContracts {
+  return {
+    ensureCanonicalIncidents: vi.fn(async () => []),
+    recordLockDeferral: vi.fn(async () => undefined),
+    sealPublicPrediction: vi.fn(async () => {
+      throw new Error("not used");
+    }),
+    sealPublicNoCall: vi.fn(async () => {
+      throw new Error("not used");
+    }),
+    loadCanonicalIncidents: vi.fn(async () => []),
+    loadSealedPublicPredictions: vi.fn(async () => []),
+    loadFirstPublicationMembership: vi.fn(async () => []),
+    writePublicationManifest: vi.fn(async () => {
+      throw new Error("not used");
+    }),
+    loadPredictionErrata: vi.fn(async () => []),
+    ...overrides,
+  };
+}
+
 describe("buildDepegResolverReviewSnapshot", () => {
+  it("can build DDRR from durable first-publication exposure when the v2 scorer is provided", async () => {
+    const db = mockD1([]);
+    const stores = {
+      ensureCanonicalIncidents: vi.fn(async () => []),
+      recordLockDeferral: vi.fn(async () => undefined),
+      sealPublicPrediction: vi.fn(async () => {
+        throw new Error("not used");
+      }),
+      sealPublicNoCall: vi.fn(async () => {
+        throw new Error("not used");
+      }),
+      loadCanonicalIncidents: vi.fn(async () => [
+        {
+          incidentKey: "ddr2:22222222222222222222222222222222",
+          eventId: 42,
+          currentEventId: 42,
+          stablecoinId: "lusd-liquity",
+          pegCurrency: "USD",
+          direction: "below" as const,
+          startedAt: STARTED_AT,
+          eligibleAt: STARTED_AT + 86_400,
+          policyUniverseIncluded: true,
+        },
+      ]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 9,
+          incidentKey: "ddr2:22222222222222222222222222222222",
+          eventId: 42,
+          assessmentId: 90,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          eligibleAt: STARTED_AT + 86_400,
+          lockedAt: ASSESSED_AT,
+          eventAgeAtLockSec: ASSESSED_AT - STARTED_AT,
+          lockTiming: "on_time" as const,
+          rowHash: "c".repeat(64),
+          sealedPayload: {},
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 9,
+          incidentKey: "ddr2:22222222222222222222222222222222",
+          snapshotToken: "ddr-public-1",
+          snapshotGeneration: 2,
+          publishedAt: ASSESSED_AT,
+          firstPublished: true,
+        },
+      ]),
+      writePublicationManifest: vi.fn(async () => {
+        throw new Error("not used");
+      }),
+      loadPredictionErrata: vi.fn(async () => []),
+    } satisfies DdrV2StoreContracts;
+    const v2ReviewBuilder = vi.fn(async () => ({
+      _meta: {
+        computedAt: ASSESSED_AT,
+        expiresAt: ASSESSED_AT + 1800,
+        degraded: false,
+        degradedReason: null,
+        reviewerVersion: "ddr-reviewer-v2",
+        publicWarning: "v2",
+        assessedEventCount: 1,
+        reviewedEventCount: 1,
+        pendingEventCount: 0,
+        durationScoredCount: 0,
+        verdictScoredCount: 0,
+        assessmentRowLimit: 20_000,
+        assessmentRowsTruncated: false,
+        publicRowLimit: 100,
+        publicRowsTruncated: false,
+        methodologyVersions: [DDR_METHODOLOGY_VERSION],
+      },
+      summary: buildEmptyDdrrSummary(),
+      rows: [],
+      methodology: {
+        key: "depeg-resolver",
+        version: DDR_METHODOLOGY_VERSION,
+        versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+        currentVersion: DDR_METHODOLOGY_VERSION,
+        currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+        changelogPath: "/methodology/depeg-resolver-changelog/",
+        isCurrent: true,
+        asOf: ASSESSED_AT,
+      },
+    }));
+
+    await buildDepegResolverReviewSnapshot(db, ASSESSED_AT, undefined, {
+      storeContracts: stores,
+      v2ReviewBuilder,
+    });
+
+    expect(stores.loadCanonicalIncidents).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        predictionPolicyVersion: "sticky-24h-v1",
+        policyUniverseIncluded: true,
+      }),
+    );
+    expect(v2ReviewBuilder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstPublication: [expect.objectContaining({ publicPredictionId: 9, firstPublished: true })],
+        sealedPublicPredictions: [expect.objectContaining({ id: 9 })],
+      }),
+    );
+  });
+
   it("reviews stored DDR assessments against actual depeg event outcomes", async () => {
     const db = mockD1([
       { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },
@@ -76,15 +209,16 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.methodology.versionLabel).toBe(DDR_METHODOLOGY_VERSION_LABEL);
     expect(snapshot._meta.assessedEventCount).toBe(1);
     expect(snapshot._meta.reviewedEventCount).toBe(1);
-    expect(snapshot.summary.recoveryLikelihoodAccuracyPct).toBe(1);
-    expect(snapshot.summary.averageSignedDurationErrorSec).toBe(3_600);
-    expect(snapshot.summary.averageAbsoluteDurationErrorSec).toBe(3_600);
+    expect(snapshot.summary.headline.recoveryLikelihoodAccuracyPct).toBe(1);
+    expect(snapshot.summary.headline.meanSignedDurationErrorSec).toBe(3_600);
+    expect(snapshot.summary.headline.meanAbsoluteDurationErrorSec).toBe(3_600);
     expect(snapshot.rows[0]).toMatchObject({
       eventId: 42,
-      actualOutcome: "recovered",
+      kind: "prediction_review",
+      actual: { kind: "recovered" },
       verdictReview: "correct_recoverable",
       durationReview: "inside_band",
-      signedErrorSec: 3_600,
+      signedDurationErrorSec: 3_600,
       withinIqr: true,
     });
   });
@@ -98,10 +232,125 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
 
     expect(snapshot.rows).toHaveLength(1);
-    expect(snapshot.rows[0].actualOutcome).toBe("source_event_missing");
-    expect(snapshot.rows[0].verdictReview).toBe("data_issue");
-    expect(snapshot.summary.dataIssue).toBe(1);
-    expect(snapshot.summary.recoveryLikelihoodScoredCount).toBe(0);
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "prediction_review",
+      actual: { kind: "source_missing" },
+      verdictReview: "data_issue",
+    });
+    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
+  });
+
+  it("classifies v2 missed-lock coverage at lock boundaries and after deferrals close", async () => {
+    const incidents = [
+      {
+        incidentKey: "ddr2:eq-recovered",
+        eventId: 1,
+        currentEventId: 1,
+        stablecoinId: "lusd-liquity",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+      {
+        incidentKey: "ddr2:deferral-closed",
+        eventId: 2,
+        currentEventId: 2,
+        stablecoinId: "lusd-liquity",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+        lockState: {
+          eligibleAt: ELIGIBLE_AT,
+          deferralCount: 1,
+          lastDeferralReason: "cache stale",
+          lastState: "lock_deferred" as const,
+        },
+      },
+      {
+        incidentKey: "ddr2:terminal-unknown-time",
+        eventId: 3,
+        currentEventId: 3,
+        stablecoinId: "usr-resolv",
+        pegCurrency: "USD",
+        direction: "below" as const,
+        startedAt: STARTED_AT,
+        eligibleAt: ELIGIBLE_AT,
+        policyUniverseIncluded: true,
+      },
+    ];
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          { id: 1, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT, recovery_price: 1 },
+          { id: 2, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT + 1, recovery_price: 1 },
+          { id: 3, stablecoin_id: "usr-resolv", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+        ],
+      },
+    ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores });
+    const states = Object.fromEntries(snapshot.rows.map((row) => [row.incidentKey, row.predictionState]));
+
+    expect(states["ddr2:eq-recovered"]).toBe("missed_lock_recovered");
+    expect(states["ddr2:deferral-closed"]).toBe("missed_lock_recovered");
+    expect(states["ddr2:terminal-unknown-time"]).toBe("missed_lock_terminal");
+  });
+
+  it("marks sealed unpublished rows as publication failed once the source closes", async () => {
+    const incident = {
+      incidentKey: "ddr2:sealed-unpublished",
+      eventId: 42,
+      currentEventId: 42,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: ELIGIBLE_AT,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [{ id: 42, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT + 10, recovery_price: 1 }],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [incident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 9,
+          publicPredictionId: 9,
+          incidentKey: incident.incidentKey,
+          eventId: 42,
+          assessmentId: 90,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          eligibleAt: ELIGIBLE_AT,
+          lockedAt: ELIGIBLE_AT,
+          eventAgeAtLockSec: 86_400,
+          lockTiming: "on_time" as const,
+          rowHash: "c".repeat(64),
+          sealedPayload: { kind: "prediction", symbol: "LUSD" },
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores });
+
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: incident.incidentKey,
+      predictionState: "publication_failed",
+      failedPublication: { publicPredictionId: 9, rowHash: "c".repeat(64) },
+    });
+    expect(snapshot.summary.headline.publicationFailedCount).toBe(1);
   });
 
   it("keeps headline stats complete while capping public review rows", async () => {
@@ -129,7 +378,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot._meta.publicRowLimit).toBe(100);
     expect(snapshot._meta.publicRowsTruncated).toBe(true);
     expect(snapshot.rows).toHaveLength(100);
-    expect(snapshot.summary.recoveryLikelihoodScoredCount).toBe(101);
+    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(101);
   });
 
   it("stores a cache snapshot with headline DDRR stats", async () => {
@@ -157,9 +406,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
     expect(result.itemCount).toBe(1);
     expect(cacheWrite?.binds[0]).toBe("depeg-resolver-review:snapshot");
-    expect(JSON.parse(cacheWrite?.binds[1] as string).payload.summary).toMatchObject({
+    expect(JSON.parse(cacheWrite?.binds[1] as string).payload.summary.headline).toMatchObject({
       recoveryLikelihoodAccuracyPct: 1,
-      averageSignedDurationErrorSec: 3_600,
+      meanSignedDurationErrorSec: 3_600,
     });
   });
 });

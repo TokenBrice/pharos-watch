@@ -1,4 +1,15 @@
-import type { DdrrActualEvent, DdrrAssessment } from "../../types/depeg-resolver-review";
+import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "../../types/depeg-resolver";
+import type {
+  DdrrActualEvent,
+  DdrrAssessment,
+  DdrrCoverageCause,
+  DdrrCoveragePredictionState,
+  DdrrFailedPublication,
+  DdrrOutcomeQualityState,
+  DdrrSourceEventState,
+  DdrrTerminalEvidenceInterval,
+  DdrrTerminalEvidencePrecision,
+} from "../../types/depeg-resolver-review";
 
 export type DdrrAssessmentInput = DdrrAssessment;
 export type DdrrActualEventInput = DdrrActualEvent;
@@ -25,10 +36,72 @@ export interface DdrrReviewBatchInput {
   nowSec: number;
 }
 
-export function lookupActualEvent(
-  lookup: DdrrActualEventLookup,
-  eventId: number,
-): DdrrActualEventInput | null {
+export interface DdrrV2CoverageInput {
+  eventId: number;
+  currentEventId?: number | null;
+  incidentKey: string;
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+  pegCurrency: string;
+  governance: string;
+  direction: "above" | "below";
+  startedAt: number;
+  eligibleAt: number;
+  sourceEventState: DdrrSourceEventState;
+  terminalEvidenceAt?: number | null;
+  terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;
+  terminalEvidencePrecision?: DdrrTerminalEvidencePrecision | null;
+  predictionState: DdrrCoveragePredictionState;
+  actualEndedAt?: number | null;
+  terminalEvidenceSourceDate?: string | null;
+  coverageCause: DdrrCoverageCause;
+  operationalCoverageCause?: DdrrCoverageCause | null;
+  outcomeQualityState?: DdrrOutcomeQualityState | null;
+  reason?: string | null;
+  failedPublication?: DdrrFailedPublication | null;
+}
+
+export interface DdrrV2InvalidatedPredictionInput {
+  eventId: number;
+  currentEventId?: number | null;
+  incidentKey: string;
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+  pegCurrency: string;
+  governance: string;
+  direction: "above" | "below";
+  startedAt: number;
+  eligibleAt: number;
+  sourceEventState?: DdrrSourceEventState;
+  terminalEvidenceAt?: number | null;
+  terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;
+  terminalEvidencePrecision?: DdrrTerminalEvidencePrecision | null;
+  publicPredictionId: number;
+  assessmentId: number;
+  predictionMethodologyVersion: string;
+  predictionPolicyVersion: string;
+  lockedAt: number;
+  publishedAt?: number | null;
+  publicationSnapshotToken?: string | null;
+  originalKind: "prediction" | "no_call";
+  originalOutcome: DdrOfficialLockOutcome;
+  latestErratum: DdrPredictionErratum;
+  errataCount: number;
+  errataHistory: DdrPredictionErratum[];
+}
+
+export interface DdrrV2ReviewBatchInput {
+  assessments?: DdrrAssessmentInput[];
+  noCalls?: DdrrAssessmentInput[];
+  coverageRows?: DdrrV2CoverageInput[];
+  invalidatedPredictions?: DdrrV2InvalidatedPredictionInput[];
+  actualEventsById?: DdrrActualEventLookup;
+  nowSec: number;
+}
+
+export function lookupActualEvent(lookup: DdrrActualEventLookup, eventId: number): DdrrActualEventInput | null {
   if (hasMapLookup(lookup)) {
     return lookup.get(eventId) ?? null;
   }

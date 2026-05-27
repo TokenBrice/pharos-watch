@@ -1,10 +1,19 @@
-import { reviewDepegResolverAssessments } from "@shared/lib/depeg-resolver-review";
+import {
+  reviewDepegResolverAssessments,
+  reviewDdrrV2Rows,
+  summarizeDdrrRows,
+  type DdrrV2CoverageInput,
+  type DdrrV2InvalidatedPredictionInput,
+} from "@shared/lib/depeg-resolver-review";
 import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
+  DDR_PREDICTION_POLICY_VERSION,
 } from "@shared/lib/depeg-resolver-version";
+import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "@shared/types/depeg-resolver";
 import {
   DDRR_PUBLIC_WARNING,
   DDRR_REVIEWER_VERSION,
@@ -18,10 +27,29 @@ import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { buildInClause, chunkArray } from "../lib/db";
 import { writeDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
+import type {
+  DdrCanonicalIncident,
+  DdrFirstPublicationMembership,
+  DdrSealedPublicPrediction,
+  DdrV2StoreContracts,
+} from "./compute-depeg-resolver";
 
 const DDRR_SNAPSHOT_TTL_SEC = 1800;
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;
 const DDRR_PUBLIC_ROW_CAP = 100;
+
+export interface DdrrV2ReviewSource {
+  incidents: DdrCanonicalIncident[];
+  firstPublication: DdrFirstPublicationMembership[];
+  sealedPublicPredictions: DdrSealedPublicPrediction[];
+  errata: Array<Record<string, unknown>>;
+  nowSec: number;
+}
+
+export interface ComputeDepegResolverReviewOptions {
+  storeContracts?: DdrV2StoreContracts | null;
+  v2ReviewBuilder?: ((source: DdrrV2ReviewSource) => Promise<DdrrResponse>) | null;
+}
 
 interface AssessmentDbRow {
   event_id: number;
@@ -55,35 +83,32 @@ interface ActualEventDbRow {
   recovery_price: number | null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function arrayValue(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function publicPredictionIdOf(sealed: DdrSealedPublicPrediction): number {
+  return sealed.publicPredictionId ?? sealed.id;
+}
+
 export function buildEmptyDdrrSummary(): DdrrSummary {
-  return {
-    recoveryLikelihoodCorrectCount: 0,
-    recoveryLikelihoodScoredCount: 0,
-    recoveryLikelihoodAccuracyPct: null,
-    durationScoredCount: 0,
-    averageSignedDurationErrorSec: null,
-    averageAbsoluteDurationErrorSec: null,
-    correctRecoverable: 0,
-    correctTerminal: 0,
-    falseTerminal: 0,
-    falseRecoverable: 0,
-    riskNotedTerminal: 0,
-    unscoredInsufficientSignal: 0,
-    pending: 0,
-    dataIssue: 0,
-    verdictScoredCount: 0,
-    durationUnscoredCount: 0,
-    withinIqrCount: 0,
-    iqrScoredCount: 0,
-    withinIqrPct: null,
-    medianAbsoluteErrorSec: null,
-    horizonHitRates: [
-      { horizon: "6h", scored: 0, hits: 0, misses: 0, hitRate: null },
-      { horizon: "24h", scored: 0, hits: 0, misses: 0, hitRate: null },
-      { horizon: "7d", scored: 0, hits: 0, misses: 0, hitRate: null },
-      { horizon: "30d", scored: 0, hits: 0, misses: 0, hitRate: null },
-    ],
-  };
+  return summarizeDdrrRows([]);
 }
 
 function abortIf(signal: AbortSignal | undefined, label: string): void {
@@ -164,10 +189,18 @@ async function loadActualEventsById(
   db: D1Database,
   assessments: readonly DdrrAssessment[],
 ): Promise<Map<number, DdrrActualEvent>> {
-  const eventIds = [...new Set(assessments.map((assessment) => assessment.eventId))];
+  return loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId));
+}
+
+async function loadActualEventsByEventIds(
+  db: D1Database,
+  eventIdsInput: readonly number[],
+): Promise<Map<number, DdrrActualEvent>> {
+  const eventIds = [...new Set(eventIdsInput)];
   const actualEventsById = new Map<number, DdrrActualEvent>();
 
   for (const ids of chunkArray(eventIds)) {
+    if (ids.length === 0) continue;
     const inClause = buildInClause(ids);
     const result = await db
       .prepare(
@@ -181,11 +214,15 @@ async function loadActualEventsById(
     for (const row of result.results ?? []) {
       actualEventsById.set(row.id, {
         eventId: row.id,
+        currentEventId: row.id,
         startedAt: row.started_at,
         endedAt: row.ended_at,
         recoveryPrice: row.recovery_price,
         stablecoinStatus: TRACKED_META_BY_ID.get(row.stablecoin_id)?.status ?? null,
         terminalObserved: null,
+        terminalEvidenceAt: null,
+        terminalEvidenceInterval: null,
+        terminalEvidencePrecision: null,
       });
     }
   }
@@ -193,12 +230,439 @@ async function loadActualEventsById(
   return actualEventsById;
 }
 
+function firstPublicationById(rows: readonly DdrFirstPublicationMembership[]): Map<number, DdrFirstPublicationMembership> {
+  return new Map(rows.filter((row) => row.firstPublished).map((row) => [row.publicPredictionId, row]));
+}
+
+function latestErrataByPredictionId(
+  rows: readonly Record<string, unknown>[],
+): Map<number, { latest: DdrPredictionErratum; history: DdrPredictionErratum[] }> {
+  const out = new Map<number, { latest: DdrPredictionErratum; history: DdrPredictionErratum[] }>();
+  for (const row of rows) {
+    const publicPredictionId = numberValue(row.publicPredictionId);
+    if (publicPredictionId == null) continue;
+    const erratum = row as DdrPredictionErratum;
+    const current = out.get(publicPredictionId);
+    const history = [...(current?.history ?? []), erratum].sort((left, right) => right.createdAt - left.createdAt || right.id - left.id);
+    out.set(publicPredictionId, { latest: history[0], history });
+  }
+  return out;
+}
+
+function baseFieldsForIncident(incident: DdrCanonicalIncident, payload: Record<string, unknown>) {
+  const meta = TRACKED_META_BY_ID.get(incident.stablecoinId);
+  return {
+    eventId: incident.eventId,
+    currentEventId: incident.currentEventId,
+    incidentKey: incident.incidentKey,
+    stablecoinId: incident.stablecoinId,
+    symbol: stringValue(payload.symbol) ?? meta?.symbol ?? incident.stablecoinId,
+    name: stringValue(payload.name) ?? meta?.name ?? stringValue(payload.symbol) ?? incident.stablecoinId,
+    pegCurrency: stringValue(payload.pegCurrency) ?? incident.pegCurrency,
+    governance: stringValue(payload.governance) ?? meta?.flags.governance ?? "unknown",
+    direction: incident.direction,
+    startedAt: incident.startedAt,
+    eligibleAt: incident.eligibleAt,
+  };
+}
+
+function assessmentFromPrediction(
+  sealed: DdrSealedPublicPrediction,
+  incident: DdrCanonicalIncident,
+  publication: DdrFirstPublicationMembership,
+): DdrrAssessment | null {
+  const payload = recordValue(sealed.sealedPayload);
+  const frozen = recordValue(payload.frozen);
+  const resolution = recordValue(frozen.resolution);
+  const duration = recordValue(frozen.duration);
+  const iqr = arrayValue(duration.iqrSec);
+  const parsed = DdrrAssessmentSchema.safeParse({
+    ...baseFieldsForIncident(incident, payload),
+    publicPredictionId: publicPredictionIdOf(sealed),
+    assessmentId: sealed.assessmentId,
+    lockedAt: sealed.lockedAt,
+    publishedAt: publication.publishedAt,
+    publicationSnapshotToken: publication.snapshotToken,
+    assessedAt: sealed.lockedAt,
+    eventAgeSec: sealed.eventAgeAtLockSec,
+    checkpoint: "public_prediction",
+    methodologyVersion: sealed.predictionMethodologyVersion,
+    predictionMethodologyVersion: sealed.predictionMethodologyVersion,
+    predictionPolicyVersion: sealed.predictionPolicyVersion,
+    resolutionTier: resolution.tier,
+    durationSuppressed: duration.suppressed === true,
+    durationSuppressedReason: stringValue(duration.suppressedReason),
+    predictedRemainingSec: numberValue(duration.medianSec),
+    iqrRemainingSec: iqr.length === 2 && typeof iqr[0] === "number" && typeof iqr[1] === "number" ? [iqr[0], iqr[1]] : null,
+    horizonCells: arrayValue(duration.horizons),
+    stratum: stringValue(duration.stratum),
+    factors: arrayValue(resolution.factors),
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function assessmentFromNoCall(
+  sealed: DdrSealedPublicPrediction,
+  incident: DdrCanonicalIncident,
+  publication: DdrFirstPublicationMembership,
+): DdrrAssessment | null {
+  const payload = recordValue(sealed.sealedPayload);
+  const noCall = recordValue(payload.noCall);
+  const missingReasons = arrayValue(noCall.missingReasons).filter((entry): entry is string => typeof entry === "string");
+  const parsed = DdrrAssessmentSchema.safeParse({
+    ...baseFieldsForIncident(incident, payload),
+    publicPredictionId: publicPredictionIdOf(sealed),
+    assessmentId: sealed.assessmentId,
+    lockedAt: sealed.lockedAt,
+    publishedAt: publication.publishedAt,
+    publicationSnapshotToken: publication.snapshotToken,
+    assessedAt: sealed.lockedAt,
+    eventAgeSec: sealed.eventAgeAtLockSec,
+    checkpoint: "public_prediction",
+    methodologyVersion: sealed.predictionMethodologyVersion,
+    predictionMethodologyVersion: sealed.predictionMethodologyVersion,
+    predictionPolicyVersion: sealed.predictionPolicyVersion,
+    resolutionTier: "insufficient_signal",
+    durationSuppressed: true,
+    durationSuppressedReason: missingReasons[0] ?? "insufficient_signal",
+    predictedRemainingSec: null,
+    iqrRemainingSec: null,
+    horizonCells: [],
+    stratum: null,
+    factors: [],
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function sourceEventState(actual: DdrrActualEvent | null): DdrrV2CoverageInput["sourceEventState"] {
+  if (!actual) return "missing";
+  if (isTerminalStablecoinStatus(actual.stablecoinStatus)) return "terminal";
+  if (actual.endedAt != null && actual.recoveryPrice != null) return "recovered";
+  if (actual.endedAt != null) return "orphan_closed";
+  return "active";
+}
+
+function coverageStateForIncident(
+  incident: DdrCanonicalIncident,
+  actual: DdrrActualEvent | null,
+  nowSec: number,
+): Pick<DdrrV2CoverageInput, "predictionState" | "coverageCause" | "operationalCoverageCause" | "outcomeQualityState" | "reason"> {
+  if (actual == null) {
+    return {
+      predictionState: "data_quality_gap",
+      coverageCause: "data_quality_gap",
+      operationalCoverageCause: null,
+      outcomeQualityState: "data_quality_gap",
+      reason: "source_event_missing",
+    };
+  }
+  if (actual.endedAt != null && actual.recoveryPrice != null && actual.endedAt < incident.eligibleAt) {
+    return {
+      predictionState: "resolved_before_prediction",
+      coverageCause: "pre_lock_recovered",
+      operationalCoverageCause: null,
+      outcomeQualityState: "classified",
+      reason: null,
+    };
+  }
+  if (isTerminalStablecoinStatus(actual.stablecoinStatus) && actual.terminalEvidenceAt != null && actual.terminalEvidenceAt < incident.eligibleAt) {
+    return {
+      predictionState: "terminal_before_prediction",
+      coverageCause: "pre_lock_terminal",
+      operationalCoverageCause: null,
+      outcomeQualityState: "classified",
+      reason: null,
+    };
+  }
+  if (nowSec < incident.eligibleAt) {
+    return {
+      predictionState: "pending_lock",
+      coverageCause: "active_pending_lock",
+      operationalCoverageCause: null,
+      outcomeQualityState: null,
+      reason: null,
+    };
+  }
+  if (actual.endedAt != null && actual.recoveryPrice != null) {
+    return {
+      predictionState: "missed_lock_recovered",
+      coverageCause: "lock_missed",
+      operationalCoverageCause: "lock_missed",
+      outcomeQualityState: "classified",
+      reason: "eligible_incident_closed_without_public_prediction",
+    };
+  }
+  if (actual.endedAt != null) {
+    return {
+      predictionState: "orphan_closed",
+      coverageCause: "orphan_closed",
+      operationalCoverageCause: null,
+      outcomeQualityState: "orphan_closed",
+      reason: "closed_without_recovery_or_terminal_evidence",
+    };
+  }
+  if (isTerminalStablecoinStatus(actual.stablecoinStatus)) {
+    return {
+      predictionState: "missed_lock_terminal",
+      coverageCause: "lock_missed",
+      operationalCoverageCause: "lock_missed",
+      outcomeQualityState: "classified",
+      reason: "eligible_terminal_incident_without_public_prediction",
+    };
+  }
+  if (incident.lockState?.lastState === "lock_deferred") {
+    return {
+      predictionState: "lock_deferred",
+      coverageCause: "active_lock_deferred",
+      operationalCoverageCause: "system_deferral",
+      outcomeQualityState: null,
+      reason: incident.lockState.lastDeferralReason,
+    };
+  }
+  return {
+    predictionState: "lock_deferred",
+    coverageCause: "cron_gap",
+    operationalCoverageCause: "cron_gap",
+    outcomeQualityState: null,
+    reason: "eligible_active_incident_without_public_prediction",
+  };
+}
+
+function coverageRowForIncident(
+  incident: DdrCanonicalIncident,
+  actual: DdrrActualEvent | null,
+  nowSec: number,
+): DdrrV2CoverageInput {
+  const state = coverageStateForIncident(incident, actual, nowSec);
+  return {
+    ...baseFieldsForIncident(incident, {}),
+    sourceEventState: sourceEventState(actual),
+    terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
+    terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
+    terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,
+    actualEndedAt: actual?.endedAt ?? null,
+    terminalEvidenceSourceDate: null,
+    failedPublication: null,
+    ...state,
+  };
+}
+
+function failedPublicationCoverageRow(
+  sealed: DdrSealedPublicPrediction,
+  incident: DdrCanonicalIncident,
+  actual: DdrrActualEvent | null,
+): DdrrV2CoverageInput {
+  const publicationFailed = actual != null && (
+    actual.endedAt != null ||
+    isTerminalStablecoinStatus(actual.stablecoinStatus)
+  );
+  const predictionState = publicationFailed ? "publication_failed" : "publication_retry_pending";
+  return {
+    ...baseFieldsForIncident(incident, recordValue(sealed.sealedPayload)),
+    sourceEventState: sourceEventState(actual),
+    terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
+    terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
+    terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,
+    predictionState,
+    actualEndedAt: actual?.endedAt ?? null,
+    terminalEvidenceSourceDate: null,
+    coverageCause: predictionState,
+    operationalCoverageCause: predictionState,
+    outcomeQualityState: publicationFailed ? "classified" : null,
+    reason: publicationFailed
+      ? "sealed_prediction_closed_before_first_publication_manifest"
+      : "sealed_prediction_not_in_first_publication_manifest",
+    failedPublication: {
+      publicPredictionId: publicPredictionIdOf(sealed),
+      assessmentId: sealed.assessmentId,
+      lockedAt: sealed.lockedAt,
+      outcomeKind: sealed.outcomeKind,
+      rowHash: sealed.rowHash,
+      sealedPayloadRedacted: true,
+      lastAttemptedAt: sealed.lockedAt,
+    },
+  };
+}
+
+async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2ReviewSource): Promise<DdrrResponse> {
+  const incidentsByKey = new Map(source.incidents.map((incident) => [incident.incidentKey, incident]));
+  const firstPublication = firstPublicationById(source.firstPublication);
+  const errataByPredictionId = latestErrataByPredictionId(source.errata);
+  const actualEventsById = await loadActualEventsByEventIds(db, [
+    ...source.incidents.map((incident) => incident.currentEventId),
+    ...source.sealedPublicPredictions.map((prediction) => prediction.eventId),
+  ]);
+
+  const assessments: DdrrAssessment[] = [];
+  const noCalls: DdrrAssessment[] = [];
+  const coverageRows: DdrrV2CoverageInput[] = [];
+  const invalidatedPredictions: DdrrV2InvalidatedPredictionInput[] = [];
+  const sealedIncidentKeys = new Set<string>();
+
+  for (const sealed of source.sealedPublicPredictions) {
+    const incident = incidentsByKey.get(sealed.incidentKey);
+    if (!incident) continue;
+    sealedIncidentKeys.add(incident.incidentKey);
+    const publicPredictionId = publicPredictionIdOf(sealed);
+    const publication = firstPublication.get(publicPredictionId) ?? null;
+    const actual = actualEventsById.get(sealed.eventId) ?? null;
+    const errata = errataByPredictionId.get(publicPredictionId);
+
+    if (publication == null) {
+      coverageRows.push(failedPublicationCoverageRow(sealed, incident, actual));
+      continue;
+    }
+
+    if (errata) {
+      const payload = recordValue(sealed.sealedPayload);
+      const originalOutcome = (sealed.outcomeKind === "no_call" ? payload.noCall : payload.frozen) as DdrOfficialLockOutcome | undefined;
+      if (originalOutcome) {
+        invalidatedPredictions.push({
+          ...baseFieldsForIncident(incident, payload),
+          sourceEventState: "invalidated",
+          terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
+          terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
+          terminalEvidencePrecision: actual?.terminalEvidencePrecision ?? null,
+          publicPredictionId,
+          assessmentId: sealed.assessmentId,
+          predictionMethodologyVersion: sealed.predictionMethodologyVersion,
+          predictionPolicyVersion: sealed.predictionPolicyVersion,
+          lockedAt: sealed.lockedAt,
+          publishedAt: publication.publishedAt,
+          publicationSnapshotToken: publication.snapshotToken,
+          originalKind: sealed.outcomeKind,
+          originalOutcome,
+          latestErratum: errata.latest,
+          errataCount: errata.history.length,
+          errataHistory: errata.history,
+        });
+      }
+      continue;
+    }
+
+    const assessment = sealed.outcomeKind === "no_call"
+      ? assessmentFromNoCall(sealed, incident, publication)
+      : assessmentFromPrediction(sealed, incident, publication);
+    if (!assessment) {
+      coverageRows.push({
+        ...failedPublicationCoverageRow(sealed, incident, actual),
+        predictionState: "data_quality_gap",
+        coverageCause: "data_quality_gap",
+        operationalCoverageCause: null,
+        outcomeQualityState: "data_quality_gap",
+        reason: "sealed_payload_parse_failed",
+        failedPublication: null,
+      });
+      continue;
+    }
+    if (sealed.outcomeKind === "no_call") noCalls.push(assessment);
+    else assessments.push(assessment);
+  }
+
+  for (const incident of source.incidents) {
+    if (sealedIncidentKeys.has(incident.incidentKey)) continue;
+    coverageRows.push(coverageRowForIncident(incident, actualEventsById.get(incident.currentEventId) ?? null, source.nowSec));
+  }
+
+  const { rows, summary } = reviewDdrrV2Rows({
+    assessments,
+    noCalls,
+    coverageRows,
+    invalidatedPredictions,
+    actualEventsById,
+    nowSec: source.nowSec,
+  });
+  const publicRows = rows.slice(0, DDRR_PUBLIC_ROW_CAP);
+  const publicRowsTruncated = rows.length > publicRows.length;
+  const methodologyVersions = [...new Set(source.sealedPublicPredictions.map((prediction) => prediction.predictionMethodologyVersion))].sort();
+
+  return {
+    _meta: {
+      computedAt: source.nowSec,
+      expiresAt: source.nowSec + DDRR_SNAPSHOT_TTL_SEC,
+      degraded: false,
+      degradedReason: null,
+      reviewerVersion: DDRR_REVIEWER_VERSION,
+      publicWarning: DDRR_PUBLIC_WARNING,
+      assessedEventCount: source.incidents.length,
+      reviewedEventCount: rows.length,
+      pendingEventCount:
+        summary.headline.pendingLockCount +
+        summary.headline.lockDeferredCount +
+        summary.headline.publicationRetryPendingCount,
+      durationScoredCount: summary.headline.durationScoredCount,
+      verdictScoredCount: summary.headline.recoveryLikelihoodScoredCount,
+      assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
+      assessmentRowsTruncated: false,
+      publicRowLimit: DDRR_PUBLIC_ROW_CAP,
+      publicRowsTruncated,
+      methodologyVersions,
+    },
+    summary,
+    rows: publicRows,
+    methodology: buildMethodologyEnvelope({
+      version: DDR_METHODOLOGY_VERSION,
+      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+      currentVersion: DDR_METHODOLOGY_VERSION,
+      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
+      asOf: source.nowSec,
+    }),
+  };
+}
+
+async function maybeBuildDdrV2ReviewSnapshot(
+  db: D1Database,
+  nowSec: number,
+  options: ComputeDepegResolverReviewOptions | undefined,
+): Promise<DdrrResponse | null> {
+  const stores = options?.storeContracts;
+  const builder = options?.v2ReviewBuilder;
+  if (!stores || !stores.loadCanonicalIncidents) return null;
+
+  const incidents = await stores.loadCanonicalIncidents(db, {
+    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+    policyUniverseIncluded: true,
+    includeSuperseded: true,
+  });
+  const incidentKeys = incidents.map((incident) => incident.incidentKey);
+  const sealedPublicPredictions = await stores.loadSealedPublicPredictions(db, {
+    incidentKeys,
+    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+    includeUnpublished: true,
+  });
+  const firstPublication = await stores.loadFirstPublicationMembership(db, {
+    incidentKeys,
+    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+  });
+  const errata = stores.loadPredictionErrata
+    ? await stores.loadPredictionErrata(db, {
+        incidentKeys,
+        publicPredictionIds: sealedPublicPredictions.map((prediction) => prediction.publicPredictionId ?? prediction.id),
+      })
+    : [];
+
+  const source = {
+    incidents,
+    firstPublication,
+    sealedPublicPredictions,
+    errata,
+    nowSec,
+  };
+
+  return builder ? builder(source) : buildDurableDdrV2ReviewSnapshot(db, source);
+}
+
 export async function buildDepegResolverReviewSnapshot(
   db: D1Database,
   nowSec = Math.floor(Date.now() / 1000),
   signal?: AbortSignal,
+  options?: ComputeDepegResolverReviewOptions,
 ): Promise<DdrrResponse> {
   abortIf(signal, "compute-depeg-resolver-review");
+  const v2Snapshot = await maybeBuildDdrV2ReviewSnapshot(db, nowSec, options);
+  if (v2Snapshot) return v2Snapshot;
+
   const { assessments, parseIssueCount, truncated: assessmentRowsTruncated } = await loadAssessments(db);
   abortIf(signal, "compute-depeg-resolver-review");
 
@@ -226,9 +690,12 @@ export async function buildDepegResolverReviewSnapshot(
       publicWarning: DDRR_PUBLIC_WARNING,
       assessedEventCount: new Set(assessments.map((assessment) => assessment.eventId)).size,
       reviewedEventCount: rows.length,
-      pendingEventCount: summary.pending,
-      durationScoredCount: summary.durationScoredCount,
-      verdictScoredCount: summary.verdictScoredCount,
+      pendingEventCount:
+        summary.headline.pendingLockCount +
+        summary.headline.lockDeferredCount +
+        summary.headline.publicationRetryPendingCount,
+      durationScoredCount: summary.headline.durationScoredCount,
+      verdictScoredCount: summary.headline.recoveryLikelihoodScoredCount,
       assessmentRowLimit: DDRR_ASSESSMENT_ROW_CAP,
       assessmentRowsTruncated,
       publicRowLimit: DDRR_PUBLIC_ROW_CAP,
@@ -251,8 +718,9 @@ export async function buildDepegResolverReviewSnapshot(
 export async function computeAndStoreDepegResolverReview(
   db: D1Database,
   signal?: AbortSignal,
+  options?: ComputeDepegResolverReviewOptions,
 ): Promise<CronResult> {
-  const snapshot = await buildDepegResolverReviewSnapshot(db, Math.floor(Date.now() / 1000), signal);
+  const snapshot = await buildDepegResolverReviewSnapshot(db, Math.floor(Date.now() / 1000), signal, options);
   await writeDepegResolverReviewSnapshot(db, snapshot);
 
   return {
@@ -261,8 +729,8 @@ export async function computeAndStoreDepegResolverReview(
       assessedEvents: snapshot._meta.assessedEventCount,
       reviewedRows: snapshot._meta.reviewedEventCount,
       publicRows: snapshot.rows.length,
-      verdictScored: snapshot.summary.recoveryLikelihoodScoredCount,
-      durationScored: snapshot.summary.durationScoredCount,
+      verdictScored: snapshot.summary.headline.recoveryLikelihoodScoredCount,
+      durationScored: snapshot.summary.headline.durationScoredCount,
       degraded: snapshot._meta.degraded,
       degradedReason: snapshot._meta.degradedReason,
       assessmentRowsTruncated: snapshot._meta.assessmentRowsTruncated,

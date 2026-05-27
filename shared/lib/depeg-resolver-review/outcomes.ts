@@ -1,13 +1,16 @@
-import type { DdrrActualOutcome } from "../../types/depeg-resolver-review";
+import type { DdrrActualOutcome, DdrrSourceEventState } from "../../types/depeg-resolver-review";
 import type { DdrrActualEventInput, DdrrAssessmentInput } from "./inputs";
 import { isTerminalStablecoinStatus } from "../stablecoin-lifecycle";
 
 export interface DdrrDerivedOutcome {
   actualOutcome: DdrrActualOutcome;
-  sourceEventState: DdrrActualOutcome;
+  sourceEventState: DdrrSourceEventState;
   actualEndedAt: number | null;
   actualRemainingSec: number | null;
   terminalObserved: boolean;
+  terminalEvidenceAt: number | null;
+  terminalEvidenceInterval: { start: number; end: number } | null;
+  terminalEvidencePrecision: "day" | "month" | "unknown" | null;
   dataIssueReason: string | null;
 }
 
@@ -26,27 +29,42 @@ function dataIssue(reason: string, actualEndedAt: number | null = null): DdrrDer
     actualEndedAt,
     actualRemainingSec: null,
     terminalObserved: false,
+    terminalEvidenceAt: null,
+    terminalEvidenceInterval: null,
+    terminalEvidencePrecision: null,
     dataIssueReason: reason,
   };
+}
+
+export function getAssessmentReviewAnchorSec(assessment: DdrrAssessmentInput): number {
+  return assessment.lockedAt ?? assessment.assessedAt;
 }
 
 export function deriveActualOutcome(
   assessment: DdrrAssessmentInput,
   event: DdrrActualEventInput | null,
 ): DdrrDerivedOutcome {
-  if (!isFiniteNonnegativeInteger(assessment.startedAt) || !isFiniteNonnegativeInteger(assessment.assessedAt)) {
+  const anchorSec = getAssessmentReviewAnchorSec(assessment);
+  if (
+    !isFiniteNonnegativeInteger(assessment.startedAt) ||
+    !isFiniteNonnegativeInteger(assessment.assessedAt) ||
+    !isFiniteNonnegativeInteger(anchorSec)
+  ) {
     return dataIssue("malformed_assessment_timestamp");
   }
-  if (assessment.assessedAt < assessment.startedAt) {
+  if (anchorSec < assessment.startedAt) {
     return dataIssue("assessment_before_event_start");
   }
   if (event == null) {
     return {
-      actualOutcome: "source_event_missing",
-      sourceEventState: "source_event_missing",
+      actualOutcome: "source_missing",
+      sourceEventState: "missing",
       actualEndedAt: null,
       actualRemainingSec: null,
       terminalObserved: false,
+      terminalEvidenceAt: null,
+      terminalEvidenceInterval: null,
+      terminalEvidencePrecision: null,
       dataIssueReason: "source_event_missing",
     };
   }
@@ -68,28 +86,56 @@ export function deriveActualOutcome(
   if (event.endedAt != null && event.endedAt < event.startedAt) {
     return dataIssue("event_end_before_event_start", event.endedAt);
   }
-  if (event.endedAt != null && event.endedAt < assessment.assessedAt) {
-    return dataIssue("event_end_before_assessment", event.endedAt);
+  if (event.endedAt != null && event.endedAt < anchorSec) {
+    return dataIssue("event_end_before_review_anchor", event.endedAt);
   }
 
   const terminalObserved = hasTerminalEvidence(event);
+  const terminalEvidenceAt = event.terminalEvidenceAt ?? null;
+  const terminalEvidenceInterval = event.terminalEvidenceInterval ?? null;
+  const terminalEvidencePrecision = event.terminalEvidencePrecision ?? null;
+  if (
+    terminalObserved &&
+    event.endedAt != null &&
+    event.recoveryPrice != null &&
+    terminalEvidenceAt != null &&
+    terminalEvidenceAt <= event.endedAt
+  ) {
+    return {
+      actualOutcome: "terminal",
+      sourceEventState: "terminal",
+      actualEndedAt: event.endedAt,
+      actualRemainingSec: null,
+      terminalObserved: true,
+      terminalEvidenceAt,
+      terminalEvidenceInterval,
+      terminalEvidencePrecision,
+      dataIssueReason: null,
+    };
+  }
   if (event.endedAt != null && event.recoveryPrice != null) {
     return {
       actualOutcome: "recovered",
       sourceEventState: "recovered",
       actualEndedAt: event.endedAt,
-      actualRemainingSec: event.endedAt - assessment.assessedAt,
+      actualRemainingSec: event.endedAt - anchorSec,
       terminalObserved,
+      terminalEvidenceAt,
+      terminalEvidenceInterval,
+      terminalEvidencePrecision,
       dataIssueReason: null,
     };
   }
   if (terminalObserved && (event.endedAt == null || event.recoveryPrice == null)) {
     return {
-      actualOutcome: "terminal_observed",
-      sourceEventState: "terminal_observed",
+      actualOutcome: "terminal",
+      sourceEventState: "terminal",
       actualEndedAt: event.endedAt,
       actualRemainingSec: null,
       terminalObserved: true,
+      terminalEvidenceAt,
+      terminalEvidenceInterval,
+      terminalEvidencePrecision,
       dataIssueReason: null,
     };
   }
@@ -100,15 +146,21 @@ export function deriveActualOutcome(
       actualEndedAt: event.endedAt,
       actualRemainingSec: null,
       terminalObserved: false,
+      terminalEvidenceAt,
+      terminalEvidenceInterval,
+      terminalEvidencePrecision,
       dataIssueReason: "orphan_closed_without_terminal_evidence",
     };
   }
   return {
     actualOutcome: "still_open",
-    sourceEventState: "still_open",
+    sourceEventState: "active",
     actualEndedAt: null,
     actualRemainingSec: null,
     terminalObserved: false,
+    terminalEvidenceAt,
+    terminalEvidenceInterval,
+    terminalEvidencePrecision,
     dataIssueReason: null,
   };
 }

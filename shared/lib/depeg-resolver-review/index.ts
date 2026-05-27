@@ -1,7 +1,12 @@
 import type { DdrrRow, DdrrSummary } from "../../types/depeg-resolver-review";
-import type { DdrrReviewBatchInput } from "./inputs";
+import type { DdrrReviewBatchInput, DdrrV2ReviewBatchInput } from "./inputs";
 import { lookupActualEvent } from "./inputs";
-import { reviewDepegResolverAssessment } from "./review";
+import {
+  buildDdrrCoverageRow,
+  buildDdrrInvalidatedPredictionRow,
+  reviewDepegResolverAssessment,
+  reviewDepegResolverNoCall,
+} from "./review";
 import { summarizeDdrrRows } from "./summary";
 
 export interface DdrrReviewBatchResult {
@@ -11,8 +16,30 @@ export interface DdrrReviewBatchResult {
 
 export function reviewDepegResolverAssessments(input: DdrrReviewBatchInput): DdrrReviewBatchResult {
   const rows = input.assessments.map((assessment) =>
-    reviewDepegResolverAssessment(assessment, lookupActualEvent(input.actualEventsById, assessment.eventId), input.nowSec),
+    reviewDepegResolverAssessment(
+      assessment,
+      lookupActualEvent(input.actualEventsById, assessment.eventId),
+      input.nowSec,
+    ),
   );
+  return {
+    rows,
+    summary: summarizeDdrrRows(rows),
+  };
+}
+
+export function reviewDdrrV2Rows(input: DdrrV2ReviewBatchInput): DdrrReviewBatchResult {
+  const actualEventsById = input.actualEventsById ?? {};
+  const rows: DdrrRow[] = [
+    ...(input.assessments ?? []).map((assessment) =>
+      reviewDepegResolverAssessment(assessment, lookupActualEvent(actualEventsById, assessment.eventId), input.nowSec),
+    ),
+    ...(input.noCalls ?? []).map((assessment) =>
+      reviewDepegResolverNoCall(assessment, lookupActualEvent(actualEventsById, assessment.eventId), input.nowSec),
+    ),
+    ...(input.coverageRows ?? []).map((row) => buildDdrrCoverageRow(row)),
+    ...(input.invalidatedPredictions ?? []).map((row) => buildDdrrInvalidatedPredictionRow(row)),
+  ];
   return {
     rows,
     summary: summarizeDdrrRows(rows),

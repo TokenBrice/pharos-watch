@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
+  DDRR_REVIEWER_VERSION,
 } from "@shared/lib/depeg-resolver-version";
-import type { DdrrResponse } from "@shared/types/depeg-resolver-review";
-import { DDRR_REVIEWER_VERSION } from "@shared/types/depeg-resolver-review";
+import { DDRR_REVIEWER_VERSION as DDRR_CACHE_REVIEWER_VERSION } from "@shared/types/depeg-resolver-review";
 import { handleDepegResolverReview } from "../depeg-resolver-review";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
@@ -14,14 +14,54 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function snapshot(computedAt: number, expiresAt: number): DdrrResponse {
+type LegacyDdrrCachePayload = {
+  _meta: {
+    computedAt: number;
+    expiresAt: number;
+    degraded: boolean;
+    degradedReason: string | null;
+    reviewerVersion: string;
+    publicWarning: string;
+    assessedEventCount: number;
+    reviewedEventCount: number;
+    pendingEventCount: number;
+    durationScoredCount: number;
+    verdictScoredCount: number;
+    assessmentRowLimit: number;
+    assessmentRowsTruncated: boolean;
+    publicRowLimit: number;
+    publicRowsTruncated: boolean;
+    methodologyVersions: string[];
+  };
+  summary: Record<string, unknown>;
+  rows: unknown[];
+  methodology: Record<string, unknown>;
+};
+
+type DdrrApiTestBody = {
+  _meta: {
+    degraded: boolean;
+    degradedReason: string | null;
+    reviewerVersion: string;
+  };
+  summary: {
+    headline: {
+      recoveryLikelihoodAccuracyPct: number | null;
+      recoveryLikelihoodScoredCount: number;
+      meanSignedDurationErrorSec: number | null;
+    };
+  };
+  rows: unknown[];
+};
+
+function snapshot(computedAt: number, expiresAt: number): LegacyDdrrCachePayload {
   return {
     _meta: {
       computedAt,
       expiresAt,
       degraded: false,
       degradedReason: null,
-      reviewerVersion: DDRR_REVIEWER_VERSION,
+      reviewerVersion: DDRR_CACHE_REVIEWER_VERSION,
       publicWarning: "warning",
       assessedEventCount: 1,
       reviewedEventCount: 1,
@@ -97,7 +137,7 @@ function snapshot(computedAt: number, expiresAt: number): DdrrResponse {
 }
 
 describe("handleDepegResolverReview", () => {
-  it("serves stale snapshots as degraded while keeping review rows", async () => {
+  it("rejects old reviewer snapshots instead of serving v1 review rows", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);
     const payload = snapshot(1_998_000, 1_999_000);
@@ -110,7 +150,7 @@ describe("handleDepegResolverReview", () => {
             value: JSON.stringify({
               generation: DDRR_SNAPSHOT_CACHE_GENERATION,
               methodologyVersion: DDR_METHODOLOGY_VERSION,
-              reviewerVersion: DDRR_REVIEWER_VERSION,
+              reviewerVersion: DDRR_CACHE_REVIEWER_VERSION,
               payload,
             }),
             updated_at: payload._meta.computedAt,
@@ -120,13 +160,14 @@ describe("handleDepegResolverReview", () => {
     ]);
 
     const res = await handleDepegResolverReview(db);
-    const body = (await res.json()) as DdrrResponse;
+    const body = (await res.json()) as DdrrApiTestBody;
 
     expect(res.status).toBe(200);
     expect(body._meta.degraded).toBe(true);
-    expect(body._meta.degradedReason).toBe("stale-cache");
-    expect(body.summary.recoveryLikelihoodAccuracyPct).toBe(1);
-    expect(body.rows[0].verdictReview).toBe("correct_recoverable");
+    expect(["invalid-payload", "reviewer-version-mismatch"]).toContain(body._meta.degradedReason);
+    expect(body._meta.reviewerVersion).toBe(DDRR_REVIEWER_VERSION);
+    expect(body.summary.headline.recoveryLikelihoodAccuracyPct).toBeNull();
+    expect(body.rows).toEqual([]);
   });
 
   it("returns a valid degraded empty payload when no cache exists yet", async () => {
@@ -135,13 +176,13 @@ describe("handleDepegResolverReview", () => {
     const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [] }]);
 
     const res = await handleDepegResolverReview(db);
-    const body = (await res.json()) as DdrrResponse;
+    const body = (await res.json()) as DdrrApiTestBody;
 
     expect(res.status).toBe(200);
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("missing-cache");
-    expect(body.summary.recoveryLikelihoodScoredCount).toBe(0);
-    expect(body.summary.averageSignedDurationErrorSec).toBeNull();
+    expect(body.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
+    expect(body.summary.headline.meanSignedDurationErrorSec).toBeNull();
     expect(body.rows).toEqual([]);
   });
 });
