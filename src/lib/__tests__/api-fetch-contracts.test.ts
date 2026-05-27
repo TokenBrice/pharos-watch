@@ -143,10 +143,21 @@ describe("api contract validation policy", () => {
   it("validates meta-aware response schemas that intentionally retain _meta", async () => {
     const ddrPayload = {
       _meta: {
+        schemaVersion: 2,
         dataAsOf: 1779723422,
         modelAsOf: 1779723422,
         computedAt: 1779723422,
         expiresAt: 1779725222,
+        snapshotToken: null,
+        snapshotGeneration: null,
+        publicPredictionIds: [],
+        publicPredictionRowHashes: {},
+        basePayloadHash: null,
+        readOverlay: {
+          degradedLockDeferralIncidentKeys: [],
+          closedPendingReviewIncidentKeys: [],
+          suppressedIncidentKeys: [],
+        },
         degraded: false,
         degradedReason: null,
         publicWarning: "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.",

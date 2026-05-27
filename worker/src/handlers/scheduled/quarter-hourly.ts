@@ -55,7 +55,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
   const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
   if (stablecoinsResult && !stablecoinsCacheSafe) {
-    console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping dependent jobs");
+    console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
   }
 
   if (stablecoinsCacheSafe) {
@@ -72,11 +72,16 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     );
   }
 
-  if (stablecoinsCacheSafe) {
-    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
-      computeDepegResolver(runtime.db, signal),
-    );
-  }
+  await runBestEffortScheduledJob(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
+    computeDepegResolver({
+      db: runtime.db,
+      signal,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe,
+      depegPipelineHealthy: stablecoinsCapabilities.depegPipeline,
+      syncCapabilities: stablecoinsCapabilities,
+    }),
+  );
 
   try {
     const cached = await getCache(runtime.db, "stablecoins");

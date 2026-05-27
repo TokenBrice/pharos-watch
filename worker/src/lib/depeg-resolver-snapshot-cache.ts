@@ -1,10 +1,13 @@
 import { DdrResponseSchema, type DdrResponse } from "@shared/types/depeg-resolver";
-import { DDR_METHODOLOGY_VERSION } from "@shared/lib/depeg-resolver-version";
+import {
+  DDR_METHODOLOGY_VERSION,
+  DDR_SNAPSHOT_CACHE_GENERATION as CURRENT_DDR_SNAPSHOT_CACHE_GENERATION,
+} from "@shared/lib/depeg-resolver-version";
 import { decodeCachedJson } from "./cache-json";
 import { getCache, setCache } from "./db-cache";
 
 const DDR_SNAPSHOT_CACHE_KEY = "depeg-resolver:snapshot";
-export const DDR_SNAPSHOT_CACHE_GENERATION = 1;
+export const DDR_SNAPSHOT_CACHE_GENERATION = CURRENT_DDR_SNAPSHOT_CACHE_GENERATION;
 
 export type DdrSnapshotCacheFailureReason =
   | "missing-cache"
