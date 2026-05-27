@@ -49,6 +49,55 @@
     "country": "United States",
     "license": "Money Transmitter Licenses (49 states)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "ctUSD is a MoonPay-issued U.S. dollar payment stablecoin using M0 infrastructure with 1:1 mint and redemption."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MoonPay USA LLC",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "MoonPay and Citrea materials describe ctUSD issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
+    "references": [
+      {
+        "label": "MoonPay stablecoin issuance",
+        "url": "https://www.moonpay.com/business/issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MoonPay stablecoin terms",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Citrea ctUSD announcement",
+        "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "MoonPay stablecoin issuance and licensing pages",
+        "Citrea ctUSD launch materials",
+        "M0 reserve dashboard"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for ctUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "citrea",

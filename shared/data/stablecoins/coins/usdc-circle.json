@@ -46,6 +46,55 @@
     "regulator": "NYDFS / 50-state MTL",
     "license": "Virtual Currency License (BitLicense)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDC is publicly issued as a U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Circle Internet Financial, LLC",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "U.S. state money-transmitter regulators / NYDFS BitLicense context; proposed OCC national trust bank",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.circle.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Circle signals a GENIUS-era U.S. stablecoin path, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Circle GENIUS Act hub",
+        "url": "https://www.circle.com/genius-act",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Circle USDC transparency",
+        "url": "https://www.circle.com/transparency",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Federal Register GENIUS notices",
+        "Circle GENIUS Act, transparency, legal, and licensing pages"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for USDC.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "mica": {
     "status": "authorized",
     "tokenType": "EMT",
@@ -58,8 +107,8 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Circle: first global stablecoin issuer to comply with MiCA",
-        "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica"
+        "label": "Circle USDC MiCA white paper",
+        "url": "https://www.circle.com/fr/legal/mica-usdc-whitepaper"
       }
     ]
   },

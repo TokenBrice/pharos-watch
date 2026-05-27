@@ -12,6 +12,10 @@ export interface GeniusRegimeState {
   rulemakingPhase: GeniusRulemakingPhase;
   sourceLabel: string;
   sourceUrl: string;
+  sourceReferences?: {
+    label: string;
+    url: string;
+  }[];
   reviewedAt: string;
 }
 
@@ -22,6 +26,28 @@ export const GENIUS_REGIME_STATE = {
   rulemakingPhase: "proposed-rules",
   sourceLabel: "OCC Bulletin 2026-3",
   sourceUrl: "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+  sourceReferences: [
+    {
+      label: "OCC Bulletin 2026-3",
+      url: "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+    },
+    {
+      label: "FDIC proposed PPSI application procedures",
+      url: "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+    },
+    {
+      label: "FDIC proposed PPSI requirements and standards",
+      url: "https://www.fdic.gov/board/federal-register-notice-genius-act-requirements-and-standards-fdic-supervised-permitted",
+    },
+    {
+      label: "FinCEN and OFAC proposed PPSI AML/CFT rule",
+      url: "https://www.fincen.gov/system/files/2026-04/PPSI-AMLCFT-NPRM.pdf",
+    },
+    {
+      label: "Treasury proposed state regime comparability rule",
+      url: "https://home.treasury.gov/news/press-releases/sb0435",
+    },
+  ],
   reviewedAt: "2026-05-27",
 } as const satisfies GeniusRegimeState;
 

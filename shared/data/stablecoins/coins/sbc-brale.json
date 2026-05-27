@@ -49,6 +49,53 @@
     "regulator": "FinCEN",
     "license": "Money Services Business / Money Transmitter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "SBC is a Brale-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Brale Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://brale.xyz/stablecoins/SBC",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "references": [
+      {
+        "label": "Brale SBC",
+        "url": "https://brale.xyz/stablecoins/SBC",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "Brale terms",
+        "url": "https://brale.xyz/legal/terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Brale disclosures",
+        "url": "https://brale.xyz/legal/disclosures",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Brale SBC reserve, terms, and disclosure pages",
+        "state money-transmitter public licensing context"
+      ],
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for SBC.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

@@ -33,6 +33,54 @@
     "regulator": "FinCEN / state MTL authorities",
     "license": "Money Services Business (NMLS #2450917)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "CASH is a Bridge-issued U.S. dollar payment stablecoin for Phantom with 1:1 redemption through Bridge."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge issuer and Phantom materials describe CASH issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
+    "references": [
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Phantom CASH help",
+        "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Bridge Open Issuance documentation and legal terms",
+        "Phantom CASH user-facing disclosures"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for CASH.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "solana",

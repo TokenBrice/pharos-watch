@@ -41,6 +41,57 @@
     "regulator": "South Dakota Division of Banking",
     "license": "South Dakota Trust Charter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USD1 is a U.S. dollar payment stablecoin issued through BitGo-associated infrastructure with 1:1 redemption and reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "BitGo Bank & Trust, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC / South Dakota trust-company context",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Public USD1 materials split branding between World Liberty Financial and BitGo issuer/custody roles; no token-specific public GENIUS approval was located as of review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "World Liberty Financial USD1 page",
+        "url": "https://worldlibertyfinancial.com/usd1",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "BitGo USD1 attestations",
+        "url": "https://www.bitgo.com/usd1/attestations/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "BitGo national trust and OCC materials",
+        "South Dakota trust-company materials",
+        "BitGo USD1 terms and attestations",
+        "World Liberty Financial USD1 issuer disclosures"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for USD1.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

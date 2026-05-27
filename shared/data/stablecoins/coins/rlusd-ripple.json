@@ -42,6 +42,57 @@
     "regulator": "NYDFS",
     "license": "Trust Charter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "RLUSD is a U.S. dollar payment stablecoin issued through Ripple's regulated stablecoin program with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Standard Custody & Trust Company, LLC",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS; proposed OCC national trust bank context",
+    "primaryFederalRegulator": "OCC",
+    "stateRegulator": "NYDFS",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://ripple.com/solutions/stablecoin/transparency/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Ripple disclosures establish the U.S. regulated stablecoin issuer model, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Ripple RLUSD issuer page",
+        "url": "https://ripple.com/solutions/stablecoin/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Ripple RLUSD transparency",
+        "url": "https://ripple.com/solutions/stablecoin/transparency/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Ripple national trust bank and OCC materials",
+        "NYDFS virtual-currency and stablecoin materials",
+        "Ripple RLUSD transparency pages"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for RLUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

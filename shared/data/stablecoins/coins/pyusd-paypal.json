@@ -46,6 +46,56 @@
     "regulator": "NYDFS",
     "license": "Limited Purpose Trust Charter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "PYUSD is a Paxos-issued U.S. dollar payment stablecoin distributed by PayPal with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Paxos Trust Company, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC / NYDFS historical trust-company context",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Paxos and PayPal disclosures establish the U.S. stablecoin issuer model, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "PayPal PYUSD page",
+        "url": "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Paxos PYUSD transparency",
+        "url": "https://www.paxos.com/pyusd-transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Paxos OCC and national trust materials",
+        "Paxos PYUSD transparency and terms",
+        "PayPal PYUSD issuer disclosures"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for PYUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

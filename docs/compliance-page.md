@@ -54,7 +54,7 @@ GENIUS should not be modeled as one broad "compliant" label. The `GeniusProfile`
 
 Use `authorizationStatus: "issuer-announced-intent"` only for issuer/partner statements that do not have regulator-sourced approval or application evidence. Official approval/application statuses require regulator or Federal Register references. `no-public-authorization-found` requires a dated negative-evidence review.
 
-GENIUS effective-date state is centralized in `shared/lib/compliance-regime-state.ts`. Update that object when final primary-regulator rules are issued or the statutory fallback effective date changes.
+GENIUS effective-date state is centralized in `shared/lib/compliance-regime-state.ts`. Update that object when final primary-regulator rules are issued or the statutory fallback effective date changes. The page renders the regime state's `sourceReferences` list when present so the effective-date posture can cite multiple regulator rulemaking sources, not only the primary OCC rulemaking page.
 
 ## Route Retirement
 
@@ -76,6 +76,7 @@ After compliance metadata edits:
 tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run check:generated-artifacts
+npm run check:doc-counts
 ```
 
 After route or crawlability edits:

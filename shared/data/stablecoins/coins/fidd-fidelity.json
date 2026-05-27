@@ -45,6 +45,54 @@
     "regulator": "OCC",
     "license": "National Trust Bank Charter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "FIDD is a Fidelity-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Fidelity Digital Assets, National Association",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.fidelitydigitalassets.com/stablecoin",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Fidelity Digital Assets stablecoin",
+        "url": "https://www.fidelitydigitalassets.com/stablecoin",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "FIDD terms",
+        "url": "https://www.fidelitydigitalassets.com/fidd-terms",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC national trust bank materials",
+        "Fidelity Digital Assets stablecoin and FIDD terms pages"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for FIDD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

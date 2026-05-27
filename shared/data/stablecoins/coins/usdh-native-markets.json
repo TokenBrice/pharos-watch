@@ -50,6 +50,54 @@
     "regulator": "FinCEN",
     "license": "Money Services Business (Bridge Building, Inc.)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDH is a Bridge-issued U.S. dollar payment stablecoin for Hyperliquid with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://usdh.com/reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "USDH issuer and reserve materials identify Bridge as issuer, but Pharos found no token-specific public GENIUS approval as of review.",
+    "references": [
+      {
+        "label": "USDH reserves",
+        "url": "https://usdh.com/reserves",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance overview",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "USDH reserves and issuer documentation",
+        "Bridge issuance documentation and legal terms"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for USDH.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "hyperevm",

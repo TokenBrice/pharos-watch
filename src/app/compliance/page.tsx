@@ -68,16 +68,23 @@ const COMPLIANCE_STATIC_SECTION = (
         <dd className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</dd>
       </dl>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Source:{" "}
-        <a
-          href={GENIUS_REGIME_STATE.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-        >
-          {GENIUS_REGIME_STATE.sourceLabel}
-        </a>
-        . Pair this with{" "}
+        Sources:{" "}
+        {(GENIUS_REGIME_STATE.sourceReferences ?? [
+          { label: GENIUS_REGIME_STATE.sourceLabel, url: GENIUS_REGIME_STATE.sourceUrl },
+        ]).map((source, index, sources) => (
+          <span key={source.url}>
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            >
+              {source.label}
+            </a>
+            {index < sources.length - 1 ? ", " : ". "}
+          </span>
+        ))}
+        Pair this with{" "}
         <Link
           href="/screener/"
           className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"

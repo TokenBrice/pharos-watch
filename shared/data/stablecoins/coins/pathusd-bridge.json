@@ -52,6 +52,54 @@
     "regulator": "FinCEN",
     "license": "Money Services Business"
   },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "pathUSD functions as Tempo routing and quote-token infrastructure; its payment-stablecoin treatment remains less clear than consumer-facing Bridge issued stablecoins."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Tempo describes pathUSD as optional routing infrastructure rather than a general consumer-facing stablecoin; no token-specific public GENIUS approval was located.",
+    "references": [
+      {
+        "label": "Tempo pathUSD docs",
+        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Tempo pathUSD documentation",
+        "Bridge issuance documentation and legal terms"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for pathUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "tempo",

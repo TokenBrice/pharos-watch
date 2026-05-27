@@ -53,6 +53,54 @@
     "regulator": "FinCEN / state MTL authorities",
     "license": "Money Services Business (NMLS #2450917)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDsui is a Bridge-issued U.S. dollar payment stablecoin for Sui with 1:1 redemption through Bridge Open Issuance."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge and Sui materials describe USDsui issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
+    "references": [
+      {
+        "label": "Sui Dollar launch",
+        "url": "https://blog.sui.io/sui-dollar-launch-bridge/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance overview",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Sui Dollar launch materials",
+        "Bridge Open Issuance documentation and legal terms"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for USDsui.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "sui",

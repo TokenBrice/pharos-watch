@@ -144,6 +144,55 @@
   "jurisdiction": {
     "country": "United States"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "MUSD is a Bridge-issued U.S. dollar payment stablecoin for MetaMask using M0 infrastructure and 1:1 redemption."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge and MetaMask materials describe MUSD issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
+    "references": [
+      {
+        "label": "MetaMask USD announcement",
+        "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 Dashboard",
+        "url": "https://dashboard.m0.org",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "MetaMask USD launch materials",
+        "Bridge Open Issuance documentation",
+        "M0 reserve dashboard"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for MUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

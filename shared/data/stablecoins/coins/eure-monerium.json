@@ -49,7 +49,7 @@
     "tokenType": "EMT",
     "authorizationType": "emi",
     "competentAuthority": "Central Bank of Iceland",
-    "authorizedEntity": "Monerium EMI ehf",
+    "authorizedEntity": "Monerium ehf",
     "references": [
       {
         "label": "ESMA MiCA register (issuers of EMTs)",
@@ -57,7 +57,7 @@
       },
       {
         "label": "Monerium EURe MiCA white paper",
-        "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+        "url": "https://monerium.com/assets/whitepapers/eure/EURe-WP-static.xhtml"
       }
     ]
   },

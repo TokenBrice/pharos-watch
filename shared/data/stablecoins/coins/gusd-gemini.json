@@ -61,6 +61,50 @@
       }
     ]
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "GUSD is a U.S. dollar payment stablecoin issued by Gemini Trust Company with 1:1 redemption and reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Gemini Trust Company, LLC",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS",
+    "stateRegulator": "NYDFS",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.gemini.com/dollar",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "references": [
+      {
+        "label": "NYDFS virtual currency business activity",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator"
+      },
+      {
+        "label": "Gemini Dollar page",
+        "url": "https://www.gemini.com/dollar",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Federal Register GENIUS notices",
+        "NYDFS Gemini and GUSD materials",
+        "Gemini Dollar disclosures"
+      ],
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for GUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

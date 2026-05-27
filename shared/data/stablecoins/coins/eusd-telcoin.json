@@ -37,6 +37,53 @@
     "regulator": "Nebraska Department of Banking and Finance",
     "license": "Digital Asset Depository Institution"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "eUSD is a bank-issued U.S. dollar payment stablecoin with KYC-gated mint and redemption through Telcoin Digital Asset Bank."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "state-qualified",
+    "issuerEntity": "Telcoin, Inc. d/b/a Telcoin Digital Asset Bank",
+    "issuerDomicile": "United States",
+    "stateRegulator": "Nebraska Department of Banking and Finance",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://bank.telco.in/eUSD",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "references": [
+      {
+        "label": "Telcoin eUSD",
+        "url": "https://bank.telco.in/eUSD",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Telcoin terms of use",
+        "url": "https://bank.telco.in/terms-of-use",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Nebraska digital asset bank charter announcement",
+        "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter",
+        "sourceKind": "state-regulator"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Nebraska digital asset depository charter materials",
+        "Telcoin eUSD and terms pages"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified GENIUS approval, or official application source was located for eUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

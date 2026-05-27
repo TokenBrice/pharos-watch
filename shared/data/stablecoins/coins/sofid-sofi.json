@@ -43,6 +43,54 @@
     "country": "United States",
     "regulator": "OCC (national bank charter)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "SOFID is a U.S. dollar payment stablecoin issued by SoFi Bank, N.A. with 1:1 mint and redemption."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "SoFi Bank, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.sofi.com/crypto/sofiusd/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "SoFiUSD page",
+        "url": "https://www.sofi.com/crypto/sofiusd/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "SoFiUSD launch announcement",
+        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC SoFi Bank approval and charter materials",
+        "SoFiUSD product and investor-relations pages"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",
