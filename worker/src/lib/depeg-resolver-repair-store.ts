@@ -1,5 +1,3 @@
-import { buildInClause, chunkArray } from "./db";
-
 export type DdrRepairOperation =
   | "identity_update"
   | "delete"
@@ -202,53 +200,4 @@ export async function consumeEventRepairAuthorization(
     consumedAt: input.consumedAt,
     consumer: input.consumer,
   };
-}
-
-export async function loadRepairAuthorizations(
-  db: D1Database,
-  filters: { authorizationIds?: number[]; eventIds?: number[]; incidentKeys?: string[] } = {},
-): Promise<DdrEventRepairAuthorization[]> {
-  const rows: DdrEventRepairAuthorization[] = [];
-  const query = async (whereSql: string, binds: unknown[]) => {
-    const result = await db
-      .prepare(
-        `SELECT *
-         FROM depeg_resolver_event_repair_authorizations
-         ${whereSql}
-         ORDER BY created_at DESC, id DESC`,
-      )
-      .bind(...binds)
-      .all<AuthorizationRow>();
-    rows.push(...(result.results ?? []).map(mapAuthorization));
-  };
-
-  if (filters.authorizationIds) {
-    if (filters.authorizationIds.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.authorizationIds)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE id IN (${clause.sql})`, clause.binds);
-    }
-    return rows;
-  }
-
-  if (filters.eventIds) {
-    if (filters.eventIds.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.eventIds)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE event_id IN (${clause.sql})`, clause.binds);
-    }
-    return rows;
-  }
-
-  if (filters.incidentKeys) {
-    if (filters.incidentKeys.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.incidentKeys)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE incident_key IN (${clause.sql})`, clause.binds);
-    }
-    return rows;
-  }
-
-  await query("", []);
-  return rows;
 }
