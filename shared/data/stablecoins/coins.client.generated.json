@@ -18451,6 +18451,91 @@
     }
   },
   {
+    "id": "tgld-tenbin",
+    "name": "Tenbin Gold",
+    "symbol": "tGLD",
+    "oneLiner": "tGLD is Tenbin's private-beta synthetic gold token tracking one troy ounce via USDC reserves hedged with CME gold futures, redeemable in USD stablecoin.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "pegMechanism": "KYC-gated mint and redemption through a Controller that processes off-chain signed orders; a Tenbin backend signer holds the on-chain minter role. Redemption pays the gold-denominated value in a USD stablecoin, not physical metal. On-chain pricing uses a Chainlink tGLD/USD blended price feed",
+    "mechanismArchetype": "synthetic-delta-neutral",
+    "geckoId": "tenbin-gold",
+    "status": "pre-launch",
+    "announcedDate": "2026-01",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "beta",
+    "milestones": [
+      {
+        "date": "2026-01-22",
+        "type": "audit",
+        "title": "Security audits completed",
+        "description": "Independent audits by Spearbit, Fuzzland, Verilog, and 0xleastwood, alongside Certora formal verification.",
+        "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts/tree/master/audit"
+      },
+      {
+        "date": "2026-01-27",
+        "type": "announcement",
+        "title": "$7M seed led by Galaxy Ventures",
+        "description": "Galaxy Ventures led a $7M seed with Wintermute Ventures, FalconX, GSR, Nascent, Variant, Archetype, and Bankless Ventures.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/01/27/galaxy-digital-leads-usd7m-investment-in-tenbin-to-build-improved-tokenized-gold-and-fx-markets"
+      },
+      {
+        "date": "2026-02-10",
+        "type": "milestone",
+        "title": "tGLD deployed to Ethereum mainnet (private beta)",
+        "sourceUrl": "https://etherscan.io/address/0x6a547b25534234bb79ce6961a23db13de154b6f4"
+      },
+      {
+        "date": "2026-05-19",
+        "type": "partnership",
+        "title": "Tenbin adopts Chainlink CCIP for cross-chain expansion",
+        "sourceUrl": "https://www.cryptowisser.com/news/tenbin-labs-is-migrating-to-chainlink-ccip"
+      }
+    ],
+    "canBeBlacklisted": true,
+    "commodityOunces": 1,
+    "mica": {
+      "status": "out-of-scope",
+      "tokenType": "ART"
+    },
+    "reserves": [
+      {
+        "name": "USDC collateral (on-chain manager + Hidden Road prime-brokerage custody; CME gold-futures margin)",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "collateral": "Synthetic gold exposure, not vaulted bullion: each token represents the USD value of one troy ounce of gold at the LBMA PM spot price. Backed by USDC held on-chain and at prime broker Hidden Road, with gold price exposure obtained via CME gold futures. Issued as a Tenbin AssetCo (BVI) SPC debt-note (a UCC Article 12 controllable electronic record)",
+    "collateralQuality": "exotic",
+    "blacklistStatus": true,
+    "mintAuthoritySummary": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "concentrated-admin",
+      "controls": [
+        {
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "multisig",
+          "directMintAbility": "parameter-only"
+        }
+      ]
+    }
+  },
+  {
     "id": "thbill-theo",
     "name": "Theo thBILL",
     "symbol": "thBILL",

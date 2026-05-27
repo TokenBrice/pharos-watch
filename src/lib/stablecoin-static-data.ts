@@ -2,9 +2,9 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 400;
+export const TRACKED_STABLECOIN_COUNT = 401;
 export const ACTIVE_STABLECOIN_COUNT = 369;
-export const PRE_LAUNCH_STABLECOIN_COUNT = 27;
+export const PRE_LAUNCH_STABLECOIN_COUNT = 28;
 export const FROZEN_STABLECOIN_COUNT = 4;
 export const DEAD_STABLECOIN_COUNT = 88;
 
@@ -477,6 +477,7 @@ export const TRACKED_STABLECOIN_IDS = [
   "zkusd-goal3",
   "gynusd-gyndore",
   "gelt-tether",
+  "tgld-tenbin",
 ] as const;
 
 export const HOMEPAGE_TOP_ACTIVE_STABLECOINS = [

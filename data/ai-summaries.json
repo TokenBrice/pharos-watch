@@ -3988,5 +3988,13 @@
     "reviewedBy": "@TokenBrice",
     "reviewedAt": "2026-05-19",
     "factsAsOf": "2026-05-19"
+  },
+  "tgld-tenbin": {
+    "title": "Synthetic Gold, Not Bullion",
+    "text": "tGLD is Tenbin's tokenized gold note, but unlike PAXG or XAUT it holds no vaulted metal. Each token is a Tenbin AssetCo (BVI) debt-note representing the U.S.-dollar value of one troy ounce of gold, collateralized by USDC and hedged with CME gold futures rather than allocated bullion. Mint and redemption are KYC-gated through a Controller and a backend signer that holds the on-chain minter role, and redemptions settle in a USD stablecoin instead of physical metal. Launched on Ethereum mainnet in February 2026 after a $7M Galaxy Ventures-led seed and four security audits, it remains in private beta -- roughly $0.3M outstanding across about 36 holders, with its only public market a near-dormant Uniswap V4 pool and no independent proof-of-reserves attestation. Pharos lists tGLD as pre-launch until its public price feed updates frequently enough to clear the gold pricing-freshness gate; a staked yield variant (stGLD) and testnet FX siblings (tBRL, tMXN) round out Tenbin's roadmap.",
+    "updatedAt": "2026-05-27",
+    "authoredBy": "ai",
+    "model": "claude-opus-4-7",
+    "factsAsOf": "2026-05-27"
   }
 }

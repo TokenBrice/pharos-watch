@@ -41542,6 +41542,192 @@
     }
   },
   {
+    "id": "tgld-tenbin",
+    "detailProvider": "commodity",
+    "name": "Tenbin Gold",
+    "symbol": "tGLD",
+    "oneLiner": "tGLD is Tenbin's private-beta synthetic gold token tracking one troy ounce via USDC reserves hedged with CME gold futures, redeemable in USD stablecoin.",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Synthetic gold exposure, not vaulted bullion: each token represents the USD value of one troy ounce of gold at the LBMA PM spot price. Backed by USDC held on-chain and at prime broker Hidden Road, with gold price exposure obtained via CME gold futures. Issued as a Tenbin AssetCo (BVI) SPC debt-note (a UCC Article 12 controllable electronic record)",
+    "pegMechanism": "KYC-gated mint and redemption through a Controller that processes off-chain signed orders; a Tenbin backend signer holds the on-chain minter role. Redemption pays the gold-denominated value in a USD stablecoin, not physical metal. On-chain pricing uses a Chainlink tGLD/USD blended price feed",
+    "mechanismArchetype": "synthetic-delta-neutral",
+    "commodityOunces": 1,
+    "geckoId": "tenbin-gold",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://tenbinlabs.xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.tenbinlabs.xyz"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/tenbinlabs"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/tenbinlabs"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
+    "mica": {
+      "status": "out-of-scope",
+      "tokenType": "ART"
+    },
+    "mintAuthority": {
+      "mintPath": "offchain-attested-minter",
+      "authorityPosture": "concentrated-admin",
+      "confidence": "manual-review",
+      "summary": "tGLD mints through a Tenbin-operated backend signer that holds the on-chain minter role and processes KYC-gated off-chain signed orders via the Controller; the owner multisig can grant or revoke that minter role and the dev multisig sets the supply cap and manages authorized signers.",
+      "controls": [
+        {
+          "chain": "ethereum",
+          "address": "0xca2d7cfaa96290171c98e112c73fc87c2ae2fe9b",
+          "label": "tGLD minter (Tenbin backend signer)",
+          "role": "backend-signer",
+          "authorityType": "issuer-backend",
+          "directMintAbility": "direct",
+          "modulesOrGuardsStatus": "not-applicable",
+          "evidence": "Holds minter_role on the tGLD deployment per Tenbin's deployments.json; mints execute from off-chain KYC-gated signed orders processed through the Controller (0x5e631388b24ec493619DAEEAef6fc34B33d97Dcd)."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x698c6d3726846c4ad4dc9331862b92cd80d2fb99",
+          "label": "Owner multisig (DEFAULT_ADMIN_ROLE)",
+          "role": "minter-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "can-authorize",
+          "canRaiseCap": "unknown",
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Holds DEFAULT_ADMIN_ROLE on the tGLD deployment per deployments.json; can grant or revoke minter_role and other privileged roles. Multisig threshold and signer set not independently verified."
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x48fa008bd2660974d55ee9b7a9eca1ce61347614",
+          "label": "Dev multisig (cap adjuster + signer manager)",
+          "role": "cap-admin",
+          "authorityType": "multisig",
+          "directMintAbility": "parameter-only",
+          "canRaiseCap": true,
+          "modulesOrGuardsStatus": "unknown",
+          "evidence": "Holds cap_adjuster_role (can raise the supply cap) and signer_manager_role (controls which off-chain signers may authorize mints) per deployments.json. Multisig threshold and signer set not independently verified."
+        }
+      ],
+      "review": {
+        "sources": [
+          {
+            "label": "Tenbin contracts — deployments.json",
+            "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+          },
+          {
+            "label": "tGLD AssetToken on Etherscan",
+            "url": "https://etherscan.io/address/0x6a547b25534234bb79ce6961a23db13de154b6f4"
+          }
+        ],
+        "evidence": "Tenbin's public deployments.json (verified contracts repo) enumerates minter_role (backend-signer EOA 0xCa2D7CfAa96290171c98e112c73fC87c2AE2fe9B plus the protocol multicall), DEFAULT_ADMIN_ROLE (owner multisig), and cap_adjuster_role / signer_manager_role (dev multisig). Minting is gated by the Controller's off-chain signed-order flow. The multisigs' threshold and signer composition were not independently verified on-chain, so confidence is manual-review.",
+        "reviewer": "Pharos pre-launch addition",
+        "reviewedAt": "2026-05-27",
+        "unresolvedQuestions": [
+          "Whether the admin, owner, and dev multisigs are Gnosis Safes and their exact threshold and signer composition.",
+          "Whether the off-chain minter signing keys are HSM-bound and subject to on-chain rate limits or mint caps."
+        ]
+      }
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x6a547b25534234bb79ce6961a23db13de154b6f4",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Tenbin contracts — deployments.json (restricter_role)",
+          "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+        }
+      ],
+      "evidence": "Tenbin's mainnet deployment assigns a restricter_role (held by the admin multisig 0xE6Eb534f33A635e8d867414Af32F766D221F30d1) that flags accounts in the AssetToken restricted-accounts registry and blocks their transfers — a centralized freeze surface.",
+      "reviewer": "Pharos pre-launch addition",
+      "reviewedAt": "2026-05-27"
+    },
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "multisig",
+    "reserves": [
+      {
+        "name": "USDC collateral (on-chain manager + Hidden Road prime-brokerage custody; CME gold-futures margin)",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Synthetic gold debt-note, no published proof-of-reserves",
+        "message": "tGLD is not vaulted physical gold. Each token is a Tenbin AssetCo (BVI) debt-note backed by USDC reserves with gold exposure hedged via CME futures, redeemable only in a USD stablecoin under KYC. No independent proof-of-reserves attestation is published, and public on-chain liquidity is currently minimal (private beta)."
+      }
+    ],
+    "status": "pre-launch",
+    "announcedDate": "2026-01",
+    "expectedLaunchDate": "2026",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10 in private beta (~$0.27M market cap, ~60 tGLD, ~36 holders). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only public market is a dormant Uniswap V4 tGLD/USDC pool, so CoinGecko's price updates are stale (multi-day) and currently fail Pharos's gold price-freshness gate — live tracking begins once a usable public price feed exists. A staked variant stGLD (ERC-4626) and testnet sibling FX tokens (tBRL, tMXN) exist; Chainlink CCIP multichain expansion announced May 2026.",
+    "featuredContent": [
+      {
+        "type": "article",
+        "url": "https://www.coindesk.com/business/2026/01/27/galaxy-digital-leads-usd7m-investment-in-tenbin-to-build-improved-tokenized-gold-and-fx-markets",
+        "title": "Galaxy Digital leads $7M investment in Tenbin to build improved tokenized gold and FX markets",
+        "description": "Tenbin Labs raised a $7M seed led by Galaxy Ventures to build an on-chain tokenization protocol for gold and FX, starting with the gold token tGLD.",
+        "source": "CoinDesk"
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-01-22",
+        "type": "audit",
+        "title": "Security audits completed",
+        "description": "Independent audits by Spearbit, Fuzzland, Verilog, and 0xleastwood, alongside Certora formal verification.",
+        "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts/tree/master/audit"
+      },
+      {
+        "date": "2026-01-27",
+        "type": "announcement",
+        "title": "$7M seed led by Galaxy Ventures",
+        "description": "Galaxy Ventures led a $7M seed with Wintermute Ventures, FalconX, GSR, Nascent, Variant, Archetype, and Bankless Ventures.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/01/27/galaxy-digital-leads-usd7m-investment-in-tenbin-to-build-improved-tokenized-gold-and-fx-markets"
+      },
+      {
+        "date": "2026-02-10",
+        "type": "milestone",
+        "title": "tGLD deployed to Ethereum mainnet (private beta)",
+        "sourceUrl": "https://etherscan.io/address/0x6a547b25534234bb79ce6961a23db13de154b6f4"
+      },
+      {
+        "date": "2026-05-19",
+        "type": "partnership",
+        "title": "Tenbin adopts Chainlink CCIP for cross-chain expansion",
+        "sourceUrl": "https://www.cryptowisser.com/news/tenbin-labs-is-migrating-to-chainlink-ccip"
+      }
+    ]
+  },
+  {
     "id": "thbill-theo",
     "detailProvider": "coingecko",
     "name": "Theo thBILL",
