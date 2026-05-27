@@ -537,11 +537,15 @@ export const ENDPOINT_ASSERTIONS = {
     assert(body && Array.isArray(body.rows), "/api/depeg-resolver-review missing rows[]");
     assert(body.summary && typeof body.summary === "object", "/api/depeg-resolver-review missing summary");
     assert(
-      typeof body.summary.recoveryLikelihoodScoredCount === "number",
+      body.summary.headline && typeof body.summary.headline === "object",
+      "/api/depeg-resolver-review missing summary.headline",
+    );
+    assert(
+      typeof body.summary.headline.recoveryLikelihoodScoredCount === "number",
       "/api/depeg-resolver-review missing recovery likelihood scored count",
     );
     assert(
-      typeof body.summary.durationScoredCount === "number",
+      typeof body.summary.headline.durationScoredCount === "number",
       "/api/depeg-resolver-review missing duration scored count",
     );
     assert(

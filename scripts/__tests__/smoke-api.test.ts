@@ -170,6 +170,45 @@ describe("smoke-api redemption backstop assertion", () => {
   });
 });
 
+describe("smoke-api depeg resolver review assertion", () => {
+  const validReviewBody = {
+    summary: {
+      headline: {
+        recoveryLikelihoodScoredCount: 2,
+        durationScoredCount: 1,
+      },
+    },
+    rows: [],
+    methodology: {
+      version: "2.0",
+    },
+  };
+
+  it("accepts the v2 nested headline metrics", () => {
+    expect(
+      ENDPOINT_ASSERTIONS["/api/depeg-resolver-review"]({
+        status: 200,
+        body: validReviewBody,
+      }),
+    ).toBe("0 reviewed");
+  });
+
+  it("rejects legacy top-level summary metrics", () => {
+    expect(() =>
+      ENDPOINT_ASSERTIONS["/api/depeg-resolver-review"]({
+        status: 200,
+        body: {
+          ...validReviewBody,
+          summary: {
+            recoveryLikelihoodScoredCount: 2,
+            durationScoredCount: 1,
+          },
+        },
+      }),
+    ).toThrow("summary.headline");
+  });
+});
+
 describe("smoke-api path scopes", () => {
   it("keeps canary paths as a strict subset of the full strict path set", () => {
     const full = new Set(STRICT_CONTRACT_SMOKE_PATHS);
