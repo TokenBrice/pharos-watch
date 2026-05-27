@@ -44,6 +44,18 @@ import type { StablecoinData } from "@shared/types/market";
 import { buildMethodologyEnvelope } from "../lib/api-utils";
 import type { CronResult } from "../lib/cron-logger";
 import { computeAndStoreDepegResolverReview } from "./compute-depeg-resolver-review";
+import {
+  DDR_PUBLICATION_SNAPSHOT_KIND,
+  type DdrCanonicalIncident,
+  type DdrCanonicalIncidentInput,
+  type DdrDirection,
+  type DdrFirstPublicationMembership,
+  type DdrLockTiming,
+  type DdrPublicationManifest,
+  type DdrSealedPublicPrediction,
+  type DdrSealInput,
+  type DdrV2StoreContracts,
+} from "./depeg-resolver-v2-contracts";
 import { writeDepegResolverAssessments } from "../lib/depeg-resolver-assessment-store";
 import {
   ensureCanonicalIncidents as ensureCanonicalIncidentsStore,
@@ -70,6 +82,8 @@ import { writeDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
+export type { DdrV2StoreContracts } from "./depeg-resolver-v2-contracts";
+
 const TRAINING_WINDOW_SEC = 4 * 365 * 86400;
 const HISTORICAL_ROW_CAP = 60000;
 const DAY = 86400;
@@ -77,20 +91,6 @@ const CURRENT_PRICE_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stablecoins;
 const DEWS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals;
 const DEX_LIQUIDITY_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.dexLiquidity;
 const REDEMPTION_BACKSTOP_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops;
-const DDR_PUBLICATION_SNAPSHOT_KIND = "ddr_public";
-
-export type DdrDirection = "above" | "below";
-export type DdrOutcomeKind = "prediction" | "no_call";
-export type DdrLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
-export type DdrLockAction =
-  | "pending"
-  | "deferred"
-  | "confirmed_seen"
-  | "locked_prediction"
-  | "locked_no_call"
-  | "publication_retry_pending"
-  | "publication_failed"
-  | "published";
 
 export interface ComputeDepegResolverV2Options {
   db: D1Database;
@@ -120,190 +120,6 @@ interface DdrEventDbRow {
   pending_reason: string | null;
   provenance_replay_run_id: string | null;
   provenance_replay_version: string | null;
-}
-
-export interface DdrCanonicalIncidentInput {
-  eventId: number;
-  stablecoinId: string;
-  symbol: string;
-  pegCurrency: string;
-  direction: DdrDirection;
-  startedAt: number;
-  endedAt: number | null;
-  recoveryPrice: number | null;
-  peakDeviationBps: number;
-  source: string | null;
-  sourceFingerprint: string | null;
-  rolloutActiveAtEnablement: boolean;
-  publicTrackedAtFirstSeen: boolean;
-  psiShadowAtFirstSeen: boolean;
-  predictionPolicyVersion: string;
-  policyDelaySec: number;
-  policyEffectiveAt: number;
-  registrySnapshot: Record<string, unknown>;
-}
-
-export interface DdrPredictionLockState {
-  eligibleAt: number;
-  deferralCount: number;
-  lastDeferralReason: string | null;
-  lastState:
-    | "pending_lock"
-    | "lock_deferred"
-    | "frozen"
-    | "no_call"
-    | "publication_retry_pending"
-    | "publication_failed"
-    | "published";
-}
-
-export interface DdrCanonicalIncident {
-  incidentKey: string;
-  eventId: number;
-  currentEventId: number;
-  stablecoinId: string;
-  pegCurrency: string;
-  direction: DdrDirection;
-  startedAt: number;
-  eligibleAt: number;
-  policyUniverseIncluded: boolean;
-  rolloutActiveAtEnablement?: boolean;
-  confirmedAt?: number | null;
-  lockState?: DdrPredictionLockState | null;
-}
-
-export interface DdrSealedPublicPrediction {
-  id: number;
-  publicPredictionId?: number;
-  incidentKey: string;
-  eventId: number;
-  assessmentId: number;
-  outcomeKind: DdrOutcomeKind;
-  predictionPolicyVersion: string;
-  predictionMethodologyVersion: string;
-  eligibleAt: number;
-  lockedAt: number;
-  eventAgeAtLockSec: number;
-  lockTiming: DdrLockTiming;
-  rowHash: string;
-  sealedPayload: Record<string, unknown>;
-}
-
-export interface DdrFirstPublicationMembership {
-  publicPredictionId: number;
-  incidentKey: string;
-  snapshotToken: string;
-  snapshotGeneration: number;
-  publishedAt: number;
-  firstPublished: boolean;
-}
-
-export interface DdrPublicationManifest {
-  snapshotToken: string;
-  snapshotGeneration: number;
-  snapshotSequence: number;
-  publishedAt: number;
-  basePayloadHash: string;
-  publicPredictionIds: number[];
-  firstPublishedPublicPredictionIds: number[];
-}
-
-export interface DdrLockOpportunityInput {
-  incidentKey: string;
-  eventId: number;
-  runId: string;
-  runAt: number;
-  eligibleAt: number;
-  predictionPolicyVersion: string;
-  healthStatus: "healthy" | "degraded" | "skipped";
-  action: DdrLockAction;
-  reason: string | null;
-  confirmationAt?: number | null;
-  outcomeAt?: number | null;
-  syncCapabilities: Record<string, unknown>;
-}
-
-export interface DdrSealInput {
-  incidentKey: string;
-  eventId: number;
-  runId: string;
-  lockedAt: number;
-  eligibleAt: number;
-  eventAgeAtLockSec: number;
-  lockTiming: DdrLockTiming;
-  predictionPolicyVersion: string;
-  policyDelaySec: number;
-  methodologyVersion: string;
-  methodologyVersionLabel: string;
-  resolutionRubricVersion: string;
-  durationModelVersion: string;
-  incidentGroupingVersion: string;
-  supportRulesVersion: string;
-  row: DdrRow;
-  sealedPayload: Record<string, unknown>;
-}
-
-export interface DdrPublicationManifestInput {
-  runId: string;
-  snapshotToken?: string;
-  publishedAt: number;
-  snapshotKind: typeof DDR_PUBLICATION_SNAPSHOT_KIND;
-  snapshotGeneration: number;
-  basePayload: Record<string, unknown>;
-  activeIncidentKeys: string[];
-  publicPredictionIds: number[];
-  publicPredictionRowHashes: Record<string, string>;
-}
-
-export interface DdrV2StoreContracts {
-  ensureCanonicalIncidents(
-    db: D1Database,
-    events: DdrCanonicalIncidentInput[],
-    options: {
-      runId: string;
-      runAt: number;
-      predictionPolicyVersion: string;
-      policyDelaySec: number;
-      policyEffectiveAt: number;
-    },
-  ): Promise<DdrCanonicalIncident[]>;
-  loadCanonicalIncidents?(
-    db: D1Database,
-    filters: {
-      incidentKeys?: string[];
-      eventIds?: number[];
-      predictionPolicyVersion?: string;
-      policyUniverseIncluded?: boolean;
-      includeSuperseded?: boolean;
-    },
-  ): Promise<DdrCanonicalIncident[]>;
-  recordLockDeferral(db: D1Database, input: DdrLockOpportunityInput): Promise<void>;
-  sealPublicPrediction(db: D1Database, input: DdrSealInput): Promise<DdrSealedPublicPrediction>;
-  sealPublicNoCall(db: D1Database, input: DdrSealInput): Promise<DdrSealedPublicPrediction>;
-  loadSealedPublicPredictions(
-    db: D1Database,
-    filters: {
-      publicPredictionIds?: number[];
-      incidentKeys?: string[];
-      eventIds?: number[];
-      predictionPolicyVersion?: string;
-      includeUnpublished?: boolean;
-    },
-  ): Promise<DdrSealedPublicPrediction[]>;
-  loadFirstPublicationMembership(
-    db: D1Database,
-    filters: {
-      incidentKeys?: string[];
-      publicPredictionIds?: number[];
-      predictionPolicyVersion?: string;
-    },
-  ): Promise<DdrFirstPublicationMembership[]>;
-  writePublicationManifest(db: D1Database, input: DdrPublicationManifestInput): Promise<DdrPublicationManifest>;
-  loadLatestPublicationManifest?(db: D1Database): Promise<DdrPublicationManifest | null>;
-  loadPredictionErrata?(
-    db: D1Database,
-    filters: { incidentKeys?: string[]; publicPredictionIds?: number[] },
-  ): Promise<Array<Record<string, unknown>>>;
 }
 
 interface CurrentDeviationMapResult {

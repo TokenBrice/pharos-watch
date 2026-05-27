@@ -32,7 +32,7 @@ import type {
   DdrFirstPublicationMembership,
   DdrSealedPublicPrediction,
   DdrV2StoreContracts,
-} from "./compute-depeg-resolver";
+} from "./depeg-resolver-v2-contracts";
 
 const DDRR_SNAPSHOT_TTL_SEC = 1800;
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;
