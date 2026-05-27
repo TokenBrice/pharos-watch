@@ -27,6 +27,52 @@
       "url": "https://x.com/_HTDA"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDX is described as a 1:1 USD-referencing token backed by Treasuries and cash equivalents with approved-party redemption."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Hex Trust Digital Assets",
+    "issuerDomicile": "Hong Kong",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.htdigitalassets.com/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDX has reserve and redemption disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Hex Trust Digital Assets USDX",
+        "url": "https://www.htdigitalassets.com/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Hex Trust website",
+        "url": "https://www.hextrust.com/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Hex Trust Digital Assets and Hex Trust public disclosures"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDX.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Hong Kong",
     "regulator": "Companies Registry",

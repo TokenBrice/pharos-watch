@@ -39,6 +39,52 @@
       "url": "https://docs.ethena.fi/"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Ethena distinguishes USDe from fiat stablecoins while documenting a fully backed synthetic dollar with approved-counterparty mint/redeem."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Ethena Protocol / Ethena",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDe is a synthetic dollar rather than a fiat reserve stablecoin; GENIUS payment-stablecoin applicability is unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Ethena USDe docs",
+        "url": "https://docs.ethena.fi/solution-overview/usde-overview",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Ethena transparency dashboard",
+        "url": "https://app.ethena.fi/dashboards/transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Ethena USDe documentation and transparency dashboard"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDe.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "British Virgin Islands"
   },

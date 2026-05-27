@@ -140,6 +140,57 @@
       "url": "https://github.com/m0-foundation"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "M is M0's core dollar token minted and burned by permissioned minters against eligible off-chain collateral verified by validators."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "M0 Foundation / M0 protocol minter network",
+    "issuerDomicile": "Switzerland",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "M has reserve transparency and permissioned mint/burn mechanics, but no public GENIUS approval or foreign-issuer exception source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "M0 docs",
+        "url": "https://docs.m0.org/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 website",
+        "url": "https://www.m0.org/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 dashboard",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "M0 docs, website, and reserve dashboard"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for M.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Switzerland"
   },

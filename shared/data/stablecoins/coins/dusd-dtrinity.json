@@ -34,6 +34,46 @@
       "url": "https://app.dtrinity.org/mint/dusd/"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "dUSD is a decentralized, chain-isolated collateral stablecoin with 1:1 mint/redeem mechanics rather than a legal fiat issuer."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "dTRINITY protocol governance",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.dtrinity.org/protocol-components/dusd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "dUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "dTRINITY dUSD docs",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "dTRINITY dUSD documentation"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for dUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -159,10 +199,18 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "dUSD Stablecoin docs", "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin" },
-        { "label": "dTRINITY dUSD on DefiLlama", "url": "https://defillama.com/protocol/dtrinity-dusd" }
+        {
+          "label": "dUSD Stablecoin docs",
+          "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
+        },
+        {
+          "label": "dTRINITY dUSD on DefiLlama",
+          "url": "https://defillama.com/protocol/dtrinity-dusd"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain owner/admin of the dUSD issuer and AMO contracts and the contributor multisig threshold; confirm whether the March 2026 dLEND pause affected dUSD mint controls."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain owner/admin of the dUSD issuer and AMO contracts and the contributor multisig threshold; confirm whether the March 2026 dLEND pause affected dUSD mint controls."
+      ]
     }
   }
 }

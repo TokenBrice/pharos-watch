@@ -116,6 +116,57 @@
       "url": "https://docs.noble.xyz/"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDN is a yield-bearing Noble Dollar built on M0 reserves; source evidence supports reserves but not a plain holder redemption policy."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Noble / M0 stablecoin infrastructure",
+    "issuerDomicile": "United States / Switzerland",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "USDN is stablecoin-adjacent but yield-bearing and built on M0 infrastructure; GENIUS payment-stablecoin applicability is unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Noble USDN",
+        "url": "https://noble.xyz/usdn",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Noble docs",
+        "url": "https://docs.noble.xyz/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 dashboard",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Noble USDN materials and M0 reserve dashboard"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDN.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "United States"
   },

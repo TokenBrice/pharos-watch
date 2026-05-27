@@ -39,6 +39,52 @@
       "url": "https://docs.re.xyz"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "reUSD is principal-protected and redeemable subject to liquidity limits, with insurance/RWA reserve exposure and investment-like features."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Re Protocol",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.re.xyz/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "reUSD is stablecoin-adjacent but investment-like; GENIUS payment-stablecoin applicability is unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Re Protocol docs",
+        "url": "https://docs.re.xyz/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Re transparency",
+        "url": "https://app.re.xyz/transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Re Protocol docs and transparency page"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for reUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "British Virgin Islands",
     "regulator": "FSC",

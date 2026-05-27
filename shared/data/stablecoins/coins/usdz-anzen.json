@@ -38,6 +38,57 @@
       "url": "https://docs.anzen.finance/"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDz is a private-credit-backed RWA dollar with qualified-market-maker mint/redeem mechanics, not a conventional fiat reserve token."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Anzen",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://rwa.anzen.finance/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDz is stablecoin-adjacent but backed by private credit; GENIUS payment-stablecoin applicability is unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Anzen docs",
+        "url": "https://docs.anzen.finance/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anzen website",
+        "url": "https://anzen.finance/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anzen transparency",
+        "url": "https://rwa.anzen.finance/transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Anzen docs, website, and transparency page"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDz.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
@@ -142,11 +193,19 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Anzen USDz overview", "url": "https://docs.anzen.finance/usdz-101/overview" },
-        { "label": "How to mint USDz", "url": "https://docs.anzen.finance/overview/anzen-protocol/getting-started/how-to-mint-usdz" }
+        {
+          "label": "Anzen USDz overview",
+          "url": "https://docs.anzen.finance/usdz-101/overview"
+        },
+        {
+          "label": "How to mint USDz",
+          "url": "https://docs.anzen.finance/overview/anzen-protocol/getting-started/how-to-mint-usdz"
+        }
       ],
       "sourceFreeRationale": "Permissioned SPCT-collateral mint and Qualified-Market-Maker gating taken from Anzen docs; the on-chain minter role holders / admin owner across the five deployments were not independently resolved.",
-      "unresolvedQuestions": ["Resolve the on-chain mint/admin owner of the USDz token and SPCT contract and the set of authorized Qualified Market Maker minters."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain mint/admin owner of the USDz token and SPCT contract and the set of authorized Qualified Market Maker minters."
+      ]
     }
   }
 }

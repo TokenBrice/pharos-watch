@@ -30,6 +30,28 @@
       "url": "https://tech.usual.money/overview/features/eur0"
     }
   ],
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA interim MiCA EMT register - Usual/EUR0 not listed",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "EBA - ART/EMT issuers require EU authorisation",
+        "url": "https://www.eba.europa.eu/regulation-and-policy/asset-referenced-and-e-money-tokens-mica"
+      },
+      {
+        "label": "Usual EUR0 technical docs",
+        "url": "https://tech.usual.money/overview/features/eur0"
+      },
+      {
+        "label": "Usual EUR/EUR0 rail launch",
+        "url": "https://usual.money/blog/from-bank-account-to-eur0.-no-exchange-needed"
+      }
+    ]
+  },
   "jurisdiction": {
     "country": "France"
   },

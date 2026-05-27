@@ -343,6 +343,25 @@
     "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts; whitelisted partners can mint or redeem directly while other users trade through the app or DEX liquidity",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gaib-aid",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "GAIB",
+      "issuerDomicile": "Singapore",
+      "reserveDisclosureUrl": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "GAIB AID docs",
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "single-asset",
@@ -466,6 +485,33 @@
     },
     "pegMechanism": "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
     "geckoId": "apxusd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Preference Capital (BVI) Ltd. / Apyx",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://docs.apyx.fi/collateral-and-custody/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Apyx apxUSD overview",
+          "url": "https://docs.apyx.fi/product-overview/apxusd-overview"
+        },
+        {
+          "label": "Apyx terms of service",
+          "url": "https://docs.apyx.fi/resources/terms-of-service"
+        },
+        {
+          "label": "Apyx transparency",
+          "url": "https://docs.apyx.fi/collateral-and-custody/transparency"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -703,6 +749,38 @@
     "pegMechanism": "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "novatti-australian-digital-dollar",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "AUDC Pty Ltd",
+      "issuerDomicile": "Australia",
+      "licensingRegulator": "ASIC AFSL No. 700123",
+      "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "AUDD Coinbase listing announcement",
+          "url": "https://www.audd.digital/coinbase-partners-with-audc-to-list-audd/"
+        },
+        {
+          "label": "Coinbase AUDD United States buy page",
+          "url": "https://www.coinbase.com/en/how-to-buy/australian-digital-dollar"
+        },
+        {
+          "label": "AUDD terms",
+          "url": "https://www.audd.digital/audd-terms-and-conditions/"
+        },
+        {
+          "label": "AUDD transparency",
+          "url": "https://www.audd.digital/transparency/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "single-asset",
@@ -1226,6 +1304,29 @@
     "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "avant-usd",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Avant Protocol",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://docs.avantprotocol.com/overview/core-tokens",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Avant core tokens",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens"
+        },
+        {
+          "label": "Avant docs",
+          "url": "https://docs.avantprotocol.com/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -1559,6 +1660,25 @@
     "mechanismArchetype": "tbill",
     "geckoId": "franklin-templeton-benji",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Franklin Templeton",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC registered investment company context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Franklin OnChain U.S. Government Money Fund",
+          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Franklin Templeton FOBXX U.S. government money market fund",
       "yieldType": "rebase"
@@ -1686,6 +1806,25 @@
     "mechanismArchetype": "tbill",
     "geckoId": "backed-ib01-treasury-bond-0-1yr",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Backed Assets",
+      "issuerDomicile": "Switzerland",
+      "licensingRegulator": "Swiss DLT Act registered uncertificated securities context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Backed bIB01 product page",
+          "url": "https://assets.backed.fi/products/bib01"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "iShares 0-1yr Treasury Bond ETF (IB01) NAV accretion",
       "yieldType": "nav-appreciation"
@@ -2936,8 +3075,8 @@
           "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
         },
         {
-          "label": "Phantom CASH help",
-          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
+          "label": "Phantom Cash docs",
+          "url": "https://docs.phantom.com/cash"
         }
       ]
     },
@@ -4878,6 +5017,24 @@
     },
     "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
     "geckoId": "dtrinity-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "dTRINITY protocol governance",
+      "reserveDisclosureUrl": "https://docs.dtrinity.org/protocol-components/dusd",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "dTRINITY dUSD docs",
+          "url": "https://docs.dtrinity.org/protocol-components/dusd"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "sfrxUSD (Staked Frax USD)",
@@ -5196,6 +5353,33 @@
     "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; public materials do not yet expose an eMXN-specific redemption or reserve-attestation report",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "telcoin-mxn",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "state-qualified",
+      "issuerEntity": "Telcoin, Inc. / Telcoin Digital Asset Bank",
+      "issuerDomicile": "United States",
+      "stateRegulator": "Nebraska Department of Banking and Finance",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Telcoin Digital Cash",
+          "url": "https://www.telco.in/en/digital-cash"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank",
+          "url": "https://bank.telco.in/"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank terms",
+          "url": "https://bank.telco.in/terms-of-use"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Mexican peso fiat reserves for Telcoin Digital Cash",
@@ -5312,6 +5496,28 @@
     "mechanismArchetype": "tbill",
     "geckoId": "usual-eur",
     "canBeBlacklisted": true,
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "ESMA interim MiCA EMT register - Usual/EUR0 not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "EBA - ART/EMT issuers require EU authorisation",
+          "url": "https://www.eba.europa.eu/regulation-and-policy/asset-referenced-and-e-money-tokens-mica"
+        },
+        {
+          "label": "Usual EUR0 technical docs",
+          "url": "https://tech.usual.money/overview/features/eur0"
+        },
+        {
+          "label": "Usual EUR/EUR0 rail launch",
+          "url": "https://usual.money/blog/from-bank-account-to-eur0.-no-exchange-needed"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "Spiko EUTBL tokenized Eurozone Treasury-bill fund shares",
@@ -5995,7 +6201,6 @@
     "geckoId": "token-teknoloji-a-s-euro",
     "mica": {
       "status": "out-of-scope",
-      "tokenType": "EMT",
       "references": [
         {
           "label": "Token Teknoloji A.S. - Euro Token (Turkey-domiciled issuer; traded on Bitlo)",
@@ -6430,6 +6635,28 @@
     "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
     "mechanismArchetype": "cdp",
     "geckoId": "electronic-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Electronic Dollar governance / Reserve Protocol RToken governors",
+      "reserveDisclosureUrl": "https://app.reserve.org/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Reserve app",
+          "url": "https://app.reserve.org/"
+        },
+        {
+          "label": "Reserve docs",
+          "url": "https://docs.reserve.org/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -7498,6 +7725,34 @@
     },
     "pegMechanism": "Eligible customers mint and redeem through FinChain; FUSD targets a fixed $1 token value while balances rebase daily to distribute reserve yield from the underlying tokenized Treasury and money-market fund portfolio",
     "mechanismArchetype": "tbill",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "FinChain",
+      "issuerDomicile": "Bermuda",
+      "licensingRegulator": "Bermuda Monetary Authority digital asset business context",
+      "reserveDisclosureUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "FinChain FUSD website",
+          "url": "https://fusd.finchain.global/"
+        },
+        {
+          "label": "FinChain FUSD introduction",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        },
+        {
+          "label": "FinChain FUSD reserves",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "FinChain FUSD daily reserve-yield rebase",
       "yieldType": "rebase"
@@ -7768,6 +8023,23 @@
     "pegMechanism": "Mint-and-burn through Monerium after onboarding/KYC: GBPe is issued when users deposit GBP through supported bank rails and burned when redeemed back to a bank account.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "monerium-gbp-emoney",
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "Central Bank of Iceland",
+      "authorizedEntity": "Monerium ehf",
+      "references": [
+        {
+          "label": "ESMA interim MiCA EMT register - Monerium ehf",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Monerium e-money tokens - EURe and GBPe",
+          "url": "https://docs.monerium.com/tokens/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "attestation-mix",
@@ -9584,6 +9856,24 @@
     },
     "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
     "geckoId": "honey-3",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Berachain / BGT governance",
+      "reserveDisclosureUrl": "https://docs.berachain.com/learn/pol/tokens/honey",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Berachain HONEY docs",
+          "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -11821,6 +12111,33 @@
     "infrastructures": [
       "m0"
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "M0 Foundation / M0 protocol minter network",
+      "issuerDomicile": "Switzerland",
+      "reserveDisclosureUrl": "https://dashboard.m0.org/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "M0 docs",
+          "url": "https://docs.m0.org/"
+        },
+        {
+          "label": "M0 website",
+          "url": "https://www.m0.org/"
+        },
+        {
+          "label": "M0 dashboard",
+          "url": "https://dashboard.m0.org/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -13023,6 +13340,25 @@
     "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; NAV oracle published daily by Ankura Trust Company",
     "mechanismArchetype": "tbill",
     "geckoId": "midas-mtbill",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Midas",
+      "issuerDomicile": "Germany",
+      "licensingRegulator": "EU Prospectus Regulation / MiFID financial-instrument context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Midas mTBILL docs",
+          "url": "https://docs.midas.app/tokens/mtbill"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Midas T-bill fund",
       "yieldType": "nav-appreciation"
@@ -14272,6 +14608,25 @@
     "pegMechanism": "NAV-accreting fund share token (not pegged to $1); token price rises daily as Treasury income accrues; instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 settlement via BUIDL on-chain liquidity); token transfers restricted to KYC-verified whitelisted addresses on-chain",
     "mechanismArchetype": "tbill",
     "geckoId": "ousg",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Ondo Finance",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC Reg D / qualified purchaser context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Ondo OUSG docs",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Ondo Finance T-bill fund",
       "yieldType": "nav-appreciation"
@@ -14946,6 +15301,29 @@
     },
     "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
     "geckoId": "plume-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Plume",
+      "issuerDomicile": "Cayman Islands",
+      "reserveDisclosureUrl": "https://docs.plume.org/plume/tokens/plume-usd",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Plume pUSD docs",
+          "url": "https://docs.plume.org/plume/tokens/plume-usd"
+        },
+        {
+          "label": "Plume pUSD website",
+          "url": "https://plume.org/pusd"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "single-asset",
@@ -15369,6 +15747,29 @@
     "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 via Chainlink price feed; yield accrues from delta-neutral ETH basis trade or T-bill returns plus 250 bps protocol spread; atomic redemptions when instant liquidity available, otherwise queue mode",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "re-protocol-reusd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Re Protocol",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://app.re.xyz/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Re Protocol docs",
+          "url": "https://docs.re.xyz/"
+        },
+        {
+          "label": "Re transparency",
+          "url": "https://app.re.xyz/transparency"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Re Protocol vault",
       "yieldType": "governance-set"
@@ -15966,6 +16367,33 @@
     "geckoId": "royal-dollar",
     "protocolSlug": "rcoins",
     "canBeBlacklisted": "possible",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "RIB Digital Holdings Limited",
+      "issuerDomicile": "Hong Kong",
+      "reserveDisclosureUrl": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Royal RUSD page",
+          "url": "https://www.rcoins.digital/RUSD.html"
+        },
+        {
+          "label": "Royal RCoins website",
+          "url": "https://www.rcoins.digital/"
+        },
+        {
+          "label": "RUSD whitepaper",
+          "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -19071,6 +19499,25 @@
     "pegMechanism": "NAV-based pricing; institutional mint/redeem through regulated BVI fund structure",
     "mechanismArchetype": "tbill",
     "geckoId": "openeden-tbill",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "OpenEden",
+      "issuerDomicile": "British Virgin Islands",
+      "licensingRegulator": "BVI FSC professional fund context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "OpenEden TBILL introduction",
+          "url": "https://docs.openeden.com/tbill/introduction"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "OpenEden T-bill vault",
       "yieldType": "nav-appreciation"
@@ -19244,7 +19691,6 @@
     "commodityOunces": 1,
     "mica": {
       "status": "out-of-scope",
-      "tokenType": "ART",
       "references": [
         {
           "label": "ESMA MiCA register (issuers of ARTs)",
@@ -21221,6 +21667,28 @@
     "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
     "mechanismArchetype": "cdp",
     "geckoId": "usdd",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "TRON DAO Reserve",
+      "reserveDisclosureUrl": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "USDD over-collateralization and transparency",
+          "url": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency"
+        },
+        {
+          "label": "USDD PSM",
+          "url": "https://legacy-docs.usdd.io/psm/the-psm"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -21307,6 +21775,29 @@
     "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-usde",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Ethena Protocol / Ethena",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Ethena USDe docs",
+          "url": "https://docs.ethena.fi/solution-overview/usde-overview"
+        },
+        {
+          "label": "Ethena transparency dashboard",
+          "url": "https://app.ethena.fi/dashboards/transparency"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -22092,6 +22583,34 @@
     "infrastructures": [
       "m0"
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "KAST / KAST Tech",
+      "issuerDomicile": "Union of Comoros",
+      "licensingRegulator": "Anjouan Offshore Finance Authority",
+      "reserveDisclosureUrl": "https://dashboard.m0.org/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "KAST USDK announcement",
+          "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins"
+        },
+        {
+          "label": "M0 Solana launch with KAST",
+          "url": "https://www.m0.org/press-releases/m-0-launches-on-solana-bringing-the-first-programmable-stablecoin-infrastructure-to-one-of-cryptos-fastest-growing-ecosystem"
+        },
+        {
+          "label": "M0 dashboard",
+          "url": "https://dashboard.m0.org/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -22291,6 +22810,30 @@
     "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
     "geckoId": "usdkg",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Gold Dollar / LLC Virelint Group",
+      "issuerDomicile": "Kyrgyz Republic",
+      "licensingRegulator": "Ministry of Finance of the Kyrgyz Republic",
+      "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "USDKG website",
+          "url": "https://www.usdkg.com/"
+        },
+        {
+          "label": "USDKG transparency",
+          "url": "https://www.usdkg.com/transparency"
+        }
+      ]
+    },
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.usdkg.com/transparency",
@@ -22535,6 +23078,33 @@
     "infrastructures": [
       "m0"
     ],
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Noble / M0 stablecoin infrastructure",
+      "issuerDomicile": "United States / Switzerland",
+      "reserveDisclosureUrl": "https://dashboard.m0.org/",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Noble USDN",
+          "url": "https://noble.xyz/usdn"
+        },
+        {
+          "label": "Noble docs",
+          "url": "https://docs.noble.xyz/"
+        },
+        {
+          "label": "M0 dashboard",
+          "url": "https://dashboard.m0.org/"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "M0 T-bill rebase",
       "yieldType": "rebase"
@@ -24426,6 +24996,29 @@
     "pegMechanism": "Direct 1:1 redemption through Hex Trust",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "hex-trust-usdx",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Hex Trust Digital Assets",
+      "issuerDomicile": "Hong Kong",
+      "reserveDisclosureUrl": "https://www.htdigitalassets.com/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Hex Trust Digital Assets USDX",
+          "url": "https://www.htdigitalassets.com/"
+        },
+        {
+          "label": "Hex Trust website",
+          "url": "https://www.hextrust.com/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "single-asset",
@@ -24692,6 +25285,33 @@
     "pegMechanism": "Each USDz backed 1:1 by its reserve basket — majority SPCT private credit plus a Superstate USTB/USCC tokenized-Treasury sleeve and cash — locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "anzen-usdz",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anzen",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://rwa.anzen.finance/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Anzen docs",
+          "url": "https://docs.anzen.finance/"
+        },
+        {
+          "label": "Anzen website",
+          "url": "https://anzen.finance/"
+        },
+        {
+          "label": "Anzen transparency",
+          "url": "https://rwa.anzen.finance/transparency"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "single-asset",
@@ -25248,6 +25868,25 @@
     "mechanismArchetype": "tbill",
     "geckoId": "us-sonic-dollar",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Sonic Labs / Frax stablecoin infrastructure",
+      "issuerDomicile": "United States",
+      "reserveDisclosureUrl": "https://docs.soniclabs.com/sonic/ussd",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Sonic USSD docs",
+          "url": "https://docs.soniclabs.com/sonic/ussd"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "attestation-mix",
@@ -25325,6 +25964,25 @@
     "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
     "mechanismArchetype": "tbill",
     "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Superstate",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC Reg D / Delaware statutory trust context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Superstate USTB docs",
+          "url": "https://docs.superstate.com/ustb"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Superstate T-bill fund",
       "yieldType": "nav-appreciation"
@@ -27177,6 +27835,25 @@
     "mechanismArchetype": "tbill",
     "geckoId": "wisdomtree-treasury-money-market-digital-fund",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "WisdomTree",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC registered money market fund context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "WisdomTree Government Money Market Digital Fund",
+          "url": "https://www.wisdomtreeprime.com/digital-funds/wtgxx/"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "WisdomTree WTGXX U.S. government money market fund",
       "yieldType": "nav-appreciation"
@@ -27966,6 +28643,38 @@
     "pegMechanism": "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); independent attestation reports issued twice monthly",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "xsgd",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "StraitsX / Xfers Pte. Ltd.",
+      "issuerDomicile": "Singapore",
+      "licensingRegulator": "Monetary Authority of Singapore Major Payment Institution; MAS SCS substantive-compliance acknowledgement",
+      "reserveDisclosureUrl": "https://www.straitsx.com/xsgd",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "StraitsX XSGD",
+          "url": "https://www.straitsx.com/xsgd"
+        },
+        {
+          "label": "StraitsX purchasing and redemption terms",
+          "url": "https://www.straitsx.com/legal/purchasing-and-redemption"
+        },
+        {
+          "label": "StraitsX XSGD Coinbase announcement",
+          "url": "https://www.straitsx.com/blog-post/xsgd-live-on-coinbase"
+        },
+        {
+          "label": "Coinbase XSGD United States buy page",
+          "url": "https://www.coinbase.com/how-to-buy/base-xsgd-e000"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "attestation-mix",
@@ -28434,6 +29143,25 @@
     "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 50bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
     "mechanismArchetype": "tbill",
     "geckoId": "ylds",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Figure Certificate Company",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC registered security context",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "YLDS prospectus",
+          "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Figure yield fund",
       "yieldType": "nav-appreciation"

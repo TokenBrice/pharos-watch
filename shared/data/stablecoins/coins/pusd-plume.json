@@ -31,6 +31,52 @@
       "url": "https://docs.plume.org/plume/tokens/plume-usd"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Plume describes pUSD as a non-interest-bearing USDC wrapper with payment-like use, but not a fiat-custody stablecoin issuance."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Plume",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.plume.org/plume/tokens/plume-usd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "pUSD is payment-like but appears to be a USDC wrapper; GENIUS payment-stablecoin applicability is unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Plume pUSD docs",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Plume pUSD website",
+        "url": "https://plume.org/pusd",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Plume pUSD docs and product page"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for pUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Cayman Islands"
   },
@@ -125,7 +171,9 @@
           "url": "https://docs.nucleusearn.io/nucleus-architecture/vault-framework"
         }
       ],
-      "unresolvedQuestions": ["Confirm the live Teller/Manager owner addresses (multisig vs EOA) and the predicate proxy admin before raising confidence."]
+      "unresolvedQuestions": [
+        "Confirm the live Teller/Manager owner addresses (multisig vs EOA) and the predicate proxy admin before raising confidence."
+      ]
     }
   }
 }

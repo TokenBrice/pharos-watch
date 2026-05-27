@@ -31,6 +31,57 @@
       "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "RUSD is described as a USD-referenced stable-value token for settlement and treasury use with authorized-participant issuance and redemption."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "RIB Digital Holdings Limited",
+    "issuerDomicile": "Hong Kong",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "RUSD has issuer-style stablecoin disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Royal RUSD page",
+        "url": "https://www.rcoins.digital/RUSD.html",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Royal RCoins website",
+        "url": "https://www.rcoins.digital/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "RUSD whitepaper",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Royal RUSD page and whitepaper"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for RUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Hong Kong"
   },
@@ -119,7 +170,9 @@
           "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
         }
       ],
-      "unresolvedQuestions": ["Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron RUSD contracts before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain minter/owner role on the Ethereum/BSC/Tron RUSD contracts before raising confidence."
+      ]
     }
   }
 }

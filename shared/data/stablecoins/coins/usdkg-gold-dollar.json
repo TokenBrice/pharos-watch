@@ -36,6 +36,53 @@
       "url": "https://www.usdkg.com/transparency"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDKG is a USD-pegged, issuer-redeemable stablecoin backed by physical LBMA gold under Kyrgyz Republic oversight."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Gold Dollar / LLC Virelint Group",
+    "issuerDomicile": "Kyrgyz Republic",
+    "licensingRegulator": "Ministry of Finance of the Kyrgyz Republic",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDKG is commodity-backed but USD-referenced and issuer-redeemable; no public GENIUS approval or foreign-issuer exception source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "USDKG website",
+        "url": "https://www.usdkg.com/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USDKG transparency",
+        "url": "https://www.usdkg.com/transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "USDKG website and transparency page"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDKG.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Kyrgyz Republic",
     "regulator": "Ministry of Finance",

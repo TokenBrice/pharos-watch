@@ -63,8 +63,8 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "Phantom CASH help",
-        "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash",
+        "label": "Phantom Cash docs",
+        "url": "https://docs.phantom.com/cash",
         "sourceKind": "issuer-disclosure"
       }
     ],
@@ -170,8 +170,8 @@
           "url": "https://www.bridge.xyz/news/introducing-open-issuance"
         },
         {
-          "label": "Phantom Cash help",
-          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
+          "label": "Phantom Cash docs",
+          "url": "https://docs.phantom.com/cash"
         },
         {
           "label": "Solana RPC getAccountInfo",

@@ -40,6 +40,35 @@
       "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
     }
   ],
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Figure Certificate Company",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "SEC registered security context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "YLDS is treated as outside GENIUS payment-stablecoin tracking because it is a registered security/face-amount certificate rather than a payment stablecoin.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "YLDS prospectus",
+        "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+        "sourceKind": "issuer-filing"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "United States",
     "regulator": "SEC",

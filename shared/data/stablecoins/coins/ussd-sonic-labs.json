@@ -37,6 +37,47 @@
       "url": "https://docs.soniclabs.com/sonic/ussd"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Sonic docs describe USSD as a Treasury-backed, 1:1 mint/redeem dollar built on GENIUS-compatible frxUSD infrastructure."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Sonic Labs / Frax stablecoin infrastructure",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.soniclabs.com/sonic/ussd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Sonic Labs signals GENIUS-compatible infrastructure, but no public token-specific approval or official application source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Sonic USSD docs",
+        "url": "https://docs.soniclabs.com/sonic/ussd",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Sonic USSD docs and OCC GENIUS rulemaking materials"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "United States"
   },
@@ -146,7 +187,10 @@
         "capDescription": "Permissionless 1:1 mint against an issuer-administered approved-collateral set (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX); the approved-asset list and parameters are controlled by the issuer/Frax framework.",
         "evidence": "Sonic Labs docs state USSD is built on Frax's frxUSD infrastructure with non-custodial 1:1 mint/redeem and zero fees; the set of approved minting collateral is defined by the issuer.",
         "sources": [
-          { "label": "USSD docs", "url": "https://docs.soniclabs.com/sonic/ussd" }
+          {
+            "label": "USSD docs",
+            "url": "https://docs.soniclabs.com/sonic/ussd"
+          }
         ]
       },
       {
@@ -158,7 +202,10 @@
         "modulesOrGuardsStatus": "unknown",
         "evidence": "Reserves are custodied tokenized U.S. Treasury products (BlackRock BUIDL, Superstate USTB, WisdomTree WTGXX) with deployment/management run through Frax's infrastructure; yield is directed to the Sonic ecosystem, indicating issuer/custodian control over reserves and the approved-asset roster.",
         "sources": [
-          { "label": "Frax balance sheet", "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf" }
+          {
+            "label": "Frax balance sheet",
+            "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf"
+          }
         ]
       }
     ],
@@ -167,8 +214,14 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "USSD docs", "url": "https://docs.soniclabs.com/sonic/ussd" },
-        { "label": "Frax balance sheet", "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf" }
+        {
+          "label": "USSD docs",
+          "url": "https://docs.soniclabs.com/sonic/ussd"
+        },
+        {
+          "label": "Frax balance sheet",
+          "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf"
+        }
       ],
       "sourceFreeRationale": "frxUSD-based mechanism and reserve composition confirmed from Sonic/Frax materials; the on-chain owner/admin of the USSD contract and the controller of the approved-collateral roster were not independently resolved.",
       "unresolvedQuestions": [

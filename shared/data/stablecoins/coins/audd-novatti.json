@@ -44,6 +44,63 @@
       "url": "https://www.audd.digital/transparency/"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AUDD is an AUD payment stablecoin with issuer reserve/redemption disclosures and a Coinbase U.S. availability signal."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AUDC Pty Ltd",
+    "issuerDomicile": "Australia",
+    "licensingRegulator": "ASIC AFSL No. 700123",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "AUDD is a foreign non-USD payment stablecoin with U.S. availability signals, but no public GENIUS approval or foreign-issuer exception source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "AUDD Coinbase listing announcement",
+        "url": "https://www.audd.digital/coinbase-partners-with-audc-to-list-audd/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Coinbase AUDD United States buy page",
+        "url": "https://www.coinbase.com/en/how-to-buy/australian-digital-dollar",
+        "sourceKind": "news"
+      },
+      {
+        "label": "AUDD terms",
+        "url": "https://www.audd.digital/audd-terms-and-conditions/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "AUDD transparency",
+        "url": "https://www.audd.digital/transparency/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "AUDD issuer disclosures, terms, transparency, and Coinbase availability pages"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for AUDD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Australia",
     "regulator": "ASIC",

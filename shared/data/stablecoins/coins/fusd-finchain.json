@@ -42,6 +42,58 @@
       "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "FUSD has issuer-style 1:1 minting and reserves, but it is natively yield-bearing and backed by tokenized T-bills/MMFs."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "FinChain",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "Bermuda Monetary Authority digital asset business context",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "FUSD is stablecoin-adjacent, but yield-bearing reserve-token mechanics make GENIUS payment-stablecoin applicability unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "FinChain FUSD website",
+        "url": "https://fusd.finchain.global/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "FinChain FUSD introduction",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "FinChain FUSD reserves",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "FinChain FUSD site and docs"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for FUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Bermuda",
     "regulator": "Bermuda Monetary Authority",

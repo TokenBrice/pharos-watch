@@ -39,6 +39,58 @@
       "url": "https://dashboard.m0.org/"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDK is KAST's branded dollar token for payments and savings, built on M0 programmable stablecoin infrastructure."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "KAST / KAST Tech",
+    "issuerDomicile": "Union of Comoros",
+    "licensingRegulator": "Anjouan Offshore Finance Authority",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDK has branded stablecoin and M0 reserve disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "KAST USDK announcement",
+        "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 Solana launch with KAST",
+        "url": "https://www.m0.org/press-releases/m-0-launches-on-solana-bringing-the-first-programmable-stablecoin-infrastructure-to-one-of-cryptos-fastest-growing-ecosystem",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 dashboard",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "KAST and M0 issuer disclosures"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDK.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Union of Comoros",
     "regulator": "Anjouan Offshore Finance Authority"
@@ -95,9 +147,9 @@
         ],
         "evidence": "Official M0 deployments list the Ethereum MinterGateway, and M0 docs describe approved-minter plus validator-gated issuance."
       },
-    {
-      "chain": "solana",
-      "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+      {
+        "chain": "solana",
+        "address": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
         "label": "M0 Solana Portal",
         "role": "bridge-admin",
         "authorityType": "bridge",
@@ -115,24 +167,24 @@
             "url": "https://docs.m0.org/home/technical-documentations/solana/"
           }
         ],
-      "evidence": "Official M0 deployments list the Solana Portal program; a USDK-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
-    },
-    {
-      "chain": "solana",
-      "address": "C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
-      "label": "USDK Token-2022 mint authority",
-      "role": "direct-minter",
-      "authorityType": "unknown",
-      "directMintAbility": "direct",
-      "canRaiseCap": "unknown",
-      "modulesOrGuardsStatus": "unknown",
-      "sources": [
-        {
-          "label": "USDK Solana token",
-          "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
-        }
-      ],
-      "evidence": "Solana Token-2022 mint account reads identify this live USDK mint authority; signer model was not decoded."
+        "evidence": "Official M0 deployments list the Solana Portal program; a USDK-specific Solana mint authority was not publicly verified in the checked official M0 deployment docs."
+      },
+      {
+        "chain": "solana",
+        "address": "C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7",
+        "label": "USDK Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "unknown",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USDK Solana token",
+            "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+          }
+        ],
+        "evidence": "Solana Token-2022 mint account reads identify this live USDK mint authority; signer model was not decoded."
       }
     ],
     "review": {
@@ -146,7 +198,7 @@
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
         }
       ],
-    "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins; live Solana Token-2022 metadata also exposes a USDK mint authority.",
+      "evidence": "M0 documentation describes permissioned minter/validator rails used by M0-built stablecoins; live Solana Token-2022 metadata also exposes a USDK mint authority.",
       "reviewer": "Codex mint-authority MVP",
       "reviewedAt": "2026-05-24"
     }

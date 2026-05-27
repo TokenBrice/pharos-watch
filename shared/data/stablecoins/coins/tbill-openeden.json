@@ -40,6 +40,35 @@
       "url": "https://docs.openeden.com/"
     }
   ],
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "OpenEden",
+    "issuerDomicile": "British Virgin Islands",
+    "licensingRegulator": "BVI FSC professional fund context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "TBILL is treated as outside GENIUS payment-stablecoin tracking because it is a tokenized Treasury fund interest, not a payment stablecoin.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OpenEden TBILL introduction",
+        "url": "https://docs.openeden.com/tbill/introduction",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "British Virgin Islands",
     "regulator": "BVI FSC",

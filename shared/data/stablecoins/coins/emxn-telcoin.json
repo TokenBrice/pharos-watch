@@ -30,6 +30,58 @@
       "url": "https://bank.telco.in/"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Telcoin lists eMXN as live Digital Cash and ties the program to a Nebraska-chartered digital asset depository bank."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "state-qualified",
+    "issuerEntity": "Telcoin, Inc. / Telcoin Digital Asset Bank",
+    "issuerDomicile": "United States",
+    "stateRegulator": "Nebraska Department of Banking and Finance",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Telcoin Digital Cash disclosures identify eMXN, but token-specific reserve/redemption and GENIUS approval evidence was not located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank",
+        "url": "https://bank.telco.in/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Telcoin Digital Cash and Digital Asset Bank disclosures",
+        "Nebraska digital asset bank charter context"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eMXN.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "United States",
     "regulator": "Nebraska Department of Banking and Finance"
@@ -69,10 +121,15 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Telcoin Digital Cash", "url": "https://www.telco.in/en/digital-cash" }
+        {
+          "label": "Telcoin Digital Cash",
+          "url": "https://www.telco.in/en/digital-cash"
+        }
       ],
       "sourceFreeRationale": "Classification based on Telcoin's issuer model; the on-chain Polygon owner/minter admin for eMXN was not independently resolved, and eMXN-specific reserve attestations are not yet published.",
-      "unresolvedQuestions": ["Resolve the on-chain Polygon owner/minter admin for eMXN before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the on-chain Polygon owner/minter admin for eMXN before raising confidence."
+      ]
     }
   },
   "chainTier": "mature-alt-l1",

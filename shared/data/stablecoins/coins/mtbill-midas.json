@@ -38,6 +38,35 @@
       "url": "https://docs.midas.app/tokens/mtbill"
     }
   ],
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "EU Prospectus Regulation / MiFID financial-instrument context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "mTBILL is treated as outside GENIUS payment-stablecoin tracking because it is a tokenized debt instrument/certificate rather than a payment stablecoin.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Midas mTBILL docs",
+        "url": "https://docs.midas.app/tokens/mtbill",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Germany",
     "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
@@ -142,10 +171,18 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Midas mTBILL docs", "url": "https://docs.midas.app/tokens/mtbill" },
-        { "label": "Sherlock Midas audit (DepositVault/RedemptionVault/MidasAccessControl roles)", "url": "https://github.com/sherlock-audit/2024-05-midas" }
+        {
+          "label": "Midas mTBILL docs",
+          "url": "https://docs.midas.app/tokens/mtbill"
+        },
+        {
+          "label": "Sherlock Midas audit (DepositVault/RedemptionVault/MidasAccessControl roles)",
+          "url": "https://github.com/sherlock-audit/2024-05-midas"
+        }
       ],
-      "unresolvedQuestions": ["Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."]
+      "unresolvedQuestions": [
+        "Resolve the live on-chain MidasAccessControl role holders (mint operator, default admin) and proxy admin before raising confidence."
+      ]
     }
   }
 }

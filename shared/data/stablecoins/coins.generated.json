@@ -833,6 +833,47 @@
     "jurisdiction": {
       "country": "Singapore"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "AID is presented as a 1:1 mintable and redeemable AI-dollar stablecoin backed by U.S. Treasuries and stable assets."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "GAIB",
+      "issuerDomicile": "Singapore",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "AID has issuer-style 1:1 mint/redeem and reserve disclosures, but no public GENIUS authorization or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "GAIB AID docs",
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "GAIB AID product documentation"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for AID.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "concentrated-admin",
@@ -1195,6 +1236,57 @@
     ],
     "jurisdiction": {
       "country": "British Virgin Islands"
+    },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "apxUSD has stablecoin-like mint/redeem mechanics, but collateral and issuer materials describe preferred-share and RWA investment exposure."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Preference Capital (BVI) Ltd. / Apyx",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.apyx.fi/collateral-and-custody/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "apxUSD is stablecoin-adjacent, but its preferred-share collateral makes GENIUS payment-stablecoin applicability unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Apyx apxUSD overview",
+          "url": "https://docs.apyx.fi/product-overview/apxusd-overview",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Apyx terms of service",
+          "url": "https://docs.apyx.fi/resources/terms-of-service",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Apyx transparency",
+          "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Apyx product, terms, and transparency pages"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for apxUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "offchain-attested-minter",
@@ -1733,6 +1825,63 @@
       "country": "Australia",
       "regulator": "ASIC",
       "license": "AFSL No. 700123"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "AUDD is an AUD payment stablecoin with issuer reserve/redemption disclosures and a Coinbase U.S. availability signal."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "AUDC Pty Ltd",
+      "issuerDomicile": "Australia",
+      "licensingRegulator": "ASIC AFSL No. 700123",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "AUDD is a foreign non-USD payment stablecoin with U.S. availability signals, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "AUDD Coinbase listing announcement",
+          "url": "https://www.audd.digital/coinbase-partners-with-audc-to-list-audd/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Coinbase AUDD United States buy page",
+          "url": "https://www.coinbase.com/en/how-to-buy/australian-digital-dollar",
+          "sourceKind": "news"
+        },
+        {
+          "label": "AUDD terms",
+          "url": "https://www.audd.digital/audd-terms-and-conditions/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "AUDD transparency",
+          "url": "https://www.audd.digital/transparency/",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "AUDD issuer disclosures, terms, transparency, and Coinbase availability pages"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for AUDD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -2961,6 +3110,52 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "avUSD is the non-yield Avant base token backed 1:1 by USDC and redeemable through protocol mint/redeem flows."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Avant Protocol",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.avantprotocol.com/overview/core-tokens",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "avUSD has stablecoin-like reserve and redemption disclosures; no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Avant core tokens",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Avant docs",
+          "url": "https://docs.avantprotocol.com/",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Avant protocol token documentation"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for avUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -3662,6 +3857,35 @@
       "regulator": "SEC",
       "license": "Investment Company Act of 1940 (registered money market fund)"
     },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Franklin Templeton",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC registered investment company context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "BENJI is treated as outside GENIUS payment-stablecoin tracking because it represents shares of a registered money market fund rather than a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Franklin OnChain U.S. Government Money Fund",
+          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -3961,6 +4185,35 @@
       "country": "Switzerland",
       "regulator": "FINMA",
       "license": "Swiss DLT Act registered uncertificated securities"
+    },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Backed Assets",
+      "issuerDomicile": "Switzerland",
+      "licensingRegulator": "Swiss DLT Act registered uncertificated securities context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "bIB01 is treated as outside GENIUS payment-stablecoin tracking because it is a tracker certificate/security referencing an ETF, not a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Backed bIB01 product page",
+          "url": "https://assets.backed.fi/products/bib01",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -6721,8 +6974,8 @@
           "sourceKind": "issuer-disclosure"
         },
         {
-          "label": "Phantom CASH help",
-          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash",
+          "label": "Phantom Cash docs",
+          "url": "https://docs.phantom.com/cash",
           "sourceKind": "issuer-disclosure"
         }
       ],
@@ -6813,8 +7066,8 @@
             "url": "https://www.bridge.xyz/news/introducing-open-issuance"
           },
           {
-            "label": "Phantom Cash help",
-            "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
+            "label": "Phantom Cash docs",
+            "url": "https://docs.phantom.com/cash"
           },
           {
             "label": "Solana RPC getAccountInfo",
@@ -11011,6 +11264,46 @@
         "url": "https://app.dtrinity.org/mint/dusd/"
       }
     ],
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "dUSD is a decentralized, chain-isolated collateral stablecoin with 1:1 mint/redeem mechanics rather than a legal fiat issuer."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "dTRINITY protocol governance",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.dtrinity.org/protocol-components/dusd",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "dUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "dTRINITY dUSD docs",
+          "url": "https://docs.dtrinity.org/protocol-components/dusd",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "dTRINITY dUSD documentation"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for dUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "concentrated-admin",
@@ -11645,6 +11938,58 @@
       "country": "United States",
       "regulator": "Nebraska Department of Banking and Finance"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "Telcoin lists eMXN as live Digital Cash and ties the program to a Nebraska-chartered digital asset depository bank."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "state-qualified",
+      "issuerEntity": "Telcoin, Inc. / Telcoin Digital Asset Bank",
+      "issuerDomicile": "United States",
+      "stateRegulator": "Nebraska Department of Banking and Finance",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "Telcoin Digital Cash disclosures identify eMXN, but token-specific reserve/redemption and GENIUS approval evidence was not located.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Telcoin Digital Cash",
+          "url": "https://www.telco.in/en/digital-cash",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank",
+          "url": "https://bank.telco.in/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank terms",
+          "url": "https://bank.telco.in/terms-of-use",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Telcoin Digital Cash and Digital Asset Bank disclosures",
+          "Nebraska digital asset bank charter context"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eMXN.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -11867,6 +12212,28 @@
     ],
     "jurisdiction": {
       "country": "France"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "ESMA interim MiCA EMT register - Usual/EUR0 not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "EBA - ART/EMT issuers require EU authorisation",
+          "url": "https://www.eba.europa.eu/regulation-and-policy/asset-referenced-and-e-money-tokens-mica"
+        },
+        {
+          "label": "Usual EUR0 technical docs",
+          "url": "https://tech.usual.money/overview/features/eur0"
+        },
+        {
+          "label": "Usual EUR/EUR0 rail launch",
+          "url": "https://usual.money/blog/from-bank-account-to-eur0.-no-exchange-needed"
+        }
+      ]
     },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
@@ -13464,7 +13831,6 @@
     },
     "mica": {
       "status": "out-of-scope",
-      "tokenType": "EMT",
       "references": [
         {
           "label": "Token Teknoloji A.S. - Euro Token (Turkey-domiciled issuer; traded on Bitlo)",
@@ -14459,6 +14825,51 @@
         "url": "https://docs.reserve.org/"
       }
     ],
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "Electronic USD is a Reserve Protocol RToken with on-chain basket collateral and governance rather than a legal fiat issuer."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Electronic Dollar governance / Reserve Protocol RToken governors",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://app.reserve.org/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "eUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Reserve app",
+          "url": "https://app.reserve.org/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Reserve docs",
+          "url": "https://docs.reserve.org/",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Reserve Protocol documentation and app disclosures"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -16880,6 +17291,58 @@
       "regulator": "Bermuda Monetary Authority",
       "license": "Digital asset business license"
     },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "FUSD has issuer-style 1:1 minting and reserves, but it is natively yield-bearing and backed by tokenized T-bills/MMFs."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "FinChain",
+      "issuerDomicile": "Bermuda",
+      "licensingRegulator": "Bermuda Monetary Authority digital asset business context",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "FUSD is stablecoin-adjacent, but yield-bearing reserve-token mechanics make GENIUS payment-stablecoin applicability unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "FinChain FUSD website",
+          "url": "https://fusd.finchain.global/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "FinChain FUSD introduction",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "FinChain FUSD reserves",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "FinChain FUSD site and docs"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for FUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -17505,6 +17968,23 @@
       "country": "Iceland",
       "regulator": "Financial Supervisory Authority of the Central Bank of Iceland",
       "license": "Electronic Money Institution (EMI)"
+    },
+    "mica": {
+      "status": "authorized",
+      "tokenType": "EMT",
+      "authorizationType": "emi",
+      "competentAuthority": "Central Bank of Iceland",
+      "authorizedEntity": "Monerium ehf",
+      "references": [
+        {
+          "label": "ESMA interim MiCA EMT register - Monerium ehf",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Monerium e-money tokens - EURe and GBPe",
+          "url": "https://docs.monerium.com/tokens/"
+        }
+      ]
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -21498,6 +21978,46 @@
         "url": "https://discord.gg/berachain"
       }
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "Berachain docs describe HONEY as a USD-soft-pegged, fully collateralized native stablecoin for payments and remittances."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Berachain / BGT governance",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.berachain.com/learn/pol/tokens/honey",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "HONEY has stablecoin mint/redeem disclosures, but no public GENIUS approval or issuer pathway source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Berachain HONEY docs",
+          "url": "https://docs.berachain.com/learn/pol/tokens/honey",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Berachain HONEY documentation"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for HONEY.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -26379,6 +26899,57 @@
     "jurisdiction": {
       "country": "Switzerland"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "M is M0's core dollar token minted and burned by permissioned minters against eligible off-chain collateral verified by validators."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "M0 Foundation / M0 protocol minter network",
+      "issuerDomicile": "Switzerland",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://dashboard.m0.org/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "M has reserve transparency and permissioned mint/burn mechanics, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "M0 docs",
+          "url": "https://docs.m0.org/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "M0 website",
+          "url": "https://www.m0.org/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "M0 dashboard",
+          "url": "https://dashboard.m0.org/",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "M0 docs, website, and reserve dashboard"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for M.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -29302,6 +29873,35 @@
       "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
       "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (MiFID II financial instrument); EEA-passported; not available to U.S. or UK retail persons"
     },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Midas",
+      "issuerDomicile": "Germany",
+      "licensingRegulator": "EU Prospectus Regulation / MiFID financial-instrument context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "mTBILL is treated as outside GENIUS payment-stablecoin tracking because it is a tokenized debt instrument/certificate rather than a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Midas mTBILL docs",
+          "url": "https://docs.midas.app/tokens/mtbill",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -31894,6 +32494,35 @@
       "regulator": "SEC",
       "license": "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers"
     },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Ondo Finance",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC Reg D / qualified purchaser context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "OUSG is treated as outside GENIUS payment-stablecoin tracking because Ondo presents it as a qualified-access tokenized Treasury fund product.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Ondo OUSG docs",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -33472,6 +34101,52 @@
     "jurisdiction": {
       "country": "Cayman Islands"
     },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "Plume describes pUSD as a non-interest-bearing USDC wrapper with payment-like use, but not a fiat-custody stablecoin issuance."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Plume",
+      "issuerDomicile": "Cayman Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.plume.org/plume/tokens/plume-usd",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "pUSD is payment-like but appears to be a USDC wrapper; GENIUS payment-stablecoin applicability is unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Plume pUSD docs",
+          "url": "https://docs.plume.org/plume/tokens/plume-usd",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Plume pUSD website",
+          "url": "https://plume.org/pusd",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Plume pUSD docs and product page"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for pUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -34350,6 +35025,52 @@
       "country": "British Virgin Islands",
       "regulator": "FSC",
       "license": "BVI Securities and Investment Business Act"
+    },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "reUSD is principal-protected and redeemable subject to liquidity limits, with insurance/RWA reserve exposure and investment-like features."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Re Protocol",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://app.re.xyz/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "reUSD is stablecoin-adjacent but investment-like; GENIUS payment-stablecoin applicability is unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Re Protocol docs",
+          "url": "https://docs.re.xyz/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Re transparency",
+          "url": "https://app.re.xyz/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Re Protocol docs and transparency page"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for reUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
@@ -35524,6 +36245,57 @@
     ],
     "jurisdiction": {
       "country": "Hong Kong"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "RUSD is described as a USD-referenced stable-value token for settlement and treasury use with authorized-participant issuance and redemption."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "RIB Digital Holdings Limited",
+      "issuerDomicile": "Hong Kong",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "RUSD has issuer-style stablecoin disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Royal RUSD page",
+          "url": "https://www.rcoins.digital/RUSD.html",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Royal RCoins website",
+          "url": "https://www.rcoins.digital/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "RUSD whitepaper",
+          "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Royal RUSD page and whitepaper"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for RUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -42669,6 +43441,35 @@
       "regulator": "BVI FSC",
       "license": "Registered Professional Fund"
     },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "OpenEden",
+      "issuerDomicile": "British Virgin Islands",
+      "licensingRegulator": "BVI FSC professional fund context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "TBILL is treated as outside GENIUS payment-stablecoin tracking because it is a tokenized Treasury fund interest, not a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "OpenEden TBILL introduction",
+          "url": "https://docs.openeden.com/tbill/introduction",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -42973,7 +43774,6 @@
     },
     "mica": {
       "status": "out-of-scope",
-      "tokenType": "ART",
       "references": [
         {
           "label": "ESMA MiCA register (issuers of ARTs)",
@@ -47483,6 +48283,51 @@
     "jurisdiction": {
       "country": "Dominica"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDD is presented as a TRON DAO Reserve dollar stablecoin for payments with over-collateralized reserves and PSM swap/redemption mechanics."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "TRON DAO Reserve",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "USDD has reserve and swap/redemption disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "USDD over-collateralization and transparency",
+          "url": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "USDD PSM",
+          "url": "https://legacy-docs.usdd.io/psm/the-psm",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "USDD issuance and PSM documentation"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "user-collateralized-governed",
       "authorityPosture": "partially-bounded-admin",
@@ -47656,6 +48501,52 @@
     ],
     "jurisdiction": {
       "country": "British Virgin Islands"
+    },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "Ethena distinguishes USDe from fiat stablecoins while documenting a fully backed synthetic dollar with approved-counterparty mint/redeem."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Ethena Protocol / Ethena",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://app.ethena.fi/dashboards/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "USDe is a synthetic dollar rather than a fiat reserve stablecoin; GENIUS payment-stablecoin applicability is unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Ethena USDe docs",
+          "url": "https://docs.ethena.fi/solution-overview/usde-overview",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Ethena transparency dashboard",
+          "url": "https://app.ethena.fi/dashboards/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Ethena USDe documentation and transparency dashboard"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDe.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "offchain-attested-minter",
@@ -49489,6 +50380,58 @@
       "country": "Union of Comoros",
       "regulator": "Anjouan Offshore Finance Authority"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDK is KAST's branded dollar token for payments and savings, built on M0 programmable stablecoin infrastructure."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "KAST / KAST Tech",
+      "issuerDomicile": "Union of Comoros",
+      "licensingRegulator": "Anjouan Offshore Finance Authority",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://dashboard.m0.org/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "USDK has branded stablecoin and M0 reserve disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "KAST USDK announcement",
+          "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "M0 Solana launch with KAST",
+          "url": "https://www.m0.org/press-releases/m-0-launches-on-solana-bringing-the-first-programmable-stablecoin-infrastructure-to-one-of-cryptos-fastest-growing-ecosystem",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "M0 dashboard",
+          "url": "https://dashboard.m0.org/",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "KAST and M0 issuer disclosures"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDK.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -49879,6 +50822,53 @@
       "country": "Kyrgyz Republic",
       "regulator": "Ministry of Finance",
       "license": "Law on Virtual Assets (2022) / Cabinet Resolution No. 514"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDKG is a USD-pegged, issuer-redeemable stablecoin backed by physical LBMA gold under Kyrgyz Republic oversight."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Gold Dollar / LLC Virelint Group",
+      "issuerDomicile": "Kyrgyz Republic",
+      "licensingRegulator": "Ministry of Finance of the Kyrgyz Republic",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "USDKG is commodity-backed but USD-referenced and issuer-redeemable; no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "USDKG website",
+          "url": "https://www.usdkg.com/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "USDKG transparency",
+          "url": "https://www.usdkg.com/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "USDKG website and transparency page"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDKG.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -50358,6 +51348,57 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "USDN is a yield-bearing Noble Dollar built on M0 reserves; source evidence supports reserves but not a plain holder redemption policy."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Noble / M0 stablecoin infrastructure",
+      "issuerDomicile": "United States / Switzerland",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://dashboard.m0.org/",
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "USDN is stablecoin-adjacent but yield-bearing and built on M0 infrastructure; GENIUS payment-stablecoin applicability is unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Noble USDN",
+          "url": "https://noble.xyz/usdn",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Noble docs",
+          "url": "https://docs.noble.xyz/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "M0 dashboard",
+          "url": "https://dashboard.m0.org/",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Noble USDN materials and M0 reserve dashboard"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDN.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "m0-permissioned-minter",
@@ -54621,6 +55662,52 @@
       "regulator": "Companies Registry",
       "license": "TCSP License"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDX is described as a 1:1 USD-referencing token backed by Treasuries and cash equivalents with approved-party redemption."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Hex Trust Digital Assets",
+      "issuerDomicile": "Hong Kong",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.htdigitalassets.com/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "USDX has reserve and redemption disclosures, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Hex Trust Digital Assets USDX",
+          "url": "https://www.htdigitalassets.com/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Hex Trust website",
+          "url": "https://www.hextrust.com/",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Hex Trust Digital Assets and Hex Trust public disclosures"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDX.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -55281,6 +56368,57 @@
     ],
     "jurisdiction": {
       "country": "British Virgin Islands"
+    },
+    "genius": {
+      "applicability": "unclear",
+      "applicabilityBasis": {
+        "summary": "USDz is a private-credit-backed RWA dollar with qualified-market-maker mint/redeem mechanics, not a conventional fiat reserve token."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anzen",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://rwa.anzen.finance/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "USDz is stablecoin-adjacent but backed by private credit; GENIUS payment-stablecoin applicability is unresolved.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Anzen docs",
+          "url": "https://docs.anzen.finance/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Anzen website",
+          "url": "https://anzen.finance/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Anzen transparency",
+          "url": "https://rwa.anzen.finance/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Anzen docs, website, and transparency page"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDz.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
@@ -56580,6 +57718,47 @@
     "jurisdiction": {
       "country": "United States"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "Sonic docs describe USSD as a Treasury-backed, 1:1 mint/redeem dollar built on GENIUS-compatible frxUSD infrastructure."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Sonic Labs / Frax stablecoin infrastructure",
+      "issuerDomicile": "United States",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.soniclabs.com/sonic/ussd",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "Sonic Labs signals GENIUS-compatible infrastructure, but no public token-specific approval or official application source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Sonic USSD docs",
+          "url": "https://docs.soniclabs.com/sonic/ussd",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Sonic USSD docs and OCC GENIUS rulemaking materials"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "amo-or-custodian-hybrid",
       "authorityPosture": "concentrated-admin",
@@ -56775,6 +57954,35 @@
       "country": "United States",
       "regulator": "SEC",
       "license": "Reg D Rule 506(c); Delaware Statutory Trust; restricted to U.S. Qualified Purchasers and Accredited Investors"
+    },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Superstate",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC Reg D / Delaware statutory trust context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "USTB is treated as outside GENIUS payment-stablecoin tracking because Superstate presents it as tokenized fund shares rather than a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Superstate USTB docs",
+          "url": "https://docs.superstate.com/ustb",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -61347,6 +62555,35 @@
       "regulator": "SEC",
       "license": "Investment Company Act of 1940 (registered money market fund)"
     },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "WisdomTree",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC registered money market fund context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "WTGXX is treated as outside GENIUS payment-stablecoin tracking because it is a digital money market fund share class, not a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "WisdomTree Government Money Market Digital Fund",
+          "url": "https://www.wisdomtreeprime.com/digital-funds/wtgxx/",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -63324,6 +64561,63 @@
       "regulator": "MAS",
       "license": "Major Payment Institution"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "XSGD is a MAS-regulated SGD payment stablecoin with Coinbase/Base distribution and public reserve/redemption disclosures."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "StraitsX / Xfers Pte. Ltd.",
+      "issuerDomicile": "Singapore",
+      "licensingRegulator": "Monetary Authority of Singapore Major Payment Institution; MAS SCS substantive-compliance acknowledgement",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.straitsx.com/xsgd",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "XSGD is a foreign non-USD payment stablecoin with U.S. availability signals, but no public GENIUS approval or foreign-issuer exception source was found.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "StraitsX XSGD",
+          "url": "https://www.straitsx.com/xsgd",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "StraitsX purchasing and redemption terms",
+          "url": "https://www.straitsx.com/legal/purchasing-and-redemption",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "StraitsX XSGD Coinbase announcement",
+          "url": "https://www.straitsx.com/blog-post/xsgd-live-on-coinbase",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Coinbase XSGD United States buy page",
+          "url": "https://www.coinbase.com/how-to-buy/base-xsgd-e000",
+          "sourceKind": "news"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "StraitsX XSGD, reserve, redemption, and Coinbase/Base disclosures"
+        ],
+        "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for XSGD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -64308,6 +65602,35 @@
       "country": "United States",
       "regulator": "SEC",
       "license": "SEC-Registered Security"
+    },
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Figure Certificate Company",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "SEC registered security context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-applicable",
+      "reserveDisclosurePresent": false,
+      "redemptionPolicyPresent": false,
+      "monthlyAttestationPresent": false,
+      "notes": "YLDS is treated as outside GENIUS payment-stablecoin tracking because it is a registered security/face-amount certificate rather than a payment stablecoin.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "YLDS prospectus",
+          "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+          "sourceKind": "issuer-filing"
+        }
+      ],
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",

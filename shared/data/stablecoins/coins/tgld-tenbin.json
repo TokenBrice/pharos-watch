@@ -40,7 +40,6 @@
   },
   "mica": {
     "status": "out-of-scope",
-    "tokenType": "ART",
     "references": [
       {
         "label": "ESMA MiCA register (issuers of ARTs)",

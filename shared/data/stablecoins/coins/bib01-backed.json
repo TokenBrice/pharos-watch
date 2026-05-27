@@ -38,6 +38,35 @@
       "url": "https://docs.backed.fi/"
     }
   ],
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Backed Assets",
+    "issuerDomicile": "Switzerland",
+    "licensingRegulator": "Swiss DLT Act registered uncertificated securities context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "bIB01 is treated as outside GENIUS payment-stablecoin tracking because it is a tracker certificate/security referencing an ETF, not a payment stablecoin.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Backed bIB01 product page",
+        "url": "https://assets.backed.fi/products/bib01",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "jurisdiction": {
     "country": "Switzerland",
     "regulator": "FINMA",
