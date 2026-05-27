@@ -67,6 +67,10 @@
       {
         "label": "Paxos EUROe redemption notice (issuer wind-down)",
         "url": "https://www.paxos.com/euroe-redemptions"
+      },
+      {
+        "label": "EUROe whitepaper",
+        "url": "https://www.membrane.fi/whitepapers/EUROe.html"
       }
     ]
   },

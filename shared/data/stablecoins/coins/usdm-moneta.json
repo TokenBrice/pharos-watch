@@ -52,10 +52,68 @@
         "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/671252e5de22175efb179b4b_USDM%20White%20paper%20notification%20date%2025th%20September%202024.pdf"
       },
       {
-        "label": "NBX granted e-money institution license by Finanstilsynet (2022)",
-        "url": "https://www.marketscreener.com/quote/stock/NORWEGIAN-BLOCK-EXCHANGE-130615471/news/E-money-license-granted-by-Finanstilsynet-40894370/"
+        "label": "NBX USDM terms",
+        "url": "https://nbx.com/en/usdm-terms"
+      },
+      {
+        "label": "Finanstilsynet registry - Norwegian Block Exchange AS",
+        "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
+      },
+      {
+        "label": "ESMA interim MiCA EMT register - USDM not listed",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Moneta Digital LLC / Norwegian Block Exchange AS",
+    "issuerDomicile": "United States / Norway",
+    "licensingRegulator": "FinCEN MSB; Finanstilsynet / NBX EEA issuance",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDM has dual U.S./EEA issuer disclosures; its GENIUS pathway remains unresolved, and ESMA did not show a USDM EMT row in this pass.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Moneta USDM",
+        "url": "https://moneta.global/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "NBX USDM terms",
+        "url": "https://nbx.com/en/usdm-terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Charli3 USDM reserve feed",
+        "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "USDM issuer, reserve, redemption, and EEA/NBX materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDM.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
   },
   "contracts": [
     {

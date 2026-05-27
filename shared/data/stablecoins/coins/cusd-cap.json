@@ -141,6 +141,54 @@
       "url": "https://docs.cap.app/"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Cap Protocol",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://cap.app/vault/reserves/cUSD",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Cap documents basket-based vault redemption rather than a clean fiat issuer redemption promise.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Cap docs",
+        "url": "https://docs.cap.app/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Cap vault docs",
+        "url": "https://docs.cap.app/concepts/vault",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Cap cUSD reserves",
+        "url": "https://cap.app/vault/reserves/cUSD",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "Cap documents basket redemption rather than a clean fiat issuer redemption promise; no public GENIUS authorization or application source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

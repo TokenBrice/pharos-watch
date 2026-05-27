@@ -34,6 +34,54 @@
   "jurisdiction": {
     "country": "United States"
   },
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Cygnus Finance",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "cgUSD is a protocol stablecoin integrated into Cygnus LVS; GENIUS issuer treatment remains unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Cygnus cgUSD overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Cygnus cgUSD token docs",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd.md",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Cygnus cgUSD redemption",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "cgUSD materials describe a protocol stablecoin and redemption mechanics, but no public GENIUS authorization, official application, or foreign registration source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "base",

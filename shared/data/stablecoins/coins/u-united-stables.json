@@ -37,6 +37,50 @@
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "United Stables Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.u.tech/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "United Stables states $U has not obtained registration, authorization, or licensing under the GENIUS Act.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "United Stables",
+        "url": "https://www.u.tech/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "United Stables terms",
+        "url": "https://u.tech/terms/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "United Stables’ own site states $U has not obtained registration, authorization, or licensing under the GENIUS Act; no public GENIUS approval, application, or foreign registration source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "bsc",

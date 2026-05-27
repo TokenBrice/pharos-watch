@@ -51,6 +51,55 @@
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Saturn",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.saturn.credit/insights/saturn-protocol",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Saturn documents USDaT reserve and redemption mechanics, but no public GENIUS issuer approval or registration was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Saturn docs",
+        "url": "https://saturncredit.gitbook.io/saturn-docs",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USDaT overview",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Saturn transparency and audits",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "No public GENIUS approval, state-qualified approval, official application, or foreign registration source was located for USDaT.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

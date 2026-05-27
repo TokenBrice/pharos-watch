@@ -277,8 +277,8 @@
           "url": "https://www.anchoredcoins.com/en/landing/aeur"
         },
         {
-          "label": "Binance delists non-MiCA stablecoins incl. AEUR in EEA",
-          "url": "https://www.financemagnates.com/cryptocurrency/binance-finally-delists-tether-usdt-from-european-spot-trading-in-compliance-with-mica/"
+          "label": "ESMA interim MiCA EMT register - AEUR not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ]
     },
@@ -1028,34 +1028,26 @@
       "issuerEntity": "Agora Bermuda Limited",
       "issuerDomicile": "Bermuda",
       "licensingRegulator": "BMA; OCC national trust bank application for Agora National Trust Bank",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
       "redemptionPolicyPresent": true,
-      "notes": "Agora has publicly disclosed an OCC national trust bank charter application, but Pharos found no token-specific public GENIUS PPSI approval or registered foreign-issuer exception.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "OCC digital asset licensing applications - Agora National Trust Bank",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
         },
         {
           "label": "Agora national trust bank charter post",
-          "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter"
         },
         {
           "label": "Agora transparency",
-          "url": "https://docs.agora.finance/developer/transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://docs.agora.finance/developer/transparency"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -1132,6 +1124,22 @@
     "mechanismArchetype": "cdp",
     "geckoId": "alloy-tether",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "non-payment-token",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Alloy by Tether",
+      "references": [
+        {
+          "label": "Alloy aUSDT vault docs",
+          "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt.md"
+        },
+        {
+          "label": "Alloy tethered assets",
+          "url": "https://docs.alloy.tether.to/get-started/tethered-assets.md"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -1338,6 +1346,32 @@
     "pegMechanism": "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "mu-digital-aznd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "MU Digital",
+      "reserveDisclosureUrl": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "MU Digital AZND",
+          "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd"
+        },
+        {
+          "label": "AZND mint/redeem",
+          "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem"
+        },
+        {
+          "label": "MU Digital yield mechanics",
+          "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Mu Digital Asian Dollar credit fund",
       "yieldType": "nav-appreciation"
@@ -2521,6 +2555,18 @@
     "pegMechanism": "NAV-based pricing with institutional redemption through BlackRock/Securitize",
     "mechanismArchetype": "tbill",
     "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "BlackRock / Securitize",
+      "references": [
+        {
+          "label": "Securitize BlackRock BUIDL",
+          "url": "https://securitize.io/blackrock/buidl"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "BlackRock T-bill fund",
       "yieldType": "rebase"
@@ -2878,29 +2924,22 @@
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "redemptionPolicyPresent": true,
-      "notes": "Bridge issuer and Phantom materials describe CASH issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
       "references": [
         {
           "label": "Bridge Open Issuance",
-          "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
         },
         {
           "label": "Bridge issuance FAQ",
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
         },
         {
           "label": "Phantom CASH help",
-          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://help.phantom.com/hc/en-us/articles/44799497237395-About-Phantom-Cash"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -3319,6 +3358,32 @@
     "pegMechanism": "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
     "mechanismArchetype": "tbill",
     "geckoId": "cygnus-finance-global-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Cygnus Finance",
+      "reserveDisclosureUrl": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Cygnus cgUSD overview",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md"
+        },
+        {
+          "label": "Cygnus cgUSD token docs",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd.md"
+        },
+        {
+          "label": "Cygnus cgUSD redemption",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "cgUSD daily T-bill rebase",
       "yieldType": "rebase"
@@ -3410,8 +3475,8 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "AllUnity CHFAU (BaFin EMI under MiCA)",
-          "url": "https://allunity.com/chfau/"
+          "label": "AllUnity CHFAU whitepaper",
+          "url": "https://framerusercontent.com/assets/a3Xne7fRRNHBpFxng0CHdzN58u4.pdf"
         }
       ]
     },
@@ -3831,29 +3896,22 @@
       "issuerEntity": "MoonPay USA LLC",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
       "redemptionPolicyPresent": true,
-      "notes": "MoonPay and Citrea materials describe ctUSD issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
       "references": [
         {
           "label": "MoonPay stablecoin issuance",
-          "url": "https://www.moonpay.com/business/issuance",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.moonpay.com/business/issuance"
         },
         {
           "label": "MoonPay stablecoin terms",
-          "url": "https://www.moonpay.com/legal/stablecoin_terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.moonpay.com/legal/stablecoin_terms"
         },
         {
           "label": "Citrea ctUSD announcement",
-          "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -3923,6 +3981,32 @@
     },
     "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
     "geckoId": "cap-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Cap Protocol",
+      "reserveDisclosureUrl": "https://cap.app/vault/reserves/cUSD",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Cap docs",
+          "url": "https://docs.cap.app/"
+        },
+        {
+          "label": "Cap vault docs",
+          "url": "https://docs.cap.app/concepts/vault"
+        },
+        {
+          "label": "Cap cUSD reserves",
+          "url": "https://cap.app/vault/reserves/cUSD"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -4226,6 +4310,31 @@
     "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     "mechanismArchetype": "cdp",
     "geckoId": "dai",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "MakerDAO / Sky Protocol governance",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "MakerDAO docs",
+          "url": "https://docs.makerdao.com/"
+        },
+        {
+          "label": "MakerDAO DAI module",
+          "url": "https://docs.makerdao.com/smart-contract-modules/dai-module"
+        },
+        {
+          "label": "Sky DAI docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/dai/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -5257,8 +5366,8 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "AllUnity EURAU (BaFin EMI under MiCA)",
-          "url": "https://allunity.com/eurau/"
+          "label": "AllUnity EURAU whitepaper",
+          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
         }
       ]
     },
@@ -5605,6 +5714,10 @@
         {
           "label": "CSSF list of EMT issuers",
           "url": "https://www.cssf.lu/en/issuers-of-e-money-tokens-emts/"
+        },
+        {
+          "label": "EURI whitepaper",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
         }
       ]
     },
@@ -5738,6 +5851,10 @@
         {
           "label": "Paxos EUROe redemption notice (issuer wind-down)",
           "url": "https://www.paxos.com/euroe-redemptions"
+        },
+        {
+          "label": "EUROe whitepaper",
+          "url": "https://www.membrane.fi/whitepapers/EUROe.html"
         }
       ]
     },
@@ -5946,8 +6063,12 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "Quantoz EURQ/USDQ (DNB EMI under MiCAR)",
-          "url": "https://www.quantoz.com/products/eurq-usdq"
+          "label": "Quantoz EURQ whitepaper",
+          "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8aa5175db824c8a5190cc_EURQ-WP-1.4%20(30-4-2026).pdf"
+        },
+        {
+          "label": "DNB public register - Quantoz Payments B.V.",
+          "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
         }
       ]
     },
@@ -6037,6 +6158,10 @@
         {
           "label": "StablR secures EMI license for MiCAR-compliant EURR",
           "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
+        },
+        {
+          "label": "StablR EURR whitepaper",
+          "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_EURR_V3.2.pdf"
         }
       ]
     },
@@ -6118,6 +6243,10 @@
         {
           "label": "ESMA interim MiCA register (issuers of EMTs) - STASIS not listed",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "STASIS EURS information",
+          "url": "https://stasis.net/eurs-info"
         }
       ]
     },
@@ -6445,28 +6574,22 @@
       "issuerEntity": "Telcoin, Inc. d/b/a Telcoin Digital Asset Bank",
       "issuerDomicile": "United States",
       "stateRegulator": "Nebraska Department of Banking and Finance",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://bank.telco.in/eUSD",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "Telcoin eUSD",
-          "url": "https://bank.telco.in/eUSD",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://bank.telco.in/eUSD"
         },
         {
           "label": "Telcoin terms of use",
-          "url": "https://bank.telco.in/terms-of-use",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://bank.telco.in/terms-of-use"
         },
         {
           "label": "Nebraska digital asset bank charter announcement",
-          "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter",
-          "sourceKind": "state-regulator"
+          "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -6612,29 +6735,22 @@
       "issuerPathway": "unknown",
       "issuerEntity": "FD121 (BVI) Limited",
       "issuerDomicile": "British Virgin Islands",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.firstdigitallabs.com/transparency",
       "redemptionPolicyPresent": true,
-      "notes": "First Digital publishes reserve and redemption disclosures, but no public U.S. GENIUS permitted-issuer approval or foreign-issuer exception was located.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "First Digital Labs transparency",
-          "url": "https://www.firstdigitallabs.com/transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://www.firstdigitallabs.com/transparency"
         },
         {
           "label": "First Digital Labs FDD terms",
-          "url": "https://www.firstdigitallabs.com/legal/fdd-terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.firstdigitallabs.com/legal/fdd-terms"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -6837,29 +6953,22 @@
       "issuerEntity": "Fidelity Digital Assets, National Association",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.fidelitydigitalassets.com/stablecoin",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Fidelity Digital Assets stablecoin",
-          "url": "https://www.fidelitydigitalassets.com/stablecoin",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.fidelitydigitalassets.com/stablecoin"
         },
         {
           "label": "FIDD terms",
-          "url": "https://www.fidelitydigitalassets.com/fidd-terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.fidelitydigitalassets.com/fidd-terms"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -7001,29 +7110,22 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Fiserv, Inc.",
       "issuerDomicile": "United States",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
       "redemptionPolicyPresent": true,
-      "notes": "Fiserv describes FIUSD as fully reserved and redeemable at $1, but Pharos found no token-specific public GENIUS PPSI approval or official application source.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Fiserv FIUSD stablecoin page",
-          "url": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html"
         },
         {
           "label": "Fiserv FIUSD launch announcement",
-          "url": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure",
     "blacklistStatus": false
@@ -7106,6 +7208,24 @@
     },
     "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
     "geckoId": "frax",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Frax DAO",
+      "issuerDomicile": "United States",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "FIP-430 payment-stablecoin compliance proposal",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 2,
       "semantics": "attestation-mix",
@@ -7192,6 +7312,34 @@
     "mechanismArchetype": "tbill",
     "geckoId": "frax-usd",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Financial Reserves and Asset Exploration Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "Not publicly identified",
+      "reserveDisclosureUrl": "https://frax.com/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "frxUSD docs",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd"
+        },
+        {
+          "label": "FIP-430 payment-stablecoin compliance proposal",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+        },
+        {
+          "label": "Frax transparency",
+          "url": "https://frax.com/transparency"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 2,
       "semantics": "attestation-mix",
@@ -8509,6 +8657,22 @@
     "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gusd",
+    "genius": {
+      "applicability": "non-payment-token",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Gate",
+      "references": [
+        {
+          "label": "Gate GUSD",
+          "url": "https://www.gate.com/gusd"
+        },
+        {
+          "label": "Gate GUSD mint and redeem guide",
+          "url": "https://www.gate.com/blog/how-to-mint-and-redeem-gate-gusd"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Gate USD redemption yield",
       "yieldType": "governance-set"
@@ -8620,23 +8784,18 @@
       "issuerDomicile": "United States",
       "licensingRegulator": "NYDFS",
       "stateRegulator": "NYDFS",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.gemini.com/dollar",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "NYDFS virtual currency business activity",
-          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
-          "sourceKind": "state-regulator"
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         },
         {
           "label": "Gemini Dollar page",
-          "url": "https://www.gemini.com/dollar",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.gemini.com/dollar"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -8713,6 +8872,35 @@
     "pegMechanism": "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gyen",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "GMO-Z.com Trust Company, Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "NYDFS limited purpose trust company",
+      "stateRegulator": "NYDFS",
+      "reserveDisclosureUrl": "https://stablecoin.z.com/attestation/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "NYDFS virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
+        {
+          "label": "GMO Trust attestations",
+          "url": "https://stablecoin.z.com/attestation/"
+        },
+        {
+          "label": "GMO Trust stablecoin overview",
+          "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "single-asset",
@@ -10576,6 +10764,32 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "jupusd",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Jupiter / Ethena stablecoin infrastructure",
+      "reserveDisclosureUrl": "https://jupusd.money/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "JupUSD user docs",
+          "url": "https://docs.jup.ag/user-docs/earn/jupusd"
+        },
+        {
+          "label": "JupUSD developer docs",
+          "url": "https://developers.jup.ag/docs/jupusd"
+        },
+        {
+          "label": "JupUSD site",
+          "url": "https://jupusd.money/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -12320,29 +12534,22 @@
       "issuerEntity": "MNEE Limited",
       "issuerDomicile": "Antigua and Barbuda",
       "licensingRegulator": "FSRC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.mnee.io/transparency",
       "redemptionPolicyPresent": true,
-      "notes": "Antigua FSRC licensing and reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception for MNEE.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "MNEE terms of use",
-          "url": "https://www.mnee.io/terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.mnee.io/terms"
         },
         {
           "label": "MNEE transparency",
-          "url": "https://www.mnee.io/transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://www.mnee.io/transparency"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -12487,29 +12694,22 @@
       "issuerEntity": "CFX Labs Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators; Metropolitan Capital Bank & Trust banking partner context",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://docs.moveusd.com/docs/disclosures-disclaimers",
       "redemptionPolicyPresent": true,
-      "notes": "MOVEUSD public materials describe CFX issuance and designated redemption channels, but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "MoveUSD disclosures and disclaimers",
-          "url": "https://docs.moveusd.com/docs/disclosures-disclaimers",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://docs.moveusd.com/docs/disclosures-disclaimers"
         },
         {
           "label": "CFX platform overview",
-          "url": "https://docs.cfx.to/docs/key-features",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://docs.cfx.to/docs/key-features"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "reserves": [
       {
@@ -12911,29 +13111,22 @@
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://dashboard.m0.org",
       "redemptionPolicyPresent": true,
-      "notes": "Bridge and MetaMask materials describe MUSD issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
       "references": [
         {
           "label": "MetaMask USD announcement",
-          "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet"
         },
         {
           "label": "Bridge Open Issuance",
-          "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
         },
         {
           "label": "M0 Dashboard",
-          "url": "https://dashboard.m0.org",
-          "sourceKind": "auditor-report"
+          "url": "https://dashboard.m0.org"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -13051,6 +13244,34 @@
     "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
     "mechanismArchetype": "tbill",
     "geckoId": "real-mxn",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Brale Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "FinCEN / state money transmitter regulators; NMLS ID #2376957",
+      "reserveDisclosureUrl": "https://brale.xyz/stablecoins/MXNe",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Brale MXNe",
+          "url": "https://brale.xyz/stablecoins/MXNe"
+        },
+        {
+          "label": "Brale MXNe announcement",
+          "url": "https://brale.xyz/blog/introducing-mxne"
+        },
+        {
+          "label": "Brale terms",
+          "url": "https://brale.xyz/legal/terms"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
@@ -14149,29 +14370,22 @@
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "redemptionPolicyPresent": true,
-      "notes": "Tempo describes pathUSD as optional routing infrastructure rather than a general consumer-facing stablecoin; no token-specific public GENIUS approval was located.",
       "references": [
         {
           "label": "Tempo pathUSD docs",
-          "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
         },
         {
           "label": "Bridge Open Issuance",
-          "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
         },
         {
           "label": "Bridge issuance FAQ",
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "proofOfReserves": {
       "type": "independent-audit",
@@ -14919,30 +15133,22 @@
       "issuerEntity": "Paxos Trust Company, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC / NYDFS historical trust-company context",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
       "redemptionPolicyPresent": true,
-      "notes": "Paxos and PayPal disclosures establish the U.S. stablecoin issuer model, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "PayPal PYUSD page",
-          "url": "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd"
         },
         {
           "label": "Paxos PYUSD transparency",
-          "url": "https://www.paxos.com/pyusd-transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://www.paxos.com/pyusd-transparency"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -15443,31 +15649,23 @@
       "issuerEntity": "Standard Custody & Trust Company, LLC",
       "issuerDomicile": "United States",
       "licensingRegulator": "NYDFS; proposed OCC national trust bank context",
-      "primaryFederalRegulator": "OCC",
       "stateRegulator": "NYDFS",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://ripple.com/solutions/stablecoin/transparency/",
       "redemptionPolicyPresent": true,
-      "notes": "Ripple disclosures establish the U.S. regulated stablecoin issuer model, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Ripple RLUSD issuer page",
-          "url": "https://ripple.com/solutions/stablecoin/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://ripple.com/solutions/stablecoin/"
         },
         {
           "label": "Ripple RLUSD transparency",
-          "url": "https://ripple.com/solutions/stablecoin/transparency/",
-          "sourceKind": "auditor-report"
+          "url": "https://ripple.com/solutions/stablecoin/transparency/"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -15591,6 +15789,28 @@
     "pegMechanism": "Users can mint and redeem rUSD 1:1 against USDC, USDT, or USD1 through Reservoir's Peg Stability Module, while Credit Enforcer contracts constrain liquidity, solvency, and capital ratios before protocol asset reallocations.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "reservoir-rusd",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Reservoir Protocol",
+      "reserveDisclosureUrl": "https://app.reservoir.xyz/reserves",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Reservoir rUSD docs",
+          "url": "https://docs.reservoir.xyz/products/stablecoin-rusd"
+        },
+        {
+          "label": "Reservoir reserves",
+          "url": "https://app.reservoir.xyz/reserves"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -16150,28 +16370,22 @@
       "issuerEntity": "Brale Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://brale.xyz/stablecoins/SBC",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "Brale SBC",
-          "url": "https://brale.xyz/stablecoins/SBC",
-          "sourceKind": "auditor-report"
+          "url": "https://brale.xyz/stablecoins/SBC"
         },
         {
           "label": "Brale terms",
-          "url": "https://brale.xyz/legal/terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://brale.xyz/legal/terms"
         },
         {
           "label": "Brale disclosures",
-          "url": "https://brale.xyz/legal/disclosures",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://brale.xyz/legal/disclosures"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -16900,29 +17114,22 @@
       "issuerEntity": "SoFi Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.sofi.com/crypto/sofiusd/",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "SoFiUSD page",
-          "url": "https://www.sofi.com/crypto/sofiusd/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.sofi.com/crypto/sofiusd/"
         },
         {
           "label": "SoFiUSD launch announcement",
-          "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "reserves": [
       {
@@ -17792,6 +17999,28 @@
     "mechanismArchetype": "tbill",
     "geckoId": "solayer-usd",
     "protocolSlug": "solayer-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Solayer",
+      "reserveDisclosureUrl": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Solayer sUSD FAQ",
+          "url": "https://docs.solayer.org/susd/protocol-info/faqs.md"
+        },
+        {
+          "label": "Solayer sUSD litepaper",
+          "url": "https://docs.solayer.org/susd/protocol-info/litepaper.md"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Solayer sUSD T-bill yield",
       "yieldType": "rebase"
@@ -19270,29 +19499,22 @@
       "issuerPathway": "unknown",
       "issuerEntity": "Techteryx",
       "issuerDomicile": "British Virgin Islands",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://tusd.io/transparency",
       "redemptionPolicyPresent": true,
-      "notes": "TUSD reserve and redemption materials support payment-stablecoin monitoring, but Pharos found no public U.S. GENIUS approval, application, or foreign-issuer exception source.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "TUSD transparency",
-          "url": "https://tusd.io/transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://tusd.io/transparency"
         },
         {
           "label": "TrueUSD white paper",
-          "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -19377,6 +19599,29 @@
     "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "united-stables",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "United Stables Limited",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://www.u.tech/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "United Stables",
+          "url": "https://www.u.tech/"
+        },
+        {
+          "label": "United Stables terms",
+          "url": "https://u.tech/terms/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -19505,30 +19750,22 @@
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usat-reserve-attestations",
       "redemptionPolicyPresent": true,
-      "notes": "Issuer and partner materials frame USAT for the GENIUS Act era, but Pharos found no token-specific public OCC GENIUS approval as of review.",
       "references": [
         {
           "label": "OCC: Anchorage national trust bank charter",
-          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
           "label": "Tether USAT announcement",
-          "url": "https://tether.io/news/tether-unveils-usat-its-planned-u-s-regulated-dollar-backed-stablecoin-and-will-appoint-bo-hines-as-ceo-of-tether-usat/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://tether.io/news/tether-unveils-usat-its-planned-u-s-regulated-dollar-backed-stablecoin-and-will-appoint-bo-hines-as-ceo-of-tether-usat/"
         },
         {
           "label": "Anchorage USAT attestations",
-          "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
-          "sourceKind": "auditor-report"
+          "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -19734,6 +19971,33 @@
     "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
     "mechanismArchetype": "tbill",
     "geckoId": "usual-usd",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Usual DAO",
+      "issuerDomicile": "France",
+      "reserveDisclosureUrl": "https://app.rwa.xyz/assets/USD0",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "USD0 factsheet",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/usd0"
+        },
+        {
+          "label": "USD0 RWA collateral",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral"
+        },
+        {
+          "label": "RWA.xyz USD0 asset page",
+          "url": "https://app.rwa.xyz/assets/USD0"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -19862,30 +20126,22 @@
       "issuerEntity": "BitGo Bank & Trust, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC / South Dakota trust-company context",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.bitgo.com/usd1/attestations/",
       "redemptionPolicyPresent": true,
-      "notes": "Public USD1 materials split branding between World Liberty Financial and BitGo issuer/custody roles; no token-specific public GENIUS approval was located as of review.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "World Liberty Financial USD1 page",
-          "url": "https://worldlibertyfinancial.com/usd1",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://worldlibertyfinancial.com/usd1"
         },
         {
           "label": "BitGo USD1 attestations",
-          "url": "https://www.bitgo.com/usd1/attestations/",
-          "sourceKind": "auditor-report"
+          "url": "https://www.bitgo.com/usd1/attestations/"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 2,
@@ -20158,29 +20414,22 @@
       "issuerEntity": "Anzens Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN MSB / state no-objection-letter context; BitGo Trust account context",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.anzens.com/",
       "redemptionPolicyPresent": true,
-      "notes": "Anzens describes USDA as 100% backed and issued by Anzens Inc., but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Anzens USDA page",
-          "url": "https://www.anzens.com/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.anzens.com/"
         },
         {
           "label": "Anzens terms and conditions",
-          "url": "https://www.anzens.com/landing/terms-and-conditions",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.anzens.com/landing/terms-and-conditions"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "reserves": [
       {
@@ -20369,6 +20618,33 @@
     "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdai",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "USD.AI Foundation",
+      "issuerDomicile": "Cayman Islands",
+      "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/proof-of-reserves",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "USDai",
+          "url": "https://usd.ai/usdai"
+        },
+        {
+          "label": "USD.AI technical overview",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+        },
+        {
+          "label": "USD.AI proof of reserves",
+          "url": "https://docs.usd.ai/app-guide/proof-of-reserves"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 2,
       "semantics": "single-asset",
@@ -20437,6 +20713,33 @@
     "infrastructures": [
       "m0"
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Saturn",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://app.saturn.credit/insights/saturn-protocol",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Saturn docs",
+          "url": "https://saturncredit.gitbook.io/saturn-docs"
+        },
+        {
+          "label": "USDaT overview",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview"
+        },
+        {
+          "label": "Saturn transparency and audits",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -20611,35 +20914,26 @@
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators; OCC conditional national trust bank charter context",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "redemptionPolicyPresent": true,
-      "notes": "Bridge has OCC preliminary conditional approval to organize Bridge National Trust Bank, but Pharos found no token-specific public GENIUS PPSI approval or official GENIUS application source for USDB.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "OCC Corporate Decision 1365 - Bridge National Trust Bank",
-          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf"
         },
         {
           "label": "Bridge receives OCC conditional approval",
-          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank"
         },
         {
           "label": "Bridge stablecoins FAQ",
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter",
     "blacklistStatus": true
@@ -20684,30 +20978,22 @@
       "issuerEntity": "Circle Internet Financial, LLC",
       "issuerDomicile": "United States",
       "licensingRegulator": "U.S. state money-transmitter regulators / NYDFS BitLicense context; proposed OCC national trust bank",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.circle.com/transparency",
       "redemptionPolicyPresent": true,
-      "notes": "Circle signals a GENIUS-era U.S. stablecoin path, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Circle GENIUS Act hub",
-          "url": "https://www.circle.com/genius-act",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.circle.com/genius-act"
         },
         {
           "label": "Circle USDC transparency",
-          "url": "https://www.circle.com/transparency",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.circle.com/transparency"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -20797,6 +21083,30 @@
         {
           "label": "ESMA MiCA register (issuers of EMTs)",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "SG-FORGE USDCV MiCA white paper",
+          "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+        }
+      ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Société Générale - FORGE",
+      "issuerDomicile": "France",
+      "licensingRegulator": "ACPR; MiCA electronic money institution",
+      "reserveDisclosureUrl": "https://www.sgforge.com/product/coinvertible/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "SG-FORGE CoinVertible",
+          "url": "https://www.sgforge.com/product/coinvertible/"
         },
         {
           "label": "SG-FORGE USDCV MiCA white paper",
@@ -21223,6 +21533,31 @@
         "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
       }
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Coinbase, Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "NYDFS virtual currency and money transmitter licenses; state money transmitter context",
+      "stateRegulator": "NYDFS",
+      "reserveDisclosureUrl": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Coinbase USDF announcement",
+          "url": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin"
+        },
+        {
+          "label": "NYDFS virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        }
+      ]
+    },
     "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
     "blacklistStatus": "inherited"
   },
@@ -21266,29 +21601,22 @@
       "issuerEntity": "Paxos Digital Singapore Pte. Ltd.",
       "issuerDomicile": "Singapore",
       "licensingRegulator": "MAS",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.paxos.com/usdg-transparency",
       "redemptionPolicyPresent": true,
-      "notes": "MAS and MiCA authorization contexts do not establish a U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception for USDG.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Paxos USDG transparency",
-          "url": "https://www.paxos.com/usdg-transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://www.paxos.com/usdg-transparency"
         },
         {
           "label": "Paxos USDG terms and conditions",
-          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -21374,28 +21702,22 @@
       "issuerEntity": "Brale Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "Brale USDGLO",
-          "url": "https://brale.xyz/stablecoins/USDGLO",
-          "sourceKind": "auditor-report"
+          "url": "https://brale.xyz/stablecoins/USDGLO"
         },
         {
           "label": "Brale terms",
-          "url": "https://brale.xyz/legal/terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://brale.xyz/legal/terms"
         },
         {
           "label": "Brale disclosures",
-          "url": "https://brale.xyz/legal/disclosures",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://brale.xyz/legal/disclosures"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -21476,30 +21798,22 @@
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
       "redemptionPolicyPresent": true,
-      "notes": "Issuer materials identify Anchorage Digital Bank as USDGO issuer, but Pharos found no token-specific public OCC GENIUS approval as of review.",
       "references": [
         {
           "label": "OCC: Anchorage national trust bank charter",
-          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
           "label": "Anchorage USDGO launch",
-          "url": "https://www.anchorage.com/insights/usdgo-officially-launches-under-federal-oversight",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.anchorage.com/insights/usdgo-officially-launches-under-federal-oversight"
         },
         {
           "label": "Anchorage USDGO attestations",
-          "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-          "sourceKind": "auditor-report"
+          "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "yieldConfig": {
       "yieldSource": "USDGO EFFR-linked reserve yield",
@@ -21667,29 +21981,22 @@
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://usdh.com/reserves",
       "redemptionPolicyPresent": true,
-      "notes": "USDH issuer and reserve materials identify Bridge as issuer, but Pharos found no token-specific public GENIUS approval as of review.",
       "references": [
         {
           "label": "USDH reserves",
-          "url": "https://usdh.com/reserves",
-          "sourceKind": "auditor-report"
+          "url": "https://usdh.com/reserves"
         },
         {
           "label": "Bridge Open Issuance",
-          "url": "https://www.bridge.xyz/news/introducing-open-issuance",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.bridge.xyz/news/introducing-open-issuance"
         },
         {
           "label": "Bridge issuance overview",
-          "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -22028,6 +22335,29 @@
     "pegMechanism": "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
     "mechanismArchetype": "tbill",
     "geckoId": "megausd",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "MegaUSD (BVI) Ltd",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://megausd.money/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "MegaUSD",
+          "url": "https://megausd.money/"
+        },
+        {
+          "label": "MegaETH docs",
+          "url": "https://docs.megaeth.com"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -22113,8 +22443,44 @@
           "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/671252e5de22175efb179b4b_USDM%20White%20paper%20notification%20date%2025th%20September%202024.pdf"
         },
         {
-          "label": "NBX granted e-money institution license by Finanstilsynet (2022)",
-          "url": "https://www.marketscreener.com/quote/stock/NORWEGIAN-BLOCK-EXCHANGE-130615471/news/E-money-license-granted-by-Finanstilsynet-40894370/"
+          "label": "NBX USDM terms",
+          "url": "https://nbx.com/en/usdm-terms"
+        },
+        {
+          "label": "Finanstilsynet registry - Norwegian Block Exchange AS",
+          "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
+        },
+        {
+          "label": "ESMA interim MiCA EMT register - USDM not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        }
+      ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Moneta Digital LLC / Norwegian Block Exchange AS",
+      "issuerDomicile": "United States / Norway",
+      "licensingRegulator": "FinCEN MSB; Finanstilsynet / NBX EEA issuance",
+      "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Moneta USDM",
+          "url": "https://moneta.global/"
+        },
+        {
+          "label": "NBX USDM terms",
+          "url": "https://nbx.com/en/usdm-terms"
+        },
+        {
+          "label": "Charli3 USDM reserve feed",
+          "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
         }
       ]
     },
@@ -22388,6 +22754,28 @@
     "pegMechanism": "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",
     "mechanismArchetype": "tbill",
     "geckoId": "openeden-open-dollar",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "OpenEden",
+      "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "OpenEden USDO FAQ",
+          "url": "https://docs.openeden.com/usdo/faq"
+        },
+        {
+          "label": "OpenEden USDO reserves",
+          "url": "https://docs.openeden.com/usdo/introduction/usdo-reserves"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "OpenEden USDO daily rebase",
       "yieldType": "rebase"
@@ -22479,6 +22867,32 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "ondo-u-s-dollar-token",
     "canBeBlacklisted": true,
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Ondo Global Markets",
+      "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/available-assets",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Ondo Global Markets available assets",
+          "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+        },
+        {
+          "label": "Ondo investing and redeeming",
+          "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming"
+        },
+        {
+          "label": "Ondo legal and regulatory",
+          "url": "https://docs.ondo.finance/ondo-global-markets/legal-and-regulatory"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "attestation-mix",
@@ -22654,30 +23068,22 @@
       "issuerEntity": "Paxos Trust Company, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC / NYDFS historical trust-company context",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.paxos.com/usdp-transparency",
       "redemptionPolicyPresent": true,
-      "notes": "Paxos operates a U.S. regulated issuer path, but Pharos found no token-specific public GENIUS PPSI approval as of review.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Paxos USDP page",
-          "url": "https://www.paxos.com/usdp",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.paxos.com/usdp"
         },
         {
           "label": "Paxos USDP transparency",
-          "url": "https://www.paxos.com/usdp-transparency",
-          "sourceKind": "auditor-report"
+          "url": "https://www.paxos.com/usdp-transparency"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -22830,35 +23236,26 @@
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
       "redemptionPolicyPresent": true,
-      "notes": "Western Union identifies Anchorage Digital Bank as issuer and describes 1:1 reserves, but Pharos found no token-specific public OCC GENIUS approval or PPSI registration.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "OCC: Anchorage national trust bank charter",
-          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
           "label": "Western Union USDPT page",
-          "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
         },
         {
           "label": "Western Union USDPT announcement",
-          "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
     "blacklistStatus": true
@@ -22891,8 +23288,36 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         },
         {
-          "label": "Quantoz EURQ/USDQ (DNB EMI under MiCAR)",
+          "label": "Quantoz USDQ whitepaper",
+          "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8a95a68591924cd02b363_USDQ-WP-1.4%20(30-04-2026).pdf"
+        },
+        {
+          "label": "DNB public register - Quantoz Payments B.V.",
+          "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+        }
+      ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Quantoz Payments B.V.",
+      "issuerDomicile": "Netherlands",
+      "licensingRegulator": "DNB; MiCA electronic money institution",
+      "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Quantoz EURQ/USDQ",
           "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Quantoz transparency",
+          "url": "https://www.quantoz.com/transparency"
         }
       ]
     },
@@ -23171,6 +23596,38 @@
         {
           "label": "StablR EMI license (MiCAR-compliant EMTs)",
           "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
+        },
+        {
+          "label": "StablR USDR whitepaper",
+          "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
+        }
+      ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "StablR Ltd",
+      "issuerDomicile": "Malta",
+      "licensingRegulator": "MFSA; MiCA electronic money institution",
+      "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "StablR USDR",
+          "url": "https://www.stablr.com/usdr"
+        },
+        {
+          "label": "StablR proof of reserve",
+          "url": "https://www.stablr.com/proof-of-reserve"
+        },
+        {
+          "label": "StablR USDR whitepaper",
+          "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
         }
       ]
     },
@@ -23286,6 +23743,27 @@
     "mechanismArchetype": "cdp",
     "geckoId": "usds",
     "canBeBlacklisted": "possible",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Sky Protocol governance",
+      "redemptionPolicyPresent": false,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Sky USDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+        },
+        {
+          "label": "Sky protocol token routes",
+          "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "collateral-mix",
@@ -23377,6 +23855,33 @@
     "infrastructures": [
       "m0"
     ],
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Startale Group",
+      "issuerDomicile": "Singapore",
+      "reserveDisclosureUrl": "https://usd.startale.com/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Startale USD",
+          "url": "https://usd.startale.com/"
+        },
+        {
+          "label": "Startale USD launch",
+          "url": "https://startale.com/blog/startale-launches-usdsc"
+        },
+        {
+          "label": "M0 Startale USDSC docs",
+          "url": "https://docs.m0.org/home/build-with-m0/m-extensions/startale-usdsc"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -23449,29 +23954,22 @@
       "issuerEntity": "Bridge Building Inc.",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
       "redemptionPolicyPresent": true,
-      "notes": "Bridge and Sui materials describe USDsui issuance and redemption, but Pharos found no token-specific public GENIUS approval as of review.",
       "references": [
         {
           "label": "Sui Dollar launch",
-          "url": "https://blog.sui.io/sui-dollar-launch-bridge/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
         },
         {
           "label": "Bridge issuance overview",
-          "url": "https://apidocs.bridge.xyz/platform/issuance/overview",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
         },
         {
           "label": "Bridge issuance FAQ",
-          "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "proofOfReserves": {
       "type": "independent-audit",
@@ -23543,29 +24041,22 @@
       "issuerEntity": "Tether International, S.A. de C.V.",
       "issuerDomicile": "El Salvador",
       "licensingRegulator": "CNAD",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://tether.to/en/transparency/",
       "redemptionPolicyPresent": true,
-      "notes": "El Salvador digital-asset licensing and Tether reserve disclosures do not establish a public U.S. GENIUS permitted-issuer approval or foreign-issuer exception.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "Tether token terms",
-          "url": "https://tether.to/en/legal/",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://tether.to/en/legal/"
         },
         {
           "label": "Tether transparency",
-          "url": "https://tether.to/en/transparency/",
-          "sourceKind": "auditor-report"
+          "url": "https://tether.to/en/transparency/"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -23651,30 +24142,22 @@
       "issuerEntity": "Anchorage Digital Bank, N.A.",
       "issuerDomicile": "United States",
       "licensingRegulator": "OCC",
-      "primaryFederalRegulator": "OCC",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
       "redemptionPolicyPresent": true,
-      "notes": "Anchorage identifies USDtb as federally regulated issuance, but Pharos found no token-specific public OCC GENIUS approval as of review.",
       "references": [
         {
           "label": "OCC: Anchorage national trust bank charter",
-          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
         },
         {
           "label": "Anchorage USDtb launch",
-          "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin"
         },
         {
           "label": "Anchorage USDtb attestations",
-          "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-          "sourceKind": "auditor-report"
+          "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -24112,6 +24595,18 @@
     "pegMechanism": "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
     "mechanismArchetype": "tbill",
     "geckoId": "ondo-us-dollar-yield",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Ondo Finance",
+      "references": [
+        {
+          "label": "Ondo USDY basics",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/basics"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Ondo T-bill fund",
       "yieldType": "nav-appreciation"
@@ -24350,6 +24845,33 @@
     "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
     "geckoId": "noon-usn",
     "canBeBlacklisted": "possible",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Noon Capital",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://noon.accountable.capital/",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Noon USN docs",
+          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+        },
+        {
+          "label": "Noon minting and redemption",
+          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption"
+        },
+        {
+          "label": "Noon reserve transparency",
+          "url": "https://noon.accountable.capital/"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
@@ -25093,6 +25615,18 @@
     "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
     "mechanismArchetype": "tbill",
     "geckoId": "hashnote-usyc",
+    "genius": {
+      "applicability": "excluded-security",
+      "authorizationStatus": "not-applicable",
+      "issuerPathway": "not-applicable",
+      "issuerEntity": "Circle / Hashnote",
+      "references": [
+        {
+          "label": "Circle USYC",
+          "url": "https://www.circle.com/usyc"
+        }
+      ]
+    },
     "yieldConfig": {
       "yieldSource": "Hashnote T-bill fund",
       "yieldType": "nav-appreciation"
@@ -25851,8 +26385,8 @@
       "authorizedEntity": "VNX Commodities AG",
       "references": [
         {
-          "label": "ESMA interim MiCA register (issuers of ARTs) - VNX not listed",
-          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+          "label": "ESMA interim MiCA ART register - VNX not listed",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
         },
         {
           "label": "FMA Liechtenstein - MiCAR asset-referenced token authorisation requirements",
@@ -26732,6 +27266,33 @@
     "pegMechanism": "Direct 1:1 redemption through WSPN; fiat minted/burned on deposit/withdrawal with reserves verified by independent third-party audits",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "worldwide-usd",
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "WSPN Fintech Limited",
+      "issuerDomicile": "British Virgin Islands",
+      "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "WSPN WUSD",
+          "url": "https://www.wspn.io/wusd"
+        },
+        {
+          "label": "WSPN reserve disclosure",
+          "url": "https://developer.wspn.io/5768563m0"
+        },
+        {
+          "label": "WSPN terms of service",
+          "url": "https://www.wspn.io/pdf/WSPN_Terms_of_Service.pdf"
+        }
+      ]
+    },
     "liveReservesConfig": {
       "version": 1,
       "semantics": "attestation-mix",
@@ -27263,28 +27824,22 @@
       "issuerEntity": "MoonPay USA LLC",
       "issuerDomicile": "United States",
       "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://dashboard.m0.org/",
       "redemptionPolicyPresent": true,
       "references": [
         {
           "label": "Exodus, MoonPay, and M0 XO announcement",
-          "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
         },
         {
           "label": "MoonPay stablecoin terms",
-          "url": "https://www.moonpay.com/legal/stablecoin_terms",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.moonpay.com/legal/stablecoin_terms"
         },
         {
           "label": "MoonPay licenses",
-          "url": "https://www.moonpay.com/de/legal/licenses",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.moonpay.com/de/legal/licenses"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,
@@ -27704,29 +28259,22 @@
       "issuerEntity": "StraitsX USD Issuance Pte. Ltd.",
       "issuerDomicile": "Singapore",
       "licensingRegulator": "MAS",
-      "reserveDisclosurePresent": true,
       "reserveDisclosureUrl": "https://www.straitsx.com/xusd",
       "redemptionPolicyPresent": true,
-      "notes": "StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception.",
       "references": [
         {
           "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-          "sourceKind": "federal-regulator"
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
         },
         {
           "label": "StraitsX XUSD",
-          "url": "https://www.straitsx.com/xusd",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.straitsx.com/xusd"
         },
         {
           "label": "StraitsX token terms",
-          "url": "https://www.straitsx.com/legal/token",
-          "sourceKind": "issuer-disclosure"
+          "url": "https://www.straitsx.com/legal/token"
         }
-      ],
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-05-27"
+      ]
     },
     "liveReservesConfig": {
       "version": 1,

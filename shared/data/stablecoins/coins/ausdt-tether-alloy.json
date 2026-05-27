@@ -54,6 +54,29 @@
     "regulator": "CNAD",
     "license": "Stablecoin Issuer and DASP registrations"
   },
+  "genius": {
+    "applicability": "non-payment-token",
+    "issuerEntity": "Alloy by Tether",
+    "notes": "aUSDT is treated here as outside GENIUS payment-stablecoin tracking because Alloy describes it as a tethered asset minted from overcollateralized XAUt vault positions rather than an issuer-redeemable payment stablecoin.",
+    "references": [
+      {
+        "label": "Alloy aUSDT vault docs",
+        "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults/ausdmnt.md",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Alloy tethered assets",
+        "url": "https://docs.alloy.tether.to/get-started/tethered-assets.md",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

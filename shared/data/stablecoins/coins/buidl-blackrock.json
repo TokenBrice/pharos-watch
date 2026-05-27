@@ -40,6 +40,24 @@
     "regulator": "SEC (Reg D)",
     "license": "Regulation D Exemption"
   },
+  "genius": {
+    "applicability": "excluded-security",
+    "issuerEntity": "BlackRock / Securitize",
+    "notes": "BUIDL is treated here as outside GENIUS payment-stablecoin tracking because it is a tokenized fund rather than a payment stablecoin.",
+    "references": [
+      {
+        "label": "Securitize BlackRock BUIDL",
+        "url": "https://securitize.io/blackrock/buidl",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

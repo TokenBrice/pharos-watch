@@ -22,6 +22,31 @@ function makeCoin(overrides: Record<string, unknown> = {}): Record<string, unkno
   };
 }
 
+describe("StablecoinMeta schema — MiCA profile", () => {
+  it("requires source references for assessed in-scope MiCA statuses", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mica-negative",
+        mica: {
+          status: "non-compliant",
+          tokenType: "EMT",
+        },
+      }),
+    ], "fixture")).toThrow(/source reference/);
+  });
+
+  it("allows explicit MiCA out-of-scope rows without references", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mica-out-of-scope",
+        mica: {
+          status: "out-of-scope",
+        },
+      }),
+    ], "fixture")).not.toThrow();
+  });
+});
+
 const mintAuthoritySource = {
   label: "Contract docs",
   url: "https://example.com/mint-authority",

@@ -45,6 +45,57 @@
     "regulator": "NYDFS",
     "license": "Trust Charter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "GMO-Z.com Trust Company, Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS limited purpose trust company",
+    "stateRegulator": "NYDFS",
+    "foreignExceptionStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://stablecoin.z.com/attestation/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "GYEN has NYDFS trust-company supervision and monthly attestations, but no public GENIUS state-qualified approval or official application source was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "NYDFS virtual currency businesses",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator"
+      },
+      {
+        "label": "GMO Trust attestations",
+        "url": "https://stablecoin.z.com/attestation/",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "GMO Trust stablecoin overview",
+        "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "NYDFS trust-company and reserve-attestation materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, or official application source was located for GYEN.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

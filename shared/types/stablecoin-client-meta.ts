@@ -71,7 +71,6 @@ export type GeniusClientProfile = Pick<
   | "reserveDisclosureUrl"
   | "redemptionPolicyPresent"
   | "latestReportDate"
-  | "notes"
   | "references"
   | "reviewer"
   | "reviewedAt"
@@ -90,7 +89,8 @@ export type GeniusClientProfile = Pick<
  * detail pages add page-specific full mint-authority summaries outside this
  * global registry so coverage growth does not inflate every route's client
  * chunk. GENIUS compliance evidence is also projected to displayed fields only;
- * full negative-evidence reviews remain in the source JSON/server registry.
+ * notes, reviewer metadata, source kinds, and full negative-evidence reviews
+ * remain in the source JSON/server registry.
  *
  * Build pipeline: `scripts/build-data/build-client-registry.mjs` projects
  * `coins.generated.json` to a slim JSON consumed by

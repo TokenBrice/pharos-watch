@@ -33,6 +33,54 @@
       "url": "https://jupusd.money/"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Jupiter / Ethena stablecoin infrastructure",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://jupusd.money/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "JupUSD references USDtb/Anchorage infrastructure, but no JupUSD-specific public GENIUS approval or issuer pathway source was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "JupUSD user docs",
+        "url": "https://docs.jup.ag/user-docs/earn/jupusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "JupUSD developer docs",
+        "url": "https://developers.jup.ag/docs/jupusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "JupUSD site",
+        "url": "https://jupusd.money/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "JupUSD references USDtb/Anchorage infrastructure, but no JupUSD-specific public GENIUS approval, application, or issuer pathway source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "solana",

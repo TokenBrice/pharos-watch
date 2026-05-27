@@ -31,6 +31,56 @@
     "regulator": "FinCEN / state money transmitter regulators",
     "license": "Money Services Business / Money Transmitter, NMLS ID #2376957"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Brale Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators; NMLS ID #2376957",
+    "foreignExceptionStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://brale.xyz/stablecoins/MXNe",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "MXNe is a Brale-issued peso stablecoin with U.S. money-transmitter context, but no GENIUS permitted-issuer approval or official application was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Brale MXNe",
+        "url": "https://brale.xyz/stablecoins/MXNe",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Brale MXNe announcement",
+        "url": "https://brale.xyz/blog/introducing-mxne",
+        "sourceKind": "news"
+      },
+      {
+        "label": "Brale terms",
+        "url": "https://brale.xyz/legal/terms",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "Brale issuer, reserve, and redemption materials were found, but no token-specific public U.S. GENIUS approval, state-qualified approval, or official application source was located for MXNe.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "base",

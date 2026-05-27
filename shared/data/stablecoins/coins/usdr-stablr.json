@@ -54,8 +54,62 @@
       {
         "label": "StablR EMI license (MiCAR-compliant EMTs)",
         "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
+      },
+      {
+        "label": "StablR USDR whitepaper",
+        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "StablR Ltd",
+    "issuerDomicile": "Malta",
+    "licensingRegulator": "MFSA; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "StablR USDR",
+        "url": "https://www.stablr.com/usdr",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "StablR proof of reserve",
+        "url": "https://www.stablr.com/proof-of-reserve",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "StablR USDR whitepaper",
+        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
   },
   "contracts": [
     {

@@ -28,6 +28,52 @@
   "jurisdiction": {
     "country": "United States"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Coinbase, Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS virtual currency and money transmitter licenses; state money transmitter context",
+    "stateRegulator": "NYDFS",
+    "foreignExceptionStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "USDF is described as a Coinbase Custom Stablecoin backed 1:1 by USDC, but no token-specific GENIUS permitted-issuer or state-qualified approval source was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Coinbase USDF announcement",
+        "url": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "NYDFS virtual currency businesses",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "Coinbase Custom Stablecoin and state-license materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, or official application source was located for USDF.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",

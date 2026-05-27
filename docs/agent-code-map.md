@@ -401,10 +401,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audm-mento.json` - 25 keys
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 23 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 23 keys
-- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 24 keys
+- `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 25 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 20 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 19 keys
-- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 23 keys
+- `shared/data/stablecoins/coins/aznd-mu-digital.json` - 24 keys
 - `shared/data/stablecoins/coins/bc3m-backed.json` - 26 keys
 - `shared/data/stablecoins/coins/bd-basedollar.json` - 16 keys
 - `shared/data/stablecoins/coins/benji-franklin-templeton.json` - 26 keys

@@ -36,6 +36,55 @@
     "regulator": "FinCEN (USA)",
     "license": "MSB registration (USA); VASP license application (BVI)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "WSPN Fintech Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "WSPN materials describe WUSD reserves and redemption, while terms restrict U.S. persons; no GENIUS foreign-issuer registration was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "WSPN WUSD",
+        "url": "https://www.wspn.io/wusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "WSPN reserve disclosure",
+        "url": "https://developer.wspn.io/5768563m0",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "WSPN terms of service",
+        "url": "https://www.wspn.io/pdf/WSPN_Terms_of_Service.pdf",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "WSPN issuer, reserve, redemption, and terms materials were found, but no token-specific public U.S. GENIUS approval, official application, or registered/comparable foreign-issuer exception source was located for WUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

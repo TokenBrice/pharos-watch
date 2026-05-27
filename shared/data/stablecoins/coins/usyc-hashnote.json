@@ -37,6 +37,24 @@
     "regulator": "BMA",
     "license": "DABA License"
   },
+  "genius": {
+    "applicability": "excluded-security",
+    "issuerEntity": "Circle / Hashnote",
+    "notes": "USYC is treated here as outside GENIUS payment-stablecoin tracking because Circle describes it as a tokenized money-market fund strategy.",
+    "references": [
+      {
+        "label": "Circle USYC",
+        "url": "https://www.circle.com/usyc",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

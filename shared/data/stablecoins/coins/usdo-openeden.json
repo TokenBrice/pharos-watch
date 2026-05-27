@@ -43,6 +43,49 @@
     "regulator": "BMA",
     "license": "DABA License"
   },
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "OpenEden",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDO is described as a rebasing, yield-bearing stablecoin redeemable to USDC and backed by tokenized Treasury exposure, making GENIUS treatment unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OpenEden USDO FAQ",
+        "url": "https://docs.openeden.com/usdo/faq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "OpenEden USDO reserves",
+        "url": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "USDO materials describe a rebasing yield-bearing stablecoin pegged to $1, redeemable to USDC, and backed by tokenized Treasuries/BUIDL, but no public GENIUS authorization or application source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

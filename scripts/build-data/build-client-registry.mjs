@@ -46,16 +46,10 @@ const GENIUS_CLIENT_FIELDS = [
   "issuerEntity",
   "issuerDomicile",
   "licensingRegulator",
-  "primaryFederalRegulator",
   "stateRegulator",
-  "reserveDisclosurePresent",
   "reserveDisclosureUrl",
   "redemptionPolicyPresent",
-  "latestReportDate",
-  "notes",
   "references",
-  "reviewer",
-  "reviewedAt",
 ];
 
 /**
@@ -150,6 +144,9 @@ export function projectBlacklistStatus(coin) {
 }
 
 export function projectGeniusProfile(profile) {
+  if (profile === null) {
+    return null;
+  }
   if (!isPlainObject(profile)) {
     return undefined;
   }
@@ -157,7 +154,7 @@ export function projectGeniusProfile(profile) {
   const projected = {};
   for (const field of GENIUS_CLIENT_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(profile, field)) {
-      projected[field] = profile[field];
+      projected[field] = field === "references" ? projectLinks(profile[field]) : profile[field];
     }
   }
   return projected;
@@ -165,6 +162,20 @@ export function projectGeniusProfile(profile) {
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function projectLinks(links) {
+  if (!Array.isArray(links)) {
+    return undefined;
+  }
+
+  return links
+    .filter(isPlainObject)
+    .map((link) => {
+      const { label, url } = link;
+      return typeof label === "string" && typeof url === "string" ? { label, url } : null;
+    })
+    .filter((link) => link !== null);
 }
 
 export function projectMintAuthoritySummary(coin) {

@@ -32,6 +32,53 @@
       "url": "https://docs.makerdao.com/"
     }
   ],
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MakerDAO / Sky Protocol governance",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "DAI is documented as a protocol stablecoin generated against collateral, not a legal-issuer fiat redemption product.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "MakerDAO docs",
+        "url": "https://docs.makerdao.com/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MakerDAO DAI module",
+        "url": "https://docs.makerdao.com/smart-contract-modules/dai-module",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Sky DAI docs",
+        "url": "https://developers.skyeco.com/protocol/tokens/dai/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "DAI is documented as a protocol stablecoin generated against collateral, but no legal PPSI issuer, GENIUS authorization, state-qualified approval, or official application source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   projectCoin,
   projectBlacklistStatus,
+  projectGeniusProfile,
   projectMintAuthoritySummary,
   readCanonicalClientFields,
 } from "../build-data/build-client-registry.mjs";
@@ -147,6 +148,75 @@ describe("client registry field contract", () => {
     expect(JSON.stringify(projected)).not.toContain("Long blacklist review evidence");
     expect(JSON.stringify(projected)).not.toContain("https://example.com/blacklist");
     expect(JSON.stringify(projected)).not.toContain("2026-05-24");
+  });
+
+  it("projects only displayed GENIUS fields and excludes review evidence", () => {
+    const coin = {
+      id: "genius-usd",
+      name: "GENIUS USD",
+      symbol: "GUSD",
+      flags: {
+        pegCurrency: "USD",
+        backing: "fiat",
+        governance: "centralized",
+      },
+      genius: {
+        applicability: "apparent-payment-stablecoin",
+        applicabilityBasis: {
+          summary: "Long applicability basis stays server-side.",
+        },
+        authorizationStatus: "no-public-authorization-found",
+        issuerPathway: "unknown",
+        issuerEntity: "Fixture Issuer",
+        issuerDomicile: "United States",
+        licensingRegulator: "OCC",
+        primaryFederalRegulator: "OCC",
+        stateRegulator: "NYDFS",
+        foreignExceptionStatus: "not-applicable",
+        enforcementStatus: "no-public-action-found",
+        daspOfferSaleStatus: "not-yet-restricted",
+        reserveDisclosurePresent: true,
+        reserveDisclosureUrl: "https://example.com/reserves",
+        redemptionPolicyPresent: true,
+        monthlyAttestationPresent: true,
+        latestReportDate: "2026-05-01",
+        references: [{ label: "Disclosure", url: "https://example.com/genius", sourceKind: "issuer-disclosure" }],
+        negativeEvidenceReview: {
+          sourcesChecked: ["OCC public releases"],
+          summary: "Long negative evidence review stays server-side.",
+          reviewer: "pharos",
+          reviewedAt: "2026-05-27",
+        },
+        reviewer: "pharos",
+        reviewedAt: "2026-05-27",
+      },
+    };
+
+    const projected = projectCoin(coin, readCanonicalClientFields());
+
+    expect(projectGeniusProfile(null)).toBeNull();
+    expect(projected.genius).toEqual({
+      applicability: "apparent-payment-stablecoin",
+      authorizationStatus: "no-public-authorization-found",
+      issuerPathway: "unknown",
+      issuerEntity: "Fixture Issuer",
+      issuerDomicile: "United States",
+      licensingRegulator: "OCC",
+      stateRegulator: "NYDFS",
+      reserveDisclosureUrl: "https://example.com/reserves",
+      redemptionPolicyPresent: true,
+      references: [{ label: "Disclosure", url: "https://example.com/genius" }],
+    });
+    expect(JSON.stringify(projected)).not.toContain("Long applicability basis");
+    expect(JSON.stringify(projected)).not.toContain("Long negative evidence");
+    expect(JSON.stringify(projected)).not.toContain("Rendered compliance note");
+    expect(JSON.stringify(projected)).not.toContain("reserveDisclosurePresent");
+    expect(JSON.stringify(projected)).not.toContain("monthlyAttestationPresent");
+    expect(JSON.stringify(projected)).not.toContain("foreignExceptionStatus");
+    expect(JSON.stringify(projected)).not.toContain("primaryFederalRegulator");
+    expect(JSON.stringify(projected)).not.toContain("2026-05-01");
+    expect(JSON.stringify(projected)).not.toContain("issuer-disclosure");
+    expect(JSON.stringify(projected)).not.toContain("2026-05-27");
   });
 
   it("returns no mint-authority summary when the source profile is absent", () => {

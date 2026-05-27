@@ -46,6 +46,49 @@
       "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
     }
   ],
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Reservoir Protocol",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.reservoir.xyz/reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reservoir documents 1:1 mint/redeem mechanics, but no public GENIUS issuer pathway was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Reservoir rUSD docs",
+        "url": "https://docs.reservoir.xyz/products/stablecoin-rusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Reservoir reserves",
+        "url": "https://app.reservoir.xyz/reserves",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "Reservoir documents 1:1 mint/redeem mechanics, but no public GENIUS PPSI approval, state-qualified approval, official application, or foreign registration source was located for rUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

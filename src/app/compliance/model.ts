@@ -10,14 +10,13 @@ import type {
   GeniusAuthorizationStatus,
   GeniusIssuerPathway,
   GeniusPrimaryFederalRegulator,
-  GeniusProfile,
-  GeniusReference,
   MicaProfile,
   MicaStatus,
   MicaTokenType,
   PegCurrency,
   StablecoinLink,
 } from "@shared/types";
+import type { GeniusClientProfile } from "@shared/types/stablecoin-client-meta";
 
 export const COMPLIANCE_REGIME_VALUES = ["all", "mica", "genius"] as const;
 export type ComplianceRegimeFilter = (typeof COMPLIANCE_REGIME_VALUES)[number];
@@ -55,10 +54,7 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
   latestReportDate?: string;
-  notes?: string;
-  references: GeniusReference[];
-  reviewer: string;
-  reviewedAt: string;
+  references: StablecoinLink[];
 }
 
 export type ComplianceRow = MicaComplianceRow | GeniusComplianceRow;
@@ -180,7 +176,10 @@ function buildMicaRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], mica: M
   };
 }
 
-function buildGeniusRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], genius: GeniusProfile): GeniusComplianceRow {
+function buildGeniusRow(
+  meta: (typeof CLIENT_TRACKED_STABLECOINS)[number],
+  genius: GeniusClientProfile,
+): GeniusComplianceRow {
   return {
     regime: "genius",
     id: meta.id,
@@ -195,14 +194,13 @@ function buildGeniusRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], geniu
     licensingRegulator: genius.licensingRegulator,
     primaryFederalRegulator: genius.primaryFederalRegulator,
     stateRegulator: genius.stateRegulator,
-    reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
+    reserveDisclosurePresent: Boolean(
+      genius.reserveDisclosureUrl || genius.redemptionPolicyPresent || genius.latestReportDate,
+    ),
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
     latestReportDate: genius.latestReportDate,
-    notes: genius.notes,
     references: genius.references ?? [],
-    reviewer: genius.reviewer,
-    reviewedAt: genius.reviewedAt,
   };
 }
 

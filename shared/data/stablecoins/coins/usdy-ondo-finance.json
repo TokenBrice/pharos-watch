@@ -43,6 +43,24 @@
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
+  "genius": {
+    "applicability": "excluded-security",
+    "issuerEntity": "Ondo Finance",
+    "notes": "USDY is treated here as outside GENIUS payment-stablecoin tracking because Ondo describes it as a tokenized note/fund-like yield product rather than a payment stablecoin.",
+    "references": [
+      {
+        "label": "Ondo USDY basics",
+        "url": "https://docs.ondo.finance/general-access-products/usdy/basics",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

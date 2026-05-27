@@ -61,10 +61,59 @@
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       },
       {
-        "label": "Quantoz EURQ/USDQ (DNB EMI under MiCAR)",
-        "url": "https://www.quantoz.com/products/eurq-usdq"
+        "label": "Quantoz USDQ whitepaper",
+        "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8a95a68591924cd02b363_USDQ-WP-1.4%20(30-04-2026).pdf"
+      },
+      {
+        "label": "DNB public register - Quantoz Payments B.V.",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Quantoz Payments B.V.",
+    "issuerDomicile": "Netherlands",
+    "licensingRegulator": "DNB; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.quantoz.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDQ is a Dutch MiCA EMT, but no public GENIUS foreign-issuer registration or U.S. permitted-issuer status was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Quantoz EURQ/USDQ",
+        "url": "https://www.quantoz.com/products/eurq-usdq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Quantoz transparency",
+        "url": "https://www.quantoz.com/transparency",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "DNB/MiCA issuer evidence and Quantoz reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDQ.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
   },
   "contracts": [
     {

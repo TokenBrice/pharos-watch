@@ -52,8 +52,8 @@
     "authorizedEntity": "VNX Commodities AG",
     "references": [
       {
-        "label": "ESMA interim MiCA register (issuers of ARTs) - VNX not listed",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "ESMA interim MiCA ART register - VNX not listed",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
       },
       {
         "label": "FMA Liechtenstein - MiCAR asset-referenced token authorisation requirements",

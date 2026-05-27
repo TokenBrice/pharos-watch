@@ -73,10 +73,10 @@ export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
   significant: z.boolean().optional(),
   references: z.array(StablecoinLinkSchema).optional(),
 }).strict().superRefine((mica, ctx) => {
-  if (mica.status === "authorized" && (mica.references?.length ?? 0) === 0) {
+  if (mica.status !== "out-of-scope" && (mica.references?.length ?? 0) === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "mica.status 'authorized' requires at least one register reference",
+      message: "mica.status requires at least one source reference unless it is 'out-of-scope'",
       path: ["references"],
     });
   }

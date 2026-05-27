@@ -51,6 +51,54 @@
     "country": "British Virgin Islands",
     "license": "Ondo Global Markets SPV; Regulation S restrictions"
   },
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Ondo Global Markets",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/available-assets",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDON is described as platform cash inside Ondo Global Markets securities-tokenization flows, so payment-stablecoin treatment remains unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Ondo Global Markets available assets",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Ondo investing and redeeming",
+        "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Ondo legal and regulatory",
+        "url": "https://docs.ondo.finance/ondo-global-markets/legal-and-regulatory",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "Ondo materials describe USDON as stablecoin cash backed 1:1 by dollars in brokerage accounts inside a securities-tokenization platform; no public GENIUS authorization or application source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

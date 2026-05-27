@@ -35,6 +35,49 @@
   "jurisdiction": {
     "country": "United States"
   },
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Solayer",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Solayer sUSD materials describe a yield-bearing stablecoin design; GENIUS issuer treatment remains unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Solayer sUSD FAQ",
+        "url": "https://docs.solayer.org/susd/protocol-info/faqs.md",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Solayer sUSD litepaper",
+        "url": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "Solayer sUSD materials describe a stablecoin design and redemption mechanics, but no public GENIUS authorization, official application, or foreign registration source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "solana",

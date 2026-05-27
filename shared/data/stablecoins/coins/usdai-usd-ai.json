@@ -42,6 +42,55 @@
   "jurisdiction": {
     "country": "Cayman Islands"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "issuerPathway": "unknown",
+    "issuerEntity": "USD.AI Foundation",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/proof-of-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDai supports whitelisted direct mint/redeem flows, but no public GENIUS approval, application, or foreign registration was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "USDai",
+        "url": "https://usd.ai/usdai",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USD.AI technical overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USD.AI proof of reserves",
+        "url": "https://docs.usd.ai/app-guide/proof-of-reserves",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "No public GENIUS approval, official application, or foreign registration source was located for USDai; direct mint/redeem is now whitelisted.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

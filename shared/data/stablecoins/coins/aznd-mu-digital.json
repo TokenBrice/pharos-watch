@@ -47,6 +47,54 @@
     "regulator": "Monetary Authority of Singapore (MAS)",
     "license": "Portfolio managed by Golden Hill Asset Management (GHAM) under MAS Capital Markets Services Licence CMS-101035; assets held in a regulated fund vehicle"
   },
+  "genius": {
+    "applicability": "unclear",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MU Digital",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "AZND is a yield-bearing Asia Dollar product with mint/redeem mechanics; GENIUS treatment remains unresolved.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "MU Digital AZND",
+        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "AZND mint/redeem",
+        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MU Digital yield mechanics",
+        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "no-public-authorization-found",
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "AZND materials describe a yield-bearing stablecoin and mint/redeem mechanics, but no public GENIUS approval, official application, or foreign registration source was located.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

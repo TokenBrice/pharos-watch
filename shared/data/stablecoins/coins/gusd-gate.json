@@ -38,6 +38,29 @@
   "jurisdiction": {
     "country": "Cayman Islands"
   },
+  "genius": {
+    "applicability": "non-payment-token",
+    "issuerEntity": "Gate",
+    "notes": "Gate GUSD is treated here as outside GENIUS payment-stablecoin tracking because Gate describes it as a platform mint/redeem product rather than a public payment stablecoin issuer pathway.",
+    "references": [
+      {
+        "label": "Gate GUSD",
+        "url": "https://www.gate.com/gusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Gate GUSD mint and redeem guide",
+        "url": "https://www.gate.com/blog/how-to-mint-and-redeem-gate-gusd",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",
