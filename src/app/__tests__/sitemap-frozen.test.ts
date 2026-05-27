@@ -12,4 +12,12 @@ describe("sitemap", () => {
       expect(urls.has(`${SITE_ORIGIN}${buildStablecoinUrl(id)}`)).toBe(true);
     }
   });
+
+  it("lists the canonical compliance route and omits the retired MiCA route", () => {
+    const entries = sitemap();
+    const urls = new Set(entries.map((entry) => entry.url));
+
+    expect(urls.has(`${SITE_ORIGIN}/compliance/`)).toBe(true);
+    expect(urls.has(`${SITE_ORIGIN}/mica/`)).toBe(false);
+  });
 });

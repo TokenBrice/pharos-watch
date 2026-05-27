@@ -167,6 +167,7 @@ describe("command palette model", () => {
     const routeQueries = [
       { query: "privacy", href: "/privacy" },
       { query: "governance", href: "/stablecoins/governance" },
+      { query: "compliance", href: "/compliance" },
       { query: "backing", href: "/stablecoins/backing" },
       { query: "docs", href: "/docs" },
       { query: "pricing", href: "/methodology/pricing-pipeline-changelog" },

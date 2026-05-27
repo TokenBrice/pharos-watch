@@ -1,6 +1,6 @@
 # MiCA Compliance Tracker
 
-**Status: shipped.** The `/mica/` route and the `mica` metadata extension are live. This document began as the pre-build spec and now serves as the as-built reference; the implementation follows it, with two deltas: the status label/color map lives in a dedicated `shared/lib/mica.ts` (not `shared/lib/classification.ts`), and the initial register-verified backfill covers 24 coins (expandable via the `mica-research` skill).
+**Status: shipped as part of `/compliance/`.** MiCA metadata remains the `mica` metadata extension, but the public route moved from `/mica/` to the canonical [Compliance Tracker](./compliance-page.md) at `/compliance/`. `/mica` is a 301 legacy redirect only.
 
 The tracker maps every tracked stablecoin to its standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing-non-goals).
 
@@ -20,7 +20,7 @@ MiCA status is **static editorial metadata, not pipeline data**. It lives in the
 
 A dedicated `mica` object on `StablecoinMeta`, not an overload of `jurisdiction` (which stays as the generic `{ country, regulator?, license? }` summary). A dedicated object is the smallest change that captures MiCA's required fields without speculative regime configurability.
 
-> **Deferred alternative (do not build now):** a generic `regulatory: RegulatoryRegime[]` array supporting MiCA + future regimes (US GENIUS Act, MAS, HKMA). The free-text data already hints at latent demand (SEC, OCC, NYDFS, MAS, FINMA, HKMA all appear), but YAGNI for a single-regime ask. Refactor `mica` → `regulatory[]` only when a second regime is actually tracked.
+GENIUS is now tracked as a dedicated sibling `genius?: GeniusProfile`, not by migrating MiCA into a generic regulatory array. Keep `mica` dedicated because MiCA has regime-specific fields and an existing curated backfill.
 
 ### Types — `shared/types/core.ts`
 
@@ -124,26 +124,27 @@ Per-coin `significant` follows EBA designation of significant EMTs/ARTs (thresho
 
 ---
 
-## Page contract — `/mica/`
+## Page contract — `/compliance/`
 
 Model on `/screener` (client-only, bundled registry, URL-encoded filters). No API hooks needed for the MiCA columns themselves; reuse existing hooks only if surfacing live supply/peg context alongside.
 
 **Route shape:**
 
-- `src/app/mica/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ. (frontend agent)
-- `src/app/mica/client.tsx` — filters + table, reads the bundled registry through `@shared/lib/stablecoins/client-registry`. (frontend agent)
-- `src/app/mica/model.ts` — `buildMicaViewModel()` mapping registry rows → table rows, filtering out coins with no `mica` and frozen assets whose MiCA metadata is historical. (frontend agent)
-- `src/app/mica/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
+- `src/app/compliance/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ.
+- `src/app/compliance/client.tsx` — filters + table, reads the bundled registry through `@shared/lib/stablecoins/client-registry`.
+- `src/app/compliance/model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows, filtering out coins with no regime metadata and frozen/pre-launch assets from the main table.
+- `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
+- `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.
 
 **Columns:** coin · MiCA status badge · token type (EMT/ART) · competent authority · authorized entity · `significant` marker · source links.
 
-**Filters (URL-encoded, via `useUrlFilters`):** `status`, `type`, `peg`, and free-text search as `q`. Example: `/mica/?status=authorized&peg=EUR`. The client also accepts legacy `tokenType` and `pegCurrency` query keys as read-only aliases.
+**Filters (URL-encoded, via `useUrlFilters`):** `regime`, `status`, `type`, `peg`, and free-text search as `q`. Example: `/compliance/?regime=mica&status=authorized&peg=EUR`. The client also accepts legacy `tokenType` and `pegCurrency` query keys as read-only aliases.
 
 **Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
-**Navigation:** `src/lib/nav-config.ts` includes `/mica/` in `NAV_GROUPS.monitor` with the `Landmark` icon and description "EU MiCA authorization status across tracked stablecoins". The sidebar and command palette auto-index from `NAV_GROUPS`.
+**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in `NAV_GROUPS.monitor` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The sidebar and command palette auto-index from `NAV_GROUPS`.
 
-**Detail-page surfacing:** `src/components/key-info-card.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/mica/`. It reuses the established badge styling; no new component is required.
+**Detail-page surfacing:** `src/components/key-info-card.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/compliance?regime=mica`. It reuses the established badge styling; no new component is required.
 
 **Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 
@@ -186,7 +187,7 @@ These illustrate the model only — confirm each against the ESMA/EBA/NCA regist
 
 ## Maintenance
 
-`/mica/` is shipped. Labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `mica-research` skill plus normal route/build checks.
+MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `mica-research` skill plus normal route/build checks.
 
 - Data refresh: update per-coin `mica` blocks with sourced register references, then run `npm run check:stablecoin-data`.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.

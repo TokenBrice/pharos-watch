@@ -92,4 +92,22 @@ describe("Pages legacy redirects", () => {
       ]),
     );
   });
+
+  it("redirects retired MiCA tracker URLs to the canonical compliance page", () => {
+    const lines = activeRedirectLines();
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "/mica/* /compliance/:splat 301",
+        "/mica/ /compliance/ 301",
+        "/mica /compliance/ 301",
+      ]),
+    );
+    expect(lines).not.toEqual(
+      expect.arrayContaining([
+        "/mica /compliance 301",
+        "/mica/ /compliance 301",
+      ]),
+    );
+  });
 });

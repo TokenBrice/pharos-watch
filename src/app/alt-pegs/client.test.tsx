@@ -259,7 +259,9 @@ describe("AltPegsClient", () => {
   it("renders peg drill-down links from the distribution card", () => {
     render(<AltPegsClient />);
 
-    expect(screen.getByRole("link", { name: "MiCA Tracker" }).getAttribute("href")).toBe("/mica");
+    expect(screen.getByRole("link", { name: "Compliance Tracker" }).getAttribute("href")).toBe(
+      "/compliance?regime=mica",
+    );
     expect(
       screen.getAllByRole("link", { name: "Euro" }).some((link) => link.getAttribute("href") === "/stablecoins/eur"),
     ).toBe(true);

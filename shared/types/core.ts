@@ -294,6 +294,136 @@ export interface MicaProfile {
   references?: StablecoinLink[];
 }
 
+export const GENIUS_APPLICABILITY_VALUES = [
+  "apparent-payment-stablecoin",
+  "excluded-deposit",
+  "excluded-security",
+  "excluded-national-currency",
+  "non-payment-token",
+  "unclear",
+] as const;
+export type GeniusApplicability = (typeof GENIUS_APPLICABILITY_VALUES)[number];
+
+export const GENIUS_AUTHORIZATION_STATUS_VALUES = [
+  "ppsi-approved",
+  "state-qualified",
+  "official-application-pending",
+  "issuer-announced-intent",
+  "no-public-authorization-found",
+  "not-applicable",
+  "unknown",
+] as const;
+export type GeniusAuthorizationStatus = (typeof GENIUS_AUTHORIZATION_STATUS_VALUES)[number];
+
+export const GENIUS_ISSUER_PATHWAY_VALUES = [
+  "idi-subsidiary",
+  "federal-qualified-nonbank",
+  "state-qualified",
+  "foreign-registered",
+  "unknown",
+  "not-applicable",
+] as const;
+export type GeniusIssuerPathway = (typeof GENIUS_ISSUER_PATHWAY_VALUES)[number];
+
+export const GENIUS_SOURCE_KIND_VALUES = [
+  "federal-register",
+  "federal-regulator",
+  "state-regulator",
+  "issuer-filing",
+  "issuer-disclosure",
+  "auditor-report",
+  "news",
+] as const;
+export type GeniusSourceKind = (typeof GENIUS_SOURCE_KIND_VALUES)[number];
+
+export const GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES = [
+  "OCC",
+  "Federal Reserve",
+  "FDIC",
+  "NCUA",
+  "Unknown",
+] as const;
+export type GeniusPrimaryFederalRegulator = (typeof GENIUS_PRIMARY_FEDERAL_REGULATOR_VALUES)[number];
+
+export const GENIUS_FOREIGN_EXCEPTION_STATUS_VALUES = [
+  "registered-exception",
+  "comparability-determined",
+  "registration-pending",
+  "not-qualified",
+  "not-applicable",
+  "unknown",
+] as const;
+export type GeniusForeignExceptionStatus = (typeof GENIUS_FOREIGN_EXCEPTION_STATUS_VALUES)[number];
+
+export const GENIUS_ENFORCEMENT_STATUS_VALUES = [
+  "no-public-action-found",
+  "warning-or-notice",
+  "prohibited-or-revoked",
+  "unknown",
+] as const;
+export type GeniusEnforcementStatus = (typeof GENIUS_ENFORCEMENT_STATUS_VALUES)[number];
+
+export const GENIUS_DASP_OFFER_SALE_STATUS_VALUES = [
+  "not-yet-restricted",
+  "restricted",
+  "foreign-lawful-order-condition-active",
+  "not-applicable",
+  "unknown",
+] as const;
+export type GeniusDaspOfferSaleStatus = (typeof GENIUS_DASP_OFFER_SALE_STATUS_VALUES)[number];
+
+export interface GeniusReference {
+  label: string;
+  url: string;
+  sourceKind: GeniusSourceKind;
+  sourceDate?: string;
+  accessedAt?: string;
+}
+
+export interface GeniusApplicabilityBasis {
+  summary: string;
+  references?: GeniusReference[];
+}
+
+export interface GeniusForeignExceptionEvidence {
+  summary: string;
+  references?: GeniusReference[];
+}
+
+export interface GeniusNegativeEvidenceReview {
+  sourcesChecked: string[];
+  summary: string;
+  reviewer: string;
+  reviewedAt: string;
+  references?: GeniusReference[];
+}
+
+export interface GeniusProfile {
+  applicability: GeniusApplicability;
+  applicabilityBasis?: GeniusApplicabilityBasis;
+  authorizationStatus: GeniusAuthorizationStatus;
+  issuerPathway: GeniusIssuerPathway;
+  issuerEntity?: string;
+  issuerDomicile?: string;
+  licensingRegulator?: string;
+  primaryFederalRegulator?: GeniusPrimaryFederalRegulator;
+  stateRegulator?: string;
+  foreignExceptionStatus?: GeniusForeignExceptionStatus;
+  foreignExceptionEvidence?: GeniusForeignExceptionEvidence;
+  enforcementStatus?: GeniusEnforcementStatus;
+  daspOfferSaleStatus?: GeniusDaspOfferSaleStatus;
+  reserveDisclosurePresent?: boolean;
+  reserveDisclosureUrl?: string;
+  redemptionPolicyPresent?: boolean;
+  monthlyAttestationPresent?: boolean;
+  latestReportDate?: string;
+  notes?: string;
+  references?: GeniusReference[];
+  negativeEvidenceReview?: GeniusNegativeEvidenceReview;
+  reviewer: string;
+  reviewedAt: string;
+}
+
 export interface ContractDeployment {
   chain: string;
   address: string;
@@ -473,6 +603,7 @@ export interface StablecoinMeta {
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
   mica?: MicaProfile;
+  genius?: GeniusProfile;
   mintAuthority?: MintAuthorityProfile;
   contracts?: ContractDeployment[];
   tradedContracts?: ContractDeployment[];

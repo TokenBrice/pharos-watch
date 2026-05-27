@@ -87,7 +87,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Regulatory Registers",
     sources:
-      "ESMA MiCA registers, EBA EMT/ART issuer and significant-token registers, and national competent authority registers such as ACPR REGAFI, DNB/AFM, BaFin, MFSA, CBI, and the Bank of Lithuania where relevant",
+      "ESMA MiCA registers, EBA EMT/ART issuer and significant-token registers, national competent authority registers such as ACPR REGAFI, DNB/AFM, BaFin, MFSA, CBI, and the Bank of Lithuania where relevant, plus U.S. GENIUS Act implementation sources such as OCC bulletins, OCC charter/decision materials, Federal Register notices, and issuer reserve or disclosure pages",
   },
   {
     label: "DEX Data",

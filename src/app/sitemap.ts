@@ -184,8 +184,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.75,
     },
     {
-      url: `${SITE_URL}/mica/`,
-      lastModified: lastEdited("/mica/"),
+      url: `${SITE_URL}/compliance/`,
+      lastModified: lastEdited("/compliance/"),
       changeFrequency: "weekly",
       priority: 0.6,
     },

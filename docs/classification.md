@@ -54,6 +54,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
 - `mica?: MicaProfile` — EU MiCA authorization status, EMT/ART token type, competent authority, issuer entity, significance flag, and sourced register/reference links. See [mica-tracker.md](./mica-tracker.md).
+- `genius?: GeniusProfile` — U.S. GENIUS Act implementation-watch posture: applicability, authorization status, issuer pathway, regulator fields, reserve/redemption disclosure presence, negative-evidence review, reviewer metadata, and source references. See [compliance-page.md](./compliance-page.md).
 - `contracts?: ContractDeployment[]` — on-chain contract addresses per chain
 - `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
 - `canBeBlacklisted?: boolean | "possible"` — direct freeze/blacklist capability override (reported descriptively); upstream exposure is computed

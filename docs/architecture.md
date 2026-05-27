@@ -65,7 +65,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 ## Frontend Runtime And SEO Surface
 
 - Indexable route membership is owned by `src/app/sitemap.ts`, route metadata modules, and the route-specific docs linked from [Documentation Index](./README.md). Do not mirror the full route inventory here; use the sitemap source and `npm run seo:check` for current crawlability coverage.
-- Legacy aliases are maintained through `public/_redirects` and are not sitemap entries: `/telegram` and `/telegram/*` redirect to `/pharoswatchbot/`; `/blacklist` and `/blacklist/*` redirect to `/freezewatch/`; `/report-cards` and `/risk-lab` redirect to `/safety-scores/`; `/peg-tracker` redirects to `/`; `/stability-index-alt` redirects to `/stability-index/`.
+- Legacy aliases are maintained through `public/_redirects` and are not sitemap entries: `/telegram` and `/telegram/*` redirect to `/pharoswatchbot/`; `/mica` and `/mica/*` redirect to `/compliance/`; `/blacklist` and `/blacklist/*` redirect to `/freezewatch/`; `/report-cards` and `/risk-lab` redirect to `/safety-scores/`; `/peg-tracker` redirects to `/`; `/stability-index-alt` redirects to `/stability-index/`.
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`

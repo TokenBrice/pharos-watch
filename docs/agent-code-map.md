@@ -37,6 +37,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/compare/error.tsx`
 - `src/app/compare/loading.tsx` - default:Loading
 - `src/app/compare/page.tsx` - route /compare; metadata
+- `src/app/compliance/client.tsx` - ComplianceClient
+- `src/app/compliance/error.tsx`
+- `src/app/compliance/loading.tsx` - ComplianceLoadingState, default:Loading
+- `src/app/compliance/page.tsx` - route /compliance; metadata
 - `src/app/coverage/client.tsx` - default:CoveragePageClient
 - `src/app/coverage/error.tsx`
 - `src/app/coverage/page.tsx` - route /coverage; metadata
@@ -85,10 +89,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/methodology/scoring-changelog/page.tsx` - route /methodology/scoring-changelog; metadata
 - `src/app/methodology/stability-index-changelog/page.tsx` - route /methodology/stability-index-changelog; metadata
 - `src/app/methodology/yield-changelog/page.tsx` - route /methodology/yield-changelog; metadata
-- `src/app/mica/client.tsx` - MicaClient
-- `src/app/mica/error.tsx`
-- `src/app/mica/loading.tsx` - MicaLoadingState, default:Loading
-- `src/app/mica/page.tsx` - route /mica; metadata
 - `src/app/not-found.tsx` - default:NotFound
 - `src/app/page.tsx` - route /; default:HomePage, metadata
 - `src/app/pharoswatchbot/app/client.tsx` - PharosWatchBotMiniAppClient
@@ -361,6 +361,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, NOTICE_TONE_COLORS, RATIO_QUALITY_COLORS
 - `shared/lib/cloudflare-access-jwt.ts` - JwtVerifyOptions, _resetJwksCache, normalizeTeamDomain, verifyAccessJwt
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
+- `shared/lib/compliance-regime-state.ts` - GENIUS_REGIME_STATE, GeniusRegimeState, GeniusRulemakingPhase, isGeniusRegimeEffective
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
@@ -376,8 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
 - `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
-- `shared/lib/depeg-resolver/public-contract.ts` - DdrPublicContractValidationResult, attachDdrPublicRowHash, buildDdrManifestBasePayload, computeDdrManifestBasePayloadHash, computeDdrPublicRowHash, validateDdrPublicCacheContract
-- ... 228 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 230 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 

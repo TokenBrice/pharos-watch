@@ -1,0 +1,119 @@
+import Link from "next/link";
+import { FaqSection } from "@/components/faq-section";
+import { ComplianceLoadingState } from "@/app/compliance/loading";
+import { createClientFeaturePage } from "@/lib/client-feature-page";
+import { buildPageMetadata } from "@/lib/page-metadata";
+import type { FaqItem } from "@/lib/faq";
+import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+
+const complianceDescription =
+  "Stablecoin compliance tracker for EU MiCA authorization and U.S. GENIUS Act implementation-watch signals, with sourced public references.";
+
+export const metadata = buildPageMetadata({
+  title: "Stablecoin Compliance Tracker: MiCA and GENIUS Status",
+  description: complianceDescription,
+  canonical: "/compliance/",
+  ogImage: `${SITE_URL}/og-card.png`,
+});
+
+const COMPLIANCE_FAQ_ITEMS = [
+  {
+    question: "What does the compliance tracker show?",
+    answer:
+      "It maps assessed stablecoins to public, sourced regulatory facts. MiCA rows cover EU authorization status, EMT/ART token type, competent authority, issuer entity, and register references. GENIUS rows are implementation-watch signals while the U.S. regime is pre-effective.",
+  },
+  {
+    question: "Why are GENIUS rows separated from the main table?",
+    answer:
+      "The GENIUS Act is enacted, but the general regime is not yet effective. Pharos keeps GENIUS rows in an implementation-watch section until the Act is effective or official regulator approvals can be displayed without implying current compliance.",
+  },
+  {
+    question: "What is the difference between an EMT and an ART?",
+    answer:
+      "An e-money token (EMT) references a single official currency. An asset-referenced token (ART) references a basket or other value, such as a multi-currency mix or a commodity. ARTs are rare in the tracked set.",
+  },
+  {
+    question: "Is this legal or compliance advice?",
+    answer:
+      "No. The tracker is an informational surface with sourced links, not legal advice. Statuses are editorial assignments against public registers, regulator notices, and issuer disclosures, and may lag real-world authorizations or restrictions.",
+  },
+] as const satisfies readonly FaqItem[];
+
+const COMPLIANCE_STATIC_SECTION = (
+  <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+      <p className="pharos-kicker">How To Read Status</p>
+      <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          <span className="font-medium text-foreground">MiCA authorized</span> means the issuer holds an in-effect EMI
+          or credit-institution authorization listed on a competent-authority register. Pending, transitional,
+          non-compliant, and out-of-scope retain the existing MiCA editorial meanings.
+        </p>
+        <p>
+          <span className="font-medium text-foreground">GENIUS rows are not compliance approvals.</span> They track
+          source-backed public posture such as issuer-announced intent, regulator-sourced applications, or future PPSI
+          approvals once the regime is operational.
+        </p>
+      </div>
+    </div>
+    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+      <p className="pharos-kicker">GENIUS Regime State</p>
+      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+        <dt className="text-muted-foreground">Public law</dt>
+        <dd className="font-mono text-foreground">{GENIUS_REGIME_STATE.publicLawDate}</dd>
+        <dt className="text-muted-foreground">Effective date</dt>
+        <dd className="font-mono text-foreground">{GENIUS_REGIME_STATE.effectiveDate}</dd>
+        <dt className="text-muted-foreground">Phase</dt>
+        <dd className="capitalize text-foreground">{GENIUS_REGIME_STATE.rulemakingPhase.replace(/-/g, " ")}</dd>
+      </dl>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+        Source:{" "}
+        <a
+          href={GENIUS_REGIME_STATE.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          {GENIUS_REGIME_STATE.sourceLabel}
+        </a>
+        . Pair this with{" "}
+        <Link
+          href="/screener/"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          Screener
+        </Link>{" "}
+        and{" "}
+        <Link
+          href="/safety-scores/"
+          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        >
+          Safety Scores
+        </Link>{" "}
+        for the non-legal risk picture.
+      </p>
+    </div>
+  </section>
+);
+
+export default createClientFeaturePage({
+  loadClient: () => import("./client").then((m) => ({ default: m.ComplianceClient })),
+  loading: <ComplianceLoadingState />,
+  shell: {
+    breadcrumbName: "Compliance",
+    path: "/compliance/",
+    title: "Compliance Tracker",
+    leadParagraphs: [
+      "EU MiCA authorization status and U.S. GENIUS Act implementation-watch signals across assessed stablecoins — sourced to public registers, regulator notices, and issuer disclosures.",
+    ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        Compliance status here is narrow and source-backed. It does not prove reserve sufficiency, operational controls,
+        BSA/AML effectiveness, sanctions controls, lawful-order readiness, or venue offer/sale compliance.
+      </p>
+    ),
+  },
+  beforeClient: COMPLIANCE_STATIC_SECTION,
+  afterClient: <FaqSection items={COMPLIANCE_FAQ_ITEMS} includeJsonLd />,
+});

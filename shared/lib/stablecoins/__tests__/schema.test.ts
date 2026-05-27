@@ -248,6 +248,91 @@ describe("StablecoinMeta schema — blacklistability review", () => {
   });
 });
 
+describe("StablecoinMeta schema — GENIUS profile", () => {
+  const issuerDisclosure = {
+    label: "Issuer disclosure",
+    url: "https://example.com/genius",
+    sourceKind: "issuer-disclosure",
+    sourceDate: "2026-05-27",
+  };
+
+  it("accepts a source-backed issuer-announced GENIUS watch profile", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-genius-intent",
+        genius: {
+          applicability: "apparent-payment-stablecoin",
+          authorizationStatus: "issuer-announced-intent",
+          issuerPathway: "unknown",
+          issuerEntity: "Fixture Issuer, N.A.",
+          issuerDomicile: "United States",
+          licensingRegulator: "OCC",
+          primaryFederalRegulator: "OCC",
+          foreignExceptionStatus: "not-applicable",
+          enforcementStatus: "no-public-action-found",
+          daspOfferSaleStatus: "not-yet-restricted",
+          reserveDisclosurePresent: true,
+          reserveDisclosureUrl: "https://example.com/reserves",
+          redemptionPolicyPresent: true,
+          monthlyAttestationPresent: true,
+          latestReportDate: "2026-05-01",
+          references: [issuerDisclosure],
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-27",
+        },
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
+  it("rejects official GENIUS authorization claims without a regulator reference", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-genius-official",
+        genius: {
+          applicability: "apparent-payment-stablecoin",
+          authorizationStatus: "ppsi-approved",
+          issuerPathway: "federal-qualified-nonbank",
+          references: [issuerDisclosure],
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-27",
+        },
+      }),
+    ], "fixture")).toThrow(/official authorization/);
+  });
+
+  it("requires no-public-authorization-found to include a dated negative evidence review", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-genius-negative",
+        genius: {
+          applicability: "apparent-payment-stablecoin",
+          authorizationStatus: "no-public-authorization-found",
+          issuerPathway: "unknown",
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-27",
+        },
+      }),
+    ], "fixture")).toThrow(/negative evidence review/);
+  });
+
+  it("rejects unknown nested GENIUS fields", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-genius-strict",
+        genius: {
+          applicability: "apparent-payment-stablecoin",
+          authorizationStatus: "issuer-announced-intent",
+          issuerPathway: "unknown",
+          references: [issuerDisclosure],
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-27",
+          complianceScore: 100,
+        },
+      }),
+    ], "fixture")).toThrow(/complianceScore/);
+  });
+});
+
 describe("StablecoinMeta schema — mint authority", () => {
   it("accepts a verified Safe mint authority profile", () => {
     expect(() => parseStablecoinMetaAssets([

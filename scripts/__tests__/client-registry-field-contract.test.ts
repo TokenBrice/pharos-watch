@@ -44,6 +44,7 @@ describe("client registry field contract", () => {
       commodityOunces: null,
       infrastructures: ["circle"],
       mica: null,
+      genius: null,
       yieldConfig: null,
       liveReservesConfig: null,
       proofOfReserves: null,

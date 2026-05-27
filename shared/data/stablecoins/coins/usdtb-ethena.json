@@ -44,6 +44,55 @@
     "regulator": "OCC",
     "license": "Federal Bank Charter"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDtb is publicly described as a U.S. dollar-backed stablecoin issued by Anchorage Digital Bank against BUIDL and cash reserves."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Anchorage Digital Bank, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Anchorage identifies USDtb as federally regulated issuance, but Pharos found no token-specific public OCC GENIUS approval as of review.",
+    "references": [
+      {
+        "label": "OCC: Anchorage national trust bank charter",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Anchorage USDtb launch",
+        "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anchorage USDtb attestations",
+        "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC Anchorage Digital Bank public charter materials",
+        "USDtb issuer documentation and reserve attestation pages"
+      ],
+      "summary": "No token-specific public OCC GENIUS approval, PPSI registration, or official application source was located for USDtb.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

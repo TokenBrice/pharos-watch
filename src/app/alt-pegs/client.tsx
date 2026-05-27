@@ -152,10 +152,10 @@ function AltPegDistributionCard({
             Ranked by current market cap, with direct links into each peg cohort page. EUR stablecoins are
             reshaped by EU MiCA rules — see the{" "}
             <Link
-              href="/mica"
+              href="/compliance?regime=mica"
               className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
             >
-              MiCA Tracker
+              Compliance Tracker
             </Link>
             .
           </p>

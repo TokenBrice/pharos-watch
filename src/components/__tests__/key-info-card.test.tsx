@@ -114,7 +114,7 @@ describe("KeyInfoCard contract interactions", () => {
     );
 
     const link = screen.getByRole("link", { name: /Historical MiCA status: Authorized/i });
-    expect(link.getAttribute("href")).toBe("/mica");
+    expect(link.getAttribute("href")).toBe("/compliance?regime=mica");
     expect(screen.getByText("Historical MiCA: Authorized")).toBeTruthy();
   });
 });

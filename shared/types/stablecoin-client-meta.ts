@@ -102,6 +102,7 @@ export type StablecoinClientMeta = Pick<
   | "commodityOunces"
   | "infrastructures"
   | "mica"
+  | "genius"
   | "yieldConfig"
   | "liveReservesConfig"
   | "proofOfReserves"
@@ -140,6 +141,7 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "commodityOunces",
   "infrastructures",
   "mica",
+  "genius",
   "yieldConfig",
   "liveReservesConfig",
   "proofOfReserves",

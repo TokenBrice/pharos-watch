@@ -95,7 +95,8 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
 - [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
 - [tape-page.md](./tape-page.md) - `/timeline/` cross-class event feed route, URL filter contract, digest grouping, projector pipeline, and homepage marquee integration
-- [mica-tracker.md](./mica-tracker.md) - `/mica/` EU MiCA authorization tracker: the `mica` metadata extension, status criteria, page contract, and maintenance via the `mica-research` skill
+- [compliance-page.md](./compliance-page.md) - `/compliance/` combined MiCA authorization and GENIUS implementation-watch route contract
+- [mica-tracker.md](./mica-tracker.md) - EU MiCA metadata: the `mica` extension, status criteria, and maintenance via the `mica-research` skill
 
 ## Public Route Coverage
 
@@ -146,7 +147,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/learn/mechanisms/[archetype]/`                | [learn-mechanisms-page.md](./learn-mechanisms-page.md), [classification.md](./classification.md)                                                      |
 | `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
 | `/methodology/`                                 | [methodology-page.md](./methodology-page.md)                                                                                                          |
-| `/mica/`                                        | [mica-tracker.md](./mica-tracker.md)                                                                                                                  |
+| `/compliance/`                                  | [compliance-page.md](./compliance-page.md), [mica-tracker.md](./mica-tracker.md)                                                                       |
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |

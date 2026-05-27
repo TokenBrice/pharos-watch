@@ -42680,7 +42680,7 @@
     "detailProvider": "defillama",
     "name": "Tether USA-T",
     "symbol": "USAT",
-    "oneLiner": "USAT is Tether's GENIUS-Act-compliant U.S. dollar stablecoin, issued 1:1 by Anchorage Digital Bank with reserves custodied at Cantor Fitzgerald.",
+    "oneLiner": "USAT is Tether's GENIUS-era U.S. dollar stablecoin, issued 1:1 by Anchorage Digital Bank with reserves custodied at Cantor Fitzgerald.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -42719,6 +42719,55 @@
       "country": "United States",
       "regulator": "OCC",
       "license": "Federal Bank Charter"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USAT is publicly described as a U.S. dollar-backed token with 1:1 redemption through Tether and Anchorage Digital Bank."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anchorage Digital Bank, N.A.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "OCC",
+      "primaryFederalRegulator": "OCC",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.anchorage.com/platform/usat-reserve-attestations",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "Issuer and partner materials frame USAT for the GENIUS Act era, but Pharos found no token-specific public OCC GENIUS approval as of review.",
+      "references": [
+        {
+          "label": "OCC: Anchorage national trust bank charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Tether USAT announcement",
+          "url": "https://tether.io/news/tether-unveils-usat-its-planned-u-s-regulated-dollar-backed-stablecoin-and-will-appoint-bo-hines-as-ceo-of-tether-usat/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Anchorage USAT attestations",
+          "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "OCC Anchorage Digital Bank public charter materials",
+          "USAT issuer and reserve attestation pages"
+        ],
+        "summary": "No token-specific public OCC GENIUS approval, PPSI registration, or official application source was located for USAT.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -46760,6 +46809,55 @@
       "country": "United States",
       "regulator": "OCC",
       "license": "Federal Bank Charter"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDGO is publicly described as a U.S. dollar token issued by Anchorage Digital Bank with 1:1 redemption and reserve attestations."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anchorage Digital Bank, N.A.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "OCC",
+      "primaryFederalRegulator": "OCC",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "Issuer materials identify Anchorage Digital Bank as USDGO issuer, but Pharos found no token-specific public OCC GENIUS approval as of review.",
+      "references": [
+        {
+          "label": "OCC: Anchorage national trust bank charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Anchorage USDGO launch",
+          "url": "https://www.anchorage.com/insights/usdgo-officially-launches-under-federal-oversight",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Anchorage USDGO attestations",
+          "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "OCC Anchorage Digital Bank public charter materials",
+          "USDGO issuer metadata and reserve attestation pages"
+        ],
+        "summary": "No token-specific public OCC GENIUS approval, PPSI registration, or official application source was located for USDGO.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -51226,6 +51324,55 @@
       "country": "United States",
       "regulator": "OCC",
       "license": "Federal Bank Charter"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDtb is publicly described as a U.S. dollar-backed stablecoin issued by Anchorage Digital Bank against BUIDL and cash reserves."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anchorage Digital Bank, N.A.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "OCC",
+      "primaryFederalRegulator": "OCC",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "Anchorage identifies USDtb as federally regulated issuance, but Pharos found no token-specific public OCC GENIUS approval as of review.",
+      "references": [
+        {
+          "label": "OCC: Anchorage national trust bank charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Anchorage USDtb launch",
+          "url": "https://www.anchorage.com/insights/anchorage-digital-issues-usdtb-americas-first-federally-regulated-stablecoin",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Anchorage USDtb attestations",
+          "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "OCC Anchorage Digital Bank public charter materials",
+          "USDtb issuer documentation and reserve attestation pages"
+        ],
+        "summary": "No token-specific public OCC GENIUS approval, PPSI registration, or official application source was located for USDtb.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",

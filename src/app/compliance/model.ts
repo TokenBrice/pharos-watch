@@ -1,0 +1,262 @@
+import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import {
+  GENIUS_AUTHORIZATION_STATUS_VALUES,
+  MICA_STATUS_VALUES,
+  MICA_TOKEN_TYPE_VALUES,
+} from "@shared/types/core";
+import type {
+  GeniusApplicability,
+  GeniusAuthorizationStatus,
+  GeniusIssuerPathway,
+  GeniusPrimaryFederalRegulator,
+  GeniusProfile,
+  GeniusReference,
+  MicaProfile,
+  MicaStatus,
+  MicaTokenType,
+  PegCurrency,
+  StablecoinLink,
+} from "@shared/types";
+
+export const COMPLIANCE_REGIME_VALUES = ["all", "mica", "genius"] as const;
+export type ComplianceRegimeFilter = (typeof COMPLIANCE_REGIME_VALUES)[number];
+export type ComplianceStatusFilter = MicaStatus | GeniusAuthorizationStatus | "all";
+
+interface BaseComplianceRow {
+  id: string;
+  name: string;
+  symbol: string;
+  peg: PegCurrency;
+}
+
+export interface MicaComplianceRow extends BaseComplianceRow {
+  regime: "mica";
+  status: MicaStatus;
+  tokenType?: MicaTokenType;
+  authorizationType?: MicaProfile["authorizationType"];
+  competentAuthority?: string;
+  authorizedEntity?: string;
+  significant: boolean;
+  references: StablecoinLink[];
+}
+
+export interface GeniusComplianceRow extends BaseComplianceRow {
+  regime: "genius";
+  status: GeniusAuthorizationStatus;
+  applicability: GeniusApplicability;
+  issuerPathway: GeniusIssuerPathway;
+  issuerEntity?: string;
+  issuerDomicile?: string;
+  licensingRegulator?: string;
+  primaryFederalRegulator?: GeniusPrimaryFederalRegulator;
+  reserveDisclosurePresent: boolean;
+  reserveDisclosureUrl?: string;
+  redemptionPolicyPresent: boolean;
+  latestReportDate?: string;
+  notes?: string;
+  references: GeniusReference[];
+  reviewer: string;
+  reviewedAt: string;
+}
+
+export type ComplianceRow = MicaComplianceRow | GeniusComplianceRow;
+
+export interface ComplianceFilters {
+  regime: ComplianceRegimeFilter;
+  status: ComplianceStatusFilter;
+  tokenType: MicaTokenType | "all";
+  peg: PegCurrency | "all";
+  search: string;
+}
+
+export interface ComplianceViewModel {
+  rows: ComplianceRow[];
+  watchRows: ComplianceRow[];
+  totalTracked: number;
+  isGeniusEffective: boolean;
+}
+
+const MICA_STATUS_DISPLAY_ORDER: MicaStatus[] = [
+  "authorized",
+  "pending",
+  "transitional",
+  "non-compliant",
+  "out-of-scope",
+];
+
+const GENIUS_STATUS_DISPLAY_ORDER: GeniusAuthorizationStatus[] = [
+  "ppsi-approved",
+  "state-qualified",
+  "official-application-pending",
+  "issuer-announced-intent",
+  "no-public-authorization-found",
+  "unknown",
+  "not-applicable",
+];
+
+export const COMPLIANCE_REGIME_FILTER_OPTIONS: { value: ComplianceRegimeFilter; label: string }[] = [
+  { value: "all", label: "All regimes" },
+  { value: "mica", label: "MiCA" },
+  { value: "genius", label: "GENIUS" },
+];
+
+export const MICA_STATUS_FILTER_OPTIONS: { value: MicaStatus | "all"; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "authorized", label: "Authorized" },
+  { value: "pending", label: "Pending" },
+  { value: "transitional", label: "Transitional" },
+  { value: "non-compliant", label: "Non-Compliant" },
+  { value: "out-of-scope", label: "Out of Scope" },
+];
+
+export const GENIUS_STATUS_FILTER_OPTIONS: { value: GeniusAuthorizationStatus | "all"; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "ppsi-approved", label: "PPSI Approved" },
+  { value: "state-qualified", label: "State Qualified" },
+  { value: "official-application-pending", label: "Official Pending" },
+  { value: "issuer-announced-intent", label: "Issuer Intent" },
+  { value: "no-public-authorization-found", label: "No Public Auth" },
+  { value: "not-applicable", label: "Not Applicable" },
+  { value: "unknown", label: "Unknown" },
+];
+
+export const MICA_TOKEN_TYPE_FILTER_OPTIONS: { value: MicaTokenType | "all"; label: string }[] = [
+  { value: "all", label: "All types" },
+  { value: "EMT", label: "EMT" },
+  { value: "ART", label: "ART" },
+];
+
+export function isMicaStatus(value: string): value is MicaStatus {
+  return (MICA_STATUS_VALUES as readonly string[]).includes(value);
+}
+
+export function isGeniusAuthorizationStatus(value: string): value is GeniusAuthorizationStatus {
+  return (GENIUS_AUTHORIZATION_STATUS_VALUES as readonly string[]).includes(value);
+}
+
+export function normalizeComplianceRegimeFilter(value: string): ComplianceRegimeFilter {
+  return (COMPLIANCE_REGIME_VALUES as readonly string[]).includes(value)
+    ? (value as ComplianceRegimeFilter)
+    : "all";
+}
+
+export function normalizeComplianceStatusFilter(
+  value: string,
+  regime: ComplianceRegimeFilter = "all",
+): ComplianceStatusFilter {
+  if (value === "all") return "all";
+  if (regime === "mica") return isMicaStatus(value) ? value : "all";
+  if (regime === "genius") return isGeniusAuthorizationStatus(value) ? value : "all";
+  if (isMicaStatus(value) || isGeniusAuthorizationStatus(value)) return value;
+  return "all";
+}
+
+export function normalizeMicaTokenTypeFilter(value: string): MicaTokenType | "all" {
+  return value !== "all" && (MICA_TOKEN_TYPE_VALUES as readonly string[]).includes(value)
+    ? (value as MicaTokenType)
+    : "all";
+}
+
+function isLifecycleExcludedFromMainTable(status: string | undefined): boolean {
+  return status === "frozen" || status === "pre-launch";
+}
+
+function buildMicaRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], mica: MicaProfile): MicaComplianceRow {
+  return {
+    regime: "mica",
+    id: meta.id,
+    name: meta.name,
+    symbol: meta.symbol,
+    peg: meta.flags.pegCurrency,
+    status: mica.status,
+    tokenType: mica.tokenType,
+    authorizationType: mica.authorizationType,
+    competentAuthority: mica.competentAuthority,
+    authorizedEntity: mica.authorizedEntity,
+    significant: mica.significant ?? false,
+    references: mica.references ?? [],
+  };
+}
+
+function buildGeniusRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], genius: GeniusProfile): GeniusComplianceRow {
+  return {
+    regime: "genius",
+    id: meta.id,
+    name: meta.name,
+    symbol: meta.symbol,
+    peg: meta.flags.pegCurrency,
+    status: genius.authorizationStatus,
+    applicability: genius.applicability,
+    issuerPathway: genius.issuerPathway,
+    issuerEntity: genius.issuerEntity,
+    issuerDomicile: genius.issuerDomicile,
+    licensingRegulator: genius.licensingRegulator,
+    primaryFederalRegulator: genius.primaryFederalRegulator,
+    reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
+    reserveDisclosureUrl: genius.reserveDisclosureUrl,
+    redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
+    latestReportDate: genius.latestReportDate,
+    notes: genius.notes,
+    references: genius.references ?? [],
+    reviewer: genius.reviewer,
+    reviewedAt: genius.reviewedAt,
+  };
+}
+
+function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: ComplianceRow[] } {
+  const rows: ComplianceRow[] = [];
+  const watchRows: ComplianceRow[] = [];
+  const geniusEffective = isGeniusRegimeEffective(GENIUS_REGIME_STATE);
+
+  for (const meta of CLIENT_TRACKED_STABLECOINS) {
+    if (!isLifecycleExcludedFromMainTable(meta.status) && meta.mica) {
+      rows.push(buildMicaRow(meta, meta.mica));
+    }
+
+    if (!meta.genius || meta.status === "frozen") continue;
+    const geniusRow = buildGeniusRow(meta, meta.genius);
+    if (geniusEffective && meta.status !== "pre-launch") {
+      rows.push(geniusRow);
+    } else {
+      watchRows.push(geniusRow);
+    }
+  }
+
+  return { rows, watchRows };
+}
+
+function matchesFilters(row: ComplianceRow, filters: ComplianceFilters, q: string): boolean {
+  if (filters.regime !== "all" && row.regime !== filters.regime) return false;
+  if (filters.status !== "all" && row.status !== filters.status) return false;
+  if (filters.tokenType !== "all" && (row.regime !== "mica" || row.tokenType !== filters.tokenType)) return false;
+  if (filters.peg !== "all" && row.peg !== filters.peg) return false;
+  if (q && !row.name.toLowerCase().includes(q) && !row.symbol.toLowerCase().includes(q)) return false;
+  return true;
+}
+
+function sortComplianceRows(a: ComplianceRow, b: ComplianceRow): number {
+  if (a.regime !== b.regime) return a.regime === "mica" ? -1 : 1;
+
+  const statusDelta = a.regime === "mica" && b.regime === "mica"
+    ? MICA_STATUS_DISPLAY_ORDER.indexOf(a.status) - MICA_STATUS_DISPLAY_ORDER.indexOf(b.status)
+    : GENIUS_STATUS_DISPLAY_ORDER.indexOf(a.status as GeniusAuthorizationStatus) -
+      GENIUS_STATUS_DISPLAY_ORDER.indexOf(b.status as GeniusAuthorizationStatus);
+  if (statusDelta !== 0) return statusDelta;
+  return a.symbol.localeCompare(b.symbol);
+}
+
+export function buildComplianceViewModel(filters: ComplianceFilters): ComplianceViewModel {
+  const all = buildAllComplianceRows();
+  const q = filters.search.toLowerCase().trim();
+
+  const rows = all.rows.filter((row) => matchesFilters(row, filters, q)).sort(sortComplianceRows);
+  const watchRows = all.watchRows.filter((row) => matchesFilters(row, filters, q)).sort(sortComplianceRows);
+
+  return {
+    rows,
+    watchRows,
+    totalTracked: all.rows.length + all.watchRows.length,
+    isGeniusEffective: isGeniusRegimeEffective(GENIUS_REGIME_STATE),
+  };
+}
