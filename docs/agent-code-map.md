@@ -381,9 +381,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 400 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 400 entries
-- `shared/data/stablecoins/coins.generated.json` - 400 entries
+- `shared/data/stablecoins/canonical-order.json` - 401 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 401 entries
+- `shared/data/stablecoins/coins.generated.json` - 401 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 22 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 23 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 26 keys
@@ -421,7 +421,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brlv-crown.json` - 24 keys
 - `shared/data/stablecoins/coins/brz-transfero.json` - 22 keys
 - `shared/data/stablecoins/coins/btcusd-btcfi.json` - 20 keys
-- ... 370 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 371 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -503,7 +503,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/backfill-depegs-extraction.ts` - BackfillEvent, BackfillEventExtractionOptions, SupplyPoint, SupplySnapshot, extractDepegEvents, findNearestSupply
 - `worker/src/api/backfill-depegs-preview.ts` - BackfillReplayPreview, ExistingDepegEventRow, ExistingReplayRows, buildBackfillReplayPreview, loadExistingReplayRows, summarizeBackfillReplayDiff
 - `worker/src/api/backfill-depegs-replay.ts` - BackfillCoinReplayResult, backfillCoin
-- `worker/src/api/backfill-depegs-window.ts` - BackfillReplayWindow, OptionalDayWindow, OptionalDayWindowOptions, buildBackfillDeleteStmt, eventOverlapsReplayWindow, existingRowOverlapsReplayWindow
+- `worker/src/api/backfill-depegs-window.ts` - BackfillReplayWindow, DdrSealedBackfillConflict, OptionalDayWindow, OptionalDayWindowOptions, buildBackfillDeleteStmt, eventOverlapsReplayWindow
 - `worker/src/api/backfill-depegs.ts` - BackfillDepegsRouteContext, applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegs, handleBackfillDepegsTrusted
 - `worker/src/api/backfill-depegs/execution.ts` - ApplyBackfillEventsFn, CoinExecutionOutcome, executeBackfillForCoin
 - `worker/src/api/backfill-depegs/persistence.ts` - BackfillConfidenceTier, BackfillEventProvenanceInput, BackfillRunInput, buildBackfillEventsFingerprint, buildInsertProvenanceStmt, buildReplayRunId
