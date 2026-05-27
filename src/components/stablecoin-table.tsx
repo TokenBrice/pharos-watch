@@ -7,7 +7,7 @@ import type { QueryKey } from "@tanstack/react-query";
 import { TableBody, TableHead, TableCaption, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableToolbar } from "./table-toolbar";
-import { useTableDensity, DENSITY_CONFIGS } from "@/hooks/use-table-density";
+import { useTableDensity, DENSITY_CONFIGS, type TableDensity } from "@/hooks/use-table-density";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -22,7 +22,6 @@ import {
   type ColumnId,
 } from "@/hooks/use-preferences";
 import { MethodologyHint } from "@/components/methodology-hint";
-import { TablePagination } from "@/components/table-pagination";
 import { TableBackgroundRefreshingBar } from "@/components/data-table-shell";
 import { StablecoinTableEmptyState } from "@/components/stablecoin-table-empty-state";
 import { StablecoinVirtualRow } from "@/components/stablecoin-table-row";
@@ -41,7 +40,7 @@ import {
 } from "@/components/stablecoin-table-logic";
 
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
-const OVERSCAN = 12;
+const OVERSCAN = 32;
 const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
 // M1: keys feeding the home table's columns (market data, peg, grade, liquidity).
 // A background refetch surfaces the RefreshingBar while prior rows stay visible.
@@ -53,6 +52,12 @@ const STABLECOIN_TABLE_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
 ];
 const MOBILE_TABLE_BASE_MIN_WIDTH_PX = 420;
 const PINNED_COLUMN_MIN_WIDTH_PX = 56;
+const VIRTUAL_ROW_HEIGHT_ESTIMATE_PX: Record<TableDensity, number> = {
+  list: 32,
+  compact: 52,
+  comfortable: 64,
+  spacious: 75,
+};
 const MOBILE_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
   rank: 40,
   name: 168,
@@ -320,9 +325,11 @@ export function StablecoinTable({
   const virtualDensityConfig = useMemo(
     () => ({
       ...densityConfig,
-      rowHeight: isMobileColumns ? Math.max(densityConfig.rowHeight, 68) : densityConfig.rowHeight,
+      rowHeight: isMobileColumns
+        ? Math.max(densityConfig.rowHeight, 68)
+        : Math.max(densityConfig.rowHeight, VIRTUAL_ROW_HEIGHT_ESTIMATE_PX[density]),
     }),
-    [densityConfig, isMobileColumns],
+    [density, densityConfig, isMobileColumns],
   );
 
   // Virtual scrolling with density-aware row height
@@ -331,6 +338,7 @@ export function StablecoinTable({
     count: displayed.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => virtualDensityConfig.rowHeight,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? virtualDensityConfig.rowHeight,
     overscan: OVERSCAN,
   });
 
@@ -338,10 +346,13 @@ export function StablecoinTable({
   const totalHeight = virtualizer.getTotalSize();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
-
-  // Visible range for footer
-  const rangeStart = virtualItems.length > 0 ? virtualItems[0].index + 1 : 0;
-  const rangeEnd = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index + 1 : 0;
+  const measureVirtualRow = useCallback(
+    (element: HTMLTableRowElement | null) => {
+      if (!element || typeof virtualizer.measureElement !== "function") return;
+      virtualizer.measureElement(element);
+    },
+    [virtualizer],
+  );
 
   const handleCsvExport = useCallback(() => {
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
@@ -465,7 +476,7 @@ export function StablecoinTable({
 
       <div
         ref={scrollRef}
-        className={`scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "xl:overflow-x-hidden" : ""}`}
+        className={`scroll-shadow max-h-[50vh] overscroll-x-contain overscroll-y-auto overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "xl:overflow-x-hidden" : ""}`}
       >
         <table
           className={`min-w-[420px] xl:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
@@ -514,6 +525,7 @@ export function StablecoinTable({
                   key={coin.id}
                   coin={coin}
                   rank={sortedRankById.get(coin.id) ?? virtualRow.index + 1}
+                  virtualIndex={virtualRow.index}
                   isStriped={virtualRow.index % 2 === 1}
                   densityConfig={virtualDensityConfig}
                   density={density}
@@ -528,6 +540,7 @@ export function StablecoinTable({
                   onTogglePinned={onTogglePinnedStablecoin}
                   onNavigate={handleNavigate}
                   onPrefetch={prefetch}
+                  measureElement={measureVirtualRow}
                 />
               );
             })}
@@ -550,18 +563,16 @@ export function StablecoinTable({
         </table>
       </div>
 
-      {/* Scroll position footer */}
+      {/* Stable footer: avoid rewriting visible virtual ranges on every scroll tick. */}
       {displayed.length > 0 && (
-        <TablePagination
-          page={0}
-          totalPages={1}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          total={displayed.length}
-          noun="stablecoins"
-          showControls={false}
-          supplementaryText="Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return."
-        />
+        <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+          <span className="text-sm text-muted-foreground">
+            Showing <span className="font-mono tabular-nums">{displayed.length.toLocaleString()}</span> stablecoins
+          </span>
+          <span className="pharos-meta">
+            Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.
+          </span>
+        </div>
       )}
     </div>
   );

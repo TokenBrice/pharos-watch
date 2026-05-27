@@ -34,6 +34,7 @@ import type { TableDensity } from "@/hooks/use-table-density";
 interface StablecoinVirtualRowProps {
   coin: StablecoinData;
   rank: number;
+  virtualIndex?: number;
   isStriped: boolean;
   densityConfig: {
     rowHeight: number;
@@ -53,6 +54,7 @@ interface StablecoinVirtualRowProps {
   onTogglePinned?: (coinId: string) => void;
   onNavigate: (coinId: string) => void;
   onPrefetch: (coinId: string) => void;
+  measureElement?: (element: HTMLTableRowElement | null) => void;
 }
 
 function MiniSparkline({ values }: { values: number[] }) {
@@ -87,6 +89,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 function StablecoinVirtualRowBase({
   coin,
   rank,
+  virtualIndex,
   isStriped,
   densityConfig,
   density,
@@ -103,6 +106,7 @@ function StablecoinVirtualRowBase({
   onTogglePinned,
   onNavigate,
   onPrefetch,
+  measureElement,
 }: StablecoinVirtualRowProps) {
   const circulating = getCirculatingRaw(coin);
   const prevDay = getPrevDayRaw(coin);
@@ -136,9 +140,11 @@ function StablecoinVirtualRowBase({
 
   return (
     <TableRow
+      ref={measureElement}
       key={coin.id}
       className={`group cursor-pointer ${riskClass}`}
       style={{ height: densityConfig.rowHeight }}
+      data-index={virtualIndex}
       data-row-striped={isStriped ? "true" : undefined}
       onClick={(event) => {
         if (isNestedInteractiveTarget(event.target, event.currentTarget)) return;
