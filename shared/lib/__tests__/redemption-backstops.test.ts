@@ -235,6 +235,18 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 50 },
       reviewedAt: "2026-03-23",
     });
+
+    expect(getRedemptionBackstopConfig("fxsave-f-x-protocol")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-05-27",
+    });
+    expect(getRedemptionBackstopConfig("fxsave-f-x-protocol")?.notes?.[0]).toContain("idle fxSP balance");
   });
 
   it("promotes the next non-top-100 tranche to reviewed medium-confidence routes", () => {

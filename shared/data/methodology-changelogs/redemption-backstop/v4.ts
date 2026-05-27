@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.06",
+    title: "fxSAVE uses live ERC-4626 capacity",
+    date: "2026-05-27",
+    effectiveAt: 1779840000,
+    summary:
+      "fxSAVE redemption capacity now uses fresh ERC-4626 reserve-sync telemetry from the vault's idle fxSP balance instead of a heuristic strategy-buffer ratio.",
+    impact: [
+      "`fxsave-f-x-protocol` moves from a static 20% heuristic capacity model to `reserve-sync-metadata`",
+      "Fresh clean snapshots resolve as live-direct current capacity and can produce medium model confidence despite the reviewed variable-fee route",
+      "The route fails closed as unrated when live ERC-4626 telemetry is stale, missing, or degraded, avoiding heuristic Safety Score uplift",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.05",
     title: "ZCHF bridge capacity follows CHFAU",
     date: "2026-05-25",

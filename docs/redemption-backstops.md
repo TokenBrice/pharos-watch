@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.05`
+- **Current methodology version:** `v4.06`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.05` update: Frankencoin ZCHF's StablecoinBridge capacity telemetry now follows the active CHFAU bridge after the prior VCHF bridge expired with no remaining inventory.
+Latest `v4.06` update: fxSAVE now uses fresh ERC-4626 live redemption-capacity telemetry from the vault's idle fxSP balance instead of the prior low-confidence 20% heuristic strategy-buffer estimate.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -143,7 +143,7 @@ Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as thei
 `LUSD` now uses the live `liquity-v1` onchain adapter for bounded current direct capacity, scoring against `TroveManager.getEntireSystemDebt()` when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model.
 `BOLD`, `feUSD`, `USDQ`, and `NECT` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown/sunsetting as degraded route status.
 `fxUSD` now uses f(x)'s protocol pool API debt balances as live proxy capacity, while `USDaf` uses Asymmetry's timestamped protocol supply data as direct live capacity. `JupUSD` uses Jupiter's public transparency API for current USDC/USDtb holdings and oracle route-status context, with the previous 10% reviewed buffer retained only as fallback.
-ERC-4626 single-asset wrappers such as Spark savings wrappers, sUSDS, sDAI, scrvUSD, sfrxUSD, and stcUSD now use the live adapter's idle underlying ERC-20 balance as current direct redemption capacity when fresh reserve telemetry is available, rather than treating the full wrapper supply as immediately executable.
+ERC-4626 single-asset wrappers such as fxSAVE, Spark savings wrappers, sUSDS, sDAI, scrvUSD, sfrxUSD, and stcUSD now use the live adapter's idle underlying ERC-20 balance as current direct redemption capacity when fresh reserve telemetry is available, rather than treating the full wrapper supply as immediately executable.
 `GHO` now uses tracked swappable GSM backing as a live lower bound even when reserve sync is degraded solely by aggregated residual issuance outside the configured GSM set, because that warning reflects reserve completeness rather than invalid tracked telemetry.
 `wsrUSD` continues to prefer live Reservoir USDC balance telemetry when available, but now falls back to Reservoir's documented 25 bps minimum USDC PSM balance instead of remaining unrated when the live feed lacks a trustworthy source timestamp.
 Reviewed bounded primary-market liquidity buffers published by protocols or issuers, such as DOLA's USDS PSM share or JupUSD's USDC buffer, can also use `documented-bound` ratio semantics when the underlying source is explicit enough to avoid pretending the ratio is merely a blind heuristic.

@@ -8,7 +8,7 @@ import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/
 import type { MethodologyVersionConfig } from "./base";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.28",
+  currentVersion: "7.29",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
     ...SAFETY_SCORE_V7,

@@ -6,12 +6,12 @@ The stablecoin registry currently contains 401 tracked metadata entries. Report-
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.28`
+- **Current methodology version:** `v7.29`
 - **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.28)
+## Overall Grade (v7.29)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.28 keeps the v7.27 four-status FreezeWatch model after a full re-audit of active assets previously shown as `No`. FreezeWatch remains freeze-only: direct controls resolve as Yes, dependency/collateral/custody paths resolve as Upstream, ambiguous direct holder controls resolve as Possible, and reviewed non-freezable assets resolve as No.
+Current-version note: v7.29 keeps the v7.28 four-status FreezeWatch model and moves fxSAVE's redemption route from a low-confidence heuristic strategy-buffer estimate to fresh ERC-4626 live capacity. Clean fxSAVE snapshots can now reach medium model confidence and feed Liquidity / Exit; missing or degraded live telemetry leaves the route unrated instead of falling back to the old 20% heuristic buffer.
 
 ## Yield Source-Risk Boundary
 

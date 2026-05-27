@@ -799,6 +799,55 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.modelConfidence).toBe("high");
   });
 
+  it("uses fxSAVE ERC-4626 idle fxSP as Safety-eligible live direct redemption capacity", async () => {
+    const config = getRedemptionBackstopConfig("fxsave-f-x-protocol");
+    expect(config).not.toBeNull();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "fxsave-f-x-protocol",
+      config!,
+      10_000_000,
+      20,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "fxsave-f-x-protocol",
+          fetchedAt: now - 120,
+          source: "erc4626-single-asset",
+          metadata: {
+            freshnessMode: "not-applicable",
+            assetAddress: "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+            redemption: {
+              capacityUsd: 2_000_000,
+              capacityRatioOfSupply: 0.2,
+              capacityKind: "live-direct",
+              freshnessKind: "same-run-onchain",
+              routeStatus: "unknown",
+              routeStatusSource: "onchain",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "single-bucket",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.sourceMode).toBe("dynamic");
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.capacityConfidence).toBe("live-direct");
+    expect(entry.capacityBasis).toBe("live-direct-telemetry");
+    expect(entry.capacitySemantics).toBe("immediate-bounded");
+    expect(entry.immediateCapacityUsd).toBe(2_000_000);
+    expect(entry.immediateCapacityRatio).toBe(0.2);
+    expect(entry.modelConfidence).toBe("medium");
+    expect(entry.effectiveExitScore).toBeGreaterThan(20);
+  });
+
   it("uses BOLD Liquity v2 branch debt as live direct redemption capacity", async () => {
     const config = getRedemptionBackstopConfig("bold-liquity");
     expect(config).not.toBeNull();

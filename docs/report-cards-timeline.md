@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.28 (2026-02-25 → 2026-05-25). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.29 (2026-02-25 → 2026-05-27). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+
+## v7.29 — fxSAVE live redemption capacity (2026-05-27)
+
+- `fxsave-f-x-protocol` now consumes live ERC-4626 reserve-sync redemption metadata instead of the previous 20% heuristic strategy-buffer estimate
+- Fresh clean snapshots use the vault's idle fxSP balance as current direct redemption capacity, allowing the route to reach medium model confidence and feed Liquidity / Exit when the normal route-status and severe-depeg gates pass
+- Missing, stale, or degraded fxSAVE live telemetry leaves the redemption route unrated rather than preserving a heuristic Safety Score uplift
 
 ## v7.28 — FreezeWatch curated upstream review audit (2026-05-25)
 

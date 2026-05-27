@@ -181,7 +181,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES = [
   ...[
     "apyusd-apyx",
     "cusdo-openeden",
-    "fxsave-f-x-protocol",
     "gtusdc-gauntlet",
     "gtusdcp-gauntlet",
     "msy-main-street",

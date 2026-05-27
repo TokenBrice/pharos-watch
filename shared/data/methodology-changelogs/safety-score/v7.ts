@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const SAFETY_SCORE_V7: readonly MethodologyChangelogEntry[] = [
     {
+      version: "7.29",
+      title: "fxSAVE live redemption capacity",
+      date: "2026-05-27",
+      effectiveAt: 1779840000,
+      summary:
+        "fxSAVE's Liquidity / Exit input can now consume fresh ERC-4626 live redemption capacity instead of the prior low-confidence heuristic strategy-buffer route.",
+      impact: [
+        "`fxsave-f-x-protocol` now uses the live reserve-sync redemption metadata emitted by its ERC-4626 adapter, reading idle fxSP capacity from the current on-chain snapshot",
+        "Clean fresh snapshots resolve at medium model confidence, allowing the redemption backstop to contribute to effective exit liquidity and Safety Score liquidity when the standard route-status and severe-depeg gates pass",
+        "If live fxSAVE capacity is unavailable or degraded, the route is left unrated rather than falling back to the old 20% heuristic buffer",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "7.28",
       title: "FreezeWatch curated upstream review audit",
       date: "2026-05-25",
