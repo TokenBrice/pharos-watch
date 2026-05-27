@@ -73,6 +73,18 @@ export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
   significant: z.boolean().optional(),
   references: z.array(StablecoinLinkSchema).optional(),
 }).strict().superRefine((mica, ctx) => {
+  if (mica.status === "out-of-scope") {
+    for (const field of ["tokenType", "authorizationType", "competentAuthority", "authorizedEntity"] as const) {
+      if (mica[field] != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mica.out-of-scope rows cannot carry in-scope classification fields",
+          path: [field],
+        });
+      }
+    }
+  }
+
   if (mica.status !== "out-of-scope" && (mica.references?.length ?? 0) === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -108,6 +120,8 @@ Editorial assignment rules. Each non-`out-of-scope` status should carry at least
 | `out-of-scope` | Not offered to the public or admitted to trading in the EU. | Default for non-EU-marketed coins |
 
 Leave `mica` **undefined** for coins not yet assessed — the page distinguishes "not assessed" (no row / muted) from `out-of-scope` (explicitly reviewed). This bounds the backfill: only researched coins assert a status.
+
+`out-of-scope` rows are explicit assessments, but they must not carry in-scope MiCA classification fields such as `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`. Use those fields only when the row is asserting an EMT/ART posture inside the MiCA status model.
 
 ### Token type (`tokenType`)
 

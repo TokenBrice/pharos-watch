@@ -56,6 +56,8 @@ Use `authorizationStatus: "issuer-announced-intent"` only for issuer/partner sta
 
 GENIUS effective-date state is centralized in `shared/lib/compliance-regime-state.ts`. Update that object when final primary-regulator rules are issued or the statutory fallback effective date changes. The page renders the regime state's `sourceReferences` list when present so the effective-date posture can cite multiple regulator rulemaking sources, not only the primary OCC rulemaking page.
 
+Use explicit `not-applicable` GENIUS rows sparingly for prominent tokenized funds, securities, wrappers, or commodity tokens that are likely to be confused with payment stablecoins. Do not bulk-mark every fund share or wrapper; missing `genius` metadata remains "not assessed", while explicit exclusions should clarify a real compliance ambiguity.
+
 ## Route Retirement
 
 `public/_redirects` owns the `/mica` retirement:

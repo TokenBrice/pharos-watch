@@ -45,6 +45,18 @@ describe("StablecoinMeta schema — MiCA profile", () => {
       }),
     ], "fixture")).not.toThrow();
   });
+
+  it("rejects MiCA out-of-scope rows with in-scope classification fields", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mica-out-of-scope-token-type",
+        mica: {
+          status: "out-of-scope",
+          tokenType: "EMT",
+        },
+      }),
+    ], "fixture")).toThrow(/out-of-scope/);
+  });
 });
 
 const mintAuthoritySource = {

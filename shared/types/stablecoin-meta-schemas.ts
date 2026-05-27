@@ -161,6 +161,18 @@ export const MicaProfileSchema: z.ZodType<MicaProfile> = z.object({
   significant: z.boolean().optional(),
   references: z.array(StablecoinLinkSchema).optional(),
 }).strict().superRefine((mica, ctx) => {
+  if (mica.status === "out-of-scope") {
+    for (const field of ["tokenType", "authorizationType", "competentAuthority", "authorizedEntity"] as const) {
+      if (mica[field] != null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "mica.out-of-scope rows cannot carry in-scope classification fields",
+          path: [field],
+        });
+      }
+    }
+  }
+
   if (mica.status !== "out-of-scope" && (mica.references?.length ?? 0) === 0) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
