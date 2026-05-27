@@ -549,7 +549,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/sync-support.ts` - applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
 - `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental, parseTronEvent
 - `worker/src/cron/compute-depeg-resolver-review.ts` - ComputeDepegResolverReviewOptions, DdrrV2ReviewSource, buildDepegResolverReviewSnapshot, buildEmptyDdrrSummary, computeAndStoreDepegResolverReview
-- `worker/src/cron/compute-depeg-resolver.ts` - ComputeDepegResolverV2Options, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
+- `worker/src/cron/compute-depeg-resolver.ts` - ComputeDepegResolverV2Options, computeDepegResolver
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
 - `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, evaluateCronStaleness, runCronStalenessWatchdog
@@ -583,6 +583,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-detection/persistence.ts` - persistDepegCommands
 - `worker/src/cron/depeg-detection/repair.ts` - DuplicateRepairResult, OrphanDepegRow, OrphanRepairResult, buildDuplicateOpenEventRepair, buildOrphanCloseRepair, shouldCloseOrphanedDepeg
 - `worker/src/cron/depeg-detection/types.ts` - DepegAssetDecision, DepegAssetDecisionInput, DepegDiagnostic, DepegPersistenceCommand, DexPoolChallenger, HydratedDepegDetection
+- `worker/src/cron/depeg-resolver-v2-contracts.ts` - DDR_PUBLICATION_SNAPSHOT_KIND, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
 - `worker/src/cron/detect-depegs.ts` - detectDepegEvents, shouldCloseOrphanedDepeg
 - `worker/src/cron/dews/contracts.ts` - ContagionAmplifiers, DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState, DexLiquidityRow
 - `worker/src/cron/dews/persistence.ts` - computeStressSignalPruneIds, persistDewsResults
@@ -616,8 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/direct-source-helpers.ts` - buildDirectApiPoolIdentity, classifyClPoolType, normalizeFeeRateFromBps
 - `worker/src/cron/dex-liquidity/fetch-balancer.ts` - fetchBalancerPools
 - `worker/src/cron/dex-liquidity/fetch-crawlers.ts` - fetchCgPools, fetchGtPools, mergeCgPools, mergeGtPools
-- `worker/src/cron/dex-liquidity/fetch-fallbacks.ts` - fetchCgTickersFallback, fetchDsFallbackPools, getFallbackTargets
-- ... 287 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 288 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
