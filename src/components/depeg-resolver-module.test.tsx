@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
+import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import type { DdrResponse, DdrRow } from "@shared/types";
 
@@ -94,7 +95,9 @@ describe("DepegResolverModule", () => {
   });
 
   it("shows unavailable copy for degraded empty snapshots", () => {
-    render(<DepegResolverModule data={response({ _meta: { ...meta, degraded: true, degradedReason: "missing-cache" } })} />);
+    render(
+      <DepegResolverModule data={response({ _meta: { ...meta, degraded: true, degradedReason: "missing-cache" } })} />,
+    );
 
     expect(screen.getByText("Resolver data is temporarily unavailable.")).toBeTruthy();
     expect(screen.queryByText(/No active confirmed depegs/)).toBeNull();
@@ -130,10 +133,41 @@ describe("DepegResolverModule", () => {
 
     expect(screen.getByText("DDR does not expect this depeg to recover.")).toBeTruthy();
     expect(
-      screen.getByText(
-        "Comparable structural failures did not return to peg, so no duration estimate is shown.",
-      ),
+      screen.getByText("Comparable structural failures did not return to peg, so no duration estimate is shown."),
     ).toBeTruthy();
     expect(screen.queryByText(/Duration not estimated/)).toBeNull();
+  });
+});
+
+describe("StablecoinDepegResolverRows", () => {
+  it("renders only the DDR row for the current stablecoin", () => {
+    render(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [row] })} />);
+
+    expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
+    expect(screen.getByText("At Risk")).toBeTruthy();
+  });
+
+  it("stays hidden when the DDR snapshot has no row for the current stablecoin", () => {
+    render(<StablecoinDepegResolverRows stablecoinId="usdc-circle" data={response({ rows: [row] })} />);
+
+    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
+  });
+
+  it("keeps matching rows visible when the resolver snapshot is stale", () => {
+    render(
+      <StablecoinDepegResolverRows
+        stablecoinId="lusd-liquity"
+        data={response({
+          _meta: { ...meta, degraded: true, degradedReason: "stale-cache" },
+          rows: [row],
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Resolver snapshot is stale; duration estimates are suppressed until the next refresh."),
+    ).toBeTruthy();
+    expect(screen.getByText("At Risk")).toBeTruthy();
   });
 });

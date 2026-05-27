@@ -115,6 +115,13 @@ const SafetyScoreHistorySection = dynamic(
   },
 );
 
+const StablecoinDepegResolverCard = dynamic(
+  () => import("@/components/stablecoin-detail/depeg-resolver-card").then((mod) => mod.StablecoinDepegResolverCard),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+  },
+);
+
 const DETAIL_SECTION_DEFS = {
   overview: { id: "overview", label: "Risk", icon: Compass },
   context: { id: "context", label: "Context", icon: Network },
@@ -292,6 +299,7 @@ export default function StablecoinDetailClient({
     isWrapperVariant && viewModel.variantParent
       ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
       : null;
+  const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
 
   return (
     <div>
@@ -393,6 +401,9 @@ export default function StablecoinDetailClient({
                 />
               )}
             </section>
+            {showDepegResolver ? (
+              <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
+            ) : null}
             {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
             {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
           </div>
