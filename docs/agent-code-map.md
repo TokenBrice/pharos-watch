@@ -365,19 +365,19 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
 - `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
 - `shared/lib/depeg-dews-version.ts`
-- `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDepegResolverAssessments
-- `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrReviewInput, lookupActualEvent
-- `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, hasTerminalEvidence
-- `shared/lib/depeg-resolver-review/review.ts` - DDRR_HORIZON_SECONDS, reviewDepegResolverAssessment, reviewDuration, reviewHorizons, reviewVerdict
-- `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrRows
+- `shared/lib/depeg-resolver-review/index.ts` - DdrrReviewBatchResult, reviewDdrrV2Rows, reviewDepegResolverAssessments
+- `shared/lib/depeg-resolver-review/inputs.ts` - DdrrActualEventInput, DdrrActualEventLookup, DdrrAssessmentInput, DdrrReviewBatchInput, DdrrReviewInput, DdrrV2CoverageInput
+- `shared/lib/depeg-resolver-review/outcomes.ts` - DdrrDerivedOutcome, deriveActualOutcome, getAssessmentReviewAnchorSec, hasTerminalEvidence
+- `shared/lib/depeg-resolver-review/review.ts` - DDRR_HORIZON_SECONDS, buildDdrrCoverageRow, buildDdrrInvalidatedPredictionRow, isOperationalMissCause, reviewDepegResolverAssessment, reviewDepegResolverNoCall
+- `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
+- `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
 - `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
-- `shared/lib/depeg-resolver/resolution.ts` - resolveOutlook
-- `shared/lib/depeg-resolver/strata.ts` - DdrCurrencyClass, DdrDepthBucket, DdrStratumCandidate, DdrStratumKey, DdrStructuralClass, STRATUM_ANY
-- ... 226 more files omitted; use `rg --files shared/lib` for the full list.
+- `shared/lib/depeg-resolver/public-contract.ts` - DdrPublicContractValidationResult, attachDdrPublicRowHash, buildDdrManifestBasePayload, computeDdrManifestBasePayloadHash, computeDdrPublicRowHash, validateDdrPublicCacheContract
+- ... 228 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -548,8 +548,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/shared.ts` - BlacklistRow, BlacklistScanResult, buildExplorerAddressUrl, buildExplorerTxUrl, shouldSuppressAsMirrorZero
 - `worker/src/cron/blacklist/sync-support.ts` - applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
 - `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental, parseTronEvent
-- `worker/src/cron/compute-depeg-resolver-review.ts` - buildDepegResolverReviewSnapshot, buildEmptyDdrrSummary, computeAndStoreDepegResolverReview
-- `worker/src/cron/compute-depeg-resolver.ts` - computeDepegResolver
+- `worker/src/cron/compute-depeg-resolver-review.ts` - ComputeDepegResolverReviewOptions, DdrrV2ReviewSource, buildDepegResolverReviewSnapshot, buildEmptyDdrrSummary, computeAndStoreDepegResolverReview
+- `worker/src/cron/compute-depeg-resolver.ts` - ComputeDepegResolverV2Options, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
 - `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, evaluateCronStaleness, runCronStalenessWatchdog
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 208 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 212 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

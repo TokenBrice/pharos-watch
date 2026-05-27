@@ -137,6 +137,150 @@ describe("DepegResolverModule", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/Duration not estimated/)).toBeNull();
   });
+
+  it("does not render verdict or duration for pending, deferred, and retry-pending v2 rows", () => {
+    const { rerender } = render(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              kind: "pending",
+              eligibleAt: 86_401,
+              prediction: { state: "pending_lock" },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Prediction lock pending")).toBeTruthy();
+    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText(/~resolve/)).toBeNull();
+
+    rerender(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              prediction: { state: "lock_deferred", deferralReason: "stablecoins cache stale" },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Health deferral")).toBeTruthy();
+    expect(screen.getByText("Deferral reason: stablecoins cache stale")).toBeTruthy();
+    expect(screen.queryByText("At Risk")).toBeNull();
+
+    rerender(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              prediction: { state: "publication_retry_pending", retryStatus: "Retrying next healthy publication run" },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Forecast publication delayed")).toBeTruthy();
+    expect(screen.getByText("Retrying next healthy publication run")).toBeTruthy();
+    expect(screen.queryByText("At Risk")).toBeNull();
+
+    rerender(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              prediction: { state: "publication_failed" },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Publication failed before public exposure")).toBeTruthy();
+    expect(screen.getByText(/operational coverage debt/)).toBeTruthy();
+    expect(screen.queryByText("At Risk")).toBeNull();
+  });
+
+  it("shows frozen prediction lock metadata separately from live status", () => {
+    render(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              prediction: { state: "frozen", lockedAt: 86_401, eligibleAt: 86_400, lockTiming: "on_time" },
+              live: { status: "active", ageSec: 90_000, currentDeviationBps: -180 },
+              duration: {
+                ...row.duration,
+                suppressed: false,
+                medianSec: 7200,
+                iqrSec: [3600, 10_800],
+                horizons: [],
+              },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Prediction frozen")).toBeTruthy();
+    expect(screen.getByText("anchored duration")).toBeTruthy();
+    expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /frozen at public lock/i })).toBeTruthy();
+    expect(screen.getByText("From lock")).toBeTruthy();
+    expect(screen.getByText("live now")).toBeTruthy();
+    expect(screen.queryByText("Projected")).toBeNull();
+    expect(screen.getByText("Live incident")).toBeTruthy();
+    expect(screen.getByText("on time")).toBeTruthy();
+  });
+
+  it("renders no-call and invalidated v2 rows as accountability states", () => {
+    const { rerender } = render(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              kind: "no_call",
+              prediction: { state: "no_call", lockedAt: 86_401, missingReasons: ["no usable live price"] },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("No-call at lock")).toBeTruthy();
+    expect(screen.getByText("no usable live price")).toBeTruthy();
+    expect(screen.queryByText("DDR does not expect this depeg to recover.")).toBeNull();
+
+    rerender(
+      <DepegResolverModule
+        data={response({
+          rows: [
+            {
+              ...row,
+              kind: "invalidated_prediction",
+              prediction: {
+                state: "invalidated",
+                originalOutcomeKind: "prediction",
+                invalidationReason: "source event repaired",
+              },
+              latestErratum: { summary: "Source event repaired after publication", createdAt: 86_500 },
+            } as DdrRow,
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
+    expect(screen.getByText("Erratum and original outcome")).toBeTruthy();
+  });
 });
 
 describe("StablecoinDepegResolverRows", () => {

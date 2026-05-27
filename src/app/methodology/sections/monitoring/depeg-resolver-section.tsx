@@ -21,12 +21,18 @@ export function DepegResolverMethodologySection() {
       changelogClassName="hover:text-violet-700 dark:text-violet-400"
     >
       <p>
-        When Pharos confirms an active depeg, the Depeg Duration Resolver answers two questions in order: will it come
-        back, and if so, when. Stage 1 emits an ordinal Resolution Outlook &mdash; Recovery Likely, At Risk, Recovery
+        When Pharos confirms an active depeg, the Depeg Duration Resolver answers two questions in order at the public
+        lock point: will it come back, and if so, when. Stage 1 emits an ordinal Resolution Outlook &mdash; Recovery Likely, At Risk, Recovery
         Unlikely, or Insufficient Signal &mdash; from five kill signals (supply weaponization, backing impairment,
         freeze/seizure, reflexive death-spiral, exit collapse) and five recovery anchors (non-inflatable supply, hard
         collateral with live redemption, no supply anomaly, no single freeze point, proven mean-reversion), each shown
         with the factors that drove it.
+      </p>
+      <p>
+        DDRv2 uses a sticky 24h public prediction policy. Active confirmed incidents show live facts only before the
+        lock, freeze exactly one official prediction or no-call on the first healthy eligible run, and keep that
+        first-published outcome immutable. Later current-price movement is shown as live status beside the frozen
+        prediction rather than rewriting it.
       </p>
       <p>
         Stage 1 is a calibrated mechanistic rubric, not fitted machine learning. The terminal-label corpus is roughly
@@ -42,11 +48,10 @@ export function DepegResolverMethodologySection() {
         Wilson-bounded so thin cells show their support state instead of a fabricated number.
       </p>
       <p>
-        The Depeg Duration Resolver Reviewer (DDRR) is the companion audit layer. It stores DDR assessment checkpoints,
-        scores the first checkpoint for each event under the current methodology against later canonical depeg-event
-        outcomes, and surfaces two headline checks: recovery-likelihood accuracy and the average observed-minus-DDR
-        recovery-duration error. Pending, insufficient-signal, and data-issue rows remain visible but are excluded from
-        scored headline accuracy.
+        The Depeg Duration Resolver Reviewer (DDRR) is the companion audit layer. It scores only frozen outcomes that
+        reached first publication, while coverage metrics keep no-calls, pre-lock recoveries, missed locks, publication
+        retries/failures, data-quality gaps, and invalidated predictions visible. Recovery-likelihood and duration
+        accuracy are computed only where a public frozen prediction can fairly be reviewed.
       </p>
       <p>
         DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. It is
@@ -55,8 +60,8 @@ export function DepegResolverMethodologySection() {
       </p>
       <MethodologyFacts
         facts={[
-          { label: "Trigger", value: "Active confirmed depeg events (ended_at IS NULL), both directions" },
-          { label: "Readouts", value: "DDR outlook/duration bands + DDRR recovery-likelihood and duration-error review" },
+          { label: "Trigger", value: "Confirmed canonical incidents, active at the 24h public lock point" },
+          { label: "Readouts", value: "Sticky DDR predictions/no-calls + DDRR coverage and first-publication review" },
           { label: "Update frequency", value: "Precomputed in the sync-stablecoins flow; served from D1 cache" },
         ]}
       />
@@ -78,9 +83,9 @@ export function DepegResolverMethodologySection() {
             scope. The full methodology, limitations, and backtest plan live in docs/depeg-resolver.md.
           </p>
           <p>
-            DDRR does not replay today&rsquo;s resolver over historical rows. It compares the stored DDR readout with the
-            later event outcome, caps the public row sample while computing headline stats across the loaded current
-            methodology ledger, and marks the snapshot degraded when that ledger is truncated or contains invalid rows.
+            DDRR does not replay today&rsquo;s resolver over historical rows. It compares the frozen first-published DDR
+            outcome with the later event outcome, keeps append-only errata visible, and separates policy-universe
+            coverage from scoreable recovery/duration accuracy.
           </p>
         </div>
       </MethodologyDetails>

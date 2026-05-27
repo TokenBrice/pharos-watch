@@ -1,10 +1,21 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v1.1`.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v2.0`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
 
 ---
+
+## v2.0 — Sticky Public Prediction Contract (May 27, 2026)
+
+Promoted DDR from a live reassessment widget to a one-shot public forecast contract.
+
+- **Sticky 24h lock policy.** Active confirmed incidents receive no headline verdict before the 24h lock point. The first healthy eligible run seals exactly one frozen prediction or one no-call for the canonical `incidentKey` under `sticky-24h-v1`.
+- **First-publication scoring.** DDRR headline review now scores only frozen `public_prediction` outcomes that entered the append-only first-publication manifest. Sealed-but-unpublished rows surface as `publication_retry_pending` and are not counted as public predictions.
+- **No-call semantics.** Healthy lock runs with insufficient row-level inputs freeze a `no_call` outcome. No-calls are visible accountability rows, excluded from recovery/duration accuracy, and cannot later drift into predictions.
+- **Coverage universe.** DDRR reports prediction coverage, scoreable coverage, publication success, no-call share, invalidation rate, missed locks, pre-lock recoveries/terminal outcomes, data-quality gaps, and retry/failed publication states over canonical incidents.
+- **Errata and invalidation.** Append-only errata keep original first-publication exposure visible while marking predictions invalidated and linking the latest correction/history.
+- **Live overlay split.** Frozen predictions keep lock-time verdict/duration anchored while the public DDR UI shows current deviation, incident age, stale/degraded status, and closure state separately.
 
 ## v1.1 — Depeg Duration Resolver Reviewer (May 25, 2026)
 

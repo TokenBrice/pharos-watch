@@ -1,34 +1,56 @@
 # Depeg Duration Resolver (DDR)
 
-When Pharos confirms an active depeg, the Depeg Duration Resolver answers the two questions an analyst actually asks, in order:
+When Pharos confirms an active depeg, the Depeg Duration Resolver answers the two questions an analyst actually asks, in order, but it now does so as a public forecast contract instead of a live-moving widget:
 
 1. **Will it come back?** — a *Resolution Outlook*: an ordinal verdict (Recovery Likely / At Risk / Recovery Unlikely / Insufficient Signal) driven by transparent mechanistic rules over the coin's structure and the depeg's fingerprint. **No fitted ML, no false-precision probability** — the death-label corpus is too thin to fit a supervised terminal classifier. Each verdict shows the contributing factors.
 2. **If it comes back, when?** — an *Expected Duration*: an empirical landmark-survival estimate over Pharos's clean corpus of *recovered* depeg incidents, conditioned on the depeg's structural stratum (depth, direction, structural class, peg currency), with explicit data-sufficiency gates and per-horizon (6h / 24h / 7d / 30d) resolution probabilities.
 
-Stage 2 only renders when Stage 1 is not terminal-leaning. The result is a two-readout module: a verdict with reasons, and — when recovery is plausible — a "typically resolves within X–Y" band.
+Stage 2 only renders when Stage 1 is not terminal-leaning. The result is a two-readout module: a verdict with reasons, and — when recovery is plausible — a "typically resolves within X–Y" band. Under DDRv2, that headline readout is frozen once per canonical incident at the public lock point and later live facts are shown separately.
 
 DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" verdict is a structural read, not a guarantee, and the inverse is equally true.
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.1`
+- **Current methodology version:** `v2.0`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
 
-Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion`, `durationModelVersion`, `incidentGroupingVersion`, and `supportRulesVersion`.
+Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion`, `durationModelVersion`, `incidentGroupingVersion`, `supportRulesVersion`, snapshot generation fields, public prediction IDs, and first-publication hashes.
 
 ## Trigger & Scope
 
-One DDR readout per **active confirmed** depeg event:
+DDRv2 maintains one official public lock outcome per **canonical confirmed depeg incident**. The live `/api/depeg-resolver` board is active/current only, but each row is a stateful projection of the durable incident:
 
 - `depeg_events.ended_at IS NULL` (the event is still open), and
 - the tracked stablecoin has not already entered a terminal lifecycle state (`frozen`, `dead`, `defunct`, `failed`, or `cemetery`), and
 - the event passes confirmation (provenance `auditVerdict` is not `false_positive`, `disputed`, or `no_data` where provenance exists).
 
-Closed events feed the historical corpus, not live readouts. Terminal lifecycle events also leave the live DDR board even when the raw depeg row remains open: once registry status proves the asset is frozen/dead, the "time to repeg" question has no finite observable answer, so DDRR owns the audit result instead of DDR publishing an infinite-duration live incident. DDR inherits the clean confirmed-event stream from the [depeg detection pipeline](./depeg-detection.md) (100 bps USD / 150 bps non-USD thresholds plus multi-source confirmation), so it does not re-run depeg detection.
+Closed and terminal events feed DDRR coverage and review, not new live DDR predictions. Terminal lifecycle events also leave the live DDR board even when the raw depeg row remains open: once registry status proves the asset is frozen/dead, the "time to repeg" question has no finite observable answer, so DDRR owns the audit result instead of DDR publishing an infinite-duration live incident. DDR inherits the clean confirmed-event stream from the [depeg detection pipeline](./depeg-detection.md) (100 bps USD / 150 bps non-USD thresholds plus multi-source confirmation), so it does not re-run depeg detection.
+
+## DDRv2 Public Forecast Contract
+
+DDRv2 freezes exactly one official lock outcome per canonical incident key. The public identity is `incidentKey`, not the mutable `depeg_events.id`, so delete/reinsert repair, merge, split, or start-time repair cannot silently create a second public prediction. The lock policy is methodology-owned:
+
+- `DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1"`
+- `DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600`
+- `DDR_LOCK_ON_TIME_GRACE_SEC = 20 * 60`
+- `DDR_V2_EFFECTIVE_AT = 1779897600` (May 27, 2026 00:00:00 UTC)
+
+The first healthy run at or after `started_at + 24h` seals either:
+
+- a frozen prediction (`prediction.state = "frozen"`) with the Stage 1 verdict, anchored duration, lock timestamp, lock timing, and first-publication metadata, or
+- a no-call (`prediction.state = "no_call"`) when the run is healthy but row-level inputs are insufficient.
+
+Before the lock point, rows use `pending_lock` and show live facts plus the lock countdown without a verdict or duration. If the lock point arrives while global/system health predicates fail, rows use `lock_deferred`; system-health deferrals do not create no-calls. If sealing succeeds but the first-publication manifest has not finalized, rows use `publication_retry_pending`; the sealed verdict, duration, and no-call details remain hidden until first publication succeeds.
+
+Frozen means frozen. Later prices, supply changes, methodology versions, better input coverage, or a worse peak do not mutate the official public prediction. Live incident status, current deviation, age, staleness, and degraded overlay details are shown as live facts beside the frozen lock outcome.
+
+Errata are append-only. If a source event or input is later proven wrong, DDR keeps the original first-publication exposure visible as `invalidated`, shows the original frozen prediction or no-call outcome, and attaches the latest erratum/history. Repairs require explicit lineage/authorization rather than automatic nearby-event linking.
+
+Short depegs are not predicted after the fact. If a confirmed incident recovers before the 24h lock point, DDRR classifies it as `resolved_before_prediction`; reliable terminal evidence before the lock point becomes `terminal_before_prediction`. Incidents that crossed eligibility but never received a public prediction become explicit coverage debt such as `missed_lock_recovered`, `missed_lock_terminal`, `publication_failed`, `orphan_closed`, or `data_quality_gap`.
 
 **Both directions are in scope.** For a below-peg break (underpeg) the kill signals do real work — this is where the terminal-vs-recoverable call matters. For an above-peg break (overpeg) recovery is quasi-certain (a premium mean-reverts as soon as minting/arbitrage works), so Stage 1 is almost always `recovery_likely` and the headline shifts to Stage 2 duration: how long the premium persists. The exception is a structurally sticky premium (minting paused or capped, or a NAV/yield token), which Stage 1 surfaces as `at_risk` rather than terminal.
 
@@ -121,9 +143,9 @@ No leakage: a closed event's final peak severity is never used to estimate a liv
 
 The Depeg Duration Resolver Reviewer (DDRR) is the audit companion to DDR. DDR answers an open-event question; DDRR asks whether a stored DDR answer later matched canonical Pharos event data.
 
-DDRR does **not** replay today's resolver over old events. The quarter-hourly DDR writer stores assessment checkpoints in `depeg_resolver_assessments` (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) with the original verdict tier, duration median/IQR, horizon cells, factors, methodology version, and source row JSON. Public reviewer v1 scores the `first` checkpoint for the current DDR methodology so headline stats are event-level, while later checkpoints remain in D1 for audit/drill-down expansion. The review layer compares the stored assessment with the later `depeg_events` row and tracked-coin lifecycle status.
+DDRR does **not** replay today's resolver over old events. DDRv2 scores only frozen outcomes that entered the first-publication manifest through `checkpoint = 'public_prediction'`. Diagnostic checkpoints (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) remain useful for audit, but they are not headline public predictions. The review layer compares the frozen first-published outcome with the later canonical incident state and tracked-coin lifecycle status.
 
-The public module on `/depeg/` sits directly below DDR and surfaces two headline reviewer stats first:
+The public module on `/depeg/` sits directly below DDR and separates coverage/accountability from accuracy. It surfaces prediction coverage, scoreable coverage, publication success, no-call share, invalidation rate, and missed-lock/deferred states before treating any row as an accuracy sample.
 
 - **Recovery likelihood** — strict accuracy for scored DDR recovery verdicts. Correct recoverable and correct terminal calls count in the numerator; false terminal, false recoverable, and `at_risk` terminal outcomes are scored in the denominator. Pending, insufficient-signal, and data-issue rows are excluded.
 - **Recovery duration** — average signed observed-minus-DDR duration error for recovered rows with a duration estimate. Positive means the observed recovery took longer than DDR's median remaining-time estimate; negative means it recovered faster. The module also shows the average absolute error as context.
@@ -135,7 +157,7 @@ Review outcomes are deliberately conservative:
 - A terminal/frozen tracked asset without a recovery price is `terminal_observed`, even if the underlying depeg row remains open; that lifecycle evidence matures the review as a terminal outcome rather than a pending duration case.
 - Missing source rows or closed rows without recovery/terminal evidence are data issues, not wins or losses.
 
-The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same review snapshot used by the UI. Headline stats are computed across the loaded current-methodology assessment ledger, while public review rows are capped to the newest 100 rows to keep the D1 cache row bounded; `_meta.publicRowsTruncated` and `_meta.assessmentRowsTruncated` disclose truncation. Missing or invalid snapshots return a degraded `200` with empty rows, matching DDR's public failure mode. Stale review snapshots keep their rows and mark `_meta.degraded=true` / `degradedReason="stale-cache"`.
+The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same review snapshot used by the UI. Headline stats are computed across the v2 policy universe, while public review rows are capped to keep the D1 cache row bounded; `_meta.publicRowsTruncated` and `_meta.assessmentRowsTruncated` disclose truncation. Missing or invalid snapshots return a degraded `200` with empty rows, matching DDR's public failure mode. Stale review snapshots keep their rows and mark `_meta.degraded=true` / `degradedReason="stale-cache"`.
 
 ## Honest Limitations & Failure Modes
 
@@ -161,9 +183,9 @@ DDR is validated by a replay harness over historical events plus the label corpu
 
 ## Data Plumbing
 
-Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by cache-backed endpoints. After the DDR snapshot is written, the same job best-effort persists assessment checkpoints and rebuilds the DDRR review snapshot from the assessment ledger plus current `depeg_events`; DDRR persistence or snapshot failures are recorded in cron metadata without failing the already-written DDR run unless the cron abort signal has fired. The frontend reads the caches only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes a degraded run on failure rather than failing the parent sync.
+Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by cache-backed endpoints. The writer resolves canonical incidents, records lock deferrals, seals immutable predictions/no-calls, finalizes first-publication manifests, and then projects the public DDR cache from sealed outcomes plus live overlays. The same job rebuilds the DDRR review snapshot from first-publication exposure, errata, and policy-universe coverage rows. DDRR persistence or snapshot failures are recorded in cron metadata without failing an already-written DDR run unless the cron abort signal has fired. The frontend reads the caches only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes degraded lock-deferral overlays rather than inventing verdicts during unhealthy runs.
 
-The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer and the cache-backed `GET /api/depeg-resolver` handler degrade to a `200` with empty rows when the cache is missing, and serve stale rows with a warning (suppressing duration cells, keeping verdicts) when the cache is stale.
+The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer and the cache-backed `GET /api/depeg-resolver` handler degrade to a `200` with empty rows when the cache is missing, and serve stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus live overlay facts.
 
 The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`.
 

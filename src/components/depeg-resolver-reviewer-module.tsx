@@ -32,6 +32,46 @@ interface DepegResolverReviewerModuleProps {
   logos?: Record<string, string>;
 }
 
+type DdrrCoverageState =
+  | "pending_lock"
+  | "lock_deferred"
+  | "data_quality_gap"
+  | "orphan_closed"
+  | "publication_retry_pending"
+  | "resolved_before_prediction"
+  | "terminal_before_prediction"
+  | "missed_lock_recovered"
+  | "missed_lock_terminal"
+  | "publication_failed"
+  | "no_call"
+  | "invalidated";
+
+type DdrrCompatSummary = DdrrSummary & {
+  policyUniverseCount?: number | null;
+  scoreableCoveragePct?: number | null;
+  predictionCoveragePct?: number | null;
+  publicationSuccessPct?: number | null;
+  noCallSharePct?: number | null;
+  invalidationRatePct?: number | null;
+  coverage?: {
+    policyUniverseCount?: number | null;
+    scoreableCoveragePct?: number | null;
+    predictionCoveragePct?: number | null;
+    publicationSuccessPct?: number | null;
+    noCallSharePct?: number | null;
+    invalidationRatePct?: number | null;
+  } | null;
+};
+
+type DdrrCompatMeta = DdrrResponse["_meta"] & {
+  policyUniverseCount?: number | null;
+  scoreableCoveragePct?: number | null;
+  predictionCoveragePct?: number | null;
+  publicationSuccessPct?: number | null;
+  noCallSharePct?: number | null;
+  invalidationRatePct?: number | null;
+};
+
 /** Below this many scored verdicts, accuracy is presented as a raw fraction, not a percentage. */
 const CALIBRATION_THRESHOLD = 5;
 const ROW_DISPLAY_LIMIT = 8;
@@ -62,11 +102,12 @@ const VERDICT_STYLES: Record<DdrrVerdictReview, string> = {
 
 const OUTCOME_LABELS: Record<DdrrActualOutcome, string> = {
   recovered: "recovered",
+  terminal: "terminal observed",
   orphan_closed: "closed without recovery",
-  terminal_observed: "terminal observed",
   still_open: "still open",
-  source_event_missing: "source missing",
+  source_missing: "source missing",
   data_issue: "data issue",
+  invalidated: "invalidated",
 };
 
 const CHECKPOINT_LABELS: Record<DdrrCheckpoint, string> = {
@@ -76,6 +117,7 @@ const CHECKPOINT_LABELS: Record<DdrrCheckpoint, string> = {
   age_24h: "24h",
   age_7d: "7d",
   latest: "Latest",
+  public_prediction: "Public prediction",
 };
 
 const DURATION_LABELS: Record<DdrrDurationReview, string> = {
@@ -89,6 +131,36 @@ const DURATION_LABELS: Record<DdrrDurationReview, string> = {
   data_issue: "data issue",
 };
 
+const COVERAGE_LABELS: Record<DdrrCoverageState, string> = {
+  pending_lock: "pending lock",
+  lock_deferred: "lock deferred",
+  data_quality_gap: "data quality gap",
+  orphan_closed: "orphan closed",
+  publication_retry_pending: "publication retry",
+  resolved_before_prediction: "resolved before lock",
+  terminal_before_prediction: "terminal before lock",
+  missed_lock_recovered: "missed recovered",
+  missed_lock_terminal: "missed terminal",
+  publication_failed: "publication failed",
+  no_call: "no-call",
+  invalidated: "invalidated",
+};
+
+const COVERAGE_STYLES: Record<DdrrCoverageState, string> = {
+  pending_lock: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  lock_deferred: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  data_quality_gap: "border-border bg-muted text-muted-foreground",
+  orphan_closed: "border-border bg-muted text-muted-foreground",
+  publication_retry_pending: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  resolved_before_prediction: "border-border bg-background text-muted-foreground",
+  terminal_before_prediction: "border-border bg-background text-muted-foreground",
+  missed_lock_recovered: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  missed_lock_terminal: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  publication_failed: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  no_call: "border-border bg-muted text-muted-foreground",
+  invalidated: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+};
+
 /** Verdict reviews that count as a real, scored result (vs. still maturing). */
 const SCORED_VERDICTS = new Set<DdrrVerdictReview>([
   "correct_recoverable",
@@ -99,7 +171,11 @@ const SCORED_VERDICTS = new Set<DdrrVerdictReview>([
 ]);
 
 function isScored(row: DdrrRow): boolean {
-  return SCORED_VERDICTS.has(row.verdictReview);
+  return SCORED_VERDICTS.has(getVerdictReview(row));
+}
+
+function isTrackRecordRow(row: DdrrRow): boolean {
+  return getCoverageState(row) == null;
 }
 
 function formatPercent(value: number | null): string {
@@ -113,6 +189,82 @@ function formatSignedDuration(seconds: number | null): string {
   const rounded = Math.round(seconds);
   if (rounded === 0) return "0s";
   return `${rounded > 0 ? "+" : "−"}${formatElapsedSeconds(Math.abs(rounded))}`;
+}
+
+function getCoverageState(row: DdrrRow): DdrrCoverageState | null {
+  const record = asRecord(row);
+  const coverage = asRecord(record.coverage);
+  const state = record.coverageState ?? record.predictionState ?? coverage.coverageState ?? coverage.predictionState;
+  return typeof state === "string" && state in COVERAGE_LABELS ? (state as DdrrCoverageState) : null;
+}
+
+function formatMetricPercent(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return formatPercent(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value != null && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function getHeadlineMetrics(summary: DdrrSummary): Record<string, unknown> {
+  const compat = asRecord(summary);
+  return asRecord(compat.headline).horizonHitRates != null || "headline" in compat ? asRecord(compat.headline) : compat;
+}
+
+function getNumberMetric(summary: DdrrSummary, key: string, fallback = 0): number {
+  const value = getHeadlineMetrics(summary)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function getNullableMetric(summary: DdrrSummary, key: string): number | null {
+  const value = getHeadlineMetrics(summary)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getVerdictReview(row: DdrrRow): DdrrVerdictReview {
+  const value = asRecord(row).verdictReview;
+  return typeof value === "string" && value in VERDICT_LABELS ? (value as DdrrVerdictReview) : "pending";
+}
+
+function getDurationReview(row: DdrrRow): DdrrDurationReview {
+  const value = asRecord(row).durationReview;
+  return typeof value === "string" && value in DURATION_LABELS ? (value as DdrrDurationReview) : "duration_unscored";
+}
+
+function getActualOutcome(row: DdrrRow): DdrrActualOutcome {
+  const record = asRecord(row);
+  const actual = asRecord(record.actual);
+  const direct = record.actualOutcome ?? actual.kind;
+  if (typeof direct === "string" && direct in OUTCOME_LABELS) return direct as DdrrActualOutcome;
+
+  const source = record.sourceEventState;
+  if (source === "active") return "still_open";
+  if (source === "missing") return "source_missing";
+  if (source === "terminal" || source === "recovered" || source === "orphan_closed" || source === "data_issue" || source === "invalidated") {
+    return source;
+  }
+  return "data_issue";
+}
+
+function getCheckpoint(row: DdrrRow): DdrrCheckpoint {
+  const value = asRecord(row).checkpoint;
+  return typeof value === "string" && value in CHECKPOINT_LABELS ? (value as DdrrCheckpoint) : "public_prediction";
+}
+
+function getRowTime(row: DdrrRow): number {
+  const record = asRecord(row);
+  for (const key of ["assessedAt", "lockedAt", "publishedAt", "eligibleAt", "startedAt"]) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return 0;
+}
+
+function getSignedDurationError(row: DdrrRow): number | null {
+  const record = asRecord(row);
+  const value = record.signedErrorSec ?? record.signedDurationErrorSec;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 // --- track-record timeline -------------------------------------------------
@@ -152,19 +304,19 @@ const NODE_TONE: Record<NodeKind, { dot: string; pos: string }> = {
 function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
   // Oldest call on the left, the most recent at "now" on the right.
   const ordered = [...rows]
-    .sort((a, b) => a.assessedAt - b.assessedAt)
+    .sort((a, b) => getRowTime(a) - getRowTime(b))
     .slice(-TIMELINE_NODE_LIMIT);
   if (ordered.length === 0) return null;
 
-  const correct = ordered.filter((r) => nodeKind(r.verdictReview) === "correct").length;
-  const miss = ordered.filter((r) => nodeKind(r.verdictReview) === "miss").length;
-  const pending = ordered.filter((r) => nodeKind(r.verdictReview) === "pending").length;
+  const correct = ordered.filter((r) => nodeKind(getVerdictReview(r)) === "correct").length;
+  const miss = ordered.filter((r) => nodeKind(getVerdictReview(r)) === "miss").length;
+  const pending = ordered.filter((r) => nodeKind(getVerdictReview(r)) === "pending").length;
 
   return (
     <div
       className="relative h-14 w-full"
       role="img"
-      aria-label={`Track record across ${ordered.length} graded DDR calls: ${correct} correct, ${miss} missed, ${pending} still maturing, oldest left, most recent right.`}
+      aria-label={`Track record across ${ordered.length} graded DDR outcomes: ${correct} correct, ${miss} missed, ${pending} still maturing, oldest left, most recent right.`}
     >
       {/* the rail */}
       <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" aria-hidden="true" />
@@ -175,15 +327,18 @@ function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
       </span>
 
       {ordered.map((row, i) => {
-        const kind = nodeKind(row.verdictReview);
+        const coverageState = getCoverageState(row);
+        const kind = coverageState && !isScored(row) ? "muted" : nodeKind(getVerdictReview(row));
         const tone = NODE_TONE[kind];
         const left = ordered.length === 1 ? 50 : (i / (ordered.length - 1)) * 96 + 2;
         return (
           <span
-            key={`${row.eventId}:${row.checkpoint}:${row.assessedAt}`}
+            key={`${row.eventId}:${getCheckpoint(row)}:${getRowTime(row)}`}
             className={cn("absolute h-2 w-2 -translate-x-1/2 rounded-full", tone.dot, tone.pos)}
             style={{ left: `${left}%` }}
-            title={`${row.symbol} · ${VERDICT_LABELS[row.verdictReview]} · ${OUTCOME_LABELS[row.actualOutcome]}`}
+            title={`${row.symbol} · ${
+              coverageState ? COVERAGE_LABELS[coverageState] : VERDICT_LABELS[getVerdictReview(row)]
+            } · ${OUTCOME_LABELS[getActualOutcome(row)]}`}
             aria-hidden="true"
           />
         );
@@ -276,10 +431,11 @@ function BreakdownStat({
 }
 
 function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
-  const correct = summary.recoveryLikelihoodCorrectCount;
-  const scored = summary.recoveryLikelihoodScoredCount;
-  const pct = summary.recoveryLikelihoodAccuracyPct;
-  const durationScored = summary.durationScoredCount;
+  const correct = getNumberMetric(summary, "recoveryLikelihoodCorrectCount");
+  const scored = getNumberMetric(summary, "recoveryLikelihoodScoredCount");
+  const pct = getNullableMetric(summary, "recoveryLikelihoodAccuracyPct");
+  const durationScored = getNumberMetric(summary, "durationScoredCount");
+  const pending = getNumberMetric(summary, "pending", getNumberMetric(summary, "pendingLockCount"));
 
   const recoveryValue = scored > 0 ? `${correct} / ${scored}` : "—";
   const recoveryCaption =
@@ -300,7 +456,7 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
             </span>
             <span className="text-xs text-muted-foreground">{recoveryCaption}</span>
           </div>
-          <CalibrationBar scored={scored} maturing={summary.pending} tone="emerald" />
+          <CalibrationBar scored={scored} maturing={pending} tone="emerald" />
         </div>
 
         <div className="space-y-2.5 sm:border-l sm:border-border/50 sm:pl-6">
@@ -309,10 +465,15 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
             {durationScored > 0 ? (
               <>
                 <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-                  {formatSignedDuration(summary.averageSignedDurationErrorSec)}
+                  {formatSignedDuration(getNullableMetric(summary, "averageSignedDurationErrorSec") ?? getNullableMetric(summary, "meanSignedDurationErrorSec"))}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  mean miss · ±{formatElapsedSeconds(summary.averageAbsoluteDurationErrorSec ?? 0)}
+                  mean miss · ±
+                  {formatElapsedSeconds(
+                    getNullableMetric(summary, "averageAbsoluteDurationErrorSec") ??
+                      getNullableMetric(summary, "meanAbsoluteDurationErrorSec") ??
+                      0,
+                  )}
                 </span>
               </>
             ) : (
@@ -324,39 +485,156 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
               </>
             )}
           </div>
-          <CalibrationBar scored={durationScored} maturing={summary.pending} tone="cyan" />
+          <CalibrationBar scored={durationScored} maturing={pending} tone="cyan" />
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/50 pt-3">
         <BreakdownStat
           label="correct"
-          value={summary.correctRecoverable + summary.correctTerminal}
+          value={getNumberMetric(summary, "correctRecoverable") + getNumberMetric(summary, "correctTerminal")}
           tone="emerald"
         />
         <BreakdownStat
           label="false terminal"
-          value={summary.falseTerminal}
-          tone={summary.falseTerminal > 0 ? "red" : "muted"}
+          value={getNumberMetric(summary, "falseTerminal")}
+          tone={getNumberMetric(summary, "falseTerminal") > 0 ? "red" : "muted"}
         />
         <BreakdownStat
           label="false recoverable"
-          value={summary.falseRecoverable}
-          tone={summary.falseRecoverable > 0 ? "red" : "muted"}
+          value={getNumberMetric(summary, "falseRecoverable")}
+          tone={getNumberMetric(summary, "falseRecoverable") > 0 ? "red" : "muted"}
         />
-        <BreakdownStat label="inside IQR" value={`${summary.withinIqrCount}/${summary.iqrScoredCount}`} />
-        <BreakdownStat label="pending" value={summary.pending} />
+        <BreakdownStat
+          label="inside IQR"
+          value={`${getNumberMetric(summary, "withinIqrCount")}/${getNumberMetric(summary, "iqrScoredCount")}`}
+        />
+        <BreakdownStat label="pending" value={pending} />
       </div>
     </div>
   );
 }
 
+function getCoverageMetric(
+  summary: DdrrSummary,
+  meta: DdrrResponse["_meta"] | undefined,
+  key: keyof Pick<
+    DdrrCompatSummary,
+    | "scoreableCoveragePct"
+    | "predictionCoveragePct"
+    | "publicationSuccessPct"
+    | "noCallSharePct"
+    | "invalidationRatePct"
+  >,
+): number | null {
+  const summaryCompat = summary as DdrrCompatSummary;
+  const metaCompat = meta as DdrrCompatMeta | undefined;
+  const direct = summaryCompat.coverage?.[key] ?? summaryCompat[key] ?? metaCompat?.[key] ?? null;
+  if (direct != null) return direct;
+
+  if (key === "scoreableCoveragePct") {
+    const denominator = getNumberMetric(summary, "policyUniverseIncidentCount");
+    return denominator > 0 ? getNumberMetric(summary, "recoveryLikelihoodScoredCount") / denominator : null;
+  }
+
+  if (key === "publicationSuccessPct") {
+    const published = getNumberMetric(summary, "lockedPredictionCount");
+    const retryPending = getNumberMetric(summary, "publicationRetryPendingCount");
+    const failed = getNumberMetric(summary, "publicationFailedCount");
+    const denominator = published + retryPending + failed;
+    return denominator > 0 ? published / denominator : null;
+  }
+
+  const v2Key =
+    key === "predictionCoveragePct"
+      ? "predictionRatePct"
+      : key === "noCallSharePct"
+        ? "noCallRatePct"
+        : key === "invalidationRatePct"
+          ? "invalidatedPct"
+          : null;
+  return v2Key ? getNullableMetric(summary, v2Key) : null;
+}
+
+function getPolicyUniverseCount(summary: DdrrSummary, meta: DdrrResponse["_meta"] | undefined): number {
+  const summaryCompat = summary as DdrrCompatSummary;
+  const metaCompat = meta as DdrrCompatMeta | undefined;
+  return (
+    summaryCompat.coverage?.policyUniverseCount ??
+    summaryCompat.policyUniverseCount ??
+    metaCompat?.policyUniverseCount ??
+    getNumberMetric(summary, "policyUniverseIncidentCount", meta?.assessedEventCount ?? 0)
+  );
+}
+
+function CoverageAccountabilityLedger({
+  summary,
+  meta,
+}: {
+  summary: DdrrSummary;
+  meta: DdrrResponse["_meta"] | undefined;
+}) {
+  const policyUniverseCount = getPolicyUniverseCount(summary, meta);
+  const metrics = [
+    {
+      label: "Scoreable coverage",
+      value: formatMetricPercent(getCoverageMetric(summary, meta, "scoreableCoveragePct")),
+    },
+    {
+      label: "Prediction coverage",
+      value: formatMetricPercent(getCoverageMetric(summary, meta, "predictionCoveragePct")),
+    },
+    {
+      label: "Publication success",
+      value: formatMetricPercent(getCoverageMetric(summary, meta, "publicationSuccessPct")),
+    },
+    {
+      label: "No-call share",
+      value: formatMetricPercent(getCoverageMetric(summary, meta, "noCallSharePct")),
+    },
+    {
+      label: "Invalidation rate",
+      value: formatMetricPercent(getCoverageMetric(summary, meta, "invalidationRatePct")),
+    },
+  ];
+
+  return (
+    <div className="pharos-card-shell p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Kicker>Coverage accountability</Kicker>
+        <span className="font-mono text-[10px] text-muted-foreground">
+          {policyUniverseCount.toLocaleString()} policy-universe incidents
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="min-w-0 rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
+            <p className="truncate text-[11px] text-muted-foreground">{metric.label}</p>
+            <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground">{metric.value}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Headline accuracy reviews frozen outcomes only after first public publication. No-calls, missed locks,
+        publication failures, and invalidations remain in coverage even when they are not scoreable accuracy rows.
+      </p>
+    </div>
+  );
+}
+
 function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string> }) {
+  const coverageState = getCoverageState(row);
   const scored = isScored(row);
+  const verdictReview = getVerdictReview(row);
+  const durationReview = getDurationReview(row);
+  const actualOutcome = getActualOutcome(row);
+  const signedDurationErrorSec = getSignedDurationError(row);
+  const verdictLabel = coverageState ? COVERAGE_LABELS[coverageState] : VERDICT_LABELS[verdictReview];
+  const verdictStyle = coverageState ? COVERAGE_STYLES[coverageState] : VERDICT_STYLES[verdictReview];
   const durationText =
-    row.signedErrorSec == null
-      ? DURATION_LABELS[row.durationReview]
-      : `${formatSignedDuration(row.signedErrorSec)} ${DURATION_LABELS[row.durationReview]}`;
+    signedDurationErrorSec == null
+      ? DURATION_LABELS[durationReview]
+      : `${formatSignedDuration(signedDurationErrorSec)} ${DURATION_LABELS[durationReview]}`;
 
   // Two stacked lines on mobile (identity never shrinks to nothing), one row on sm+.
   return (
@@ -374,13 +652,13 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
         variant="outline"
         className={cn(
           "justify-self-end text-[11px] sm:col-start-3 sm:row-start-1 sm:justify-self-start",
-          VERDICT_STYLES[row.verdictReview],
+          verdictStyle,
         )}
       >
-        {VERDICT_LABELS[row.verdictReview]}
+        {verdictLabel}
       </Badge>
       <span className="justify-self-start font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
-        {CHECKPOINT_LABELS[row.checkpoint]} · {OUTCOME_LABELS[row.actualOutcome]}
+        {CHECKPOINT_LABELS[getCheckpoint(row)]} · {OUTCOME_LABELS[actualOutcome]}
       </span>
       <span className="justify-self-end font-mono text-[11px] tabular-nums text-muted-foreground sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
         {durationText}
@@ -411,7 +689,7 @@ function ReviewLegend() {
 
 function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: DdrrResponse | undefined }) {
   const meta = data?._meta;
-  const scored = data?.summary?.recoveryLikelihoodScoredCount ?? 0;
+  const scored = data?.summary ? getNumberMetric(data.summary, "recoveryLikelihoodScoredCount") : 0;
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
@@ -454,8 +732,8 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
         ) : null}
       </div>
       <p className="text-pretty text-sm text-muted-foreground">
-        Grades every past DDR call against what actually happened —{" "}
-        <span className="text-foreground">the wins and the misses</span>, never cherry-picked.
+        Grades frozen, first-published DDR predictions against what actually happened and keeps the coverage debt
+        visible - <span className="text-foreground">the wins, misses, no-calls, and gaps</span>, never cherry-picked.
       </p>
     </div>
   );
@@ -486,12 +764,13 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
 
   const summary = data?.summary;
   const rows = data?.rows ?? [];
-  const calibrating = (summary?.recoveryLikelihoodScoredCount ?? 0) < CALIBRATION_THRESHOLD;
+  const calibrating = (summary ? getNumberMetric(summary, "recoveryLikelihoodScoredCount") : 0) < CALIBRATION_THRESHOLD;
 
   // Scored rows carry the signal; surface them first, then a capped run of maturing rows.
   const orderedRows = [...rows].sort((a, b) => Number(isScored(b)) - Number(isScored(a)));
   const shownRows = orderedRows.slice(0, ROW_DISPLAY_LIMIT);
   const hiddenCount = orderedRows.length - shownRows.length;
+  const trackRecordRows = rows.filter(isTrackRecordRow);
 
   return (
     <section aria-label="Depeg Duration Resolver Reviewer" className="space-y-4">
@@ -512,6 +791,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
       ) : (
         <>
           <CalibrationLedger summary={summary} />
+          <CoverageAccountabilityLedger summary={summary} meta={data._meta} />
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 
           {data._meta.degraded ? (
@@ -527,7 +807,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
               <ReviewLegend />
             </div>
             <div className="pharos-card-shell px-4 py-3 sm:px-5">
-              <TrackRecordTimeline rows={rows} />
+              <TrackRecordTimeline rows={trackRecordRows} />
               <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-wide text-muted-foreground/70">
                 <span>older calls</span>
                 <span>recent</span>
@@ -540,12 +820,12 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             <Kicker>Reviewed readouts</Kicker>
             <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-card/40">
               {shownRows.map((row) => (
-                <ReviewRow key={`${row.eventId}:${row.checkpoint}:${row.assessedAt}`} row={row} logos={logos} />
+              <ReviewRow key={`${row.eventId}:${getCheckpoint(row)}:${getRowTime(row)}`} row={row} logos={logos} />
               ))}
             </ul>
             {hiddenCount > 0 ? (
               <p className="px-1 font-mono text-[11px] text-muted-foreground">
-                +{hiddenCount} more maturing
+                +{hiddenCount} more reviewer rows
               </p>
             ) : null}
           </div>

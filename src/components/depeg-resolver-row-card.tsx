@@ -12,12 +12,14 @@ import type {
   DdrFactor,
   DdrFactorSeverity,
   DdrHorizon,
+  DdrResponse,
+  DdrResolution,
   DdrResolutionTier,
   DdrRow,
 } from "@shared/types/depeg-resolver";
 
 interface DepegResolverRowCardProps {
-  row: DdrRow;
+  row: DdrDisplayRow;
   logos?: Record<string, string>;
 }
 
@@ -29,10 +31,152 @@ interface StablecoinDepegResolverRowsProps {
           degraded: boolean;
           degradedReason?: string | null;
         };
-        rows: DdrRow[];
+        rows: DdrDisplayRow[];
       }
     | undefined;
   logoSrc?: string;
+}
+
+type DdrDisplayRow = DdrResponse["rows"][number] | DdrRow;
+
+type DdrPublicPredictionState =
+  | "pending_lock"
+  | "lock_deferred"
+  | "publication_retry_pending"
+  | "publication_failed"
+  | "frozen"
+  | "no_call"
+  | "invalidated";
+
+type DdrCompatPrediction = {
+  state?: string | null;
+  lockedAt?: number | null;
+  predictedAt?: number | null;
+  assessedAt?: number | null;
+  eligibleAt?: number | null;
+  eventAgeAtLockSec?: number | null;
+  lockTiming?: string | null;
+  missingReasons?: string[] | null;
+  deferralReason?: string | null;
+  retryStatus?: string | null;
+  nextRetryAt?: number | null;
+  publicationSnapshotToken?: string | null;
+  originalOutcomeKind?: string | null;
+  outcomeKind?: string | null;
+  invalidatedAt?: number | null;
+  invalidationReason?: string | null;
+};
+
+type DdrCompatErratum = {
+  id?: string | number | null;
+  reason?: string | null;
+  summary?: string | null;
+  createdAt?: number | null;
+};
+
+type DdrCompatRow = DdrDisplayRow & {
+  kind?: string | null;
+  predictionState?: string | null;
+  incidentKey?: string | null;
+  eligibleAt?: number | null;
+  lockedAt?: number | null;
+  lockTiming?: string | null;
+  missingReasons?: string[] | null;
+  prediction?: DdrCompatPrediction | null;
+  frozen?: {
+    resolution?: DdrResolution;
+    duration?: DdrDuration;
+    relatedContext?: DdrRow["relatedContext"];
+    sourceRow?: Partial<DdrRow>;
+  } | null;
+  noCall?: {
+    lockedAt?: number | null;
+    eventAgeAtLockSec?: number | null;
+    missingReasons?: string[] | null;
+    relatedContext?: DdrRow["relatedContext"];
+  } | null;
+  originalOutcome?: {
+    resolution?: DdrResolution;
+    duration?: DdrDuration;
+    relatedContext?: DdrRow["relatedContext"];
+    missingReasons?: string[] | null;
+  } | null;
+  originalKind?: string | null;
+  coverage?: { predictionState?: string | null; coverageState?: string | null } | null;
+  live?: {
+    ageSec?: number | null;
+    currentDeviationBps?: number | null;
+    peakDeviationBps?: number | null;
+    status?: string | null;
+    eventState?: string | null;
+    active?: boolean | null;
+    stale?: boolean | null;
+    degradedReason?: string | null;
+  } | null;
+  latestErratum?: DdrCompatErratum | null;
+  errata?: DdrCompatErratum[] | null;
+};
+
+const EMPTY_DURATION: DdrDuration = {
+  suppressed: true,
+  suppressedReason: "unavailable",
+  stratum: null,
+  medianSec: null,
+  iqrSec: null,
+  ageStatus: null,
+  horizons: [],
+};
+
+const EMPTY_RESOLUTION: DdrResolution = {
+  tier: "insufficient_signal",
+  factors: [],
+  insufficientReasons: [],
+};
+
+const EMPTY_CONTEXT: DdrRow["relatedContext"] = {
+  dewsBand: null,
+  dewsScore: null,
+  liquidityScore: null,
+  safetyGrade: null,
+  safetyScore: null,
+  supplyChange7dPct: null,
+  supplyChange30dPct: null,
+  mintSurge: null,
+};
+
+function getResolution(row: DdrDisplayRow): DdrResolution {
+  const compat = row as DdrCompatRow;
+  return ("resolution" in row ? row.resolution : undefined) ?? compat.frozen?.resolution ?? compat.originalOutcome?.resolution ?? EMPTY_RESOLUTION;
+}
+
+function getDuration(row: DdrDisplayRow): DdrDuration {
+  const compat = row as DdrCompatRow;
+  return ("duration" in row ? row.duration : undefined) ?? compat.frozen?.duration ?? compat.originalOutcome?.duration ?? EMPTY_DURATION;
+}
+
+function getRelatedContext(row: DdrDisplayRow): DdrRow["relatedContext"] {
+  const compat = row as DdrCompatRow;
+  return (
+    ("relatedContext" in row ? row.relatedContext : undefined) ??
+    compat.frozen?.relatedContext ??
+    compat.noCall?.relatedContext ??
+    EMPTY_CONTEXT
+  );
+}
+
+function getAgeSec(row: DdrDisplayRow): number {
+  const compat = row as DdrCompatRow;
+  return ("ageSec" in row ? row.ageSec : undefined) ?? compat.live?.ageSec ?? compat.prediction?.eventAgeAtLockSec ?? compat.noCall?.eventAgeAtLockSec ?? 0;
+}
+
+function getPeakDeviationBps(row: DdrDisplayRow): number {
+  const compat = row as DdrCompatRow;
+  return ("peakDeviationBps" in row ? row.peakDeviationBps : undefined) ?? compat.live?.peakDeviationBps ?? compat.frozen?.sourceRow?.peakDeviationBps ?? 0;
+}
+
+function getCurrentDeviationBps(row: DdrDisplayRow): number | null {
+  const compat = row as DdrCompatRow;
+  return ("currentDeviationBps" in row ? row.currentDeviationBps : undefined) ?? compat.live?.currentDeviationBps ?? compat.frozen?.sourceRow?.currentDeviationBps ?? null;
 }
 
 const TIER_META: Record<DdrResolutionTier, { label: string; blurb: string; band: string }> = {
@@ -88,6 +232,15 @@ const SUPPRESSED_REASON_LABELS: Record<string, string> = {
 
 const HOUR_SECONDS = 3600;
 const DAY_SECONDS = 86_400;
+const DDR_V2_STATES = new Set<string>([
+  "pending_lock",
+  "lock_deferred",
+  "publication_retry_pending",
+  "publication_failed",
+  "frozen",
+  "no_call",
+  "invalidated",
+]);
 
 function formatDurationSec(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
@@ -98,6 +251,71 @@ function formatDurationSec(seconds: number): string {
   }
   const days = seconds / DAY_SECONDS;
   return `${Number.isInteger(days) ? days : days.toFixed(1)}d`;
+}
+
+function formatUtcTimestamp(seconds: number | null | undefined): string | null {
+  if (seconds == null || !Number.isFinite(seconds)) return null;
+  return new Date(seconds * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+}
+
+function compactLockTiming(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.replaceAll("_", " ");
+}
+
+function getPredictionState(row: DdrDisplayRow): DdrPublicPredictionState | null {
+  const compat = row as DdrCompatRow;
+  const state =
+    compat.prediction?.state ?? compat.predictionState ?? compat.coverage?.predictionState ?? compat.coverage?.coverageState;
+  if (state && DDR_V2_STATES.has(state)) return state as DdrPublicPredictionState;
+
+  switch (compat.kind) {
+    case "pending":
+      return "pending_lock";
+    case "prediction":
+      return "frozen";
+    case "no_call":
+      return "no_call";
+    case "invalidated_prediction":
+      return "invalidated";
+    default:
+      return null;
+  }
+}
+
+function getLockMetadata(row: DdrDisplayRow) {
+  const compat = row as DdrCompatRow;
+  const prediction = compat.prediction ?? {};
+  const lockedAt = prediction.lockedAt ?? prediction.assessedAt ?? compat.lockedAt ?? null;
+  const eligibleAt = prediction.eligibleAt ?? compat.eligibleAt ?? null;
+  const predictedAt = prediction.predictedAt ?? prediction.assessedAt ?? lockedAt;
+  const predictedAgeSec = lockedAt != null ? Math.max(0, lockedAt - row.startedAt) : null;
+
+  return {
+    lockedAt,
+    eligibleAt,
+    predictedAt,
+    predictedAgeSec,
+    lockTiming: prediction.lockTiming ?? compat.lockTiming ?? null,
+    incidentKey: compat.incidentKey ?? null,
+  };
+}
+
+function getMissingReasons(row: DdrDisplayRow): string[] {
+  const compat = row as DdrCompatRow;
+  return (
+    compat.prediction?.missingReasons ??
+    compat.noCall?.missingReasons ??
+    compat.originalOutcome?.missingReasons ??
+    compat.missingReasons ??
+    getResolution(row).insufficientReasons ??
+    []
+  );
+}
+
+function getLatestErratum(row: DdrDisplayRow): DdrCompatErratum | null {
+  const compat = row as DdrCompatRow;
+  return compat.latestErratum ?? compat.errata?.[0] ?? null;
 }
 
 const HORIZON_SECONDS: Record<DdrHorizon, number> = {
@@ -139,11 +357,21 @@ function StageLabel({ children }: { children: ReactNode }) {
   return <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{children}</p>;
 }
 
+function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
+  if (value == null || value === "") return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+      <span>{label}</span>
+      <span className="font-mono tabular-nums text-foreground">{value}</span>
+    </span>
+  );
+}
+
 function CoinLockup({
   row,
   logos,
 }: {
-  row: Pick<DdrRow, "stablecoinId" | "symbol" | "name">;
+  row: Pick<DdrDisplayRow, "stablecoinId" | "symbol" | "name">;
   logos?: Record<string, string>;
 }) {
   return (
@@ -224,9 +452,10 @@ function SignalPull({ killWeight, anchorWeight }: { killWeight: number; anchorWe
   );
 }
 
-function PastDeviationSpark({ row }: { row: DdrRow }) {
-  const peak = Math.abs(row.peakDeviationBps);
-  const now = row.currentDeviationBps != null ? Math.abs(row.currentDeviationBps) : peak;
+function PastDeviationSpark({ row }: { row: DdrDisplayRow }) {
+  const peak = Math.abs(getPeakDeviationBps(row));
+  const currentDeviationBps = getCurrentDeviationBps(row);
+  const now = currentDeviationBps != null ? Math.abs(currentDeviationBps) : peak;
   const max = Math.max(peak, now, 1);
   const below = row.direction === "below";
 
@@ -349,9 +578,13 @@ function ForwardCap({ tone, label }: { tone: "terminal" | "muted"; label: string
   );
 }
 
-function ForecastTimeline({ row }: { row: DdrRow }) {
-  const tier = row.resolution.tier;
-  const { duration } = row;
+function ForecastTimeline({ row }: { row: DdrDisplayRow }) {
+  const resolution = getResolution(row);
+  const tier = resolution.tier;
+  const duration = getDuration(row);
+  const predictionState = getPredictionState(row);
+  const lockAnchored = predictionState === "frozen";
+  const lockMetadata = getLockMetadata(row);
   const terminal = tier === "recovery_unlikely";
   const insufficient = tier === "insufficient_signal";
   const hasBand =
@@ -359,25 +592,34 @@ function ForecastTimeline({ row }: { row: DdrRow }) {
 
   const forwardLabel = terminal
     ? "no recovery expected"
-    : insufficient
+      : insufficient
       ? "awaiting signal"
       : "duration not benchmarked";
 
-  const ariaLabel = `Forecast timeline: depeg open ${formatElapsedSeconds(row.ageSec)}, peak ${formatBps(
-    row.peakDeviationBps,
-  )}${row.currentDeviationBps != null ? `, now ${formatBps(row.currentDeviationBps)}` : ""}; verdict ${
-    TIER_META[tier].label
-  }${hasBand && duration.medianSec != null ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)}` : `; ${forwardLabel}`}.`;
+  const ageSec = lockAnchored ? lockMetadata.predictedAgeSec ?? getAgeSec(row) : getAgeSec(row);
+  const peakDeviationBps = getPeakDeviationBps(row);
+  const currentDeviationBps = getCurrentDeviationBps(row);
+  const ariaLabel = lockAnchored
+    ? `Forecast timeline frozen at public lock: depeg age at lock ${formatElapsedSeconds(ageSec)}, peak ${formatBps(
+        peakDeviationBps,
+      )}${currentDeviationBps != null ? `, lock deviation ${formatBps(currentDeviationBps)}` : ""}; verdict ${
+        TIER_META[tier].label
+      }${hasBand && duration.medianSec != null ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)} after lock` : `; ${forwardLabel}`}.`
+    : `Forecast timeline: depeg open ${formatElapsedSeconds(ageSec)}, peak ${formatBps(peakDeviationBps)}${
+        currentDeviationBps != null ? `, now ${formatBps(currentDeviationBps)}` : ""
+      }; verdict ${TIER_META[tier].label}${
+        hasBand && duration.medianSec != null ? `; expected to resolve in about ${formatDurationSec(duration.medianSec)}` : `; ${forwardLabel}`
+      }.`;
 
   return (
     <div className="rounded-lg border border-border/50 bg-background/40 px-3 py-2.5" role="img" aria-label={ariaLabel}>
       <div className="grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
         <span className="truncate">
-          So far{" "}
-          <span className="font-mono normal-case text-muted-foreground/90">· {formatElapsedSeconds(row.ageSec)}</span>
+          {lockAnchored ? "At lock" : "So far"}{" "}
+          <span className="font-mono normal-case text-muted-foreground/90">· {formatElapsedSeconds(ageSec)}</span>
         </span>
-        <span className="px-1 text-foreground/70">Now</span>
-        <span className="text-right">{terminal || insufficient ? "Outlook" : "Projected"}</span>
+        <span className="px-1 text-foreground/70">{lockAnchored ? "Lock" : "Now"}</span>
+        <span className="text-right">{terminal || insufficient ? "Outlook" : lockAnchored ? "From lock" : "Projected"}</span>
       </div>
 
       <div className="mt-1 flex h-[58px] items-stretch gap-2">
@@ -415,21 +657,237 @@ function ForecastTimeline({ row }: { row: DdrRow }) {
   );
 }
 
+const STATE_COPY: Record<
+  Exclude<DdrPublicPredictionState, "frozen">,
+  { badge: string; title: string; body: string; tone: string }
+> = {
+  pending_lock: {
+    badge: "Pending lock",
+    title: "Prediction lock pending",
+    body: "This incident is still before the 24h public lock point. DDR shows live facts only until the official lock run.",
+    tone: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  },
+  lock_deferred: {
+    badge: "Lock deferred",
+    title: "Health deferral",
+    body: "The lock point has arrived, but a system-health predicate failed. DDR will retry on the next healthy run.",
+    tone: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  },
+  publication_retry_pending: {
+    badge: "Publication delayed",
+    title: "Forecast publication delayed",
+    body: "A sealed outcome exists operationally but has not entered the first-publication manifest. DDR hides the sealed verdict until publication succeeds.",
+    tone: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  },
+  publication_failed: {
+    badge: "Publication failed",
+    title: "Publication failed before public exposure",
+    body: "DDR did not recoverably publish this lock outcome. DDRR counts it as operational coverage debt, not as a prediction users saw.",
+    tone: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  },
+  no_call: {
+    badge: "No-call locked",
+    title: "No-call at lock",
+    body: "At the official lock run, required row-level inputs were missing. This is an accountable no-call, not a recovery or terminal verdict.",
+    tone: "border-border bg-muted/70 text-foreground",
+  },
+  invalidated: {
+    badge: "Invalidated",
+    title: "Prediction invalidated by erratum",
+    body: "The first-published lock outcome remains visible for audit, but an append-only erratum invalidated the source event or input.",
+    tone: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  },
+};
+
+function LiveFacts({ row }: { row: DdrDisplayRow }) {
+  const compat = row as DdrCompatRow;
+  const live = compat.live ?? {};
+  const ageSec = live.ageSec ?? getAgeSec(row);
+  const peakDeviationBps = live.peakDeviationBps ?? getPeakDeviationBps(row);
+  const currentDeviationBps = live.currentDeviationBps ?? getCurrentDeviationBps(row);
+  const status = live.status ?? ("eventState" in live ? live.eventState : live.active === false ? "closed" : live.stale ? "stale" : "active");
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
+      <StageLabel>Live incident</StageLabel>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
+        <span>
+          age <span className="text-foreground">{formatElapsedSeconds(ageSec)}</span>
+        </span>
+        <span>
+          peak <span className="text-foreground">{formatBps(peakDeviationBps)}</span>
+        </span>
+        {currentDeviationBps != null ? (
+          <span>
+            now <span className="text-foreground">{formatBps(currentDeviationBps)}</span>
+          </span>
+        ) : null}
+        {status ? <span className="uppercase tracking-wide">{status}</span> : null}
+      </div>
+      {live.degradedReason ? (
+        <p className="mt-1.5 text-xs text-muted-foreground">Live overlay degraded: {live.degradedReason}.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function LockMetadataStrip({ row, showAnchoredDuration = false }: { row: DdrDisplayRow; showAnchoredDuration?: boolean }) {
+  const metadata = getLockMetadata(row);
+  const duration = getDuration(row);
+  const lockedAt = formatUtcTimestamp(metadata.lockedAt);
+  const eligibleAt = formatUtcTimestamp(metadata.eligibleAt);
+  const predictedAt = formatUtcTimestamp(metadata.predictedAt);
+  const anchoredDuration =
+    showAnchoredDuration && duration.medianSec != null && !duration.suppressed
+      ? `~${formatDurationSec(duration.medianSec)}${
+          duration.iqrSec
+            ? ` (${formatDurationSec(duration.iqrSec[0])}-${formatDurationSec(duration.iqrSec[1])})`
+            : ""
+        }`
+      : null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <MetadataPill label="eligible" value={eligibleAt} />
+      <MetadataPill label="locked" value={lockedAt} />
+      <MetadataPill label="predicted at" value={metadata.predictedAgeSec != null ? formatElapsedSeconds(metadata.predictedAgeSec) : null} />
+      <MetadataPill label="lock timing" value={compactLockTiming(metadata.lockTiming)} />
+      <MetadataPill label="anchored duration" value={anchoredDuration} />
+      <MetadataPill label="manifest" value={predictedAt && !lockedAt ? predictedAt : null} />
+    </div>
+  );
+}
+
+function StateOnlyCard({
+  row,
+  state,
+  logos,
+}: {
+  row: DdrDisplayRow;
+  state: Exclude<DdrPublicPredictionState, "frozen">;
+  logos?: Record<string, string>;
+}) {
+  const copy = STATE_COPY[state];
+  const compat = row as DdrCompatRow;
+  const retryText =
+    compat.prediction?.nextRetryAt != null
+      ? `Next retry ${formatUtcTimestamp(compat.prediction.nextRetryAt)}`
+      : compat.prediction?.retryStatus ?? null;
+  const deferralReason = compat.prediction?.deferralReason ?? compat.live?.degradedReason ?? null;
+  const missingReasons = getMissingReasons(row);
+  const erratum = getLatestErratum(row);
+  const originalOutcome = compat.prediction?.originalOutcomeKind ?? compat.prediction?.outcomeKind ?? null;
+  const dirGlyph = row.direction === "below" ? "▼" : "▲";
+
+  return (
+    <Card className="gap-0 overflow-hidden p-4 sm:p-5">
+      <div className="space-y-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <CoinLockup row={row} logos={logos} />
+          </div>
+          <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+            {dirGlyph} {row.direction} {row.pegCurrency}
+          </span>
+        </div>
+
+        <div className={cn("rounded-lg border px-3 py-2.5", copy.tone)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[0.95rem] font-bold uppercase leading-none tracking-wide">{copy.title}</p>
+            <span className="rounded-full border border-current/30 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide">
+              {copy.badge}
+            </span>
+          </div>
+          <p className="mt-1.5 text-xs leading-snug opacity-85">{copy.body}</p>
+        </div>
+
+        <LockMetadataStrip row={row} />
+        <LiveFacts row={row} />
+
+        {state === "lock_deferred" && (deferralReason || retryText) ? (
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5 text-xs">
+            {deferralReason ? <p className="text-foreground">Deferral reason: {deferralReason}</p> : null}
+            {retryText ? <p className="mt-1 text-muted-foreground">{retryText}</p> : null}
+          </div>
+        ) : null}
+
+        {state === "publication_retry_pending" && retryText ? (
+          <p className="rounded-lg border border-violet-500/25 bg-violet-500/[0.06] px-3 py-2.5 text-xs text-muted-foreground">
+            {retryText}
+          </p>
+        ) : null}
+
+        {state === "no_call" ? (
+          <div className="space-y-1.5">
+            <StageLabel>Missing inputs</StageLabel>
+            {missingReasons.length ? (
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {missingReasons.map((reason) => (
+                  <li key={reason} className="flex gap-2">
+                    <span aria-hidden="true" className="text-muted-foreground/50">
+                      -
+                    </span>
+                    <span className="min-w-0">{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">No missing-input detail was published for this no-call.</p>
+            )}
+          </div>
+        ) : null}
+
+        {state === "invalidated" ? (
+          <details className="group rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+            <summary className="pharos-focus-ring cursor-pointer list-none text-xs font-medium text-foreground">
+              Erratum and original outcome
+              <span aria-hidden="true" className="ml-1 inline-block transition-transform group-open:rotate-90">
+                ›
+              </span>
+            </summary>
+            <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+              <p>
+                Original lock outcome:{" "}
+                <span className="font-mono uppercase text-foreground">{originalOutcome ?? "published prediction"}</span>
+              </p>
+              <p>
+                Latest erratum:{" "}
+                <span className="text-foreground">
+                  {erratum?.summary ?? erratum?.reason ?? compat.prediction?.invalidationReason ?? "details unavailable"}
+                </span>
+              </p>
+              {erratum?.createdAt ? <p>Recorded {formatUtcTimestamp(erratum.createdAt)}.</p> : null}
+            </div>
+          </details>
+        ) : null}
+      </div>
+    </Card>
+  );
+}
+
 export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) {
-  const tier = row.resolution.tier;
+  const predictionState = getPredictionState(row);
+  if (predictionState && predictionState !== "frozen") {
+    return <StateOnlyCard row={row} state={predictionState} logos={logos} />;
+  }
+
+  const resolution = getResolution(row);
+  const duration = getDuration(row);
+  const tier = resolution.tier;
   const meta = TIER_META[tier];
-  const factors = row.resolution.factors;
+  const factors = resolution.factors;
   const kills = factors.filter((f) => f.kind === "kill");
   const anchors = factors.filter((f) => f.kind === "anchor");
   const killWeight = kills.reduce((sum, f) => sum + SEVERITY_WEIGHT[f.severity], 0);
   const anchorWeight = anchors.reduce((sum, f) => sum + SEVERITY_WEIGHT[f.severity], 0);
 
   const showTension = factors.length > 0 && tier !== "insufficient_signal";
-  const chronic = row.duration.ageStatus === "chronic_tail";
+  const chronic = duration.ageStatus === "chronic_tail";
   const dirGlyph = row.direction === "below" ? "▼" : "▲";
+  const durationAnchorLabel = predictionState === "frozen" ? "from lock" : "~resolve";
   const priceLabel =
-    row.currentDeviationBps != null
-      ? formatPrice(1 + row.currentDeviationBps / 10_000, pegCurrencySymbol(row.pegCurrency))
+    getCurrentDeviationBps(row) != null
+      ? formatPrice(1 + (getCurrentDeviationBps(row) ?? 0) / 10_000, pegCurrencySymbol(row.pegCurrency))
       : null;
 
   return (
@@ -450,35 +908,45 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         </div>
 
         <div className={cn("rounded-lg border px-3 py-2.5", meta.band)}>
-          <p className="text-[0.95rem] font-bold uppercase tracking-wide leading-none">{meta.label}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[0.95rem] font-bold uppercase tracking-wide leading-none">{meta.label}</p>
+            {predictionState === "frozen" ? (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                Prediction frozen
+              </span>
+            ) : null}
+          </div>
           <p className="mt-1.5 text-xs leading-snug opacity-80">{meta.blurb}</p>
         </div>
+
+        {predictionState === "frozen" ? <LockMetadataStrip row={row} showAnchoredDuration /> : null}
 
         <ForecastTimeline row={row} />
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
           <span>
-            peak <span className="text-foreground">{formatBps(row.peakDeviationBps)}</span>
+            peak <span className="text-foreground">{formatBps(getPeakDeviationBps(row))}</span>
           </span>
-          {row.currentDeviationBps != null ? (
+          {getCurrentDeviationBps(row) != null ? (
             <span>
-              now <span className="text-foreground">{formatBps(row.currentDeviationBps)}</span>
+              {predictionState === "frozen" ? "live now" : "now"}{" "}
+              <span className="text-foreground">{formatBps(getCurrentDeviationBps(row) ?? 0)}</span>
             </span>
           ) : null}
-          {row.duration.medianSec != null && !row.duration.suppressed && tier !== "recovery_unlikely" ? (
+          {duration.medianSec != null && !duration.suppressed && tier !== "recovery_unlikely" ? (
             <span>
-              ~resolve <span className="text-foreground">{formatDurationSec(row.duration.medianSec)}</span>
-              {row.duration.iqrSec ? (
+              {durationAnchorLabel} <span className="text-foreground">{formatDurationSec(duration.medianSec)}</span>
+              {duration.iqrSec ? (
                 <span className="text-muted-foreground">
                   {" "}
-                  ({formatDurationSec(row.duration.iqrSec[0])}–{formatDurationSec(row.duration.iqrSec[1])})
+                  ({formatDurationSec(duration.iqrSec[0])}–{formatDurationSec(duration.iqrSec[1])})
                 </span>
               ) : null}
             </span>
           ) : null}
-          {row.duration.stratum && !row.duration.suppressed && tier !== "recovery_unlikely" ? (
-            <span className="truncate text-muted-foreground/80" title={row.duration.stratum}>
-              {row.duration.stratum}
+          {duration.stratum && !duration.suppressed && tier !== "recovery_unlikely" ? (
+            <span className="truncate text-muted-foreground/80" title={duration.stratum}>
+              {duration.stratum}
             </span>
           ) : null}
         </div>
@@ -505,9 +973,9 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         ) : tier === "insufficient_signal" ? (
           <div className="space-y-1.5">
             <StageLabel>Why no verdict</StageLabel>
-            {row.resolution.insufficientReasons?.length ? (
+            {resolution.insufficientReasons?.length ? (
               <ul className="space-y-1 text-xs text-muted-foreground">
-                {row.resolution.insufficientReasons.map((reason) => (
+                {resolution.insufficientReasons.map((reason) => (
                   <li key={reason} className="flex gap-2">
                     <span aria-hidden="true" className="text-muted-foreground/50">
                       —
@@ -520,11 +988,13 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
               <p className="text-xs text-muted-foreground">Key inputs are missing for this event.</p>
             )}
           </div>
-        ) : row.duration.suppressed && row.duration.suppressedReason ? (
+        ) : duration.suppressed && duration.suppressedReason ? (
           <p className="text-xs leading-snug text-muted-foreground">
-            {SUPPRESSED_REASON_LABELS[row.duration.suppressedReason] ?? "Duration estimate is not available."}
+            {SUPPRESSED_REASON_LABELS[duration.suppressedReason] ?? "Duration estimate is not available."}
           </p>
         ) : null}
+
+        {predictionState === "frozen" ? <LiveFacts row={row} /> : null}
 
         {showTension ? (
           <div className="space-y-2.5 border-t border-border/50 pt-3">
@@ -548,8 +1018,8 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   );
 }
 
-function RelatedContextDetails({ row }: { row: DdrRow }) {
-  const c = row.relatedContext;
+function RelatedContextDetails({ row }: { row: DdrDisplayRow }) {
+  const c = getRelatedContext(row);
   const items: Array<{ label: string; value: string }> = [];
   if (c.dewsBand) {
     items.push({

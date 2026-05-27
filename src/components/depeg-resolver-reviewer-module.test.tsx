@@ -156,6 +156,46 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.queryByText("Calibrating")).toBeNull();
   });
 
+  it("shows DDRv2 coverage accountability metrics and coverage-row labels", () => {
+    render(
+      <DepegResolverReviewerModule
+        data={response({
+          summary: {
+            ...summary,
+            policyUniverseCount: 20,
+            scoreableCoveragePct: 0.4,
+            predictionCoveragePct: 0.65,
+            publicationSuccessPct: 0.9,
+            noCallSharePct: 0.1,
+            invalidationRatePct: 0.05,
+          } as DdrrSummary,
+          rows: [
+            row,
+            {
+              ...row,
+              eventId: 43,
+              coverageState: "missed_lock_recovered",
+              verdictReview: "pending",
+              durationReview: "duration_unscored",
+              signedErrorSec: null,
+            } as DdrrRow,
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Coverage accountability")).toBeTruthy();
+    expect(screen.getByText("20 policy-universe incidents")).toBeTruthy();
+    expect(screen.getByText("Scoreable coverage")).toBeTruthy();
+    expect(screen.getByText("Prediction coverage")).toBeTruthy();
+    expect(screen.getByText("Publication success")).toBeTruthy();
+    expect(screen.getByText("No-call share")).toBeTruthy();
+    expect(screen.getByText("Invalidation rate")).toBeTruthy();
+    expect(screen.getByText("missed recovered")).toBeTruthy();
+    expect(screen.getByText(/frozen outcomes only after first public publication/)).toBeTruthy();
+    expect(screen.getByRole("img", { name: /Track record across 1 graded DDR outcomes/ })).toBeTruthy();
+  });
+
   it("keeps loading and empty states distinct", () => {
     const { rerender } = render(<DepegResolverReviewerModule data={undefined} />);
     expect(screen.getByText("Reviewer data is loading.")).toBeTruthy();

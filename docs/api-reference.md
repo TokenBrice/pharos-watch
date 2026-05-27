@@ -1048,19 +1048,41 @@ Results are ordered by `startedAt` descending (most recent first).
 
 ### `GET /api/depeg-resolver`
 
-Cache-backed Depeg Duration Resolver readouts for active confirmed depeg events. The resolver emits one row per open confirmed event: a Resolution Outlook verdict plus a duration estimate when the verdict is not terminal and historical support is sufficient.
+Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg incidents. DDRv2 emits one row per canonical incident projection, keyed by `incidentKey`, and separates live facts from the official public lock outcome.
 
-**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true` and `rows: []`; stale snapshots keep the Stage 1 verdict rows but set `_meta.degraded=true`, `degradedReason="stale-cache"`, and suppress duration bands/horizon cells until the next precompute.
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true` and `rows: []`; stale snapshots mark `_meta.degraded=true`, include the read overlay when available, and keep pre-publication rows free of verdict/duration details.
+
+**Row states**
+
+| State | Meaning |
+| ----- | ------- |
+| `pending_lock` | Incident is active and younger than the 24h public lock point. Live facts and lock metadata may render; no verdict or duration is exposed. |
+| `lock_deferred` | The lock point arrived, but a deterministic system-health predicate failed. Shows deferral/retry status only; no no-call, verdict, or duration is created. |
+| `publication_retry_pending` | A lock outcome sealed, but first-publication manifest finalization has not succeeded. The sealed outcome stays hidden until publication. |
+| `frozen` | First-published official prediction. Shows frozen verdict/duration, lock timestamp, lock timing, anchored duration, and live overlay facts separately. |
+| `no_call` | Healthy lock run had insufficient row-level signal. Shows missing inputs and lock metadata, not a recovery/terminal verdict. |
+| `invalidated` | Append-only erratum invalidated the original first-published prediction or no-call; original exposure remains visible with correction history. |
 
 **Response**
 
 ```text
 {
   "_meta": {
+    "schemaVersion": 2,
     "dataAsOf": 1779700000,
     "modelAsOf": 1779700000,
     "computedAt": 1779700000,
     "expiresAt": 1779701800,
+    "snapshotToken": "ddrpub_...",
+    "snapshotGeneration": 2,
+    "publicPredictionIds": [101, 102],
+    "publicPredictionRowHashes": { "101": "..." },
+    "basePayloadHash": "...",
+    "readOverlay": {
+      "degradedLockDeferralIncidentKeys": [],
+      "closedPendingReviewIncidentKeys": [],
+      "suppressedIncidentKeys": []
+    },
     "degraded": false,
     "degradedReason": null,
     "publicWarning": "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.",
@@ -1070,18 +1092,18 @@ Cache-backed Depeg Duration Resolver readouts for active confirmed depeg events.
     "supportRulesVersion": "support-rules-v1",
     "lineage": { "eventCount": 34129, "incidentCount": 1820, "coinCount": 142, "quarantinedCoins": 7 }
   },
-  "rows": [DdrRow, ...],
-  "methodology": { "version": "1.1", "versionLabel": "v1.1", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "rows": [DdrV2ResponseRow, ...],
+  "methodology": { "version": "2.0", "versionLabel": "v2.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 
-`DdrRow.resolution.tier` is one of `recovery_likely`, `at_risk`, `recovery_unlikely`, or `insufficient_signal`. `resolution.factors[]` contains stable K/R factor codes and public reason labels. `duration` is suppressed for terminal, insufficient-signal, stale, or unsupported rows; otherwise it includes the stratum used, median remaining seconds, IQR remaining seconds, age status, and 6h / 24h / 7d / 30d horizon cells.
+`DdrV2ResponseRow.kind` is one of `pending`, `prediction`, `no_call`, or `invalidated_prediction`. `prediction.state` carries the public state above. Prediction rows include `frozen.resolution` and `frozen.duration`; no-call rows include `noCall.missingReasons`; invalidated rows include `originalOutcome`, `latestErratum`, and errata history. All rows include a `live` overlay with current event age, peak/current deviation, event state, freshness, and degraded reason.
 
 ---
 
 ### `GET /api/depeg-resolver-review`
 
-Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored first DDR assessment for each event under the current DDR methodology with later canonical `depeg_events` outcomes; it does not replay current DDR code over older events. Later checkpoints are retained in D1 for audit/drill-down expansion, but the public reviewer v1 headline stats are event-level.
+Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR v2 reviews frozen public predictions and no-calls that reached first publication, then reports the full incident-scoped policy universe so missing predictions are visible coverage debt rather than silently excluded.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true`, an empty summary, and `rows: []`; stale snapshots keep review rows but set `_meta.degraded=true` and `degradedReason="stale-cache"`.
 
@@ -1089,10 +1111,14 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored
 
 | Field | Type | Meaning |
 | ----- | ---- | ------- |
-| `summary.recoveryLikelihoodAccuracyPct` | `number \| null` | Strict scored DDR recovery-verdict accuracy. Numerator is correct recoverable + correct terminal calls; denominator also includes false terminal, false recoverable, and risk-noted-terminal rows. |
-| `summary.averageSignedDurationErrorSec` | `number \| null` | Mean observed-minus-DDR duration error for recovered rows with a DDR median remaining-time estimate. Positive means observed recovery was slower than DDR predicted; negative means faster. |
-| `summary.averageAbsoluteDurationErrorSec` | `number \| null` | Mean absolute duration miss for the same scored recovered rows. |
-| `summary.durationScoredCount` | `number` | Number of recovered, duration-scored rows included in duration-error averages. |
+| `summary.headline.recoveryLikelihoodAccuracyPct` | `number \| null` | Strict scored DDR recovery-verdict accuracy over first-published frozen predictions. |
+| `summary.headline.meanSignedDurationErrorSec` | `number \| null` | Mean observed-minus-DDR duration error for recovered rows with a DDR median remaining-time estimate. Positive means observed recovery was slower than DDR predicted; negative means faster. |
+| `summary.headline.meanAbsoluteDurationErrorSec` | `number \| null` | Mean absolute duration miss for the same scored recovered rows. |
+| `summary.headline.durationScoredCount` | `number` | Number of recovered, duration-scored rows included in duration-error averages. |
+| `summary.headline.predictionRatePct` | `number \| null` | Share of eligible finalized incidents that received a published prediction/no-call decision. |
+| `summary.headline.finalizedCoveragePct` | `number \| null` | Share of the policy universe assigned to a finalized/public coverage state. |
+| `summary.headline.noCallRatePct` | `number \| null` | Share of finalized lock outcomes that became no-calls. |
+| `summary.headline.invalidatedPct` | `number \| null` | Share of first-published predictions invalidated by errata. |
 
 **Response**
 
@@ -1103,26 +1129,36 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR compares the stored
     "expiresAt": 1779701800,
     "degraded": false,
     "degradedReason": null,
-    "reviewerVersion": "ddr-reviewer-v1",
+    "reviewerVersion": "ddr-reviewer-v2",
     "assessedEventCount": 12,
     "reviewedEventCount": 12,
     "pendingEventCount": 8,
     "durationScoredCount": 6,
     "verdictScoredCount": 10,
-    "methodologyVersions": ["1.1"]
+    "methodologyVersions": ["2.0"]
   },
   "summary": {
-    "recoveryLikelihoodAccuracyPct": 0.7,
-    "averageSignedDurationErrorSec": 3600,
-    "averageAbsoluteDurationErrorSec": 7200,
-    "horizonHitRates": [{ "horizon": "6h", "scored": 5, "hits": 3, "misses": 2, "hitRate": 0.6 }]
+    "headlineScope": "current_policy",
+    "headlineLabel": "DDR v2 public predictions",
+    "headline": {
+      "policyUniverseIncidentCount": 20,
+      "predictionRatePct": 0.65,
+      "finalizedCoveragePct": 0.9,
+      "noCallRatePct": 0.1,
+      "invalidatedPct": 0.05,
+      "recoveryLikelihoodAccuracyPct": 0.7,
+      "meanSignedDurationErrorSec": 3600,
+      "meanAbsoluteDurationErrorSec": 7200,
+      "horizonHitRates": [{ "horizon": "6h", "scored": 5, "hits": 3, "misses": 2, "hitRate": 0.6 }]
+    },
+    "byPredictionPolicy": []
   },
   "rows": [DdrrRow, ...],
-  "methodology": { "version": "1.1", "versionLabel": "v1.1", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "methodology": { "version": "2.0", "versionLabel": "v2.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 
-`DdrrRow.verdictReview` is one of `correct_recoverable`, `correct_terminal`, `false_terminal`, `false_recoverable`, `risk_noted_terminal`, `unscored_insufficient_signal`, `pending`, or `data_issue`. `DdrrRow.durationReview` reports whether the observed recovery was inside the original IQR, faster/slower than the band, or unscored. `signedErrorSec` is always `actualRemainingSec - predictedRemainingSec`.
+`DdrrRow.kind` is one of `prediction_review`, `no_call_review`, `coverage`, or `invalidated_prediction`. Only `prediction_review` rows enter recovery-likelihood and duration accuracy. `no_call_review` rows are deliberate lock outcomes but unscored. `coverage` rows include states such as `resolved_before_prediction`, `terminal_before_prediction`, `missed_lock_recovered`, `missed_lock_terminal`, `publication_retry_pending`, and `publication_failed`. `invalidated_prediction` rows retain original exposure and attach errata history.
 
 ---
 
