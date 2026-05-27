@@ -28365,6 +28365,33 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "metal-dollar",
     "canBeBlacklisted": "possible",
+    "genius": {
+      "applicability": "unclear",
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Metallicus / Metal DAO",
+      "issuerDomicile": "United States",
+      "reserveDisclosureUrl": "https://www.metallicus.com/metal-dollar",
+      "redemptionPolicyPresent": true,
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html"
+        },
+        {
+          "label": "Metal Dollar product page",
+          "url": "https://www.metallicus.com/metal-dollar"
+        },
+        {
+          "label": "XPR Network Metal Dollar help",
+          "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
+        },
+        {
+          "label": "Metal Dollar whitepaper",
+          "url": "https://cdn.metallicus.com/Metal_Dollar_Whitepaper_v1.1.pdf"
+        }
+      ]
+    },
     "reserves": [
       {
         "name": "USDC reserve basket component",
