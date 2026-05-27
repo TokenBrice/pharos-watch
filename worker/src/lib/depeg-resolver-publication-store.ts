@@ -1,0 +1,863 @@
+import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
+import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import { buildInClause, chunkArray } from "./db";
+import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
+import type { DdrIncidentDirection, DdrLockHealthStatus } from "./depeg-resolver-incident-store";
+
+export type DdrPublicPredictionOutcomeKind = "prediction" | "no_call";
+export type DdrPublicPredictionLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
+
+export interface DdrPublicAssessmentSealInput {
+  incidentKey: string;
+  eventId: number;
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+  pegCurrency: string;
+  governance: string;
+  direction: DdrIncidentDirection;
+  startedAt: number;
+  assessedAt: number;
+  eventAgeSec: number;
+  methodologyVersion: string;
+  methodologyVersionLabel: string;
+  resolutionRubricVersion: string;
+  durationModelVersion: string;
+  incidentGroupingVersion: string;
+  supportRulesVersion: string;
+  resolutionTier: string;
+  durationSuppressed: boolean;
+  durationSuppressedReason?: string | null;
+  medianRemainingSec?: number | null;
+  iqrLowRemainingSec?: number | null;
+  iqrHighRemainingSec?: number | null;
+  stratum?: string | null;
+  horizons?: unknown[];
+  factors?: unknown[];
+  sealedPayload: unknown;
+  rowHash: string;
+  predictionPolicyVersion: string;
+  policyDelaySec: number;
+  eligibleAt: number;
+  lockedAt: number;
+  eventAgeAtLockSec: number;
+  lockTiming: DdrPublicPredictionLockTiming;
+  createdAt: number;
+  runId?: string | null;
+  healthStatus?: DdrLockHealthStatus;
+}
+
+export interface DdrSealedPublicPrediction {
+  id: number;
+  publicPredictionId: number;
+  incidentKey: string;
+  eventId: number;
+  assessmentId: number;
+  outcomeKind: DdrPublicPredictionOutcomeKind;
+  predictionPolicyVersion: string;
+  predictionMethodologyVersion: string;
+  predictionMethodologyVersionLabel: string;
+  resolutionRubricVersion: string;
+  durationModelVersion: string;
+  incidentGroupingVersion: string;
+  supportRulesVersion: string;
+  policyDelaySec: number;
+  eligibleAt: number;
+  lockedAt: number;
+  eventAgeAtLockSec: number;
+  lockTiming: DdrPublicPredictionLockTiming;
+  sealedPayloadJson: string;
+  sealedPayload: Record<string, unknown>;
+  rowHash: string;
+  createdAt: number;
+}
+
+export interface LoadSealedPublicPredictionsFilters {
+  publicPredictionIds?: number[];
+  incidentKeys?: string[];
+  eventIds?: number[];
+  predictionPolicyVersion?: string;
+  includeUnpublished?: boolean;
+}
+
+export interface WritePublicationManifestInput {
+  snapshotToken?: string;
+  snapshotGeneration: number;
+  publishedAt: number;
+  createdAt?: number;
+  validatorVersion?: string;
+  runId?: string;
+  snapshotKind?: string;
+  activeIncidentKeys?: string[];
+  basePayload: unknown;
+  publicPredictionIds?: number[];
+  publicPredictionRowHashes?: Record<string, string> | Record<number, string>;
+  basePayloadHash?: string;
+  publicPredictionIdsHash?: string;
+}
+
+export interface DdrPublicationManifest {
+  snapshotToken: string;
+  snapshotKind: "ddr_public";
+  snapshotSequence: number;
+  snapshotGeneration: number;
+  publishedAt: number;
+  basePayloadHash: string;
+  publicPredictionIdsHash: string;
+  publicPredictionIds: number[];
+  firstPublishedPublicPredictionIds: number[];
+  publicPredictionRowHashes: Record<string, string>;
+  basePayloadJson: string;
+  baseRowCount: number;
+  publicPredictionCount: number;
+  createdAt: number;
+  finalizedAt: number;
+  validatorVersion: string;
+}
+
+export interface DdrFirstPublicationMembership {
+  publicPredictionId: number;
+  incidentKey: string;
+  snapshotToken: string;
+  snapshotSequence: number;
+  snapshotGeneration: number;
+  publishedAt: number;
+  finalizedAt: number;
+  firstPublished: boolean;
+}
+
+interface SealedPublicPredictionRow {
+  id: number;
+  incident_key: string;
+  event_id: number;
+  assessment_id: number;
+  outcome_kind: DdrPublicPredictionOutcomeKind;
+  prediction_policy_version: string;
+  prediction_methodology_version: string;
+  prediction_methodology_version_label: string;
+  resolution_rubric_version: string;
+  duration_model_version: string;
+  incident_grouping_version: string;
+  support_rules_version: string;
+  policy_delay_sec: number;
+  eligible_at: number;
+  locked_at: number;
+  event_age_at_lock_sec: number;
+  lock_timing: DdrPublicPredictionLockTiming;
+  sealed_payload_json: string;
+  row_hash: string;
+  created_at: number;
+}
+
+interface PublicationManifestRow {
+  snapshot_token: string;
+  snapshot_kind: "ddr_public";
+  snapshot_sequence: number;
+  snapshot_generation: number;
+  published_at: number;
+  base_payload_hash: string;
+  public_prediction_ids_hash: string;
+  public_prediction_ids_json: string;
+  public_prediction_row_hashes_json: string;
+  base_payload_json: string;
+  base_row_count: number;
+  public_prediction_count: number;
+  created_at: number;
+  finalized_at: number;
+  validator_version: string;
+}
+
+interface FirstPublicationMembershipRow {
+  public_prediction_id: number;
+  incident_key: string;
+  snapshot_token: string;
+  snapshot_sequence: number;
+  snapshot_generation: number;
+  published_at: number;
+  finalized_at: number;
+}
+
+function assertPositiveInteger(value: number, name: string): void {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${name} must be a positive safe integer`);
+  }
+}
+
+function assertNonNegativeInteger(value: number, name: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative safe integer`);
+  }
+}
+
+function assertNonEmpty(value: string, name: string): void {
+  if (value.trim().length === 0) throw new Error(`${name} must be non-empty`);
+}
+
+function assertHash(value: string, name: string): void {
+  if (!/^[0-9a-f]{64}$/.test(value)) throw new Error(`${name} must be a 64-character lowercase hex hash`);
+}
+
+function jsonString(value: unknown, name: string): string {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  try {
+    JSON.parse(text);
+  } catch {
+    throw new Error(`${name} must be valid JSON`);
+  }
+  return text;
+}
+
+function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPublicPrediction {
+  return {
+    id: row.id,
+    publicPredictionId: row.id,
+    incidentKey: row.incident_key,
+    eventId: row.event_id,
+    assessmentId: row.assessment_id,
+    outcomeKind: row.outcome_kind,
+    predictionPolicyVersion: row.prediction_policy_version,
+    predictionMethodologyVersion: row.prediction_methodology_version,
+    predictionMethodologyVersionLabel: row.prediction_methodology_version_label,
+    resolutionRubricVersion: row.resolution_rubric_version,
+    durationModelVersion: row.duration_model_version,
+    incidentGroupingVersion: row.incident_grouping_version,
+    supportRulesVersion: row.support_rules_version,
+    policyDelaySec: row.policy_delay_sec,
+    eligibleAt: row.eligible_at,
+    lockedAt: row.locked_at,
+    eventAgeAtLockSec: row.event_age_at_lock_sec,
+    lockTiming: row.lock_timing,
+    sealedPayloadJson: row.sealed_payload_json,
+    sealedPayload: JSON.parse(row.sealed_payload_json) as Record<string, unknown>,
+    rowHash: row.row_hash,
+    createdAt: row.created_at,
+  };
+}
+
+function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationManifest {
+  return {
+    snapshotToken: row.snapshot_token,
+    snapshotKind: row.snapshot_kind,
+    snapshotSequence: row.snapshot_sequence,
+    snapshotGeneration: row.snapshot_generation,
+    publishedAt: row.published_at,
+    basePayloadHash: row.base_payload_hash,
+    publicPredictionIdsHash: row.public_prediction_ids_hash,
+    publicPredictionIds: JSON.parse(row.public_prediction_ids_json) as number[],
+    firstPublishedPublicPredictionIds: [],
+    publicPredictionRowHashes: JSON.parse(row.public_prediction_row_hashes_json) as Record<string, string>,
+    basePayloadJson: row.base_payload_json,
+    baseRowCount: row.base_row_count,
+    publicPredictionCount: row.public_prediction_count,
+    createdAt: row.created_at,
+    finalizedAt: row.finalized_at,
+    validatorVersion: row.validator_version,
+  };
+}
+
+function basePayloadObject(input: unknown): Record<string, unknown> {
+  const payload = typeof input === "string" ? (JSON.parse(input) as unknown) : input;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("basePayload must be a JSON object");
+  }
+  return payload as Record<string, unknown>;
+}
+
+function publicPredictionIdsFromPayload(payload: Record<string, unknown>): number[] {
+  const meta = payload._meta;
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return [];
+  const ids = (meta as Record<string, unknown>).publicPredictionIds;
+  if (!Array.isArray(ids)) return [];
+  return ids.map((id) => {
+    if (!Number.isSafeInteger(id) || id <= 0) throw new Error("basePayload _meta.publicPredictionIds must be positive integers");
+    return id;
+  });
+}
+
+function rowHashesFromPayload(payload: Record<string, unknown>): Record<string, string> {
+  const meta = payload._meta;
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) return {};
+  const hashes = (meta as Record<string, unknown>).publicPredictionRowHashes;
+  if (!hashes || typeof hashes !== "object" || Array.isArray(hashes)) return {};
+  return Object.fromEntries(
+    Object.entries(hashes as Record<string, unknown>).map(([id, hash]) => {
+      if (typeof hash !== "string") throw new Error("basePayload _meta.publicPredictionRowHashes values must be hashes");
+      assertHash(hash, `publicPredictionRowHashes[${id}]`);
+      return [id, hash];
+    }),
+  );
+}
+
+function normalizeIdSet(ids: number[]): number[] {
+  const normalized = [...new Set(ids)];
+  for (const id of normalized) assertPositiveInteger(id, "publicPredictionId");
+  return normalized.sort((left, right) => left - right);
+}
+
+function normalizeRowHashes(rowHashes: Record<string, string> | Record<number, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(rowHashes)
+      .sort(([left], [right]) => Number(left) - Number(right))
+      .map(([id, hash]) => {
+        assertPositiveInteger(Number(id), "publicPredictionRowHash id");
+        assertHash(hash, `publicPredictionRowHashes[${id}]`);
+        return [String(Number(id)), hash];
+      }),
+  );
+}
+
+function assertMatchingIdAndHashSets(ids: number[], rowHashes: Record<string, string>): void {
+  const hashIds = Object.keys(rowHashes).map(Number).sort((left, right) => left - right);
+  if (JSON.stringify(ids) !== JSON.stringify(hashIds)) {
+    throw new Error("public prediction id set and row-hash map keys must match");
+  }
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function publicPredictionIdFromPayloadRow(row: unknown): number | null {
+  const record = recordValue(row);
+  const prediction = recordValue(record?.prediction);
+  const id = prediction?.publicPredictionId;
+  if (id == null) return null;
+  if (typeof id !== "number") throw new Error("basePayload row prediction.publicPredictionId must be a number");
+  if (!Number.isSafeInteger(id) || id <= 0) throw new Error("basePayload row prediction.publicPredictionId must be positive integer");
+  return id;
+}
+
+function publicPredictionRowHashFromPayloadRow(row: unknown): string | null {
+  const record = recordValue(row);
+  const prediction = recordValue(record?.prediction);
+  const rowHash = prediction?.rowHash;
+  if (rowHash == null) return null;
+  if (typeof rowHash !== "string") throw new Error("basePayload row prediction.rowHash must be a string");
+  assertHash(rowHash, "basePayload row prediction.rowHash");
+  return rowHash;
+}
+
+async function insertPublicPredictionAssessment(
+  db: D1Database,
+  input: DdrPublicAssessmentSealInput,
+  payloadJson: string,
+): Promise<D1PreparedStatement> {
+  const checkpoint: DdrAssessmentCheckpoint = "public_prediction";
+  return db
+    .prepare(
+      `INSERT INTO depeg_resolver_assessments
+       (event_id, stablecoin_id, symbol, name, peg_currency, governance, direction,
+        started_at, assessed_at, event_age_sec, checkpoint, methodology_version,
+        methodology_version_label, resolution_rubric_version, duration_model_version,
+        incident_grouping_version, support_rules_version, resolution_tier,
+        duration_suppressed, duration_suppressed_reason, median_remaining_sec,
+        iqr_low_remaining_sec, iqr_high_remaining_sec, stratum, horizons_json,
+        factors_json, row_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      input.eventId,
+      input.stablecoinId,
+      input.symbol,
+      input.name,
+      input.pegCurrency,
+      input.governance,
+      input.direction,
+      input.startedAt,
+      input.assessedAt,
+      input.eventAgeSec,
+      checkpoint,
+      input.methodologyVersion,
+      input.methodologyVersionLabel,
+      input.resolutionRubricVersion,
+      input.durationModelVersion,
+      input.incidentGroupingVersion,
+      input.supportRulesVersion,
+      input.resolutionTier,
+      input.durationSuppressed ? 1 : 0,
+      input.durationSuppressedReason ?? null,
+      input.medianRemainingSec ?? null,
+      input.iqrLowRemainingSec ?? null,
+      input.iqrHighRemainingSec ?? null,
+      input.stratum ?? null,
+      JSON.stringify(input.horizons ?? []),
+      JSON.stringify(input.factors ?? []),
+      payloadJson,
+      input.createdAt,
+      input.createdAt,
+    );
+}
+
+function lockStateStatement(
+  db: D1Database,
+  input: DdrPublicAssessmentSealInput,
+  state: "frozen" | "no_call",
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO depeg_resolver_prediction_lock_state
+       (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
+        last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)
+       ON CONFLICT(incident_key) DO UPDATE SET
+         last_attempted_at = excluded.last_attempted_at,
+         last_state = excluded.last_state,
+         last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
+         updated_at = excluded.updated_at`,
+    )
+    .bind(
+      input.incidentKey,
+      input.eventId,
+      input.predictionPolicyVersion,
+      input.eligibleAt,
+      input.lockedAt,
+      input.lockedAt,
+      state,
+      input.createdAt,
+      input.createdAt,
+    );
+}
+
+function sealedPredictionStatement(
+  db: D1Database,
+  input: DdrPublicAssessmentSealInput,
+  outcomeKind: DdrPublicPredictionOutcomeKind,
+  payloadJson: string,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO depeg_resolver_public_predictions
+       (incident_key, event_id, assessment_id, outcome_kind, prediction_policy_version,
+        prediction_methodology_version, prediction_methodology_version_label,
+        resolution_rubric_version, duration_model_version, incident_grouping_version,
+        support_rules_version, policy_delay_sec, eligible_at, locked_at,
+        event_age_at_lock_sec, lock_timing, sealed_payload_json, row_hash, created_at)
+       SELECT ?, a.event_id, a.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       FROM depeg_resolver_assessments a
+       WHERE a.event_id = ?
+         AND a.checkpoint = 'public_prediction'
+         AND a.methodology_version = ?
+         AND a.assessed_at = ?`,
+    )
+    .bind(
+      input.incidentKey,
+      outcomeKind,
+      input.predictionPolicyVersion,
+      input.methodologyVersion,
+      input.methodologyVersionLabel,
+      input.resolutionRubricVersion,
+      input.durationModelVersion,
+      input.incidentGroupingVersion,
+      input.supportRulesVersion,
+      input.policyDelaySec,
+      input.eligibleAt,
+      input.lockedAt,
+      input.eventAgeAtLockSec,
+      input.lockTiming,
+      payloadJson,
+      input.rowHash,
+      input.createdAt,
+      input.eventId,
+      input.methodologyVersion,
+      input.assessedAt,
+    );
+}
+
+function lockAuditStatement(
+  db: D1Database,
+  input: DdrPublicAssessmentSealInput,
+  action: "locked_prediction" | "locked_no_call",
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO depeg_resolver_lock_opportunity_audit
+       (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
+        confirmation_at, outcome_at, reason, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?)`,
+    )
+    .bind(
+      input.incidentKey,
+      input.eventId,
+      input.runId ?? null,
+      input.lockedAt,
+      input.eligibleAt,
+      input.healthStatus ?? "healthy",
+      action,
+      input.createdAt,
+    );
+}
+
+async function sealPublicOutcome(
+  db: D1Database,
+  input: DdrPublicAssessmentSealInput,
+  outcomeKind: DdrPublicPredictionOutcomeKind,
+): Promise<DdrSealedPublicPrediction> {
+  assertNonEmpty(input.incidentKey, "incidentKey");
+  assertPositiveInteger(input.eventId, "eventId");
+  assertPositiveInteger(input.startedAt, "startedAt");
+  assertPositiveInteger(input.assessedAt, "assessedAt");
+  assertNonNegativeInteger(input.eventAgeSec, "eventAgeSec");
+  assertPositiveInteger(input.createdAt, "createdAt");
+  assertPositiveInteger(input.policyDelaySec, "policyDelaySec");
+  assertPositiveInteger(input.eligibleAt, "eligibleAt");
+  assertPositiveInteger(input.lockedAt, "lockedAt");
+  assertNonNegativeInteger(input.eventAgeAtLockSec, "eventAgeAtLockSec");
+  assertHash(input.rowHash, "rowHash");
+
+  const existing = await loadSealedPublicPredictions(db, { incidentKeys: [input.incidentKey] });
+  if (existing.length > 0) return existing[0];
+
+  const canonicalRowHash = computeDdrPublicRowHash(input.sealedPayload);
+  if (canonicalRowHash !== input.rowHash) {
+    throw new Error("rowHash does not match canonical sealed public row payload");
+  }
+  const payloadJson = jsonString(attachDdrPublicRowHash(input.sealedPayload as Record<string, unknown>, input.rowHash), "sealedPayload");
+  const results = await db.batch([
+    await insertPublicPredictionAssessment(db, input, payloadJson),
+    lockStateStatement(db, input, outcomeKind === "prediction" ? "frozen" : "no_call"),
+    sealedPredictionStatement(db, input, outcomeKind, payloadJson),
+    lockAuditStatement(db, input, outcomeKind === "prediction" ? "locked_prediction" : "locked_no_call"),
+  ]);
+  const sealedChanges = Number(results[2]?.meta?.changes ?? 0);
+  if (sealedChanges !== 1) {
+    throw new Error(`Expected to seal one DDR public ${outcomeKind}; inserted ${sealedChanges}`);
+  }
+
+  const [prediction] = await loadSealedPublicPredictions(db, { incidentKeys: [input.incidentKey] });
+  if (!prediction) throw new Error(`Sealed DDR public ${outcomeKind} could not be reloaded`);
+  return prediction;
+}
+
+export function sealPublicPrediction(
+  db: D1Database,
+  input: DdrPublicAssessmentSealInput,
+): Promise<DdrSealedPublicPrediction> {
+  return sealPublicOutcome(db, input, "prediction");
+}
+
+export function sealPublicNoCall(
+  db: D1Database,
+  input: Omit<
+    DdrPublicAssessmentSealInput,
+    | "resolutionTier"
+    | "durationSuppressed"
+    | "durationSuppressedReason"
+    | "medianRemainingSec"
+    | "iqrLowRemainingSec"
+    | "iqrHighRemainingSec"
+    | "stratum"
+    | "horizons"
+    | "factors"
+  > & { resolutionTier?: "insufficient_signal" },
+): Promise<DdrSealedPublicPrediction> {
+  return sealPublicOutcome(
+    db,
+    {
+      ...input,
+      resolutionTier: "insufficient_signal",
+      durationSuppressed: true,
+      durationSuppressedReason: "insufficient_signal",
+      medianRemainingSec: null,
+      iqrLowRemainingSec: null,
+      iqrHighRemainingSec: null,
+      stratum: null,
+      horizons: [],
+      factors: [],
+    },
+    "no_call",
+  );
+}
+
+export async function loadSealedPublicPredictions(
+  db: D1Database,
+  filters: LoadSealedPublicPredictionsFilters = {},
+): Promise<DdrSealedPublicPrediction[]> {
+  const rows: DdrSealedPublicPrediction[] = [];
+  const query = async (whereSql: string, binds: unknown[]) => {
+    const policySql = filters.predictionPolicyVersion ? `${whereSql ? " AND" : "WHERE"} prediction_policy_version = ?` : "";
+    const policyBinds = filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : [];
+    const result = await db
+      .prepare(
+        `SELECT *
+         FROM depeg_resolver_public_predictions
+         ${whereSql} ${policySql}
+         ORDER BY locked_at DESC, id DESC`,
+      )
+      .bind(...binds, ...policyBinds)
+      .all<SealedPublicPredictionRow>();
+    rows.push(...(result.results ?? []).map(mapSealedPublicPrediction));
+  };
+
+  if (filters.publicPredictionIds) {
+    if (filters.publicPredictionIds.length === 0) return [];
+    for (const chunk of chunkArray(normalizeIdSet(filters.publicPredictionIds))) {
+      const clause = buildInClause(chunk);
+      await query(`WHERE id IN (${clause.sql})`, clause.binds);
+    }
+    return rows;
+  }
+
+  if (filters.incidentKeys) {
+    if (filters.incidentKeys.length === 0) return [];
+    for (const chunk of chunkArray([...new Set(filters.incidentKeys)])) {
+      const clause = buildInClause(chunk);
+      await query(`WHERE incident_key IN (${clause.sql})`, clause.binds);
+    }
+    return rows;
+  }
+
+  if (filters.eventIds) {
+    if (filters.eventIds.length === 0) return [];
+    for (const chunk of chunkArray(normalizeIdSet(filters.eventIds))) {
+      const clause = buildInClause(chunk);
+      await query(`WHERE event_id IN (${clause.sql})`, clause.binds);
+    }
+    return rows;
+  }
+
+  await query("", []);
+  return rows;
+}
+
+async function loadPublicationManifestByToken(db: D1Database, snapshotToken: string): Promise<DdrPublicationManifest | null> {
+  const row = await db
+    .prepare(
+      `SELECT s.*, f.finalized_at, f.validator_version
+       FROM depeg_resolver_publication_snapshots s
+       JOIN depeg_resolver_publication_snapshot_finalizations f
+         ON f.snapshot_token = s.snapshot_token
+       WHERE s.snapshot_token = ?`,
+    )
+    .bind(snapshotToken)
+    .first<PublicationManifestRow>();
+  return row ? mapPublicationManifest(row) : null;
+}
+
+export async function writePublicationManifest(
+  db: D1Database,
+  input: WritePublicationManifestInput,
+): Promise<DdrPublicationManifest> {
+  assertPositiveInteger(input.snapshotGeneration, "snapshotGeneration");
+  assertPositiveInteger(input.publishedAt, "publishedAt");
+  const validatorVersion = input.validatorVersion ?? "ddr-publication-store-v1";
+  assertNonEmpty(validatorVersion, "validatorVersion");
+
+  const payload = basePayloadObject(input.basePayload);
+  const payloadRows = payload.rows;
+  if (!Array.isArray(payloadRows)) throw new Error("basePayload.rows must be an array");
+
+  const ids = normalizeIdSet(input.publicPredictionIds ?? publicPredictionIdsFromPayload(payload));
+  const rowHashes = normalizeRowHashes(input.publicPredictionRowHashes ?? rowHashesFromPayload(payload));
+  assertMatchingIdAndHashSets(ids, rowHashes);
+
+  const sealedRows = ids.length > 0 ? await loadSealedPublicPredictions(db, { publicPredictionIds: ids }) : [];
+  const sealedById = new Map(sealedRows.map((row) => [row.id, row]));
+  const payloadRowById = new Map<number, unknown>();
+  for (const row of payloadRows) {
+    const id = publicPredictionIdFromPayloadRow(row);
+    if (id == null) continue;
+    if (payloadRowById.has(id)) throw new Error(`basePayload contains duplicate public prediction row ${id}`);
+    payloadRowById.set(id, row);
+  }
+  for (const id of ids) {
+    const sealed = sealedById.get(id);
+    if (!sealed) throw new Error(`Cannot publish missing sealed public prediction ${id}`);
+    if (sealed.rowHash !== rowHashes[String(id)]) {
+      throw new Error(`Public prediction ${id} row hash does not match sealed row hash`);
+    }
+    const payloadRow = payloadRowById.get(id);
+    if (!payloadRow) throw new Error(`basePayload is missing public prediction row ${id}`);
+    const payloadRowHash = publicPredictionRowHashFromPayloadRow(payloadRow);
+    if (payloadRowHash !== sealed.rowHash) {
+      throw new Error(`basePayload row ${id} does not carry the sealed row hash`);
+    }
+    const recomputedRowHash = computeDdrPublicRowHash(payloadRow);
+    if (recomputedRowHash !== sealed.rowHash) {
+      throw new Error(`basePayload row ${id} canonical hash does not match sealed row hash`);
+    }
+  }
+
+  const basePayloadJson = stableJsonStringifyV1(payload);
+  const basePayloadHash = stableJsonHashV1(DDR_HASH_DOMAINS.publicationManifest, payload);
+  const publicPredictionIdsHash = stableJsonHashV1(DDR_HASH_DOMAINS.publicPredictionIds, ids);
+  if (input.basePayloadHash && input.basePayloadHash !== basePayloadHash) {
+    throw new Error("basePayloadHash does not match canonical publication payload hash");
+  }
+  if (input.publicPredictionIdsHash && input.publicPredictionIdsHash !== publicPredictionIdsHash) {
+    throw new Error("publicPredictionIdsHash does not match canonical public prediction id hash");
+  }
+
+  const publicPredictionIdsJson = JSON.stringify(ids);
+  const publicPredictionRowHashesJson = JSON.stringify(rowHashes);
+  const snapshotToken =
+    input.snapshotToken ?? `ddrpub:${input.publishedAt}:${basePayloadHash.slice(0, 16)}:${publicPredictionIdsHash.slice(0, 8)}`;
+  const createdAt = input.createdAt ?? input.publishedAt;
+
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_publication_snapshots
+         (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
+          base_payload_hash, public_prediction_ids_hash, public_prediction_ids_json,
+          public_prediction_row_hashes_json, base_payload_json, base_row_count,
+          public_prediction_count, created_at)
+         VALUES (
+           ?,
+           'ddr_public',
+           (SELECT COALESCE(MAX(snapshot_sequence), 0) + 1 FROM depeg_resolver_publication_snapshots WHERE snapshot_kind = 'ddr_public'),
+           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         )`,
+      )
+      .bind(
+        snapshotToken,
+        input.snapshotGeneration,
+        input.publishedAt,
+        basePayloadHash,
+        publicPredictionIdsHash,
+        publicPredictionIdsJson,
+        publicPredictionRowHashesJson,
+        basePayloadJson,
+        payloadRows.length,
+        ids.length,
+        createdAt,
+      ),
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_publication_snapshot_rows
+         (snapshot_token, public_prediction_id, incident_key, first_published)
+         SELECT ?, p.id, p.incident_key,
+                CASE
+                  WHEN EXISTS (
+                    SELECT 1
+                    FROM depeg_resolver_publication_snapshot_rows existing
+                    WHERE existing.public_prediction_id = p.id
+                  )
+                  THEN 0
+                  ELSE 1
+                END
+         FROM json_each(?) ids
+         JOIN depeg_resolver_public_predictions p
+           ON p.id = CAST(ids.value AS INTEGER)
+         ORDER BY p.id`,
+      )
+      .bind(snapshotToken, publicPredictionIdsJson),
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_publication_snapshot_finalizations
+         (snapshot_token, finalized_at, validator_version, validated_base_payload_hash,
+          validated_public_prediction_ids_hash, validated_public_prediction_row_hashes_json,
+          validated_base_row_count, validated_public_prediction_count)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        snapshotToken,
+        input.publishedAt,
+        validatorVersion,
+        basePayloadHash,
+        publicPredictionIdsHash,
+        publicPredictionRowHashesJson,
+        payloadRows.length,
+        ids.length,
+      ),
+  ]);
+
+  const manifest = await loadPublicationManifestByToken(db, snapshotToken);
+  if (!manifest) throw new Error(`Publication manifest ${snapshotToken} was not finalized`);
+  const firstMembership = await loadFirstPublicationMembership(db, { publicPredictionIds: ids });
+  return {
+    ...manifest,
+    firstPublishedPublicPredictionIds: firstMembership
+      .filter((membership) => membership.snapshotToken === snapshotToken)
+      .map((membership) => membership.publicPredictionId),
+  };
+}
+
+export async function loadLatestPublicationManifest(db: D1Database): Promise<DdrPublicationManifest | null> {
+  const row = await db
+    .prepare(
+      `SELECT s.*, f.finalized_at, f.validator_version
+       FROM depeg_resolver_publication_snapshots s
+       JOIN depeg_resolver_publication_snapshot_finalizations f
+         ON f.snapshot_token = s.snapshot_token
+       WHERE s.snapshot_kind = 'ddr_public'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM depeg_resolver_publication_snapshot_errata e
+           WHERE e.snapshot_token = s.snapshot_token
+         )
+       ORDER BY s.snapshot_sequence DESC
+       LIMIT 1`,
+    )
+    .first<PublicationManifestRow>();
+  return row ? mapPublicationManifest(row) : null;
+}
+
+export async function loadFirstPublicationMembership(
+  db: D1Database,
+  filters: LoadSealedPublicPredictionsFilters = {},
+): Promise<DdrFirstPublicationMembership[]> {
+  const rows: DdrFirstPublicationMembership[] = [];
+  const query = async (whereSql: string, binds: unknown[]) => {
+    const result = await db
+      .prepare(
+        `SELECT r.public_prediction_id,
+                r.incident_key,
+                r.snapshot_token,
+                s.snapshot_sequence,
+                s.snapshot_generation,
+                s.published_at,
+                f.finalized_at
+         FROM depeg_resolver_publication_snapshot_rows r
+         JOIN depeg_resolver_publication_snapshots s ON s.snapshot_token = r.snapshot_token
+         JOIN depeg_resolver_publication_snapshot_finalizations f ON f.snapshot_token = r.snapshot_token
+         JOIN depeg_resolver_public_predictions p ON p.id = r.public_prediction_id
+         WHERE r.first_published = 1
+         ${whereSql}
+         ORDER BY s.snapshot_sequence ASC, r.public_prediction_id ASC`,
+      )
+      .bind(...binds)
+      .all<FirstPublicationMembershipRow>();
+    rows.push(
+      ...(result.results ?? []).map((row) => ({
+        publicPredictionId: row.public_prediction_id,
+        incidentKey: row.incident_key,
+        snapshotToken: row.snapshot_token,
+        snapshotSequence: row.snapshot_sequence,
+        snapshotGeneration: row.snapshot_generation,
+        publishedAt: row.published_at,
+        finalizedAt: row.finalized_at,
+        firstPublished: true,
+      })),
+    );
+  };
+
+  if (filters.publicPredictionIds) {
+    if (filters.publicPredictionIds.length === 0) return [];
+    for (const chunk of chunkArray(normalizeIdSet(filters.publicPredictionIds))) {
+      const clause = buildInClause(chunk);
+      await query(`AND r.public_prediction_id IN (${clause.sql})`, clause.binds);
+    }
+    return rows;
+  }
+
+  if (filters.incidentKeys) {
+    if (filters.incidentKeys.length === 0) return [];
+    for (const chunk of chunkArray([...new Set(filters.incidentKeys)])) {
+      const clause = buildInClause(chunk);
+      await query(`AND r.incident_key IN (${clause.sql})`, clause.binds);
+    }
+    return rows;
+  }
+
+  if (filters.eventIds) {
+    if (filters.eventIds.length === 0) return [];
+    for (const chunk of chunkArray(normalizeIdSet(filters.eventIds))) {
+      const clause = buildInClause(chunk);
+      await query(`AND p.event_id IN (${clause.sql})`, clause.binds);
+    }
+    return rows;
+  }
+
+  await query("", []);
+  return rows;
+}

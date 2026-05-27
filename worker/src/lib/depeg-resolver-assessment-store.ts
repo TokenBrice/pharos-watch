@@ -1,8 +1,14 @@
-import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
 import { batchExecute } from "./db";
 
-export type DdrAssessmentCheckpoint = "first" | "age_1h" | "age_6h" | "age_24h" | "age_7d" | "latest";
+export type DdrAssessmentCheckpoint =
+  | "first"
+  | "age_1h"
+  | "age_6h"
+  | "age_24h"
+  | "age_7d"
+  | "latest"
+  | "public_prediction";
 
 const AGE_CHECKPOINTS: Array<{ checkpoint: DdrAssessmentCheckpoint; minAgeSec: number }> = [
   { checkpoint: "age_1h", minAgeSec: 3600 },
@@ -11,6 +17,48 @@ const AGE_CHECKPOINTS: Array<{ checkpoint: DdrAssessmentCheckpoint; minAgeSec: n
   { checkpoint: "age_7d", minAgeSec: 7 * 86400 },
 ];
 
+export interface DdrDiagnosticAssessmentRow {
+  stablecoinId: string;
+  symbol: string;
+  name: string;
+  pegCurrency: string;
+  governance: string;
+  eventId: number;
+  startedAt: number;
+  ageSec: number;
+  direction: "above" | "below";
+  resolution: {
+    tier: string;
+    factors: unknown[];
+  };
+  duration: {
+    suppressed: boolean;
+    suppressedReason?: string | null;
+    medianSec?: number | null;
+    iqrSec?: [number, number] | null;
+    stratum?: string | null;
+    horizons: unknown[];
+  };
+}
+
+export interface DdrDiagnosticAssessmentSnapshot {
+  _meta: {
+    computedAt: number;
+    degraded: boolean;
+    resolutionRubricVersion: string;
+    durationModelVersion: string;
+    incidentGroupingVersion: string;
+    supportRulesVersion: string;
+    [key: string]: unknown;
+  };
+  rows: unknown[];
+  methodology: {
+    version: string;
+    versionLabel: string;
+    [key: string]: unknown;
+  };
+}
+
 interface DdrAssessmentRecord {
   eventId: number;
   stablecoinId: string;
@@ -18,7 +66,7 @@ interface DdrAssessmentRecord {
   name: string;
   pegCurrency: string;
   governance: string;
-  direction: DdrRow["direction"];
+  direction: DdrDiagnosticAssessmentRow["direction"];
   startedAt: number;
   assessedAt: number;
   eventAgeSec: number;
@@ -29,7 +77,7 @@ interface DdrAssessmentRecord {
   durationModelVersion: string;
   incidentGroupingVersion: string;
   supportRulesVersion: string;
-  resolutionTier: DdrRow["resolution"]["tier"];
+  resolutionTier: string;
   durationSuppressed: number;
   durationSuppressedReason: string | null;
   medianRemainingSec: number | null;
@@ -56,9 +104,33 @@ function checkpointsForAge(ageSec: number): DdrAssessmentCheckpoint[] {
   return checkpoints;
 }
 
+function isDiagnosticAssessmentRow(row: unknown): row is DdrDiagnosticAssessmentRow {
+  if (!row || typeof row !== "object") return false;
+  const candidate = row as Partial<DdrDiagnosticAssessmentRow>;
+  return (
+    typeof candidate.stablecoinId === "string" &&
+    typeof candidate.symbol === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.pegCurrency === "string" &&
+    typeof candidate.governance === "string" &&
+    typeof candidate.eventId === "number" &&
+    typeof candidate.startedAt === "number" &&
+    typeof candidate.ageSec === "number" &&
+    (candidate.direction === "above" || candidate.direction === "below") &&
+    !!candidate.resolution &&
+    typeof candidate.resolution === "object" &&
+    typeof candidate.resolution.tier === "string" &&
+    Array.isArray(candidate.resolution.factors) &&
+    !!candidate.duration &&
+    typeof candidate.duration === "object" &&
+    typeof candidate.duration.suppressed === "boolean" &&
+    Array.isArray(candidate.duration.horizons)
+  );
+}
+
 function buildAssessmentRecord(
-  row: DdrRow,
-  snapshot: DdrResponse,
+  row: DdrDiagnosticAssessmentRow,
+  snapshot: DdrDiagnosticAssessmentSnapshot,
   checkpoint: DdrAssessmentCheckpoint,
   nowSec: number,
 ): DdrAssessmentRecord {
@@ -130,7 +202,10 @@ function bindAssessment(stmt: D1PreparedStatement, record: DdrAssessmentRecord):
   );
 }
 
-export async function writeDepegResolverAssessments(db: D1Database, snapshot: DdrResponse): Promise<number> {
+export async function writeDepegResolverAssessments(
+  db: D1Database,
+  snapshot: DdrDiagnosticAssessmentSnapshot,
+): Promise<number> {
   if (snapshot._meta.degraded || snapshot.rows.length === 0) return 0;
   if (snapshot.methodology.version !== DDR_METHODOLOGY_VERSION) {
     throw new Error(
@@ -194,7 +269,9 @@ export async function writeDepegResolverAssessments(db: D1Database, snapshot: Dd
   );
 
   const statements: D1PreparedStatement[] = [];
-  for (const row of snapshot.rows) {
+  const diagnosticRows = snapshot.rows.filter(isDiagnosticAssessmentRow);
+  if (diagnosticRows.length === 0) return 0;
+  for (const row of diagnosticRows) {
     for (const checkpoint of checkpointsForAge(row.ageSec)) {
       const record = buildAssessmentRecord(row, snapshot, checkpoint, nowSec);
       statements.push(bindAssessment(checkpoint === "latest" ? upsertLatest : insertImmutable, record));

@@ -79,6 +79,11 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0133     | `0133_yield_decision_alternatives.sql`                   | Add sibling `yield_source_decision_alternatives` table for the bounded, public-safe retained alternates surfaced on `/api/yield-rankings`        |
 | 0134     | `0134_yield_decision_retention_reason.sql`               | Add nullable `retention_reason` column to `yield_source_decisions` for per-row trend/audit classification and selective pruning                   |
 | 0135     | `0135_depeg_resolver_assessments.sql`                    | Add durable DDR assessment checkpoints for reviewer comparisons against later depeg outcomes                                                     |
+| 0136     | `0136_depeg_resolver_incident_storage.sql`               | Add DDRv2 canonical incident identity, event links, lineage, policy membership snapshots, and repair authorization ledgers                       |
+| 0137     | `0137_depeg_resolver_public_prediction_storage.sql`      | Add DDRv2 public_prediction assessment guards, sealed public prediction/no-call storage, and durable lock state/audit tables                     |
+| 0138     | `0138_depeg_resolver_prediction_errata.sql`              | Add DDRv2 append-only prediction errata ledger with replacement-evidence guards                                                                  |
+| 0139     | `0139_depeg_resolver_repair_guards.sql`                  | Add DDRv2 repair authorization guards for sealed incident relinks, event identity changes, deletes, and provenance invalidations                 |
+| 0140     | `0140_depeg_resolver_publication_snapshots.sql`          | Add DDRv2 append-only public publication snapshot manifests, row membership, finalization, and snapshot errata storage                           |
 
 ## Retired Individual Migrations
 

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
-import type { DdrResponse, DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { writeDepegResolverAssessments } from "../depeg-resolver-assessment-store";
+import {
+  type DdrDiagnosticAssessmentRow,
+  type DdrDiagnosticAssessmentSnapshot,
+  writeDepegResolverAssessments,
+} from "../depeg-resolver-assessment-store";
 
-const baseRow: DdrRow = {
+const baseRow: DdrDiagnosticAssessmentRow = {
   stablecoinId: "lusd-liquity",
   symbol: "LUSD",
   name: "Liquity USD",
@@ -59,9 +62,12 @@ const baseRow: DdrRow = {
     supplyChange30dPct: null,
     mintSurge: null,
   },
-};
+} as DdrDiagnosticAssessmentRow;
 
-function snapshot(rows: DdrRow[], overrides: Partial<DdrResponse["_meta"]> = {}): DdrResponse {
+function snapshot(
+  rows: DdrDiagnosticAssessmentRow[],
+  overrides: Partial<DdrDiagnosticAssessmentSnapshot["_meta"]> = {},
+): DdrDiagnosticAssessmentSnapshot {
   return {
     _meta: {
       dataAsOf: 2_000_000,

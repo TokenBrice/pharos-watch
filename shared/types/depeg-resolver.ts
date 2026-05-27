@@ -156,6 +156,42 @@ export type DdrRow = z.infer<typeof DdrRowSchema>;
 export const DDR_PUBLIC_WARNING =
   "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.";
 
+export const DDR_ASSESSMENT_CHECKPOINT_VALUES = [
+  "first",
+  "age_1h",
+  "age_6h",
+  "age_24h",
+  "age_7d",
+  "latest",
+  "public_prediction",
+] as const;
+export type DdrAssessmentCheckpoint = (typeof DDR_ASSESSMENT_CHECKPOINT_VALUES)[number];
+
+export const DDR_PUBLIC_PREDICTION_STATE_VALUES = [
+  "pending_lock",
+  "lock_deferred",
+  "publication_retry_pending",
+  "frozen",
+  "no_call",
+  "invalidated",
+] as const;
+export type DdrPublicPredictionState = (typeof DDR_PUBLIC_PREDICTION_STATE_VALUES)[number];
+
+export const DDR_LOCK_TIMING_VALUES = ["on_time", "late_confirmation", "late_freeze", "deferred"] as const;
+export type DdrLockTiming = (typeof DDR_LOCK_TIMING_VALUES)[number];
+
+export const DDR_ERRATUM_REASON_VALUES = [
+  "false_positive",
+  "disputed",
+  "no_data",
+  "event_identity_error",
+  "input_corruption",
+  "lifecycle_status_error",
+  "implementation_bug",
+  "hash_mismatch",
+] as const;
+export type DdrErratumReason = (typeof DDR_ERRATUM_REASON_VALUES)[number];
+
 export const DdrLineageSchema = z.object({
   trainingWindow: z.object({ start: z.number(), end: z.number() }),
   eventCount: z.number().int().nonnegative(),
@@ -165,11 +201,187 @@ export const DdrLineageSchema = z.object({
 });
 export type DdrLineage = z.infer<typeof DdrLineageSchema>;
 
+export const DdrPredictionErratumSchema = z.object({
+  id: z.number().int().positive(),
+  state: z.literal("invalidated"),
+  publicPredictionId: z.number().int().positive(),
+  incidentKey: z.string(),
+  eventId: z.number().int().positive(),
+  assessmentId: z.number().int().positive(),
+  reason: z.enum(DDR_ERRATUM_REASON_VALUES),
+  createdAt: z.number().int().positive(),
+  operatorNote: z.string(),
+  rowHashBefore: z.string().nullable(),
+  replacementAssessmentId: z.number().int().positive().nullable(),
+  replacementRowHash: z.string().nullable(),
+  createdBy: z.string(),
+});
+export type DdrPredictionErratum = z.infer<typeof DdrPredictionErratumSchema>;
+
+export const DdrPredictionMetaSchema = z.object({
+  state: z.enum(DDR_PUBLIC_PREDICTION_STATE_VALUES),
+  publicPredictionId: z.number().int().positive().nullable(),
+  incidentKey: z.string(),
+  predictionPolicyVersion: z.string(),
+  predictionMethodologyVersion: z.string().nullable(),
+  predictionMethodologyVersionLabel: z.string().nullable(),
+  resolutionRubricVersion: z.string().nullable(),
+  durationModelVersion: z.string().nullable(),
+  incidentGroupingVersion: z.string().nullable(),
+  supportRulesVersion: z.string().nullable(),
+  eligibleAt: z.number().int().nonnegative(),
+  lockedAt: z.number().int().nonnegative().nullable(),
+  publishedAt: z.number().int().nonnegative().nullable(),
+  publicationSnapshotToken: z.string().nullable(),
+  snapshotGeneration: z.number().int().positive().nullable(),
+  eventAgeAtLockSec: z.number().int().nonnegative().nullable(),
+  lockTiming: z.enum(DDR_LOCK_TIMING_VALUES).nullable(),
+  source: z.enum(["public_prediction", "pending", "erratum"]),
+  deferralReason: z.string().nullable(),
+  deferralCount: z.number().int().nonnegative().nullable(),
+  rowHash: z.string().nullable(),
+  lineage: DdrLineageSchema.nullable(),
+  modelAsOf: z.number().int().nonnegative().nullable(),
+  latestErratum: DdrPredictionErratumSchema.nullable(),
+  errataCount: z.number().int().nonnegative(),
+  errataHistory: z.array(DdrPredictionErratumSchema),
+});
+export type DdrPredictionMeta = z.infer<typeof DdrPredictionMetaSchema>;
+
+export const DdrAnchoredHorizonCellSchema = DdrHorizonCellSchema.extend({
+  horizonEndAt: z.number().int().nonnegative(),
+  anchoredLabel: z.string(),
+});
+export type DdrAnchoredHorizonCell = z.infer<typeof DdrAnchoredHorizonCellSchema>;
+
+export const DdrFrozenDurationSchema = DdrDurationSchema.extend({
+  remainingAsOf: z.number().int().nonnegative(),
+  medianResolveAt: z.number().int().nonnegative().nullable(),
+  iqrResolveAt: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]).nullable(),
+  horizons: z.array(DdrAnchoredHorizonCellSchema),
+});
+export type DdrFrozenDuration = z.infer<typeof DdrFrozenDurationSchema>;
+
+export const DdrV2BaseRowSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  name: z.string(),
+  pegCurrency: z.string(),
+  governance: z.string(),
+  status: z.string().nullable(),
+  eventId: z.number().int().positive(),
+  incidentKey: z.string(),
+  startedAt: z.number().int().nonnegative(),
+  direction: z.enum(["above", "below"]),
+});
+export type DdrV2BaseRow = z.infer<typeof DdrV2BaseRowSchema>;
+
+export const DdrV2LiveOverlaySchema = z.object({
+  currentEventId: z.number().int().positive().nullable(),
+  ageSec: z.number().int().nonnegative(),
+  peakDeviationBps: z.number(),
+  currentDeviationBps: z.number().nullable(),
+  eventState: z.enum(["active", "closed_pending_review", "source_event_missing", "event_invalidated"]),
+  updatedAt: z.number().int().nonnegative(),
+  stale: z.boolean(),
+  degradedReason: z.string().nullable(),
+});
+export type DdrV2LiveOverlay = z.infer<typeof DdrV2LiveOverlaySchema>;
+
+export const DdrV2FrozenPayloadSchema = z.object({
+  resolution: DdrResolutionSchema,
+  duration: DdrFrozenDurationSchema,
+  relatedContext: DdrRelatedContextSchema,
+  sourceRow: DdrRowSchema,
+});
+export type DdrV2FrozenPayload = z.infer<typeof DdrV2FrozenPayloadSchema>;
+
+export const DdrV2NoCallPayloadSchema = z.object({
+  lockedAt: z.number().int().nonnegative(),
+  eventAgeAtLockSec: z.number().int().nonnegative(),
+  missingReasons: z.array(z.string()),
+  relatedContext: DdrRelatedContextSchema,
+});
+export type DdrV2NoCallPayload = z.infer<typeof DdrV2NoCallPayloadSchema>;
+
+export const DdrOfficialLockOutcomeSchema = z.union([DdrV2FrozenPayloadSchema, DdrV2NoCallPayloadSchema]);
+export type DdrOfficialLockOutcome = z.infer<typeof DdrOfficialLockOutcomeSchema>;
+
+export const DdrV2PendingRowSchema = DdrV2BaseRowSchema.extend({
+  kind: z.literal("pending"),
+  prediction: DdrPredictionMetaSchema.extend({
+    state: z.enum(["pending_lock", "lock_deferred", "publication_retry_pending"]),
+  }),
+  frozen: z.null(),
+});
+export type DdrV2PendingRow = z.infer<typeof DdrV2PendingRowSchema>;
+
+export const DdrV2PredictionRowSchema = DdrV2BaseRowSchema.extend({
+  kind: z.literal("prediction"),
+  prediction: DdrPredictionMetaSchema.extend({ state: z.literal("frozen") }),
+  frozen: DdrV2FrozenPayloadSchema,
+});
+export type DdrV2PredictionRow = z.infer<typeof DdrV2PredictionRowSchema>;
+
+export const DdrV2NoCallRowSchema = DdrV2BaseRowSchema.extend({
+  kind: z.literal("no_call"),
+  prediction: DdrPredictionMetaSchema.extend({ state: z.literal("no_call") }),
+  noCall: DdrV2NoCallPayloadSchema,
+  frozen: z.null(),
+});
+export type DdrV2NoCallRow = z.infer<typeof DdrV2NoCallRowSchema>;
+
+export const DdrV2InvalidatedPredictionRowSchema = DdrV2BaseRowSchema.extend({
+  kind: z.literal("invalidated_prediction"),
+  prediction: DdrPredictionMetaSchema.extend({ state: z.literal("invalidated") }),
+  originalKind: z.enum(["prediction", "no_call"]),
+  originalOutcome: DdrOfficialLockOutcomeSchema,
+  frozen: DdrV2FrozenPayloadSchema.nullable(),
+  noCall: DdrV2NoCallPayloadSchema.nullable(),
+});
+export type DdrV2InvalidatedPredictionRow = z.infer<typeof DdrV2InvalidatedPredictionRowSchema>;
+
+export const DdrV2RowSchema = z.discriminatedUnion("kind", [
+  DdrV2PendingRowSchema,
+  DdrV2PredictionRowSchema,
+  DdrV2NoCallRowSchema,
+  DdrV2InvalidatedPredictionRowSchema,
+]);
+export type DdrV2Row = z.infer<typeof DdrV2RowSchema>;
+
+export const DdrV2ResponseRowSchema = z.discriminatedUnion("kind", [
+  DdrV2PendingRowSchema.extend({ live: DdrV2LiveOverlaySchema }),
+  DdrV2PredictionRowSchema.extend({ live: DdrV2LiveOverlaySchema }),
+  DdrV2NoCallRowSchema.extend({ live: DdrV2LiveOverlaySchema }),
+  DdrV2InvalidatedPredictionRowSchema.extend({ live: DdrV2LiveOverlaySchema }),
+]);
+export type DdrV2ResponseRow = z.infer<typeof DdrV2ResponseRowSchema>;
+
+export const DdrReadOverlaySchema = z.object({
+  degradedLockDeferralIncidentKeys: z.array(z.string()).optional().default([]),
+  closedPendingReviewIncidentKeys: z.array(z.string()).optional().default([]),
+  suppressedIncidentKeys: z.array(z.string()).optional().default([]),
+});
+export type DdrReadOverlay = z.infer<typeof DdrReadOverlaySchema>;
+
+export const DDR_EMPTY_READ_OVERLAY: DdrReadOverlay = {
+  degradedLockDeferralIncidentKeys: [],
+  closedPendingReviewIncidentKeys: [],
+  suppressedIncidentKeys: [],
+};
+
 export const DdrMetaSchema = z.object({
+  schemaVersion: z.literal(2),
   dataAsOf: z.number(),
   modelAsOf: z.number(),
   computedAt: z.number(),
   expiresAt: z.number(),
+  snapshotToken: z.string().nullable(),
+  snapshotGeneration: z.number().int().positive().nullable(),
+  publicPredictionIds: z.array(z.number().int().positive()),
+  publicPredictionRowHashes: z.record(z.string(), z.string()),
+  basePayloadHash: z.string().nullable(),
+  readOverlay: DdrReadOverlaySchema.optional().default(DDR_EMPTY_READ_OVERLAY),
   degraded: z.boolean(),
   degradedReason: z.string().nullable().optional().default(null),
   publicWarning: z.string(),
@@ -183,7 +395,7 @@ export type DdrMeta = z.infer<typeof DdrMetaSchema>;
 
 export const DdrResponseSchema = z.object({
   _meta: DdrMetaSchema,
-  rows: z.array(DdrRowSchema),
+  rows: z.array(DdrV2ResponseRowSchema),
   methodology: MethodologyEnvelopeSchema,
 });
 export type DdrResponse = z.infer<typeof DdrResponseSchema>;
