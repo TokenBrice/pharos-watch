@@ -41,6 +41,55 @@
     "regulator": "MAS",
     "license": "Major Payment Institution"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "XUSD is a U.S. dollar stablecoin issued by StraitsX with 1:1 USD redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "StraitsX USD Issuance Pte. Ltd.",
+    "issuerDomicile": "Singapore",
+    "licensingRegulator": "MAS",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.straitsx.com/xusd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "StraitsX XUSD",
+        "url": "https://www.straitsx.com/xusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "StraitsX token terms",
+        "url": "https://www.straitsx.com/legal/token",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "StraitsX XUSD product and regulatory disclosure pages",
+        "MAS payment-institution public materials",
+        "Public foreign payment stablecoin issuer exception materials"
+      ],
+      "summary": "MAS licensing and XUSD reserve disclosures were found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for XUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

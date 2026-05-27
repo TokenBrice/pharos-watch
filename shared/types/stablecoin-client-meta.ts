@@ -55,6 +55,27 @@ export interface MintAuthorityCoverageSummary {
 }
 
 type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"]>["reviewedStatus"];
+type GeniusSourceProfile = NonNullable<StablecoinMeta["genius"]>;
+
+export type GeniusClientProfile = Pick<
+  GeniusSourceProfile,
+  | "applicability"
+  | "authorizationStatus"
+  | "issuerPathway"
+  | "issuerEntity"
+  | "issuerDomicile"
+  | "licensingRegulator"
+  | "primaryFederalRegulator"
+  | "stateRegulator"
+  | "reserveDisclosurePresent"
+  | "reserveDisclosureUrl"
+  | "redemptionPolicyPresent"
+  | "latestReportDate"
+  | "notes"
+  | "references"
+  | "reviewer"
+  | "reviewedAt"
+>;
 
 /**
  * Slim projection of `StablecoinMeta` for client-side consumers.
@@ -65,9 +86,11 @@ type BlacklistClientStatus = NonNullable<StablecoinMeta["blacklistabilityReview"
  * browser costs ~1.37 MiB of JSON. This client type keeps only the fields
  * client surfaces actually read for routing, labels, filtering, basic
  * classification, reserve coverage summaries, mint-authority coverage
- * classification, and portfolio exposure. Stablecoin detail pages add
- * page-specific full mint-authority summaries outside this global registry so
- * coverage growth does not inflate every route's client chunk.
+ * classification, compliance-table display, and portfolio exposure. Stablecoin
+ * detail pages add page-specific full mint-authority summaries outside this
+ * global registry so coverage growth does not inflate every route's client
+ * chunk. GENIUS compliance evidence is also projected to displayed fields only;
+ * full negative-evidence reviews remain in the source JSON/server registry.
  *
  * Build pipeline: `scripts/build-data/build-client-registry.mjs` projects
  * `coins.generated.json` to a slim JSON consumed by
@@ -102,7 +125,6 @@ export type StablecoinClientMeta = Pick<
   | "commodityOunces"
   | "infrastructures"
   | "mica"
-  | "genius"
   | "yieldConfig"
   | "liveReservesConfig"
   | "proofOfReserves"
@@ -111,6 +133,7 @@ export type StablecoinClientMeta = Pick<
   | "collateralQuality"
 > & {
   blacklistStatus?: BlacklistClientStatus;
+  genius?: GeniusClientProfile;
   mintAuthoritySummary?: MintAuthorityCoverageSummary;
 };
 

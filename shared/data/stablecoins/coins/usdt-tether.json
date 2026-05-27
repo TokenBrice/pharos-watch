@@ -54,14 +54,67 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Binance delists USDT from EEA spot trading to comply with MiCA",
-        "url": "https://www.financemagnates.com/cryptocurrency/binance-finally-delists-tether-usdt-from-european-spot-trading-in-compliance-with-mica/"
+        "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "Gemini non-MiCA-compliant stablecoin restrictions",
+        "url": "https://support.gemini.com/hc/en-us/articles/33437494572443-Non-MiCA-Compliant-Stablecoins"
       },
       {
         "label": "ESMA MiCA register and webpage",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDT is a fiat-referenced dollar stablecoin marketed for payments, transfers, and 1:1 redemption through Tether for eligible customers."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Tether International, S.A. de C.V.",
+    "issuerDomicile": "El Salvador",
+    "licensingRegulator": "CNAD",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://tether.to/en/transparency/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "El Salvador digital-asset licensing and Tether reserve disclosures do not establish a public U.S. GENIUS permitted-issuer approval or foreign-issuer exception.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Tether token terms",
+        "url": "https://tether.to/en/legal/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Tether transparency",
+        "url": "https://tether.to/en/transparency/",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Tether token terms and transparency pages",
+        "Tether El Salvador licensing disclosures",
+        "Public foreign payment stablecoin issuer exception materials"
+      ],
+      "summary": "CNAD authorization and reserve disclosures were found, but no U.S. PPSI approval, official GENIUS application, or GENIUS foreign-issuer registration source was located for USDT.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
   },
   "contracts": [
     {

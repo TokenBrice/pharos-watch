@@ -46,6 +46,20 @@
     "regulator": "NYDFS",
     "license": "Limited Purpose Trust Charter"
   },
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "ESMA interim MiCA register (issuers of EMTs) - no PYUSD row found",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

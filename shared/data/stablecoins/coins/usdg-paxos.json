@@ -59,6 +59,55 @@
       }
     ]
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDG is a MAS-regulated U.S. dollar stablecoin with 1:1 redemption through Paxos Digital Singapore and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Paxos Digital Singapore Pte. Ltd.",
+    "issuerDomicile": "Singapore",
+    "licensingRegulator": "MAS",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.paxos.com/usdg-transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "MAS and MiCA authorization contexts do not establish a U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception for USDG.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Paxos USDG transparency",
+        "url": "https://www.paxos.com/usdg-transparency",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "Paxos USDG terms and conditions",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Paxos USDG transparency and terms",
+        "MAS stablecoin and payment-institution public materials",
+        "Public foreign payment stablecoin issuer exception materials"
+      ],
+      "summary": "MAS and MiCA issuer evidence was found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for USDG.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

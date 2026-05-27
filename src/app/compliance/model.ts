@@ -50,6 +50,7 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   issuerDomicile?: string;
   licensingRegulator?: string;
   primaryFederalRegulator?: GeniusPrimaryFederalRegulator;
+  stateRegulator?: string;
   reserveDisclosurePresent: boolean;
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
@@ -193,6 +194,7 @@ function buildGeniusRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], geniu
     issuerDomicile: genius.issuerDomicile,
     licensingRegulator: genius.licensingRegulator,
     primaryFederalRegulator: genius.primaryFederalRegulator,
+    stateRegulator: genius.stateRegulator,
     reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
@@ -231,8 +233,26 @@ function matchesFilters(row: ComplianceRow, filters: ComplianceFilters, q: strin
   if (filters.status !== "all" && row.status !== filters.status) return false;
   if (filters.tokenType !== "all" && (row.regime !== "mica" || row.tokenType !== filters.tokenType)) return false;
   if (filters.peg !== "all" && row.peg !== filters.peg) return false;
-  if (q && !row.name.toLowerCase().includes(q) && !row.symbol.toLowerCase().includes(q)) return false;
+  if (q && !buildSearchText(row).includes(q)) return false;
   return true;
+}
+
+function buildSearchText(row: ComplianceRow): string {
+  const fields: (string | undefined)[] = [row.name, row.symbol, row.peg, row.status];
+  if (row.regime === "mica") {
+    fields.push(row.tokenType, row.authorizationType, row.competentAuthority, row.authorizedEntity);
+  } else {
+    fields.push(
+      row.applicability,
+      row.issuerPathway,
+      row.issuerEntity,
+      row.issuerDomicile,
+      row.licensingRegulator,
+      row.primaryFederalRegulator,
+      row.stateRegulator,
+    );
+  }
+  return fields.filter(Boolean).join(" ").toLowerCase();
 }
 
 function sortComplianceRows(a: ComplianceRow, b: ComplianceRow): number {

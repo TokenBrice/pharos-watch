@@ -446,12 +446,17 @@ function MicaAuthorityCell({ row }: { row: Extract<ComplianceRow, { regime: "mic
 }
 
 function GeniusAuthorityCell({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
-  return row.primaryFederalRegulator || row.licensingRegulator ? (
+  const authority = row.primaryFederalRegulator ?? row.stateRegulator ?? row.licensingRegulator;
+  const secondaryAuthority = row.licensingRegulator && row.licensingRegulator !== authority
+    ? row.licensingRegulator
+    : row.stateRegulator && row.stateRegulator !== authority
+      ? row.stateRegulator
+      : undefined;
+
+  return authority ? (
     <span className="text-sm">
-      {row.primaryFederalRegulator ?? row.licensingRegulator}
-      {row.licensingRegulator && row.licensingRegulator !== row.primaryFederalRegulator ? (
-        <span className="block text-xs text-muted-foreground">{row.licensingRegulator}</span>
-      ) : null}
+      {authority}
+      {secondaryAuthority ? <span className="block text-xs text-muted-foreground">{secondaryAuthority}</span> : null}
     </span>
   ) : (
     <EmptyCell />

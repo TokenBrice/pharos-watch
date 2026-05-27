@@ -44,6 +44,55 @@
     "regulator": "FSRC",
     "license": "Class A Digital Asset Business License"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "MNEE is a USD-backed stablecoin issued by MNEE Limited with contractual mint and redemption rights for verified customers."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MNEE Limited",
+    "issuerDomicile": "Antigua and Barbuda",
+    "licensingRegulator": "FSRC",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.mnee.io/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Antigua FSRC licensing and reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception for MNEE.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "MNEE terms of use",
+        "url": "https://www.mnee.io/terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MNEE transparency",
+        "url": "https://www.mnee.io/transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "MNEE terms and transparency pages",
+        "Antigua and Barbuda FSRC digital asset license context",
+        "Public foreign payment stablecoin issuer exception materials"
+      ],
+      "summary": "FSRC licensing and MNEE reserve disclosures were found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for MNEE.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

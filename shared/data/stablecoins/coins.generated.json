@@ -2488,6 +2488,60 @@
       "regulator": "BMA",
       "license": "DABA License"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "AUSD is a fiat-backed U.S. dollar stablecoin with 1:1 redemption, reserve attestations, and institutional payment and settlement use cases."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Agora Bermuda Limited",
+      "issuerDomicile": "Bermuda",
+      "licensingRegulator": "BMA; OCC national trust bank application for Agora National Trust Bank",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "Agora has publicly disclosed an OCC national trust bank charter application, but Pharos found no token-specific public GENIUS PPSI approval or registered foreign-issuer exception.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "OCC digital asset licensing applications - Agora National Trust Bank",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Agora national trust bank charter post",
+          "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Agora transparency",
+          "url": "https://docs.agora.finance/developer/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "OCC digital asset licensing applications",
+          "Agora AUSD transparency and OCC charter application disclosures",
+          "Bermuda BMA digital asset licensing context"
+        ],
+        "summary": "Agora disclosed an OCC national trust bank charter application and BMA licensing context, but no token-specific public GENIUS PPSI approval, state-qualified approval, or registered foreign-issuer exception source was located for AUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -14760,6 +14814,53 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "FDUSD is a BVI-issued U.S. dollar stablecoin with 1:1 redemption, segregated reserves, and monthly reserve attestations."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "FD121 (BVI) Limited",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.firstdigitallabs.com/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "First Digital publishes reserve and redemption disclosures, but no public U.S. GENIUS permitted-issuer approval or foreign-issuer exception was located.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "First Digital Labs transparency",
+          "url": "https://www.firstdigitallabs.com/transparency",
+          "sourceKind": "auditor-report"
+        },
+        {
+          "label": "First Digital Labs FDD terms",
+          "url": "https://www.firstdigitallabs.com/legal/fdd-terms",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "First Digital Labs transparency and legal pages",
+          "Public foreign payment stablecoin issuer exception materials"
+        ],
+        "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for FDUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -15315,6 +15416,53 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "FIUSD is a pre-launch fully reserved USD-backed stablecoin from Fiserv, designed for financial-institution and payment-system use."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Fiserv, Inc.",
+      "issuerDomicile": "United States",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "Fiserv describes FIUSD as fully reserved and redeemable at $1, but Pharos found no token-specific public GENIUS PPSI approval or official application source.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Fiserv FIUSD stablecoin page",
+          "url": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Fiserv FIUSD launch announcement",
+          "url": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Fiserv FIUSD product and investor-relations disclosures",
+          "Fiserv stablecoin pilot materials"
+        ],
+        "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for FIUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "blacklistabilityReview": {
       "reviewedStatus": false,
@@ -19204,12 +19352,16 @@
       "tokenType": "EMT",
       "references": [
         {
-          "label": "Gemini: GUSD listed among non-MiCA-compliant stablecoins, unavailable in EU/EEA",
-          "url": "https://support.gemini.com/hc/en-us/articles/37588427367835-Liquidation-of-assets-in-preparation-for-MiCA"
+          "label": "Gemini non-MiCA-compliant stablecoin restrictions",
+          "url": "https://support.gemini.com/hc/en-us/articles/33437494572443-Non-MiCA-Compliant-Stablecoins"
         },
         {
-          "label": "Coinbase Europe delists GUSD, PYUSD, PAX and USDT for MiCA compliance",
-          "url": "https://decrypt.co/296453/coinbase-europe-delists-usdt"
+          "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+          "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        },
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - no GUSD row found",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ]
     },
@@ -27570,6 +27722,55 @@
       "regulator": "FSRC",
       "license": "Class A Digital Asset Business License"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "MNEE is a USD-backed stablecoin issued by MNEE Limited with contractual mint and redemption rights for verified customers."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "MNEE Limited",
+      "issuerDomicile": "Antigua and Barbuda",
+      "licensingRegulator": "FSRC",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.mnee.io/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "Antigua FSRC licensing and reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception for MNEE.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "MNEE terms of use",
+          "url": "https://www.mnee.io/terms",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "MNEE transparency",
+          "url": "https://www.mnee.io/transparency",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "MNEE terms and transparency pages",
+          "Antigua and Barbuda FSRC digital asset license context",
+          "Public foreign payment stablecoin issuer exception materials"
+        ],
+        "summary": "FSRC licensing and MNEE reserve disclosures were found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for MNEE.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "permissioned-minter",
       "authorityPosture": "partially-bounded-admin",
@@ -27842,6 +28043,54 @@
       "country": "United States",
       "regulator": "FinCEN",
       "license": "Money Services Business"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "MOVEUSD is a CFX-issued dollar token for payment and settlement flows, redeemable through designated channels for approved customers."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "CFX Labs Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "FinCEN / state money transmitter regulators; Metropolitan Capital Bank & Trust banking partner context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://docs.moveusd.com/docs/disclosures-disclaimers",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "MOVEUSD public materials describe CFX issuance and designated redemption channels, but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "MoveUSD disclosures and disclaimers",
+          "url": "https://docs.moveusd.com/docs/disclosures-disclaimers",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "CFX platform overview",
+          "url": "https://docs.cfx.to/docs/key-features",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "MoveUSD disclosure and CFX documentation",
+          "CFX Labs public platform materials"
+        ],
+        "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for MOVEUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -33078,6 +33327,20 @@
       "country": "United States",
       "regulator": "NYDFS",
       "license": "Limited Purpose Trust Charter"
+    },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+          "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        },
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - no PYUSD row found",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        }
+      ]
     },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
@@ -42733,6 +42996,53 @@
     "jurisdiction": {
       "country": "British Virgin Islands"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "TUSD is a U.S. dollar-pegged stablecoin with issuer-managed redemption and daily reserve attestations."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Techteryx",
+      "issuerDomicile": "British Virgin Islands",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://tusd.io/transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "TUSD reserve and redemption materials support payment-stablecoin monitoring, but Pharos found no public U.S. GENIUS approval, application, or foreign-issuer exception source.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "TUSD transparency",
+          "url": "https://tusd.io/transparency",
+          "sourceKind": "auditor-report"
+        },
+        {
+          "label": "TrueUSD white paper",
+          "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "TrueUSD transparency and white paper materials",
+          "Public foreign payment stablecoin issuer exception materials"
+        ],
+        "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -44524,6 +44834,54 @@
       "regulator": "FinCEN",
       "license": "Money Service Business (MSB)"
     },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDA is an Anzens-issued U.S. dollar stablecoin designed for mint, burn, send, receive, and off-ramp payment flows."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anzens Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "FinCEN MSB / state no-objection-letter context; BitGo Trust account context",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.anzens.com/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "Anzens describes USDA as 100% backed and issued by Anzens Inc., but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Anzens USDA page",
+          "url": "https://www.anzens.com/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Anzens terms and conditions",
+          "url": "https://www.anzens.com/landing/terms-and-conditions",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Anzens USDA website and terms",
+          "Anzens FinCEN MSB and state no-objection-letter disclosures"
+        ],
+        "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDA.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
       "authorityPosture": "concentrated-admin",
@@ -45418,6 +45776,61 @@
     "jurisdiction": {
       "country": "United States",
       "regulator": "OCC (conditional national trust bank charter)"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDB is Bridge's dollar stablecoin for stablecoin financial accounts, with 1:1 reserves and mint/redeem infrastructure managed by Bridge."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Bridge Building Inc.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "FinCEN / state money transmitter regulators; OCC conditional national trust bank charter context",
+      "primaryFederalRegulator": "OCC",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "Bridge has OCC preliminary conditional approval to organize Bridge National Trust Bank, but Pharos found no token-specific public GENIUS PPSI approval or official GENIUS application source for USDB.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "OCC Corporate Decision 1365 - Bridge National Trust Bank",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Bridge receives OCC conditional approval",
+          "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Bridge stablecoins FAQ",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "OCC Corporate Decision 1365 and Bridge national trust bank materials",
+          "Bridge USDB and issuance documentation",
+          "Bridge legal terms"
+        ],
+        "summary": "Bridge OCC national trust bank charter context was found, but no token-specific public GENIUS PPSI approval, state-qualified approval, or official GENIUS application source was located for USDB.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -47097,6 +47510,55 @@
           "url": "https://www.paxos.com/terms-and-conditions/usdg-eu-whitepaper"
         }
       ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDG is a MAS-regulated U.S. dollar stablecoin with 1:1 redemption through Paxos Digital Singapore and monthly reserve attestations."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Paxos Digital Singapore Pte. Ltd.",
+      "issuerDomicile": "Singapore",
+      "licensingRegulator": "MAS",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.paxos.com/usdg-transparency",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "MAS and MiCA authorization contexts do not establish a U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception for USDG.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Paxos USDG transparency",
+          "url": "https://www.paxos.com/usdg-transparency",
+          "sourceKind": "auditor-report"
+        },
+        {
+          "label": "Paxos USDG terms and conditions",
+          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Paxos USDG transparency and terms",
+          "MAS stablecoin and payment-institution public materials",
+          "Public foreign payment stablecoin issuer exception materials"
+        ],
+        "summary": "MAS and MiCA issuer evidence was found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for USDG.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -50040,6 +50502,24 @@
       "regulator": "OCC",
       "license": "National Trust Charter"
     },
+    "mica": {
+      "status": "non-compliant",
+      "tokenType": "EMT",
+      "references": [
+        {
+          "label": "Coinbase MiCA non-compliant stablecoin restrictions (PAX/USDP)",
+          "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        },
+        {
+          "label": "Paxos confirms Paxos Standard (PAX) was renamed Pax Dollar (USDP)",
+          "url": "https://insights.paxos.com/hubfs/USDP-White-Paper.pdf"
+        },
+        {
+          "label": "ESMA interim MiCA register (issuers of EMTs) - no USDP row found",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        }
+      ]
+    },
     "genius": {
       "applicability": "apparent-payment-stablecoin",
       "applicabilityBasis": {
@@ -50245,6 +50725,61 @@
     ],
     "jurisdiction": {
       "country": "United States"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDPT is a U.S. dollar stablecoin issued by Anchorage Digital Bank for Western Union's global payment and settlement network."
+      },
+      "authorizationStatus": "issuer-announced-intent",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Anchorage Digital Bank, N.A.",
+      "issuerDomicile": "United States",
+      "licensingRegulator": "OCC",
+      "primaryFederalRegulator": "OCC",
+      "foreignExceptionStatus": "not-applicable",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "Western Union identifies Anchorage Digital Bank as issuer and describes 1:1 reserves, but Pharos found no token-specific public OCC GENIUS approval or PPSI registration.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "OCC: Anchorage national trust bank charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Western Union USDPT page",
+          "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Western Union USDPT announcement",
+          "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "OCC Anchorage Digital Bank charter materials",
+          "Western Union USDPT product and launch disclosures",
+          "Anchorage Digital Bank reserve materials"
+        ],
+        "summary": "No token-specific public OCC GENIUS approval, PPSI registration, state-qualified approval, or official application source was located for USDPT.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -51825,14 +52360,67 @@
       "tokenType": "EMT",
       "references": [
         {
-          "label": "Binance delists USDT from EEA spot trading to comply with MiCA",
-          "url": "https://www.financemagnates.com/cryptocurrency/binance-finally-delists-tether-usdt-from-european-spot-trading-in-compliance-with-mica/"
+          "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+          "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+        },
+        {
+          "label": "Gemini non-MiCA-compliant stablecoin restrictions",
+          "url": "https://support.gemini.com/hc/en-us/articles/33437494572443-Non-MiCA-Compliant-Stablecoins"
         },
         {
           "label": "ESMA MiCA register and webpage",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ]
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "USDT is a fiat-referenced dollar stablecoin marketed for payments, transfers, and 1:1 redemption through Tether for eligible customers."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "Tether International, S.A. de C.V.",
+      "issuerDomicile": "El Salvador",
+      "licensingRegulator": "CNAD",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://tether.to/en/transparency/",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": false,
+      "notes": "El Salvador digital-asset licensing and Tether reserve disclosures do not establish a public U.S. GENIUS permitted-issuer approval or foreign-issuer exception.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "Tether token terms",
+          "url": "https://tether.to/en/legal/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Tether transparency",
+          "url": "https://tether.to/en/transparency/",
+          "sourceKind": "auditor-report"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "Tether token terms and transparency pages",
+          "Tether El Salvador licensing disclosures",
+          "Public foreign payment stablecoin issuer exception materials"
+        ],
+        "summary": "CNAD authorization and reserve disclosures were found, but no U.S. PPSI approval, official GENIUS application, or GENIUS foreign-issuer registration source was located for USDT.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -61899,6 +62487,55 @@
       "country": "Singapore",
       "regulator": "MAS",
       "license": "Major Payment Institution"
+    },
+    "genius": {
+      "applicability": "apparent-payment-stablecoin",
+      "applicabilityBasis": {
+        "summary": "XUSD is a U.S. dollar stablecoin issued by StraitsX with 1:1 USD redemption and monthly reserve attestations."
+      },
+      "authorizationStatus": "no-public-authorization-found",
+      "issuerPathway": "unknown",
+      "issuerEntity": "StraitsX USD Issuance Pte. Ltd.",
+      "issuerDomicile": "Singapore",
+      "licensingRegulator": "MAS",
+      "foreignExceptionStatus": "unknown",
+      "enforcementStatus": "no-public-action-found",
+      "daspOfferSaleStatus": "not-yet-restricted",
+      "reserveDisclosurePresent": true,
+      "reserveDisclosureUrl": "https://www.straitsx.com/xusd",
+      "redemptionPolicyPresent": true,
+      "monthlyAttestationPresent": true,
+      "notes": "StraitsX MAS licensing and XUSD reserve attestations do not establish a U.S. GENIUS permitted-issuer approval or foreign-issuer exception.",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator"
+        },
+        {
+          "label": "StraitsX XUSD",
+          "url": "https://www.straitsx.com/xusd",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "StraitsX token terms",
+          "url": "https://www.straitsx.com/legal/token",
+          "sourceKind": "issuer-disclosure"
+        }
+      ],
+      "negativeEvidenceReview": {
+        "sourcesChecked": [
+          "OCC GENIUS Act rulemaking bulletin and public releases",
+          "StraitsX XUSD product and regulatory disclosure pages",
+          "MAS payment-institution public materials",
+          "Public foreign payment stablecoin issuer exception materials"
+        ],
+        "summary": "MAS licensing and XUSD reserve disclosures were found, but no token-specific public U.S. GENIUS approval, official application, or foreign-issuer registration source was located for XUSD.",
+        "reviewer": "Pharos compliance research",
+        "reviewedAt": "2026-05-27"
+      },
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",

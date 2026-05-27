@@ -28,6 +28,61 @@
   "jurisdiction": {
     "country": "United States"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDPT is a U.S. dollar stablecoin issued by Anchorage Digital Bank for Western Union's global payment and settlement network."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Anchorage Digital Bank, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Western Union identifies Anchorage Digital Bank as issuer and describes 1:1 reserves, but Pharos found no token-specific public OCC GENIUS approval or PPSI registration.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC: Anchorage national trust bank charter",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Western Union USDPT page",
+        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Western Union USDPT announcement",
+        "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC Anchorage Digital Bank charter materials",
+        "Western Union USDPT product and launch disclosures",
+        "Anchorage Digital Bank reserve materials"
+      ],
+      "summary": "No token-specific public OCC GENIUS approval, PPSI registration, state-qualified approval, or official application source was located for USDPT.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "geckoId": "usdpt-western-union",
   "blacklistabilityReview": {
     "reviewedStatus": true,

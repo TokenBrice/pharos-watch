@@ -28,6 +28,53 @@
   "jurisdiction": {
     "country": "United States"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "FIUSD is a pre-launch fully reserved USD-backed stablecoin from Fiserv, designed for financial-institution and payment-system use."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Fiserv, Inc.",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Fiserv describes FIUSD as fully reserved and redeemable at $1, but Pharos found no token-specific public GENIUS PPSI approval or official application source.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Fiserv FIUSD stablecoin page",
+        "url": "https://www.fiserv.com/en/solutions/embedded-finance/fiusd-stablecoin.html",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Fiserv FIUSD launch announcement",
+        "url": "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Fiserv FIUSD product and investor-relations disclosures",
+        "Fiserv stablecoin pilot materials"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for FIUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",

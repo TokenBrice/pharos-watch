@@ -56,6 +56,18 @@ describe("Compliance model", () => {
     expect(watchRows.every((row) => row.peg === "USD")).toBe(true);
   });
 
+  it("searches GENIUS issuer and authority fields", () => {
+    const { watchRows } = buildComplianceViewModel({
+      regime: "genius",
+      status: "all",
+      tokenType: "all",
+      peg: "all",
+      search: "Nebraska",
+    });
+
+    expect(watchRows.some((row) => row.id === "eusd-telcoin")).toBe(true);
+  });
+
   it("normalizes unknown URL filter values to all", () => {
     expect(normalizeComplianceRegimeFilter("bogus")).toBe("all");
     expect(normalizeComplianceStatusFilter("bogus")).toBe("all");

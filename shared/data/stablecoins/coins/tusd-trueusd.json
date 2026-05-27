@@ -40,6 +40,53 @@
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "TUSD is a U.S. dollar-pegged stablecoin with issuer-managed redemption and daily reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Techteryx",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://tusd.io/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "TUSD reserve and redemption materials support payment-stablecoin monitoring, but Pharos found no public U.S. GENIUS approval, application, or foreign-issuer exception source.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "TUSD transparency",
+        "url": "https://tusd.io/transparency",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "TrueUSD white paper",
+        "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "TrueUSD transparency and white paper materials",
+        "Public foreign payment stablecoin issuer exception materials"
+      ],
+      "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for TUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

@@ -400,7 +400,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audm-macropod.json` - 26 keys
 - `shared/data/stablecoins/coins/audm-mento.json` - 25 keys
 - `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 23 keys
-- `shared/data/stablecoins/coins/ausd-agora.json` - 22 keys
+- `shared/data/stablecoins/coins/ausd-agora.json` - 23 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 24 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 20 keys
 - `shared/data/stablecoins/coins/axcnh-anchorx.json` - 19 keys
@@ -738,7 +738,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/wait-for-workflow-job.test.ts`
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
-- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectMintAuthoritySummary, readCanonicalClientFields, runCli
+- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectGeniusProfile, projectMintAuthoritySummary, readCanonicalClientFields
 - `scripts/ci/check-agent-doc-sync.mjs`
 - `scripts/ci/check-agent-skill-symlinks.mjs`
 - `scripts/ci/check-archetype-explainer-coverage.ts` - ArchetypeExplainerCheckResult, ArchetypeExplainerFinding, validateArchetypeExplainerCoverage

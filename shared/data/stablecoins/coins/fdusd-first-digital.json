@@ -38,6 +38,53 @@
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "FDUSD is a BVI-issued U.S. dollar stablecoin with 1:1 redemption, segregated reserves, and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "FD121 (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.firstdigitallabs.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "First Digital publishes reserve and redemption disclosures, but no public U.S. GENIUS permitted-issuer approval or foreign-issuer exception was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "First Digital Labs transparency",
+        "url": "https://www.firstdigitallabs.com/transparency",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "First Digital Labs FDD terms",
+        "url": "https://www.firstdigitallabs.com/legal/fdd-terms",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "First Digital Labs transparency and legal pages",
+        "Public foreign payment stablecoin issuer exception materials"
+      ],
+      "summary": "No token-specific public U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration source was located for FDUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",

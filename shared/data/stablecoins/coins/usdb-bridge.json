@@ -29,6 +29,61 @@
     "country": "United States",
     "regulator": "OCC (conditional national trust bank charter)"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDB is Bridge's dollar stablecoin for stablecoin financial accounts, with 1:1 reserves and mint/redeem infrastructure managed by Bridge."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators; OCC conditional national trust bank charter context",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge has OCC preliminary conditional approval to organize Bridge National Trust Bank, but Pharos found no token-specific public GENIUS PPSI approval or official GENIUS application source for USDB.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC Corporate Decision 1365 - Bridge National Trust Bank",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Bridge receives OCC conditional approval",
+        "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge stablecoins FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC Corporate Decision 1365 and Bridge national trust bank materials",
+        "Bridge USDB and issuance documentation",
+        "Bridge legal terms"
+      ],
+      "summary": "Bridge OCC national trust bank charter context was found, but no token-specific public GENIUS PPSI approval, state-qualified approval, or official GENIUS application source was located for USDB.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

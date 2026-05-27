@@ -38,6 +38,25 @@ const CLIENT_META_TS_ABS = resolve(REPO_ROOT, CLIENT_META_TS_REL);
 const CLIENT_FIELDS_EXPORT = "STABLECOIN_CLIENT_META_FIELDS";
 const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
+const GENIUS_FIELD = "genius";
+const GENIUS_CLIENT_FIELDS = [
+  "applicability",
+  "authorizationStatus",
+  "issuerPathway",
+  "issuerEntity",
+  "issuerDomicile",
+  "licensingRegulator",
+  "primaryFederalRegulator",
+  "stateRegulator",
+  "reserveDisclosurePresent",
+  "reserveDisclosureUrl",
+  "redemptionPolicyPresent",
+  "latestReportDate",
+  "notes",
+  "references",
+  "reviewer",
+  "reviewedAt",
+];
 
 /**
  * Read the canonical field allowlist from `shared/types/stablecoin-client-meta.ts`.
@@ -103,7 +122,7 @@ export function projectCoin(coin, clientFields) {
   const slim = {};
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(coin, field)) {
-      slim[field] = coin[field];
+      slim[field] = field === GENIUS_FIELD ? projectGeniusProfile(coin[field]) : coin[field];
     }
   }
   const blacklistStatus = projectBlacklistStatus(coin);
@@ -128,6 +147,20 @@ export function projectBlacklistStatus(coin) {
   }
 
   return undefined;
+}
+
+export function projectGeniusProfile(profile) {
+  if (!isPlainObject(profile)) {
+    return undefined;
+  }
+
+  const projected = {};
+  for (const field of GENIUS_CLIENT_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(profile, field)) {
+      projected[field] = profile[field];
+    }
+  }
+  return projected;
 }
 
 function isPlainObject(value) {
@@ -192,7 +225,7 @@ export function validateProjection(slim, sourceCoin, index, clientFields) {
   // source value. Catches generator bugs that silently mutate values.
   for (const field of clientFields) {
     if (Object.prototype.hasOwnProperty.call(slim, field)) {
-      const sourceValue = sourceCoin[field];
+      const sourceValue = field === GENIUS_FIELD ? projectGeniusProfile(sourceCoin[field]) : sourceCoin[field];
       const slimValue = slim[field];
       if (JSON.stringify(sourceValue) !== JSON.stringify(slimValue)) {
         throw new Error(

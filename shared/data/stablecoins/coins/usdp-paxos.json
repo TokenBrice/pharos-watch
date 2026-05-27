@@ -47,6 +47,24 @@
     "regulator": "OCC",
     "license": "National Trust Charter"
   },
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Coinbase MiCA non-compliant stablecoin restrictions (PAX/USDP)",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "Paxos confirms Paxos Standard (PAX) was renamed Pax Dollar (USDP)",
+        "url": "https://insights.paxos.com/hubfs/USDP-White-Paper.pdf"
+      },
+      {
+        "label": "ESMA interim MiCA register (issuers of EMTs) - no USDP row found",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

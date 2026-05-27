@@ -48,6 +48,60 @@
     "regulator": "BMA",
     "license": "DABA License"
   },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AUSD is a fiat-backed U.S. dollar stablecoin with 1:1 redemption, reserve attestations, and institutional payment and settlement use cases."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Agora Bermuda Limited",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "BMA; OCC national trust bank application for Agora National Trust Bank",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Agora has publicly disclosed an OCC national trust bank charter application, but Pharos found no token-specific public GENIUS PPSI approval or registered foreign-issuer exception.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC digital asset licensing applications - Agora National Trust Bank",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Agora national trust bank charter post",
+        "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Agora transparency",
+        "url": "https://docs.agora.finance/developer/transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC digital asset licensing applications",
+        "Agora AUSD transparency and OCC charter application disclosures",
+        "Bermuda BMA digital asset licensing context"
+      ],
+      "summary": "Agora disclosed an OCC national trust bank charter application and BMA licensing context, but no token-specific public GENIUS PPSI approval, state-qualified approval, or registered foreign-issuer exception source was located for AUSD.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-05-27"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-05-27"
+  },
   "contracts": [
     {
       "chain": "ethereum",
