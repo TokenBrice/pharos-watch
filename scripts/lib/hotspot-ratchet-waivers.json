@@ -23,14 +23,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "worker/src/cron/fetch-tbill-rate.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
   "src/components/tape/event-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
@@ -95,13 +87,13 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "worker/src/cron/blacklist/amount-recovery.ts": {
+  "worker/src/cron/compute-depeg-resolver.ts": {
     "disposition": "queued-p4",
-    "notes": "Amount recovery remains the shared EVM/TRON replay and remediation helper for blacklist gaps, with provider dispatch, event decoding, D1 batch planning, and telemetry in one module. Keep it explicitly queued for a blacklist recovery decomposition pass rather than widening this code-health tranche.",
+    "notes": "DDRv2 one-shot implementation expanded the cron shell to coordinate canonical incident resolution, lock-state writes, public sealing, first-publication manifests, stale-safe cache projection, and DDRR rebuild handoff. Split publication assembly/store orchestration from the cron shell once the v2 contract has production mileage.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+    "createdAt": "2026-05-27",
+    "reviewAfter": "2026-08-27",
+    "nextAction": "Extract DDRv2 publication/cache orchestration into focused helpers after the initial v2 rollout stabilizes."
   },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
@@ -175,12 +167,12 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "src/components/yield-history-chart.tsx": {
+  "src/components/depeg-resolver-row-card.tsx": {
     "disposition": "queued-p4",
-    "notes": "Yield history chart carries source-aware history normalization, warning states, tooltip details, and chart rendering together. Split history projection and chart presentation after the current yield UI work stabilizes.",
+    "notes": "DDRv2 added lock-state cards, publication-failure accountability, lock-anchored forecast timelines, live overlays, no-call/erratum states, and stablecoin-detail reuse to the shared DDR row renderer. Split state cards, lock metadata, and forecast/live visualizations after the v2 UI settles.",
     "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
+    "createdAt": "2026-05-27",
+    "reviewAfter": "2026-08-27",
+    "nextAction": "Extract DDR state-only cards and forecast/live timeline renderers into narrower components in the next DDR UI cleanup pass."
   }
 }
