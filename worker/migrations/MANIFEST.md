@@ -84,6 +84,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0138     | `0138_depeg_resolver_prediction_errata.sql`              | Add DDRv2 append-only prediction errata ledger with replacement-evidence guards                                                                  |
 | 0139     | `0139_depeg_resolver_repair_guards.sql`                  | Add DDRv2 repair authorization guards for sealed incident relinks, event identity changes, deletes, and provenance invalidations                 |
 | 0140     | `0140_depeg_resolver_publication_snapshots.sql`          | Add DDRv2 append-only public publication snapshot manifests, row membership, finalization, and snapshot errata storage                           |
+| 0141     | `0141_depeg_resolver_public_prediction_guard_split.sql`  | Split the DDRv2 public-prediction assessment guard into smaller D1-compatible triggers                                                           |
 
 ## Retired Individual Migrations
 

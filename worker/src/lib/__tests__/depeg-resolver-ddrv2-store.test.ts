@@ -220,6 +220,33 @@ async function sealPredictionFixture(db: SqliteD1) {
 }
 
 describe("DDRv2 storage migrations and stores", () => {
+  it("replaces the monolithic public-prediction guard with split triggers", () => {
+    const db = makeSqliteD1();
+    try {
+      const rows = db.sqlite
+        .prepare(
+          `SELECT name
+           FROM sqlite_master
+           WHERE type = 'trigger'
+             AND tbl_name = 'depeg_resolver_public_predictions'`,
+        )
+        .all() as { name: string }[];
+      const names = new Set(rows.map((row) => row.name));
+
+      expect(names.has("trg_ddr_public_predictions_assessment_guard")).toBe(false);
+      expect([...names]).toEqual(expect.arrayContaining([
+        "trg_ddr_public_predictions_relational_guard",
+        "trg_ddr_public_predictions_version_guard",
+        "trg_ddr_public_predictions_payload_identity_guard",
+        "trg_ddr_public_predictions_payload_prediction_guard",
+        "trg_ddr_public_predictions_prediction_kind_guard",
+        "trg_ddr_public_predictions_no_call_kind_guard",
+      ]));
+    } finally {
+      db.close();
+    }
+  });
+
   it("bootstraps canonical incidents with immutable links and policy membership", async () => {
     const db = makeSqliteD1();
     try {
