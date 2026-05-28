@@ -377,7 +377,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 ## Deployment
 
-GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys run from `.github/workflows/deploy-cloudflare.yml` on push to `main` or manual `workflow_dispatch`. A separate `.github/workflows/rebuild-pages.yml` handles the daily scheduled Pages rebuild (08:15 UTC, after digest generation):
+GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys run from `.github/workflows/deploy-cloudflare.yml` on push to `main` or manual `workflow_dispatch`. A separate `.github/workflows/rebuild-pages.yml` handles the daily scheduled Pages rebuild (08:10 UTC, with an 08:25 UTC catch-up after digest generation):
 
 For the canonical delivery workflow (including worktree merge flow and the repo pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).

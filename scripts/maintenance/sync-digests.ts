@@ -35,6 +35,12 @@ function resolveOutputPath(): URL {
   return new URL(explicitOutput, `file://${process.cwd()}/`);
 }
 
+function cacheBustedUrl(rawUrl: string): string {
+  const url = new URL(rawUrl);
+  url.searchParams.set("staticSync", String(Date.now()));
+  return url.toString();
+}
+
 async function main() {
   // --check mode is a smoke test for the script's own wiring (no network).
   if (parseCheckMode(process.argv)) {
@@ -53,7 +59,10 @@ async function main() {
 
   console.log("Fetching digest archive...");
   console.log(`Digest source: ${apiUrl}`);
+  const fetchUrl = cacheBustedUrl(apiUrl);
   const headers = new Headers();
+  headers.set("Cache-Control", "no-cache");
+  headers.set("Pragma", "no-cache");
   if (digestApiKey) {
     headers.set("X-API-Key", digestApiKey);
   }
@@ -61,7 +70,7 @@ async function main() {
   const { entries, outputFile } = await syncJson<DigestEntry>({
     writeTo: outputPath,
     parse: async () => {
-      const res = await fetchWithRetry(apiUrl, { headers }, { logLabel: "sync-digests" });
+      const res = await fetchWithRetry(fetchUrl, { headers }, { logLabel: "sync-digests" });
       if (!res.ok) throw new Error(`API returned ${res.status}`);
       const { digests } = (await res.json()) as { digests: ApiDigest[] };
       console.log(`Fetched ${digests.length} digests`);

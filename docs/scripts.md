@@ -169,6 +169,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Requires an explicit digest API source via `--api-url` or `DIGEST_API_URL`; falls back to `SMOKE_API_BASE` or `API_BASE_URL` when those are already set by CI/local shell context.
 - Sends `X-API-Key` when `DIGEST_API_KEY` is set, which is required once `GET /api/digest-archive` is protected on `api.pharos.watch`.
+- Adds a one-off query parameter and no-cache request headers so Pages release builds do not reuse a stale edge-cached archive immediately after daily digest publication.
 - Accepts `--output` so CI can write digest data into an artifact path before the Pages build job runs.
 - The consolidated Pages release job runs this once before `npm run build`, writing the normalized digest JSON directly to `data/digests.json`.
 

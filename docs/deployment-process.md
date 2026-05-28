@@ -240,6 +240,8 @@ Current explicitly deferred major cohort:
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
+Schedule: `10 8 * * *` and `25 8 * * *` UTC. The first slot follows the 08:05 UTC daily digest cron closely; the second is a catch-up for slower digest generation or a missed GitHub schedule tick.
+
 1. `pages-release`
    - reuses the same consolidated `.github/workflows/pages-release.yml` job as push/manual production deploys
    - fetches data, builds, runs `test:a11y`, local SEO/UI/mobile smoke, publishes, and runs post-publish live public-host, ops, and transport smokes in that one reusable job

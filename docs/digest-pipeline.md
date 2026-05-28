@@ -347,7 +347,7 @@ Each detail page shows the short summary intro (`text`) followed by every extend
 **Script:** `scripts/maintenance/sync-digests.ts`
 **Command:** `npm run sync:digests`
 
-Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`), and writes the file. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set.
+Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`), and writes the file. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set. CI syncs add a one-off query parameter plus `Cache-Control: no-cache` request headers so the static build sees a digest row that was just written, without waiting for the public archive endpoint's 5-minute edge TTL.
 
 For local/manual use, point it at the intended environment explicitly:
 
@@ -359,6 +359,7 @@ CI now runs digest sync inside `.github/workflows/pages-release.yml`:
 
 1. The `pages-release` job fetches `GET /api/digest-archive` once from the selected API environment and writes the normalized JSON directly to `data/digests.json` before `next build`.
 2. In production deploys and scheduled rebuilds, that selected API environment is `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; callers can still override it through `api_base_url`.
+3. The scheduled `Rebuild Pages` workflow runs at 08:10 UTC after the 08:05 UTC daily digest slot, with an 08:25 UTC catch-up run for slower digest generation or a missed schedule tick.
 
 This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.
 

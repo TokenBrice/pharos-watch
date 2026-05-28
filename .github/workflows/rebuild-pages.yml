@@ -1,8 +1,9 @@
 name: Rebuild Pages
 on:
   schedule:
-    # Rebuild daily at 8:15 UTC (after 8 AM digest generation)
-    - cron: "15 8 * * *"
+    # Rebuild after the 08:05 UTC digest run; the second slot catches slow generation or a missed schedule tick.
+    - cron: "10 8 * * *"
+    - cron: "25 8 * * *"
   workflow_dispatch:
 
 concurrency:
