@@ -21,7 +21,7 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
-- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/api/`, and `/changelog/`. Learn surfaces such as `/learn/mechanisms/` live in the separate Learn group.
+- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with reference cards derived from the `NAV_GROUPS` entry keyed `"info"` (`NAV_GROUPS.find((g) => g.key === "info")`) excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/api/`, and `/changelog/`. Learn surfaces such as `/learn/mechanisms/` live in the separate Learn group.
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 - the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
 - public trust subroutes live under `/about/`: `/about/principles/` states the editorial/product principles and `/about/editorial/` states the AI editorial policy.
@@ -58,7 +58,7 @@ The page is organized into these sections, in order:
 
 ## Navigation Contract
 
-- `/about/` remains a top-level route, and primary navigation places it first in the `Reference` group (`NAV_GROUPS.info`).
+- `/about/` remains a top-level route, and primary navigation places it first in the `Reference` group (the `NAV_GROUPS` entry keyed `"info"`).
 - `/about/` is now the reference hub for low-frequency reference surfaces. `Funding`, `Methodology`, `Coverage`, API Reference, and Changelog are grouped around it in the reference module. Learn surfaces such as Mechanisms stay in the Learn navigation group; `Status` stays in Monitor, and `Start Here` remains the conditional bottom-nav shortcut and footer link.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`

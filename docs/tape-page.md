@@ -63,7 +63,7 @@ Filter state is read from URL search params via `useUrlFilters`, parsed in `read
 | `type`     | comma-joined slugs; exact (`depeg.opened`) or prefix wildcard (`depeg.*`)             | empty    | Class chips in the UI emit the wildcard form                                           |
 | `severity` | `info`, `notice`, `warning`, `severe`, `critical`                                     | `notice` | `info` drops the floor entirely; default keeps routine info-tier events out of view    |
 | `coin`     | canonical ticker-issuer id                                                            | empty    | Forwarded to `/api/events?coin=`                                                       |
-| `peg`      | `all` or one of the entries in `PEG_FILTER_OPTIONS` from `@shared/lib/classification` | `all`    | Applied client-side after the API response (mirrors `pegCurrency` API param when set)  |
+| `peg`      | `all` or one of the entries in `PEG_FILTER_OPTIONS` from `@shared/lib/classification` | `all`    | Forwarded to `/api/events?pegCurrency=` and filtered server-side (mirrors the `pegCurrency` API param)  |
 | `chain`    | `all` or any id present in `CHAIN_META` from `@shared/lib/chains`                     | `all`    | Forwarded to `/api/events?chain=`                                                      |
 | `window`   | `24h`, `7d`, `30d`, `90d`, `alltime`                                                   | `7d`     | Converted to `since=<epoch_ms>` by `tapeWindowSince(...)`; parser also accepts legacy `all`, but the UI emits `alltime` |
 | `q`        | free-text                                                                             | empty    | Client-side fuzzy match against title, summary, and `coinId`                           |
@@ -98,10 +98,10 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 | `depeg.opened` / `.resolved` / `.peak_worsened` | `depeg_events`                          | Confirmed peg deviations and their resolution / peak transitions     |
 | `freeze.blocked` / `.unblocked` / `.destroyed`  | `blacklist_events`                      | Issuer freeze, unblock, and fund-destroy actions                     |
 | `score.upgraded` / `.downgraded`                | `safety_grade_history`                  | Stablecoin Safety Score grade transitions                            |
-| `psi.band_changed`                              | `psi_snapshots`                         | PSI regime-band transitions                                          |
-| `dews.escalated` / `.deescalated`               | `dews_summary_snapshots`                | DEWS stress-level changes                                            |
-| `mint_burn.large_flow`                          | `mint_burn_flow_events`                 | Large net mint/burn flow observations                                |
-| `yield.warning_emitted` / `.pys_dropped`        | `yield_events`                          | Yield-risk warnings and PYS drops                                    |
+| `psi.band_changed`                              | `stability_index_samples`               | PSI regime-band transitions                                          |
+| `dews.escalated` / `.deescalated`               | `stress_signals`                        | DEWS stress-level changes                                            |
+| `mint_burn.large_flow`                          | `mint_burn_events`                      | Large net mint/burn flow observations                                |
+| `yield.warning_emitted` / `.pys_dropped`        | `yield_history` (warning_emitted) / `yield_source_decisions` (pys_dropped) | Yield-risk warnings and PYS drops                                    |
 | `methodology.bumped:<domain>`                   | `shared/lib/*-version` modules          | Methodology version bumps (first-observation pattern)                |
 | `cemetery.entry.added`                          | `shared/lib/cemetery-merged.ts`         | Newly added cemetery entries                                         |
 | `lifecycle.tracked.frozen`                      | `shared/lib/stablecoins/` (frozen status)| Tracked coin frozen-lifecycle entries                                |

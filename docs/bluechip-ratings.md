@@ -52,7 +52,7 @@ Failure behavior:
 
 ## Data Shape
 
-Each cached map value is a `BluechipRating` (`shared/types/market.ts`); the grade union is defined in `shared/types/core.ts`.
+Each cached map value is a `BluechipRating` (`shared/types/bluechip.ts`, re-exported via `shared/types/market.ts`); the grade union is defined in `shared/types/core.ts`.
 
 | Field | Meaning |
 |-------|---------|

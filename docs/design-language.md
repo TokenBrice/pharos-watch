@@ -21,7 +21,7 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 
 ### Typography carve-out
 
-Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. The `/timeline/` route is a third carve-out: Geist Mono dominates the wire-service event stream (see `### Tape (Special)` below). Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside the Digest and `AiSummary` carve-outs, and do not extend the Tape mono treatment to general analytics surfaces; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
+Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. The Cemetery obituary plaques (`cemetery-tombstones.tsx`) are a third Newsreader serif carve-out (Design Council B11), allow-listed in the design-invariants test alongside `AiSummary`. The `/timeline/` route is a further carve-out: Geist Mono dominates the wire-service event stream (see `### Tape (Special)` below). Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside the Digest, `AiSummary`, and Cemetery obituary carve-outs, and do not extend the Tape mono treatment to general analytics surfaces; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
 
 ### Masthead tagline
 
@@ -121,7 +121,7 @@ Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top
 
 Behavioral contract: [Homepage](./homepage.md)
 
-- Masthead strip: `pharos-card-shell flex flex-col gap-3 px-4 py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5` — stacked on mobile, side-by-side from `md` upward
+- Masthead strip: `pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3` — stacked on mobile, side-by-side from `md` upward
 - Live tape: homepage-only strip mounted directly below the global PSI `RegimeBar`, before the masthead. It spans the full viewport on mobile and starts at the active sidebar width on desktop so the ticker never covers the navigation column.
 - Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
@@ -201,7 +201,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Shared page title utility | `pharos-page-title`                                                                           |
 | Digest article title      | Newsreader via `digestDisplay.className`, `text-[clamp(2.2rem,5vw,3.5rem)]`, `font-semibold`, `leading-[0.92]`, `tracking-[-0.04em]` |
 | Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |
-| Home logotype label       | `text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
+| Home logotype label       | `text-sm font-mono font-semibold uppercase tracking-[0.14em] md:text-[1.02rem] md:tracking-[0.16em]` |
 | Primary section heading   | `leading-none font-semibold`                                                                 |
 | Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                            |
 | Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground` |
@@ -372,14 +372,6 @@ Tracked token logos now render inside a shared neutral container:
 
 ## Badges and Chips
 
-### Feature Status Badges
-
-- **Mature**: emerald badge (`bg-emerald-500/15 ... border-emerald-500/30`)
-- **Beta**: amber badge (`bg-amber-500/15 ... border-amber-500/30`); both `beta` and the `experimental` alias render the `Beta` label
-- **Testing in Prod**: orange badge (`bg-orange-500/15 ... border-orange-500/30`)
-- Status text should follow light/dark pairing (`text-*-700 dark:text-*-400`) instead of fixed `text-*-300/400` tones.
-- Badge copy is now terse (`Mature`, `Beta`, `Testing in Prod`) instead of repeating “Feature Status”.
-
 ### Version Badge
 
 Secondary version pill:
@@ -405,7 +397,7 @@ The preferred finish-level control language is now the shared pill system:
 
 ### Proof-of-Reserves Attestor Tier Ladder
 
-`POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines a 4-tier categorical color ladder used for the per-coin proof-of-reserves badge on detail pages. The ladder maps directly to `AttestorTier` from `shared/types/core.ts`:
+`POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines a 5-tier categorical color ladder used for the per-coin proof-of-reserves badge on detail pages. The ladder maps directly to `AttestorTier` from `shared/types/core.ts`:
 
 | Tier       | Color            | Token classes                                                                                  | Meaning                                                          |
 | ---------- | ---------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -415,7 +407,7 @@ The preferred finish-level control language is now the shared pill system:
 | `self`     | amber            | `bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30`                       | Issuer self-attestation, no third-party signoff                  |
 | `none`     | red              | `bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30`                               | No attestation surface published                                 |
 
-This is the canonical 4-tier categorical ladder for evidence-quality badges. Reuse `POR_TIER_STYLES` rather than redefining the palette inline. The ladder degrades cleanly to a 3-tier emerald / amber / red flatten for severity-style surfaces; do not introduce a competing "audit quality" palette.
+This is the canonical 5-tier categorical ladder for evidence-quality badges. Reuse `POR_TIER_STYLES` rather than redefining the palette inline. The ladder degrades cleanly to a 3-tier emerald / amber / red flatten for severity-style surfaces; do not introduce a competing "audit quality" palette.
 
 ### Freshness Stamps
 
@@ -503,7 +495,7 @@ Common chart skeletons:
 - `rounded-lg bg-muted/30 animate-pulse relative overflow-hidden h-[250px] sm:h-[350px] w-full`
 - `bg-accent animate-pulse h-[250px] sm:h-[350px] w-full rounded-xl`
 - Blacklist hero chart uses `h-[220px] sm:h-[280px]`
-- Yield scatter plot uses `h-[240px] sm:h-[340px]` inside a bordered chart stage
+- Yield scatter plot uses `h-[420px]` (compact) or `h-[600px] sm:h-[850px]` (full) inside a bordered chart stage
 
 ---
 

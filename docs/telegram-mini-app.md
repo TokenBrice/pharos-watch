@@ -33,7 +33,7 @@ The full inventory of launch entrypoints and their reconciliation paths is docum
 
 ## Payload Scheme
 
-Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. The frontend `?startapp=` surface uses the shared parser from `shared/lib/telegram-mini-app-payloads.ts`. The worker `/start <payload>` parser in `worker/src/api/telegram-webhook-parsing.ts` shares the same charset/length constants but intentionally supports only bot-command payload schemes: `sub_*`, `status_*`, `why_*`, `coverage_*`, `setup`, and `app`/`home`.
+Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. The frontend `?startapp=` surface uses the shared parser from `shared/lib/telegram-mini-app-payloads.ts`. The worker `/start <payload>` parser in `worker/src/api/telegram-webhook-parsing.ts` shares the same charset constant but intentionally supports only bot-command payload schemes: `sub_*`, `status_*`, `why_*`, `coverage_*`, `setup`, and `app`/`home`.
 
 Recognized payloads:
 
@@ -52,7 +52,7 @@ Recognized payloads:
 | `forget` | Settings panel | Used by the `/forget` command danger-zone entrypoint. |
 | `setup_recommended` | Watchlist panel | Legacy alias retained for older launch buttons. |
 
-Payload constraints (mirroring `?start=`): max 64 characters, charset `[A-Za-z0-9_-]`, no spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is no longer in the Mini App catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
+Payload constraints: the frontend `?startapp=` parser accepts up to 512 characters (`TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH`); the worker `?start=` parser is capped at 64 (`TELEGRAM_START_PAYLOAD_MAX_LENGTH`). Both share the charset `[A-Za-z0-9_-]` (`TELEGRAM_MINI_APP_PAYLOAD_PATTERN`) but not the length constant. In practice every payload we emit stays well under 64. No spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is no longer in the Mini App catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
 
 ## Seam Rules
 

@@ -78,7 +78,7 @@ The visible policy must enumerate every Telegram-owned D1 table, its purpose, an
 | `telegram_alert_dead_letters` | Expired or permanently failed pending-send audit trail | 90-day audit retention |
 | `telegram_processed_updates` | Retry-safe webhook idempotency claims (`update_id`, status, error class) | 7-day prune |
 | `telegram_usage_daily` | Privacy-preserving daily command/setup/action aggregates; no `chat_id` is stored | 400-day aggregate retention |
-| `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for public pulse history | Aggregate (no per-chat detail); not pruned automatically |
+| `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for public pulse history | Aggregate (no per-chat detail); 400-day prune via `telegram-retention-cleanup` (same window as `telegram_usage_daily`) |
 | `telegram_chat_delivery_diagnostics` | Per-chat delivery diagnostics used by `/health` | Kept while subscriber exists; 90-day stale prune |
 
 ### Mini App `initData`
@@ -95,7 +95,7 @@ The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutat
 
 ## Navigation And Discoverability
 
-- Footer links point to `/privacy/` from both desktop and mobile footer layouts in `src/components/footer.tsx`.
+- The footer renders a single `/privacy/` link (`src/components/footer.tsx`) that is visible at all breakpoints.
 - The route is included in `src/app/sitemap.ts`.
 - The design-language doc treats this page as a constrained longform layout (`max-w-2xl`).
 

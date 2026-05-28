@@ -49,7 +49,7 @@ Mint Authority review is a descriptive metadata track for answering whether dura
 
 The detail page consumes only a compact presentation summary when available: mint path, descriptive authority posture, confidence, summary, primary controls, and source links. It must not treat this data as a Safety Score input, report-card raw input, selector exclusion, or ranking sort until a separate methodology change ships.
 
-Scanner output is not curated metadata. The local scanner POC writes candidate artifacts under `agents/mint-authority-candidates/` and never updates `shared/data/stablecoins/coins/*.json`, generated registries, or client projections. A reviewer must verify source links, current controls, Safe/multisig threshold and modules/guards when relevant, proxy/cap authority, and unresolved bridge/off-chain route checks before authoring any future `mintAuthority` metadata field.
+Scanner output is not curated metadata. The local scanner POC writes candidate artifacts under `agents/mint-authority-candidates/` and never updates `shared/data/stablecoins/coins/*.json`, generated registries, or client projections. A reviewer must verify source links, current controls, Safe/multisig threshold and modules/guards when relevant, proxy/cap authority, and unresolved bridge/off-chain route checks before authoring or amending a coin's `mintAuthority` metadata field (defined in `shared/lib/stablecoins/schema.ts` and consumed by the detail page, screener filter, and DDR resolver).
 
 ## Required Checks
 

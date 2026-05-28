@@ -52,8 +52,7 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 | Constant | Value | Purpose |
 |----------|-------|---------|
 | `dustThreshold` | 10,000 default (token-native); 10 for gold tokens | Events below this amount are discarded |
-| `INDEXING_SAFETY_SEC` | 900 (15 min) | Safety margin when advancing sync state to chain head |
-| `ETHEREUM_BLOCK_TIME_SEC` | 12 sec | Approximate Ethereum block time (yields ~75-block safety margin) |
+| `EVM_SAFETY_MARGIN_BLOCKS` | 75 | Safety margin when advancing sync state to chain head, derived as `ceil(900s indexing safety / 12s block time)` |
 | `DENOM_SCALE` | 0.3 | Pressure-shift denominator = 30% of baseline daily absolute flow |
 | `DENOM_FLOOR` | $1,000,000 | Minimum pressure-shift denominator |
 | `Z_MULTIPLIER` | 50 | Z-score amplification in the pressure-shift formula |
@@ -224,7 +223,7 @@ reUSD's `Deposited(address user, address token, uint256 amount)` event has all t
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
    - Resolve transaction-context receipts for candidate bridge rows with the local `mapWithConcurrency` helper (`TX_CONTEXT_CONCURRENCY = 4`) instead of a serial loop. Each worker fetches transaction and receipt context together, so this is a bounded best-effort speedup rather than a fixed per-trigger headroom guarantee.
    - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
-   - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.
+   - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id, chain_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction and their totals match within `ROUNDTRIP_AMOUNT_TOLERANCE` (0.5%). Rows with an empty `tx_hash` are defensively skipped.
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`.
    - Update `mint_burn_sync_state.last_block`:
@@ -256,7 +255,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 |--------|----------------|
 | `types.ts` | Shared ingestion row/context/counter types and sync-state mode union |
 | `parse.ts` | `parseMintBurnLogs()` and event-level price resolution (`supply-history` then `price_cache` fallback) |
-| `roundtrip-detection.ts` | Same-transaction `(tx_hash, stablecoin_id)` atomic roundtrip detection for `flow_type` tagging |
+| `roundtrip-detection.ts` | Same-transaction `(tx_hash, stablecoin_id, chain_id)` atomic roundtrip detection for `flow_type` tagging |
 | `classification.ts` | Bridge-aware burn classification and transaction-context loading |
 | `context.ts` | Shared loaders for current prices and historical price series |
 | `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
@@ -430,7 +429,7 @@ CREATE INDEX idx_mbe_null_price_ts ON mint_burn_events(timestamp DESC) WHERE amo
 CREATE INDEX idx_mbe_flow_type_ts ON mint_burn_events(flow_type, timestamp DESC);
 ```
 
-### mint_burn_hourly (migration 0031)
+### mint_burn_hourly (baseline `0000_baseline.sql`)
 
 Pre-aggregated hourly flow buckets. Written by cron after each scan; also recalculated by the backfill admin endpoint.
 
@@ -451,7 +450,7 @@ CREATE INDEX idx_mbh_ts ON mint_burn_hourly(hour_ts DESC);
 CREATE INDEX idx_mbh_coin ON mint_burn_hourly(stablecoin_id, hour_ts DESC);
 ```
 
-### mint_burn_sync_state (migration 0031)
+### mint_burn_sync_state (baseline `0000_baseline.sql`)
 
 Incremental block tracking (same pattern as `blacklist_sync_state`).
 
@@ -479,7 +478,7 @@ CREATE TABLE mint_burn_config_deferral (
 CREATE INDEX idx_mbcd_until ON mint_burn_config_deferral(deferred_until);
 ```
 
-**Migration history:** Initial schema in 0019 was dropped in 0020. Current schema is v2 (migration 0031). Migration 0096 adds `mint_burn_config_deferral`; migration 0097 adds the `(flow_type, timestamp)` composite index on `mint_burn_events`.
+**Migration history:** The earlier per-step mint/burn migrations were squashed into the baseline; the `mint_burn_events`, `mint_burn_hourly`, and `mint_burn_sync_state` tables (v2 layout) now live in `0000_baseline.sql`. Migration 0096 adds `mint_burn_config_deferral`; migration 0097 adds the `(flow_type, timestamp)` composite index on `mint_burn_events`. These are the only post-baseline mint/burn migrations.
 
 ---
 
@@ -589,7 +588,7 @@ Retroactive cleanup endpoint for historical rows that predate shared roundtrip d
 - Auth: Access service-token headers
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
 - Behavior:
-  - **Forward pass** — scans up to `1000` `(tx_hash, stablecoin_id)` groups per call where `flow_type='standard'` but both mint and burn directions exist, and flips all matching rows in each group to `flow_type='atomic_roundtrip'`.
+  - **Forward pass** — scans up to `1000` `(tx_hash, stablecoin_id, chain_id)` groups per call where `flow_type='standard'` but both mint and burn directions exist, and flips all matching rows in each group to `flow_type='atomic_roundtrip'`.
   - **Reverse pass (new).** Scans up to `1000` groups currently tagged `flow_type='atomic_roundtrip'` that fail the 0.5% tolerance (`|mint_amt - burn_amt| > 0.005 × max(mint_amt, burn_amt)`) and flips them back to `flow_type='standard'`. The SQL mirrors `ROUNDTRIP_AMOUNT_TOLERANCE` in `worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts`.
   - Recalculates the affected hourly buckets so downstream flow aggregates pick up both directions of reclassification immediately.
   - Returns `done=true` only when BOTH forward and reverse passes returned fewer than `BATCH_SIZE` groups.

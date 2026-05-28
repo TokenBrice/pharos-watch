@@ -47,7 +47,7 @@ npx wrangler tail stablecoin-api --format pretty
 # Look for sync-stablecoins run completions and stablecoins cache writes.
 curl -sS -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
-        https://ops-api.pharos.watch/api/status | jq '.dataQuality.stablecoinsCacheStatus, .dataQuality.stablecoinsCacheReason, .telegramBot.presetQueryFailures, .telegramBot.presetResolutionFailures'
+        https://ops-api.pharos.watch/api/status | jq '.dataQuality.stablecoinsCacheStatus, .dataQuality.stablecoinsCacheReason, .telegramBot.presetQueryFailures, .crons["dispatch-telegram-alerts"].lastRun.metadata.presetResolutionFailures'
 ```
 
 Rerun the preset resolver via the 5-minute Telegram cron lane after fixing the upstream cause: the next scheduled `dispatch-telegram-alerts` run will retry. There is no separate preset-only re-fire; once the cache is repopulated and the next dispatch tick fires, the persistent `telegram:preset-query-failure-count` counter resets and preset delivery resumes.

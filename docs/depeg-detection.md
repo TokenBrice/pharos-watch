@@ -33,7 +33,7 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 
 ## Database Schema
 
-### depeg_events (migration 0006)
+### depeg_events
 
 ```sql
 CREATE TABLE IF NOT EXISTS depeg_events (
@@ -58,14 +58,14 @@ CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
 CREATE INDEX idx_depeg_started ON depeg_events(started_at DESC);
 ```
 
-Uniqueness and open-event indexes (migration 0008):
+Uniqueness and open-event indexes:
 
 ```sql
 CREATE UNIQUE INDEX idx_depeg_unique ON depeg_events(stablecoin_id, started_at, source);
 CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NULL;
 ```
 
-### depeg_pending (migration 0023)
+### depeg_pending
 
 ```sql
 CREATE TABLE IF NOT EXISTS depeg_pending (
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS depeg_pending (
 CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
-One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. Migration `0061` adds the `reason` column so operators can distinguish large-cap confirmations from ambiguous-price and extreme-move confirmations. Migration `0091` adds last-seen and peak-seen tracking columns so pending rows preserve current and worst observed evidence while they await promotion or expiry. Migration `0105` adds `confirmation_sources` and `pending_reason` to promoted `depeg_events` rows for ex-post provenance.
+One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema, the `reason` column (distinguishes large-cap confirmations from ambiguous-price and extreme-move confirmations), and the original uniqueness/open-event indexes were all squashed into `0000_baseline.sql` (migrations 0001–0071, squashed 2026-03-25), so their pre-squash migration files no longer exist. The still-extant follow-on migrations layer on top: migration `0091` adds last-seen and peak-seen tracking columns so pending rows preserve current and worst observed evidence while they await promotion or expiry, and migration `0105` adds `confirmation_sources` and `pending_reason` to promoted `depeg_events` rows for ex-post provenance.
 
 ### depeg_event_provenance (migration 0127)
 
@@ -102,9 +102,9 @@ Stored fields include source kind, replay run ID/version, source price providers
 
 Backfill replay manifest table. Each mutating replay records stablecoin/window, source type, expected event count, expected fingerprint, removed/added/inserted counts, status (`started`, `complete`, or `incomplete`), timestamps, and any failure message. Chunked insert failures mark the run `incomplete` so operators can repair or re-run instead of assuming the historical slice is complete.
 
-### Migration 0016
+### Non-USD threshold cleanup (folded into baseline)
 
-Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD threshold was raised from 100 to 150.
+Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD threshold was raised from 100 to 150. This was a pre-squash migration now folded into `0000_baseline.sql`.
 
 ## Cron Scheduling
 
@@ -337,7 +337,7 @@ Orphan cleanup:
 - `direction` must be `"above"` or `"below"` (defaults to `"below"`)
 - `source` must be `"live"` or `"backfill"` (defaults to `"live"`)
 
-Frontend type (`shared/types/index.ts`):
+Frontend type (defined in `shared/types/market.ts`, re-exported through `shared/types/index.ts`):
 
 ```typescript
 interface DepegEvent {
@@ -388,11 +388,11 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the
 
 ## Frontend
 
-### Hook: useDepegEvents (`use-depeg-events.ts`)
+### Hook: useInfiniteDepegEvents / useActiveDepegEvents (`use-depeg-events.ts`)
 
-- Fetches `/api/depeg-events` with optional `?stablecoin=` filter
+- `useInfiniteDepegEvents({ stablecoinId?, activeOnly?, includePending?, autoLoadAll? })` fetches `/api/depeg-events` with optional `?stablecoin=` filter (shared options built by `depegEventsInfiniteQueryOptions(...)`); `useActiveDepegEvents(...)` wraps it with `activeOnly` preset
 - TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
-- Companion hook `useInfiniteDepegEvents({ stablecoinId?, autoLoadAll? })` pages through `/api/depeg-events?limit=100&offset=...`; oversized `limit` values are rejected rather than silently clamped
+- Pages through `/api/depeg-events?limit=100&cursor=...`, advancing via the response `nextCursor`; oversized `limit` values are rejected rather than silently clamped
 - `/depeg` uses the unfiltered infinite hook for the global recent-events feed
 - `/depeg/<event>/` static pages are generated for a bounded editorial subset: confirmed events with an absolute peak deviation at or above the 5.0% static-page threshold, limited to the newest indexable archive entries plus pinned authored incidents such as USDC 2023. The full event table remains available through the API, live tracker, stablecoin detail history, and feeds; non-static feed entries link back to the relevant stablecoin history anchor instead of consuming Cloudflare Pages files.
 - Stablecoin detail pages use the filtered infinite hook with `autoLoadAll` so the hero can read the full recorded-event `total` while the history table hydrates every page in the background
@@ -401,7 +401,7 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the
 
 - Responsive recent-events feed with progressive history pagination
 - Sorted by `startedAt` DESC
-- Shows: logo, symbol, peak deviation (red >= 500bps, amber < 500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
+- Shows: logo, symbol, peak deviation colored by severity (green <50bps, amber 50-200bps, orange 200-500bps, red >=500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
 - Click navigates to `/stablecoin/{id}`
 
 ### Depeg dashboard stat context
@@ -481,7 +481,7 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 | `worker/src/lib/depeg-helpers.ts` | `DepegRow` type, `rowToDepegEvent()`, `loadDexPriceRows()`, `buildInsertDepegEventStmt()` |
 | `worker/src/api/depeg-events.ts` | `GET /api/depeg-events` handler |
 | `worker/migrations/0000_baseline.sql` | Baseline `depeg_events` / `depeg_pending` schema, including the historical dedupe and non-USD cleanup changes |
-| `shared/types/index.ts` | `DepegEvent` frontend type |
+| `shared/types/market.ts` | `DepegEvent` frontend type (re-exported via `shared/types/index.ts`) |
 | `shared/lib/peg-score.ts` | Peg score computation for report cards |
 | `src/lib/peg-stability.ts` | Peg stability metrics (`pegPct`, streak, tracking span) |
 | `src/hooks/use-depeg-events.ts` | TanStack Query hook |

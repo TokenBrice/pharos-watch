@@ -44,7 +44,7 @@ This same persisted flag also retires the shell-level `Start Here` shortcut in t
 - `breadcrumbName = "Start Here"`
 - `path = "/start/"`
 - `title = "Start Here"`
-- `containerClassName = "mx-auto max-w-6xl space-y-8"`
+- `containerClassName = "mx-auto max-w-6xl"`
 
 Unlike the homepage, `/start/` is a guided long-form route with standard breadcrumb/title chrome above the route-specific onboarding content.
 
@@ -76,7 +76,7 @@ These are the canonical source of truth for the route destinations, copy, and gr
 4. `Feature atlas` section
 5. `Power moves` shortcuts section
 6. `Sister tool: PharosVille`
-7. Closing CTA with `Open the dashboard` and `Browse the directory` links
+7. Closing CTA with `Open the dashboard`, `Read the methodology`, and `browse the directory` links
 
 ### Hero route deck
 
@@ -119,7 +119,7 @@ Current primary goal routes:
 
 - `/`
 - `/stablecoins/usd/`
-- `/compare/`
+- `/portfolio/`
 - `/yield/`
 - `/pharoswatchbot/`
 

@@ -55,9 +55,9 @@ The `/cemetery/` page also emits a `Dataset` JSON-LD node built from the checked
 
 Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS` through `shared/lib/cemetery-merged.ts`:
 
-- `buildCemeteryEntries()` maps each `FROZEN_STABLECOINS` entry's `frozenAt` to `deathDate` and the registry `obituary` block to `epitaph` / `obituary` / `causeOfDeath` / `sourceUrl` / `sourceLabel`. Frozen rows are flagged with `archivedDataAvailable: true` so the tombstone and obituary panels render a "View archived data ->" link to `/stablecoin/<id>/` (which serves the frozen detail page with the `<FrozenStateBanner>` and "Data frozen on YYYY-MM-DD" chart footer). Curated `DEAD_STABLECOINS` entries leave `archivedDataAvailable` falsy and link only to the cemetery anchor.
+- `buildMergedCemetery()` (via `frozenToDeadShape()`) maps each `FROZEN_STABLECOINS` entry's `obituary.deathDate` to `deathDate` and the registry `obituary` block to `epitaph` / `obituary` / `causeOfDeath` / `sourceUrl` / `sourceLabel`. Frozen rows are flagged with `archivedDataAvailable: true` so the tombstone and obituary panels render a "View archived data ->" link to `/stablecoin/<id>/` (which serves the frozen detail page with the `<FrozenStateBanner>` and "Data frozen on YYYY-MM-DD" chart footer). Curated `DEAD_STABLECOINS` entries leave `archivedDataAvailable` falsy and link only to the cemetery anchor.
 - Identifier rules: the merged `id` for a frozen row is the registry `id` (the same canonical ticker-issuer ID used everywhere else on the site). Curated dead-coin ids (e.g. `ust-luna-2022`) keep their stable cemetery-only identifiers.
-- Sort and grouping: the merged list keeps the same year-grouped, newest-first behavior the cemetery already uses. `frozenAt` participates in the same sort key as `deathDate`.
+- Sort and grouping: the merged list keeps the same year-grouped, newest-first behavior the cemetery already uses. The merged `deathDate` (sourced from the `obituary` block) is the sort input; `frozenAt` is not copied onto the entry and does not participate in the sort key.
 
 The static cemetery dataset export reflects the same merge:
 

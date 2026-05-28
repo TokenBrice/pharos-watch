@@ -331,7 +331,7 @@ When authoritative pricing removes every Jupiter fallback candidate, the run clo
 
 Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `last_updated_at` for the ticker sits hours-to-days behind real time. The strict 15-minute freshness gates used elsewhere reject these prices, leaving the assets with `priceSource: "missing"` even though CoinGecko has a valid USD quote.
 
-`fetchFiatCoinGeckoTokens` in `worker/src/cron/sync-stablecoins/supplemental-assets.ts` runs a relaxed fallback for CoinGecko-only supplemental assets:
+`fetchFiatCoinGeckoTokens` in `worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts` runs a relaxed fallback for CoinGecko-only supplemental assets:
 
 1. Try `resolveSupplementalPrice` first (the standard 15-minute gate).
 2. If that returns null but `cgData[geckoId].usd` is a positive finite number, build a resolution with `source: "coingecko-low-volume"`, `priceConfidence: "fallback"`, and `priceObservedAtMode: "upstream"` when CG returned `last_updated_at` (otherwise `"local_fetch"`).

@@ -21,7 +21,7 @@ Primary audience:
 - **Server shell:** `src/app/upcoming/page.tsx`
 - **Client implementation:** `src/components/upcoming-client.tsx`
 - **Shared helpers:** `src/lib/pre-launch.ts`
-- **Primary dataset:** `PRE_LAUNCH_STABLECOINS` from `@shared/lib/stablecoins/registry`, filtered from the generated catalog aggregate backed by `shared/data/stablecoins/coins/*.json`
+- **Primary dataset:** the client card/filter universe is derived in `src/components/upcoming-client.tsx` from `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`) filtered on `status: "pre-launch"`; the registry-exported `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) is consumed only by the server shell (`page.tsx`) for JSON-LD and the crawlable `sr-only` nav. Both derive from the catalog backed by `shared/data/stablecoins/coins/*.json`
 
 The route renders through `FeaturePageShell` with:
 
@@ -43,7 +43,8 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 
 | Source                   | Used for                                                                                          |
 | ------------------------ | ------------------------------------------------------------------------------------------------- |
-| `PRE_LAUNCH_STABLECOINS` | the route's full card/filter universe                                                             |
+| `CLIENT_TRACKED_STABLECOINS` (`@shared/lib/stablecoins/client-registry`), filtered on `status: "pre-launch"` in `upcoming-client.tsx` | the client card/filter universe                                                             |
+| `PRE_LAUNCH_STABLECOINS` (`@shared/lib/stablecoins/registry`) | server-only: JSON-LD and the crawlable `sr-only` nav in `page.tsx`                                                             |
 | `shared/data/stablecoins/coins/*.json` | editable stablecoin catalog source of truth; pre-launch membership comes from `status: "pre-launch"` |
 | `shared/data/stablecoins/coins.generated.json` | generated/runtime aggregate regenerated with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `data/logos.json`        | per-coin logo display                                                                             |
@@ -69,7 +70,7 @@ The route does not call the Worker API directly. It is a metadata-driven surface
 - `Clear filters`, shown only while any filter set is active
 - the filter surface now uses the shared Pharos card/pill treatment instead of standalone flat chip rows, so dark mode stays visually consistent with the rest of the product
 
-Filtering always starts from the full `PRE_LAUNCH_STABLECOINS` set. Sorting is then applied to the filtered result.
+Filtering always starts from the full locally-derived pre-launch set (the `upcoming-client.tsx` const filtered from `CLIENT_TRACKED_STABLECOINS`). Sorting is then applied to the filtered result.
 
 ---
 

@@ -32,7 +32,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 The visible top fold is split across four independently composed surfaces:
 
 - `HomepageTopTape`, rendered directly under the global PSI `RegimeBar` on `/`; it uses full mobile width and the available desktop width to the right of the sidebar
-- `SiteHeader` on `lg+`
+- `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
 - `HomeAltHero`
 - `HomeAltMiniCardGrid`
 
@@ -67,7 +67,7 @@ Derived helpers:
 
 Starred stablecoin state is local to the browser:
 
-- localStorage key: `pharos-pinned-stablecoins`
+- localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` key is migrated once and then only echo-written for back-compat)
 - value: normalized stablecoin ID array
 - invalid, inactive, duplicate, or over-limit IDs are ignored on read
 

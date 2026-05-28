@@ -51,7 +51,7 @@ The shared registry in `shared/lib/live-reserve-adapters-definitions.ts` defines
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`blast-usdb-yield-manager`, `btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-v1`, `sgforge-coinvertible`, `superstate-liquidity`, `usd1-bundle-oracle`, `yamato`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`blast-usdb-yield-manager`, `btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-v1`, `ripple-transparency`, `sgforge-coinvertible`, `sgho-wrapper`, `superstate-liquidity`, `usd1-bundle-oracle`, `yamato`, plus the parked `centrifuge-vault`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
@@ -531,7 +531,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 - Shared unverified-freshness metadata helper so timestamp-less dashboard feeds explain why they remain non-scoring, plus a not-applicable freshness helper for reviewed latest-state on-chain/API reads
 - DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`), with fixed-price overrides supported for wrapper branches in `evm-branch-balances`; tracked branch assets can also reuse a fresh stablecoins cache price when DefiLlama address pricing is missing
 - EVM balance, total-supply, hex-call, and Multicall3 aggregate reads (`fetchErc20Balance`, `fetchErc20TotalSupply`, `fetchOnchainMulticall3`)
-- Solana mint-supply reads (`fetchSolanaTokenSupplyRaw`) used by `curated-validated` for tracked Solana-issued assets
+- Solana / on-chain mint-supply reads (`probeTrackedTokenSupply`, `probeOnchainTotalSupply`) used by `curated-validated` for tracked assets
 - Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
 - Slice normalization / valuation / unknown-exposure math (`slice-math.ts`) with configurable precision (`normalizeSlices`, `slicesFromValues`, `valueUsdFromBigIntPrice`)
 - Risk validation (`isReserveRisk`)

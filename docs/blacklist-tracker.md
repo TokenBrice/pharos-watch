@@ -537,7 +537,7 @@ TransferRestrictionRemoved(address indexed)
 
 ### blacklist_events table
 
-**Migrations:** baseline schema in `worker/migrations/0000_baseline.sql`, plus `0076_blacklist_provenance_and_amount_semantics.sql` and `0077_blacklist_amount_recovery_telemetry.sql`. Historical pre-squash index/version additions are tracked in [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md).
+**Migrations:** baseline schema in `worker/migrations/0000_baseline.sql`, plus `0076_blacklist_provenance_and_amount_semantics.sql`, `0077_blacklist_amount_recovery_telemetry.sql`, and `0095_blacklist_event_suppression.sql` (adds the `suppression_reason` column + index). Historical pre-squash index/version additions are tracked in [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md).
 
 ```sql
 CREATE TABLE blacklist_events (
@@ -760,6 +760,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | `offset`     | number | 0       | Pagination offset                                                    |
 | `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`, `"USDG"`, `"RLUSD"`, `"U"`, `"USDTB"`, `"A7A5"`, `"FDUSD"`, `"BRZ"`, `"AUSD"`, `"EURI"`, `"USDQ"`, `"USDO"`, `"USDX"`, `"AID"`, `"TGBP"`, `"MNEE"`, `"EURC"`, `"BUIDL"`, `"USDP"`, `"TUSD"`, `"NUSD"`, `"EURCV"`, `"USDA"`, `"USAT"`, `"AEUR"`, `"XUSD"`, `"XAUM"`, `"JPYC"`, `"FRXUSD"`, `"FIDD"`) |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
+| `chainId`    | string | --      | Filter by canonical chain id; must match `chain` if both are provided |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 | `q`          | string | --      | Case-insensitive address substring search                            |
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
@@ -873,7 +874,7 @@ Supported inputs:
 
 Frozen stablecoins are excluded. Use narrow `stablecoin` + `chainId` filters and `dryRun=true` before a write-enabled backfill.
 
-All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http.ts`.
+All blacklist admin endpoints are aggregated and dispatched by `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http.ts`, but their route definitions live in `worker/src/routes/ops-routes.ts` (`reset-blacklist-sync`, `debug-sync-state`) and `worker/src/routes/admin-routes.ts` (`remediate-blacklist-amount-gaps`, `backfill-blacklist-current-balances`).
 
 ---
 
@@ -983,7 +984,7 @@ Gating is driven by the view model (`src/lib/stablecoin-detail-view-model.ts` â†
 | `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules    |
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
-| `worker/src/routes/registry.ts`                            | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`, `remediate-blacklist-amount-gaps`) |
+| `worker/src/routes/registry.ts`                            | API route aggregator/dispatcher; admin route definitions live in `ops-routes.ts` (`reset-blacklist-sync`, `debug-sync-state`) and `admin-routes.ts` (`remediate-blacklist-amount-gaps`, `backfill-blacklist-current-balances`) |
 | `worker/src/handlers/scheduled.ts`                         | Thin cron-expression dispatcher for scheduled slots                                        |
 | `worker/src/handlers/scheduled/hourly-blacklist.ts`         | Dedicated 6-hourly `sync-blacklist` slot runner                                            |
 | `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |

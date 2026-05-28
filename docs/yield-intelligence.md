@@ -211,8 +211,6 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Unitas (283)          | sUSDu   | Unitas savings              |
 | Yuzu USD (344)        | syzUSD   | Yuzu savings                |
 | fxUSD (168)           | fxSAVE  | Concentrator savings        |
-| Noon USN (230)        | sUSN    | Noon savings                |
-| Parallel USDp         | sUSDp   | Parallel savings wrapper    |
 | Flying Tulip ftUSD    | sftUSD  | Flying Tulip staking        |
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
@@ -843,7 +841,7 @@ Each `history` row includes:
 
 **Files:** `src/app/stablecoin/[id]/yield/page.tsx` (SSG wrapper), `src/app/stablecoin/[id]/yield/client.tsx` (interactive)
 
-Generated only for tracked coins with `flags.yieldBearing`. The route renders per-source APY history, warning-signal timeline, and source-switch history for the selected coin; non-yield-bearing or unknown IDs return `notFound()` and noindex metadata.
+Generated for every non-pre-launch tracked coin (lending-opportunity rows can appear for any tracked stablecoin, so the deep link must be reachable beyond `flags.yieldBearing`). The route renders per-source APY history, warning-signal timeline, and source-switch history for the selected coin; coins with no live yield row render an empty-state card, and only IDs absent from the tracked registry return `notFound()`. All known-coin pages carry noindex (`robots: { index: false, follow: true }`) metadata.
 
 ### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
 

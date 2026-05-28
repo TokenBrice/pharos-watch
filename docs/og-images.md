@@ -119,7 +119,7 @@ npm run check:og-case-studies
 ### When to renew
 
 - After adding, removing, or renaming a case-study slug in `CASE_STUDY_LIST`.
-- After changing a case-study title, eyebrow, subtitle, outcome, or event date label that appears on the card.
+- After changing a case-study title, eyebrow, or outcome that appears on the card (subtitle and eventDateLabel are not rendered on the OG card).
 - After changing the shared case-study OG template.
 
 ## 5. Selector profile cards (`public/og-selector-*.png`)

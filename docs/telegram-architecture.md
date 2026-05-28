@@ -102,7 +102,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 **Must NOT.**
 - Bypass the `CALLBACK_ACTIONS` allowlist when adding a new callback prefix. Any new prefix is a seam-relevant change — add it to the allowlist *and* to the registered keyboard builders in one commit.
-- Duplicate write logic that exists in `telegram-webhook-store.ts`. The current callbacks file has a few inline `INSERT … ON CONFLICT` writes (snooze, depegstep, safetydown) that pre-date the store helpers; these are grandfathered. New mutations go through `telegram-webhook-store.ts`.
+- Duplicate write logic that exists in `telegram-webhook-store.ts`. The per-action files in `webhook-callbacks/` route their writes through helpers (`snooze.ts` via `setSubscriberSnooze`; `depegstep.ts` / `safetydown.ts` via `prepareCoinSettingStatements`); there are no inline `INSERT … ON CONFLICT` writes left in the callbacks layer. New mutations go through `telegram-webhook-store.ts`.
 - Take a hard dependency on a specific *Action handler* implementation — when a callback needs to re-run a command, prefer the same `build*Message` helper the command uses rather than calling `handle*` from `webhook-commands/`.
 
 ---
@@ -187,7 +187,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload and the setup-wizard state), the processed-update idempotency claim, the command-cooldown gate, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
 
 **Owned files.**
-- `worker/src/api/telegram-webhook-store.ts` (the bulk of subscription/disambiguation writes and reads)
+- `worker/src/api/telegram-webhook-store.ts` (compatibility barrel re-exporting `telegram-store/*`) and `worker/src/api/telegram-store/*` (the topic-specific SQL builders: `subscribers`, `subscriptions`, `disambiguation`, `snooze`, `presets`, `forget`, `processed-updates`). The import contract — per-coin/preset write SQL belongs in `telegram-webhook-store` — still holds via the barrel.
 - `worker/src/lib/telegram-chat-member.ts` (cached chat-admin read policy; Bot API HTTP goes through Outbound transport)
 - `worker/src/lib/telegram-usage-analytics.ts` (usage events, lifecycle snapshots, chat delivery diagnostics)
 - `worker/src/lib/telegram-webhook-registration.ts` (Bot API webhook/commands/profile/menu-button reconcile cadence and D1 cache markers; Bot API HTTP goes through Outbound transport)
@@ -283,7 +283,7 @@ Three commits decomposed Telegram code in 30 days. Knowing which seam each touch
 
 - **2026-04-17 — `feat(telegram): callback_query router + snooze buttons backend` (cb202d93b)** — created the **Callback routing** seam. Split `handleCallbackQuery` into its own file (`telegram-webhook-callbacks.ts`), added the `action:arg` parser, and added the first action (`snooze:1h|4h|24h`). Same-day follow-up `refactor(telegram): simplify pass after audit remediation` (6cd53dd0e) collapsed `upsertSubscriberRow + UPDATE` into one `INSERT ... ON CONFLICT` and parallelized `/status` D1 reads.
 
-- **2026-05-11 — `P1-M1: decompose telegram-webhook.ts dispatch into per-command modules` (58695ef1e)** — created the **Action handlers** seam. Cut `telegram-webhook.ts` from ~1,034 lines to ~426, moved each `/command` into `worker/src/api/webhook-commands/<command>.ts`, replaced two parallel switch statements (the pending-active branch and the fresh-command branch) with one `COMMAND_HANDLERS` table plus explicit pending passthrough/clear sets. Extracted the shared subscribe/unsubscribe/set machinery into `webhook-commands/action-runner.ts`. Behavior and exports unchanged.
+- **2026-05-11 — `P1-M1: decompose telegram-webhook.ts dispatch into per-command modules` (58695ef1e)** — created the **Action handlers** seam. Cut `telegram-webhook.ts` from ~1,221 to ~428 code lines (1,363 to 499 total), moved each `/command` into `worker/src/api/webhook-commands/<command>.ts`, replaced two parallel switch statements (the pending-active branch and the fresh-command branch) with one `COMMAND_HANDLERS` table plus explicit pending passthrough/clear sets. Extracted the shared subscribe/unsubscribe/set machinery into `webhook-commands/action-runner.ts`. Behavior and exports unchanged.
 
 - **2026-05-14 — `refactor(telegram): extract callback and queue helpers` (d6f4fec8e)** — split **Dispatch / fan-out** further (`dispatch-telegram-alerts-fanout.ts`), restructured `telegram-webhook-callbacks.ts` for explicit per-action handlers, and grew `telegram-pending-queue.ts` to absorb claim-based draining. This commit was the immediate motivation for this doc.
 
@@ -322,7 +322,7 @@ If two or more of these happen, re-evaluate the seams (revise this doc, then ref
 
 1. **Two consecutive "extract helper" commits to Telegram code in 7 days** — the seams aren't holding; whatever was extracted is still entangled.
 2. **A bug fix touches more than 2 seams** — a single change rippling through Ingress + Action handlers + State means the boundary between them is wrong, not the code inside them.
-3. **A callback handler imports from 4+ seams** — `telegram-webhook-callbacks.ts` already sits at the edge (it imports Action handlers' builders, State helpers, Common, and re-runs setup state); if a new callback needs a 5th, the callback layer is doing too much.
+3. **A callback handler imports from 4+ seams** — the callback layer already sits at the edge: the per-action files in `webhook-callbacks/` reach into Action handlers' builders, State helpers (via store/settings-mutations), Common, and the setup state machine; if a new callback needs a 5th, the callback layer is doing too much.
 4. **A new constant gets defined outside `telegram-constants.ts`** within the Telegram subsystem — the centralization (P1-M2) is decaying.
 5. **The same SQL appears in two seams** — most likely State / persistence is missing a helper.
 6. **Ingress grows past ~600 lines again** — the dispatcher loop is doing more than routing. Push behavior into Action handlers or State.

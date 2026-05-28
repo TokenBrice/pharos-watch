@@ -51,7 +51,7 @@ Status semantics are intentionally user-facing:
 - `Reserve View`: `Score-grade`, `Configured`, `Checking`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
 - query-backed columns can also emit `Data n/a` while an upstream dataset is unavailable
 - `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Resolved`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
-- `Yield`: `Ranked`, `—`, or `Data n/a`
+- `Yield`: `Ranked`, `Gap`, or `Data n/a`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Disabled`, `Not Covered`, or `Data n/a`
 - `Freezable Status`: `Live`, `Yes`, `Upstream`, `Possible`, `No`, or `Data n/a`
 - `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
@@ -90,7 +90,7 @@ Additional page-level sources:
 | Market-cap weights                                                                         | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload                                     |
 | Peg/backing/governance labels in each row                                                  | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
 | Pricing-source tiles                                                                       | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
-| Snapshot insight cards (`Source target`, `Widest today`, `Narrowest today`, `Major-heavy`) | Derived from the same per-feature summaries and per-row source-depth counts used by the feature snapshot rows                         |
+| Snapshot insight cards (`Source target`, `Widest reach`, `Tightest reach`, `Cap skew`) | Derived from the same per-feature summaries and per-row source-depth counts used by the feature snapshot rows                         |
 
 ---
 

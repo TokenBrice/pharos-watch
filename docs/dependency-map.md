@@ -2,7 +2,7 @@
 
 ## Overview
 
-The dependency map (`/dependency-map`) renders an interactive collateral graph for non-defunct stablecoins by market cap that have at least one live dependency edge. The visible node count is user-selectable at **50, 100, or 200** via the in-header Limit toggle; default is 50.
+The dependency map (`/dependency-map`) renders an interactive collateral graph for non-defunct stablecoins by market cap that have at least one live dependency edge. The visible node count is user-selectable at **50, 100, 200, or All** via the in-header Limit toggle; default is 50. The `All` option uncaps to the full ranked set.
 
 Primary files:
 
@@ -20,10 +20,10 @@ Primary files:
 The page combines three data sources:
 
 1. `useReportCards()` (`/api/report-cards`) for per-coin grade metadata.
-2. `useStablecoins()` (`/api/stablecoins`) for market-cap sizing (`sumPegBuckets(circulating)`).
+2. `useStablecoins()` (`/api/stablecoins`) for market-cap sizing (`getCirculatingRaw(asset)`).
 3. `useLogos()` (static `data/logos.json` import) for node logos.
 
-Market-cap map construction lives in `src/app/dependency-map/client.tsx` and uses `sumPegBuckets()` from `shared/lib/supply.ts`.
+Market-cap map construction lives in `src/app/dependency-map/client.tsx` and uses `getCirculatingRaw()` from `shared/lib/supply.ts` (which sums the peg buckets of `circulating`).
 
 ## Graph Construction
 
@@ -31,11 +31,11 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 
 - Filters out `isDefunct` report cards.
 - Uses `reportData.dependencyGraph?.edges` from `/api/report-cards` as the primary dependency edge source, then filters to live source/target IDs with `filterDependencyGraphEdgesToLive()`.
-- `buildGraphData()` falls back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` only when `dependencyEdges` is omitted or `undefined`; an explicit empty edge array means “render no dependency edges.”
+- `buildGraphData()` falls back to `buildDependencyGraphEdges(CLIENT_ACTIVE_STABLECOINS)` only when `dependencyEdges` is omitted or `undefined`; an explicit empty edge array means “render no dependency edges.”
 - The mobile hub summary is built from `reportData.dependencyGraph?.edges ?? []` and does not use the static fallback.
 - Removes coins with no incoming and no outgoing live dependency edges.
 - Sorts remaining coins by market cap descending.
-- Takes the top N coins where N comes from the runtime Limit toggle (50 / 100 / 200; default `DEFAULT_NODE_LIMIT = 50`), then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.
+- Takes the top N coins where N comes from the runtime Limit toggle (50 / 100 / 200 / All; default `DEFAULT_NODE_LIMIT = 50`, and `All` uncaps to the full ranked set), then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
 
 Edges are derived from the report-card edge set:
@@ -110,7 +110,7 @@ The graph header exposes:
   - `All`: no type filter.
   - `Collateral`, `Mechanism`, and `Wrapper`: show only visible edges of that dependency type while preserving the active focus mode.
 - **Node limit toggle**:
-  - `50` (default), `100`, or `200` top-mcap coins enter the map before isolated-node pruning.
+  - `50` (default), `100`, `200`, or `All` top-mcap coins enter the map before isolated-node pruning; `All` uncaps to the full ranked set.
 - **Selection overlay**:
   - Renders only when a node is actively hovered or pinned (clicked).
   - Sits in the top-right corner of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`).
@@ -138,7 +138,7 @@ Workspace canvas:
 
 - The SVG stage is a graph-local HUD surface with its own visual tokens: `--graph-canvas-bg`, `--graph-panel-bg`, and `--graph-grid-line`. The tokens live in `src/app/globals.css` and are scoped to the dependency-map workspace — they are not part of the global semantic layer.
 - Background uses a 24px CSS gradient grid in `--graph-grid-line`. Border is a 1px hairline in the same color with a 2px radius. No shadow.
-- Inner chrome (legend pill, SYSTEMIC/LEAF indicator) sits on `--graph-panel-bg` with the same hairline border and 2px radius.
+- Inner chrome (legend pill) sits on `--graph-panel-bg` with the same hairline border and 2px radius.
 - The outer workspace card and the Dependency Hubs Board below it keep the warm system surface ramp; the cold HUD treatment is scoped to the SVG stage only.
 
 Node encoding:
@@ -193,7 +193,7 @@ When a node is hovered, the graph visualizes how stress could propagate through 
 
 ## Scope and Limits
 
-- The map starts at the largest 50 live dependency-linked coins for readability; the in-header Limit toggle lets users expand to 100 or 200 when broader exposure context is needed. The d3-force overlap and post-pass collision passes scale O(n²) and remain interactive at 200 nodes.
+- The map starts at the largest 50 live dependency-linked coins for readability; the in-header Limit toggle lets users expand to 100, 200, or All when broader exposure context is needed. The d3-force overlap and post-pass collision passes scale O(n²) and remain interactive at 200 nodes.
 - Dependencies are snapshot-derived from the same effective dependency resolver used by report-card scoring: score-grade live reserve slices with tracked `coinId` links can replace curated reserve links for that snapshot, unmapped live reserve share remains implicit self-backed / non-stablecoin exposure, and synthetic tracked-variant `wrapper` edges remain dominant where applicable. The map still does not perform live on-chain graph discovery.
 - Live reserve sync still affects the map only through the report-card snapshot; detail-only, stale, degraded, or non-score-grade reserve feeds do not create graph edges.
 - Defunct coins are excluded from the graph.

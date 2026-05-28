@@ -15,7 +15,7 @@ Internal changelog reconstructed from git history. Runtime currently reports Yie
 
 ---
 
-## v8.17 - dTRINITY sdUSD Ownership Handoff (May 22, 2026)
+## v8.17 - dTRINITY sdUSD Ownership Handoff (May 21, 2026)
 
 - `sdusd-dtrinity` is now the first-class tracked dTRINITY dStake yield wrapper
 - The existing Ethereum/Fraxtal weighted sdUSD DeFiLlama source publishes under `sdusd-dtrinity`

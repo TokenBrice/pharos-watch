@@ -181,7 +181,7 @@ The verification result produces one of three GitHub labels:
 | `verified: unconfirmed` | Price available but within 1% — data looks OK |
 | `verified: pending` | Cache unavailable at submission time |
 
-The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot ---**` section.
+The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot (at time of submission) ---**` section.
 
 For non-USD pegs, the worker now derives `pegReference` from the tracked peg type plus cached fallback rates (`peggedEUR`, `peggedGOLD`, etc.). Commodity pegs also respect `commodityOunces`, so tokens such as XAUT and PAXG are compared against per-token gold references rather than `$1`.
 
@@ -259,5 +259,7 @@ Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.
 | `worker/src/api/feedback/submission.ts` | GitHub routing orchestration |
 | `worker/src/api/feedback/github.ts` | GitHub REST transport helper |
 | `worker/src/api/feedback/format.ts` | Issue body and title formatting |
-| `worker/src/routes/registry.ts` | Registers `POST /api/feedback` route to `handleFeedback()` |
+| `worker/src/routes/messaging-routes.ts` | Registers the feedback static route (`MESSAGING_STATIC_ROUTES`) binding `handleFeedback()` to the `"feedback"` endpoint |
+| `shared/lib/api-endpoints/definitions.ts` (+ `paths.ts`) | Endpoint definition mapping key `"feedback"` to `POST /api/feedback` |
+| `worker/src/routes/registry.ts` | Static-route aggregator/matcher (Map by `endpoint.path`); dispatches the feedback route, does not register it |
 | `worker/migrations/0000_baseline.sql` | Baseline D1 rate-limit table schema for feedback submissions |

@@ -74,7 +74,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 
 ## Metadata + SEO
 
-- Title pattern: `<Archetype> Stablecoins, Explained` (template `%s | Pharos` adds the suffix).
+- Title: hand-tuned per archetype, all ending in `, Explained` (see `TITLE_BY_ARCHETYPE` in the route module); template `%s | Pharos` adds the suffix.
 - Description: hand-tuned per archetype, ≤160 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
@@ -100,7 +100,7 @@ The guard runs in `validate:prebuild` and so blocks deploy even on non-Pages-imp
 
 - **Sidebar:** `src/lib/nav-config.ts` LEARN group → `Learn Overview`, `Mechanisms`, `Case Studies`, and `Glossary`
 - **Coin detail (`src/components/key-info-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, gated on `meta.mechanismArchetype`.
-- **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** appended `trackerLinks` entry, gated the same way.
+- **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`key-info-card` already carries that CTA); its archetype-gated slot is a `/screener/?mechanism=<archetype>` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn the mechanisms" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
 - **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn / Reference group.

@@ -65,7 +65,7 @@ The hook currently wires these sources:
 - `useMintBurnFlows()` for flow-surface availability checks
 - `useStablecoinReserves(id, enabled)` for live reserve presentation when `coin.liveReservesConfig` exists
 
-`useInfiniteDepegEvents()` is intentionally separate from the main view model. The hook is called unconditionally to preserve React hook order, but both `enabled` and `autoLoadAll` are true only when the detail view is ready and the coin is not a NAV token.
+Depeg events are not part of the main view model. The `useInfiniteDepegEvents({ stablecoinId })` hook is called inside the lazily-imported `DepegHistory` component (History zone), which itself only mounts for non-NAV coins; it uses the default options (enabled, no auto-load).
 
 ### Returned states
 
@@ -124,7 +124,7 @@ Hero signal chips below the identity block are severity-ordered: `DEWS`, `Freeza
 
 ### Classification taxonomy pills
 
-Below the identity block, the classification line renders three small focus-ringed taxonomy pills (governance / backing / peg) that each route to `buildGovernanceTaxonomyUrl(coin.flags.governance)`, `buildBackingTaxonomyUrl(coin.flags.backing)`, and `/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/` respectively. No handwritten slugs.
+Below the identity block, the classification line uses `buildGovernanceTaxonomyUrl(coin.flags.governance)`, `buildBackingTaxonomyUrl(coin.flags.backing)`, and `buildPegLandingUrl(coin.flags.pegCurrency)` (which resolves to `/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/` or null). Default flags render as inline sentence links; non-default flags (decentralized governance, algorithmic backing, non-USD peg) render as separate focus-ringed taxonomy pills. No handwritten slugs.
 
 ### Price Transparency Card
 
@@ -141,7 +141,7 @@ When reserves render, the treemap block is wrapped in `<section id="reserves">` 
 
 ### Explore Next anchor
 
-The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `ExploreNextSection` wraps itself in `<section id="explore-next">` for existing deep links. Layout rebalanced to three equal columns at `xl+` (Taxonomy | Trackers | Compare+Related), two columns at `lg`, stacked below `lg` in order Compare+Related -> Taxonomy -> Trackers. Per-pair compare affordance now primaries `Open comparison` (filled button) with a secondary `Read the one-page brief` text link. Related pills cap at 4 entries with a `See all peers ->` overflow pill when more exist.
+The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `ExploreNextSection` wraps itself in `<section id="explore-next">` for existing deep links. The browse grid is `sm:grid-cols-2 xl:grid-cols-3` with columns Taxonomy | Trackers | Actions. A separate Peers block above it shows up to 6 related pills (`related.slice(0, 6)`) with a `See all peers ->` header link to the peg landing page when a peg slug exists, plus a `vs {symbol}` compact-link list of static comparison pages.
 
 ---
 

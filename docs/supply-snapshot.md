@@ -26,20 +26,20 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse and validate the cached payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
 4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 371 entries: 369 active tracked + 2 shadow)
-5. Floor current date/time to UTC midnight:
+5. Check the cooldown guard before building write statements:
+   - read cache key `snapshot-supply:last-write`
+   - if the previous successful write is < 20 hours old, skip with `reason: "cooldown_active"` (one snapshot per UTC day; 20h tolerates clock drift without skipping a day)
+6. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
    );
    ```
-6. For each PSI-eligible cached asset:
+7. For each PSI-eligible cached asset:
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
    - Build `INSERT OR REPLACE` statement
-7. Check the cooldown guard before building write statements:
-   - read cache key `snapshot-supply:last-write`
-   - if the previous successful write is < 20 hours old, skip with `reason: "cooldown_active"` (one snapshot per UTC day; 20h tolerates clock drift without skipping a day)
 8. Data quality check: block writes if fewer than 80% of expected coins have valid data (`reason: "partial_snapshot_blocked"`)
 9. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
 10. If zero rows were prepared after passing the 80% guard, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`; with the current non-empty PSI-eligible set this is not normally reachable because zero rows hit `partial_snapshot_blocked` first

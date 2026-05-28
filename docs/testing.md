@@ -439,7 +439,7 @@ const row = makeBlacklistRow({ stablecoin: "USDC", event_type: "freeze" });
 
 ### Reserve HTML Fixtures (`worker/src/cron/reserve-adapters/__tests__/fixtures/*.html`)
 
-Five issuer dashboards feed HTML-parsing adapters (Circle transparency, FDUSD, Mento reserve, Reserve (RE) metrics, SG Forge). Their HTML layout drifts over time, so the fixtures need periodic refreshes to keep tests anchored to today's markup rather than a snapshot from months ago.
+Seven issuer dashboards feed HTML-parsing adapters (Circle transparency, Buck transparency, FDUSD, Mento reserve, Reserve (RE) metrics, SG Forge, USDH). Their HTML layout drifts over time, so the fixtures need periodic refreshes to keep tests anchored to today's markup rather than a snapshot from months ago.
 
 Run:
 

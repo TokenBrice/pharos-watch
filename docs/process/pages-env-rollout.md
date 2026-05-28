@@ -60,7 +60,7 @@ Setting / changing a repo Variable does **not** trigger a deploy. The flag flips
    gh workflow run "Rebuild Pages" --ref main
    gh run watch  # follow the run
    ```
-   It schedules nightly anyway (08:15 UTC) but `workflow_dispatch` makes it on-demand. It re-runs the full `pages-release` build/smoke/publish path, picking up current Variables.
+   It is scheduled twice daily at 08:10 and 08:25 UTC (after the 08:05 UTC digest run, with a catch-up slot) but `workflow_dispatch` makes it on-demand. It re-runs the full `pages-release` build/smoke/publish path, picking up current Variables.
 
 ## Verifying a deploy
 

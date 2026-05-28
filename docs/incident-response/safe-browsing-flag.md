@@ -97,7 +97,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 ### Step 5 — Harden, ship, verify
 
 1. Commit the hardening with a clear `refactor(security):` or `fix(security):` prefix referencing the incident date.
-2. Push to `main`. The pre-push merge-gate runs `validate:prebuild` (now including `check:phishing-signatures`) + Pages build + SEO check.
+2. Push to `main`. The pre-push merge-gate runs `validate:prebuild` + the Pages build/validation stage (which now includes `check:phishing-signatures`, run against the built `out/` HTML) + SEO check.
 3. Wait 90s for Cloudflare Pages deploy to propagate.
 4. Verify the new HTML is live:
    ```bash

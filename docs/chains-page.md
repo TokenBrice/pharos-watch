@@ -45,7 +45,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - `SelectedHarborPanel`, synchronized from the harbor chart and leaderboard hover/focus, showing the selected chain's exact supply, tracked share, health band, stablecoin count, dominant cargo, top cargo marks, and 7-day wake directly after the harbor map; the panel reads existing chain snapshot fields and does not change Chain Health semantics
 - `ChainCohortLattice`, a top-chain 90d trajectory small-multiple section after the selected-harbor panel. Until 90d series data is wired client-side, it renders the ordered `90d cohort coming soon` placeholder before the leaderboard table.
 - sortable leaderboard table rendered through `DataTableShell`
-- `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
+- `QueryFreshnessNotices` (preset `"chains"`, which wraps the stale-data banner) plus `QueryErrorNotice` with retry in the no-data error state
 - skeleton loading states (KPI grid + table rows)
 - row click and keyboard navigation into `/chains/[chain]/`
 - chain logos apply `dark:invert` when `CHAIN_META[id].darkInvert` is set
@@ -78,13 +78,12 @@ Default sort is `totalUsd desc`.
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
 2. `StaleDataBanner` when coordinated chain/stablecoin snapshots are stale or mismatched
-3. hero card with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, and `dark:invert` logo support
-4. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
-5. `ShowYourWorkPanel`, which exposes the factor math immediately below the health breakdown
-6. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
-7. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
-8. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
-9. skeleton loading states (hero + health + composition blocks)
+3. hero card (`ChainHero`) with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, `dark:invert` logo support, and the embedded Chain Health breakdown (the `HealthZone` factor grid) whose weight labels derive dynamically from exported constants in `chain-health.ts`
+4. `ShowYourWorkPanel` rendered immediately below the hero card, exposing the factor math
+5. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
+6. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket; filter buttons update the stablecoin table by backing type
+7. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
+8. skeleton loading states (hero + health + composition blocks)
 
 `useChainProfileData()` coordinates `GET /api/chains` and `GET /api/stablecoins` for the route. It renders the summary chain card as soon as the chain snapshot exists, but it keeps the composition/backing/table sections hidden until both snapshots share the same `updatedAt` value and the stablecoins snapshot has authoritative freshness metadata. The route surfaces explicit notices for the three non-happy states: missing detailed stablecoin data, mismatched snapshots, and missing freshness metadata.
 

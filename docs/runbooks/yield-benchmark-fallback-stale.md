@@ -11,7 +11,7 @@ Yield rows still publish, but benchmark provenance shows a fallback or retained 
 
 ## Impact
 
-Rankings are usually available, but benchmark-relative interpretation is degraded. The hourly publisher degrades when the default USD benchmark is a true fallback, when retained fallback mode is active, or when the retained last-known-good USD benchmark is older than 48 hours.
+Rankings are usually available, but benchmark-relative interpretation is degraded. The hourly publisher degrades when the default USD benchmark is a true fallback, when retained fallback mode is active, or when the retained last-known-good USD benchmark is older than 72 hours (3 days).
 
 ## First Checks
 

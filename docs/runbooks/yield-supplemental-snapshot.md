@@ -70,7 +70,7 @@ ORDER BY rows DESC;
 
 - `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`.
 - `cache['yield:supplemental-sources:v1']` and any `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A single malformed family row should not block other fresh family rows.
-- The next `sync-yield-data` metadata shows `supplementalSourceMode: "available"` and a non-zero `supplementalSourceCount`.
+- The next `sync-yield-data` metadata shows `supplementalSourceMode: "cache"` and a non-zero `supplementalSourceCount`.
 - Public rankings/source board show expected optional family rows or alternatives.
 
 ## Rollback Notes

@@ -18,7 +18,7 @@
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
 - **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
-- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
+- **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
 - **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory with custom authored content sections, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` (with `content-v6.tsx` further splitting into `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
@@ -37,6 +37,7 @@
 | Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts`                                                                                                                     |
 | Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/yield-methodology-version.ts` |
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts`                                                                                                                                              |
+| Depeg Duration Resolver | `shared/lib/depeg-resolver/` (DDR/DDRR resolver), `shared/lib/depeg-resolver-version.ts`                                                                                                                                          |
 | Contagion Test        | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
 | Chain Health Score    | `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`), `shared/lib/chains/index.ts`, `shared/lib/chain-health-version.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades with a 40-point fallback for unrated coins once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and resilience-tier-based chain environment (tier 1 = 100, tier 2 = 60, tier 3 = 20). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
@@ -62,7 +63,7 @@ If section IDs or changelog paths change, also update `src/lib/methodology-conte
 If you add a new methodology changelog route, follow the existing pattern:
 
 1. Add or update the version source in `shared/lib/*-version.ts`.
-2. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createMethodologyChangelogRoute(...)`.
+2. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createStandardMethodologyChangelogRoute(...)` (the standard factory used by every non-scoring route); `createMethodologyChangelogRoute(...)` is reserved for the `scoring-changelog` special case with custom authored content.
 3. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
 
 If the Chain Health methodology changes, also update:
@@ -96,9 +97,9 @@ Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Bac
 
 Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. Pharos tracks the centralized stablecoins listed in `BLACKLIST_STABLECOINS` (`shared/types/market.ts`) — assets outside that list are excluded because they lack a confirmed admin freeze surface. The supported set today covers fiat-backed majors (USDT, USDC, PYUSD, FDUSD, USD1, USDP, TUSD, RLUSD, EURC, BUIDL, etc.) plus tokenised metals (PAXG, XAUT, XAUM).
 
-The detail page renders the existing per-coin blacklist module unchanged, plus a "Recent activity" banner above the report-card section when one of two thresholds is hit over a trailing 7-day window:
+The detail page renders the existing per-coin blacklist module unchanged, plus a "Recent activity" badge rendered alongside the hero tertiary metrics (linking to the `#blacklist` anchor) when one of two thresholds is hit over a trailing 7-day window:
 
-- `freezes + destroys >= 5`, or
+- `freezes >= 5` (when `destroys === 0`), or
 - any `destroys > 0`.
 
 The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [process/feature-flags.md](process/feature-flags.md)) and suppressed when the coin is already in `frozen` status so it does not double up with the existing frozen badge. Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/blacklist-tracker-version.ts` for the versioned methodology snapshot.

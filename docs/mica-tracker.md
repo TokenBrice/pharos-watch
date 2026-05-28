@@ -170,8 +170,8 @@ Verify: `npm run lint`, `npm run typecheck`, `npm run build`, `npm run seo:check
 
 Low-cost reuse, not required for MVP:
 
-- A global "key MiCA dates" strip on `/mica/` using the anchors above.
-- Per-coin regulatory milestones via the **existing** `LaunchMilestone` `type: "regulatory"` (`core.ts:220`) and chart-annotation `"regulatory"` type, surfaced in the `/timeline/` feed ([tape-page.md](./tape-page.md)).
+- A global "key MiCA dates" strip on `/compliance/` using the anchors above.
+- Per-coin regulatory milestones via the **existing** `LaunchMilestone` `type: "regulatory"` (`LAUNCH_MILESTONE_TYPE_VALUES` in `core.ts`) and chart-annotation `"regulatory"` type, surfaced in the `/timeline/` feed ([tape-page.md](./tape-page.md)).
 
 No new infrastructure — these primitives already exist.
 

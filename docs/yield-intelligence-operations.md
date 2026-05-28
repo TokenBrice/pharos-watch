@@ -17,8 +17,10 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a 6-hour cooldown after the second consecutive masked failure. The cooldown skips the deterministic lane on the hourly publisher until either the cooldown expires or non-onchain coverage gaps reappear.
 - Single-coin optional adapters are time-boxed to 12 seconds:
   - `BIMA sUSBD`
+  - `Etherfuse CETES current-issuance`
   - `Hashnote USYC`
   - `Ondo USDY oracle`
+  - `Zephyr ZYS`
   - `B.Protocol LQTY-only`
   - `Curve scrvUSD current-rate`
 - `sync-yield-supplemental` owns the heavier best-effort families. It writes the backward-compatible aggregate cached snapshot plus per-family cache rows (`yield:supplemental-sources:v1:<family>`) and does not overwrite the last good snapshot with an empty result.
@@ -75,8 +77,8 @@ Each yield-bearing adapter sits in one of four lifecycle states tracked by `YIEL
 | State | Use when | Operator classification cue |
 | --- | --- | --- |
 | `active` | Adapter ships an APY through the normal publication path | Default; no override needed |
-| `quarantined` | Adapter exists but is intentionally disabled pending a protocol-specific reader or evidence | Add a typed reason in `QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED` and link the reason `code` to the diagnosis (`convert-to-assets-empty`, `convert-to-assets-reverts`, `wrapper-not-yet-supported`) |
-| `intentional-gap` | Asset is yield-bearing but no reliable runtime APY source exists yet | Add a typed reason in `INTENTIONAL_GAP_REASONS_TYPED` with a stable `code` such as `no-public-yield-source`, `off-chain-account-product`, `nav-rebase-no-oracle`, or `pre-launch` |
+| `quarantined` | Adapter exists but is intentionally disabled pending a protocol-specific reader or evidence | Add a typed reason in `QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED` and link the reason `code` to the diagnosis (`convert-to-assets-empty`, `wrapper-not-yet-supported`) |
+| `intentional-gap` | Asset is yield-bearing but no reliable runtime APY source exists yet | Add a typed reason in `INTENTIONAL_GAP_REASONS_TYPED` with a stable `code` such as `no-public-yield-source`, `off-chain-account-product`, `issuer-distributed-yield`, or `pre-launch` |
 | `experimental` | Adapter is in trial; results should not block publication or alerts | Use sparingly while validating a new on-chain reader or rate source |
 
 When promoting an adapter out of `quarantined` or `intentional-gap`, remove the typed entry (the legacy string map derives from the typed map, so a single edit propagates). Always set `since` to the date the lifecycle change happens; set `nextReviewAt` when the gap is expected to be revisited soon.
