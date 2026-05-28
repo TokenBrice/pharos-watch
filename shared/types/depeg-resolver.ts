@@ -230,6 +230,7 @@ export const DdrPredictionMetaSchema = z.object({
   incidentGroupingVersion: z.string().nullable(),
   supportRulesVersion: z.string().nullable(),
   eligibleAt: z.number().int().nonnegative(),
+  policyDelaySec: z.number().int().nonnegative().optional().default(24 * 3600),
   lockedAt: z.number().int().nonnegative().nullable(),
   publishedAt: z.number().int().nonnegative().nullable(),
   publicationSnapshotToken: z.string().nullable(),

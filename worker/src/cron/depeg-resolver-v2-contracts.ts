@@ -74,6 +74,7 @@ export interface DdrSealedPublicPrediction {
   outcomeKind: DdrOutcomeKind;
   predictionPolicyVersion: string;
   predictionMethodologyVersion: string;
+  policyDelaySec: number;
   eligibleAt: number;
   lockedAt: number;
   eventAgeAtLockSec: number;

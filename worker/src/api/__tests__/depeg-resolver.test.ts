@@ -39,6 +39,7 @@ function basePredictionMeta(
     incidentGroupingVersion: "incident-group-v1",
     supportRulesVersion: "support-rules-v1",
     eligibleAt: computedAt - 24 * 3600,
+    policyDelaySec: 24 * 3600,
     lockedAt: computedAt - 23 * 3600,
     publishedAt: computedAt - 22 * 3600,
     publicationSnapshotToken: "ddrpub_001",

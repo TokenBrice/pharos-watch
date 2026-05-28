@@ -1,4 +1,8 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
+import {
+  attachDdrPublicRowHash,
+  computeDdrPublicRowHash,
+} from "@shared/lib/depeg-resolver/public-contract";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
 
@@ -58,6 +62,7 @@ describe("computeDepegResolver", () => {
       outcomeKind: "no_call" as const,
       predictionPolicyVersion: "sticky-24h-v1",
       predictionMethodologyVersion: "2.0",
+      policyDelaySec: 86_400,
       eligibleAt: NOW_SEC - 3_600,
       lockedAt: NOW_SEC,
       eventAgeAtLockSec: 90_000,
@@ -224,6 +229,75 @@ describe("computeDepegResolver", () => {
     expect(stores.writePublicationManifest).toHaveBeenCalledTimes(1);
     expect(metadata.v2LockedNoCalls).toBe(1);
     expect(metadata.v2PublicationSucceeded).toBe(true);
+  });
+
+  it("publishes first-sealed rows with manifest payload hashes matching sealed rows", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores, sealed } = storesFor();
+    let created: typeof sealed | null = null;
+    let createdRowHash: string | null = null;
+    let manifestBasePayload: unknown = null;
+
+    stores.sealPublicNoCall = vi.fn(async (_db, input) => {
+      const rowHash = computeDdrPublicRowHash(input.sealedPayload);
+      createdRowHash = rowHash;
+      created = {
+        ...sealed,
+        eligibleAt: input.eligibleAt,
+        lockedAt: input.lockedAt,
+        eventAgeAtLockSec: input.eventAgeAtLockSec,
+        lockTiming: input.lockTiming,
+        policyDelaySec: input.policyDelaySec,
+        rowHash,
+        sealedPayload: attachDdrPublicRowHash(input.sealedPayload, rowHash),
+      };
+      return created;
+    });
+    stores.loadSealedPublicPredictions = vi.fn(async () => (created ? [created] : []));
+    stores.writePublicationManifest = vi.fn(async (_db, input) => {
+      manifestBasePayload = input.basePayload;
+      return {
+        snapshotToken: "ddr-public-1",
+        snapshotGeneration: 2,
+        snapshotSequence: 1,
+        publishedAt: NOW_SEC,
+        basePayloadHash: "b".repeat(64),
+        publicPredictionIds: [7],
+        firstPublishedPublicPredictionIds: [7],
+      };
+    });
+    const db = mockD1([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      { match: "FROM cache WHERE key = ?", rows: [stablecoinsCacheRow()] },
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ]);
+
+    await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      syncCapabilities: { depegPipeline: true },
+      storeContracts: stores,
+    });
+
+    const publishedRow = (manifestBasePayload as { rows?: Array<Record<string, unknown>> }).rows?.[0];
+    const prediction = publishedRow?.prediction as Record<string, unknown> | undefined;
+    expect(publishedRow?.kind).toBe("no_call");
+    expect(prediction?.policyDelaySec).toBe(86_400);
+    expect(computeDdrPublicRowHash(publishedRow)).toBe(createdRowHash);
+
+    const ddrCacheWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot");
+    const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
+    expect(payload.rows[0].prediction.policyDelaySec).toBe(86_400);
   });
 
   it("projects first-published sealed no-calls as invalidated when errata exist", async () => {

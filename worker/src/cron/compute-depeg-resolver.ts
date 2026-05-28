@@ -262,6 +262,7 @@ function mapStoreSealedPublicPrediction(row: StoreDdrSealedPublicPrediction): Dd
     outcomeKind: row.outcomeKind,
     predictionPolicyVersion: row.predictionPolicyVersion,
     predictionMethodologyVersion: row.predictionMethodologyVersion,
+    policyDelaySec: row.policyDelaySec,
     eligibleAt: row.eligibleAt,
     lockedAt: row.lockedAt,
     eventAgeAtLockSec: row.eventAgeAtLockSec,
@@ -933,6 +934,7 @@ function buildPredictionMeta(input: {
   errataHistory?: DdrPredictionErratum[];
 }): Record<string, unknown> {
   const errataHistory = input.errataHistory ?? [];
+  const policyDelaySec = input.sealed?.policyDelaySec ?? Math.max(0, input.incident.eligibleAt - input.incident.startedAt);
   return {
     state: input.state,
     publicPredictionId: input.publicPredictionId,
@@ -945,6 +947,7 @@ function buildPredictionMeta(input: {
     incidentGroupingVersion: input.sealed ? DDR_INCIDENT_GROUPING_VERSION : null,
     supportRulesVersion: input.sealed ? DDR_SUPPORT_RULES_VERSION : null,
     eligibleAt: input.incident.eligibleAt,
+    policyDelaySec,
     lockedAt: input.sealed?.lockedAt ?? null,
     publishedAt: input.publication?.publishedAt ?? null,
     publicationSnapshotToken: input.publication?.snapshotToken ?? null,

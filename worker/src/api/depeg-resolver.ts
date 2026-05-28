@@ -294,6 +294,7 @@ function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2
       incidentGroupingVersion: null,
       supportRulesVersion: null,
       eligibleAt: row.eligible_at,
+      policyDelaySec: Math.max(0, row.eligible_at - row.current_started_at),
       lockedAt: null,
       publishedAt: null,
       publicationSnapshotToken: null,
