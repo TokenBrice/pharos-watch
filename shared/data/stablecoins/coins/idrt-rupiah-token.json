@@ -73,7 +73,7 @@
     "semantics": "single-asset",
     "breakerScope": "idrt-rupiah-token",
     "display": {
-      "url": "https://www.rupiahtoken.com/",
+      "url": "https://rupiahtoken.com/",
       "label": "Rupiah Token"
     },
     "inputs": {
@@ -119,7 +119,7 @@
       "sources": [
         {
           "label": "Rupiah Token website",
-          "url": "https://www.rupiahtoken.com/"
+          "url": "https://rupiahtoken.com/"
         }
       ],
       "sourceFreeRationale": "Classification based on the centralized issuer model described in project materials; on-chain token owner/minter admin across Ethereum, BSC, Harmony, and Polygon was not independently resolved.",

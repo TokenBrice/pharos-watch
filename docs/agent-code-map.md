@@ -385,11 +385,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins.client.generated.json` - 401 entries
 - `shared/data/stablecoins/coins.generated.json` - 401 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 22 keys
-- `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 23 keys
+- `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 25 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 26 keys
 - `shared/data/stablecoins/coins/acred-apollo-securitize.json` - 26 keys
-- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 22 keys
-- `shared/data/stablecoins/coins/aid-gaib.json` - 23 keys
+- `shared/data/stablecoins/coins/aeur-anchored-coins.json` - 23 keys
+- `shared/data/stablecoins/coins/aid-gaib.json` - 24 keys
 - `shared/data/stablecoins/coins/alusd-alchemix.json` - 18 keys
 - `shared/data/stablecoins/coins/apxusd-apyx.json` - 23 keys
 - `shared/data/stablecoins/coins/apyusd-apyx.json` - 26 keys
@@ -399,7 +399,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/audf-forte.json` - 19 keys
 - `shared/data/stablecoins/coins/audm-macropod.json` - 26 keys
 - `shared/data/stablecoins/coins/audm-mento.json` - 25 keys
-- `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 23 keys
+- `shared/data/stablecoins/coins/audx-aussie-dollar-token.json` - 24 keys
 - `shared/data/stablecoins/coins/ausd-agora.json` - 23 keys
 - `shared/data/stablecoins/coins/ausdt-tether-alloy.json` - 25 keys
 - `shared/data/stablecoins/coins/avusd-avant.json` - 21 keys

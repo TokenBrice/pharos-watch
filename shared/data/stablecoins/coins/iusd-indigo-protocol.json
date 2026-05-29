@@ -40,12 +40,14 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
     "evidence": "Inferred review retained: iUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
     "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedAt": "2026-05-12",
+    "upstreamSuppressionRationale": "The peg mechanism references USDC, USDT, and TUSD only as oracle price inputs for the median peg target; iUSD reserves are ADA CDP collateral, so those fiat-stablecoin freeze surfaces are not upstream backing exposure."
   },
   "chainTier": "mature-alt-l1",
   "governanceQuality": "dao-governance",

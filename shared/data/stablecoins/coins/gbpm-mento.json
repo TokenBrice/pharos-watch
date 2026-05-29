@@ -116,7 +116,7 @@
     }
   },
   "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

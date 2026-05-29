@@ -15,7 +15,6 @@
   "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
-  "geckoId": "moneta-digital",
   "cmcSlug": "moneta-digital",
   "proofOfReserves": {
     "type": "self-reported",

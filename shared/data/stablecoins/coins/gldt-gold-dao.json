@@ -113,10 +113,6 @@
       "reviewedAt": "2026-05-25",
       "sources": [
         {
-          "label": "Gold DAO technology docs",
-          "url": "https://docs.gold-dao.org/gold-dao-whitepaper/technology/technology"
-        },
-        {
           "label": "Gold DAO key canisters",
           "url": "https://docs.gold-dao.org/other/key-canisters"
         }

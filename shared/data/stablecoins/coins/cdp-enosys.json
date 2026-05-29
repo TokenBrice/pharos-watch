@@ -44,7 +44,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://docs.enosys.global/"
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
       },
       {
         "label": "Website",
@@ -109,7 +109,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "cdp-enosys",
     "display": {
-      "url": "https://docs.enosys.global/",
+      "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans",
       "label": "Enosys docs"
     },
     "inputs": {

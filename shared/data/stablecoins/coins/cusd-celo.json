@@ -91,7 +91,7 @@
         "sources": [
           {
             "label": "Mento reserve docs",
-            "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+            "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
           },
           {
             "label": "Safe Transaction Service - Celo",
@@ -105,7 +105,7 @@
       "sources": [
         {
           "label": "Mento reserve docs",
-          "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
         },
         {
           "label": "Safe Transaction Service - Celo",

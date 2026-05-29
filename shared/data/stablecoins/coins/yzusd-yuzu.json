@@ -251,7 +251,7 @@
       "reviewer": "DeepSeek-verified mint-authority sweep",
       "reviewedAt": "2026-05-25",
       "sources": [
-        { "label": "Yuzu Stablecoin (yzUSD) docs", "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-stablecoin-yzusd" },
+        { "label": "Yuzu Stablecoin (yzUSD) docs", "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd" },
         { "label": "yzUSD token (Plasmascan)", "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc" }
       ],
       "sourceFreeRationale": "Eligible-investor-gated mint and Fordefi MPC custody taken from Yuzu docs/coverage; the on-chain yzUSD minter role/owner and the MPC signer policy were not independently resolved.",
