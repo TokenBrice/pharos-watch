@@ -8,7 +8,7 @@ import { REVIEWED_STABLECOIN_AUDIT_AT } from "./shared";
 
 export const YUSD_YIELDFI_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ...stablecoinRedeemBase,
-  capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+  capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound", basis: "strategy-buffer" },
   reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
   settlementModel: "queued",
   executionModel: "rules-based-nav",
@@ -27,6 +27,6 @@ export const YUSD_YIELDFI_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
   ],
   notes: [
     "yUSD is an ERC-4626 vault over USDC; redemption burns shares immediately but underlying USDC is delivered through a queued request after the cooldown period.",
-    "Because yUSD allocates into delta-neutral and private-credit strategy positions, the reviewed route keeps a conservative 10% strategy-buffer capacity instead of scoring against full supply.",
+    "Because yUSD allocates into delta-neutral and private-credit strategy positions, the reviewed route uses the documented queued route with a conservative 10% strategy-buffer capacity instead of scoring against full supply.",
   ],
 };
