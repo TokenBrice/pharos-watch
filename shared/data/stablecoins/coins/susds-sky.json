@@ -48,6 +48,16 @@
       "chain": "base",
       "address": "0x5875eee11cf8398102fdad704c9e96607675467a",
       "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0xddb46999f8891663a8f2828d25298f70416d7610",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": "possible",

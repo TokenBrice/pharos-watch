@@ -77,6 +77,26 @@
       "chain": "blast",
       "address": "0x76da31d7c9cbeae102aff34d3398bc450c8374c1",
       "decimals": 18
+    },
+    {
+      "chain": "moonriver",
+      "address": "0x0cae51e1032e8461f4806e26332c030e34de3adb",
+      "decimals": 18
+    },
+    {
+      "chain": "nibiru",
+      "address": "0xfcfc58685101e2914cbcf7551b432500db84eaa8",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

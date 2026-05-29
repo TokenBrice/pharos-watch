@@ -29,6 +29,10 @@
     {
       "label": "Docs",
       "url": "https://docs.solstice.finance"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://attestation.solstice.finance/"
     }
   ],
   "jurisdiction": {

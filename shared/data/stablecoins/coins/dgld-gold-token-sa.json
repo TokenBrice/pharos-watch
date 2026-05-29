@@ -32,6 +32,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/DGLD_Official"
+    },
+    {
+      "label": "Docs",
+      "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
     }
   ],
   "jurisdiction": {

@@ -30,7 +30,7 @@
     },
     {
       "label": "Transparency",
-      "url": "https://jupusd.money/"
+      "url": "https://jupusd.money/transparency"
     }
   ],
   "genius": {
@@ -140,7 +140,7 @@
   },
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://jupusd.money/",
+    "url": "https://jupusd.money/transparency",
     "provider": "JupUSD transparency page",
     "attestorTier": "self",
     "cadence": "real-time"

@@ -26,6 +26,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/SuiNetwork"
+    },
+    {
+      "label": "Docs",
+      "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
     }
   ],
   "contracts": [

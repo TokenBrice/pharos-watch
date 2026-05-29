@@ -6,6 +6,7 @@
   "llamaId": "385",
   "detailProvider": "defillama",
   "geckoId": "pathusd",
+  "cmcSlug": "pathusd",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

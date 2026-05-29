@@ -26,6 +26,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/Lumi_finance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://lumi-finance.gitbook.io/docs/"
     }
   ],
   "contracts": [

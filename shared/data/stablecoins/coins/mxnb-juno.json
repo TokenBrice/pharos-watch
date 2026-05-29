@@ -64,6 +64,11 @@
       "chain": "avalanche",
       "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
       "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,

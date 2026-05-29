@@ -16,6 +16,7 @@
   "commodityOunces": 0.03215072258749015,
   "detailProvider": "commodity",
   "geckoId": "comtech-gold",
+  "cmcSlug": "comtech-gold",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://comtechgold.com/Routine",

@@ -68,7 +68,7 @@
     {
       "chain": "solana",
       "address": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
-      "decimals": 9
+      "decimals": 6
     }
   ],
   "deploymentModel": "third-party-bridge",

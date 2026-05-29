@@ -40,6 +40,10 @@
       "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
     },
     {
+      "label": "Proof of Reserve",
+      "url": "https://aegis.accountable.capital/"
+    },
+    {
       "label": "Smart Contracts",
       "url": "https://docs.aegis.im/smart-contracts"
     }

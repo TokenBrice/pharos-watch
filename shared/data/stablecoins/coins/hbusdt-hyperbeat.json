@@ -113,6 +113,10 @@
     {
       "label": "Website",
       "url": "https://hyperbeat.org/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hyperbeat.org/"
     }
   ],
   "contracts": [

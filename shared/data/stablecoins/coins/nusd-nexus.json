@@ -17,6 +17,14 @@
   "pegMechanism": "Bridge-liquidity stable asset minted and redeemed through Synapse pool routes, with the dollar peg inherited from the underlying stablecoin basket and pool arbitrage",
   "links": [
     {
+      "label": "Website",
+      "url": "https://synapseprotocol.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/SynapseProtocol"
+    },
+    {
       "label": "DefiLlama",
       "url": "https://stablecoins.llama.fi/stablecoin/18"
     },

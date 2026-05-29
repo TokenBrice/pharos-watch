@@ -114,6 +114,11 @@
       "chain": "base",
       "address": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
       "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+      "decimals": 18
     }
   ],
   "chainTier": "ethereum",

@@ -49,6 +49,11 @@
       "chain": "arbitrum",
       "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
       "decimals": 8
+    },
+    {
+      "chain": "icp",
+      "address": "6c7su-kiaaa-aaaar-qaira-cai",
+      "decimals": 8
     }
   ],
   "chainTier": "ethereum",

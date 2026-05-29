@@ -61,6 +61,16 @@
       "chain": "avalanche",
       "address": "0x03569cc076654f82679c4ba2124d64774781b01d",
       "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

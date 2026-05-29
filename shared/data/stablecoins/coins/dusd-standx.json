@@ -36,7 +36,7 @@
     {
       "chain": "bsc",
       "address": "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
-      "decimals": 18
+      "decimals": 6
     },
     {
       "chain": "solana",

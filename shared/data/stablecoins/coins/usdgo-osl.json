@@ -25,6 +25,7 @@
   "llamaId": "347",
   "detailProvider": "defillama",
   "geckoId": "usdgo",
+  "cmcSlug": "usdgo",
   "links": [
     {
       "label": "Website",

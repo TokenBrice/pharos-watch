@@ -16,6 +16,7 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "alto-dusd",
+  "llamaId": "366",
   "links": [
     {
       "label": "Website",

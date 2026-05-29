@@ -44,6 +44,11 @@
       "chain": "agoric",
       "address": "uist",
       "decimals": 6
+    },
+    {
+      "chain": "osmosis",
+      "address": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

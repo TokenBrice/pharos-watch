@@ -14,6 +14,7 @@
   "collateral": "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
   "pegMechanism": "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
   "mechanismArchetype": "tbill",
+  "llamaId": "356",
   "detailProvider": "coingecko",
   "geckoId": "us-sonic-dollar",
   "proofOfReserves": {

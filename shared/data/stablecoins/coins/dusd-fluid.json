@@ -15,6 +15,7 @@
   "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "70",
+  "cmcSlug": "digitaldollar",
   "detailProvider": "defillama",
   "links": [
     {

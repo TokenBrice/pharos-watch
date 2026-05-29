@@ -17,7 +17,7 @@
   "llamaId": "342",
   "detailProvider": "defillama",
   "geckoId": "megausd",
-  "cmcSlug": "mega-usdm",
+  "cmcSlug": "megausd",
   "links": [
     {
       "label": "Website",
@@ -25,7 +25,7 @@
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/megaeth"
+      "url": "https://x.com/megaeth_labs"
     },
     {
       "label": "Docs",

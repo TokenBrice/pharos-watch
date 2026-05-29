@@ -16,6 +16,7 @@
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "quantoz-eurq",
+  "llamaId": "274",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://quantoz.com/transparency",
@@ -32,6 +33,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/Quantoz"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://quantoz.com/transparency"
     }
   ],
   "jurisdiction": {

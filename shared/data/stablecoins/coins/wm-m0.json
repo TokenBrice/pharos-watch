@@ -64,6 +64,11 @@
       "decimals": 6
     },
     {
+      "chain": "base",
+      "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+      "decimals": 6
+    },
+    {
       "chain": "solana",
       "address": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
       "decimals": 6

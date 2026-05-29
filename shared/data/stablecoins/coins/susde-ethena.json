@@ -156,8 +156,18 @@
     },
     {
       "chain": "zksync",
-      "address": "0xad17d2dd3e576dc084050090eb3773dcd49d2ebc",
+      "address": "0xad17da2f6ac76746ef261e835c50b2651ce36da8",
       "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "aptos",
+      "address": "0xb30a694a344edee467d9f82330bbe7c3b89f440a1ecd2da1f3bca266560fce69",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,

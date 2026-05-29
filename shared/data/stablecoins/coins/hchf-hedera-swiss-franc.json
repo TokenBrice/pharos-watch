@@ -19,6 +19,7 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "hedera-swiss-franc",
+  "llamaId": "200",
   "links": [
     {
       "label": "Website",

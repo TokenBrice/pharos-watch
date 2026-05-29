@@ -13,6 +13,7 @@
   },
   "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
   "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "flying-tulip-usd",
   "proofOfReserves": {

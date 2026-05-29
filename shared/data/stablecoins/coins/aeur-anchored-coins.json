@@ -17,6 +17,7 @@
   "llamaId": "147",
   "detailProvider": "defillama",
   "geckoId": "anchored-coins-eur",
+  "cmcSlug": "anchored-coins-aeur",
   "links": [
     {
       "label": "Website",

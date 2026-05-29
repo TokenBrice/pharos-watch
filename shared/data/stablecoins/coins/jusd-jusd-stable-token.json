@@ -16,6 +16,7 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "jusd",
+  "cmcSlug": "jusd-stable-token",
   "protocolSlug": "jusd",
   "links": [
     {

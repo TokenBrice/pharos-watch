@@ -51,6 +51,11 @@
       "chain": "apechain",
       "address": "0x64ae250e044688ddd04262f17daca23c28d241c2",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xfb0bd86210d2a10543bb40289e92d108b3a5334f",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

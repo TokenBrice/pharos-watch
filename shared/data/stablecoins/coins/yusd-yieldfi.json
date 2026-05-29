@@ -25,6 +25,10 @@
       "url": "https://yield.fi/"
     },
     {
+      "label": "Twitter",
+      "url": "https://x.com/getyieldfi"
+    },
+    {
       "label": "Docs",
       "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
     }
@@ -62,6 +66,21 @@
     },
     {
       "chain": "katana",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
       "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
       "decimals": 18
     }

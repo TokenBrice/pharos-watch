@@ -28,8 +28,12 @@
       "url": "https://midas.app/mmev"
     },
     {
+      "label": "Twitter",
+      "url": "https://x.com/midasrwa"
+    },
+    {
       "label": "Docs",
-      "url": "https://docs.midas.app/tokens/mmev"
+      "url": "https://docs.midas.app/"
     },
     {
       "label": "Risks",

@@ -25,6 +25,10 @@
     {
       "label": "X",
       "url": "https://x.com/ripioapp"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.ripio.com/en/assets/wars/whitepaper"
     }
   ],
   "jurisdiction": {

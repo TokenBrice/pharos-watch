@@ -75,6 +75,11 @@
       "chain": "mantle",
       "address": "0xfc421aD3C883Bf9E7C4f42dE845C4e4405799e73",
       "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

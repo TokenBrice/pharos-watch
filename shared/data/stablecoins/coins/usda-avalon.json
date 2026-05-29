@@ -67,6 +67,21 @@
       "chain": "nibiru",
       "address": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
       "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+      "decimals": 18
+    },
+    {
+      "chain": "taiko",
+      "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+      "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,

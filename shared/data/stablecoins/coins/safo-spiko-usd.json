@@ -30,6 +30,14 @@
       "url": "https://www.spiko.io/spiko-dollar"
     },
     {
+      "label": "Twitter",
+      "url": "https://x.com/Spiko_finance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.spiko.io/"
+    },
+    {
       "label": "Amundi announcement",
       "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4?inline="
     },
@@ -72,6 +80,11 @@
     {
       "chain": "stellar",
       "address": "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX",
+      "decimals": 5
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x5677a4dc7484762ffccee13cba20b5c979def446",
       "decimals": 5
     }
   ],

@@ -41,6 +41,11 @@
       "chain": "optimism",
       "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

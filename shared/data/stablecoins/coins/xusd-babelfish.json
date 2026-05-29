@@ -24,6 +24,14 @@
       "url": "https://babelfish.money/"
     },
     {
+      "label": "Twitter",
+      "url": "https://x.com/babelfishmoney"
+    },
+    {
+      "label": "Docs",
+      "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/"
+    },
+    {
       "label": "Explorer",
       "url": "https://rootstock.blockscout.com/token/0xb5999795be0ebb5bab23144aa5fd6a02d080299f"
     }

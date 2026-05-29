@@ -40,7 +40,7 @@
   "contracts": [
     {
       "chain": "ethereum",
-      "address": "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4",
+      "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
       "decimals": 6
     },
     {

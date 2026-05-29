@@ -97,6 +97,16 @@
       "chain": "ethereum",
       "address": "0x98a878b1cd98131b271883b390f68d2c90674665",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xd993935e13851dd7517af10687ec7e5022127228",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
+      "decimals": 18
     }
   ],
   "deploymentModel": "single-chain",

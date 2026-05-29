@@ -84,6 +84,16 @@
       "chain": "fraxtal",
       "address": "0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3",
       "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x7fff4c4a827c84e32c5e175052834111b2ccd270",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

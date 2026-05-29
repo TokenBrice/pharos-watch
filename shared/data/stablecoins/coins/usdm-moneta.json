@@ -17,7 +17,7 @@
   "llamaId": "215",
   "detailProvider": "defillama",
   "geckoId": "usdm-2",
-  "cmcSlug": "moneta-usdm",
+  "cmcSlug": "usdm",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",

@@ -1763,7 +1763,7 @@
     },
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97",
+      "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0",
       "provider": "Binance BFUSD product disclosures",
       "attestorTier": "self",
       "cadence": "ad-hoc"
@@ -7669,6 +7669,7 @@
       "navToken": false
     },
     "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "flying-tulip-usd",
     "canBeBlacklisted": true,
     "proofOfReserves": {
@@ -11102,7 +11103,7 @@
     },
     "proofOfReserves": {
       "type": "real-time",
-      "url": "https://jupusd.money/",
+      "url": "https://jupusd.money/transparency",
       "provider": "JupUSD transparency page",
       "attestorTier": "self",
       "cadence": "real-time"
@@ -12782,6 +12783,7 @@
     },
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "mechanismArchetype": "fiat-cash",
+    "geckoId": "moneta-digital",
     "canBeBlacklisted": "possible",
     "liveReservesConfig": {
       "version": 1,
@@ -13128,6 +13130,7 @@
       "navToken": false
     },
     "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-usd",
     "liveReservesConfig": {
       "version": 1,
@@ -15258,6 +15261,7 @@
       "navToken": false
     },
     "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs. PSM (Peg Stability Module) is the primary peg defense tool: arbitrageurs swap pmUSD → sUSDS at $1 face value when pmUSD trades at a discount on-chain; swaps are one-directional and pause if the sUSDS reserve falls below 20% of PSM assets",
+    "mechanismArchetype": "cdp",
     "geckoId": "precious-metals-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -23527,6 +23531,7 @@
       "navToken": false
     },
     "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",
+    "mechanismArchetype": "cdp",
     "geckoId": "parallel-usdp",
     "reserves": [
       {
@@ -25463,6 +25468,7 @@
       "navToken": false
     },
     "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "noon-usn",
     "canBeBlacklisted": "possible",
     "genius": {
@@ -25654,6 +25660,7 @@
       "navToken": false
     },
     "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "pareto-usp",
     "canBeBlacklisted": "possible",
     "liveReservesConfig": {
@@ -28617,6 +28624,7 @@
     },
     "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
     "mechanismArchetype": "cdp",
+    "geckoId": "celo-west-african-cfa-franc",
     "infrastructures": [
       "liquity-v2"
     ],
@@ -29912,7 +29920,7 @@
     },
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://kempengroup.co.za/wp-content/uploads/2025/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2025-09-04-1757061801998.pdf",
+      "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf",
       "provider": "Kempen Audit",
       "attestorTier": "niche",
       "cadence": "quarterly",

@@ -35,6 +35,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/tusdio"
+    },
+    {
+      "label": "Docs",
+      "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://tusd.io/transparency"
     }
   ],
   "jurisdiction": {

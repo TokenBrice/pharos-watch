@@ -84,6 +84,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/SteakhouseFi"
+    },
+    {
+      "label": "Docs",
+      "url": "https://www.steakhouse.financial/docs"
     }
   ],
   "contracts": [

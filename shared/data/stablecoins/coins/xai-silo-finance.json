@@ -23,12 +23,16 @@
       "url": "https://www.silo.finance/"
     },
     {
+      "label": "Twitter",
+      "url": "https://x.com/SiloFinance"
+    },
+    {
       "label": "Docs",
       "url": "https://docs.silo.finance/"
     },
     {
       "label": "Governance",
-      "url": "https://snapshot.org/#/silodao.eth"
+      "url": "https://snapshot.org/#/silofinance.eth"
     }
   ],
   "contracts": [

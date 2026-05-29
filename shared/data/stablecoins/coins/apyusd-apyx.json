@@ -59,6 +59,11 @@
       "chain": "ethereum",
       "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+      "decimals": 18
     }
   ],
   "mintAuthority": {

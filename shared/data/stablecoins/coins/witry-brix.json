@@ -24,6 +24,14 @@
     {
       "label": "Twitter",
       "url": "https://x.com/brix_money"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.brix.money/"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://accountable.brix.money/"
     }
   ],
   "jurisdiction": {

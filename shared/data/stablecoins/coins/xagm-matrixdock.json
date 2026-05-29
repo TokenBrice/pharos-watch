@@ -47,6 +47,11 @@
       "chain": "ethereum",
       "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
       "decimals": 9
+    },
+    {
+      "chain": "sui",
+      "address": "0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM",
+      "decimals": 9
     }
   ],
   "blacklistabilityReview": {

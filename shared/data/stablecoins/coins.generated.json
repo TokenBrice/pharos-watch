@@ -607,6 +607,7 @@
     "pegMechanism": "Direct 1:1 redemption through Anchored Coins",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "anchored-coins-eur",
+    "cmcSlug": "anchored-coins-aeur",
     "links": [
       {
         "label": "Website",
@@ -828,6 +829,10 @@
       {
         "label": "Docs",
         "url": "https://docs.gaib.ai"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://aid.gaib.ai/transparency"
       }
     ],
     "jurisdiction": {
@@ -1343,6 +1348,16 @@
         "chain": "ethereum",
         "address": "0x98a878b1cd98131b271883b390f68d2c90674665",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xd993935e13851dd7517af10687ec7e5022127228",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -1530,6 +1545,11 @@
         "chain": "ethereum",
         "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -1678,7 +1698,7 @@
       },
       {
         "label": "Contracts",
-        "url": "https://docs.asterdex.com/overview/what-is-aster/our-smart-contracts"
+        "url": "https://docs.asterdex.com/overview/smart-contracts"
       },
       {
         "label": "Twitter",
@@ -2019,6 +2039,10 @@
         "url": "https://www.forteaud.com/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/ForteAUD"
+      },
+      {
         "label": "Docs",
         "url": "https://www.forteaud.com/s/Forte-AUDF-Whitepaper-140324.pdf"
       },
@@ -2136,6 +2160,11 @@
       },
       {
         "chain": "base",
+        "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+        "decimals": 6
+      },
+      {
+        "chain": "redbelly",
         "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
         "decimals": 6
       }
@@ -2473,6 +2502,7 @@
     "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "aussie-dollar-token",
+    "cmcSlug": "aussie-dollar-token",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.audxtoken.com/transparency",
@@ -2538,6 +2568,11 @@
       {
         "chain": "conflux",
         "address": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "decimals": 18
+      },
+      {
+        "chain": "xdc",
+        "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
         "decimals": 18
       }
     ],
@@ -4050,7 +4085,7 @@
     "cmcSlug": "bfusd",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97",
+      "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0",
       "provider": "Binance BFUSD product disclosures",
       "attestorTier": "self",
       "cadence": "ad-hoc"
@@ -4062,7 +4097,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97"
+        "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
       },
       {
         "label": "Terms",
@@ -4613,6 +4648,16 @@
       {
         "chain": "avalanche",
         "address": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "decimals": 18
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
         "decimals": 18
       }
     ],
@@ -5226,7 +5271,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
     "mintAuthority": {
@@ -6460,7 +6505,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://faq.paytrie.com/col/cadc-faqs"
+        "url": "https://faq.paytrie.com/en/help/cadc-faqs"
       }
     ],
     "jurisdiction": {
@@ -6518,6 +6563,11 @@
       {
         "chain": "base",
         "address": "0x043eb4b75d0805c43d7c834902e335621983cf03",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6",
         "decimals": 18
       }
     ],
@@ -6801,7 +6851,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
     "mintAuthority": {
@@ -7810,6 +7860,7 @@
     "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
     "commodityOunces": 0.03215072258749015,
     "geckoId": "comtech-gold",
+    "cmcSlug": "comtech-gold",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://comtechgold.com/Routine",
@@ -8597,6 +8648,7 @@
     "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "compliant-naira",
+    "cmcSlug": "consortium-naira",
     "links": [
       {
         "label": "Website",
@@ -8609,6 +8661,10 @@
       {
         "label": "Docs",
         "url": "https://docs.cngn.co/integrations/contract-addresses"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://cngn.co/transparency"
       }
     ],
     "jurisdiction": {
@@ -8766,7 +8822,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
     "mintAuthority": {
@@ -9031,6 +9087,16 @@
       {
         "chain": "fraxtal",
         "address": "0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3",
+        "decimals": 18
+      },
+      {
+        "chain": "zksync",
+        "address": "0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0x7fff4c4a827c84e32c5e175052834111b2ccd270",
         "decimals": 18
       }
     ],
@@ -9625,7 +9691,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/overview/core-concepts/the-reserve"
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       }
     ],
     "mintAuthority": {
@@ -9884,7 +9950,7 @@
       {
         "chain": "solana",
         "address": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
-        "decimals": 9
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -9967,7 +10033,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/MakerDAO"
+        "url": "https://x.com/SkyEcosystem"
       },
       {
         "label": "Docs",
@@ -10412,6 +10478,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/DGLD_Official"
+      },
+      {
+        "label": "Docs",
+        "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
       }
     ],
     "jurisdiction": {
@@ -10526,7 +10596,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed"
       },
       {
         "label": "Dapp",
@@ -10809,6 +10879,10 @@
         "url": "https://moneyonchain.com/doc-stablecoin/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/moneyonchainok"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
       },
@@ -11069,6 +11143,7 @@
   },
   {
     "id": "dusd-alto",
+    "llamaId": "366",
     "detailProvider": "coingecko",
     "name": "Alto DUSD",
     "symbol": "DUSD",
@@ -11462,6 +11537,7 @@
     "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
     "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
     "mechanismArchetype": "fiat-cash",
+    "cmcSlug": "digitaldollar",
     "links": [
       {
         "label": "Website",
@@ -11651,7 +11727,7 @@
       {
         "chain": "bsc",
         "address": "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
-        "decimals": 18
+        "decimals": 6
       },
       {
         "chain": "solana",
@@ -12936,7 +13012,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://monerium.dev/docs/welcome"
+        "url": "https://docs.monerium.com"
       }
     ],
     "jurisdiction": {
@@ -13148,6 +13224,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/Eurite_BC"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
       }
     ],
     "jurisdiction": {
@@ -13924,6 +14004,7 @@
   },
   {
     "id": "eurq-quantoz",
+    "llamaId": "274",
     "detailProvider": "coingecko",
     "name": "Quantoz EURQ",
     "symbol": "EURQ",
@@ -13956,6 +14037,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/Quantoz"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://quantoz.com/transparency"
       }
     ],
     "jurisdiction": {
@@ -14471,6 +14556,10 @@
       {
         "label": "Website",
         "url": "https://www.spiko.io/spiko-euro"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
       },
       {
         "label": "Amundi announcement",
@@ -16562,6 +16651,11 @@
         "chain": "fraxtal",
         "address": "0xfc00000000000000000000000000000000000002",
         "decimals": 18
+      },
+      {
+        "chain": "harmony",
+        "address": "0xfa7191d292d5633f702b0bd7e3e3bccc0e633200",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -17084,6 +17178,7 @@
     },
     "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
     "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "flying-tulip-usd",
     "proofOfReserves": {
       "type": "self-reported",
@@ -17497,7 +17592,11 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/freedomdollar"
+        "url": "https://x.com/freedomdollar5"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.freedomdollar.com/en/white-paper"
       }
     ],
     "mintAuthority": {
@@ -17561,6 +17660,10 @@
       {
         "label": "Website",
         "url": "https://fathom.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Fathom_fi"
       },
       {
         "label": "Docs",
@@ -18320,6 +18423,10 @@
         "url": "https://www.spiko.io/spiko-pound"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/Spiko_finance"
+      },
+      {
         "label": "CoinGecko",
         "url": "https://www.coingecko.com/en/coins/spiko-amundi-overnight-swap-fund-gbp"
       }
@@ -18863,6 +18970,11 @@
         "chain": "mantle",
         "address": "0xfc421aD3C883Bf9E7C4f42dE845C4e4405799e73",
         "decimals": 18
+      },
+      {
+        "chain": "plasma",
+        "address": "0xb77e872a68c62cfc0dfb02c067ecc3da23b4bbf3",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -18988,7 +19100,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
     "mintAuthority": {
@@ -19204,6 +19316,11 @@
         "chain": "arbitrum",
         "address": "0x86856814e74456893cfc8946bedcbb472b5fa856",
         "decimals": 8
+      },
+      {
+        "chain": "icp",
+        "address": "6c7su-kiaaa-aaaar-qaira-cai",
+        "decimals": 8
       }
     ],
     "blacklistabilityReview": {
@@ -19263,7 +19380,7 @@
       },
       {
         "label": "X",
-        "url": "https://x.com/StreamexCorp"
+        "url": "https://x.com/streamex"
       },
       {
         "label": "RWA.xyz",
@@ -19389,7 +19506,7 @@
       },
       {
         "label": "X",
-        "url": "https://x.com/tokenteknoloji"
+        "url": "https://x.com/tokencomtr"
       }
     ],
     "jurisdiction": {
@@ -19904,6 +20021,11 @@
       {
         "chain": "base",
         "address": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
         "decimals": 18
       }
     ],
@@ -20836,6 +20958,10 @@
       {
         "label": "Website",
         "url": "https://hyperbeat.org/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hyperbeat.org/"
       }
     ],
     "mintAuthority": {
@@ -20998,6 +21124,7 @@
   },
   {
     "id": "hchf-hedera-swiss-franc",
+    "llamaId": "200",
     "detailProvider": "coingecko",
     "name": "Hedera Swiss Franc",
     "symbol": "HCHF",
@@ -21565,6 +21692,10 @@
       {
         "label": "Website",
         "url": "https://www.helalabs.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Hela_Network"
       },
       {
         "label": "Docs",
@@ -22467,7 +22598,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.rupiahtoken.com/"
+        "url": "https://rupiahtoken.com/"
       },
       {
         "label": "Twitter",
@@ -23117,6 +23248,11 @@
       {
         "chain": "agoric",
         "address": "uist",
+        "decimals": 6
+      },
+      {
+        "chain": "osmosis",
+        "address": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
         "decimals": 6
       }
     ],
@@ -24665,7 +24801,7 @@
     "pythFeedId": "0x8ed858a2214e892c9371694fb6c8a9037b6ed4052c4edf209f8cb988484e81d9",
     "proofOfReserves": {
       "type": "real-time",
-      "url": "https://jupusd.money/",
+      "url": "https://jupusd.money/transparency",
       "provider": "JupUSD transparency page",
       "attestorTier": "self",
       "cadence": "real-time"
@@ -24681,7 +24817,7 @@
       },
       {
         "label": "Transparency",
-        "url": "https://jupusd.money/"
+        "url": "https://jupusd.money/transparency"
       }
     ],
     "genius": {
@@ -24989,6 +25125,7 @@
     "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "mechanismArchetype": "cdp",
     "geckoId": "jusd",
+    "cmcSlug": "jusd-stable-token",
     "protocolSlug": "jusd",
     "links": [
       {
@@ -26460,6 +26597,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/Lumi_finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://lumi-finance.gitbook.io/docs/"
       }
     ],
     "mintAuthority": {
@@ -26756,6 +26897,10 @@
       {
         "label": "Website",
         "url": "https://leverup.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/LeverUp_xyz"
       },
       {
         "label": "Docs",
@@ -27090,6 +27235,16 @@
         "chain": "mantra",
         "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "decimals": 6
+      },
+      {
+        "chain": "plasma",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -27377,6 +27532,10 @@
       {
         "label": "Website",
         "url": "https://midas.app/mapollo"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/midasrwa"
       },
       {
         "label": "Docs",
@@ -27755,6 +27914,10 @@
         "url": "https://midas.app/mfone"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/midasrwa"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.midas.app/"
       },
@@ -27903,6 +28066,10 @@
         "url": "https://midas.app/mglobal"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/MidasRWA"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.midas.app/"
       },
@@ -28031,6 +28198,10 @@
       {
         "label": "Website",
         "url": "https://midas.app/mhyper"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/midasrwa"
       },
       {
         "label": "Docs",
@@ -28317,6 +28488,26 @@
         "chain": "blast",
         "address": "0x76da31d7c9cbeae102aff34d3398bc450c8374c1",
         "decimals": 18
+      },
+      {
+        "chain": "moonriver",
+        "address": "0x0cae51e1032e8461f4806e26332c030e34de3adb",
+        "decimals": 18
+      },
+      {
+        "chain": "nibiru",
+        "address": "0xfcfc58685101e2914cbcf7551b432500db84eaa8",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -28436,8 +28627,12 @@
         "url": "https://midas.app/mmev"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/midasrwa"
+      },
+      {
         "label": "Docs",
-        "url": "https://docs.midas.app/tokens/mmev"
+        "url": "https://docs.midas.app/"
       },
       {
         "label": "Risks",
@@ -28584,6 +28779,7 @@
     "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "mechanismArchetype": "fiat-cash",
+    "geckoId": "moneta-digital",
     "cmcSlug": "moneta-digital",
     "proofOfReserves": {
       "type": "self-reported",
@@ -29005,6 +29201,11 @@
         "chain": "optimism",
         "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -29368,6 +29569,7 @@
     },
     "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
     "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "main-street-usd",
     "cmcSlug": "main-street-usd",
     "links": [
@@ -30211,6 +30413,11 @@
         "chain": "linea",
         "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
         "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -30357,6 +30564,11 @@
         "chain": "avalanche",
         "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
         "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -30410,6 +30622,10 @@
       {
         "label": "Website",
         "url": "https://brale.xyz/stablecoins/MXNe"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/brale_xyz"
       },
       {
         "label": "Brale announcement",
@@ -31697,6 +31913,14 @@
     "pegMechanism": "Bridge-liquidity stable asset minted and redeemed through Synapse pool routes, with the dollar peg inherited from the underlying stablecoin basket and pool arbitrage",
     "links": [
       {
+        "label": "Website",
+        "url": "https://synapseprotocol.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/SynapseProtocol"
+      },
+      {
         "label": "DefiLlama",
         "url": "https://stablecoins.llama.fi/stablecoin/18"
       },
@@ -32684,6 +32908,7 @@
     "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "pathusd",
+    "cmcSlug": "pathusd",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
@@ -33027,6 +33252,14 @@
         "url": "https://www.tradable.xyz/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/tradable_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
         "label": "Deal page",
         "url": "https://app.tradable.xyz/investor/deals/861cce9e-08ae-45a0-aca8-9fa229a0189d"
       },
@@ -33131,6 +33364,14 @@
       {
         "label": "Website",
         "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/tradable_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://doc.tradable.xyz/product-docs"
       },
       {
         "label": "Deal page",
@@ -33239,6 +33480,14 @@
         "url": "https://www.tradable.xyz/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/tradable_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
         "label": "CoinGecko",
         "url": "https://www.coingecko.com/en/coins/latam-residential-sstl"
       }
@@ -33339,6 +33588,14 @@
       {
         "label": "Website",
         "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/tradable_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://doc.tradable.xyz/product-docs"
       },
       {
         "label": "CoinGecko",
@@ -33505,6 +33762,11 @@
       {
         "chain": "apechain",
         "address": "0x64ae250e044688ddd04262f17daca23c28d241c2",
+        "decimals": 18
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfb0bd86210d2a10543bb40289e92d108b3a5334f",
         "decimals": 18
       }
     ],
@@ -33982,6 +34244,7 @@
     },
     "collateral": "TokenBlender (TB) base token held on-chain in RAAC's RWf(x) Treasury; TB is minted against I-ON Digital's ION.au token held in the TokenBlender contract, and ION.au represents a gold-backed digital security and in-situ gold claim",
     "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs. PSM (Peg Stability Module) is the primary peg defense tool: arbitrageurs swap pmUSD → sUSDS at $1 face value when pmUSD trades at a discount on-chain; swaps are one-directional and pause if the sUSDS reserve falls below 20% of PSM assets",
+    "mechanismArchetype": "cdp",
     "geckoId": "precious-metals-usd",
     "proofOfReserves": {
       "type": "real-time",
@@ -35250,7 +35513,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://resupply.fi/"
+        "url": "https://resupply.finance/"
       },
       {
         "label": "Twitter",
@@ -35258,7 +35521,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.resupply.fi/"
+        "url": "https://docs.resupply.finance/"
       },
       {
         "label": "GitHub",
@@ -36464,7 +36727,7 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4",
+        "address": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
         "decimals": 6
       },
       {
@@ -36565,6 +36828,14 @@
         "url": "https://www.spiko.io/spiko-dollar"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/Spiko_finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
+      },
+      {
         "label": "Amundi announcement",
         "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4?inline="
       },
@@ -36641,6 +36912,11 @@
       {
         "chain": "stellar",
         "address": "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX",
+        "decimals": 5
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x5677a4dc7484762ffccee13cba20b5c979def446",
         "decimals": 5
       }
     ],
@@ -37123,6 +37399,11 @@
       {
         "chain": "bsc",
         "address": "0x14063733875204b35D20D5Fc52C7B5569aD00335",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x9648db94f1e6b19e7d755585542981f97dc806c6",
         "decimals": 18
       }
     ],
@@ -37755,15 +38036,15 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://rings.money/"
+        "url": "https://trevee.xyz/"
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/rings_protocol"
+        "url": "https://x.com/trevee_xyz"
       },
       {
         "label": "Docs",
-        "url": "https://docs.rings.money/"
+        "url": "https://docs.trevee.xyz/"
       }
     ],
     "mintAuthority": {
@@ -39160,6 +39441,10 @@
         "url": "https://www.spiko.io/spiko-cash-and-carry"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/Spiko_finance"
+      },
+      {
         "label": "CoinGecko",
         "url": "https://www.coingecko.com/en/coins/spiko-digital-assets-cash-carry-fund"
       }
@@ -39331,7 +39616,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/SoulPegOfficial"
+        "url": "https://x.com/soulpeglabs"
       },
       {
         "label": "Docs",
@@ -40047,6 +40332,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/SteakhouseFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.steakhouse.financial/docs"
       }
     ],
     "mintAuthority": {
@@ -40730,6 +41019,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/SuiNetwork"
+      },
+      {
+        "label": "Docs",
+        "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
       }
     ],
     "mintAuthority": {
@@ -41306,6 +41599,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/LorenzoProtocol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://lorenzo-protocol.gitbook.io/docs"
       },
       {
         "label": "GitHub",
@@ -42131,8 +42428,18 @@
       },
       {
         "chain": "zksync",
-        "address": "0xad17d2dd3e576dc084050090eb3773dcd49d2ebc",
+        "address": "0xad17da2f6ac76746ef261e835c50b2651ce36da8",
         "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "aptos",
+        "address": "0xb30a694a344edee467d9f82330bbe7c3b89f440a1ecd2da1f3bca266560fce69",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -42310,6 +42617,16 @@
       {
         "chain": "base",
         "address": "0x5875eee11cf8398102fdad704c9e96607675467a",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xddb46999f8891663a8f2828d25298f70416d7610",
         "decimals": 18
       }
     ],
@@ -43106,6 +43423,10 @@
       {
         "label": "Docs",
         "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://aegis.accountable.capital/"
       },
       {
         "label": "Smart Contracts",
@@ -44389,6 +44710,14 @@
       {
         "label": "Twitter",
         "url": "https://x.com/tusdio"
+      },
+      {
+        "label": "Docs",
+        "url": "https://tusd.io/docs/trueusd-white-paper-202602.pdf"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://tusd.io/transparency"
       }
     ],
     "jurisdiction": {
@@ -44812,6 +45141,14 @@
       {
         "label": "Website",
         "url": "https://www.spiko.io/spiko-treasury-bills-pound"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Spiko_finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
       },
       {
         "label": "CoinGecko",
@@ -45905,7 +46242,7 @@
       {
         "chain": "monad",
         "address": "0x111111d2bf19e43c34263401e0cad979ed1cdb61",
-        "decimals": 18
+        "decimals": 6
       },
       {
         "chain": "mantle",
@@ -46309,7 +46646,7 @@
     "pegMechanism": "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "anzens-usda",
-    "cmcSlug": "anzens-usda",
+    "cmcSlug": "anzens",
     "links": [
       {
         "label": "Website",
@@ -46574,6 +46911,21 @@
       {
         "chain": "nibiru",
         "address": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "decimals": 18
+      },
+      {
+        "chain": "taiko",
+        "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "decimals": 18
+      },
+      {
+        "chain": "sei",
+        "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
         "decimals": 18
       }
     ],
@@ -47888,6 +48240,16 @@
         "chain": "hyperliquid",
         "address": "0x6d1e7cde53ba9467b783cb7c530ce054",
         "decimals": 8
+      },
+      {
+        "chain": "injective",
+        "address": "0xa00c59ff5a080d2b954d0c75e46e22a0c371235a",
+        "decimals": 6
+      },
+      {
+        "chain": "morph-l2",
+        "address": "0xcfb1186f4e93d60e60a8bdd997427d1f33bc372b",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -48158,6 +48520,10 @@
         "url": "https://movementnetwork.xyz/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/movement_xyz"
+      },
+      {
         "label": "xReserve",
         "url": "https://www.circle.com/xreserve"
       },
@@ -48387,7 +48753,7 @@
     "contracts": [
       {
         "chain": "tron",
-        "address": "TCrEVahRbhDFB6uRXEWUg7wkptXvg47GKs",
+        "address": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
         "decimals": 18
       },
       {
@@ -48836,7 +49202,7 @@
     "pegMechanism": "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "astherus-usdf",
-    "cmcSlug": "astherus",
+    "cmcSlug": "usdf",
     "links": [
       {
         "label": "Website",
@@ -49706,6 +50072,7 @@
     "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdgo",
+    "cmcSlug": "usdgo",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
@@ -49919,7 +50286,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.hermetica.fi/usdh/usdh-and-susdh"
+        "url": "https://docs.hermetica.fi/usdh"
       }
     ],
     "jurisdiction": {
@@ -50967,7 +51334,7 @@
     "pegMechanism": "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
     "mechanismArchetype": "tbill",
     "geckoId": "megausd",
-    "cmcSlug": "mega-usdm",
+    "cmcSlug": "megausd",
     "links": [
       {
         "label": "Website",
@@ -50975,7 +51342,7 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/megaeth"
+        "url": "https://x.com/megaeth_labs"
       },
       {
         "label": "Docs",
@@ -51140,7 +51507,7 @@
     "pegMechanism": "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdm-2",
-    "cmcSlug": "moneta-usdm",
+    "cmcSlug": "usdm",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
@@ -52321,6 +52688,7 @@
     },
     "collateral": "Overcollateralized basket of correlated USD stablecoins and yield-bearing wrappers routed through the Parallelizer Module: frxUSD, sfrxUSD, USDe, sUSDe on Ethereum; USDS, sUSDS on Base; USDe, sUSDe on HyperEVM; USDC and ygamiUSDC on Avalanche. Composition and exposure limits set by sPRL holders via DAO vote.",
     "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",
+    "mechanismArchetype": "cdp",
     "geckoId": "parallel-usdp",
     "links": [
       {
@@ -52334,6 +52702,10 @@
       {
         "label": "Docs",
         "url": "https://docs.parallel.best/"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://app.parallel.best/transparency"
       }
     ],
     "mintAuthority": {
@@ -53644,6 +54016,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/stablrusd"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.stablr.com/proof-of-reserve"
       }
     ],
     "jurisdiction": {
@@ -53850,6 +54226,10 @@
         "url": "https://rifonchain.com/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/rifonchain"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
       },
@@ -53987,7 +54367,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.sky.money/"
+        "url": "https://developers.skyeco.com/"
       }
     ],
     "genius": {
@@ -55528,6 +55908,10 @@
         "url": "https://solomonlabs.org/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/solomon_labs"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.solomonlabs.org/"
       },
@@ -56747,6 +57131,7 @@
     },
     "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
     "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "noon-usn",
     "proofOfReserves": {
       "type": "real-time",
@@ -57164,11 +57549,16 @@
     },
     "collateral": "USDC and USDS collateral deployed into Pareto credit vaults (private-credit lending pools), liquid buffers, and a stability fund",
     "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "pareto-usp",
     "links": [
       {
         "label": "Website",
         "url": "https://pareto.credit/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/paretocredit"
       },
       {
         "label": "Docs",
@@ -57678,6 +58068,7 @@
   },
   {
     "id": "ussd-sonic-labs",
+    "llamaId": "356",
     "detailProvider": "coingecko",
     "name": "US Sonic Dollar",
     "symbol": "USSD",
@@ -58516,6 +58907,10 @@
       {
         "label": "Docs",
         "url": "https://docs.solstice.finance"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://attestation.solstice.finance/"
       }
     ],
     "jurisdiction": {
@@ -58830,7 +59225,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://xsy.fi/"
+        "url": "https://yieldpoint.io/"
       },
       {
         "label": "Twitter",
@@ -59139,6 +59534,10 @@
       {
         "label": "Website",
         "url": "https://youves.com"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/youves_com"
       },
       {
         "label": "Docs",
@@ -60524,6 +60923,10 @@
         "url": "https://virtue.money/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/virtue_money"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.virtue.money/overview/what-is-vusd"
       }
@@ -60637,6 +61040,10 @@
       {
         "label": "Website",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/RipioApp"
       },
       {
         "label": "Proof of Reserve",
@@ -61180,6 +61587,10 @@
       {
         "label": "X",
         "url": "https://x.com/ripioapp"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
     "jurisdiction": {
@@ -61600,6 +62011,14 @@
       {
         "label": "Twitter",
         "url": "https://x.com/brix_money"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.brix.money/"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://accountable.brix.money/"
       }
     ],
     "jurisdiction": {
@@ -61849,6 +62268,11 @@
       },
       {
         "chain": "plume",
+        "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
         "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "decimals": 6
       },
@@ -62115,6 +62539,10 @@
       {
         "label": "X",
         "url": "https://x.com/ripioapp"
+      },
+      {
+        "label": "Docs",
+        "url": "https://www.ripio.com/en/assets/wars/whitepaper"
       }
     ],
     "jurisdiction": {
@@ -63121,6 +63549,11 @@
         "chain": "ethereum",
         "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
         "decimals": 9
+      },
+      {
+        "chain": "sui",
+        "address": "0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM",
+        "decimals": 9
       }
     ],
     "blacklistabilityReview": {
@@ -63195,12 +63628,16 @@
         "url": "https://www.silo.finance/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/SiloFinance"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.silo.finance/"
       },
       {
         "label": "Governance",
-        "url": "https://snapshot.org/#/silodao.eth"
+        "url": "https://snapshot.org/#/silofinance.eth"
       }
     ],
     "mintAuthority": {
@@ -63726,7 +64163,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.gnosischain.com/"
+        "url": "https://gnosis.io/chain"
       },
       {
         "label": "Twitter",
@@ -63852,10 +64289,15 @@
     "pegMechanism": "Basket-backed stablecoin index on XPR Network, with mint and redeem flows intended to keep XMD near one U.S. dollar against the underlying stablecoin basket",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "metal-dollar",
+    "cmcSlug": "metal-dollar",
     "links": [
       {
         "label": "Website",
         "url": "https://www.metallicus.com/metal-dollar"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/MetalDollarXMD"
       },
       {
         "label": "Docs",
@@ -64052,6 +64494,10 @@
       {
         "label": "Website",
         "url": "https://kinka-gold.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/kinka_gold"
       },
       {
         "label": "Whitepaper",
@@ -64445,6 +64891,7 @@
     "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
     "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
     "mechanismArchetype": "cdp",
+    "geckoId": "celo-west-african-cfa-franc",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://reserve.mento.org/",
@@ -64994,6 +65441,14 @@
       {
         "label": "Website",
         "url": "https://babelfish.money/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/babelfishmoney"
+      },
+      {
+        "label": "Docs",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/"
       },
       {
         "label": "Explorer",
@@ -65880,6 +66335,16 @@
         "chain": "base",
         "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
         "decimals": 6
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -66212,6 +66677,10 @@
         "url": "https://yield.fi/"
       },
       {
+        "label": "Twitter",
+        "url": "https://x.com/getyieldfi"
+      },
+      {
         "label": "Docs",
         "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
       }
@@ -66298,6 +66767,21 @@
       },
       {
         "chain": "katana",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "decimals": 18
+      },
+      {
+        "chain": "plasma",
         "address": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
         "decimals": 18
       }
@@ -66951,7 +67435,7 @@
     "geckoId": "zarp-stablecoin",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://kempengroup.co.za/wp-content/uploads/2025/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2025-09-04-1757061801998.pdf",
+      "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf",
       "provider": "Kempen Audit",
       "attestorTier": "niche",
       "cadence": "quarterly",
@@ -67543,7 +68027,7 @@
       {
         "chain": "zksync",
         "address": "0xfc7e56298657b002b3e656400e746b7212912757",
-        "decimals": 18
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {

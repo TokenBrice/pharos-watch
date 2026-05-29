@@ -16,6 +16,7 @@
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "compliant-naira",
+  "cmcSlug": "consortium-naira",
   "links": [
     {
       "label": "Website",
@@ -28,6 +29,10 @@
     {
       "label": "Docs",
       "url": "https://docs.cngn.co/integrations/contract-addresses"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://cngn.co/transparency"
     }
   ],
   "jurisdiction": {

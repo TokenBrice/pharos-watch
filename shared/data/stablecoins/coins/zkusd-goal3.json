@@ -26,7 +26,7 @@
     {
       "chain": "zksync",
       "address": "0xfc7e56298657b002b3e656400e746b7212912757",
-      "decimals": 18
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {
