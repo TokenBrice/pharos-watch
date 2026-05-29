@@ -11,11 +11,10 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
+  "collateral": "Adapter-held positions: Curve USDU/USDC LP tokens, Morpho USDU Core vault shares (curated lending), and TermMax USDU vault shares (fixed-term lending) as on-chain backing",
   "pegMechanism": "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
   "llamaId": "304",
   "detailProvider": "defillama",
-  "cmcSlug": "usdu",
   "links": [
     {
       "label": "Website",

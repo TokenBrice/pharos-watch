@@ -86,6 +86,9 @@
       "url": "https://x.com/SteakhouseFi"
     }
   ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
   "contracts": [
     {
       "chain": "ethereum",

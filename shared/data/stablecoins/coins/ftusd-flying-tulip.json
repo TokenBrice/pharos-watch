@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
-  "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
+  "collateral": "USDC and USDT supplied to Aave for low-risk interest; this stablecoin lending is the only on-chain strategy currently live, with the delta-neutral leg (borrow a native asset such as Sonic S against the deposits and stake it for carry) documented as a staged roadmap item; distributed strategy yield routes to sftUSD stakers while unstaked ftUSD proceeds accrue to the protocol treasury",
+  "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contracts; deposits are currently supplied to Aave for low-risk carry, with a delta-neutral leg (borrow a native asset against the collateral and stake it) documented as a staged roadmap item targeting net market exposure near zero; ftUSD circuit-breaker contracts enforce position caps, rebalancing bands, and withdrawal rate limits",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "flying-tulip-usd",

@@ -2,7 +2,7 @@
   "id": "audm-macropod",
   "name": "Macropod",
   "symbol": "AUDM",
-  "oneLiner": "AUDM is Macropod's centralized Australian dollar stablecoin, redeemable 1:1 by approved clients and backed by AUD cash held at Westpac and Banking Circle.",
+  "oneLiner": "AUDM is Macropod's centralized Australian dollar stablecoin, redeemable 1:1 by approved clients and backed by AUD cash held in trust at a Big 4 Australian bank.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
+  "collateral": "Australian dollar cash held 1:1 in segregated AUDM Trust accounts at a regulated Big 4 Australian ADI (National Australia Bank per public reporting); reserves are not lent, invested, or rehypothecated",
   "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "334",
@@ -20,7 +20,7 @@
   "cmcSlug": "macropod",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.macropod.com/transparency/reserves",
+    "url": "https://www.macropod.com/transparency",
     "provider": "Macropod independent quarterly reconciliation",
     "attestorTier": "niche",
     "cadence": "quarterly",
@@ -29,7 +29,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://www.macropod.com/product/audm"
+      "url": "https://www.macropod.com/audm"
     },
     {
       "label": "Twitter",
@@ -41,11 +41,11 @@
     },
     {
       "label": "Proof of Reserve",
-      "url": "https://www.macropod.com/transparency/reserves"
+      "url": "https://www.macropod.com/transparency"
     },
     {
       "label": "Legal",
-      "url": "https://www.macropod.com/transparency/legal"
+      "url": "https://www.macropod.com/transparency"
     }
   ],
   "jurisdiction": {
@@ -67,6 +67,11 @@
     {
       "chain": "redbelly",
       "address": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xeded6ae915b129b67a4ad49901518f2736427063",
       "decimals": 18
     }
   ],
@@ -94,13 +99,8 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Westpac Banking Corporation AUD reserve account",
-      "pct": 91.96,
-      "risk": "very-low"
-    },
-    {
-      "name": "Australian Settlements Ltd / Banking Circle AUD reserve account",
-      "pct": 8.04,
+      "name": "AUD cash held in segregated AUDM Trust account at a Big 4 Australian bank (NAB per public reporting)",
+      "pct": 100,
       "risk": "very-low"
     }
   ],
@@ -110,7 +110,7 @@
     "semantics": "attestation-mix",
     "breakerScope": "audm-macropod",
     "display": {
-      "url": "https://www.macropod.com/transparency/reserves",
+      "url": "https://www.macropod.com/transparency",
       "label": "Macropod reserves"
     },
     "inputs": {

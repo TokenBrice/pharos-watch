@@ -11,8 +11,8 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
-  "pegMechanism": "USD-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+  "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund. Monthly allocation rotates between BTC and ETH cash-and-carry (basis) trades and short-duration Treasury bills/cash. Marex is the fund's sole strategy counterparty, spot digital assets are custodied at Coinbase, futures are cleared on CME, and CACEIS Bank (Credit Agricole Group) acts as depositary.",
+  "pegMechanism": "USD-denominated NAV-accreting fund share; daily NAV is calculated by CACEIS Fund Administration and published on-chain through a Chainlink AggregatorV3-style oracle contract. Holdings are restricted to KYC-allowlisted addresses via Spiko's PermissionManager; minting is limited to the daily-operator role and burns to the Redemption contract's burner role.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund",

@@ -15,6 +15,13 @@
   "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
   "detailProvider": "coingecko",
   "geckoId": "midas-mre7yield",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://midas.app/transparency",
+    "provider": "Midas transparency dashboard and issuer disclosures",
+    "attestorTier": "self",
+    "cadence": "daily-nav"
+  },
   "links": [
     {
       "label": "Website",
@@ -27,6 +34,10 @@
     {
       "label": "Docs",
       "url": "https://docs.midas.app/"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-mre7yield"
     }
   ],
   "jurisdiction": {

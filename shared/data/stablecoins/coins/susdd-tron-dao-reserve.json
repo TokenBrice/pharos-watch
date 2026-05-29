@@ -25,6 +25,12 @@
   "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
   "detailProvider": "coingecko",
   "geckoId": "savings-usdd",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://usdd.io/data",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
   "links": [
     {
       "label": "Website",
@@ -33,6 +39,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/usddio"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.usdd.io"
     }
   ],
   "contracts": [

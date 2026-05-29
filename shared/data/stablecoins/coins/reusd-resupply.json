@@ -17,7 +17,6 @@
   "llamaId": "256",
   "detailProvider": "defillama",
   "geckoId": "resupply-usd",
-  "cmcSlug": "resupply-reusd",
   "links": [
     {
       "label": "Website",

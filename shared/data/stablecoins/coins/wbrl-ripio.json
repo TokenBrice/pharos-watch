@@ -13,15 +13,16 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
+  "collateral": "Brazilian-real fiat cash deposited in a Brazilian bank account, backing Ripio wBRL one-to-one against the Brazilian real per Ripio's wFIAT token certifications",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
     "provider": "Local public accountants",
     "attestorTier": "niche",
-    "cadence": "ad-hoc",
-    "attestorJurisdiction": "Brazil"
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Argentina",
+    "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires"
   },
   "mechanismArchetype": "fiat-cash",
   "geckoId": "brazilian-real",
@@ -161,7 +162,7 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Brazilian-real cash and local-currency liquid instruments",
+      "name": "Brazilian-real cash deposited in a Brazilian bank account",
       "pct": 100,
       "risk": "high"
     }

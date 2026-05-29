@@ -17,6 +17,7 @@
   "llamaId": "235",
   "detailProvider": "defillama",
   "geckoId": "frax-usd",
+  "cmcSlug": "frax-usd",
   "pythFeedId": "0x7c53208632935ba5122c3cf65a0f4b3e72ba4955b49ad6ba0acf3d9ba405aef3",
   "proofOfReserves": {
     "type": "real-time",
@@ -190,6 +191,11 @@
     },
     {
       "chain": "berachain",
+      "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
       "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
       "decimals": 18
     },
@@ -392,28 +398,22 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 51,
-      "risk": "low",
-      "coinId": "ustb-superstate"
-    },
-    {
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 36,
+      "pct": 44,
       "risk": "low",
       "coinId": "wtgxx-wisdomtree"
     },
     {
-      "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 9,
+      "name": "USTB (Superstate tokenized T-bills)",
+      "pct": 43,
       "risk": "low",
-      "coinId": "buidl-blackrock"
+      "coinId": "ustb-superstate"
     },
     {
-      "name": "USDC (Circle)",
-      "pct": 3,
+      "name": "BUIDL (BlackRock tokenized T-bills)",
+      "pct": 12,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "buidl-blackrock"
     },
     {
       "name": "USDB (DBS tokenized deposits)",

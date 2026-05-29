@@ -2,6 +2,7 @@
   "id": "moveusd-cfx",
   "llamaId": "389",
   "detailProvider": "defillama",
+  "cmcSlug": "movemoney-usd",
   "name": "CFX MoveUSD",
   "symbol": "MOVEUSD",
   "oneLiner": "MOVEUSD is CFX's Solana bank-deposit dollar token backed 1:1 by USD deposits in beneficiary accounts at FDIC-insured banks.",

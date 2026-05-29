@@ -11,15 +11,15 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Stablecoin deposits routed through Rings/Veda BoringVault infrastructure into curated DeFi strategies; supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
+  "collateral": "Stablecoin deposits routed through Trevee (formerly Rings) / Veda BoringVault infrastructure into curated DeFi lending strategies (e.g. Aave, Morpho); supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
   "pegMechanism": "Users deposit supported stablecoins to mint scUSD and redeem scAssets after a documented cooldown period; yield is primarily activated by staking scUSD into stkscUSD rather than by holding liquid scUSD itself.",
   "llamaId": "238",
   "detailProvider": "defillama",
   "geckoId": "rings-scusd",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://docs.rings.money/backing",
-    "provider": "Rings / Veda backing addresses",
+    "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address",
+    "provider": "Trevee / Veda backing addresses",
     "attestorTier": "self",
     "cadence": "ad-hoc"
   },

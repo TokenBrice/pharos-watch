@@ -62,7 +62,7 @@
   "variantOf": "usde-ethena",
   "variantKind": "risk-absorption",
   "pegReferenceId": "usde-ethena",
-  "collateral": "Senior tranche token over a Strata risk-tranched USDe yield strategy; junior tranche capital absorbs first-loss or underperformance before senior holders",
+  "collateral": "Senior tranche (ERC-4626 meta-vault) over Strata's CDO-style risk-tranched strategy that stakes USDe into Ethena sUSDe; the junior tranche (jrUSDe) provides first-loss capital and is paid a dynamic risk premium, giving senior holders principal protection and a benchmark-rate yield floor with uncapped sUSDe upside, while a junior-exhausting insolvency event can still impair senior principal",
   "pegMechanism": "srUSDe targets a stable senior NAV backed by USDe strategy collateral and junior-tranche subordination; exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 stablecoin redemption",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
@@ -77,8 +77,12 @@
       "url": "https://x.com/strata_markets"
     },
     {
+      "label": "Docs",
+      "url": "https://docs.strata.markets"
+    },
+    {
       "label": "GitHub",
-      "url": "https://github.com/strata-money"
+      "url": "https://github.com/Strata-Markets"
     }
   ],
   "contracts": [

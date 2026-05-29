@@ -19,7 +19,7 @@
   "geckoId": "us-sonic-dollar",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
+    "url": "https://facts.frax.finance/frxusd/balance-sheet",
     "provider": "Frax Finance",
     "attestorTier": "niche",
     "cadence": "real-time"

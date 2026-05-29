@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
+  "collateral": "Mento reserve holding sUSDS (~44%), CELO (~14%), USDC (~13%), USDT (~10%), EURC (~10%), plus smaller positions in axlEUROC, stETH, axlUSDC, and AUSD; overcollateralized at ~1.25×",
   "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
   "llamaId": "24",
   "detailProvider": "defillama",
@@ -127,26 +127,37 @@
   "reserves": [
     {
       "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-      "pct": 56,
+      "pct": 44,
       "risk": "low",
       "coinId": "susds-sky"
     },
     {
+      "name": "CELO (native token)",
+      "pct": 14,
+      "risk": "high"
+    },
+    {
+      "name": "USDC (Circle)",
+      "pct": 13,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USDT (Tether)",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    },
+    {
       "name": "EURC (Circle euro stablecoin)",
-      "pct": 22,
+      "pct": 10,
       "risk": "low",
       "coinId": "eurc-circle"
     },
     {
-      "name": "CELO (native token)",
-      "pct": 12,
-      "risk": "high"
-    },
-    {
-      "name": "USDGLO (Glo Dollar)",
-      "pct": 4,
-      "risk": "low",
-      "coinId": "usdglo-glo"
+      "name": "axlEUROC (Axelar-bridged EUROC)",
+      "pct": 5,
+      "risk": "medium"
     },
     {
       "name": "stETH (Lido staked ETH)",
@@ -154,21 +165,15 @@
       "risk": "low"
     },
     {
-      "name": "USDC",
-      "pct": 2,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "name": "axlUSDC (Axelar-bridged USDC)",
+      "pct": 1,
+      "risk": "medium"
     },
     {
-      "name": "USDT",
+      "name": "AUSD (Agora dollar)",
       "pct": 1,
       "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "ETH",
-      "pct": 1,
-      "risk": "very-low"
+      "coinId": "ausd-agora"
     }
   ],
   "liveReservesConfig": {

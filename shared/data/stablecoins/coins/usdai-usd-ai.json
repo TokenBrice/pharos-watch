@@ -18,8 +18,8 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai.",
-  "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
+  "collateral": "USDai is the non-yielding base token of USD.AI, currently backed 1:1 by PayPal's PYUSD stablecoin held in the USDai contract (live proof-of-reserves shows the entire base reserve is PYUSD on Arbitrum). USDC/USDT serve as retail deposit and secondary-market exit currencies, not the reserve asset. Yield and GPU-collateralized loan exposure accrue to staked sUSDai, not to base USDai.",
+  "pegMechanism": "USDai is minted and redeemed 1:1 against its PYUSD reserve via the contract deposit()/withdraw() functions; direct mint/redeem is KYC-gated to whitelisted institutions, with no withdrawal queue. Retail users deposit USDC/USDT and can exit via supported currencies. Staking into the yield-bearing sUSDai vault is optional.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "309",
   "detailProvider": "defillama",
@@ -173,7 +173,7 @@
   },
   "reserves": [
     {
-      "name": "USDC / USDT stablecoin reserves (variable mix)",
+      "name": "PYUSD (PayPal USD) held by USDai contract",
       "pct": 100,
       "risk": "low"
     }

@@ -14,8 +14,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
-  "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
+  "collateral": "Overcollateralized Silo credit-line collateral. XAI launched backed by ETH and USDC silos and SiloDAO progressively approved further credit lines (stETH/wstETH, cbETH, wBTC, USDT, LUSD, FXS, BAL, LQTY, gOHM); SiloDAO governs which collaterals and credit-line parameters apply",
+  "pegMechanism": "XAI is borrowed into existence against approved Silo collateral and burned on repayment. It has no dedicated stability module: the soft USD peg relies on arbitrage (borrow/repay always settle at $1, so a sub-$1 market price is repaid at a discount and an above-$1 price is sold) backed by DEX liquidity, while SiloDAO controls minting capacity and the XAI borrow interest rate across silos to manage circulating supply",
   "mechanismArchetype": "cdp",
   "links": [
     {

@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Post-settlement legal-financing receivables tokenized as a Tradable private-credit instrument.",
+  "collateral": "A senior post-settlement term loan facility extended to a US-based law firm, issued by Victory Park Capital Advisors under its North America Post-Settlement Legal Financing Receivables deal and tokenized on ZKsync Era via Tradable.",
   "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",

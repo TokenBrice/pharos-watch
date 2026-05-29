@@ -66,7 +66,7 @@
   "variantKind": "savings-passthrough",
   "pegReferenceId": "gho-aave",
   "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
-  "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the current contract exposes `previewRedeem` for GHO exits but does not expose standard ERC-4626 `asset()` / `convertToAssets()` reads. Pharos prices this entry from the protocol redeem preview rather than secondary-market liquidity.",
+  "pegMechanism": "Deposit GHO into the ERC-4626 sGHO vault to mint sGHO shares; the share-to-GHO exchange rate rises as the Aave-governance-set savings rate accrues. The vault's `asset()` is GHO and standard ERC-4626 `convertToAssets()` / `totalAssets()` reads expose NAV per share. Pharos prices this entry from the vault's share exchange rate rather than secondary-market liquidity.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "aave-stkgho",
@@ -87,7 +87,7 @@
   "contracts": [
     {
       "chain": "ethereum",
-      "address": "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+      "address": "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
       "decimals": 18
     }
   ],

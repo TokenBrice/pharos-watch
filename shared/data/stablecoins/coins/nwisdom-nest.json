@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
+  "collateral": "Predominantly WisdomTree Private Credit and Alternative Income Digital Fund tokenised shares (xCRDYX), which hold publicly-traded alternative credit vehicles (BDCs, closed-end credit funds and mortgage REITs) tracking the Gapstow index, plus a small Nest Treasury Vault (nTBILL) position and a stablecoin (pUSD / USDC) liquidity buffer for redemptions",
   "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
@@ -67,19 +67,14 @@
   "reserves": [
     {
       "name": "WisdomTree CRDYX / alternative credit vehicles",
-      "pct": 95,
+      "pct": 99,
       "risk": "high"
     },
     {
-      "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
-      "pct": 3,
+      "name": "Stablecoin liquidity buffer (pUSD / USDC) and nTBILL",
+      "pct": 1,
       "risk": "low",
       "coinId": "ntbill-nest"
-    },
-    {
-      "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-      "pct": 2,
-      "risk": "low"
     }
   ],
   "liveReservesConfig": {

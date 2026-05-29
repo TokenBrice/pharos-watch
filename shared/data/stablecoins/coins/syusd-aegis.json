@@ -26,6 +26,13 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "staked-yusd",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://aegis.accountable.capital/",
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
+  },
   "links": [
     {
       "label": "Website",
@@ -48,6 +55,9 @@
       "url": "https://docs.aegis.im/smart-contracts"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

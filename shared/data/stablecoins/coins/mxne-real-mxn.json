@@ -11,11 +11,19 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
+  "collateral": "Backed by Etherfuse CETES Stablebonds — short-duration (~7-day) Mexican federal government Treasury bills (CETES), held across regulated Mexican custodians with a majority at BBVA Mexico and held through INDEVAL; reserves segregated from Etherfuse corporate funds, issued via Brale's regulated US stack",
   "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "real-mxn",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://app.etherfuse.com/legal/proof-of-reserves",
+    "provider": "Etherfuse third-party attestations (BHR Mexico) covering the CETES Stablebonds backing MXNe",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Mexico"
+  },
   "links": [
     {
       "label": "Website",

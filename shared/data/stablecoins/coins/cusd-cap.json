@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Basket of regulated stablecoins and tokenized MMF shares: USDC, USDT, pyUSD, BUIDL, and WTGXX (WisdomTree Government MMF) (max 40% each)",
+  "collateral": "Governance-whitelisted basket of regulated dollar-denominated crypto assets: regulated stablecoins (e.g. USDC) and tokenized government money-market funds (e.g. wrapped WisdomTree Government MMF, wWTGXX); idle reserve capital is deployed into US T-bill yield and crypto lending strategies via the protocol's fractional-reserve module. The accepted assets are governance-controlled rather than a fixed list.",
   "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
   "llamaId": "296",
   "detailProvider": "defillama",
@@ -199,6 +199,11 @@
       "chain": "megaeth",
       "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c0000000000000000000000520792dcccccccc",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

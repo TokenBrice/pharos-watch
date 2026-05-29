@@ -21,11 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.straitsx.com/xsgd",
-    "provider": "Independent public accountants (ISCA standards)",
+    "provider": "KK Yap & Associates",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Singapore",
-    "attestorLicense": "ISCA-registered public accountants"
+    "attestorLicense": "ACRA-registered public accountants"
   },
   "links": [
     {

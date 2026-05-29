@@ -68,6 +68,11 @@
       "chain": "solana",
       "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "8v8aBHR7EXFZDwaqaRjAStEcmCj6VZi5iGq1YDtyTok6",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

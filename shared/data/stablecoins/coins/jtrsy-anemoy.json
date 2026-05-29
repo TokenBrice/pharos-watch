@@ -27,11 +27,11 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://anemoy.io/funds/jtrsy"
+      "url": "https://www.anemoy.io/funds/jtrsy"
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/centrifuge"
+      "url": "https://x.com/anemoycapital"
     },
     {
       "label": "Docs",
@@ -77,11 +77,6 @@
     {
       "chain": "monad",
       "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
-      "decimals": 6
-    },
-    {
-      "chain": "solana",
-      "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
       "decimals": 6
     }
   ],

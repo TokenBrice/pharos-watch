@@ -25,6 +25,11 @@
   "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
   "detailProvider": "coingecko",
   "geckoId": "staked-yuzu-usd",
+  "jurisdiction": {
+    "country": "Georgia",
+    "regulator": "Kutaisi Free Industrial Zone (FEZ)",
+    "license": "Virtual Asset Service Provider (VASP)"
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://yuzu.accountable.capital/",
@@ -40,6 +45,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/YuzuMoneyX"
+    },
+    {
+      "label": "Docs",
+      "url": "https://yuzu-money.gitbook.io/yuzu-money"
     },
     {
       "label": "Proof of Reserve",
@@ -137,11 +146,11 @@
     "sources": [
       {
         "label": "Yuzu syzUSD docs",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd"
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
       },
       {
         "label": "Yuzu yzUSD docs",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/yuzu-stablecoin-yzusd"
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
       }
     ],
       "unresolvedQuestions": [

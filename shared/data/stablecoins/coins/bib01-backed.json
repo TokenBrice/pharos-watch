@@ -17,11 +17,11 @@
   "detailProvider": "coingecko",
   "geckoId": "backed-ib01-treasury-bond-0-1yr",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "real-time",
     "url": "https://app.backed.fi/issuance",
-    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)",
+    "provider": "Chainlink Proof of Reserve feed (reserve data sourced by The Network Firm LLP from Backed's custody-bank balances; LedgerLens non-attest service)",
     "attestorTier": "self",
-    "cadence": "monthly",
+    "cadence": "daily",
     "attestorJurisdiction": "Switzerland"
   },
   "links": [

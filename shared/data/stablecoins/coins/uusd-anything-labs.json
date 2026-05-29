@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
-  "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+  "collateral": "Undisclosed; Anything Labs markets UUSD as reserve-backed but publishes no collateral composition, reserve assets, or attestation in the whitepaper, site, or repo",
+  "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "unity-usd",

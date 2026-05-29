@@ -19,10 +19,10 @@
   "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
   "mechanismArchetype": "fiat-cash",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge / independent third-party audits",
-    "attestorTier": "niche",
+    "provider": "Bridge issuance FAQ (third-party audits and transparency reports promised quarterly, not yet published)",
+    "attestorTier": "self",
     "cadence": "quarterly",
     "attestorJurisdiction": "United States"
   },
@@ -30,6 +30,10 @@
     {
       "label": "Website",
       "url": "https://tempo.xyz/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/tempo"
     },
     {
       "label": "Docs",
@@ -42,10 +46,6 @@
     {
       "label": "Bridge FAQ",
       "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
-    },
-    {
-      "label": "Bridge Reserves",
-      "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
     }
   ],
   "jurisdiction": {

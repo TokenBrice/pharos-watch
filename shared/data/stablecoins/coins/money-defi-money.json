@@ -16,7 +16,7 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "defi-money",
-  "protocolSlug": "defi-money",
+  "protocolSlug": "defi.money",
   "links": [
     {
       "label": "Website",

@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Australian-dollar cash and government-backed instruments held 1:1 for AUDX by TAU Pty Ltd trading as AUDX Token",
+  "collateral": "Backed 1:1 by Australian-dollar cash and government-backed instruments such as Treasury Bills and Notes, held by TAU Pty Ltd trading as AUDX Token",
   "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
@@ -77,7 +77,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.audxtoken.com/transparency",
-    "provider": "AUDX monthly reserve audit reports",
+    "provider": "Aura Partners",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Australia"

@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions",
-  "pegMechanism": "Overcollateralized CDP stable asset minted against Enosys Loans collateral and managed through liquidations and repayment rules",
+  "collateral": "FXRP, wFLR, sFLR, and stXRP deposited into Enosys Loans CDP positions on Flare, with collateral priced by the Flare Time Series Oracle (FTSO)",
+  "pegMechanism": "Liquity V2 friendly fork: an overcollateralized CDP with user-set borrow interest rates, a Stability Pool that absorbs liquidations, and automated redemptions against the lowest-rate positions when CDP trades below its $1 peg; collateral is priced by the Flare Time Series Oracle (FTSO)",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "enosys-loans-cdp",

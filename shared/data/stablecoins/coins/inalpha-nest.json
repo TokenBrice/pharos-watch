@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
+  "collateral": "Diversified portfolio of tokenized RWAs from institutional asset managers plus private-credit and trade-finance positions from accredited protocol partners, with a liquidity buffer of yield-bearing stablecoins and an nTBILL (Nest Treasury) allocation.",
   "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",

@@ -17,6 +17,7 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "defillama",
   "geckoId": "precious-metals-usd",
+  "cmcSlug": "precious-metals-usd",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por",

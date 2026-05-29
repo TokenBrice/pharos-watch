@@ -11,12 +11,20 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "GBP reserves held in regulated financial institutions and/or backed by short-term UK government paper.",
+  "collateral": "Held 1:1 in GBP cash, GBP money market funds, and short-term UK gilts (zero-coupon Treasury bills) at regulated UK banking partners.",
   "pegMechanism": "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "317",
   "detailProvider": "defillama",
   "geckoId": "tokenised-gbp",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.tokenisedgbp.com/transparency",
+    "provider": "Launch Accounts (Joseph Murphy, ICAEW)",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United Kingdom"
+  },
   "links": [
     {
       "label": "Website",
@@ -29,6 +37,10 @@
     {
       "label": "Audit",
       "url": "https://www.openzeppelin.com/news/tgbp-audit"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.tokenisedgbp.com/transparency"
     }
   ],
   "jurisdiction": {

@@ -17,7 +17,7 @@
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+    "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
     "provider": "Local public accountants",
     "attestorTier": "niche",
     "cadence": "ad-hoc",

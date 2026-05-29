@@ -14,9 +14,10 @@
   "pegReferenceId": "usdc-circle",
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
-  "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
-  "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
-  "mechanismArchetype": "fiat-cash",
+  "collateral": "USDC deposited into the yUSD ERC-4626 vault and allocated by YieldFi's manager across Pendle principal tokens, Morpho and Silo lending vaults, private-credit positions, and market-neutral/delta-neutral strategies (private LP deals, hedged carry, basis, and funding-rate spreads across whitelisted protocols)",
+  "pegMechanism": "ERC-4626 share over USDC priced at NAV ((Series Assets - Series Liabilities) / tokens outstanding), valued at least twice weekly using Chainlink oracles; value tracks the dollar through delta-neutral strategy returns rather than direct redemption against fiat reserves",
+  "mechanismArchetype": "synthetic-delta-neutral",
+  "archetypeOverride": true,
   "detailProvider": "coingecko",
   "geckoId": "yieldfi-ytoken",
   "links": [
@@ -33,6 +34,9 @@
       "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

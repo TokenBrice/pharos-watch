@@ -17,6 +17,7 @@
   "llamaId": "135",
   "detailProvider": "defillama",
   "geckoId": "inter-stable-token",
+  "cmcSlug": "inter-stable-token",
   "links": [
     {
       "label": "Website",

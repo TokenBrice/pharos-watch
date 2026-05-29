@@ -16,6 +16,7 @@
   "commodityOunces": 0.0321507466,
   "detailProvider": "commodity",
   "geckoId": "gram-silver",
+  "cmcSlug": "silver-grams",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
@@ -31,7 +32,11 @@
     },
     {
       "label": "X",
-      "url": "https://x.com/tokenteknoloji"
+      "url": "https://x.com/tokencomtr"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.token.com.tr/en/proof-of-reserves/"
     }
   ],
   "jurisdiction": {

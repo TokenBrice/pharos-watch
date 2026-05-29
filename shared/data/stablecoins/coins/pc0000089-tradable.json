@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Latin American residential-lending private-credit exposure tokenized as a Tradable private-credit instrument.",
+  "collateral": "On-chain exposure to a Latin American residential-lending senior secured term loan note issued by Victory Park Capital Advisors and tokenized on zkSync Era via Tradable's permissioned syndication platform (on-chain token name 'Private Credit Direct Deal0000089').",
   "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",

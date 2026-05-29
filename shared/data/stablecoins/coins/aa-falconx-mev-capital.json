@@ -23,15 +23,25 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC base asset in the Pareto FalconX Credit Vault, providing fixed-rate exposure to FalconX institutional credit lines curated by M11 Credit.",
   "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",
+  "mechanismArchetype": "rwa-credit-fund",
+  "archetypeOverride": true,
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "RWA.xyz asset",
-      "url": "https://app.rwa.xyz/assets/%24ParetoFAL-USDC"
+      "label": "Website",
+      "url": "https://pareto.credit"
     },
     {
-      "label": "Pareto docs",
+      "label": "Twitter",
+      "url": "https://x.com/paretocredit"
+    },
+    {
+      "label": "Docs",
       "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+    },
+    {
+      "label": "RWA.xyz asset",
+      "url": "https://app.rwa.xyz/assets/AA_FalconXUSDC"
     },
     {
       "label": "Launch note",

@@ -12,8 +12,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
-  "pegMechanism": "Issuer- and ecosystem-managed stablecoin used as the HeLa runtime settlement asset, with external pricing and market-cap coverage supplied by CoinGecko",
+  "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
+  "pegMechanism": "Fiat-collateralized 1:1 USD peg: HLUSD is minted against off-chain USDC reserves and redeemable at 1 HLUSD = 1 USD, with issuance and redemption controlled by HeLa's on-chain role-based mint/burn governance (MintProposer/MintVoter quorum and Admin). HLUSD also serves as HeLa Chain's native gas token. Pricing and market-cap coverage are sourced from CoinGecko because the native HeLa chain is not modeled in Pharos.",
   "mechanismArchetype": "fiat-cash",
   "geckoId": "hela-usd",
   "links": [
@@ -90,7 +90,7 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Fiat and fiat-equivalent reserves",
+      "name": "USDC reserves",
       "pct": 100,
       "risk": "medium"
     }

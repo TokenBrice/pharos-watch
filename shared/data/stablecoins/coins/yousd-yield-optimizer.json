@@ -48,7 +48,7 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

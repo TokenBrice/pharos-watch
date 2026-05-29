@@ -13,7 +13,7 @@
   },
   "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
   "pegMechanism": "Users can mint and redeem rUSD 1:1 against USDC, USDT, or USD1 through Reservoir's Peg Stability Module, while Credit Enforcer contracts constrain liquidity, solvency, and capital ratios before protocol asset reallocations.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "217",
   "detailProvider": "defillama",
   "geckoId": "reservoir-rusd",
@@ -251,43 +251,53 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "RLUSD lending markets",
-      "pct": 60.3,
+      "name": "RLUSD Euler lending markets",
+      "pct": 37.7,
       "risk": "medium",
       "coinId": "rlusd-ripple",
       "depType": "collateral"
     },
     {
-      "name": "GHO lending and savings markets",
-      "pct": 20.7,
+      "name": "GHO Aave and Fluid lending markets (Plasma)",
+      "pct": 22.8,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral"
     },
     {
-      "name": "USDC lending/direct liquidity",
-      "pct": 6.5,
-      "risk": "medium",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
+      "name": "Hastra PRIME RWA credit allocation",
+      "pct": 12.2,
+      "risk": "high"
     },
     {
-      "name": "AUSD lending markets",
-      "pct": 5.9,
+      "name": "Pendle PT USDat tokenized-treasury principal token",
+      "pct": 7.2,
+      "risk": "high"
+    },
+    {
+      "name": "AUSD Morpho lending markets",
+      "pct": 6.5,
       "risk": "medium",
       "coinId": "ausd-agora",
       "depType": "collateral"
     },
     {
-      "name": "USD1 lending markets",
-      "pct": 4.6,
+      "name": "USD1 Morpho lending markets",
+      "pct": 6.3,
       "risk": "medium",
       "coinId": "usd1-world-liberty-financial",
       "depType": "collateral"
     },
     {
-      "name": "PYUSD lending/direct liquidity",
-      "pct": 2,
+      "name": "USDC Morpho lending and direct liquidity",
+      "pct": 5.4,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    },
+    {
+      "name": "PYUSD Morpho and Kamino lending markets",
+      "pct": 1.9,
       "risk": "medium",
       "coinId": "pyusd-paypal",
       "depType": "collateral"

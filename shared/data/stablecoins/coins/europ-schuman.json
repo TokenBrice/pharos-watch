@@ -37,6 +37,10 @@
     {
       "label": "Whitepaper",
       "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://schuman.io/reserve-audits/"
     }
   ],
   "jurisdiction": {

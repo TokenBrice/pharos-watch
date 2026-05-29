@@ -39,9 +39,14 @@
     }
   ],
   "jurisdiction": {
-    "country": "Vietnam"
+    "country": "Singapore"
   },
   "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
+      "decimals": 0
+    },
     {
       "chain": "polygon",
       "address": "0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",

@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Senior secured term notes linked to an APAC diversified finance provider and tokenized through Tradable private-credit issuance rails.",
+  "collateral": "Senior secured term notes (issued by Victory Park Capital Advisors) backed by an APAC diversified finance provider's consumer-financing receivables (line-of-credit and installment/BNPL) and tokenized through Tradable private-credit issuance rails.",
   "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",

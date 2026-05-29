@@ -40,7 +40,8 @@
     }
   ],
   "jurisdiction": {
-    "country": "Cayman Islands"
+    "country": "Cayman Islands",
+    "regulator": "CIMA"
   },
   "contracts": [
     {

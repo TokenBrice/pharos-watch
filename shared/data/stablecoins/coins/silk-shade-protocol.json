@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
-  "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
+  "pegMechanism": "NAV tracks a governance-set basket of global currencies and commodities (currently USD ~33.5%, EUR ~22.9%, Gold ~18.7%, JPY ~11.1%, CAD ~7.5%, BTC ~6.3%) priced via Band Protocol feeds, with weights selected on GDP, monetary-policy health and growth and adjustable through SILK Assembly peg migrations; stability maintained via overcollateralized ShadeLend minting, bounded conversion minting, redemption pools, collateral redemptions/liquidations, and ShadeDAO bonds",
   "mechanismArchetype": "cdp",
   "llamaId": "113",
   "detailProvider": "defillama",

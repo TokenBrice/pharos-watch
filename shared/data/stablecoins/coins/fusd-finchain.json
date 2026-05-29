@@ -119,11 +119,6 @@
       "chain": "monad",
       "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
       "decimals": 18
-    },
-    {
-      "chain": "solana",
-      "address": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
-      "decimals": 9
     }
   ],
   "deploymentModel": "native-multichain",

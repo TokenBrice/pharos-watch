@@ -14,14 +14,14 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
+    "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a sanctioned Russian state-owned bank; reserves audited quarterly by Kreston Bishkek (Kreston Global network member, Kyrgyzstan)",
     "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "a7a5",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://docs.a7a5.io/legal/transparency",
-      "provider": "A7A5 independent reserve auditors",
+      "provider": "Kreston Bishkek (Kreston Global network member)",
       "attestorTier": "niche",
       "cadence": "quarterly",
       "attestorJurisdiction": "Kyrgyzstan"
@@ -141,14 +141,23 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC base asset in the Pareto FalconX Credit Vault, providing fixed-rate exposure to FalconX institutional credit lines curated by M11 Credit.",
     "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",
+    "mechanismArchetype": "rwa-credit-fund",
     "links": [
       {
-        "label": "RWA.xyz asset",
-        "url": "https://app.rwa.xyz/assets/%24ParetoFAL-USDC"
+        "label": "Website",
+        "url": "https://pareto.credit"
       },
       {
-        "label": "Pareto docs",
+        "label": "Twitter",
+        "url": "https://x.com/paretocredit"
+      },
+      {
+        "label": "Docs",
         "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+      },
+      {
+        "label": "RWA.xyz asset",
+        "url": "https://app.rwa.xyz/assets/AA_FalconXUSDC"
       },
       {
         "label": "Launch note",
@@ -218,6 +227,7 @@
     "governanceQuality": "wrapper",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "archetypeOverride": true,
     "reserves": [
       {
         "name": "FalconX institutional credit-line exposure via Pareto vault",
@@ -817,6 +827,14 @@
     "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts; whitelisted partners can mint or redeem directly while other users trade through the app or DEX liquidity",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gaib-aid",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://aid.gaib.ai/transparency",
+      "provider": "McMillan Woods (Hong Kong) CPA Limited",
+      "attestorTier": "regional",
+      "cadence": "monthly",
+      "attestorJurisdiction": "Hong Kong"
+    },
     "links": [
       {
         "label": "Website",
@@ -966,7 +984,7 @@
         "sources": [
           {
             "label": "GAIB AID docs",
-            "url": "https://docs.gaib.ai/how-aid-works"
+            "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
           },
           {
             "label": "AID Ethereum token",
@@ -2192,7 +2210,7 @@
     "detailProvider": "defillama",
     "name": "Macropod",
     "symbol": "AUDM",
-    "oneLiner": "AUDM is Macropod's centralized Australian dollar stablecoin, redeemable 1:1 by approved clients and backed by AUD cash held at Westpac and Banking Circle.",
+    "oneLiner": "AUDM is Macropod's centralized Australian dollar stablecoin, redeemable 1:1 by approved clients and backed by AUD cash held in trust at a Big 4 Australian bank.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "AUD",
@@ -2201,14 +2219,14 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
+    "collateral": "Australian dollar cash held 1:1 in segregated AUDM Trust accounts at a regulated Big 4 Australian ADI (National Australia Bank per public reporting); reserves are not lent, invested, or rehypothecated",
     "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "macropod",
     "cmcSlug": "macropod",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://www.macropod.com/transparency/reserves",
+      "url": "https://www.macropod.com/transparency",
       "provider": "Macropod independent quarterly reconciliation",
       "attestorTier": "niche",
       "cadence": "quarterly",
@@ -2217,7 +2235,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.macropod.com/product/audm"
+        "url": "https://www.macropod.com/audm"
       },
       {
         "label": "Twitter",
@@ -2229,11 +2247,11 @@
       },
       {
         "label": "Proof of Reserve",
-        "url": "https://www.macropod.com/transparency/reserves"
+        "url": "https://www.macropod.com/transparency"
       },
       {
         "label": "Legal",
-        "url": "https://www.macropod.com/transparency/legal"
+        "url": "https://www.macropod.com/transparency"
       }
     ],
     "jurisdiction": {
@@ -2281,6 +2299,11 @@
         "chain": "redbelly",
         "address": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xeded6ae915b129b67a4ad49901518f2736427063",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": true,
@@ -2307,13 +2330,8 @@
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
-        "name": "Westpac Banking Corporation AUD reserve account",
-        "pct": 91.96,
-        "risk": "very-low"
-      },
-      {
-        "name": "Australian Settlements Ltd / Banking Circle AUD reserve account",
-        "pct": 8.04,
+        "name": "AUD cash held in segregated AUDM Trust account at a Big 4 Australian bank (NAB per public reporting)",
+        "pct": 100,
         "risk": "very-low"
       }
     ],
@@ -2322,7 +2340,7 @@
       "semantics": "attestation-mix",
       "breakerScope": "audm-macropod",
       "display": {
-        "url": "https://www.macropod.com/transparency/reserves",
+        "url": "https://www.macropod.com/transparency",
         "label": "Macropod reserves"
       },
       "adapter": "curated-validated",
@@ -4078,7 +4096,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Binance-owned BFUSD Collateral Pool assets, hedging portfolio positions, and a reserve fund described in Binance BFUSD terms",
+    "collateral": "Delta-hedged crypto positions (spot crypto such as ETH offset by equal short futures to collect funding fees), staked crypto (e.g. ETH staking via Binance Earn), and a USDT-seeded BFUSD Reserve Fund (~1.1M USDT, ~105% collateral value ratio at Nov 2024 launch); all assets are legally and beneficially owned by Binance, with no holder claim",
     "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "bfusd",
@@ -4123,7 +4141,7 @@
         "sources": [
           {
             "label": "Binance BFUSD FAQ",
-            "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97"
+            "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
           }
         ],
         "sourceFreeRationale": "Classified as an off-chain exchange-ledger product per Binance terms; there is no public on-chain mint contract or token owner to resolve.",
@@ -4195,11 +4213,11 @@
     "mechanismArchetype": "tbill",
     "geckoId": "backed-ib01-treasury-bond-0-1yr",
     "proofOfReserves": {
-      "type": "self-reported",
+      "type": "real-time",
       "url": "https://app.backed.fi/issuance",
-      "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)",
+      "provider": "Chainlink Proof of Reserve feed (reserve data sourced by The Network Firm LLP from Backed's custody-bank balances; LedgerLens non-attest service)",
       "attestorTier": "self",
-      "cadence": "monthly",
+      "cadence": "daily",
       "attestorJurisdiction": "Switzerland"
     },
     "links": [
@@ -5416,7 +5434,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+        "url": "https://docs.crown-brlv.com/whitepaper"
       },
       {
         "label": "Proof of Reserve",
@@ -5635,6 +5653,11 @@
       },
       {
         "chain": "base",
+        "address": "0xe9185ee218cae427af7b9764a011bb89fea761b4",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
         "address": "0xe9185ee218cae427af7b9764a011bb89fea761b4",
         "decimals": 18
       },
@@ -7207,8 +7230,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions",
-    "pegMechanism": "Overcollateralized CDP stable asset minted against Enosys Loans collateral and managed through liquidations and repayment rules",
+    "collateral": "FXRP, wFLR, sFLR, and stXRP deposited into Enosys Loans CDP positions on Flare, with collateral priced by the Flare Time Series Oracle (FTSO)",
+    "pegMechanism": "Liquity V2 friendly fork: an overcollateralized CDP with user-set borrow interest rates, a Stability Pool that absorbs liquidations, and automated redemptions against the lowest-rate positions when CDP trades below its $1 peg; collateral is priced by the Flare Time Series Oracle (FTSO)",
     "mechanismArchetype": "cdp",
     "geckoId": "enosys-loans-cdp",
     "protocolSlug": "enosys-loans",
@@ -7673,7 +7696,7 @@
       "navToken": false
     },
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
-    "pegMechanism": "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
+    "pegMechanism": "Mento V3 reserve-backed FX model: EURm is minted and redeemed against the shared Mento Reserve through Fixed-Price Market Maker (FPMM) pools that quote a Chainlink EUR oracle rate rather than deriving price from pool reserves, with on-chain trading limits and circuit breakers halting trade when the oracle is stale or off-peg.",
     "geckoId": "celo-euro",
     "proofOfReserves": {
       "type": "real-time",
@@ -8644,11 +8667,18 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Nigerian naira reserves held 1:1 in designated commercial bank accounts by the cNGN issuer consortium",
+    "collateral": "Naira reserves held 1:1 against outstanding cNGN, comprising deposits at licensed Nigerian commercial banks plus naira money-market funds and short-term FGN treasury bills, verified by monthly independent attestations",
     "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "compliant-naira",
     "cmcSlug": "consortium-naira",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://cngn.co/transparency",
+      "attestorTier": "niche",
+      "cadence": "monthly",
+      "attestorJurisdiction": "Nigeria"
+    },
     "links": [
       {
         "label": "Website",
@@ -8725,11 +8755,6 @@
         "decimals": 6
       },
       {
-        "chain": "monad",
-        "address": "0x4f90098ba5b08abaf039b95a851f8e764eb84b49",
-        "decimals": 6
-      },
-      {
         "chain": "solana",
         "address": "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8",
         "decimals": 6
@@ -8758,8 +8783,13 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Nigerian naira deposits at designated commercial banks",
-        "pct": 100,
+        "name": "Naira deposits at licensed Nigerian commercial banks",
+        "pct": 54,
+        "risk": "medium"
+      },
+      {
+        "name": "Naira money-market funds and short-term FGN treasury bills",
+        "pct": 46,
         "risk": "medium"
       }
     ],
@@ -9431,7 +9461,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Basket of regulated stablecoins and tokenized MMF shares: USDC, USDT, pyUSD, BUIDL, and WTGXX (WisdomTree Government MMF) (max 40% each)",
+    "collateral": "Governance-whitelisted basket of regulated dollar-denominated crypto assets: regulated stablecoins (e.g. USDC) and tokenized government money-market funds (e.g. wrapped WisdomTree Government MMF, wWTGXX); idle reserve capital is deployed into US T-bill yield and crypto lending strategies via the protocol's fractional-reserve module. The accepted assets are governance-controlled rather than a fixed list.",
     "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
     "geckoId": "cap-usd",
     "cmcSlug": "cap-cusd",
@@ -9552,6 +9582,11 @@
         "chain": "megaeth",
         "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
         "decimals": 18
+      },
+      {
+        "chain": "tempo",
+        "address": "0x20c0000000000000000000000520792dcccccccc",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -9669,7 +9704,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
+    "collateral": "Mento reserve holding sUSDS (~44%), CELO (~14%), USDC (~13%), USDT (~10%), EURC (~10%), plus smaller positions in axlEUROC, stETH, axlUSDC, and AUSD; overcollateralized at ~1.25×",
     "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
     "geckoId": "celo-dollar",
     "cmcSlug": "celo-dollar",
@@ -9783,26 +9818,37 @@
     "reserves": [
       {
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 56,
+        "pct": 44,
         "risk": "low",
         "coinId": "susds-sky"
       },
       {
+        "name": "CELO (native token)",
+        "pct": 14,
+        "risk": "high"
+      },
+      {
+        "name": "USDC (Circle)",
+        "pct": 13,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "USDT (Tether)",
+        "pct": 10,
+        "risk": "low",
+        "coinId": "usdt-tether"
+      },
+      {
         "name": "EURC (Circle euro stablecoin)",
-        "pct": 22,
+        "pct": 10,
         "risk": "low",
         "coinId": "eurc-circle"
       },
       {
-        "name": "CELO (native token)",
-        "pct": 12,
-        "risk": "high"
-      },
-      {
-        "name": "USDGLO (Glo Dollar)",
-        "pct": 4,
-        "risk": "low",
-        "coinId": "usdglo-glo"
+        "name": "axlEUROC (Axelar-bridged EUROC)",
+        "pct": 5,
+        "risk": "medium"
       },
       {
         "name": "stETH (Lido staked ETH)",
@@ -9810,21 +9856,15 @@
         "risk": "low"
       },
       {
-        "name": "USDC",
-        "pct": 2,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "name": "axlUSDC (Axelar-bridged USDC)",
+        "pct": 1,
+        "risk": "medium"
       },
       {
-        "name": "USDT",
+        "name": "AUSD (Agora dollar)",
         "pct": 1,
         "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "ETH",
-        "pct": 1,
-        "risk": "very-low"
+        "coinId": "ausd-agora"
       }
     ],
     "liveReservesConfig": {
@@ -10593,6 +10633,10 @@
       {
         "label": "Website",
         "url": "https://djed.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/COTInetwork"
       },
       {
         "label": "Docs",
@@ -12423,7 +12467,7 @@
       "type": "self-reported",
       "url": "https://allunity.com/trust-center/",
       "attestorTier": "self",
-      "cadence": "ad-hoc"
+      "cadence": "none"
     },
     "links": [
       {
@@ -13899,7 +13943,7 @@
       },
       {
         "label": "X",
-        "url": "https://x.com/tokenteknoloji"
+        "url": "https://x.com/tokencomtr"
       },
       {
         "label": "Proof of Reserve",
@@ -14541,7 +14585,6 @@
     },
     "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
     "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-    "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-eur",
     "proofOfReserves": {
       "type": "independent-audit",
@@ -14556,6 +14599,10 @@
       {
         "label": "Website",
         "url": "https://www.spiko.io/spiko-euro"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Spiko_finance"
       },
       {
         "label": "Docs",
@@ -14733,6 +14780,14 @@
       {
         "label": "Website",
         "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Spiko_finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/"
       },
       {
         "label": "CoinGecko",
@@ -17520,11 +17575,6 @@
         "chain": "monad",
         "address": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
         "decimals": 18
-      },
-      {
-        "chain": "solana",
-        "address": "51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
-        "decimals": 9
       }
     ],
     "blacklistabilityReview": {
@@ -18404,7 +18454,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "GBP share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
+    "collateral": "GBP share class of Spiko's Amundi-managed Smart Cash UCITS fund. Returns come from a fully collateralized total-return swap under which counterparty BNP Paribas pays SONIA + 0.27% daily; the swap is backed by a basket of listed equities marked to market daily, with CACEIS (Credit Agricole) acting as depositary.",
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
     "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
@@ -18425,6 +18475,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/Spiko_finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.spiko.io/documentation/product_overview/smart_cash/legal_documentation/"
       },
       {
         "label": "CoinGecko",
@@ -18643,8 +18697,8 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital",
-    "pegMechanism": "Issuer-managed gold reference with issuer-controlled mint/redeem contracts; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
+    "collateral": "Each GGBR token represents 1/1000th of a troy ounce of LBMA-priced physical gold, sourced from I-ON Digital Corp's ION.au gold reserve and reported as 5:1 overcollateralized, with the underlying gold secured via UCC-1 liens in ION Treasury and reserves held in Fireblocks MPC custody",
+    "pegMechanism": "GGBR price tracks the LBMA Gold Spot Price in real time at 1/1000th of a troy ounce per token; supply is created and redeemed through issuer-controlled mint/redeem contracts, with physical gold redemption available through regulated precious-metals dealers and on-chain proof-of-reserve oracles for collateral verification",
     "commodityOunces": 0.001,
     "geckoId": "goldfish-gold",
     "links": [
@@ -18683,7 +18737,7 @@
           },
           {
             "label": "Goldfish Gold Cyfrin review",
-            "url": "https://goldfishgold.com/Cyfrin-Report.pdf"
+            "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf"
           }
         ],
         "sourceFreeRationale": "Classification based on the issuer-managed model in project materials; the on-chain Ethereum owner/minter admin for GGBR was not independently resolved.",
@@ -19137,11 +19191,11 @@
         "sources": [
           {
             "label": "Mento V3 stablecoin docs",
-            "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
           },
           {
             "label": "Mento governance docs",
-            "url": "https://docs.mento.org/mento/protocol-concepts/governance"
+            "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance"
           }
         ],
         "sourceFreeRationale": "Mint mechanism and governance model confirmed from Mento docs; live owner and timelock delay were read from Celo RPC on 2026-05-25.",
@@ -19388,7 +19442,8 @@
       }
     ],
     "jurisdiction": {
-      "country": "Cayman Islands"
+      "country": "Cayman Islands",
+      "regulator": "CIMA"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -19635,6 +19690,7 @@
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
     "commodityOunces": 0.0321507466,
     "geckoId": "gram-silver",
+    "cmcSlug": "silver-grams",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
@@ -19650,7 +19706,11 @@
       },
       {
         "label": "X",
-        "url": "https://x.com/tokenteknoloji"
+        "url": "https://x.com/tokencomtr"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
       }
     ],
     "jurisdiction": {
@@ -21144,7 +21204,11 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://hliquity.org/"
+        "url": "https://hliquity.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/HLiquity_"
       },
       {
         "label": "Docs",
@@ -21684,8 +21748,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
-    "pegMechanism": "Issuer- and ecosystem-managed stablecoin used as the HeLa runtime settlement asset, with external pricing and market-cap coverage supplied by CoinGecko",
+    "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
+    "pegMechanism": "Fiat-collateralized 1:1 USD peg: HLUSD is minted against off-chain USDC reserves and redeemable at 1 HLUSD = 1 USD, with issuance and redemption controlled by HeLa's on-chain role-based mint/burn governance (MintProposer/MintVoter quorum and Admin). HLUSD also serves as HeLa Chain's native gas token. Pricing and market-cap coverage are sourced from CoinGecko because the native HeLa chain is not modeled in Pharos.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "hela-usd",
     "links": [
@@ -21767,7 +21831,7 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Fiat and fiat-equivalent reserves",
+        "name": "USDC reserves",
         "pct": 100,
         "risk": "medium"
       }
@@ -22879,7 +22943,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
+    "collateral": "Diversified portfolio of tokenized RWAs from institutional asset managers plus private-credit and trade-finance positions from accredited protocol partners, with a liquidity buffer of yield-bearing stablecoins and an nTBILL (Nest Treasury) allocation.",
     "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-alpha-vault-lp",
@@ -23173,6 +23237,7 @@
     "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
     "mechanismArchetype": "cdp",
     "geckoId": "inter-stable-token",
+    "cmcSlug": "inter-stable-token",
     "links": [
       {
         "label": "Website",
@@ -24030,6 +24095,7 @@
   },
   {
     "id": "jpyc-jpyc",
+    "llamaId": "355",
     "detailProvider": "coingecko",
     "name": "JPY Coin",
     "symbol": "JPYC",
@@ -24045,7 +24111,7 @@
     "collateral": "Japanese yen deposits and Japanese government bonds (100% backed)",
     "pegMechanism": "Direct 1:1 redemption for JPY through JPYC Inc. via the JPYC EX platform; issuance and redemption via bank transfer after KYC; JPYC Inc. holds a Type II Funds Transfer Service Provider license under Japan's Payment Services Act",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "jpy-coin",
+    "geckoId": "jpycoin",
     "links": [
       {
         "label": "Website",
@@ -24155,27 +24221,17 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
+        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "decimals": 18
       },
       {
         "chain": "polygon",
-        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
+        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "decimals": 18
       },
       {
         "chain": "avalanche",
-        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
-        "decimals": 18
-      },
-      {
-        "chain": "gnosis",
-        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
-        "decimals": 18
-      },
-      {
-        "chain": "astar",
-        "address": "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb",
+        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "decimals": 18
       }
     ],
@@ -24609,11 +24665,11 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://anemoy.io/funds/jtrsy"
+        "url": "https://www.anemoy.io/funds/jtrsy"
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/centrifuge"
+        "url": "https://x.com/anemoycapital"
       },
       {
         "label": "Docs",
@@ -24703,11 +24759,6 @@
       {
         "chain": "monad",
         "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
-        "decimals": 6
-      },
-      {
-        "chain": "solana",
-        "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
         "decimals": 6
       }
     ],
@@ -24986,7 +25037,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions, plus active bridge routes where source stablecoins such as USDC and USDT are deposited 1:1; protocol is forked from the d-EURO / Frankencoin architecture.",
+    "collateral": "Wrapped cBTC (WCBTC, the Citrea Bitcoin L2 native-coin wrapper) deposited in oracle-free overcollateralized positions, plus StablecoinBridge routes that mint JUSD 1:1 against external Citrea stablecoins USDC.e, USDT.e and ctUSD (Citrea USD); protocol is a d-EURO / Frankencoin (ZCHF) architecture fork.",
     "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
     "mechanismArchetype": "cdp",
     "geckoId": "juice-dollar",
@@ -25121,7 +25172,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Crypto collateral and protocol-managed reserve liquidity described in JUSD materials",
+    "collateral": "Self-described \"diversified reserve of high-quality assets\" managed by the issuer; the 2023 whitepaper claims supply is minted/burned as the issuer adds or reduces backing assets but names no specific reserve assets, custodians, or amounts and publishes no attestation.",
     "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "mechanismArchetype": "cdp",
     "geckoId": "jusd",
@@ -26583,8 +26634,8 @@
       "rwa": false,
       "navToken": true
     },
-    "collateral": "LUA staking, floor-price mechanics, and protocol-owned liquidity described by Lumi Finance materials",
-    "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
+    "collateral": "Over-collateralized by LUA staked at the protocol floor price, plus a diversified stablecoin reserve of USDT and USDC held as protocol-owned liquidity (including Lumi's Curve pool)",
+    "pegMechanism": "Lumi's AMO (Algorithmic Market Operations) Protocol mints or redeems LUAUSD to rebalance its Curve pool toward the dollar, with the stablecoin reserve and rising LUA floor price as backing; it is not a hard 1:1 redeemable fiat stablecoin and has traded persistently below $1",
     "mechanismArchetype": "algorithmic",
     "geckoId": "lumi-finance-luausd",
     "cmcSlug": "lumi-finance-luausd",
@@ -28049,14 +28100,14 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "Fasanara Global strategy exposure through Midas tokenized certificate rails.",
+    "collateral": "Tokenized exposure to Fasanara's Global Fund (same strategy as the Global Diversified Alternative Debt Fund): an asset-backed lending portfolio investing primarily in short-dated trade receivables and digital invoices purchased from SMEs, held via Midas tokenized-certificate rails.",
     "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-fasanara-global",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://midas.app/transparency",
-      "provider": "Midas transparency dashboard and issuer disclosures",
+      "provider": "Midas Attestation Engine: on-chain NAV/proof-of-reserves/price, independently verified via Chainlink, Canary, LlamaRisk and vLayer",
       "attestorTier": "self",
       "cadence": "daily-nav"
     },
@@ -28184,13 +28235,13 @@
       "rwa": false,
       "navToken": true
     },
-    "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
-    "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues, held under Fordefi MPC custody (manager holds the trading key share, Midas holds an admin/policy share). Tokenholders hold a qualified subordinated claim against Midas (no ownership of the underlying assets), secured by a Security Agent lien on the Collateral Account for tokenholders.",
+    "pegMechanism": "NAV-accreting tokenized debt instrument (blockchain-based certificate under German law), not a fixed $1 peg; value tracks the daily NAV of the Hyperithm-managed market-neutral reference portfolio. Primary mint/redeem only via permissioned Midas DepositVault/RedemptionVault for greenlisted users with NAV conversion settled off-chain by the issuer; instant redemptions are facilitated through Midas Staked Liquidity (MSL). No fixed $1 redemption floor.",
     "geckoId": "midas-mhyper",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://midas.app/transparency",
-      "provider": "Midas transparency dashboard and issuer disclosures",
+      "provider": "Midas Attestation Engine: on-chain NAV/proof-of-reserves/price, independently verified via Chainlink, Canary, LlamaRisk and vLayer (launched first on mHYPER)",
       "attestorTier": "self",
       "cadence": "daily-nav"
     },
@@ -28214,8 +28265,8 @@
     ],
     "jurisdiction": {
       "country": "Germany",
-      "regulator": "Liechtenstein FMA",
-      "license": "EEA-restricted tokenized certificate"
+      "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+      "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -28636,7 +28687,7 @@
       },
       {
         "label": "Risks",
-        "url": "https://docs.midas.app/tokens/mmev/risks"
+        "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
       },
       {
         "label": "CoinGecko",
@@ -28776,7 +28827,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
+    "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital; per the issuer whitepaper the MXN reserves are custodied by Delchain and Deltec, financial-services firms regulated by the Securities Commission of the Bahamas, and a historical Armanino LLP reserve attestation engagement was disclosed (2021), but no current live attestation, proof-of-reserves feed, or ongoing third-party accounting cadence is published",
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "moneta-digital",
@@ -28792,6 +28843,14 @@
       {
         "label": "Website",
         "url": "https://monetadigital.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/MMXN_Moneta"
+      },
+      {
+        "label": "Docs",
+        "url": "https://github.com/moneta-digital/mmxn-specs/blob/main/MMXN%20Whitepaper%20-%20English.pdf"
       },
       {
         "label": "Etherscan",
@@ -29259,6 +29318,7 @@
     "collateral": "U.S. dollar deposits held 1:1 in beneficiary accounts at participating FDIC-insured banks for approved CFX customers.",
     "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to settle one-to-one against bank deposits rather than a Treasury reserve portfolio.",
     "mechanismArchetype": "fiat-cash",
+    "cmcSlug": "movemoney-usd",
     "links": [
       {
         "label": "Docs",
@@ -29419,6 +29479,13 @@
     "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
     "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
     "geckoId": "midas-mre7yield",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://midas.app/transparency",
+      "provider": "Midas transparency dashboard and issuer disclosures",
+      "attestorTier": "self",
+      "cadence": "daily-nav"
+    },
     "links": [
       {
         "label": "Website",
@@ -29431,6 +29498,10 @@
       {
         "label": "Docs",
         "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/midas-mre7yield"
       }
     ],
     "jurisdiction": {
@@ -31602,7 +31673,7 @@
           },
           {
             "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
-            "url": "https://nest.credit/blog/how-nest-vaults-work"
+            "url": "https://docs.nest.credit/developers/boring-vaults"
           }
         ],
         "evidence": "Nest vaults run the Nucleus BoringVault stack (BoringVault token + Teller minter + Accountant pricing + Nest-controlled Manager); shares are minted only by the Teller on deposit and the Manager governs strategy, so supply creation is fully permissioned by Nest. Teller/Manager addresses taken from Nest's published contract list; on-chain role/owner not independently read.",
@@ -31651,19 +31722,19 @@
     "reserves": [
       {
         "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-        "pct": 79.5,
+        "pct": 82.2,
         "risk": "very-low",
         "coinId": "jtrsy-anemoy"
       },
       {
         "name": "Superstate USTB Treasury positions",
-        "pct": 20,
+        "pct": 17,
         "risk": "low",
         "coinId": "ustb-superstate"
       },
       {
         "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 0.5,
+        "pct": 0.8,
         "risk": "low"
       }
     ],
@@ -31921,6 +31992,10 @@
         "url": "https://x.com/SynapseProtocol"
       },
       {
+        "label": "Docs",
+        "url": "https://docs.synapseprotocol.com/"
+      },
+      {
         "label": "DefiLlama",
         "url": "https://stablecoins.llama.fi/stablecoin/18"
       },
@@ -32030,7 +32105,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
+    "collateral": "Predominantly WisdomTree Private Credit and Alternative Income Digital Fund tokenised shares (xCRDYX), which hold publicly-traded alternative credit vehicles (BDCs, closed-end credit funds and mortgage REITs) tracking the Gapstow index, plus a small Nest Treasury Vault (nTBILL) position and a stablecoin (pUSD / USDC) liquidity buffer for redemptions",
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-wisdomtree-vault",
@@ -32131,19 +32206,14 @@
     "reserves": [
       {
         "name": "WisdomTree CRDYX / alternative credit vehicles",
-        "pct": 95,
+        "pct": 99,
         "risk": "high"
       },
       {
-        "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
-        "pct": 3,
+        "name": "Stablecoin liquidity buffer (pUSD / USDC) and nTBILL",
+        "pct": 1,
         "risk": "low",
         "coinId": "ntbill-nest"
-      },
-      {
-        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 2,
-        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -32211,10 +32281,6 @@
       {
         "label": "Twitter",
         "url": "https://x.com/NereusFinance"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.nereus.finance/"
       }
     ],
     "mintAuthority": {
@@ -32535,8 +32601,15 @@
       "navToken": false
     },
     "collateral": "USDC deployed into DeFi strategies (Morpho, Curve)",
-    "pegMechanism": "1:1 minting/redemption backed by stablecoins; yield distributed via rebasing",
+    "pegMechanism": "Minted 1:1 against USDC into the OUSD Vault, which deploys backing into Morpho lending and a Curve OUSD/USDC AMO; $1 par is held by 1:1 Vault redemption to USDC (a ~10 minute buffer delay, up to 24 hours when the buffer needs to be refilled) plus instant Curve AMO swap arbitrage. Yield is distributed via daily rebasing.",
     "geckoId": "origin-dollar",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://analytics.originprotocol.com/ousd/collateral/",
+      "provider": "Origin Analytics dashboard",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -32580,7 +32653,7 @@
         "sources": [
           {
             "label": "Origin OUSD AMO docs",
-            "url": "https://docs.originprotocol.com/introduction/core-concepts/amo"
+            "url": "https://docs.originprotocol.com/yield-bearing-tokens/core-concepts/amo"
           },
           {
             "label": "OpenZeppelin Origin Dollar audit",
@@ -32619,14 +32692,14 @@
     "reserves": [
       {
         "name": "USDC (via Morpho/Yearn vault)",
-        "pct": 65,
+        "pct": 90,
         "risk": "medium",
         "coinId": "usdc-circle",
         "depType": "collateral"
       },
       {
-        "name": "USDC (via Curve AMO LP)",
-        "pct": 35,
+        "name": "USDC (via Curve OUSD/USDC AMO LP)",
+        "pct": 10,
         "risk": "medium",
         "coinId": "usdc-circle",
         "depType": "collateral"
@@ -32910,10 +32983,10 @@
     "geckoId": "pathusd",
     "cmcSlug": "pathusd",
     "proofOfReserves": {
-      "type": "independent-audit",
+      "type": "self-reported",
       "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-      "provider": "Bridge / independent third-party audits",
-      "attestorTier": "niche",
+      "provider": "Bridge issuance FAQ (third-party audits and transparency reports promised quarterly, not yet published)",
+      "attestorTier": "self",
       "cadence": "quarterly",
       "attestorJurisdiction": "United States"
     },
@@ -32921,6 +32994,10 @@
       {
         "label": "Website",
         "url": "https://tempo.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/tempo"
       },
       {
         "label": "Docs",
@@ -32933,10 +33010,6 @@
       {
         "label": "Bridge FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
-      },
-      {
-        "label": "Bridge Reserves",
-        "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
       }
     ],
     "jurisdiction": {
@@ -33356,7 +33429,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "Senior secured term notes linked to an APAC diversified finance provider and tokenized through Tradable private-credit issuance rails.",
+    "collateral": "Senior secured term notes (issued by Victory Park Capital Advisors) backed by an APAC diversified finance provider's consumer-financing receivables (line-of-credit and installment/BNPL) and tokenized through Tradable private-credit issuance rails.",
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
     "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "tradable-apac-diversified-finance-provider-sstn",
@@ -34246,6 +34319,7 @@
     "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs. PSM (Peg Stability Module) is the primary peg defense tool: arbitrageurs swap pmUSD → sUSDS at $1 face value when pmUSD trades at a discount on-chain; swaps are one-directional and pause if the sUSDS reserve falls below 20% of PSM assets",
     "mechanismArchetype": "cdp",
     "geckoId": "precious-metals-usd",
+    "cmcSlug": "precious-metals-usd",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por",
@@ -35509,7 +35583,6 @@
     "pegMechanism": "Communal redemption model with 1% fee establishing a price floor; borrow rate is the higher of half the lending rate, half the sfrxUSD rate, or 2%; underlying collateral depends on crvUSD/frxUSD ecosystems which rely on centralized stablecoin peg keepers",
     "mechanismArchetype": "cdp",
     "geckoId": "resupply-usd",
-    "cmcSlug": "resupply-reusd",
     "links": [
       {
         "label": "Website",
@@ -36079,7 +36152,7 @@
     },
     "collateral": "Reservoir protocol balance sheet of stablecoin PSM liquidity, RWA allocations, DeFi lending markets, and governance-approved credit strategies monitored through Reservoir's live reserve endpoint",
     "pegMechanism": "Users can mint and redeem rUSD 1:1 against USDC, USDT, or USD1 through Reservoir's Peg Stability Module, while Credit Enforcer contracts constrain liquidity, solvency, and capital ratios before protocol asset reallocations.",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "reservoir-rusd",
     "proofOfReserves": {
       "type": "real-time",
@@ -36315,43 +36388,53 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "RLUSD lending markets",
-        "pct": 60.3,
+        "name": "RLUSD Euler lending markets",
+        "pct": 37.7,
         "risk": "medium",
         "coinId": "rlusd-ripple",
         "depType": "collateral"
       },
       {
-        "name": "GHO lending and savings markets",
-        "pct": 20.7,
+        "name": "GHO Aave and Fluid lending markets (Plasma)",
+        "pct": 22.8,
         "risk": "medium",
         "coinId": "gho-aave",
         "depType": "collateral"
       },
       {
-        "name": "USDC lending/direct liquidity",
-        "pct": 6.5,
-        "risk": "medium",
-        "coinId": "usdc-circle",
-        "depType": "collateral"
+        "name": "Hastra PRIME RWA credit allocation",
+        "pct": 12.2,
+        "risk": "high"
       },
       {
-        "name": "AUSD lending markets",
-        "pct": 5.9,
+        "name": "Pendle PT USDat tokenized-treasury principal token",
+        "pct": 7.2,
+        "risk": "high"
+      },
+      {
+        "name": "AUSD Morpho lending markets",
+        "pct": 6.5,
         "risk": "medium",
         "coinId": "ausd-agora",
         "depType": "collateral"
       },
       {
-        "name": "USD1 lending markets",
-        "pct": 4.6,
+        "name": "USD1 Morpho lending markets",
+        "pct": 6.3,
         "risk": "medium",
         "coinId": "usd1-world-liberty-financial",
         "depType": "collateral"
       },
       {
-        "name": "PYUSD lending/direct liquidity",
-        "pct": 2,
+        "name": "USDC Morpho lending and direct liquidity",
+        "pct": 5.4,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "collateral"
+      },
+      {
+        "name": "PYUSD Morpho and Kamino lending markets",
+        "pct": 1.9,
         "risk": "medium",
         "coinId": "pyusd-paypal",
         "depType": "collateral"
@@ -38023,13 +38106,13 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Stablecoin deposits routed through Rings/Veda BoringVault infrastructure into curated DeFi strategies; supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
+    "collateral": "Stablecoin deposits routed through Trevee (formerly Rings) / Veda BoringVault infrastructure into curated DeFi lending strategies (e.g. Aave, Morpho); supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
     "pegMechanism": "Users deposit supported stablecoins to mint scUSD and redeem scAssets after a documented cooldown period; yield is primarily activated by staking scUSD into stkscUSD rather than by holding liquid scUSD itself.",
     "geckoId": "rings-scusd",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://docs.rings.money/backing",
-      "provider": "Rings / Veda backing addresses",
+      "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address",
+      "provider": "Trevee / Veda backing addresses",
       "attestorTier": "self",
       "cadence": "ad-hoc"
     },
@@ -41753,6 +41836,7 @@
     "pegReferenceId": "usdai-usd-ai",
     "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
     "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "susdai",
     "proofOfReserves": {
       "type": "real-time",
@@ -41846,6 +41930,7 @@
     "custodyModel": "institutional-unregulated",
     "variantOf": "usdai-usd-ai",
     "variantKind": "strategy-vault",
+    "archetypeOverride": true,
     "reserves": [
       {
         "name": "PYUSD liquid sleeve",
@@ -42070,6 +42155,12 @@
     "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
     "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
     "geckoId": "savings-usdd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://usdd.io/data",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -42078,6 +42169,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/usddio"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.usdd.io"
       }
     ],
     "mintAuthority": {
@@ -43598,10 +43693,19 @@
         "url": "https://x.com/YuzuMoneyX"
       },
       {
+        "label": "Docs",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+      },
+      {
         "label": "Proof of Reserve",
         "url": "https://yuzu.accountable.capital/"
       }
     ],
+    "jurisdiction": {
+      "country": "Georgia",
+      "regulator": "Kutaisi Free Industrial Zone (FEZ)",
+      "license": "Virtual Asset Service Provider (VASP)"
+    },
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -43632,11 +43736,11 @@
         "sources": [
           {
             "label": "Yuzu syzUSD docs",
-            "url": "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/staked-yzusd-syzusd"
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
           },
           {
             "label": "Yuzu yzUSD docs",
-            "url": "https://yuzu-money.gitbook.io/yuzu-money/defi-suite/yuzu-stablecoin-yzusd"
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
           }
         ],
         "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
@@ -46779,11 +46883,11 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
-    "pegMechanism": "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
+    "collateral": "FBTC (tokenized BTC, Cobo-custodied) deposited as overcollateralized CDP; USDT/USDC can be deposited 1:1 (exempt from liquidation); protocol assets held with Cobo, Fireblocks, and Coinbase Prime custody and backed by multi-billion-dollar institutional balance sheets",
+    "pegMechanism": "1:1 USDT convertibility (redemptions require loan repayment or conversion to USDT); overcollateralized against FBTC priced by Redstone oracle; HFT liquidation algorithm sells collateral on centralized exchanges to restore target LTV; cross-chain via LayerZero OFT",
     "mechanismArchetype": "cdp",
     "geckoId": "usda-2",
-    "cmcSlug": "avalon-usda",
+    "cmcSlug": "usda-avalon-labs",
     "links": [
       {
         "label": "Website",
@@ -46926,6 +47030,11 @@
       {
         "chain": "sei",
         "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "decimals": 18
+      },
+      {
+        "chain": "bitlayer",
+        "address": "0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
         "decimals": 18
       }
     ],
@@ -47129,8 +47238,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai.",
-    "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
+    "collateral": "USDai is the non-yielding base token of USD.AI, currently backed 1:1 by PayPal's PYUSD stablecoin held in the USDai contract (live proof-of-reserves shows the entire base reserve is PYUSD on Arbitrum). USDC/USDT serve as retail deposit and secondary-market exit currencies, not the reserve asset. Yield and GPU-collateralized loan exposure accrue to staked sUSDai, not to base USDai.",
+    "pegMechanism": "USDai is minted and redeemed 1:1 against its PYUSD reserve via the contract deposit()/withdraw() functions; direct mint/redeem is KYC-gated to whitelisted institutions, with no withdrawal queue. Retail users deposit USDC/USDT and can exit via supported currencies. Staking into the yield-bearing sUSDai vault is optional.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdai",
     "pythFeedId": "0x2062b35e2893383ffcd1699b01622618fec1d95d1bc6fa81111df38940ee3134",
@@ -47296,7 +47405,7 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "USDC / USDT stablecoin reserves (variable mix)",
+        "name": "PYUSD (PayPal USD) held by USDai contract",
         "pct": 100,
         "risk": "low"
       }
@@ -48628,7 +48737,7 @@
     "pythFeedId": "0x6d20210495d6518787b72e4ad06bc4df21e68d89a802cf6bced2fca6c29652a6",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://usdd.io/",
+      "url": "https://usdd.io/data",
       "attestorTier": "self",
       "cadence": "ad-hoc"
     },
@@ -50264,7 +50373,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; collateral custodied through institutional off-exchange settlement providers",
+    "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; BTC margin reserves custodied off-exchange via Copper (Clearloop) and Ceffu (MirrorX) institutional settlement providers, with monthly custodian attestations of assets, liabilities and reserve coverage",
     "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "hermetica-usdh",
@@ -50328,7 +50437,7 @@
         "sources": [
           {
             "label": "Hermetica mint mechanism",
-            "url": "https://docs.hermetica.fi/usdh/how-it-works/mint-mechanism"
+            "url": "https://docs.hermetica.fi/usdh/how-it-works/mint"
           },
           {
             "label": "Hermetica minting contract (Stacks)",
@@ -51164,6 +51273,7 @@
     "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
     "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
     "geckoId": "usdkg",
+    "cmcSlug": "usdkg",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.usdkg.com/transparency",
@@ -53844,6 +53954,7 @@
     },
     "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
     "pegMechanism": "RUSD is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "ring-usd",
     "protocolSlug": "ring-protocol",
     "links": [
@@ -55765,9 +55876,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
+    "collateral": "Adapter-held positions: Curve USDU/USDC LP tokens, Morpho USDU Core vault shares (curated lending), and TermMax USDU vault shares (fixed-term lending) as on-chain backing",
     "pegMechanism": "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
-    "cmcSlug": "usdu",
     "links": [
       {
         "label": "Website",
@@ -58087,7 +58197,7 @@
     "geckoId": "us-sonic-dollar",
     "proofOfReserves": {
       "type": "real-time",
-      "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
+      "url": "https://facts.frax.finance/frxusd/balance-sheet",
       "provider": "Frax Finance",
       "attestorTier": "niche",
       "cadence": "real-time"
@@ -58724,7 +58834,6 @@
     "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
     "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
     "mechanismArchetype": "cdp",
-    "geckoId": "dforce-usd",
     "cmcSlug": "token-force-usd",
     "protocolSlug": "dforce-lending",
     "links": [
@@ -58833,6 +58942,11 @@
       {
         "chain": "kava",
         "address": "0xdb0e1e86b01c4ad25241b1843e407efc4d615248",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x853ea32391aaa14c112c645fd20ba389ab25c5e0",
         "decimals": 18
       }
     ],
@@ -59215,6 +59329,7 @@
     "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
     "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
     "mechanismArchetype": "synthetic-delta-neutral",
+    "geckoId": "unity-2",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://accountable.xsy.fi/",
@@ -59229,11 +59344,11 @@
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/xsy_fi"
+        "url": "https://x.com/YieldPointCap"
       },
       {
         "label": "Docs",
-        "url": "https://xsy-1.gitbook.io/xsy-main"
+        "url": "https://docs.yieldpoint.io/"
       }
     ],
     "mintAuthority": {
@@ -59293,6 +59408,11 @@
         "chain": "avalanche",
         "address": "0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": "possible",
@@ -59313,7 +59433,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "established-alt-l1",
-    "deploymentModel": "single-chain",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "reserves": [
@@ -59389,8 +59509,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "BSC stablecoin and crypto collateral managed by the UUSD protocol",
-    "pegMechanism": "Protocol-issued dollar token using managed collateral and liquidity incentives to hold the USD peg",
+    "collateral": "Undisclosed; Anything Labs markets UUSD as reserve-backed but publishes no collateral composition, reserve assets, or attestation in the whitepaper, site, or repo",
+    "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",
     "mechanismArchetype": "cdp",
     "geckoId": "unity-usd",
     "protocolSlug": "uusd",
@@ -60064,11 +60184,11 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://vcred.xyz/"
+        "url": "https://vcred.trade/"
       },
       {
         "label": "Twitter",
-        "url": "https://x.com/vCred_xyz"
+        "url": "https://x.com/cred_v"
       }
     ],
     "mintAuthority": {
@@ -60592,7 +60712,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Vietnam"
+      "country": "Singapore"
     },
     "mintAuthority": {
       "mintPath": "issuer-direct-mint",
@@ -60635,6 +60755,11 @@
       }
     },
     "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
+        "decimals": 0
+      },
       {
         "chain": "polygon",
         "address": "0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
@@ -60913,7 +61038,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Overcollateralized IOTA and stIOTA positions backing VUSD debt inside the Virtue Money protocol",
+    "collateral": "Overcollateralized IOTA, stIOTA, and IBTC (bridged BTC) positions backing VUSD debt inside the Virtue Money protocol",
     "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
     "mechanismArchetype": "cdp",
     "geckoId": "virtue-usd",
@@ -60996,7 +61121,7 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "IOTA and stIOTA collateral",
+        "name": "IOTA, stIOTA, and IBTC collateral",
         "pct": 100,
         "risk": "high"
       }
@@ -61573,7 +61698,7 @@
     "geckoId": "colombian-peso",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
       "provider": "Local public accountants",
       "attestorTier": "niche",
       "cadence": "ad-hoc",
@@ -61851,8 +61976,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "100% USDT-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
-    "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDT and supports on-chain redemption back to USDT with a documented redemption fee.",
+    "collateral": "100% USDC-backed omni-chain stablecoin per current PicWe documentation (Phase 1: minted 1:1 against USDC, with the official contracts page naming per-chain USDC as the reserve/redemption asset); future RWA/yield collateral (tokenized treasuries, real estate, commodities) is described as Phase 2 roadmap rather than current backing",
+    "pegMechanism": "Per current PicWe docs, WEUSD is minted 1:1 against USDC and redeemed to USDC anytime via PicWe's on-chain mint/redeem contract; the protocol holds USDC reserves against circulating WEUSD.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "weusd",
     "links": [
@@ -61970,10 +62095,10 @@
     "governanceQuality": "multisig",
     "reserves": [
       {
-        "name": "USDT reserves",
+        "name": "USDC reserves",
         "pct": 100,
         "risk": "low",
-        "coinId": "usdt-tether",
+        "coinId": "usdc-circle",
         "depType": "collateral"
       }
     ],
@@ -62347,17 +62472,18 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
-    "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+    "collateral": "Mexican-peso fiat cash deposited in a Mexican bank account, backing Ripio wMXN one-to-one against the Mexican peso per Ripio's quarterly wFIAT token certifications",
+    "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN only against segregated Mexican-peso reserves and burns supply as needed, holding 1 WMXN = 1 MXN through on/off-ramp convertibility on Ripio and other VASP platforms plus DEX arbitrage; holders have no contractual on-chain redemption right",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "mexican-peso",
     "proofOfReserves": {
-      "type": "independent-audit",
+      "type": "self-reported",
       "url": "https://www.ripio.com/pt/criptos/stablecoins-locales",
       "provider": "Local public accountants",
       "attestorTier": "niche",
-      "cadence": "ad-hoc",
-      "attestorJurisdiction": "Mexico"
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Argentina",
+      "attestorLicense": "Professional Council of Economic Sciences of the Autonomous City of Buenos Aires"
     },
     "links": [
       {
@@ -62499,7 +62625,7 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Mexican-peso cash and local-currency liquid instruments",
+        "name": "Mexican-peso fiat deposits in a Mexican bank account",
         "pct": 100,
         "risk": "high"
       }
@@ -62951,7 +63077,7 @@
       "rwa": true,
       "navToken": false
     },
-    "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
+    "collateral": "Short-term U.S. Treasury bills, Treasury floating-rate notes, and tri-party repurchase agreements held by the WisdomTree Treasury Money Market Digital Fund (renamed from WisdomTree Government Money Market Digital Fund on 2025-11-01); a Rule 2a-7 '40 Act-registered money market fund managed by WisdomTree Digital Management with Voya Investment Management as sub-adviser, recorded natively on-chain via the WisdomTree Connect platform",
     "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
     "mechanismArchetype": "tbill",
     "geckoId": "wisdomtree-treasury-money-market-digital-fund",
@@ -63139,18 +63265,13 @@
     "governanceQuality": "regulated-entity",
     "reserves": [
       {
-        "name": "U.S. Government Securities",
-        "pct": 65,
+        "name": "U.S. Treasury Securities",
+        "pct": 80,
         "risk": "very-low"
       },
       {
         "name": "Repurchase Agreements",
-        "pct": 30,
-        "risk": "very-low"
-      },
-      {
-        "name": "Cash",
-        "pct": 5,
+        "pct": 20,
         "risk": "very-low"
       }
     ],
@@ -63618,8 +63739,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
-    "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
+    "collateral": "Overcollateralized Silo credit-line collateral. XAI launched backed by ETH and USDC silos and SiloDAO progressively approved further credit lines (stETH/wstETH, cbETH, wBTC, USDT, LUSD, FXS, BAL, LQTY, gOHM); SiloDAO governs which collaterals and credit-line parameters apply",
+    "pegMechanism": "XAI is borrowed into existence against approved Silo collateral and burned on repayment. It has no dedicated stability module: the soft USD peg relies on arbitrage (borrow/repay always settle at $1, so a sub-$1 market price is repaid at a discount and an above-$1 price is sold) backed by DEX liquidity, while SiloDAO controls minting capacity and the XAI borrow interest rate across silos to manage circulating supply",
     "mechanismArchetype": "cdp",
     "cmcSlug": "xai-silo-finance",
     "links": [
@@ -65038,11 +65159,11 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.straitsx.com/xsgd",
-      "provider": "Independent public accountants (ISCA standards)",
+      "provider": "KK Yap & Associates",
       "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "Singapore",
-      "attestorLicense": "ISCA-registered public accountants"
+      "attestorLicense": "ACRA-registered public accountants"
     },
     "links": [
       {
@@ -66077,7 +66198,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodian UMB Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
+    "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodians UMB Bank NA and Flagstar Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
     "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 50bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
     "mechanismArchetype": "tbill",
     "geckoId": "ylds",
@@ -66355,7 +66476,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "single-chain",
+    "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
@@ -66667,9 +66788,9 @@
       "navToken": true
     },
     "pegReferenceId": "usdc-circle",
-    "collateral": "USDC deposited into YieldFi yUSD and actively allocated across Pendle principal tokens, Morpho and Silo vaults, and private-credit vaults",
-    "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
-    "mechanismArchetype": "fiat-cash",
+    "collateral": "USDC deposited into the yUSD ERC-4626 vault and allocated by YieldFi's manager across Pendle principal tokens, Morpho and Silo lending vaults, private-credit positions, and market-neutral/delta-neutral strategies (private LP deals, hedged carry, basis, and funding-rate spreads across whitelisted protocols)",
+    "pegMechanism": "ERC-4626 share over USDC priced at NAV ((Series Assets - Series Liabilities) / tokens outstanding), valued at least twice weekly using Chainlink oracles; value tracks the dollar through delta-neutral strategy returns rather than direct redemption against fiat reserves",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "yieldfi-ytoken",
     "links": [
       {
@@ -66685,6 +66806,9 @@
         "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
       }
     ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
     "mintAuthority": {
       "mintPath": "wrapped-or-variant-inherited",
       "authorityPosture": "concentrated-admin",
@@ -66809,6 +66933,7 @@
     "governanceQuality": "multisig",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
+    "archetypeOverride": true,
     "reserves": [
       {
         "name": "USDC active strategy vaults and private-credit positions",
@@ -67532,6 +67657,11 @@
         "chain": "solana",
         "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "8v8aBHR7EXFZDwaqaRjAStEcmCj6VZi5iGq1YDtyTok6",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -67824,7 +67954,8 @@
       }
     ],
     "jurisdiction": {
-      "country": "Cayman Islands"
+      "country": "Cayman Islands",
+      "regulator": "CIMA"
     },
     "mintAuthority": {
       "mintPath": "permissioned-minter",

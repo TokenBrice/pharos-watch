@@ -15,6 +15,7 @@
   "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
   "detailProvider": "coingecko",
   "geckoId": "usdkg",
+  "cmcSlug": "usdkg",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.usdkg.com/transparency",

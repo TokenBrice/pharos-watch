@@ -11,12 +11,19 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Nigerian naira reserves held 1:1 in designated commercial bank accounts by the cNGN issuer consortium",
+  "collateral": "Naira reserves held 1:1 against outstanding cNGN, comprising deposits at licensed Nigerian commercial banks plus naira money-market funds and short-term FGN treasury bills, verified by monthly independent attestations",
   "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "compliant-naira",
   "cmcSlug": "consortium-naira",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://cngn.co/transparency",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Nigeria"
+  },
   "links": [
     {
       "label": "Website",
@@ -59,11 +66,6 @@
     {
       "chain": "polygon",
       "address": "0x52828daa48c1a9a06f37500882b42daf0be04c3b",
-      "decimals": 6
-    },
-    {
-      "chain": "monad",
-      "address": "0x4f90098ba5b08abaf039b95a851f8e764eb84b49",
       "decimals": 6
     },
     {
@@ -121,8 +123,13 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Nigerian naira deposits at designated commercial banks",
-      "pct": 100,
+      "name": "Naira deposits at licensed Nigerian commercial banks",
+      "pct": 54,
+      "risk": "medium"
+    },
+    {
+      "name": "Naira money-market funds and short-term FGN treasury bills",
+      "pct": 46,
       "risk": "medium"
     }
   ],

@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
+  "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital; per the issuer whitepaper the MXN reserves are custodied by Delchain and Deltec, financial-services firms regulated by the Securities Commission of the Bahamas, and a historical Armanino LLP reserve attestation engagement was disclosed (2021), but no current live attestation, proof-of-reserves feed, or ongoing third-party accounting cadence is published",
   "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
@@ -28,6 +28,14 @@
     {
       "label": "Website",
       "url": "https://monetadigital.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/MMXN_Moneta"
+    },
+    {
+      "label": "Docs",
+      "url": "https://github.com/moneta-digital/mmxn-specs/blob/main/MMXN%20Whitepaper%20-%20English.pdf"
     },
     {
       "label": "Etherscan",

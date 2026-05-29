@@ -25,6 +25,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/ebisu_finance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://ebisu.gitbook.io/ebisu-money"
     }
   ],
   "contracts": [

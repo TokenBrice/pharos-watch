@@ -11,14 +11,14 @@
     "rwa": false,
     "navToken": true
   },
-  "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
-  "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues, held under Fordefi MPC custody (manager holds the trading key share, Midas holds an admin/policy share). Tokenholders hold a qualified subordinated claim against Midas (no ownership of the underlying assets), secured by a Security Agent lien on the Collateral Account for tokenholders.",
+  "pegMechanism": "NAV-accreting tokenized debt instrument (blockchain-based certificate under German law), not a fixed $1 peg; value tracks the daily NAV of the Hyperithm-managed market-neutral reference portfolio. Primary mint/redeem only via permissioned Midas DepositVault/RedemptionVault for greenlisted users with NAV conversion settled off-chain by the issuer; instant redemptions are facilitated through Midas Staked Liquidity (MSL). No fixed $1 redemption floor.",
   "detailProvider": "coingecko",
   "geckoId": "midas-mhyper",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
-    "provider": "Midas transparency dashboard and issuer disclosures",
+    "provider": "Midas Attestation Engine: on-chain NAV/proof-of-reserves/price, independently verified via Chainlink, Canary, LlamaRisk and vLayer (launched first on mHYPER)",
     "attestorTier": "self",
     "cadence": "daily-nav"
   },
@@ -42,8 +42,8 @@
   ],
   "jurisdiction": {
     "country": "Germany",
-    "regulator": "Liechtenstein FMA",
-    "license": "EEA-restricted tokenized certificate"
+    "regulator": "Liechtenstein FMA (prospectus-approving authority only; issuer not FMA-licensed)",
+    "license": "EU-Prospectus-Regulation-approved tokenized debt instrument (blockchain-based certificate under German law); EEA-restricted, not available to U.S. retail persons"
   },
   "contracts": [
     {

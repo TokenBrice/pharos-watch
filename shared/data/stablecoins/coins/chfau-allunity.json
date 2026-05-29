@@ -102,7 +102,7 @@
     "type": "self-reported",
     "url": "https://allunity.com/trust-center/",
     "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "cadence": "none"
   },
   "links": [
     {

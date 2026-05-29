@@ -72,19 +72,19 @@
   "reserves": [
     {
       "name": "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-      "pct": 79.5,
+      "pct": 82.2,
       "risk": "very-low",
       "coinId": "jtrsy-anemoy"
     },
     {
       "name": "Superstate USTB Treasury positions",
-      "pct": 20,
+      "pct": 17,
       "risk": "low",
       "coinId": "ustb-superstate"
     },
     {
       "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-      "pct": 0.5,
+      "pct": 0.8,
       "risk": "low"
     }
   ],
@@ -152,7 +152,7 @@
       "reviewedAt": "2026-05-25",
       "sources": [
         { "label": "Nest smart contracts (Teller/Manager addresses)", "url": "https://docs.nest.credit/developers/smart-contracts" },
-        { "label": "How Nest vaults work (BoringVault/Teller/Manager roles)", "url": "https://nest.credit/blog/how-nest-vaults-work" }
+        { "label": "How Nest vaults work (BoringVault/Teller/Manager roles)", "url": "https://docs.nest.credit/developers/boring-vaults" }
       ],
       "unresolvedQuestions": ["Resolve the on-chain owner/authority of the Teller and Manager (Safe vs EOA) before raising confidence."]
     }

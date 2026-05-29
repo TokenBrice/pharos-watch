@@ -45,9 +45,12 @@
     },
     {
       "label": "Docs",
-      "url": "https://wiki.defillama.com/wiki/HomeCoin"
+      "url": "https://github.com/homecoin-finance/gitbook"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "ethereum",

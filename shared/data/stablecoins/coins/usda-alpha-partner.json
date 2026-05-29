@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Alpha Partners protocol collateral and managed liquidity reserves on BSC",
-  "pegMechanism": "Protocol-managed dollar token using collateral reserves and incentive mechanisms to support the peg",
+  "collateral": "Undisclosed and unverified. AP Web3 / Alpha Partners markets USDA as 1:1 USD-backed by reserves with 'FDIC protection', but publishes no reserve composition, proof of reserves, or attestation; the FDIC claim is unsubstantiated (FDIC does not insure stablecoins). Backing is opaque.",
+  "pegMechanism": "Undocumented. The issuer publishes no mint/redeem or peg-maintenance mechanism. On-chain USDA is a BSC ERC-20 with a role-gated mint, an address blacklist, and modifiable transfer tax/fees; no peg-stabilization process is described.",
   "detailProvider": "coingecko",
   "geckoId": "usda-3",
   "protocolSlug": "alpha-partners",

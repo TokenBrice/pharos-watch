@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "100% USDT-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
-  "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDT and supports on-chain redemption back to USDT with a documented redemption fee.",
+  "collateral": "100% USDC-backed omni-chain stablecoin per current PicWe documentation (Phase 1: minted 1:1 against USDC, with the official contracts page naming per-chain USDC as the reserve/redemption asset); future RWA/yield collateral (tokenized treasuries, real estate, commodities) is described as Phase 2 roadmap rather than current backing",
+  "pegMechanism": "Per current PicWe docs, WEUSD is minted 1:1 against USDC and redeemed to USDC anytime via PicWe's on-chain mint/redeem contract; the protocol holds USDC reserves against circulating WEUSD.",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "278",
   "detailProvider": "defillama",
@@ -72,10 +72,10 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "USDT reserves",
+      "name": "USDC reserves",
       "pct": 100,
       "risk": "low",
-      "coinId": "usdt-tether",
+      "coinId": "usdc-circle",
       "depType": "collateral"
     }
   ],

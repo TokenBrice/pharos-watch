@@ -21,7 +21,7 @@
   "variantOf": "usdo-openeden",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "usdo-openeden",
-  "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
+  "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper holds USDO, which is backed by tokenized U.S. Treasury Bills (primarily OpenEden TBILL and BlackRock BUIDL tokens) held by OpenEden Digital (OED) at 100% collateralization; cUSDO yield accrues through price appreciation rather than rebasing",
   "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",

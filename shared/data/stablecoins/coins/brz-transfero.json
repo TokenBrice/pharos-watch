@@ -71,6 +71,11 @@
       "decimals": 18
     },
     {
+      "chain": "optimism",
+      "address": "0xe9185ee218cae427af7b9764a011bb89fea761b4",
+      "decimals": 18
+    },
+    {
       "chain": "arbitrum",
       "address": "0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
       "decimals": 18

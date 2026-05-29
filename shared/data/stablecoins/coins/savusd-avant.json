@@ -21,8 +21,8 @@
   "variantOf": "avusd-avant",
   "variantKind": "strategy-vault",
   "pegReferenceId": "avusd-avant",
-  "collateral": "avUSD staked into Avant's savings vault, with yield sourced from Avant's actively managed market-neutral and DeFi strategy framework",
-  "pegMechanism": "Stake avUSD to receive savUSD; savUSD appreciates against avUSD as strategy yield accrues, while final USDC exit inherits Avant's 1:1 avUSD redemption process and settlement window",
+  "collateral": "avUSD staked into Avant's savings vault as the yield-bearing Senior Tranche; yield is sourced from Avant's actively managed delta-neutral / market-neutral strategies (basis trades, lending-rate arbitrage, yield trading), with portfolio NAV calculated weekly by independent valuation provider Pennyworks. Losses are absorbed first by the avUSD Reserve Fund and then by the avUSDx Junior Tranche before reaching savUSD",
+  "pegMechanism": "Stake avUSD to receive savUSD; the savUSD/avUSD exchange rate compounds as strategy yield accrues. Unstaking savUSD to avUSD has a 1-day cooldown during which no yield is earned; the final USDC exit inherits Avant's 1:1 avUSD redemption process",
   "mechanismArchetype": "synthetic-delta-neutral",
   "archetypeOverride": true,
   "detailProvider": "coingecko",
@@ -47,6 +47,13 @@
   ],
   "jurisdiction": {
     "country": "British Virgin Islands"
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.avantprotocol.com/transparency",
+    "provider": "Pennyworks (weekly NAV) + published on-chain Reserve Fund / strategy wallets",
+    "attestorTier": "niche",
+    "cadence": "weekly"
   },
   "contracts": [
     {

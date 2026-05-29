@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Cash, short-term U.S. Treasuries, repo agreements, treasury-focused funds (e.g., BlackRock TTTXX), and tokenized treasury products (e.g., BlackRock BUIDL, Superstate USTB); cash custodied at US-regulated banks, TradFi assets custodied at JP Morgan Chase; on-chain reserves managed by Superstate and custodied in Bridge's MPC infrastructure via Fireblocks; designed by Native Markets, issued by Bridge Building Inc (a Stripe company)",
-  "pegMechanism": "Direct 1:1 redemption through Bridge (a Stripe company); high-quality liquid reserves (cash, U.S. Treasuries) maintain the peg; monthly third-party reserve attestations beginning November 2025",
+  "collateral": "Held reserves per the March 2026 attestation: tokenized asset-backed tokens (Superstate USTB ~65%, USDC ~13%), US government money market funds (~22%), and cash and cash equivalents at US-regulated banks (~1%). Eligible reserves per the stablecoin terms also include short-term US Treasury bills (<=3 months), overnight reverse repurchase agreements collateralized by US Treasuries, deposit accounts, and tokenized versions of these assets. Offchain reserves managed by BlackRock and custodied with JPMorgan Chase; onchain reserves managed by Superstate and custodied via Fireblocks MPC infrastructure. Designed by Native Markets, issued by Bridge Building Inc. (a subsidiary of Stripe, Inc., incorporated in Delaware).",
+  "pegMechanism": "Direct 1:1 mint/redemption through Bridge Building Inc. (a Stripe subsidiary, FinCEN MSB); fully reserved by cash and cash equivalents, US government money market funds, and asset-backed tokens (Superstate USTB, USDC); monthly independent-accountant (BPM LLP) attestations under the AICPA 2025 Criteria for Stablecoin Reporting (Asset-Backed Fiat Pegged Tokens)",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "321",
   "detailProvider": "defillama",
@@ -161,36 +161,26 @@
   },
   "reserves": [
     {
-      "name": "Short-term U.S. Treasuries (BlackRock-managed, JP Morgan custody)",
-      "pct": 40,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash deposits (JP Morgan, Lead Bank)",
-      "pct": 20,
-      "risk": "very-low"
-    },
-    {
-      "name": "Repo agreements (UST-collateralized)",
-      "pct": 10,
-      "risk": "very-low"
-    },
-    {
-      "name": "Treasury-focused funds (BlackRock TTTXX)",
-      "pct": 10,
-      "risk": "very-low"
-    },
-    {
-      "name": "Tokenized treasuries (BUIDL)",
-      "pct": 10,
-      "risk": "low",
-      "coinId": "buidl-blackrock"
-    },
-    {
-      "name": "Tokenized treasuries (USTB)",
-      "pct": 10,
+      "name": "Tokenized treasuries (Superstate USTB)",
+      "pct": 64.68,
       "risk": "low",
       "coinId": "ustb-superstate"
+    },
+    {
+      "name": "Government money market funds (CUSIP 09248U551)",
+      "pct": 21.7,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDC (asset-backed token)",
+      "pct": 12.56,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Cash and cash equivalents (US regulated banks)",
+      "pct": 1.06,
+      "risk": "very-low"
     }
   ],
   "liveReservesConfig": {

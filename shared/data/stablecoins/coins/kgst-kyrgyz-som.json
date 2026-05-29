@@ -23,7 +23,8 @@
     }
   ],
   "jurisdiction": {
-    "country": "Kyrgyzstan"
+    "country": "Kyrgyzstan",
+    "regulator": "State Service for Regulation and Supervision of the Financial Market"
   },
   "contracts": [
     {

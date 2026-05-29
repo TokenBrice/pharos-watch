@@ -12,10 +12,17 @@
     "navToken": false
   },
   "collateral": "USDC deployed into DeFi strategies (Morpho, Curve)",
-  "pegMechanism": "1:1 minting/redemption backed by stablecoins; yield distributed via rebasing",
+  "pegMechanism": "Minted 1:1 against USDC into the OUSD Vault, which deploys backing into Morpho lending and a Curve OUSD/USDC AMO; $1 par is held by 1:1 Vault redemption to USDC (a ~10 minute buffer delay, up to 24 hours when the buffer needs to be refilled) plus instant Curve AMO swap arbitrage. Yield is distributed via daily rebasing.",
   "llamaId": "23",
   "detailProvider": "defillama",
   "geckoId": "origin-dollar",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://analytics.originprotocol.com/ousd/collateral/",
+    "provider": "Origin Analytics dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
   "links": [
     {
       "label": "Website",
@@ -54,14 +61,14 @@
   "reserves": [
     {
       "name": "USDC (via Morpho/Yearn vault)",
-      "pct": 65,
+      "pct": 90,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral"
     },
     {
-      "name": "USDC (via Curve AMO LP)",
-      "pct": 35,
+      "name": "USDC (via Curve OUSD/USDC AMO LP)",
+      "pct": 10,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral"
@@ -135,7 +142,7 @@
       "sources": [
         {
           "label": "Origin OUSD AMO docs",
-          "url": "https://docs.originprotocol.com/introduction/core-concepts/amo"
+          "url": "https://docs.originprotocol.com/yield-bearing-tokens/core-concepts/amo"
         },
         {
           "label": "OpenZeppelin Origin Dollar audit",

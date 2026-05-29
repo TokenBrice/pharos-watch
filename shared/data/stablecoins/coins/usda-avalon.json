@@ -11,13 +11,13 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
-  "pegMechanism": "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
+  "collateral": "FBTC (tokenized BTC, Cobo-custodied) deposited as overcollateralized CDP; USDT/USDC can be deposited 1:1 (exempt from liquidation); protocol assets held with Cobo, Fireblocks, and Coinbase Prime custody and backed by multi-billion-dollar institutional balance sheets",
+  "pegMechanism": "1:1 USDT convertibility (redemptions require loan repayment or conversion to USDT); overcollateralized against FBTC priced by Redstone oracle; HFT liquidation algorithm sells collateral on centralized exchanges to restore target LTV; cross-chain via LayerZero OFT",
   "mechanismArchetype": "cdp",
   "llamaId": "220",
   "detailProvider": "defillama",
   "geckoId": "usda-2",
-  "cmcSlug": "avalon-usda",
+  "cmcSlug": "usda-avalon-labs",
   "links": [
     {
       "label": "Website",
@@ -81,6 +81,11 @@
     {
       "chain": "sei",
       "address": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+      "decimals": 18
+    },
+    {
+      "chain": "bitlayer",
+      "address": "0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
       "decimals": 18
     }
   ],

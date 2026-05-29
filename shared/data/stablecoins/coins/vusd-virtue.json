@@ -12,7 +12,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized IOTA and stIOTA positions backing VUSD debt inside the Virtue Money protocol",
+  "collateral": "Overcollateralized IOTA, stIOTA, and IBTC (bridged BTC) positions backing VUSD debt inside the Virtue Money protocol",
   "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
   "mechanismArchetype": "cdp",
   "geckoId": "virtue-usd",
@@ -50,7 +50,7 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "IOTA and stIOTA collateral",
+      "name": "IOTA, stIOTA, and IBTC collateral",
       "pct": 100,
       "risk": "high"
     }

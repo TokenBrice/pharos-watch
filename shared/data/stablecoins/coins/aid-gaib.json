@@ -17,6 +17,14 @@
   "llamaId": "353",
   "detailProvider": "defillama",
   "geckoId": "gaib-aid",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://aid.gaib.ai/transparency",
+    "provider": "McMillan Woods (Hong Kong) CPA Limited",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Hong Kong"
+  },
   "links": [
     {
       "label": "Website",
@@ -195,7 +203,7 @@
       "sources": [
         {
           "label": "GAIB AID docs",
-          "url": "https://docs.gaib.ai/how-aid-works"
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
         },
         {
           "label": "AID Ethereum token",

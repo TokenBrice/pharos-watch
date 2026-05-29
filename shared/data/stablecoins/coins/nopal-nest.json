@@ -44,6 +44,11 @@
       "chain": "plume",
       "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
       "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,

@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
+  "collateral": "Short-term U.S. Treasury bills, Treasury floating-rate notes, and tri-party repurchase agreements held by the WisdomTree Treasury Money Market Digital Fund (renamed from WisdomTree Government Money Market Digital Fund on 2025-11-01); a Rule 2a-7 '40 Act-registered money market fund managed by WisdomTree Digital Management with Voya Investment Management as sub-adviser, recorded natively on-chain via the WisdomTree Connect platform",
   "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
@@ -200,18 +200,13 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "U.S. Government Securities",
-      "pct": 65,
+      "name": "U.S. Treasury Securities",
+      "pct": 80,
       "risk": "very-low"
     },
     {
       "name": "Repurchase Agreements",
-      "pct": 30,
-      "risk": "very-low"
-    },
-    {
-      "name": "Cash",
-      "pct": 5,
+      "pct": 20,
       "risk": "very-low"
     }
   ],
