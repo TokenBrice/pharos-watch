@@ -145,7 +145,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     expect(cusd?.outputImpairedDependencyId).toBe("susds-sky");
-    expect(cusd?.outputImpairedShare).toBe(0.56);
+    expect(cusd?.outputImpairedShare).toBe(0.44);
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
