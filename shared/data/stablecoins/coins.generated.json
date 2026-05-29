@@ -21851,7 +21851,7 @@
       {
         "name": "USDC reserves",
         "pct": 100,
-        "risk": "medium"
+        "risk": "low"
       }
     ],
     "notices": [

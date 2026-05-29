@@ -9695,7 +9695,7 @@
       {
         "name": "USDC reserves",
         "pct": 100,
-        "risk": "medium"
+        "risk": "low"
       }
     ],
     "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
