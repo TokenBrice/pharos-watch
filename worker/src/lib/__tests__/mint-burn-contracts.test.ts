@@ -311,7 +311,7 @@ describe("mint-burn-contracts top-150 Ethereum additions", () => {
     { stablecoinId: "mtbill-midas", symbol: "mTBILL", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "wsrusd-reservoir", symbol: "wsrUSD", address: "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "audd-novatti", symbol: "AUDD", address: "0x4cce605ed955295432958d8951d0b176c10720d5", decimals: 6, dustThreshold: 10_000 },
-    { stablecoinId: "jpyc-jpyc", symbol: "JPYC", address: "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "jpyc-jpyc", symbol: "JPYC", address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "xaum-matrixdock", symbol: "XAUm", address: "0x2103e845c5e135493bb6c2a4f0b8651956ea8682", decimals: 18, dustThreshold: 10 },
     { stablecoinId: "eurr-stablr", symbol: "EURR", address: "0x50753cfaf86c094925bf976f218d043f8791e408", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "europ-schuman", symbol: "EUROP", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6, dustThreshold: 10_000 },

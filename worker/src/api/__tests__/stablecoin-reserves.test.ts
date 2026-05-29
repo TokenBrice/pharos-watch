@@ -18,7 +18,8 @@ describe("handleStablecoinReserves", () => {
       displayUrl: "https://usd.ai/usdai",
       reserves: [
         {
-          name: "USDC / USDT stablecoin reserves (variable mix)",
+          name: "PYUSD (PayPal USD) held by USDai contract",
+          coinId: "pyusd-paypal",
           pct: 100,
           risk: "low",
         },

@@ -10803,11 +10803,15 @@
           "directMintAbility": "direct"
         },
         {
-          "authorityType": "unknown",
+          "authorityType": "contract",
           "directMintAbility": "can-authorize"
         },
         {
-          "authorityType": "eoa",
+          "authorityType": "safe",
+          "directMintAbility": "can-authorize"
+        },
+        {
+          "authorityType": "safe",
           "directMintAbility": "can-authorize"
         }
       ]
