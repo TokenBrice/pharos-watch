@@ -175,7 +175,8 @@
     {
       "name": "PYUSD (PayPal USD) held by USDai contract",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "pyusd-paypal"
     }
   ],
   "liveReservesConfig": {

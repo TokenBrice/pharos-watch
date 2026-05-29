@@ -92,7 +92,8 @@
     {
       "name": "USDC reserves",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "usdc-circle"
     }
   ],
   "notices": [

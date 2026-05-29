@@ -77,14 +77,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "FRAX's intra-protocol slice mixes frxUSD and related Frax-owned wrappers, so no single tracked coinId is representative.",
   ],
   [
-    "usdai-usd-ai::USDC / USDT stablecoin reserves (variable mix)::USDC",
-    "USDai's base-token reserve slice intentionally aggregates variable USDC and USDT collateral, so no single fixed coinId is representative.",
-  ],
-  [
-    "usdai-usd-ai::USDC / USDT stablecoin reserves (variable mix)::USDT",
-    "USDai's base-token reserve slice intentionally aggregates variable USDC and USDT collateral, so no single fixed coinId is representative.",
-  ],
-  [
     "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDC",
     "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
   ],
@@ -146,10 +138,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   ],
   [
     "ntbill-nest::Stablecoin liquidity buffer (USDC / pUSD)::USDC",
-    "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
-  ],
-  [
-    "nwisdom-nest::Stablecoin liquidity buffer (USDC / pUSD)::USDC",
     "Nest's static fallback bucket mixes USDC with untracked pUSD; the live positions adapter emits USDC coinId when it sees exact liquid USDC balances.",
   ],
 ]);

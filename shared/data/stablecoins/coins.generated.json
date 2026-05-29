@@ -9868,7 +9868,8 @@
       {
         "name": "axlUSDC (Axelar-bridged USDC)",
         "pct": 1,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usdc-circle"
       },
       {
         "name": "AUSD (Agora dollar)",
@@ -21851,7 +21852,8 @@
       {
         "name": "USDC reserves",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     ],
     "notices": [
@@ -47485,7 +47487,8 @@
       {
         "name": "PYUSD (PayPal USD) held by USDai contract",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "pyusd-paypal"
       }
     ],
     "liveReservesConfig": {

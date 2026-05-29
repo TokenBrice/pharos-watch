@@ -167,7 +167,8 @@
     {
       "name": "axlUSDC (Axelar-bridged USDC)",
       "pct": 1,
-      "risk": "medium"
+      "risk": "medium",
+      "coinId": "usdc-circle"
     },
     {
       "name": "AUSD (Agora dollar)",

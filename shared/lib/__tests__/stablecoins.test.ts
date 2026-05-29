@@ -335,9 +335,10 @@ describe("tracked stablecoin metadata", () => {
 
     expect(usdai?.reserves).toEqual([
       {
-        name: "USDC / USDT stablecoin reserves (variable mix)",
+        name: "PYUSD (PayPal USD) held by USDai contract",
         pct: 100,
         risk: "low",
+        coinId: "pyusd-paypal",
       },
     ]);
     expect(usdai?.liveReservesConfig).toMatchObject({

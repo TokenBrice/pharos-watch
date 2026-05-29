@@ -4358,7 +4358,8 @@
       {
         "name": "axlUSDC (Axelar-bridged USDC)",
         "pct": 1,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usdc-circle"
       },
       {
         "name": "AUSD (Agora dollar)",
@@ -9695,7 +9696,8 @@
       {
         "name": "USDC reserves",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     ],
     "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
@@ -21199,7 +21201,8 @@
       {
         "name": "PYUSD (PayPal USD) held by USDai contract",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "pyusd-paypal"
       }
     ],
     "collateral": "USDai is the non-yielding base token of USD.AI, currently backed 1:1 by PayPal's PYUSD stablecoin held in the USDai contract (live proof-of-reserves shows the entire base reserve is PYUSD on Arbitrum). USDC/USDT serve as retail deposit and secondary-market exit currencies, not the reserve asset. Yield and GPU-collateralized loan exposure accrue to staked sUSDai, not to base USDai.",
