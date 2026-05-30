@@ -88,7 +88,7 @@ export default createClientFeaturePage({
       "Start with the feature snapshot for breadth by coin count and market-cap share, then drop into the matrix when you need the asset-level truth.",
       <>
         {PRE_LAUNCH_STABLECOIN_COUNT}{" "}
-        <a href="/upcoming" className="underline underline-offset-2 hover:text-foreground transition-colors">
+        <a href="/upcoming/" className="underline underline-offset-2 hover:text-foreground transition-colors">
           upcoming stablecoins
         </a>{" "}
         are excluded until they enter active tracking.

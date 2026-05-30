@@ -96,7 +96,7 @@ export const content: ArchetypeContent = {
     },
     { href: "/yield/", label: "Yield-bearing stablecoins ranked by PYS" },
     {
-      href: "/stablecoins/backing/rwa-backed/",
+      href: "/stablecoins/backing/rwa/",
       label: "RWA-backed stablecoin directory",
     },
     {
