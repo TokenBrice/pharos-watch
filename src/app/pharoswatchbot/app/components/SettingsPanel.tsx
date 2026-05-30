@@ -1,0 +1,270 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ALERT_LABELS, DEPEG_STEP_OPTIONS } from "../constants";
+import { formatHour } from "../format";
+import type {
+  TelegramAlertType,
+  TelegramDepegStepBps,
+  TelegramMiniAppOperation,
+  TelegramMiniAppState,
+} from "../types";
+import { MiniButton } from "./MiniButton";
+import { TogglePill } from "./TogglePill";
+
+const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
+
+function availableTimezones(): readonly string[] {
+  // `Intl.supportedValuesOf` is ES2022 and not yet in the lib.dom types we target, so probe via an unknown cast.
+  const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+  if (typeof intl.supportedValuesOf === "function") {
+    try {
+      const values = intl.supportedValuesOf("timeZone");
+      if (Array.isArray(values) && values.length > 0) return values;
+    } catch {
+      // fall through to curated list
+    }
+  }
+  return FALLBACK_TIMEZONES;
+}
+
+function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
+  state: TelegramMiniAppState;
+  canMutate: boolean;
+  isMutating: boolean;
+  onMutate: (operation: TelegramMiniAppOperation) => void;
+}) {
+  const enabled = state.subscriber.quietHours.enabled;
+  const currentStart = state.subscriber.quietHours.startHourUtc;
+  const currentEnd = state.subscriber.quietHours.endHourUtc;
+  const [draftStartOverride, setDraftStart] = useState<number | null>(null);
+  const [draftEndOverride, setDraftEnd] = useState<number | null>(null);
+  const draftStart = draftStartOverride ?? currentStart ?? 22;
+  const draftEnd = draftEndOverride ?? currentEnd ?? 7;
+
+  const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const sameHours = draftStart === draftEnd;
+  const summary = enabled && currentStart != null && currentEnd != null
+    ? `Quiet hours: ${formatHour(currentStart)}–${formatHour(currentEnd)} UTC`
+    : "Quiet hours off";
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+      <h2 className="text-sm font-semibold text-foreground">Quiet hours</h2>
+      <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <label htmlFor="mini-quiet-start" className="pharos-kicker">Start (UTC)</label>
+          <select
+            id="mini-quiet-start"
+            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            value={draftStart}
+            disabled={!canMutate || isMutating}
+            onChange={(event) => setDraftStart(Number(event.target.value))}
+          >
+            {hours.map((hour) => (
+              <option key={`start-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="mini-quiet-end" className="pharos-kicker">End (UTC)</label>
+          <select
+            id="mini-quiet-end"
+            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            value={draftEnd}
+            disabled={!canMutate || isMutating}
+            onChange={(event) => setDraftEnd(Number(event.target.value))}
+          >
+            {hours.map((hour) => (
+              <option key={`end-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <MiniButton
+          disabled={!canMutate || isMutating || sameHours}
+          onClick={() => onMutate({ kind: "set-quiet-hours", enabled: true, startHourUtc: draftStart, endHourUtc: draftEnd })}
+        >
+          {enabled ? "Save quiet hours" : "Enable quiet hours"}
+        </MiniButton>
+        <MiniButton variant="secondary" disabled={!canMutate || isMutating || !enabled} onClick={() => onMutate({ kind: "set-quiet-hours", enabled: false })}>
+          Disable quiet hours
+        </MiniButton>
+      </div>
+      {sameHours ? <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">Start and end must differ.</p> : null}
+      <p className="pharos-meta mt-3">Times are UTC. Pharos doesn&apos;t track your timezone; convert from your local time.</p>
+    </section>
+  );
+}
+
+function TimezonePicker({ state, canMutate, isMutating, onMutate }: {
+  state: TelegramMiniAppState;
+  canMutate: boolean;
+  isMutating: boolean;
+  onMutate: (operation: TelegramMiniAppOperation) => void;
+}) {
+  const current = state.subscriber.quietHours.timezone ?? "UTC";
+  const options = useMemo(() => availableTimezones(), []);
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-foreground">Timezone</h2>
+        <span className="shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+          {current}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Used to convert quiet hours to your local time.</p>
+      <label className="sr-only" htmlFor="telegram-mini-app-timezone">Timezone</label>
+      <select
+        id="telegram-mini-app-timezone"
+        className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        value={current}
+        disabled={!canMutate || isMutating}
+        onChange={(event) => onMutate({ kind: "set-timezone", timezone: event.target.value })}
+      >
+        {options.map((zone) => (
+          <option key={zone} value={zone}>{zone}</option>
+        ))}
+      </select>
+      <div className="mt-3">
+        <MiniButton
+          variant="secondary"
+          disabled={!canMutate || isMutating || current === "UTC"}
+          onClick={() => onMutate({ kind: "set-timezone", timezone: null })}
+        >
+          Use UTC (clear)
+        </MiniButton>
+      </div>
+    </section>
+  );
+}
+
+function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe, hasShowConfirm }: {
+  canMutate: boolean;
+  isMutating: boolean;
+  onUnsubscribeAll: () => void;
+  onForgetMe: () => void;
+  hasShowConfirm: boolean;
+}) {
+  // When the bridge can drive two native confirmations, tap once and let the
+  // bridge escalate. Otherwise fall back to an in-page two-tap armed state.
+  const [forgetArmed, setForgetArmed] = useState(false);
+  const requiresArming = !hasShowConfirm;
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+      <h2 className="text-sm font-semibold text-foreground">Danger zone</h2>
+      <p className="mt-1 text-xs text-muted-foreground">These actions can&apos;t be undone.</p>
+      <div className="mt-3 grid gap-2">
+        <MiniButton variant="danger" disabled={!canMutate || isMutating} onClick={onUnsubscribeAll}>
+          Unsubscribe from all
+        </MiniButton>
+        <button
+          type="button"
+          disabled={!canMutate || isMutating}
+          aria-label="Delete all my data"
+          onClick={() => {
+            if (requiresArming && !forgetArmed) {
+              setForgetArmed(true);
+              return;
+            }
+            onForgetMe();
+          }}
+          onBlur={() => setForgetArmed(false)}
+          className={cn(
+            "pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+            forgetArmed
+              ? "border-red-600/80 bg-red-600 text-white hover:bg-red-700"
+              : "border-red-500/35 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300",
+          )}
+        >
+          {forgetArmed ? "Tap again to confirm forever" : "Delete all my data"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+export interface SettingsPanelProps {
+  state: TelegramMiniAppState;
+  canMutate: boolean;
+  isMutating: boolean;
+  onMutate: (operation: TelegramMiniAppOperation) => void;
+  optimisticGlobalAlerts: Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null };
+  onUnsubscribeAll: () => void;
+  onForgetMe: () => void;
+  hasShowConfirm: boolean;
+}
+
+export function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGlobalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: SettingsPanelProps) {
+  const currentDepegStep = optimisticGlobalAlerts.depegStepBps;
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-[color:var(--mini-accent)]" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-foreground">Global alerts</h2>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Global alert types">
+          {(Object.keys(ALERT_LABELS) as TelegramAlertType[]).map((type) => (
+            <TogglePill
+              key={type}
+              label={ALERT_LABELS[type]}
+              enabled={optimisticGlobalAlerts[type]}
+              disabled={!canMutate || isMutating}
+              onToggle={() => onMutate({ kind: "set-global", alertType: type, enabled: !optimisticGlobalAlerts[type] })}
+            />
+          ))}
+        </div>
+        <div className="mt-5 border-t border-border/60 pt-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Depeg step</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Applies to all-stablecoin depeg alerts.</p>
+            </div>
+            <span className="pharos-numeric shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+              {currentDepegStep == null ? "Any" : `${currentDepegStep} bps`}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {DEPEG_STEP_OPTIONS.map((option) => {
+              const selected = currentDepegStep === option.value;
+              return (
+                <button
+                  key={option.label}
+                  type="button"
+                  aria-label={option.value == null ? "Set global depeg step to any depeg" : `Set global depeg step to ${option.value} bps`}
+                  aria-pressed={selected}
+                  disabled={!canMutate || isMutating}
+                  onClick={() => onMutate({ kind: "set-global-depeg-step", depegStepBps: option.value })}
+                  className={cn(
+                    "pharos-focus-ring min-h-12 rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    selected ? "mini-selected" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="block text-[11px] leading-tight">{option.caption}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+      <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} onMutate={onMutate} />
+      <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} onMutate={onMutate} />
+      <DangerZoneSection
+        canMutate={canMutate}
+        isMutating={isMutating}
+        onUnsubscribeAll={onUnsubscribeAll}
+        onForgetMe={onForgetMe}
+        hasShowConfirm={hasShowConfirm}
+      />
+    </div>
+  );
+}

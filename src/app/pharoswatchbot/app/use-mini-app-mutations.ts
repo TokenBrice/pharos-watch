@@ -1,15 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
-import { apiRequest } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { ALERT_LABELS } from "./constants";
 import {
-  isMiniAppErrorCode,
   miniAppErrorMessage,
   MiniAppRequestError,
-  type MiniAppErrorCode,
 } from "./error-messages";
+import { postMiniAppJson, TelegramMiniAppStateSchema } from "./mini-app-api";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type {
   FollowedPreset,
@@ -24,25 +22,6 @@ const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 
 /** Grace period during which a removed coin can be restored via the undo toast. */
 const UNDO_WINDOW_MS = 5_000;
-
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await apiRequest(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    let code: MiniAppErrorCode | null = null;
-    try {
-      const payload = await response.json() as { code?: unknown };
-      if (isMiniAppErrorCode(payload?.code)) code = payload.code;
-    } catch {
-      // body wasn't JSON or was empty — leave code null
-    }
-    throw new MiniAppRequestError(response.status, code);
-  }
-  return await response.json() as T;
-}
 
 function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
   switch (operation.kind) {
@@ -256,7 +235,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     setIsMutating(true);
     webApp?.enableClosingConfirmation?.();
     try {
-      const next = await postJson<TelegramMiniAppState>(MUTATE_ENDPOINT, { initData, operation });
+      const next = await postMiniAppJson(MUTATE_ENDPOINT, { initData, operation }, TelegramMiniAppStateSchema);
       if (operation.kind === "forget-me") {
         // Render the terminal screen instead of swapping state.
         setForgottenView(true);
