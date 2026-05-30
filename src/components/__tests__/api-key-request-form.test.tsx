@@ -122,11 +122,12 @@ describe("ApiKeyRequestForm", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    window.history.replaceState(null, "", `/api/?utm_source=email#akv_${suffix}`);
+    window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(window.location.href).toContain("utm_source=email");
+    expect(window.location.href).not.toContain(`verify=qs-${suffix}`);
     expect(window.location.href).not.toContain(`akv_${suffix}`);
     const [, init] = fetchMock.mock.calls[0] ?? [];
     expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`akv_${suffix}`);
@@ -142,7 +143,8 @@ describe("ApiKeyRequestForm", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(window.location.search).toContain(`verify=qs-${suffix}`);
+    expect(window.location.search).not.toContain(`verify=qs-${suffix}`);
+    expect(window.location.search).toContain("utm_source=email");
   });
 
   it("does not display the durable request id after a pending submission", async () => {

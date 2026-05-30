@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import type {
   ApiKeySummaryItem,
-  CreateExpiryMode,
   CreateKeyState,
   EditableKeyState,
 } from "@/lib/api-key-admin-view-model";
@@ -24,6 +23,86 @@ type EditableKeyPatch = Partial<EditableKeyState>;
 
 function fieldClassName() {
   return "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
+}
+
+function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>({
+  state,
+  onChange,
+  gridClassName,
+  expiryLabel,
+  expiryOptions,
+}: {
+  state: TState;
+  onChange: (patch: Partial<TState>) => void;
+  gridClassName: string;
+  expiryLabel: string;
+  expiryOptions: Array<{ value: TState["expiryMode"]; label: string }>;
+}) {
+  return (
+    <div className={gridClassName}>
+      <label className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Name</span>
+        <input className={fieldClassName()} value={state.name} onChange={(event) => onChange({ name: event.target.value } as Partial<TState>)} />
+      </label>
+      <label className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Owner Email</span>
+        <input className={fieldClassName()} value={state.ownerEmail} onChange={(event) => onChange({ ownerEmail: event.target.value } as Partial<TState>)} />
+      </label>
+      <label className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Tier</span>
+        <input className={fieldClassName()} value={state.tier} onChange={(event) => onChange({ tier: event.target.value } as Partial<TState>)} />
+      </label>
+      <label className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
+        <select
+          className={fieldClassName()}
+          value={state.trafficClass}
+          onChange={(event) => onChange({ trafficClass: event.target.value as ApiKeyTrafficClass } as Partial<TState>)}
+        >
+          <option value="external">external</option>
+          <option value="site">site</option>
+        </select>
+      </label>
+      <label className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
+        <input
+          type="number"
+          min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
+          max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
+          step={1}
+          className={fieldClassName()}
+          value={state.rateLimitPerMinute}
+          onChange={(event) => onChange({ rateLimitPerMinute: event.target.value } as Partial<TState>)}
+        />
+      </label>
+      <label className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">{expiryLabel}</span>
+        <select
+          className={fieldClassName()}
+          value={state.expiryMode}
+          onChange={(event) => onChange({ expiryMode: event.target.value as TState["expiryMode"] } as Partial<TState>)}
+        >
+          {expiryOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {state.expiryMode === "custom" ? (
+        <label className="space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Expires At</span>
+          <input
+            type="datetime-local"
+            step={60}
+            className={fieldClassName()}
+            value={state.expiresAtInput}
+            onChange={(event) => onChange({ expiresAtInput: event.target.value } as Partial<TState>)}
+          />
+        </label>
+      ) : null}
+    </div>
+  );
 }
 
 export function ApiKeyInventorySummary({ items }: { items: readonly ApiKeySummaryItem[] }) {
@@ -59,67 +138,17 @@ export function CreateApiKeyForm({
           Tokens are shown once. Store them outside Pharos after creation or rotation.
         </p>
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Name</span>
-          <input className={fieldClassName()} value={state.name} onChange={(event) => onChange({ name: event.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Owner Email</span>
-          <input className={fieldClassName()} value={state.ownerEmail} onChange={(event) => onChange({ ownerEmail: event.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Tier</span>
-          <input className={fieldClassName()} value={state.tier} onChange={(event) => onChange({ tier: event.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
-          <select
-            className={fieldClassName()}
-            value={state.trafficClass}
-            onChange={(event) => onChange({ trafficClass: event.target.value as ApiKeyTrafficClass })}
-          >
-            <option value="external">external</option>
-            <option value="site">site</option>
-          </select>
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
-          <input
-            type="number"
-            min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
-            max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
-            step={1}
-            className={fieldClassName()}
-            value={state.rateLimitPerMinute}
-            onChange={(event) => onChange({ rateLimitPerMinute: event.target.value })}
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Expiry Policy</span>
-          <select
-            className={fieldClassName()}
-            value={state.expiryMode}
-            onChange={(event) => onChange({ expiryMode: event.target.value as CreateExpiryMode })}
-          >
-            <option value="default">Default 90 days</option>
-            <option value="custom">Custom expiry</option>
-            <option value="non-expiring">Non-expiring exception</option>
-          </select>
-        </label>
-        {state.expiryMode === "custom" ? (
-          <label className="space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Expires At</span>
-            <input
-              type="datetime-local"
-              step={60}
-              className={fieldClassName()}
-              value={state.expiresAtInput}
-              onChange={(event) => onChange({ expiresAtInput: event.target.value })}
-            />
-          </label>
-        ) : null}
-      </div>
+      <ApiKeyEditableFields
+        state={state}
+        onChange={onChange}
+        gridClassName="grid gap-3 lg:grid-cols-3"
+        expiryLabel="Expiry Policy"
+        expiryOptions={[
+          { value: "default", label: "Default 90 days" },
+          { value: "custom", label: "Custom expiry" },
+          { value: "non-expiring", label: "Non-expiring exception" },
+        ]}
+      />
       <div className="rounded-md border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
         {state.expiryMode === "default"
           ? "Default 90 days from creation. The request omits expiresAt and the worker applies the standard lifecycle."
@@ -202,66 +231,16 @@ export function ApiKeyRowEditor({
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-4">
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Name</span>
-          <input className={fieldClassName()} value={draft.name} onChange={(event) => onDraftChange({ name: event.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Owner Email</span>
-          <input className={fieldClassName()} value={draft.ownerEmail} onChange={(event) => onDraftChange({ ownerEmail: event.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Tier</span>
-          <input className={fieldClassName()} value={draft.tier} onChange={(event) => onDraftChange({ tier: event.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
-          <select
-            className={fieldClassName()}
-            value={draft.trafficClass}
-            onChange={(event) => onDraftChange({ trafficClass: event.target.value as ApiKeyTrafficClass })}
-          >
-            <option value="external">external</option>
-            <option value="site">site</option>
-          </select>
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
-          <input
-            type="number"
-            min={API_KEY_MIN_RATE_LIMIT_PER_MINUTE}
-            max={API_KEY_MAX_RATE_LIMIT_PER_MINUTE}
-            step={1}
-            className={fieldClassName()}
-            value={draft.rateLimitPerMinute}
-            onChange={(event) => onDraftChange({ rateLimitPerMinute: event.target.value })}
-          />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Expiry</span>
-          <select
-            className={fieldClassName()}
-            value={draft.expiryMode}
-            onChange={(event) => onDraftChange({ expiryMode: event.target.value as EditableKeyState["expiryMode"] })}
-          >
-            <option value="custom">Custom expiry</option>
-            <option value="non-expiring">Non-expiring exception</option>
-          </select>
-        </label>
-        {draft.expiryMode === "custom" ? (
-          <label className="space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Expires At</span>
-            <input
-              type="datetime-local"
-              step={60}
-              className={fieldClassName()}
-              value={draft.expiresAtInput}
-              onChange={(event) => onDraftChange({ expiresAtInput: event.target.value })}
-            />
-          </label>
-        ) : null}
-      </div>
+      <ApiKeyEditableFields
+        state={draft}
+        onChange={onDraftChange}
+        gridClassName="grid gap-3 lg:grid-cols-4"
+        expiryLabel="Expiry"
+        expiryOptions={[
+          { value: "custom", label: "Custom expiry" },
+          { value: "non-expiring", label: "Non-expiring exception" },
+        ]}
+      />
 
       <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
         <div>Expiry: {formatExpirySummary(apiKey, nowSeconds)}</div>

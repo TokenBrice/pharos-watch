@@ -11,6 +11,17 @@ import type {
 import { buildApiUrl } from "@/lib/api";
 
 const VERIFICATION_TOKEN_PREFIX = "akv_";
+const CREDENTIAL_QUERY_PARAM_NAMES = new Set([
+  "akv",
+  "api-key",
+  "api_key",
+  "apikey",
+  "key",
+  "token",
+  "verification",
+  "verify",
+  "x-api-key",
+]);
 
 interface ApiErrorPayload {
   error?: string;
@@ -104,8 +115,33 @@ function scrubHashVerificationToken(hash: string): string {
   return parseHashVerificationToken(hash) ? "" : hash;
 }
 
+function isApiSelfServePath(pathname: string): boolean {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+function scrubCredentialQueryParamsFromUrl(): void {
+  if (!isApiSelfServePath(window.location.pathname) || !window.location.search) return;
+
+  const params = new URLSearchParams(window.location.search);
+  let changed = false;
+  for (const key of Array.from(params.keys())) {
+    if (!CREDENTIAL_QUERY_PARAM_NAMES.has(key.toLowerCase())) continue;
+    params.delete(key);
+    changed = true;
+  }
+  if (!changed) return;
+
+  const nextSearch = params.toString();
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+  );
+}
+
 export function readVerificationTokenFromUrl(): string | null {
   if (typeof window === "undefined") return null;
+  scrubCredentialQueryParamsFromUrl();
   return parseHashVerificationToken(window.location.hash);
 }
 
