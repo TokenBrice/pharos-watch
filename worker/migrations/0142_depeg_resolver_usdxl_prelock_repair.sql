@@ -5,27 +5,117 @@
 -- append-only incident links and revisions. If a prediction has somehow been
 -- sealed before this migration runs, every statement below no-ops and the
 -- sealed repair-authorization path remains required.
+--
+-- Keep this as single-row statements. D1 rejected the first version's compact
+-- UNION ALL helper tables during production migration application.
 
 INSERT OR IGNORE INTO depeg_resolver_incident_event_links
   (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
 SELECT
   'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
-  repair.event_id,
+  90031,
   'repair_replacement',
   NULL,
   unixepoch(),
   'pre-lock nearby event adopted as current incident source'
-FROM (
-  SELECT 90031 AS event_id UNION ALL
-  SELECT 90032 UNION ALL
-  SELECT 90033 UNION ALL
-  SELECT 90034 UNION ALL
-  SELECT 90035 UNION ALL
-  SELECT 90036
-) repair
-JOIN depeg_events e
-  ON e.id = repair.event_id
-WHERE e.stablecoin_id = 'usdxl-last'
+FROM depeg_events e
+WHERE e.id = 90031
+  AND e.stablecoin_id = 'usdxl-last'
+  AND e.direction = 'above'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  );
+
+INSERT OR IGNORE INTO depeg_resolver_incident_event_links
+  (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90032,
+  'repair_replacement',
+  NULL,
+  unixepoch(),
+  'pre-lock nearby event adopted as current incident source'
+FROM depeg_events e
+WHERE e.id = 90032
+  AND e.stablecoin_id = 'usdxl-last'
+  AND e.direction = 'above'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  );
+
+INSERT OR IGNORE INTO depeg_resolver_incident_event_links
+  (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90033,
+  'repair_replacement',
+  NULL,
+  unixepoch(),
+  'pre-lock nearby event adopted as current incident source'
+FROM depeg_events e
+WHERE e.id = 90033
+  AND e.stablecoin_id = 'usdxl-last'
+  AND e.direction = 'above'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  );
+
+INSERT OR IGNORE INTO depeg_resolver_incident_event_links
+  (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90034,
+  'repair_replacement',
+  NULL,
+  unixepoch(),
+  'pre-lock nearby event adopted as current incident source'
+FROM depeg_events e
+WHERE e.id = 90034
+  AND e.stablecoin_id = 'usdxl-last'
+  AND e.direction = 'above'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  );
+
+INSERT OR IGNORE INTO depeg_resolver_incident_event_links
+  (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90035,
+  'repair_replacement',
+  NULL,
+  unixepoch(),
+  'pre-lock nearby event adopted as current incident source'
+FROM depeg_events e
+WHERE e.id = 90035
+  AND e.stablecoin_id = 'usdxl-last'
+  AND e.direction = 'above'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  );
+
+INSERT OR IGNORE INTO depeg_resolver_incident_event_links
+  (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90036,
+  'repair_replacement',
+  NULL,
+  unixepoch(),
+  'pre-lock nearby event adopted as current incident source'
+FROM depeg_events e
+WHERE e.id = 90036
+  AND e.stablecoin_id = 'usdxl-last'
   AND e.direction = 'above'
   AND NOT EXISTS (
     SELECT 1
@@ -37,25 +127,20 @@ INSERT INTO depeg_resolver_incident_revisions
   (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
 SELECT
   'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
-  repair.previous_event_id,
-  repair.current_event_id,
+  90030,
+  90031,
   'pre-lock nearby event adopted as current incident source',
   NULL,
   NULL,
   unixepoch(),
   'migration-0142'
-FROM (
-  SELECT 90030 AS previous_event_id, 90031 AS current_event_id UNION ALL
-  SELECT 90031, 90032 UNION ALL
-  SELECT 90032, 90033 UNION ALL
-  SELECT 90033, 90034 UNION ALL
-  SELECT 90034, 90035 UNION ALL
-  SELECT 90035, 90036
-) repair
-JOIN depeg_resolver_incident_event_links l
-  ON l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
- AND l.event_id = repair.current_event_id
-WHERE NOT EXISTS (
+WHERE EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    WHERE l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND l.event_id = 90031
+  )
+  AND NOT EXISTS (
     SELECT 1
     FROM depeg_resolver_public_predictions p
     WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
@@ -64,8 +149,163 @@ WHERE NOT EXISTS (
     SELECT 1
     FROM depeg_resolver_incident_revisions existing
     WHERE existing.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
-      AND existing.previous_event_id = repair.previous_event_id
-      AND existing.current_event_id = repair.current_event_id
+      AND existing.previous_event_id = 90030
+      AND existing.current_event_id = 90031
+      AND existing.reason = 'pre-lock nearby event adopted as current incident source'
+  );
+
+INSERT INTO depeg_resolver_incident_revisions
+  (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90031,
+  90032,
+  'pre-lock nearby event adopted as current incident source',
+  NULL,
+  NULL,
+  unixepoch(),
+  'migration-0142'
+WHERE EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    WHERE l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND l.event_id = 90032
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_revisions existing
+    WHERE existing.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND existing.previous_event_id = 90031
+      AND existing.current_event_id = 90032
+      AND existing.reason = 'pre-lock nearby event adopted as current incident source'
+  );
+
+INSERT INTO depeg_resolver_incident_revisions
+  (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90032,
+  90033,
+  'pre-lock nearby event adopted as current incident source',
+  NULL,
+  NULL,
+  unixepoch(),
+  'migration-0142'
+WHERE EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    WHERE l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND l.event_id = 90033
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_revisions existing
+    WHERE existing.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND existing.previous_event_id = 90032
+      AND existing.current_event_id = 90033
+      AND existing.reason = 'pre-lock nearby event adopted as current incident source'
+  );
+
+INSERT INTO depeg_resolver_incident_revisions
+  (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90033,
+  90034,
+  'pre-lock nearby event adopted as current incident source',
+  NULL,
+  NULL,
+  unixepoch(),
+  'migration-0142'
+WHERE EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    WHERE l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND l.event_id = 90034
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_revisions existing
+    WHERE existing.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND existing.previous_event_id = 90033
+      AND existing.current_event_id = 90034
+      AND existing.reason = 'pre-lock nearby event adopted as current incident source'
+  );
+
+INSERT INTO depeg_resolver_incident_revisions
+  (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90034,
+  90035,
+  'pre-lock nearby event adopted as current incident source',
+  NULL,
+  NULL,
+  unixepoch(),
+  'migration-0142'
+WHERE EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    WHERE l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND l.event_id = 90035
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_revisions existing
+    WHERE existing.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND existing.previous_event_id = 90034
+      AND existing.current_event_id = 90035
+      AND existing.reason = 'pre-lock nearby event adopted as current incident source'
+  );
+
+INSERT INTO depeg_resolver_incident_revisions
+  (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+SELECT
+  'ddr2:d85042cc0e57fe1e0c3228b8beff54b5',
+  90035,
+  90036,
+  'pre-lock nearby event adopted as current incident source',
+  NULL,
+  NULL,
+  unixepoch(),
+  'migration-0142'
+WHERE EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_event_links l
+    WHERE l.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND l.event_id = 90036
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_public_predictions p
+    WHERE p.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM depeg_resolver_incident_revisions existing
+    WHERE existing.incident_key = 'ddr2:d85042cc0e57fe1e0c3228b8beff54b5'
+      AND existing.previous_event_id = 90035
+      AND existing.current_event_id = 90036
       AND existing.reason = 'pre-lock nearby event adopted as current incident source'
   );
 
