@@ -346,6 +346,27 @@ describe("handleTelegramWebhook", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 
+  it("returns ok when a my_chat_member welcome cache read fails", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        throwError: new Error("cache unavailable"),
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({ from: { id: 999, first_name: "Alice <Ops>" } }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM cache WHERE key = ?"))).toBe(true);
+  });
+
   it("ignores private my_chat_member updates", async () => {
     const db = mockD1([]);
 
