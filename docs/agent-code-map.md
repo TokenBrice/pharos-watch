@@ -133,7 +133,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/status/client.tsx` - default:StatusClient
 - `src/app/status/error.tsx`
 - `src/app/status/page.tsx` - route /status; default:StatusPage, metadata
-- `src/app/timeline/client.tsx` - TimelineClient, TimelineEventQueryParams, TimelineFeedController, buildTimelineFeedController, buildTimelineFilterSignature, buildTimelineResetParams
+- `src/app/timeline/client.tsx` - TimelineClient
 - `src/app/timeline/error.tsx`
 - `src/app/timeline/page.tsx` - route /timeline; default:TimelinePage, metadata
 - `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, metadata
@@ -248,7 +248,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
 - `src/lib/coverage-matrix-model.ts` - CoverageMatrixModel, CoverageMatrixModelInput, buildCoverageMatrixModel
-- ... 120 more files omitted; use `rg --files src/lib` for the full list.
+- ... 121 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -281,6 +281,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chart-primitives/annotations.tsx` - AnnotationDensityStrip, ChartAnnotationLegend, ChartAnnotationLines
 - `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis
 - `src/components/chart-primitives/data-table.tsx` - ChartDataTable, ChartDataTableColumn, capDataForTable
+- `src/components/chart-primitives/market-data-x-tick.tsx` - MarketDataXTick
 - `src/components/chart-primitives/scale-toggle.tsx` - ChartScale, ChartScaleToggle
 - `src/components/chart-primitives/skeleton.tsx` - ChartShellSkeleton
 - `src/components/chart-primitives/sync.tsx` - BrushedRange, ChartBrush, ChartCrosshairOverlay, MarketDataChartSyncProvider, useMarketDataChartSync
@@ -291,8 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-selector.tsx` - CoinSelector
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
 - `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
-- `src/components/command-palette.tsx` - CommandPalette
-- ... 336 more files omitted; use `rg --files src/components` for the full list.
+- ... 347 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
 - `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
-- ... 230 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 237 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -533,7 +533,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
 - `worker/src/api/events.ts` - handleEvents
-- ... 115 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 116 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -549,7 +549,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/blacklist/sync-support.ts` - applyTronLedgerMirrorPass, deriveSyncBlacklistStatus, loadBlacklistConfigStates, recordApiErrorConfig, recordProcessedRows
 - `worker/src/cron/blacklist/tron-source.ts` - fetchTronEventsIncremental, parseTronEvent
 - `worker/src/cron/compute-depeg-resolver-review.ts` - ComputeDepegResolverReviewOptions, DdrrV2ReviewSource, buildDepegResolverReviewSnapshot, buildEmptyDdrrSummary, computeAndStoreDepegResolverReview
-- `worker/src/cron/compute-depeg-resolver.ts` - ComputeDepegResolverV2Options, computeDepegResolver
+- `worker/src/cron/compute-depeg-resolver.ts` - computeDepegResolver
 - `worker/src/cron/compute-dews.ts` - computeAndStoreDEWS
 - `worker/src/cron/confirm-pending-depegs.ts` - confirmPendingDepegs
 - `worker/src/cron/cron-staleness-watchdog.ts` - CronStalenessObservation, evaluateCronStaleness, runCronStalenessWatchdog
@@ -584,6 +584,17 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/depeg-detection/repair.ts` - DuplicateRepairResult, OrphanDepegRow, OrphanRepairResult, buildDuplicateOpenEventRepair, buildOrphanCloseRepair, shouldCloseOrphanedDepeg
 - `worker/src/cron/depeg-detection/types.ts` - DepegAssetDecision, DepegAssetDecisionInput, DepegDiagnostic, DepegPersistenceCommand, DexPoolChallenger, HydratedDepegDetection
 - `worker/src/cron/depeg-resolver-v2-contracts.ts` - DDR_PUBLICATION_SNAPSHOT_KIND, DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection, DdrFirstPublicationMembership, DdrLockAction
+- `worker/src/cron/depeg-resolver/constants.ts` - CURRENT_PRICE_MAX_AGE_SEC, DAY, DEWS_MAX_AGE_SEC, DEX_LIQUIDITY_MAX_AGE_SEC, HISTORICAL_ROW_CAP, REDEMPTION_BACKSTOP_MAX_AGE_SEC
+- `worker/src/cron/depeg-resolver/context.ts` - DdrContextLoadResult, DdrLoadedContext, emptyDdrLineage, loadActiveConfirmedEvents, loadDdrContext, loadPolicyUniverseEvents
+- `worker/src/cron/depeg-resolver/incident-resolution.ts` - resolveDdrIncidents
+- `worker/src/cron/depeg-resolver/incident-state.ts` - applyConfirmationTimes, computeLockTiming, ensureCanonicalIncidentsForEvents, loadPendingPromotionConfirmationTimes, recordConfirmedSeenOpportunities, recordSystemHealthDeferrals
+- `worker/src/cron/depeg-resolver/options.ts` - normalizeComputeOptions
+- `worker/src/cron/depeg-resolver/persistence.ts` - persistDepegResolverReviewArtifacts, persistDepegResolverSnapshot
+- `worker/src/cron/depeg-resolver/public-projection.ts` - buildDdrResponse, buildDiagnosticSnapshot, buildSealPayload, buildV2PublicationBasePayload, normalizeErratumRecord
+- `worker/src/cron/depeg-resolver/publication.ts` - loadErrataForSealedPredictions, loadSealedAndPublicationState, sealEligibleLocks, writePublicationBeforeCache
+- `worker/src/cron/depeg-resolver/storage-adapters.ts` - DEFAULT_DDR_V2_STORE_CONTRACTS, DdrStorageJsonDecodeFailure, firstPublicationByPredictionId, publicPredictionIdOf, sealedByIncident
+- `worker/src/cron/depeg-resolver/types.ts` - ComputeDepegResolverV2Options, CurrentDeviationMapResult, DdrDiagnosticResponse, DdrEventDbRow, DdrLineage, DdrPendingPromotionOutcomeRow
+- `worker/src/cron/depeg-resolver/utils.ts` - abortIf, allocateDdrRunId, eligibleAt, fallbackIncidentForEvent, fallbackStructural, formatDdrrFailure
 - `worker/src/cron/detect-depegs.ts` - detectDepegEvents, shouldCloseOrphanedDepeg
 - `worker/src/cron/dews/contracts.ts` - ContagionAmplifiers, DewsComputedRow, DewsScoringResult, DewsScoringState, DewsSourceState, DexLiquidityRow
 - `worker/src/cron/dews/persistence.ts` - computeStressSignalPruneIds, persistDewsResults
@@ -606,18 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-publish.ts` - DexPriceChallengerPoolRow, DexPriceChallengerPublicationInput, DexPriceChallengerPublicationPlan, DexPriceChallengerSnapshotRow, DexPriceChallengerTableState, buildDexPriceChallengerPublicationPlan
-- `worker/src/cron/dex-liquidity/challenger-types.ts` - DexPriceChallengerLoadDiagnostics, DexPriceChallengerLoadResult, DexPriceChallengerLoadRow
-- `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts` - CgPoolClassification, classifyCgPool, parseCgPool
-- `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts` - AggregatedExchangeTicker, CgTickerExchangeSummary, CgTickerOrderbookMetadata, aggregateCgTickersByExchange, buildCgTickerExchangeSummaries, buildCgTickerOrderbookMetadata
-- `worker/src/cron/dex-liquidity/constants.ts` - AERODROME_PAIR_QUERY, AERODROME_SUBGRAPHS, CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE, CG_TICKERS_RATE_MS, CURVE_API_BASE
-- `worker/src/cron/dex-liquidity/crawl-helpers.ts` - BuildNewPoolArgs, CrawlStats, CrawlToken, CrawlTokenPoolsConfig, CrawlTokenPoolsResult, ParsedPool
-- `worker/src/cron/dex-liquidity/direct-api-json.ts` - DexApiJsonResult, isDexApiRecord, readDexApiJson
-- `worker/src/cron/dex-liquidity/direct-api-paginated.ts` - PaginatedFetchOptions, PaginatedFetchResult, runPaginatedDirectApiFetch
-- `worker/src/cron/dex-liquidity/direct-api-policy.ts` - DIRECT_API_DEFAULT_MAX_PAGES, DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_REQUEST_TIMEOUT_MS, buildDirectApiRequestSignal
-- `worker/src/cron/dex-liquidity/direct-source-helpers.ts` - buildDirectApiPoolIdentity, classifyClPoolType, normalizeFeeRateFromBps
-- `worker/src/cron/dex-liquidity/fetch-balancer.ts` - fetchBalancerPools
-- `worker/src/cron/dex-liquidity/fetch-crawlers.ts` - fetchCgPools, fetchGtPools, mergeCgPools, mergeGtPools
-- ... 288 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 302 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -681,7 +681,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- ... 212 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 213 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-attestor-tier-coverage.ts`
 - `scripts/ci/check-build-attribution.mjs`
 - `scripts/ci/check-classifier-sensitive-copy.mjs`
-- ... 139 more files omitted; use `rg --files scripts` for the full list.
+- ... 140 more files omitted; use `rg --files scripts` for the full list.

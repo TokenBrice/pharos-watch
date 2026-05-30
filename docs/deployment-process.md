@@ -64,7 +64,7 @@ Hook behavior:
 Default policy:
 
 1. If the diff does not touch Pages or worker deploy surfaces, print the changed-file set and skip the gate.
-2. For deploy-impacting diffs, run the shared validate pre-build command set from `scripts/lib/validate-contract.mjs`. That registry is the source of truth for dependency/pricing audits, lint/typecheck, import boundaries, cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, documentation/generated-artifact checks, env contracts, duplicate exports, redemption-backstop registry checks, unused code, hotspot ratchets, SQL-safety, stablecoin data validation, and supply-helper usage.
+2. For deploy-impacting diffs, run the shared validate pre-build command set from `scripts/lib/validate-contract.mjs`. That registry is the source of truth for dependency/pricing audits, lint/typecheck, import boundaries, cycle detection across `shared/`, `worker/src`, and `src`, migrations, cron schedule/connection checks, documentation/generated-artifact checks, env contracts, duplicate exports, redemption-backstop registry checks, CSP/static-header sync, unused code, hotspot ratchets, SQL-safety, stablecoin data validation, and supply-helper usage.
 3. If Pages-impacting files changed, additionally run:
    - `npm run build` with the same static-export env contract as the production Pages job (`NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` and public-dataset/API source env cleared so the prebuild hook preserves already-synced mirrors)
    - `npm run test:a11y`
@@ -80,7 +80,7 @@ Default policy:
 5. If worker-impacting files changed, additionally run:
    - `npm run typecheck:worker`
 
-After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/typecheck groups **serially by default** to avoid CPU contention on developer machines. The non-critical Vitest lane is emitted as four `npm run test:noncritical -- --shard=N/4` shards to match the CI fan-out (each shard runs on its own CI runner), but locally they execute sequentially. Set `MERGE_GATE_PARALLEL=1` to opt into the parallel matrix when you want the faster wall-clock time and have the cores to spare. This keeps the validation surface aligned with deploy CI while keeping the local default reliable. The gate also runs an advisory `scripts/ci/check-node-modules-fresh.mjs` at the very top of every run; it warns when `package-lock.json` is newer than `node_modules/` and fails fast only when `node_modules/` is missing entirely. The fast static-check audit also pulled `check:hook-polling-window`, `check:shared-types-imports`, and `check:reserve-fixture-freshness` into the shared prebuild registry; intentionally skipped: `check:safe-browsing` and `check:telegram-load` (own scheduled workflows). Pages validate lanes cover feature-flag inlining, phishing/classifier scans, build-size, and build-attribution after the static export exists.
+After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/typecheck groups **serially by default** to avoid CPU contention on developer machines. The non-critical Vitest lane is emitted as four `npm run test:noncritical -- --shard=N/4` shards to match the CI fan-out (each shard runs on its own CI runner), but locally they execute sequentially. Set `MERGE_GATE_PARALLEL=1` to opt into the parallel matrix when you want the faster wall-clock time and have the cores to spare. This keeps the validation surface aligned with deploy CI while keeping the local default reliable. The gate also runs an advisory `scripts/ci/check-node-modules-fresh.mjs` at the very top of every run; it warns when `package-lock.json` is newer than `node_modules/` and fails fast only when `node_modules/` is missing entirely. The fast static-check audit also pulled `check:hook-polling-window`, `check:shared-types-imports`, `check:reserve-fixture-freshness`, and `check:site-csp-sync` into the shared prebuild registry; intentionally skipped: `check:safe-browsing` and `check:telegram-load` (own scheduled workflows). Pages validate lanes cover feature-flag inlining, phishing/classifier scans, build-size, and build-attribution after the static export exists.
 
 Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure, but `shared/` is classified by subpath so known Pages-only shared helpers do not request Worker typechecks or promotion. `test:merge-gate` runs Pages smoke by default for Pages-impacting diffs so the normal local merge gate and pushed ranges rehearse the same pre-publish artifact smoke path as production deploys; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`. When Pages smoke runs, desktop overflow smoke uses the deploy-lane canary routes with 6 workers, and local mobile smoke follows the same UI-impact matcher and canary profile as production deploys.
 
@@ -115,6 +115,7 @@ The tracked savings-wrapper ownership cleanup uses `worker/scripts/yield-history
 Defined across:
 
 - `.github/workflows/validate-ci.yml` for the shared validate gate
+- `.github/workflows/critical-coverage-ratchet.yml` for the weekly/manual all-critical coverage ratchet
 - `.github/workflows/dependency-audit.yml` for the scheduled full dependency audit
 - `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`, including a pinned gitleaks scan (`v8.30.0`, SHA256-verified) over the PR commit range (`--log-opts="--no-merges <base>..<head>"`); full-history scans still run weekly via `.github/workflows/secret-scan.yml`
 - `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
@@ -236,6 +237,7 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 Current explicitly deferred major cohort:
 
 - `eslint@10` — next review: 2026-08-15
+- `@types/node@25` — next review: 2026-08-15
 - `typescript@6` — next review: 2026-08-15
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
