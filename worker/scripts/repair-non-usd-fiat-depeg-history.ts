@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import { fileURLToPath, URL } from "node:url";
 import { API_PATHS } from "../../shared/lib/api-endpoints";
+import { OPS_API_ORIGIN } from "../../shared/lib/runtime-origins";
 import { DAY_SECONDS } from "../../shared/lib/time-constants";
 import { derivePegRates } from "../../shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "../../shared/lib/psi-eligible";
@@ -46,7 +47,7 @@ const TARGET_IDS = parseListArg("--stablecoin");
 const TARGET_PEGS = parseListArg("--peg");
 const REPO_ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const D1 = createWorkerD1Client(DB_NAME, OPERATION_MODE.remote ? "remote" : "local");
-const OPS_API_BASE = "https://ops-api.pharos.watch";
+const OPS_API_BASE = OPS_API_ORIGIN;
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
 const PURGE_ONLY_ORPHAN_IDS: Record<string, { symbol: string; pegCurrency: string; reason: string }> = {
   "eura-angle": {
