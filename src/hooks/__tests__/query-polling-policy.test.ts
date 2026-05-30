@@ -40,6 +40,110 @@ function mockQueryReturn() {
   });
 }
 
+function minimalStatusResponse() {
+  return {
+    timestamp: 1,
+    dbHealthy: true,
+    availabilityStatus: "healthy",
+    dataQualityStatus: "healthy",
+    rawOverallStatus: "healthy",
+    overallStatus: "healthy",
+    confidence: 1,
+    causes: { availability: [], dataQuality: [], overall: [] },
+    state: {
+      scope: "global",
+      currentStatus: "healthy",
+      rawStatus: "healthy",
+      lastEvaluatedAt: 1,
+      lastChangedAt: 1,
+      minDwellSec: 300,
+      staleMinDwellSec: 900,
+      consecutiveRaw: { healthy: 1, degraded: 0, stale: 0 },
+      thresholds: {
+        escalateToDegraded: 2,
+        escalateToStale: 3,
+        recoverToDegraded: 2,
+        recoverToHealthy: 3,
+      },
+    },
+    staleness: { ageSeconds: 0, maxAgeSec: 60, isStale: false },
+    probe: { timestamp: 1, status: "healthy", sampleCount: 1, passCount: 1, failCount: 0, p95LatencyMs: 10 },
+    discrepancy: {
+      hasDivergence: false,
+      severityDelta: 0,
+      statusSeverity: 0,
+      probeSeverity: 0,
+      details: null,
+      probeAgeSeconds: 0,
+      consecutiveDivergent: 0,
+      discrepancyReason: "in-sync",
+    },
+    timeline: [],
+    caches: {},
+    crons: {},
+    dataQuality: {},
+    telegramBot: null,
+    sectionErrors: {},
+    datasetFreshness: {},
+    summary: {},
+    liquidityHealth: null,
+    yieldHealth: null,
+    priceSourceHealth: null,
+    priceProviderDiagnostics: null,
+    gtProbe: null,
+    coingeckoPriceDiff: null,
+    d1Usage: null,
+    discoveryCandidates: null,
+    mintBurnReconciliation: null,
+    reserveComposition: {},
+  };
+}
+
+function minimalRequestSourceStatsResponse() {
+  return {
+    generatedAt: 1,
+    window: {
+      from: 1,
+      to: 2,
+      durationSec: 1,
+      bucketSizeSec: 3600,
+      routeLimit: 5,
+      apiKeyLimit: 25,
+      retentionDays: 30,
+    },
+    totals: { siteRequests: 0, externalRequests: 0, totalRequests: 0, siteSharePct: 0, externalSharePct: 0 },
+    siteDelivery: {
+      totalSiteRequests: 0,
+      pagesCacheHits: 0,
+      pagesUpstreamFetches: 0,
+      pagesUpstreamTimeouts: 0,
+      pagesUpstreamErrors: 0,
+      publicApiSiteRequests: 0,
+    },
+    lanes: [],
+    routes: [],
+    buckets: [],
+    keyedPublicApi: {
+      keyedRequests: 0,
+      unkeyedRequests: 0,
+      totalRequests: 0,
+      keyedSharePct: 0,
+      unkeyedSharePct: 0,
+      totalKeys: 0,
+      returnedKeys: 0,
+      omittedKeys: 0,
+      omittedRequests: 0,
+      truncated: false,
+    },
+    apiKeys: [],
+    scope: {
+      countsTotalSiteDemand: true,
+      countsWorkerLoad: true,
+      includesPagesProxyCacheHits: true,
+    },
+  };
+}
+
 describe("query polling policy", () => {
   beforeEach(() => {
     useQueryMock.mockReset();
@@ -104,7 +208,7 @@ describe("query polling policy", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ ok: true }),
+      json: async () => minimalStatusResponse(),
     } as Response);
 
     useStatus();
@@ -133,7 +237,7 @@ describe("query polling policy", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ ok: true }),
+      json: async () => minimalRequestSourceStatsResponse(),
     } as Response);
 
     useRequestSourceStats();
