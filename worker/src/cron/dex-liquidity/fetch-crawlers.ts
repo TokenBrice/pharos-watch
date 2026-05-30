@@ -169,11 +169,11 @@ export async function fetchCgPools(
 
 /** Merge CG-discovered new pools into existing LiquidityMetrics.
  *  Unlike GT pools, CG pools can contribute real balance ratios and locked liquidity. */
-export function mergeCgPools(
+export async function mergeCgPools(
   metrics: Map<string, LiquidityMetrics>,
   cgNewPools: Map<string, CgNewPool[]>,
   db?: D1Database,
-): void {
+): Promise<void> {
   let withBalance = 0;
   const merged = mergeSecondaryPools(metrics, cgNewPools, {
     onPoolMerged: (pool) => {
@@ -182,7 +182,7 @@ export function mergeCgPools(
   });
 
   if (merged > 0) {
-    void logDexCrawlerEvent(db, {
+    await logDexCrawlerEvent(db, {
       eventType: "cg-pools-merged",
       severity: "info",
       message: "Merged CoinGecko pools into liquidity metrics.",
@@ -301,15 +301,15 @@ export async function fetchGtPools(
 }
 
 /** Merge GT-discovered new pools into existing LiquidityMetrics. */
-export function mergeGtPools(
+export async function mergeGtPools(
   metrics: Map<string, LiquidityMetrics>,
   gtNewPools: Map<string, GtNewPool[]>,
   db?: D1Database,
-): void {
+): Promise<void> {
   const merged = mergeSecondaryPools(metrics, gtNewPools);
 
   if (merged > 0) {
-    void logDexCrawlerEvent(db, {
+    await logDexCrawlerEvent(db, {
       eventType: "gt-pools-merged",
       severity: "info",
       message: "Merged GeckoTerminal-compatible pools into liquidity metrics.",

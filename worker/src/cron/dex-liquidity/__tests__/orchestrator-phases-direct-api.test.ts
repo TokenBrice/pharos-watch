@@ -4,7 +4,7 @@ import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 
 describe("integrateDirectApiLiquidityPhase", () => {
-  it("registers exact ids for sub-threshold direct API pools so staged duplicates cannot re-add them", () => {
+  it("registers exact ids for sub-threshold direct API pools so staged duplicates cannot re-add them", async () => {
     const poolAddress = "0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
     const directApiPools: DexApiPool[] = [
       {
@@ -31,7 +31,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       ["plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "usdai-usd-ai"],
     ]);
 
-    integrateDirectApiLiquidityPhase({
+    await integrateDirectApiLiquidityPhase({
       directApiPools,
       knownPoolIndex,
       contractMetaByChainAddress: new Map(),
@@ -49,7 +49,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(knownPoolIndex.exactKeys.has(`plasma:${poolAddress}`)).toBe(true);
   });
 
-  it("skips untracked direct API pools before identity processing", () => {
+  it("skips untracked direct API pools before identity processing", async () => {
     const directApiPools: DexApiPool[] = [
       {
         source: "raydium",
@@ -68,7 +68,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       },
     ];
 
-    const result = integrateDirectApiLiquidityPhase({
+    const result = await integrateDirectApiLiquidityPhase({
       directApiPools,
       knownPoolIndex: createKnownPoolIdentityIndex(),
       contractMetaByChainAddress: new Map(),
@@ -86,7 +86,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(result.excludedByReason).toEqual({ untracked_token: 1 });
   });
 
-  it("counts invalid direct API units before tracking and identity processing", () => {
+  it("counts invalid direct API units before tracking and identity processing", async () => {
     const directApiPools: DexApiPool[] = [
       {
         source: "meteora",
@@ -105,7 +105,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       },
     ];
 
-    const result = integrateDirectApiLiquidityPhase({
+    const result = await integrateDirectApiLiquidityPhase({
       directApiPools,
       knownPoolIndex: createKnownPoolIdentityIndex(),
       contractMetaByChainAddress: new Map(),
@@ -123,7 +123,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(result.excludedByReason).toEqual({ invalid_units: 1 });
   });
 
-  it("counts tracked direct API pools filtered by the TVL threshold", () => {
+  it("counts tracked direct API pools filtered by the TVL threshold", async () => {
     const poolAddress = "0x0000000000000000000000000000000000000abc";
     const directApiPools: DexApiPool[] = [
       {
@@ -143,7 +143,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       },
     ];
 
-    const result = integrateDirectApiLiquidityPhase({
+    const result = await integrateDirectApiLiquidityPhase({
       directApiPools,
       knownPoolIndex: createKnownPoolIdentityIndex(),
       contractMetaByChainAddress: new Map(),

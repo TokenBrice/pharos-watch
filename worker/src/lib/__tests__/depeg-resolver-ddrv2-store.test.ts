@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { ensureCanonicalIncidents, recordLockOpportunity } from "../depeg-resolver-incident-store";
 import {
   loadFirstPublicationMembership,
+  loadSealedPublicPredictions,
   sealPublicNoCall,
   sealPublicPrediction,
   writePublicationManifest,
@@ -395,6 +396,24 @@ describe("DDRv2 storage migrations and stores", () => {
       expect(() =>
         db.sqlite.exec("UPDATE depeg_resolver_assessments SET row_json = '{}' WHERE checkpoint = 'public_prediction'"),
       ).toThrow(/public_prediction assessments are immutable/);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("rejects malformed sealed public prediction payload JSON on read", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { prediction } = await sealPredictionFixture(db);
+      db.sqlite.exec("DROP TRIGGER trg_ddr_public_predictions_no_update");
+      db.sqlite.exec("PRAGMA ignore_check_constraints = ON");
+      db.sqlite
+        .prepare("UPDATE depeg_resolver_public_predictions SET sealed_payload_json = ? WHERE id = ?")
+        .run("{bad", prediction.id);
+
+      await expect(
+        loadSealedPublicPredictions(db, { publicPredictionIds: [prediction.id] }),
+      ).rejects.toThrow(/sealedPayloadJson must be valid JSON/);
     } finally {
       db.close();
     }

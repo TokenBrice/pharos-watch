@@ -47,29 +47,40 @@ export interface DdrStorageJsonDecodeFailure {
   message: string;
 }
 
-function logStorageDecodeFailure(failure: DdrStorageJsonDecodeFailure): void {
-  console.warn("[compute-depeg-resolver] malformed sealed payload fallback", failure);
+class DdrStorageJsonDecodeError extends Error {
+  readonly failure: DdrStorageJsonDecodeFailure;
+
+  constructor(failure: DdrStorageJsonDecodeFailure) {
+    super(
+      `DDR sealed payload decode failed for public prediction ${failure.recordId} ` +
+        `(${failure.incidentKey}/${failure.eventId}): ${failure.message}`,
+    );
+    this.name = "DdrStorageJsonDecodeError";
+    this.failure = failure;
+  }
+}
+
+function failStorageDecode(failure: DdrStorageJsonDecodeFailure): never {
+  throw new DdrStorageJsonDecodeError(failure);
 }
 
 function decodeJsonObject(value: string | null | undefined, context: Omit<DdrStorageJsonDecodeFailure, "kind" | "message">): Record<string, unknown> {
   if (!value) {
-    logStorageDecodeFailure({ ...context, kind: "missing", message: "sealed payload JSON is missing" });
-    return {};
+    failStorageDecode({ ...context, kind: "missing", message: "sealed payload JSON is missing" });
   }
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(value) as unknown;
-    const record = recordValue(parsed);
-    if (record) return record;
-    logStorageDecodeFailure({ ...context, kind: "non_object", message: "sealed payload JSON decoded to a non-object value" });
-    return {};
+    parsed = JSON.parse(value) as unknown;
   } catch (error) {
-    logStorageDecodeFailure({
+    failStorageDecode({
       ...context,
       kind: "malformed_json",
       message: error instanceof Error ? error.message : String(error),
     });
-    return {};
   }
+  const record = recordValue(parsed);
+  if (record) return record;
+  failStorageDecode({ ...context, kind: "non_object", message: "sealed payload JSON decoded to a non-object value" });
 }
 
 function sealedPayloadFromStore(row: StoreDdrSealedPublicPrediction): Record<string, unknown> {

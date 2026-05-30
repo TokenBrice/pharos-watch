@@ -310,7 +310,7 @@ async function recordDirectApiOutcome(
   }
 }
 
-export function integrateDirectApiLiquidityPhase(params: {
+export async function integrateDirectApiLiquidityPhase(params: {
   db?: D1Database;
   directApiPools: DexApiPool[];
   knownPoolIndex: KnownPoolIdentityIndex;
@@ -322,7 +322,7 @@ export function integrateDirectApiLiquidityPhase(params: {
   symbolToIds: SymbolLookups["symbolToIds"];
   validationReferences: PriceValidationReferences;
   stablecoinPriceById: Map<string, number>;
-}): DirectApiIntegrationResult {
+}): Promise<DirectApiIntegrationResult> {
   let directApiDedupSkippedByAddress = 0;
   let directApiDedupSkippedByDerivedIdentity = 0;
   let directApiDedupSkippedByOptionalWildcardIdentity = 0;
@@ -461,7 +461,7 @@ export function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
     );
     if (directApiGtPools.size > 0) {
-      mergeGtPools(params.metrics, directApiGtPools, params.db);
+      await mergeGtPools(params.metrics, directApiGtPools, params.db);
     }
 
     const directApiPriceObs = extractPriceObservations(

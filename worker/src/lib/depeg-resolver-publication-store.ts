@@ -207,6 +207,45 @@ function jsonString(value: unknown, name: string): string {
   return text;
 }
 
+function parseJson(value: string, name: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw new Error(`${name} must be valid JSON`);
+  }
+}
+
+function parseJsonObject(value: string, name: string): Record<string, unknown> {
+  const parsed = parseJson(value, name);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${name} must be a JSON object`);
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function parsePositiveIntegerArrayJson(value: string, name: string): number[] {
+  const parsed = parseJson(value, name);
+  if (!Array.isArray(parsed)) {
+    throw new Error(`${name} must be a JSON array`);
+  }
+  return parsed.map((id) => {
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new Error(`${name} must contain positive integers`);
+    }
+    return id;
+  });
+}
+
+function parseStringRecordJson(value: string, name: string): Record<string, string> {
+  const parsed = parseJsonObject(value, name);
+  for (const [key, recordValue] of Object.entries(parsed)) {
+    if (typeof recordValue !== "string") {
+      throw new Error(`${name}.${key} must be a string`);
+    }
+  }
+  return parsed as Record<string, string>;
+}
+
 function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPublicPrediction {
   return {
     id: row.id,
@@ -228,7 +267,7 @@ function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPub
     eventAgeAtLockSec: row.event_age_at_lock_sec,
     lockTiming: row.lock_timing,
     sealedPayloadJson: row.sealed_payload_json,
-    sealedPayload: JSON.parse(row.sealed_payload_json) as Record<string, unknown>,
+    sealedPayload: parseJsonObject(row.sealed_payload_json, "sealedPayloadJson"),
     rowHash: row.row_hash,
     createdAt: row.created_at,
   };
@@ -243,9 +282,9 @@ function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationMani
     publishedAt: row.published_at,
     basePayloadHash: row.base_payload_hash,
     publicPredictionIdsHash: row.public_prediction_ids_hash,
-    publicPredictionIds: JSON.parse(row.public_prediction_ids_json) as number[],
+    publicPredictionIds: parsePositiveIntegerArrayJson(row.public_prediction_ids_json, "publicPredictionIdsJson"),
     firstPublishedPublicPredictionIds: [],
-    publicPredictionRowHashes: JSON.parse(row.public_prediction_row_hashes_json) as Record<string, string>,
+    publicPredictionRowHashes: parseStringRecordJson(row.public_prediction_row_hashes_json, "publicPredictionRowHashesJson"),
     basePayloadJson: row.base_payload_json,
     baseRowCount: row.base_row_count,
     publicPredictionCount: row.public_prediction_count,

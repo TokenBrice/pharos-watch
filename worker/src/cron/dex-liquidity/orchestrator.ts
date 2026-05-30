@@ -361,7 +361,7 @@ async function buildDexLiquidityPoolState(
     sourceState.subgraphEnrichment.uniV3SymbolFees,
     sourceState.subgraphEnrichment.aerodromeIsStable,
   );
-  const directApiIntegration = integrateDirectApiLiquidityPhase({
+  const directApiIntegration = await integrateDirectApiLiquidityPhase({
     db: ctx.db,
     directApiPools: sourceState.directApiPools,
     knownPoolIndex,
