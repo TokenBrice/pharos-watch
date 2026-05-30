@@ -48,7 +48,7 @@ export async function runFallbackCrawlerPhase(params: {
     );
     dsFallbackCoins = dsFallback.newPools.size;
     if (dsFallback.newPools.size > 0) {
-      mergeGtPools(params.metrics, dsFallback.newPools);
+      mergeGtPools(params.metrics, dsFallback.newPools, params.db);
     }
     mergeDexPriceObservationMap(params.priceObservations, dsFallback.priceObs);
   } catch (err) {
@@ -59,6 +59,7 @@ export async function runFallbackCrawlerPhase(params: {
 
   try {
     const cgFallback = await fetchCgTickersFallback(
+      params.db,
       params.metrics,
       params.priceObservations,
       params.knownPoolIndex,
@@ -69,7 +70,7 @@ export async function runFallbackCrawlerPhase(params: {
     );
     cgTickerFallbackCoins = cgFallback.newPools.size;
     if (cgFallback.newPools.size > 0) {
-      mergeGtPools(params.metrics, cgFallback.newPools);
+      mergeGtPools(params.metrics, cgFallback.newPools, params.db);
     }
     mergeDexPriceObservationMap(params.priceObservations, cgFallback.priceObs);
   } catch (err) {

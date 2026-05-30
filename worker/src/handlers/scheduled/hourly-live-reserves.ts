@@ -12,11 +12,54 @@ import { checkCollateralDrift } from "../../lib/collateral-drift";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live-reserves-store";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sendAlert } from "../../lib/alerts";
+import { logCronEvent } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 
 const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
+
+function reserveAlertTargetClass(runtime: ScheduledRuntimeContext): string {
+  if (!runtime.alertWebhookUrl) return "missing-webhook";
+  return runtime.alertWebhookUrl.includes("discord.com/api/webhooks") ? "discord-webhook" : "webhook";
+}
+
+async function sendReserveSyncAlert(
+  runtime: ScheduledRuntimeContext,
+  alertType: string,
+  title: string,
+  message: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const delivered = await sendAlert(runtime.alertWebhookUrl, title, message);
+    if (delivered) return;
+    await logCronEvent(runtime.db, {
+      job: "sync-live-reserves",
+      eventType: "reserve-alert-delivery-failed",
+      severity: "warning",
+      message: "Reserve-sync alert delivery failed.",
+      metadata: {
+        alertType,
+        deliveryTargetClass: reserveAlertTargetClass(runtime),
+        ...metadata,
+      },
+    });
+  } catch (err) {
+    await logCronEvent(runtime.db, {
+      job: "sync-live-reserves",
+      eventType: "reserve-alert-delivery-failed",
+      severity: "warning",
+      message: "Reserve-sync alert delivery threw unexpectedly.",
+      metadata: {
+        alertType,
+        deliveryTargetClass: reserveAlertTargetClass(runtime),
+        error: err instanceof Error ? err.message : String(err),
+        ...metadata,
+      },
+    });
+  }
+}
 
 function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
   return [
@@ -68,11 +111,13 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
         .map((d) => `${d.id}: live=${d.liveScore}, curated=${d.curatedScore} (Δ${d.delta})`)
         .join("\n");
       console.warn(`[live-reserves] Collateral drift detected:\n${summary}`);
-      sendAlert(
-        runtime.alertWebhookUrl,
+      await sendReserveSyncAlert(
+        runtime,
+        "collateral-score-drift",
         "Collateral Score Drift",
         `${drift.driftCoins.length} coin(s) with >15pt live/curated divergence:\n${summary}`,
-      ).catch(() => {});
+        { driftCoinCount: drift.driftCoins.length },
+      );
     }
     if (drift.fallbackCoins.length > 5) {
       console.warn(`[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
@@ -82,11 +127,13 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     // Alert after ~3 missed 4-hourly runs, matching the "several missed runs"
     // posture the previous 6h threshold gave at the prior hourly cadence.
     if (maxAge > 12 * 3600) {
-      sendAlert(
-        runtime.alertWebhookUrl,
+      await sendReserveSyncAlert(
+        runtime,
+        "live-reserve-sync-stale",
         "Live reserve sync stale",
         `No successful sync in ${Math.round(maxAge / 3600)}h. Check cron scheduler.`,
-      ).catch(() => {});
+        { maxAgeHours: Math.round(maxAge / 3600) },
+      );
     }
   } catch (e) {
     console.error("[live-reserves] Drift check failed:", e);
@@ -107,11 +154,16 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
         .map((entry) => `${entry.stablecoinId}: ${Math.round(entry.ageSec / DAY_SECONDS)}d`)
         .join("\n");
       console.warn(`[live-reserves] Persistently-stale independent sources:\n${summary}`);
-      sendAlert(
-        runtime.alertWebhookUrl,
+      await sendReserveSyncAlert(
+        runtime,
+        "persistently-stale-independent-sources",
         "Persistently-stale independent reserve sources",
         `${persistentlyStale.length} coin(s) configured-live with degraded/error status and last success >14d ago:\n${summary}`,
-      ).catch(() => {});
+        {
+          staleCoinCount: persistentlyStale.length,
+          maxStaleAgeDays: Math.round(maxStaleAgeSec / DAY_SECONDS),
+        },
+      );
     }
   } catch (e) {
     console.error("[live-reserves] Persistent-stale overview failed:", e);

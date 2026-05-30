@@ -1,13 +1,14 @@
 import { CRON_TIMEOUT_MS, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS, runWithOverloadRetry } from "./cron-lease";
+import { setCache } from "./db-cache";
 
 // --- Cron failure recording ---
 // `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
 // where the job decides to swallow an exception (e.g. degrade rather than throw).
 // It emits a single structured JSON line plus a human-readable prefix, and
 // increments a per-isolate in-memory counter so callers can sample severity
-// without touching D1. DB-backed failure tracking (e.g. a `cron_failures` table
-// or a column on `cron_runs`) is a follow-up — the current `logCronRun`
-// catch-all already records terminal exceptions via the `error` column.
+// without touching D1. Non-terminal operational events that should survive
+// log retention can use `logCronEvent`, which writes latest-event records to
+// the existing cache table without requiring a migration.
 
 const cronFailureCounts = new Map<string, number>();
 
@@ -69,6 +70,123 @@ export function recordCronFailure(
 /** Test-only: reset the in-memory failure counter. */
 export function __resetCronFailureCountsForTests(): void {
   cronFailureCounts.clear();
+}
+
+export type CronEventSeverity = "info" | "warning" | "error";
+
+export interface CronEventInput {
+  job: string;
+  eventType: string;
+  severity?: CronEventSeverity;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CronEventRecord {
+  event: "cron_event";
+  job: string;
+  eventType: string;
+  severity: CronEventSeverity;
+  message: string;
+  metadata?: Record<string, unknown>;
+  recordedAt: number;
+}
+
+const CRON_EVENT_CACHE_PREFIX = "cron:event";
+const MAX_CRON_EVENT_MESSAGE_CHARS = 500;
+const MAX_CRON_EVENT_METADATA_STRING_CHARS = 500;
+const MAX_CRON_EVENT_METADATA_KEYS = 30;
+const MAX_CRON_EVENT_METADATA_ARRAY_ITEMS = 20;
+const MAX_CRON_EVENT_METADATA_DEPTH = 3;
+
+function cacheKeySegment(value: string): string {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9:-]+/g, "-").replace(/^-+|-+$/g, "");
+  return (normalized || "unknown").slice(0, 96);
+}
+
+function boundCronEventMetadataValue(value: unknown, depth: number): unknown {
+  if (value == null || typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    return value.length <= MAX_CRON_EVENT_METADATA_STRING_CHARS
+      ? value
+      : `${value.slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS)}...`;
+  }
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message.slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS),
+    };
+  }
+  if (depth >= MAX_CRON_EVENT_METADATA_DEPTH) {
+    return "[truncated-depth]";
+  }
+  if (Array.isArray(value)) {
+    const items = value
+      .slice(0, MAX_CRON_EVENT_METADATA_ARRAY_ITEMS)
+      .map((item) => boundCronEventMetadataValue(item, depth + 1));
+    if (value.length > MAX_CRON_EVENT_METADATA_ARRAY_ITEMS) {
+      items.push(`[${value.length - MAX_CRON_EVENT_METADATA_ARRAY_ITEMS} more]`);
+    }
+    return items;
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    const bounded: Record<string, unknown> = {};
+    for (const [key, entryValue] of entries.slice(0, MAX_CRON_EVENT_METADATA_KEYS)) {
+      bounded[key] = boundCronEventMetadataValue(entryValue, depth + 1);
+    }
+    if (entries.length > MAX_CRON_EVENT_METADATA_KEYS) {
+      bounded.truncatedKeys = entries.length - MAX_CRON_EVENT_METADATA_KEYS;
+    }
+    return bounded;
+  }
+  return String(value).slice(0, MAX_CRON_EVENT_METADATA_STRING_CHARS);
+}
+
+function boundCronEventMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!metadata || Object.keys(metadata).length === 0) return undefined;
+  return boundCronEventMetadataValue(metadata, 0) as Record<string, unknown>;
+}
+
+function writeCronEventConsole(record: CronEventRecord): void {
+  const prefix = `[cron-event:${record.job}] ${record.eventType}: ${record.message.slice(0, 200)}`;
+  const payload = JSON.stringify(record);
+  if (record.severity === "error") {
+    console.error(prefix, payload);
+  } else if (record.severity === "warning") {
+    console.warn(prefix, payload);
+  } else {
+    console.log(prefix, payload);
+  }
+}
+
+/**
+ * Records a non-terminal cron event. The durable side is intentionally a
+ * latest-event cache row keyed by job and event type, so callers can add
+ * structured observability without a schema migration or cron run failure.
+ */
+export async function logCronEvent(db: D1Database, event: CronEventInput): Promise<CronEventRecord> {
+  const record: CronEventRecord = {
+    event: "cron_event",
+    job: event.job,
+    eventType: event.eventType,
+    severity: event.severity ?? "info",
+    message: event.message.slice(0, MAX_CRON_EVENT_MESSAGE_CHARS),
+    recordedAt: Math.floor(Date.now() / 1000),
+    ...(event.metadata ? { metadata: boundCronEventMetadata(event.metadata) } : {}),
+  };
+  writeCronEventConsole(record);
+
+  const cacheKey = `${CRON_EVENT_CACHE_PREFIX}:${cacheKeySegment(record.job)}:${cacheKeySegment(record.eventType)}`;
+  try {
+    await setCache(db, cacheKey, JSON.stringify(record));
+  } catch (err) {
+    const { message } = classifyError(err);
+    console.warn(`[cron-event:${record.job}] Failed to persist ${record.eventType}: ${message.slice(0, 200)}`);
+  }
+  return record;
 }
 
 // --- Cron run logging types ---

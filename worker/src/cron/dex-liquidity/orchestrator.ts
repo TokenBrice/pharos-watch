@@ -339,9 +339,8 @@ async function buildDexLiquidityPoolState(
       `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiExactIdentity} exact matches and ` +
         `${primarySkippedByDirectApiDerivedIdentity} unique derived matches and ` +
         `${primarySkippedByDirectApiWildcardIdentity} optional wildcard matches`,
-    );
+      );
   }
-
   const knownPoolIndex = buildKnownPoolAddresses(
     preferredPrimaryPools,
     sourceState.dataSources.dexProjects,
@@ -363,6 +362,7 @@ async function buildDexLiquidityPoolState(
     sourceState.subgraphEnrichment.aerodromeIsStable,
   );
   const directApiIntegration = integrateDirectApiLiquidityPhase({
+    db: ctx.db,
     directApiPools: sourceState.directApiPools,
     knownPoolIndex,
     contractMetaByChainAddress: sourceState.lookups.contractMetaByChainAddress,

@@ -526,8 +526,8 @@ export async function mergeStagedPools(
   for (const pools of cgPoolMap.values()) mergedCount += pools.length;
   for (const pools of gtPoolMap.values()) mergedCount += pools.length;
 
-  if (cgPoolMap.size > 0) mergeCgPools(metrics, cgPoolMap);
-  if (gtPoolMap.size > 0) mergeGtPools(metrics, gtPoolMap);
+  if (cgPoolMap.size > 0) mergeCgPools(metrics, cgPoolMap, db);
+  if (gtPoolMap.size > 0) mergeGtPools(metrics, gtPoolMap, db);
 
   return {
     mergedCount,

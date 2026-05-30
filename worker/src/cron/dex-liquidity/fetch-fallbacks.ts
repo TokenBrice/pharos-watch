@@ -6,6 +6,7 @@ import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { fetchDsTokenPoolsWithStatus, dsRateLimit, DS_CHAIN_MAP, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { logCronEvent } from "../../lib/cron-logger";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-cron-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
@@ -93,19 +94,32 @@ export async function fetchDsFallbackPools(
   const targetCoins = getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true });
 
   if (targetCoins.length === 0) {
-    // TODO(2.6): convert to logCronEvent
-    console.log("[dex-liquidity] DexScreener fallback: no missing-coverage coins, skipping");
+    await logCronEvent(db, {
+      job: "sync-dex-liquidity",
+      eventType: "dexscreener-fallback-skipped-no-targets",
+      severity: "info",
+      message: "DexScreener fallback skipped because no missing-coverage coins were targeted.",
+    });
     return { newPools, priceObs };
   }
 
   if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES))) {
-    // TODO(2.6): convert to logCronEvent
-    console.log("[dex-liquidity] DexScreener fallback: circuit breaker open, skipping");
+    await logCronEvent(db, {
+      job: "sync-dex-liquidity",
+      eventType: "dexscreener-fallback-circuit-open",
+      severity: "warning",
+      message: "DexScreener fallback skipped because its circuit breaker is open.",
+    });
     return { newPools, priceObs };
   }
 
-  // TODO(2.6): convert to logCronEvent
-  console.log(`[dex-liquidity] DexScreener fallback: querying ${targetCoins.length} missing-coverage coins`);
+  await logCronEvent(db, {
+    job: "sync-dex-liquidity",
+    eventType: "dexscreener-fallback-started",
+    severity: "info",
+    message: "DexScreener fallback started.",
+    metadata: { targetCoins: targetCoins.length },
+  });
 
   let requests = 0;
   let poolsFound = 0;
@@ -113,8 +127,13 @@ export async function fetchDsFallbackPools(
   for (const meta of targetCoins) {
     throwIfAborted(signal);
     if (deadlineMs && Date.now() >= deadlineMs) {
-      // TODO(2.6): convert to logCronEvent
-      console.log(`[dex-liquidity] DexScreener fallback budget exhausted after ${requests} requests, yielding partial results`);
+      await logCronEvent(db, {
+        job: "sync-dex-liquidity",
+        eventType: "dexscreener-fallback-budget-exhausted",
+        severity: "warning",
+        message: "DexScreener fallback budget exhausted; yielding partial results.",
+        metadata: { requests },
+      });
       return { newPools, priceObs };
     }
 
@@ -123,8 +142,13 @@ export async function fetchDsFallbackPools(
     for (const contract of getTrackedContracts(meta)) {
       if (!DS_CHAIN_MAP[contract.chain]) continue;
       if (deadlineMs && Date.now() >= deadlineMs) {
-        // TODO(2.6): convert to logCronEvent
-        console.log(`[dex-liquidity] DexScreener fallback budget exhausted after ${requests} requests, yielding partial results`);
+        await logCronEvent(db, {
+          job: "sync-dex-liquidity",
+          eventType: "dexscreener-fallback-budget-exhausted",
+          severity: "warning",
+          message: "DexScreener fallback budget exhausted; yielding partial results.",
+          metadata: { requests },
+        });
         return { newPools, priceObs };
       }
 
@@ -136,8 +160,18 @@ export async function fetchDsFallbackPools(
         result = await fetchDsTokenPoolsWithStatus(contract.chain, contract.address, signal);
       } catch (err) {
         if (signal?.aborted) throw err;
-        // TODO(2.6): convert to logCronEvent
-        console.warn(`[dex-liquidity] DexScreener fallback error for ${meta.symbol} on ${contract.chain}:`, err);
+        await logCronEvent(db, {
+          job: "sync-dex-liquidity",
+          eventType: "dexscreener-fallback-fetch-failed",
+          severity: "warning",
+          message: "DexScreener fallback fetch failed for a tracked contract.",
+          metadata: {
+            stablecoinId: meta.id,
+            symbol: meta.symbol,
+            chain: contract.chain,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        });
         await recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, false);
         continue;
       }
@@ -249,8 +283,13 @@ export async function fetchDsFallbackPools(
     }
 
     if (malformedCount > 0) {
-      // TODO(2.6): convert to logCronEvent
-      console.warn(`[fetch-fallbacks] DexScreener: ${malformedCount} malformed pairs for ${meta.id}`);
+      await logCronEvent(db, {
+        job: "sync-dex-liquidity",
+        eventType: "dexscreener-fallback-malformed-pairs",
+        severity: "warning",
+        message: "DexScreener fallback returned malformed pairs for a tracked coin.",
+        metadata: { stablecoinId: meta.id, malformedCount },
+      });
     }
   }
 
@@ -273,10 +312,13 @@ export async function fetchDsFallbackPools(
     poolsFound++;
   }
 
-  // TODO(2.6): convert to logCronEvent
-  console.log(
-    `[dex-liquidity] DexScreener fallback: ${requests} requests, ${poolsFound} pools found for ${newPools.size} coins`
-  );
+  await logCronEvent(db, {
+    job: "sync-dex-liquidity",
+    eventType: "dexscreener-fallback-completed",
+    severity: "info",
+    message: "DexScreener fallback completed.",
+    metadata: { requests, poolsFound, coinsWithNewPools: newPools.size },
+  });
   return { newPools, priceObs };
 }
 
@@ -292,6 +334,7 @@ export async function fetchDsFallbackPools(
  * totalVolume × ORDERBOOK_TVL_FACTOR; otherwise falls back to the volume proxy.
  */
 export async function fetchCgTickersFallback(
+  db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
   knownPoolIndex: KnownPoolIdentityIndex,
@@ -306,19 +349,32 @@ export async function fetchCgTickersFallback(
   const targetCoins = getFallbackTargets(metrics, priceObservations, { requireGeckoId: true });
 
   if (targetCoins.length === 0) {
-    // TODO(2.6): convert to logCronEvent
-    console.log("[dex-liquidity] CG tickers fallback: no missing-coverage coins with geckoId, skipping");
+    await logCronEvent(db, {
+      job: "sync-dex-liquidity",
+      eventType: "cg-tickers-fallback-skipped-no-targets",
+      severity: "info",
+      message: "CoinGecko tickers fallback skipped because no missing-coverage geckoId coins were targeted.",
+    });
     return { newPools, priceObs };
   }
 
-  // TODO(2.6): convert to logCronEvent
-  console.log(`[dex-liquidity] CG tickers fallback: querying ${targetCoins.length} coins`);
+  await logCronEvent(db, {
+    job: "sync-dex-liquidity",
+    eventType: "cg-tickers-fallback-started",
+    severity: "info",
+    message: "CoinGecko tickers fallback started.",
+    metadata: { targetCoins: targetCoins.length },
+  });
 
   for (const meta of targetCoins) {
     throwIfAborted(signal);
     if (deadlineMs && Date.now() >= deadlineMs) {
-      // TODO(2.6): convert to logCronEvent
-      console.log(`[dex-liquidity] CG tickers fallback budget exhausted, yielding partial results`);
+      await logCronEvent(db, {
+        job: "sync-dex-liquidity",
+        eventType: "cg-tickers-fallback-budget-exhausted",
+        severity: "warning",
+        message: "CoinGecko tickers fallback budget exhausted; yielding partial results.",
+      });
       return { newPools, priceObs };
     }
     try {
@@ -401,22 +457,43 @@ export async function fetchCgTickersFallback(
       if (pools.length > 0) {
         newPools.set(meta.id, pools);
         const totalVol = pools.reduce((s, p) => s + p.volume24hUsd, 0);
-        // TODO(2.6): convert to logCronEvent
-        console.log(
-          `[dex-liquidity] CG tickers fallback: ${meta.symbol} → ${pools.length} exchange(s), ` +
-          `$${Math.round(totalVol).toLocaleString()} vol/day`,
-        );
+        await logCronEvent(db, {
+          job: "sync-dex-liquidity",
+          eventType: "cg-tickers-fallback-coin-pools-found",
+          severity: "info",
+          message: "CoinGecko tickers fallback found orderbook liquidity for a tracked coin.",
+          metadata: {
+            stablecoinId: meta.id,
+            symbol: meta.symbol,
+            exchanges: pools.length,
+            volume24hUsd: Math.round(totalVol),
+          },
+        });
       }
 
       await sleepWithSignal(CG_TICKERS_RATE_MS, signal);
     } catch (err) {
       if (signal?.aborted) throw err;
-      // TODO(2.6): convert to logCronEvent
-      console.warn(`[dex-liquidity] CG tickers fallback error for ${meta.symbol}:`, err);
+      await logCronEvent(db, {
+        job: "sync-dex-liquidity",
+        eventType: "cg-tickers-fallback-fetch-failed",
+        severity: "warning",
+        message: "CoinGecko tickers fallback failed for a tracked coin.",
+        metadata: {
+          stablecoinId: meta.id,
+          symbol: meta.symbol,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
     }
   }
 
-  // TODO(2.6): convert to logCronEvent
-  console.log(`[dex-liquidity] CG tickers fallback: done, ${newPools.size} coins with orderbook data`);
+  await logCronEvent(db, {
+    job: "sync-dex-liquidity",
+    eventType: "cg-tickers-fallback-completed",
+    severity: "info",
+    message: "CoinGecko tickers fallback completed.",
+    metadata: { coinsWithOrderbookData: newPools.size },
+  });
   return { newPools, priceObs };
 }

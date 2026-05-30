@@ -5,6 +5,7 @@ import {
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { sleepWithSignal } from "../../lib/abort";
+import { logCronEvent, type CronEventInput } from "../../lib/cron-logger";
 import type {
   LiquidityMetrics, DexPriceObs, GtCrawlResult, GtNewPool, CgNewPool,
 } from "./types";
@@ -16,6 +17,13 @@ import {
 import { buildChainAddresses, type ProviderChainAddress } from "./fetch-primary";
 import { crawlTokenPools, type CrawlStats, type CrawlToken } from "./crawl-helpers";
 import { addSecondaryPoolContribution } from "./pool-contribution";
+
+type DexCrawlerEvent = Omit<CronEventInput, "job">;
+
+async function logDexCrawlerEvent(db: D1Database | undefined, event: DexCrawlerEvent): Promise<void> {
+  if (!db) return;
+  await logCronEvent(db, { job: "sync-dex-liquidity", ...event });
+}
 
 function buildCrawlTokens(chainAddresses: Map<string, ProviderChainAddress[]>): CrawlToken[] {
   const tokens: CrawlToken[] = [];
@@ -60,6 +68,7 @@ export async function fetchCgPools(
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
   deadlineMs?: number,
   coingeckoApiKey?: string | null,
+  db?: D1Database,
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -78,18 +87,25 @@ export async function fetchCgPools(
     signal,
     beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
       if (deadlineMs && Date.now() >= deadlineMs) {
-        // TODO(2.6): convert to logCronEvent
-        console.log(
-          `[dex-liquidity] CG pool crawl shared deadline reached after ${requestCount}/${totalTokens} requests, yielding partial results`,
-        );
+        await logDexCrawlerEvent(db, {
+          eventType: "cg-pool-crawl-deadline-reached",
+          severity: "warning",
+          message: "CoinGecko pool crawl shared deadline reached; yielding partial results.",
+          metadata: { requestCount, totalTokens },
+        });
         return false;
       }
       if (Date.now() - startMs > CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS) {
-        // TODO(2.6): convert to logCronEvent
-        console.log(
-          `[dex-liquidity] CG pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +
-          `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`,
-        );
+        await logDexCrawlerEvent(db, {
+          eventType: "cg-pool-crawl-budget-exhausted",
+          severity: "warning",
+          message: "CoinGecko pool crawl time budget exhausted; yielding partial results.",
+          metadata: {
+            requestCount,
+            totalTokens,
+            elapsedSeconds: Math.round((Date.now() - startMs) / 1000),
+          },
+        });
         return false;
       }
       await onchainRateLimit(requestCount, abortSignal);
@@ -134,11 +150,20 @@ export async function fetchCgPools(
     },
   });
 
-  // TODO(2.6): convert to logCronEvent
-  console.log(
-    `[dex-liquidity] CG pool crawl: ${stats.requests}/${allTokens.length} requests, ${stats.poolsSeen} pools seen, ` +
-    `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known), ${stats.poolsSkippedRatio} skipped (vol/TVL ratio)`
-  );
+  await logDexCrawlerEvent(db, {
+    eventType: "cg-pool-crawl-completed",
+    severity: "info",
+    message: "CoinGecko pool crawl completed.",
+    metadata: {
+      requests: stats.requests,
+      totalTokens: allTokens.length,
+      poolsSeen: stats.poolsSeen,
+      poolsNew: stats.poolsNew,
+      poolsSkippedCurve: stats.poolsSkippedCurve,
+      poolsSkippedKnown: stats.poolsSkippedKnown,
+      poolsSkippedRatio: stats.poolsSkippedRatio,
+    },
+  });
   return { newPools, priceObs, stats };
 }
 
@@ -147,6 +172,7 @@ export async function fetchCgPools(
 export function mergeCgPools(
   metrics: Map<string, LiquidityMetrics>,
   cgNewPools: Map<string, CgNewPool[]>,
+  db?: D1Database,
 ): void {
   let withBalance = 0;
   const merged = mergeSecondaryPools(metrics, cgNewPools, {
@@ -156,8 +182,12 @@ export function mergeCgPools(
   });
 
   if (merged > 0) {
-    // TODO(2.6): convert to logCronEvent
-    console.log(`[dex-liquidity] Merged ${merged} CG pools into ${cgNewPools.size} stablecoins (${withBalance} with balance data)`);
+    void logDexCrawlerEvent(db, {
+      eventType: "cg-pools-merged",
+      severity: "info",
+      message: "Merged CoinGecko pools into liquidity metrics.",
+      metadata: { merged, stablecoins: cgNewPools.size, withBalance },
+    });
   }
 }
 
@@ -170,6 +200,7 @@ export async function fetchGtPools(
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
   deadlineMs?: number,
+  db?: D1Database,
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -194,18 +225,25 @@ export async function fetchGtPools(
     signal,
     beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
       if (deadlineMs && Date.now() >= deadlineMs) {
-        // TODO(2.6): convert to logCronEvent
-        console.log(
-          `[dex-liquidity] GT pool crawl shared deadline reached after ${requestCount}/${totalTokens} requests, yielding partial results`,
-        );
+        await logDexCrawlerEvent(db, {
+          eventType: "gt-pool-crawl-deadline-reached",
+          severity: "warning",
+          message: "GeckoTerminal pool crawl shared deadline reached; yielding partial results.",
+          metadata: { requestCount, totalTokens },
+        });
         return false;
       }
       if (Date.now() - startMs > CRAWL_BUDGETS.GECKO_TERMINAL_MS) {
-        // TODO(2.6): convert to logCronEvent
-        console.log(
-          `[dex-liquidity] GT pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +
-          `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`,
-        );
+        await logDexCrawlerEvent(db, {
+          eventType: "gt-pool-crawl-budget-exhausted",
+          severity: "warning",
+          message: "GeckoTerminal pool crawl time budget exhausted; yielding partial results.",
+          metadata: {
+            requestCount,
+            totalTokens,
+            elapsedSeconds: Math.round((Date.now() - startMs) / 1000),
+          },
+        });
         return false;
       }
       if (requestCount > 0) {
@@ -245,11 +283,20 @@ export async function fetchGtPools(
     return { newPools, priceObs, stats };
   }
 
-  // TODO(2.6): convert to logCronEvent
-  console.log(
-    `[dex-liquidity] GT pool crawl: ${stats.requests}/${allTokens.length} requests, ${stats.poolsSeen} pools seen, ` +
-    `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known), ${stats.poolsSkippedRatio} skipped (vol/TVL ratio)`
-  );
+  await logDexCrawlerEvent(db, {
+    eventType: "gt-pool-crawl-completed",
+    severity: "info",
+    message: "GeckoTerminal pool crawl completed.",
+    metadata: {
+      requests: stats.requests,
+      totalTokens: allTokens.length,
+      poolsSeen: stats.poolsSeen,
+      poolsNew: stats.poolsNew,
+      poolsSkippedCurve: stats.poolsSkippedCurve,
+      poolsSkippedKnown: stats.poolsSkippedKnown,
+      poolsSkippedRatio: stats.poolsSkippedRatio,
+    },
+  });
   return { newPools, priceObs, stats };
 }
 
@@ -257,11 +304,16 @@ export async function fetchGtPools(
 export function mergeGtPools(
   metrics: Map<string, LiquidityMetrics>,
   gtNewPools: Map<string, GtNewPool[]>,
+  db?: D1Database,
 ): void {
   const merged = mergeSecondaryPools(metrics, gtNewPools);
 
   if (merged > 0) {
-    // TODO(2.6): convert to logCronEvent
-    console.log(`[dex-liquidity] Merged ${merged} GT pools into ${gtNewPools.size} stablecoins`);
+    void logDexCrawlerEvent(db, {
+      eventType: "gt-pools-merged",
+      severity: "info",
+      message: "Merged GeckoTerminal-compatible pools into liquidity metrics.",
+      metadata: { merged, stablecoins: gtNewPools.size },
+    });
   }
 }

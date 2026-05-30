@@ -311,6 +311,7 @@ async function recordDirectApiOutcome(
 }
 
 export function integrateDirectApiLiquidityPhase(params: {
+  db?: D1Database;
   directApiPools: DexApiPool[];
   knownPoolIndex: KnownPoolIdentityIndex;
   contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"];
@@ -460,7 +461,7 @@ export function integrateDirectApiLiquidityPhase(params: {
       params.stablecoinPriceById,
     );
     if (directApiGtPools.size > 0) {
-      mergeGtPools(params.metrics, directApiGtPools);
+      mergeGtPools(params.metrics, directApiGtPools, params.db);
     }
 
     const directApiPriceObs = extractPriceObservations(

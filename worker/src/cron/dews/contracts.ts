@@ -1,13 +1,7 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { StablecoinData } from "@shared/types/market";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
-import type {
-  DEWSEvidenceKind,
-  DewsInsufficientEvidenceReason,
-  DewsTopContributor,
-  SignalResult,
-} from "../../lib/dews";
-import type { DewsSignalKey } from "@shared/lib/dews-config";
+import type { DEWSResult } from "../../lib/dews";
 
 export interface SourceFailure {
   source: string;
@@ -56,23 +50,9 @@ export interface MintBurnSnapshot {
   baselineDays: number;
 }
 
-export interface DewsComputedRow {
+export type DewsComputedRow = DEWSResult & {
   stablecoinId: string;
-  score: number;
-  band: string;
-  signals: Record<string, SignalResult>;
-  amplifiers: { psi: number; contagion: number };
-  baseScore: number;
-  finalScore: number;
-  availableWeight: number;
-  effectiveWeights: Partial<Record<DewsSignalKey, number>>;
-  evidenceKinds: DEWSEvidenceKind[];
-  insufficientEvidenceReason: DewsInsufficientEvidenceReason | null;
-  dataQualityScore: number;
-  topContributors: DewsTopContributor[];
-  sourceAges?: Record<string, number | null>;
-  staleFlags?: Record<string, boolean>;
-}
+};
 
 export interface ContagionAmplifiers {
   /** Amplifier per pegType, defaults to 1.0 when no contagion detected. */
