@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { StatusHistoryResponse } from "@shared/types";
+import { StatusHistoryResponseSchema, type StatusHistoryResponse } from "@shared/types";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 
@@ -31,5 +31,6 @@ export function useStatusHistory(
     ["status-history", window],
     buildStatusHistoryPath(window),
     CRON_1MIN,
+    { schema: StatusHistoryResponseSchema },
   );
 }

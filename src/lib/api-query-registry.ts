@@ -35,6 +35,7 @@ import { TelegramPulseSchema, type TelegramPulse } from "@shared/types/status";
 import {
   DailyDigestResponseSchema,
   DigestArchiveResponseSchema,
+  DigestSnapshotResponseSchema,
   StablecoinChartResponseSchema,
   UsdsStatusResponseSchema,
 } from "@shared/types/digest";
@@ -42,6 +43,7 @@ import {
   BluechipRatingsMapSchema,
   BlacklistResponseSchema,
   BlacklistSummaryResponseSchema,
+  DexLiquidityHistoryResponseSchema,
   DexLiquidityMapSchema,
   PegSummaryResponseSchema,
   StablecoinListResponseSchema,
@@ -162,6 +164,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       queryKey: ["dex-liquidity-history", stablecoinId, days],
       path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
       producerIntervalMs: CRON_1H,
+      schema: DexLiquidityHistoryResponseSchema,
     }),
   digestArchive: pollingDescriptor<DigestArchiveResponse>({
     queryKey: ["digest-archive"],
@@ -174,6 +177,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     staticDescriptor<DigestSnapshotResponse>({
       queryKey: ["digest-snapshot", date],
       path: API_PATHS.digestSnapshot(date),
+      schema: DigestSnapshotResponseSchema,
     }),
   health: pollingDescriptor<HealthResponse>({
     queryKey: ["health"],

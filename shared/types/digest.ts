@@ -529,3 +529,36 @@ export interface DigestSnapshotResponse {
     timestamp: number;
   }>;
 }
+
+const DigestSnapshotInputDataSchema = z
+  .object({})
+  .passthrough()
+  .transform((value): DigestInputData => value as unknown as DigestInputData);
+
+const DigestSnapshotDepegEventSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  direction: z.string(),
+  peakDeviationBps: z.number(),
+  startedAt: z.number(),
+  endedAt: z.number().nullable(),
+});
+
+const DigestSnapshotBlacklistEventSchema = z.object({
+  stablecoin: z.string(),
+  chainName: z.string(),
+  eventType: z.string(),
+  address: z.string(),
+  amountNative: z.number().nullable(),
+  amountUsdAtEvent: z.number().nullable(),
+  amountStatus: z.string(),
+  timestamp: z.number(),
+});
+
+export const DigestSnapshotResponseSchema: z.ZodType<DigestSnapshotResponse> = z.object({
+  date: z.string(),
+  inputData: DigestSnapshotInputDataSchema.nullable(),
+  prevInputData: DigestSnapshotInputDataSchema.nullable(),
+  depegEvents: z.array(DigestSnapshotDepegEventSchema),
+  blacklistEvents: z.array(DigestSnapshotBlacklistEventSchema),
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { StatusResponse } from "@shared/types";
+import { StatusResponseSchema, type StatusResponse } from "@shared/types";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
@@ -11,5 +11,10 @@ import { useAdminPollingQuery } from "./use-admin-polling-query";
  * Auto-refreshes every 60s for live ops monitoring.
  */
 export function useStatus(): UseQueryResult<StatusResponse, Error> {
-  return useAdminPollingQuery<StatusResponse>(["status"], API_PATHS.status(), CRON_1MIN);
+  return useAdminPollingQuery<StatusResponse>(
+    ["status"],
+    API_PATHS.status(),
+    CRON_1MIN,
+    { schema: StatusResponseSchema },
+  );
 }

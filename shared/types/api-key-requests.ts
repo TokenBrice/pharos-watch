@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type ApiKeySelfServeStatus =
   | "pending_verification"
   | "issued"
@@ -6,6 +8,16 @@ export type ApiKeySelfServeStatus =
   | "expired";
 
 export type ApiKeySelfServeClaimStatus = "pending_verification" | "issued" | "released";
+
+export const ApiKeySelfServeStatusSchema = z.enum([
+  "pending_verification",
+  "issued",
+  "rejected",
+  "blocked",
+  "expired",
+]);
+
+export const ApiKeySelfServeClaimStatusSchema = z.enum(["pending_verification", "issued", "released"]);
 
 export type ApiKeySelfServeCadence =
   | "hourly"
@@ -88,6 +100,41 @@ export interface ApiKeySelfServeRequestAdminListResponse {
   generatedAt: number;
   requests: ApiKeySelfServeRequestAdminSummary[];
 }
+
+export const ApiKeySelfServeRequestAdminSummarySchema = z.object({
+  requestId: z.string(),
+  status: ApiKeySelfServeStatusSchema,
+  email: z.string(),
+  requesterName: z.string().nullable(),
+  organization: z.string().nullable(),
+  projectUrl: z.string().nullable(),
+  useCase: z.string(),
+  intendedEndpoints: z.array(z.string()),
+  expectedCadence: z.string().nullable(),
+  expectedVolume: z.string().nullable(),
+  acceptedTerms: z.boolean(),
+  emailVerified: z.boolean(),
+  linkedKeyId: z.number().nullable(),
+  linkedKeyPrefix: z.string().nullable(),
+  linkedKeyActive: z.boolean().nullable(),
+  linkedKeyExpiresAt: z.number().nullable(),
+  rateLimitPerMinute: z.number(),
+  selfServeExpiresAt: z.number().nullable(),
+  riskScore: z.number(),
+  riskReasons: z.array(z.string()),
+  claimStatus: ApiKeySelfServeClaimStatusSchema.nullable(),
+  verificationSentAt: z.number().nullable(),
+  verificationExpiresAt: z.number().nullable(),
+  issuedAt: z.number().nullable(),
+  rejectedAt: z.number().nullable(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
+export const ApiKeySelfServeRequestAdminListResponseSchema: z.ZodType<ApiKeySelfServeRequestAdminListResponse> = z.object({
+  generatedAt: z.number(),
+  requests: z.array(ApiKeySelfServeRequestAdminSummarySchema),
+});
 
 export interface ApiKeySelfServeAdminMutationResponse {
   ok: true;

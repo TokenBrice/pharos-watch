@@ -1,4 +1,5 @@
-import type { ApiKeyTrafficClass } from "./api-keys";
+import { z } from "zod";
+import { ApiKeyTrafficClassSchema, type ApiKeyTrafficClass } from "./api-keys";
 
 export type ApiRequestConsumerClass = "site" | "external";
 
@@ -94,6 +95,89 @@ export interface ApiRequestAttributionResponse {
   apiKeys: ApiRequestAttributionApiKeyStat[];
   scope: ApiRequestAttributionScope;
 }
+
+const ApiRequestAttributionSplitSchema = z.object({
+  siteRequests: z.number(),
+  externalRequests: z.number(),
+  totalRequests: z.number(),
+  siteSharePct: z.number(),
+  externalSharePct: z.number(),
+});
+
+const ApiRequestAttributionRouteStatSchema = ApiRequestAttributionSplitSchema.extend({
+  routeKey: z.string(),
+  routePath: z.string(),
+});
+
+const ApiRequestAttributionTimeBucketSchema = ApiRequestAttributionSplitSchema.extend({
+  bucketStart: z.number(),
+});
+
+const ApiRequestAttributionLaneStatSchema = ApiRequestAttributionSplitSchema.extend({
+  lane: z.enum(["public-api", "site-api"]),
+});
+
+const ApiRequestAttributionSiteDeliverySchema = z.object({
+  totalSiteRequests: z.number(),
+  pagesCacheHits: z.number(),
+  pagesUpstreamFetches: z.number(),
+  pagesUpstreamTimeouts: z.number(),
+  pagesUpstreamErrors: z.number(),
+  publicApiSiteRequests: z.number(),
+});
+
+const ApiRequestAttributionScopeSchema = z.object({
+  countsTotalSiteDemand: z.boolean(),
+  countsWorkerLoad: z.boolean(),
+  includesPagesProxyCacheHits: z.boolean(),
+});
+
+const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
+  keyedRequests: z.number(),
+  unkeyedRequests: z.number(),
+  totalRequests: z.number(),
+  keyedSharePct: z.number(),
+  unkeyedSharePct: z.number(),
+  totalKeys: z.number(),
+  returnedKeys: z.number(),
+  omittedKeys: z.number(),
+  omittedRequests: z.number(),
+  truncated: z.boolean(),
+});
+
+const ApiRequestAttributionApiKeyStatSchema = z.object({
+  apiKeyId: z.number(),
+  name: z.string(),
+  maskedToken: z.string(),
+  trafficClass: ApiKeyTrafficClassSchema,
+  isActive: z.boolean(),
+  expiresAt: z.number().nullable(),
+  rateLimitPerMinute: z.number(),
+  requestCount: z.number(),
+  shareOfKeyedRequestsPct: z.number(),
+  shareOfTotalPublicApiRequestsPct: z.number(),
+});
+
+export const ApiRequestAttributionResponseSchema: z.ZodType<ApiRequestAttributionResponse> = z.object({
+  generatedAt: z.number(),
+  window: z.object({
+    from: z.number(),
+    to: z.number(),
+    durationSec: z.number(),
+    bucketSizeSec: z.number(),
+    routeLimit: z.number(),
+    apiKeyLimit: z.number(),
+    retentionDays: z.number(),
+  }),
+  totals: ApiRequestAttributionSplitSchema,
+  siteDelivery: ApiRequestAttributionSiteDeliverySchema,
+  lanes: z.array(ApiRequestAttributionLaneStatSchema),
+  routes: z.array(ApiRequestAttributionRouteStatSchema),
+  buckets: z.array(ApiRequestAttributionTimeBucketSchema),
+  keyedPublicApi: ApiRequestAttributionKeyedPublicApiSummarySchema,
+  apiKeys: z.array(ApiRequestAttributionApiKeyStatSchema),
+  scope: ApiRequestAttributionScopeSchema,
+});
 
 export type PublicApiRequestSource = ApiRequestConsumerClass;
 export type PublicApiRequestSourceSplit = ApiRequestAttributionSplit;

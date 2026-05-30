@@ -891,6 +891,131 @@ export interface StatusHistoryResponse {
   reserveComposition: StatusResponse["reserveComposition"] | null;
 }
 
+const StatusHealthValueSchema = z.enum(["healthy", "degraded", "stale"]);
+const StatusJsonObjectSchema = z.object({}).passthrough();
+
+const StatusCauseSchema = z.object({
+  code: z.string(),
+  layer: z.enum(["availability", "data-quality", "system"]),
+  severity: z.enum(["info", "warning", "critical"]),
+  message: z.string(),
+  metric: z.string().optional(),
+  value: z.number().optional(),
+  threshold: z.number().optional(),
+  runbookUrl: z.string().optional(),
+});
+
+const StatusStateInfoSchema = z.object({
+  scope: z.literal("global"),
+  currentStatus: StatusHealthValueSchema,
+  rawStatus: StatusHealthValueSchema,
+  lastEvaluatedAt: z.number(),
+  lastChangedAt: z.number(),
+  minDwellSec: z.number(),
+  staleMinDwellSec: z.number(),
+  consecutiveRaw: z.object({
+    healthy: z.number(),
+    degraded: z.number(),
+    stale: z.number(),
+  }),
+  thresholds: z.object({
+    escalateToDegraded: z.number(),
+    escalateToStale: z.number(),
+    recoverToDegraded: z.number(),
+    recoverToHealthy: z.number(),
+  }),
+});
+
+const StatusStalenessSchema = z.object({
+  ageSeconds: z.number(),
+  maxAgeSec: z.number(),
+  isStale: z.boolean(),
+});
+
+const StatusProbeSummarySchema = z.object({
+  timestamp: z.number().nullable(),
+  status: z.enum(["healthy", "degraded", "stale", "unknown"]),
+  sampleCount: z.number(),
+  passCount: z.number(),
+  failCount: z.number(),
+  bootstrapMissCount: z.number().optional(),
+  p95LatencyMs: z.number().nullable(),
+});
+
+const StatusDiscrepancySchema = z.object({
+  hasDivergence: z.boolean(),
+  severityDelta: z.number(),
+  statusSeverity: z.number(),
+  probeSeverity: z.number(),
+  details: z.string().nullable(),
+  probeAgeSeconds: z.number().nullable(),
+  consecutiveDivergent: z.number(),
+  discrepancyReason: z.enum(["in-sync", "probe-stale", "probe-disagrees", "probe-missing"]),
+});
+
+const StatusTransitionSchema = z.object({
+  id: z.number(),
+  scope: z.literal("global"),
+  from: StatusHealthValueSchema.nullable(),
+  to: StatusHealthValueSchema,
+  rawStatus: StatusHealthValueSchema,
+  transitionType: z.enum(["degrade", "recover", "init"]),
+  reason: z.string(),
+  confidence: z.number(),
+  causes: z.array(StatusCauseSchema),
+  at: z.number(),
+});
+
+export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
+  timestamp: z.number(),
+  dbHealthy: z.boolean(),
+  availabilityStatus: StatusHealthValueSchema,
+  dataQualityStatus: StatusHealthValueSchema,
+  rawOverallStatus: StatusHealthValueSchema,
+  overallStatus: StatusHealthValueSchema,
+  confidence: z.number(),
+  causes: z.object({
+    availability: z.array(StatusCauseSchema),
+    dataQuality: z.array(StatusCauseSchema),
+    overall: z.array(StatusCauseSchema),
+  }),
+  state: StatusStateInfoSchema,
+  staleness: StatusStalenessSchema,
+  probe: StatusProbeSummarySchema,
+  discrepancy: StatusDiscrepancySchema,
+  timeline: z.array(StatusTransitionSchema),
+  caches: z.record(z.string(), CacheStatusSchema),
+  crons: z.record(z.string(), StatusJsonObjectSchema),
+  dataQuality: StatusJsonObjectSchema,
+  telegramBot: StatusJsonObjectSchema.nullable(),
+  sectionErrors: z.record(z.string(), z.object({ code: z.string(), message: z.string() })),
+  datasetFreshness: StatusJsonObjectSchema,
+  summary: StatusJsonObjectSchema,
+  liquidityHealth: StatusJsonObjectSchema.nullable(),
+  yieldHealth: StatusJsonObjectSchema.nullable(),
+  priceSourceHealth: StatusJsonObjectSchema.nullable(),
+  priceProviderDiagnostics: z.array(StatusJsonObjectSchema).nullable(),
+  gtProbe: StatusJsonObjectSchema.nullable(),
+  coingeckoPriceDiff: StatusJsonObjectSchema.nullable(),
+  d1Usage: StatusJsonObjectSchema.nullable(),
+  discoveryCandidates: z.array(StatusJsonObjectSchema).nullable(),
+  mintBurnReconciliation: StatusJsonObjectSchema.nullable(),
+  reserveComposition: StatusJsonObjectSchema,
+  cacheBlobSizes: z.record(z.string(), z.number()).optional(),
+  reserveDrift: z.array(StatusJsonObjectSchema).optional(),
+  classificationWarnings: z.array(StatusJsonObjectSchema).optional(),
+}).passthrough().transform((value): StatusResponse => value as unknown as StatusResponse);
+
+export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.object({
+  timestamp: z.number(),
+  state: StatusStateInfoSchema.nullable(),
+  staleness: StatusStalenessSchema.nullable(),
+  probe: StatusProbeSummarySchema,
+  discrepancy: StatusDiscrepancySchema,
+  transitions: z.array(StatusTransitionSchema),
+  reserveComposition: StatusJsonObjectSchema.nullable(),
+}).transform((value): StatusHistoryResponse => value as unknown as StatusHistoryResponse);
+
 export interface PublicStatusTransition {
   id: number;
   from: string | null;

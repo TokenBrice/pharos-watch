@@ -272,6 +272,21 @@ export interface DexLiquidityHistoryPoint {
   methodologyVersion: string;
 }
 
+export const DexLiquidityHistoryPointSchema = z.object({
+  tvl: z.number(),
+  volume24h: z.number(),
+  score: z.number().nullable(),
+  date: z.number(),
+  coverageClass: LiquidityCoverageClassSchema,
+  coverageConfidence: z.number(),
+  liquidityEvidenceClass: LiquidityEvidenceClassSchema,
+  hasMeasuredLiquidityEvidence: z.boolean(),
+  trendworthy: z.boolean(),
+  methodologyVersion: z.string(),
+});
+
+export const DexLiquidityHistoryResponseSchema = z.array(DexLiquidityHistoryPointSchema);
+
 const SupplyHistoryPointSchema = z.object({
   date: z.number(),
   circulatingUsd: z.number(),

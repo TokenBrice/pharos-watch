@@ -1,4 +1,8 @@
+import { z } from "zod";
+
 export type ApiKeyTrafficClass = "external" | "site";
+
+export const ApiKeyTrafficClassSchema = z.enum(["external", "site"]);
 
 export interface ApiKeySummary {
   id: number;
@@ -21,6 +25,28 @@ export interface ApiKeyListResponse {
   generatedAt: number;
   keys: ApiKeySummary[];
 }
+
+export const ApiKeySummarySchema = z.object({
+  id: z.number(),
+  keyPrefix: z.string(),
+  maskedToken: z.string(),
+  name: z.string(),
+  ownerEmail: z.string().nullable(),
+  tier: z.string(),
+  trafficClass: ApiKeyTrafficClassSchema,
+  rateLimitPerMinute: z.number(),
+  isActive: z.boolean(),
+  expiresAt: z.number().nullable(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+  lastUsedAt: z.number().nullable(),
+  lastUsedRoute: z.string().nullable(),
+});
+
+export const ApiKeyListResponseSchema: z.ZodType<ApiKeyListResponse> = z.object({
+  generatedAt: z.number(),
+  keys: z.array(ApiKeySummarySchema),
+});
 
 export interface ApiKeyCreateRequest {
   name: string;

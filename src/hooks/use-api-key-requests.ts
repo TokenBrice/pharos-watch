@@ -2,7 +2,11 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints/paths";
-import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeStatus } from "@shared/types";
+import {
+  ApiKeySelfServeRequestAdminListResponseSchema,
+  type ApiKeySelfServeRequestAdminListResponse,
+  type ApiKeySelfServeStatus,
+} from "@shared/types";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 
@@ -24,5 +28,6 @@ export function useApiKeyRequests(
     ["api-key-requests", options.status ?? "all", limit],
     path,
     CRON_1MIN,
+    { schema: ApiKeySelfServeRequestAdminListResponseSchema },
   );
 }
