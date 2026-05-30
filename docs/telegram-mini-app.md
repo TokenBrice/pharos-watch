@@ -14,8 +14,16 @@ Owned files:
 
 - `src/app/pharoswatchbot/app/page.tsx`
 - `src/app/pharoswatchbot/app/client.tsx`
+- `src/app/pharoswatchbot/app/components/*`
+- `src/app/pharoswatchbot/app/constants.ts`
+- `src/app/pharoswatchbot/app/error-messages.ts`
+- `src/app/pharoswatchbot/app/format.ts`
+- `src/app/pharoswatchbot/app/mini-app-api.ts`
 - `src/app/pharoswatchbot/app/telegram-sdk.ts`
 - `src/app/pharoswatchbot/app/types.ts`
+- `src/app/pharoswatchbot/app/use-mini-app-mutations.ts`
+- `src/app/pharoswatchbot/app/use-telegram-bridge.ts`
+- `src/app/pharoswatchbot/app/use-telegram-main-button.ts`
 - `worker/src/api/telegram-mini-app.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
@@ -82,7 +90,7 @@ HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:
 Freshness windows:
 
 - **Session reads (`POST /api/telegram-mini-app/session`):** `auth_date` must be within 24 hours. A 24-hour read window keeps long-lived open Mini Apps usable across the day.
-- **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Telegram exposes one signed `initData` value for the launch, so a fresh launch may perform multiple mutations with the same `initData` until the freshness window expires. Stale-auth rejections emit a `mini_app_session_invalid` usage event; the client should call the session endpoint to obtain a fresh launch and prompt the user to retry.
+- **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Telegram exposes one signed `initData` value for the launch, so a fresh launch may perform multiple mutations with the same `initData` until the freshness window expires. Stale-auth rejections emit a `mini_app_session_invalid` usage event; the client reloads the session endpoint for read-only state, then prompts the user to close and reopen the Mini App before retrying mutations.
 
 Mutation auth is bounded by the short freshness window plus per-user mutation cooldowns. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits.
 

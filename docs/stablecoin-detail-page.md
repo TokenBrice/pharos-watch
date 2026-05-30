@@ -97,7 +97,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
 10. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `OverviewSection` as its `rightColumn` slot to render the reserves panel) → `StablecoinDepegResolverCard` when the coin has an active depeg with a DDR row → `CoinNotices` → `DEWSDetail` for non-NAV coins
 11. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MintAuthoritySection` only when compact review data exists, `MarketDataSection` for USD-pegged non-NAV coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
-12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when price transparency or a redemption backstop is available, `PriceTransparencyCard` and `RedemptionBackstopCard` sit in a two-column grid beneath
+12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when available, `RedemptionBackstopCard` and `PriceTransparencyCard` render as full-width stacked cards beneath it, in that order
 13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
 14. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
 15. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
@@ -131,7 +131,7 @@ Below the identity block, the classification line uses `buildGovernanceTaxonomyU
 - **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
 - **Deep-link ID:** `price`; the nested card still carries the legacy `price-transparency` id
-- **Mount point:** liquidity zone grid below `#dex-liquidity`, alongside the redemption backstop
+- **Mount point:** liquidity zone below `#dex-liquidity`, stacked under the redemption backstop when both render
 - **Hidden when:** there is no `coinData`, or both `coinData.price == null` and no `dexPriceCheck`
 - Shows current price, source label, confidence badge, source-depth target (`0/3`, `1/3`, `2/3`, or `3+/3`), update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists.
 
@@ -252,7 +252,12 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | `src/components/stablecoin-detail/overview-section.tsx`             | Summary and reserves                                       |
 | `src/components/stablecoin-detail/price-transparency-card.tsx`      | Price source transparency and confidence card              |
 | `src/components/stablecoin-detail/depeg-resolver-card.tsx`          | Per-coin DDR snapshot wrapper for active depeg pages       |
-| `src/components/depeg-resolver-row-card.tsx`                        | Shared DDR row-card renderer used by `/depeg/` and details |
+| `src/components/depeg-resolver-row-card.tsx`                        | Shared DDR row-card wrapper used by `/depeg/` and details  |
+| `src/components/depeg-resolver-row-card-model.ts`                   | Shared DDR row view-model helpers                          |
+| `src/components/depeg-resolver-row-card-parts.tsx`                  | Shared DDR row-card presentational parts                   |
+| `src/components/depeg-resolver-row-card-shared.tsx`                 | Shared DDR row-card UI primitives                          |
+| `src/components/depeg-resolver-row-card-state.tsx`                  | Shared DDR row-card state helpers                          |
+| `src/components/depeg-resolver-row-card-timeline.tsx`               | Shared DDR row-card timeline rendering                     |
 | `src/components/stablecoin-detail/mint-authority-section.tsx`       | Descriptive mint-authority review card                     |
 | `src/components/stablecoin-detail/flows-section.tsx`                | Detail flow section                                        |
 | `src/components/stablecoin-detail/redemption-backstop-card.tsx`     | Liquidity-zone redemption route card                       |

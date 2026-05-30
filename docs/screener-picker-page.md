@@ -11,7 +11,7 @@ The Picker flips the Screener relationship: instead of filtering the full univer
 - **Server shell:** `src/app/screener/picker/page.tsx` (frontend agent)
 - **Client implementation:** `src/app/screener/picker/client.tsx` (frontend agent)
 - **URL state codec:** `src/app/screener/picker/selector-state.ts` (frontend agent)
-- **Scoring engine:** `shared/lib/selector/engine.ts` + `shared/lib/selector/version.ts` (engine agent)
+- **Scoring engine:** `shared/lib/selector/engine.ts`, `shared/lib/selector/scoring.ts`, `shared/lib/selector/ranking.ts`, `shared/lib/selector/recommendation.ts`, `shared/lib/selector/output-helpers.ts`, `shared/lib/selector/yield-source.ts`, and `shared/lib/selector/version.ts` (engine agent)
 - **Snapshot canonicalization:** `shared/lib/selector/canonicalize.ts` (engine + integration co-owned)
 - **Snapshot contract/schema:** `shared/lib/selector/snapshot.ts` (engine + integration co-owned)
 - **Snapshot Pages Function:** `functions/selector-snapshot/[[path]].ts` (integration)
@@ -171,7 +171,7 @@ When changing Picker behavior, update this doc alongside:
 1. **Snapshot endpoint contract** (POST/GET, failure modes, canonicalization rules) → `functions/selector-snapshot/[[path]].ts`, `functions/__tests__/selector-snapshot.test.ts`, `docs/api-reference.md` Pages Function endpoints section.
 2. **localStorage keys or schema** → `src/components/selector/selector-callout.tsx` (frontend), `docs/privacy-page.md`.
 3. **Banned-phrase policy** → `scripts/ci/check-selector-banned-phrases.mjs`. Wire any new banned phrase into `BANNED_PATTERNS`; document durable replacement guidance in this file or a focused `/docs/` page.
-4. **Weight, exclusion, or deterministic behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint. The current picker remediation is `selector-v1.8`.
+4. **Weight, exclusion, scoring, ranking, yield-source, or deterministic output behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint. The current picker remediation is `selector-v1.8`.
 5. **OG content** → replace `public/og-selector-*.png` and re-verify the marketing copy is calibrated against the banned-phrase list before commit.
 6. **Methodology page** → `/methodology/selector/` ships within 30 days post-MVP (design §9.1 item 7; project-tracker post-ship task).
 

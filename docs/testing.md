@@ -86,7 +86,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` first verifies that
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/critical-coverage-ratchet.yml`, `.github/workflows/codeql.yml`, `.github/workflows/zizmor.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/pharos-change-contract.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/og-refresh.yml`, `.github/workflows/critical-coverage-ratchet.yml`, `.github/workflows/codeql.yml`, `.github/workflows/zizmor.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
 
@@ -96,7 +96,12 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - still runs the shared non-deploy guardrails and tests on every PR; PR Pages build/SEO follows `pages_changed`, and Worker typechecks follow the same worker deploy-surface flag used by the push deploy workflow
    - runs a pinned gitleaks commit-range scan for pull-request secret detection
    - uses the PR base SHA for the critical-coverage ratchet diff
-2. `validate` (runs before any deployment):
+2. `Pharos Change Contract`
+   - defined in `.github/workflows/pharos-change-contract.yml`
+   - runs on pull requests to `main` and manual dispatch
+   - renders the deploy-surface and validation-contract summary from `scripts/ci/pharos-change-contract.mjs`
+   - is advisory and does not deploy or publish artifacts
+3. `validate` (runs before any deployment):
    - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs` with bounded parallelism: dependency/pricing audits, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, registry-derived generated-artifact checks, env checks, duplicate/export/registry guards, CSP/header sync, unused-code/hotspot/sql/stablecoin-data checks
    - starts `validate:prebuild` and the non-mutating leaf checks on separate runners at the same time: four non-critical Vitest shards, critical coverage, optional Worker runtime typecheck, and optional Pages build/SEO
    - runs all four `npm run test:noncritical -- --shard=N/4` shards and requires every shard before the aggregate `validate` job succeeds
@@ -104,7 +109,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - runs `npm run typecheck:worker` only when `worker_changed=true`
    - runs `npm run build` + `npm run test:a11y` + `npm run check:feature-flag-inlining` + `npm run seo:check` + Safe Browsing classifier guardrails (`check:phishing-signatures`, `check:classifier-sensitive-copy`) and built-artifact budget/drift checks in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
    - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow calls the consolidated `pages-release` workflow for Pages data sync, build, a11y, SEO, build-size/build-attribution guards, local artifact smoke, publish, and live smokes
-3. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
+4. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, `worker_promotion_required`, `pages_changed`, and `pages_ui_changed`
    - Marks worker validation work as required when the diff touches worker runtime, Worker-consumed shared runtime contracts, package/deploy infra, `.github/actions/`, `scripts/lib/`, shared guardrail scripts, worker operational scripts, or worker-specific checks/smokes. Known Pages-only shared helpers are excluded by subpath in `scripts/lib/automation-registry.mjs`.
@@ -113,12 +118,12 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Marks `pages_ui_changed=true` only for likely frontend/runtime surfaces (`src/`, `public/`, `shared/`, `functions/`, `data/`, root package/lock, `next.config.ts`) so strict mobile smoke can skip deploy-infra-only Pages diffs
    - Skips the heavy deploy workflow entirely when neither Pages nor worker deploy surfaces changed
    - Forces the full path on `workflow_dispatch`; manual production dispatch must target the `main` ref
-4. `upload-worker-version` (needs `detect-changes`):
+5. `upload-worker-version` (needs `detect-changes`):
    - Uses the shared workspace setup and the lockfile-installed Wrangler CLI for non-mutating candidate upload, matching the later mutating deploy lane
    - Capture the currently live production Worker version ID with `wrangler deployments status --json`
    - Upload a candidate Worker version with `wrangler versions upload` before validation completes; this is non-mutating preparation for the promotion lane and keeps preview URL smoke available before production traffic shifts. If Cloudflare returns `entitlements.not_available [code: 10007]` for Workers Versions, the job records `version_upload_unavailable=true` and lets `deploy-worker` use the validated legacy deploy fallback instead.
    - Skipped on Pages-only, validation-only, or non-deploy `push` events where `worker_promotion_required=false`
-5. `deploy-worker` (needs `upload-worker-version` when Worker promotion is required):
+6. `deploy-worker` (needs `upload-worker-version` when Worker promotion is required):
    - Waits for the aggregate `validate / validate` job before any production D1 mutation or Worker promotion
    - Re-runs `npm run check:migrations` on the release runner immediately before remote D1 changes
    - Applies D1 migrations with the local worker-pinned Wrangler CLI, then runs `npm run test:smoke-api` against the uploaded preview URL before the candidate is considered promotable when Workers Versions are available
@@ -127,7 +132,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Runs deploy canary `smoke-api` checks in the same job before promotion when preview URLs are available and always after production deploy (full strict API contract coverage remains in Vitest). Automatic Worker rollback requires the Workers Versions path; the legacy fallback still fails the workflow on production smoke failure.
    - On worker-only deploys, runs live public UI, ops, and transport smokes in parallel inside the same job
    - Skipped on Pages-only, validation-only, or non-deploy `push` events
-6. `pages-release`:
+7. `pages-release`:
    - production deploy job in `.github/workflows/deploy-cloudflare.yml` that calls the consolidated `.github/workflows/pages-release.yml`
    - runs only when `pages_changed=true`
    - starts as soon as Pages changes are detected, in parallel with Worker candidate upload/promotion work when both surfaces changed
@@ -138,7 +143,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - writes a Pages release summary with output file count, static export size, and depeg-event static page count, captures the current production Pages deployment id best-effort, publishes the verified local artifact with the Wrangler retry loop, and then runs live public UI, ops, and transport smokes in parallel inside the same job; the live UI smoke keeps broad overflow coverage on the exact local artifact and adds a narrow live `/depeg/` canary for the default-on DDR/DDRQ data contract
    - rolls Pages production back to the captured previous deployment when the live public UI smoke fails and a previous deployment id was available
    - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step verifies the built homepage artifact contains the expected GA script and that the browser initializes `window.gtag` with the expected `page_view` payload; live smoke requires successful GA4 `page_view` collect delivery, while local artifact smoke also accepts an issued collect request for the configured measurement id that Chromium reports as `net::ERR_ABORTED`; once a successful live collect is observed, additional expected-measurement GA collect aborts are tolerated as browser beacon noise
-7. `smoke-ops`:
+8. `smoke-ops`:
 
 - Run `npm run test:smoke-ops`
 - Uses `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE` (defaults: `https://ops.pharos.watch/admin/`, `https://ops-api.pharos.watch`)
@@ -148,35 +153,41 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - Defaults to the full scope, which verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, admin samples, and safe dry-run admin paths on the operator API host
 - Production deploys set `SMOKE_OPS_SCOPE=canary`, which keeps the ops UI shell/access checks plus direct and same-origin status checks on the critical path while leaving slower deep admin probes available for manual/full smoke runs
 
-8. `smoke-transport`:
+9. `smoke-transport`:
 
 - Run `npm run test:smoke-transport`
 - Verifies `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...` return `308` before application auth or worker logic responds
 - Runs after the same production-changing gate as `smoke-ops`
 - Fails the workflow on redirect regressions once the zone-level redirect rule is in place
 
-9. `Rebuild Pages`:
+10. `Rebuild Pages`:
 
 - defined in `.github/workflows/rebuild-pages.yml`
 - runs on the daily schedule and on manual dispatch
 - skips `validate` and Worker promotion
 - runs the shared `pages-release` wrapper workflow, whose publish phase includes `smoke-ui-live`, `smoke-ops`, and `smoke-transport`
 
-10. `CodeQL`:
+11. `OG Refresh`:
+
+- defined in `.github/workflows/og-refresh.yml`
+- runs on manual dispatch
+- rebuilds checked-in OG editorial and learn image artifacts and opens or updates the automated/og-refresh branch when generated images change
+
+12. `CodeQL`:
 
 - defined in `.github/workflows/codeql.yml`
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 - uses `.github/codeql/codeql-config.yml` to exclude Vitest/test fixtures from production security scanning
 
-11. `Zizmor`:
+13. `Zizmor`:
 
 - defined in `.github/workflows/zizmor.yml`
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - scans GitHub Actions workflows and uploads SARIF findings to GitHub Code Scanning
 - runs separately from CodeQL so workflow-security findings have their own tool identity and triage state
 
-12. `Dependency Audit`:
+14. `Dependency Audit`:
 
 - defined in `.github/workflows/dependency-audit.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -188,14 +199,14 @@ For deployment/worktree operating procedure (including the local merge gate befo
   - scheduled dependency-audit findings must get a tracked triage note or remediation issue the same business day
   - do not leave a new high/critical finding unowned between audit detection and the next production deploy
 
-13. `Critical Coverage Ratchet`:
+15. `Critical Coverage Ratchet`:
 
 - defined in `.github/workflows/critical-coverage-ratchet.yml`
 - runs on a weekly Monday schedule and on manual dispatch
 - runs `npm run coverage:critical` with `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked against the baseline, while pull request and merge-gate paths keep the faster touched-file ratchet
 - uses the same Node 24 workspace setup as the deploy validate lane
 
-14. `Secret Scan`:
+16. `Secret Scan`:
 
 - defined in `.github/workflows/secret-scan.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -203,7 +214,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
 - scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
 
-15. `Safe Browsing Monitor`:
+17. `Safe Browsing Monitor`:
 
 - defined in `.github/workflows/safe-browsing-monitor.yml`
 - runs on a daily schedule (`17 7 * * *`) and on manual dispatch
@@ -233,7 +244,7 @@ Current GitHub repository secrets required by scheduled monitors:
 Current GitHub repository variables used by the deploy path:
 
 - `API_BASE_URL` (required)
-- `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, and `NEXT_PUBLIC_GA_ID` (optional)
+- `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, and `NEXT_PUBLIC_PHAROS_*` (optional)
 
 Cloudflare Access ownership split:
 

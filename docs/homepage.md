@@ -136,7 +136,7 @@ When pinning is enabled from the homepage, each table row shows a locked star co
 
 The `Mint Auth` column reads `coin.mintAuthoritySummary` from the slim client registry and shows the same descriptive buckets used by `/coverage/` and `/screener/`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`. This column is informational only and does not change the homepage sort default, Safety Score inputs, or report-card methodology.
 
-`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally.
+`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally. The collapsed homepage preview shows USD, EUR, CHF, and Fiat Except USD first; remaining active pegs sit behind the "more pegs" disclosure.
 
 ---
 

@@ -194,6 +194,12 @@ Current actions:
 - `quicksub:<stablecoinId>` (enables DEWS + depeg for that one coin; private chats receive an audited confirmation with a Mini App tuning button; group chats require admin and keep the callback toast only)
 - `manage:page:<N>` (paginates the `/list` `[ Manage ]` keyboard, edits the message in place)
 - `unsub:<stablecoinId>` (removes one coin from the chat's subscriptions; group chats require admin, gated identically to `/unsubscribe`)
+- `confirm:bulk` / `cancel:bulk` for bulk confirmation prompts
+- `confirm:forget` / `cancel:forget` for the data-deletion confirmation flow
+- `select:<N>` for setup/preset selection flows
+- `help:commands` for command-help navigation
+- `setup:*` for setup wizard steps
+- `tz:<IANA zone>` for timezone quick picks
 - `settings:home` — re-render the chat-level settings view
 - `settings:gt:<type>` where `type ∈ dews | depeg | safety | launch` — toggle global alert flag
 - `settings:q:<1|0>` — enable (22-07 UTC) or disable quiet hours

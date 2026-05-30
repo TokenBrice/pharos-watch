@@ -23,6 +23,7 @@ gh variable set NEXT_PUBLIC_PHAROS_HERO_VERDICT --body true
 gh variable set NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER --body true
 gh variable set NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY --body true
 gh variable set NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER --body true
+gh variable set NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER --body true
 
 gh variable list   # verify
 ```
@@ -31,7 +32,7 @@ gh variable list   # verify
 
 Repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**. Name: `NEXT_PUBLIC_PHAROS_X`. Value: `true` (literal four characters).
 
-For default-on rollbacks (`NEXT_PUBLIC_PHAROS_HERO_VERDICT`, `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`), set the variable to `false` instead of deleting it.
+For default-on rollbacks (`NEXT_PUBLIC_PHAROS_HERO_VERDICT`, `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`, `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER`), set the variable to `false` instead of deleting it.
 
 ## How the variables reach the build
 
@@ -85,11 +86,12 @@ gh variable set NEXT_PUBLIC_PHAROS_X --body false
 gh workflow run "Rebuild Pages" --ref main
 ```
 
-For default-off flags, deleting the variable has the same effect as setting `false`: the flag returns to off on the next build. For default-on flags such as `NEXT_PUBLIC_PHAROS_HERO_VERDICT` and `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`, deletion returns them to the default-on path; rollback requires an explicit false value:
+For default-off flags, deleting the variable has the same effect as setting `false`: the flag returns to off on the next build. For default-on flags such as `NEXT_PUBLIC_PHAROS_HERO_VERDICT`, `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`, and `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER`, deletion returns them to the default-on path; rollback requires an explicit false value:
 
 ```bash
 gh variable set NEXT_PUBLIC_PHAROS_HERO_VERDICT --body false
 gh variable set NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER --body false
+gh variable set NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER --body false
 gh workflow run "Rebuild Pages" --ref main
 ```
 

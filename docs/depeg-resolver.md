@@ -185,7 +185,7 @@ DDR is validated by a replay harness over historical events plus the label corpu
 
 Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by cache-backed endpoints. The writer resolves canonical incidents, records lock deferrals, seals immutable predictions/no-calls, finalizes first-publication manifests, and then projects the public DDR cache from sealed outcomes plus live overlays. The same job rebuilds the DDRR review snapshot from first-publication exposure, errata, and policy-universe coverage rows. DDRR persistence or snapshot failures are recorded in cron metadata without failing an already-written DDR run unless the cron abort signal has fired. The frontend reads the caches only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes degraded lock-deferral overlays rather than inventing verdicts during unhealthy runs.
 
-The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer and the cache-backed `GET /api/depeg-resolver` handler degrade to a `200` with empty rows when the cache is missing, and serve stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus live overlay facts.
+The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, `public-contract.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer seals first-publication manifests through `worker/src/cron/depeg-resolver/publication.ts`, projects public rows through `worker/src/cron/depeg-resolver/public-projection.ts`, and the cache-backed `GET /api/depeg-resolver` handler degrades to a `200` with empty rows when the cache is missing, and serves stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus live overlay facts.
 
 The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`.
 
@@ -199,7 +199,10 @@ The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with 
 | `shared/lib/depeg-resolver/strata.ts` | Depth / direction / structural / currency stratification keys |
 | `shared/lib/depeg-resolver/incident-groups.ts` | Incident grouping + quarantine of flappy coins |
 | `shared/lib/depeg-resolver/inputs.ts` | Engine input shapes (active event, structural, supply, live context) |
+| `shared/lib/depeg-resolver/public-contract.ts` | Public prediction/no-call contract helpers and publication-state mapping |
 | `shared/types/depeg-resolver.ts` | Shared DDR types + Zod schemas |
+| `worker/src/cron/depeg-resolver/publication.ts` | First-publication manifest finalization and retry handling |
+| `worker/src/cron/depeg-resolver/public-projection.ts` | Public DDR row projection from sealed outcomes plus live overlays |
 | `shared/lib/depeg-resolver-review/` | Runtime-neutral DDRR outcome, duration-error, horizon-review, and summary logic |
 | `shared/types/depeg-resolver-review.ts` | Shared DDRR assessment, review row, summary, meta, and response schemas |
 | `worker/src/lib/depeg-resolver-assessment-store.ts` | DDR assessment checkpoint persistence for later review |

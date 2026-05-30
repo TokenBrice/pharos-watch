@@ -3315,7 +3315,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Returns the current private-chat Mini App control-panel state for a Telegram user.
 
-**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` field and optional third-party `signature` field from the HMAC data-check string, rejects missing/invalid hashes, and accepts sessions up to 24 hours old for read-only state loading.
+**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` field from the HMAC data-check string, includes every other signed field, rejects missing/invalid hashes, and accepts sessions up to 24 hours old for read-only state loading.
 
 **Site-data lane:** denied. The frontend calls the public API host through `src/lib/api.ts`; `/_site-data/*` never proxies this route.
 
@@ -3373,7 +3373,8 @@ Applies one private-chat Mini App setting mutation, then returns the refreshed M
 
 Supported `operation.kind` values:
 
-- `recommended-setup` — follow a preset such as `usd-top25` with selected alert types.
+- `recommended-setup` — canonical first-run setup only: `presetId="usd-top25"` and `alertTypes=["dews","depeg"]`.
+- `follow-preset` — follow any supported preset with selected alert types.
 - `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`).
 - `set-global-depeg-step` — set or clear the global depeg severity and worsening-step threshold (`100`, `250`, `500`, or `null`).
 - `set-quiet-hours` — enable or disable UTC quiet hours.

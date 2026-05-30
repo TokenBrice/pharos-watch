@@ -23,6 +23,7 @@ Primary audience:
 - **Route:** `/timeline/`
 - **Server shell:** `src/app/timeline/page.tsx`
 - **Client implementation:** `src/app/timeline/client.tsx` (exports `TimelineClient`)
+- **Timeline split modules:** `src/app/timeline/timeline-controller.ts`, `src/app/timeline/timeline-feed.tsx`, `src/app/timeline/timeline-feed-helpers.ts`, `src/app/timeline/timeline-feed-sections.tsx`, `src/app/timeline/use-timeline-feed-data.ts`, `src/app/timeline/use-timeline-feed-interactions.ts`, and `src/app/timeline/use-timeline-phosphor.ts`
 - **Filter UI:** `src/components/tape/tape-filters.tsx` and `src/components/tape/tape-classes.ts`
 - **Event card:** `src/components/tape/event-card.tsx`
 - **Digest grouping:** `src/lib/tape-digest.ts` + `src/components/tape/class-digest-row.tsx`
@@ -66,7 +67,7 @@ Filter state is read from URL search params via `useUrlFilters`, parsed in `read
 | `peg`      | `all` or one of the entries in `PEG_FILTER_OPTIONS` from `@shared/lib/classification` | `all`    | Forwarded to `/api/events?pegCurrency=` and filtered server-side (mirrors the `pegCurrency` API param)  |
 | `chain`    | `all` or any id present in `CHAIN_META` from `@shared/lib/chains`                     | `all`    | Forwarded to `/api/events?chain=`                                                      |
 | `window`   | `24h`, `7d`, `30d`, `90d`, `alltime`                                                   | `7d`     | Converted to `since=<epoch_ms>` by `tapeWindowSince(...)`; parser also accepts legacy `all`, but the UI emits `alltime` |
-| `q`        | free-text                                                                             | empty    | Client-side fuzzy match against title, summary, and `coinId`                           |
+| `q`        | free-text                                                                             | empty    | Debounced 200 ms in the client, then forwarded to `/api/events?q=` for server-side search |
 | `event`    | event id (`${ts_ms}-${type}-${hash8}`)                                                | empty    | Permalink target; resolved through a 200-row latest-events buffer when out of view     |
 
 `severity`, `peg`, `chain`, and `window` are always set; clearing them returns to the defaults shown above. The all-time empty-state CTA writes `window=alltime`.

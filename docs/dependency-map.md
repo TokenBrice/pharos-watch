@@ -11,7 +11,12 @@ Primary files:
 - `src/app/dependency-map/dependency-hubs-model.ts` — shared pure model for desktop and mobile hub summaries
 - `src/app/dependency-map/dependency-hubs-board.tsx` — desktop exact-value dependency hub board
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout logic
-- `src/components/contagion-graph.tsx` — SVG rendering, interaction handlers
+- `src/components/contagion-graph.tsx` — graph shell and shared interaction state
+- `src/components/contagion-graph-model.ts` and `src/components/contagion-graph-graph.ts` — pure graph model and graph algorithms
+- `src/components/contagion-graph/contagion-graph-body.tsx` — SVG stage rendering and interaction handlers
+- `src/components/contagion-graph/use-contagion-graph-model.ts` — ContagionGraph view-model hook
+- `src/components/contagion-graph/contagion-graph-shell.tsx` — surrounding graph chrome and controls
+- `src/components/contagion-graph/contagion-graph-svg.tsx` — low-level SVG node/link rendering helpers
 - `src/components/contagion-graph/contagion-graph-insights.tsx` — Selection overlay rendered on top of the SVG stage
 - `src/components/dependency-map-mobile-summary.tsx` — mobile quick-summary companion card
 

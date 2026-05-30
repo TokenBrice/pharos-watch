@@ -118,9 +118,11 @@ Defined across:
 - `.github/workflows/critical-coverage-ratchet.yml` for the weekly/manual all-critical coverage ratchet
 - `.github/workflows/dependency-audit.yml` for the scheduled full dependency audit
 - `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`, including a pinned gitleaks scan (`v8.30.0`, SHA256-verified) over the PR commit range (`--log-opts="--no-merges <base>..<head>"`); full-history scans still run weekly via `.github/workflows/secret-scan.yml`
+- `.github/workflows/pharos-change-contract.yml` for the pull-request/manual deploy-surface contract summary
 - `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
 - `.github/workflows/pages-release.yml` for the consolidated Pages build/local-smoke/publish/live-smoke path
 - `.github/workflows/rebuild-pages.yml` for the scheduled/manual Pages-only rebuild path
+- `.github/workflows/og-refresh.yml` for manually refreshing checked-in OG image artifacts
 - `.github/workflows/zizmor.yml` for GitHub Actions workflow security scanning into Code Scanning
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
@@ -211,7 +213,7 @@ Optional GitHub Actions checkout fallback:
 Repository variables:
 
 - Required: `API_BASE_URL`
-- Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, `CI_VALIDATE_RUNNER`, `CI_WORKER_DEPLOY_RUNNER`
+- Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `CI_VALIDATE_RUNNER`, `CI_WORKER_DEPLOY_RUNNER`
 
 Scheduled monitor secrets:
 

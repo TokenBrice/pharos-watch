@@ -21,7 +21,9 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEPEG_THRESHOLD_BPS_NON_USD` | 150 (1.5%) | Non-USD peg threshold (accounts for FX noise + thin liquidity) |
 | `DEPEG_CONFIRMATION_SUPPLY_THRESHOLD` | $1,000,000,000 | Coins above this require multi-source confirmation |
 | `DEPEG_PENDING_MIN_AGE_SEC` | 900 (15 min) | Minimum time before a pending record can be promoted |
-| `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Maximum time before a pending record expires |
+| `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Base time before a pending record can expire |
+| `DEPEG_PENDING_EXTENDED_EXPIRY_SEC` | 8100 (135 min) | Extended limit when primary evidence still points same-direction or confirmation sources are unavailable/circuit-open |
+| `DEPEG_PENDING_SEVERE_EXPIRY_SEC` | 10800 (180 min) | Severe/extreme-move limit; expiry records `unconfirmed-severe` |
 | `DEPEG_SECONDARY_THRESHOLD_RATIO` | 0.5 | Secondary source agreement bar (50% of primary threshold) |
 | `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` | 1800 (30 min) | Primary prices older than this require confirmation |
 | `DEPEG_EXTREME_MOVE_BPS` | 5000 (50%) | Severe move threshold routed through dedicated confirmation lane |
@@ -209,7 +211,7 @@ Recovery check: if the current **authoritative** primary price is valid and devi
 Age checks:
 
 - If age < 15 minutes: skip (wait for next cycle)
-- If age > 45 minutes: delete (expired without confirmation)
+- If age is past the 45-minute base expiry, delete only when the dynamic final limit is also exceeded. The limit extends to 135 minutes when the current authoritative primary still points in the pending direction or confirmation sources are unavailable/circuit-open, and to 180 minutes for extreme-move pending rows.
 
 ### Secondary Source Checks
 
@@ -259,9 +261,11 @@ Age checks:
 | false | any | null | false/null | true | REJECT (directional contradiction with no same-direction rescue signal) |
 | null | null | false | false/null | true | REJECT (available secondary evidence points the other way) |
 | null | null | false/null | false/null | true | REJECT when DEX or pool contradiction is decisive and no same-direction source rescues the candidate |
-| null | null | null | null | false | Keep pending (retry next cycle) |
+| null | null | null | null | false | Keep pending until the dynamic expiry limit; then expire (or record `unconfirmed-severe` for extreme moves) |
 
 Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, refreshed `peg_reference`, canonical `confirmation_sources`, and peak = worst of the stored pending peak, current authoritative primary, and trustworthy same-direction confirmer prices, then deletes from `depeg_pending`.
+
+Pending rows that pass the 45-minute base expiry but still have same-direction primary evidence, unavailable sources, or open confirmation circuits remain pending until their final dynamic limit. Rows that exceed that final limit are deleted with a recorded pending outcome; extreme-move expiries use `unconfirmed-severe` instead of the generic `expired` label.
 
 ## Historical Backfill Validation
 
@@ -308,7 +312,8 @@ Price crosses threshold
                                       yes ---------- + ---------- no
                                                      |             |
                                               PROMOTE to      authoritative recovery,
-                                              depeg_events    expiry, or decisive disagreement
+                                              depeg_events    expiry/final dynamic expiry,
+                                                               or decisive disagreement
                                                                -> delete pending
 
 Low-confidence pending rows are stricter: off-chain agreement alone does not promote them; they need CEX, aggregate DEX, or pool-challenger confirmation.
