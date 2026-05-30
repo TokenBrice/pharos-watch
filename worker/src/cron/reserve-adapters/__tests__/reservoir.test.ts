@@ -72,6 +72,38 @@ describe("adaptReservoirReserves", () => {
     expect(unknownExposurePct).toBe(0);
   });
 
+  it("classifies reviewed Reservoir PRIME and PT USDat rows as high-risk buckets", () => {
+    const { slices, unknownExposurePct } = adaptReservoirReserves({
+      assets: [
+        {
+          label: "Hastra - PRIME",
+          description: "Staked PRIME backed by real-world HELOC lending.",
+          totalBalanceValue: "35",
+        },
+        {
+          label: "Morpho - Sentora PRIME",
+          description: "Sentora PRIME Main lending against PRIME",
+          totalBalanceValue: "40",
+        },
+        {
+          label: "Pendle - PT USDat",
+          description: "Pendle principal token for USDat expiring on August 27 2026",
+          totalBalanceValue: "25",
+        },
+      ],
+      liabilities: [],
+      totalAssets: "100",
+      totalLiabilities: "95",
+      equity: "5",
+    });
+
+    expect(slices).toEqual([
+      { name: "Hastra / Sentora PRIME credit allocations", pct: 75, risk: "high" },
+      { name: "Pendle PT USDat tokenized-treasury principal token", pct: 25, risk: "high" },
+    ]);
+    expect(unknownExposurePct).toBe(0);
+  });
+
   it("returns empty slices for zero total assets", () => {
     const { slices } = adaptReservoirReserves({
       assets: [],
@@ -233,7 +265,7 @@ describe("adaptReservoirReserves", () => {
     });
   });
 
-  it("emits a fatal warning when total liabilities exceed total assets", async () => {
+  it("emits a degraded warning when total liabilities exceed total assets", async () => {
     const result = await fetchReservoirReserves(
       { id: "r" } as never,
       {
@@ -257,7 +289,7 @@ describe("adaptReservoirReserves", () => {
 
     expect(result.warnings).toEqual(expect.arrayContaining([expect.objectContaining({
       code: "reservoir-insolvent",
-      effect: "fatal",
+      effect: "degraded",
     })]));
   });
 

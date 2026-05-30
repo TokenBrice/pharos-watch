@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { Abi } from "abitype";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
@@ -101,6 +102,7 @@ const CURVE_CONTROLLER_FACTORY = "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC";
 const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
+const YIELD_BASIS_OPTIONAL_TIMEOUT_MS = 6_000;
 const CURVE_CONTROLLER_FACTORY_ABI = parseAbi([
   "function n_collaterals() view returns (uint256)",
   "function collaterals(uint256) view returns (address)",
@@ -521,9 +523,40 @@ async function fetchYieldBasisMarketExposures(
   });
 }
 
+async function fetchOptionalYieldBasisMarketExposures(
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<{ markets: YieldBasisMarketExposure[]; warnings: LiveReserveWarning[] }> {
+  const timeout = createTimeoutSignal({
+    timeoutMs: YIELD_BASIS_OPTIONAL_TIMEOUT_MS,
+    timeoutReason: new Error("crvUSD Yield Basis optional leg timed out"),
+    parentSignal: signal,
+  });
+
+  try {
+    const markets = await fetchYieldBasisMarketExposures(timeout.signal, ctx);
+    return { markets, warnings: [] };
+  } catch (error) {
+    if (signal.aborted) throw signal.reason ?? error;
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      markets: [],
+      warnings: [
+        reserveDegradedWarning(
+          "yield-basis-read-failed",
+          `crvUSD Yield Basis collateral leg unavailable; using direct Curve collateral only. ${message}`,
+        ),
+      ],
+    };
+  } finally {
+    timeout.dispose();
+  }
+}
+
 export function adaptCrvUsd(
   payload: CurveMarketsPayload,
   yieldBasisMarkets: YieldBasisMarketExposure[] = [],
+  extraWarnings: LiveReserveWarning[] = [],
 ): AdapterResult {
   const markets = payload.chains?.ethereum?.data ?? [];
   const summary = summarizeCrvUsdCollateralBuckets([
@@ -544,7 +577,7 @@ export function adaptCrvUsd(
 
   return {
     slices: summary.slices,
-    warnings: summary.warnings,
+    warnings: [...summary.warnings, ...extraWarnings],
     metadata: {
       marketCount: markets.length + yieldBasisMarkets.length,
       directMarketCount: markets.length,
@@ -568,6 +601,7 @@ export function adaptCrvUsd(
 export function adaptCrvUsdOnchain(
   llammaMarkets: readonly LlammaMarketExposure[],
   yieldBasisMarkets: readonly YieldBasisMarketExposure[] = [],
+  extraWarnings: LiveReserveWarning[] = [],
 ): AdapterResult {
   let softLiquidatedCrvUsdUsd = 0;
   let bandReadCount = 0;
@@ -594,7 +628,7 @@ export function adaptCrvUsdOnchain(
 
   return {
     slices: summary.slices,
-    warnings: summary.warnings,
+    warnings: [...summary.warnings, ...extraWarnings],
     metadata: {
       marketCount: llammaMarkets.length + yieldBasisMarkets.length,
       directMarketCount: llammaMarkets.length,
@@ -626,17 +660,17 @@ export async function fetchCrvUsdReserves(
 ): Promise<AdapterResult> {
   if (config.inputs.primary.kind === "onchain-evm") {
     requireOnchainInput(config.inputs.primary, "crvusd");
-    const [llammaMarkets, yieldBasisMarkets] = await Promise.all([
+    const [llammaMarkets, yieldBasis] = await Promise.all([
       fetchLlammaMarketExposures(signal, ctx),
-      fetchYieldBasisMarketExposures(signal, ctx),
+      fetchOptionalYieldBasisMarketExposures(signal, ctx),
     ]);
-    return adaptCrvUsdOnchain(llammaMarkets, yieldBasisMarkets);
+    return adaptCrvUsdOnchain(llammaMarkets, yieldBasis.markets, yieldBasis.warnings);
   }
 
   const input = requireJsonInput(config.inputs.primary, "crvusd");
-  const [payload, yieldBasisMarkets] = await Promise.all([
+  const [payload, yieldBasis] = await Promise.all([
     fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, 12_000, ctx),
-    fetchYieldBasisMarketExposures(signal, ctx),
+    fetchOptionalYieldBasisMarketExposures(signal, ctx),
   ]);
-  return adaptCrvUsd(payload, yieldBasisMarkets);
+  return adaptCrvUsd(payload, yieldBasis.markets, yieldBasis.warnings);
 }

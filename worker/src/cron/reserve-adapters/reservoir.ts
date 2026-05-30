@@ -27,7 +27,17 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "rusd";
+type ReservoirBucketKey =
+  | "usd1"
+  | "pyusd"
+  | "rlusd"
+  | "ausd"
+  | "gho"
+  | "usdt"
+  | "usdc"
+  | "rusd"
+  | "prime"
+  | "usdat";
 
 const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.reservoir.xyz",
@@ -122,6 +132,18 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     name: "rUSD strategy vaults",
     risk: "medium",
     match: (item) => /\bRUSD\b/.test(item.label),
+  },
+  {
+    key: "prime",
+    name: "Hastra / Sentora PRIME credit allocations",
+    risk: "high",
+    match: (item) => /\bPRIME\b/.test(searchableReservoirText(item)),
+  },
+  {
+    key: "usdat",
+    name: "Pendle PT USDat tokenized-treasury principal token",
+    risk: "high",
+    match: (item) => /\bUSDAT\b/i.test(searchableReservoirText(item)),
   },
 ];
 
@@ -231,7 +253,7 @@ export async function fetchReservoirReserves(
       code: "reservoir-insolvent",
       message: `Reservoir total liabilities (${totalLiabilitiesUsd}) exceed total assets (${totalAssetsUsd})`,
       severity: "warning",
-      effect: "fatal",
+      effect: "degraded",
     });
   }
 

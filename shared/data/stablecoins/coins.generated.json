@@ -9216,7 +9216,13 @@
           "kind": "onchain-evm",
           "chain": "ethereum",
           "rpcMode": "public-rpc"
-        }
+        },
+        "fallbacks": [
+          {
+            "kind": "http-json",
+            "url": "https://prices.curve.finance/v1/crvusd/markets"
+          }
+        ]
       }
     }
   },

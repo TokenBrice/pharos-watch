@@ -307,6 +307,45 @@ describe("fetchCrvUsdReserves", () => {
     expect(fetchEvmCallHexAtBlock).toHaveBeenCalled();
   });
 
+  it("continues with direct Curve market data when the optional Yield Basis leg fails", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      chains: {
+        ethereum: {
+          data: [
+            { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } },
+          ],
+        },
+      },
+    });
+    vi.mocked(fetchEvmCallHexAtBlock).mockRejectedValue(new Error("rpc unavailable"));
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 2,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://prices.curve.finance/v1/crvusd/markets",
+        },
+      },
+    };
+
+    const result = await fetchCrvUsdReserves({} as never, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" },
+    ]);
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "yield-basis-read-failed", effect: "degraded" }),
+    ]));
+    expect(result.metadata).toMatchObject({
+      directActiveMarketCount: 1,
+      yieldBasisActiveMarketCount: 0,
+      yieldBasisCollateralUsd: 0,
+    });
+  });
+
   it("loads direct LLAMMA bands onchain when configured for onchain input", async () => {
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[BTC_ASSET, 10]]));
     vi.mocked(fetchOnchainMulticall3).mockResolvedValue([
