@@ -325,6 +325,68 @@ export interface DailyDigestResponse {
   riskTape?: DigestRiskTapeItem[] | null;
 }
 
+const DigestRiskTapeToneSchema = z.enum(["critical", "warning", "neutral", "positive"]);
+
+const DigestRiskTapeItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  value: z.string(),
+  tone: DigestRiskTapeToneSchema,
+  detail: z.string().optional(),
+});
+
+const DigestSignalChangeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  kind: z.enum([
+    "depeg",
+    "resolved-depeg",
+    "psi",
+    "supply",
+    "mint-burn",
+    "dews",
+    "grade",
+    "yield",
+    "liquidity",
+    "blacklist",
+    "market",
+    "gauge",
+  ]),
+  symbols: z.array(z.string()),
+  detail: z.string(),
+});
+
+const DigestChangeSummarySchema = z.object({
+  previousDate: z.string().nullable().optional(),
+  newSignals: z.array(DigestSignalChangeSchema),
+  worsenedSignals: z.array(DigestSignalChangeSchema),
+  improvedSignals: z.array(DigestSignalChangeSchema),
+  resolvedSignals: z.array(DigestSignalChangeSchema),
+  repeatedSignals: z.array(DigestSignalChangeSchema),
+});
+
+const DigestNextTriggerSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  metric: z.enum(["depeg-bps", "supply-1d-usd", "supply-7d-usd", "bank-run-gauge", "dews-band", "psi-score"]),
+  comparator: z.enum(["abs-gte", "gte", "lte", "band-gte"]),
+  thresholdLabel: z.string(),
+  thresholdValue: z.number().optional(),
+  symbol: z.string().optional(),
+  candidateId: z.string().optional(),
+  rationale: z.string(),
+  detail: z.string(),
+});
+
+const DigestForwardLookOutcomeSchema = z.object({
+  id: z.string(),
+  triggerId: z.string(),
+  label: z.string(),
+  status: z.enum(["hit", "missed", "pending"]),
+  detail: z.string(),
+  sourceDate: z.string().nullable().optional(),
+});
+
 export interface DigestRiskSignal {
   kind: "depeg";
   symbol: string;
@@ -334,6 +396,40 @@ export interface DigestRiskSignal {
   activeCount?: number;
   date?: string | null;
 }
+
+const DigestRiskSignalSchema = z.object({
+  kind: z.literal("depeg"),
+  symbol: z.string(),
+  bps: z.number(),
+  mcapUsd: z.number().nullable(),
+  severity: z.enum(["critical", "watch"]),
+  activeCount: z.number().optional(),
+  date: z.string().nullable().optional(),
+});
+
+export const DailyDigestResponseSchema = z.object({
+  digest: z.string().nullable(),
+  digestTitle: z.string().nullable().optional(),
+  digestExtended: z.string().nullable().optional(),
+  generatedAt: z.number().nullable().optional(),
+  editionNumber: z.number().nullable().optional(),
+  riskSignal: DigestRiskSignalSchema.nullable().optional(),
+  changeSummary: DigestChangeSummarySchema.nullable().optional(),
+  nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
+  forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
+  riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
+}).transform((value): DailyDigestResponse => ({
+  digest: value.digest,
+  digestTitle: value.digestTitle ?? null,
+  digestExtended: value.digestExtended ?? null,
+  generatedAt: value.generatedAt ?? null,
+  editionNumber: value.editionNumber ?? null,
+  riskSignal: value.riskSignal ?? null,
+  changeSummary: value.changeSummary ?? null,
+  nextTriggers: value.nextTriggers ?? null,
+  forwardLookOutcomes: value.forwardLookOutcomes ?? null,
+  riskTape: value.riskTape ?? null,
+}));
 
 export interface DigestArchiveEntry {
   digestText: string;
@@ -354,6 +450,26 @@ export interface DigestArchiveEntry {
 export interface DigestArchiveResponse {
   digests: DigestArchiveEntry[];
 }
+
+const DigestArchiveEntrySchema = z.object({
+  digestText: z.string(),
+  digestTitle: z.string().nullable(),
+  digestExtended: z.string().nullable(),
+  generatedAt: z.number(),
+  psiScore: z.number().nullable(),
+  psiBand: z.string().nullable(),
+  totalMcapUsd: z.number().nullable(),
+  riskSignal: DigestRiskSignalSchema.nullable().optional(),
+  nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
+  forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
+  riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
+  digestType: z.enum(["daily", "weekly"]).optional(),
+  editionNumber: z.number().optional(),
+});
+
+export const DigestArchiveResponseSchema = z.object({
+  digests: z.array(DigestArchiveEntrySchema),
+});
 
 export interface StablecoinChartPoint {
   date: number;

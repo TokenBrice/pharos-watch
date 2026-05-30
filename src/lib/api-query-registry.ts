@@ -32,7 +32,12 @@ import type {
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { TelegramPulseSchema, type TelegramPulse } from "@shared/types/status";
-import { StablecoinChartResponseSchema, UsdsStatusResponseSchema } from "@shared/types/digest";
+import {
+  DailyDigestResponseSchema,
+  DigestArchiveResponseSchema,
+  StablecoinChartResponseSchema,
+  UsdsStatusResponseSchema,
+} from "@shared/types/digest";
 import {
   BluechipRatingsMapSchema,
   BlacklistResponseSchema,
@@ -66,7 +71,7 @@ import {
   CRON_TELEGRAM_PULSE,
   CRON_YIELD,
 } from "@/lib/cron-intervals";
-import type { ZodType } from "zod";
+import { z, type ZodType } from "zod";
 
 export interface FrontendApiQueryDescriptor<T> {
   queryKey: readonly unknown[];
@@ -90,6 +95,15 @@ export interface NonUsdSharePoint {
   fiatNonUsd: number | null;
   total: number;
 }
+
+const NonUsdSharePointSchema = z.object({
+  date: z.number(),
+  commodityShare: z.number().nullable(),
+  fiatNonUsdShare: z.number().nullable(),
+  commodity: z.number().nullable(),
+  fiatNonUsd: z.number().nullable(),
+  total: z.number(),
+});
 
 type YieldHistoryMode = "best" | "source";
 type BlacklistEventsDescriptorInput = Pick<
@@ -134,6 +148,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     queryKey: ["daily-digest"],
     path: API_PATHS.dailyDigest(),
     producerIntervalMs: CRON_24H,
+    schema: DailyDigestResponseSchema,
   }),
   dexLiquidity: pollingDescriptor<DexLiquidityMap>({
     queryKey: ["dex-liquidity"],
@@ -152,6 +167,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     queryKey: ["digest-archive"],
     path: API_PATHS.digestArchive(),
     producerIntervalMs: CRON_24H,
+    schema: DigestArchiveResponseSchema,
     metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive,
   }),
   digestSnapshot: (date: string) =>
@@ -273,6 +289,7 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     queryKey: ["non-usd-share"],
     path: API_PATHS.nonUsdShare(),
     producerIntervalMs: CRON_24H,
+    schema: z.array(NonUsdSharePointSchema),
   }),
   stabilityIndex: pollingDescriptor<StabilityIndexResponse>({
     queryKey: ["stability-index"],

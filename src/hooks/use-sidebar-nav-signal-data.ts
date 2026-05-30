@@ -19,7 +19,7 @@ function useLightApiQuery<T>(descriptor: FrontendApiQueryDescriptor<T>, enabled 
   const { staleTime, refetchInterval } = getPollingWindow(descriptor.producerIntervalMs);
   return useQuery({
     queryKey: ["api", ...descriptor.queryKey],
-    queryFn: () => fetchLightApiJson<T>(descriptor.path),
+    queryFn: () => fetchLightApiJson(descriptor),
     enabled,
     staleTime,
     refetchInterval,

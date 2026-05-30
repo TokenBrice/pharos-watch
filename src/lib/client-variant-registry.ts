@@ -3,6 +3,7 @@ import {
   CLIENT_ACTIVE_STABLECOINS,
   type StablecoinClientMeta,
 } from "@shared/lib/stablecoins/client-registry";
+import { createVariantRelationshipHelpers } from "@shared/lib/stablecoins/variant-relationships";
 import type { VariantKind } from "@shared/types";
 
 function hasTrackedVariantMeta(
@@ -11,30 +12,12 @@ function hasTrackedVariantMeta(
   return meta?.variantOf != null && meta.variantKind != null && meta.status !== "pre-launch" && meta.status !== "frozen";
 }
 
-export function getClientVariantParent(id: string): StablecoinClientMeta | null {
-  const meta = CLIENT_ACTIVE_META_BY_ID.get(id);
-  if (!hasTrackedVariantMeta(meta)) return null;
-  return CLIENT_ACTIVE_META_BY_ID.get(meta.variantOf) ?? null;
-}
+const clientVariantHelpers = createVariantRelationshipHelpers({
+  activeMetaById: CLIENT_ACTIVE_META_BY_ID,
+  activeStablecoins: CLIENT_ACTIVE_STABLECOINS,
+  hasTrackedVariantMeta,
+});
 
-export function getClientVariants(parentId: string): StablecoinClientMeta[] {
-  return CLIENT_ACTIVE_STABLECOINS.filter((meta) => meta.variantOf === parentId);
-}
-
-export function getClientVariantRelationship(id: string): {
-  parent: StablecoinClientMeta;
-  kind: VariantKind;
-  siblings: StablecoinClientMeta[];
-} | null {
-  const meta = CLIENT_ACTIVE_META_BY_ID.get(id);
-  if (!hasTrackedVariantMeta(meta)) return null;
-
-  const parent = CLIENT_ACTIVE_META_BY_ID.get(meta.variantOf);
-  if (!parent) return null;
-
-  return {
-    parent,
-    kind: meta.variantKind,
-    siblings: getClientVariants(parent.id).filter((variant) => variant.id !== id),
-  };
-}
+export const getClientVariantParent = clientVariantHelpers.getVariantParent;
+export const getClientVariants = clientVariantHelpers.getVariants;
+export const getClientVariantRelationship = clientVariantHelpers.getVariantRelationship;
