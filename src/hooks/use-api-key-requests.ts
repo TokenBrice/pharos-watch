@@ -2,11 +2,8 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { API_PATHS, buildQueryPath } from "@shared/lib/api-endpoints/paths";
-import {
-  ApiKeySelfServeRequestAdminListResponseSchema,
-  type ApiKeySelfServeRequestAdminListResponse,
-  type ApiKeySelfServeStatus,
-} from "@shared/types";
+import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeStatus } from "@shared/types";
+import { ApiKeySelfServeRequestAdminListResponseSchema } from "@shared/types/api-key-requests";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 

@@ -2,7 +2,8 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { ApiKeyListResponseSchema, type ApiKeyListResponse } from "@shared/types";
+import type { ApiKeyListResponse } from "@shared/types";
+import { ApiKeyListResponseSchema } from "@shared/types/api-keys";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 

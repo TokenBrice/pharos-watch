@@ -1,7 +1,8 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { StatusHistoryResponseSchema, type StatusHistoryResponse } from "@shared/types";
+import type { StatusHistoryResponse } from "@shared/types";
+import { StatusHistoryResponseSchema } from "@shared/types/status";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 
