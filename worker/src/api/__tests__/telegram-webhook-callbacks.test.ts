@@ -29,6 +29,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
 
 const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
+const { resolveTicker } = await import("../../lib/telegram-alerts");
 
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);
@@ -107,6 +108,74 @@ beforeEach(() => {
 });
 
 describe("handleCallbackQuery", () => {
+  it("finalizes pending disambiguation from a select callback", async () => {
+    const ambiguous = resolveTicker("USDF");
+    const usdc = resolveTicker("USDC");
+    if (ambiguous.status !== "ambiguous" || usdc.status !== "unique") {
+      throw new Error("Expected fixed ticker fixtures for callback disambiguation flow test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"], presetIds: [] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify(["USDC"]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        matchBinds: ["123", ambiguous.matches[0].id, usdc.matches[0].id],
+        rows: [
+          {
+            stablecoin_id: ambiguous.matches[0].id,
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+          {
+            stablecoin_id: usdc.matches[0].id,
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
+      },
+    ]);
+
+    await handleCallbackQuery(db, "fake-token", {
+      id: "cb-select",
+      data: "select:1",
+      from: { id: 999, username: "requester" },
+      message: { chat: { id: 123, type: "private" }, message_id: 1 },
+    });
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+    expect(
+      history.filter((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions")).map((entry) => entry.binds[1]),
+    ).toEqual([ambiguous.matches[0].id, usdc.matches[0].id]);
+    expect(lastAckBody().text).toBe("Selected.");
+    const sent = lastSentMessageBody();
+    expect(sent.text).toContain("Updated subscriptions");
+    expect(sent.text).toContain(ambiguous.matches[0].id);
+    expect(sent.text).toContain(usdc.matches[0].id);
+  });
+
   it("snooze:1h stamps alert_snooze_until_ts ~1h in the future in a single INSERT", async () => {
     const before = Math.floor(Date.now() / 1000);
     const db = mockD1([]);

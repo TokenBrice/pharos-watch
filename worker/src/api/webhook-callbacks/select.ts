@@ -1,82 +1,18 @@
 import { answerCallbackQuery } from "../../lib/telegram";
-import {
-  parseDisambiguationReply,
-  type ResolvedCoin,
-} from "../../lib/telegram-alerts";
+import { parseDisambiguationReply } from "../../lib/telegram-alerts";
 import {
   clearPendingDisambiguation,
   loadPendingDisambiguation,
   unixNow,
 } from "../telegram-webhook-store";
-import { dedupeCoins, parsePendingDisambiguation } from "../telegram-webhook-parsing";
-import type { PendingAction } from "../telegram-webhook-shared";
-import { makeActionRunner } from "../webhook-commands/action-runner";
+import { executePendingDisambiguationSelection } from "../telegram-webhook-disambiguation-selection";
+import { parsePendingDisambiguation } from "../telegram-webhook-parsing";
 import {
   callbackActorUserId,
   callbackUsername,
   hasExactParts,
   type CallbackHandler,
 } from "./_shared";
-
-async function executePendingDisambiguationSelection(
-  db: D1Database,
-  botToken: string,
-  chatId: string,
-  username: string | null,
-  pending: Exclude<PendingAction, { actionType: "confirm-bulk" | "forget-confirm" }>,
-  selectedIndices: readonly number[],
-): Promise<void> {
-  const selectedCoins = dedupeCoins(
-    selectedIndices.map((index) => pending.candidates[index]).filter((coin): coin is ResolvedCoin => Boolean(coin)),
-  );
-  const initialCoins = dedupeCoins([...pending.resolvedCoins, ...selectedCoins]);
-  const sharedOpts = { tickers: pending.remainingTickers, initialCoins, clearPendingOnTerminal: true as const };
-
-  switch (pending.actionType) {
-    case "subscribe": {
-      const runAction = makeActionRunner(
-        { db, chatId, username, initiatorUserId: pending.initiatorUserId },
-        botToken,
-        {
-          kind: "subscribe",
-          alertTypes: [...pending.alertTypes],
-          presetIds: pending.presetIds,
-          depegWorseningBpsStep: pending.depegWorseningBpsStep,
-        },
-      );
-      await runAction({
-        ...sharedOpts,
-        actionType: "subscribe",
-        actionPayload: {
-          alertTypes: [...pending.alertTypes],
-          presetIds: pending.presetIds,
-          depegWorseningBpsStep: pending.depegWorseningBpsStep,
-        },
-        alertTypes: pending.alertTypes,
-      });
-      return;
-    }
-    case "unsubscribe": {
-      const runAction = makeActionRunner(
-        { db, chatId, username: null, initiatorUserId: pending.initiatorUserId },
-        botToken,
-        { kind: "unsubscribe", presetIds: pending.presetIds },
-      );
-      await runAction({
-        ...sharedOpts,
-        actionType: "unsubscribe",
-        actionPayload: { presetIds: pending.presetIds },
-        resolutionScope: "tracked",
-      });
-      return;
-    }
-    case "set": {
-      const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: pending.initiatorUserId }, botToken);
-      await runAction({ ...sharedOpts, actionType: "set", actionPayload: pending.command });
-      return;
-    }
-  }
-}
 
 export const handleSelectCallback: CallbackHandler = async ({ db, botToken, cb, chatId, parsed }) => {
   if (!hasExactParts(parsed.parts, 2)) {
