@@ -31,7 +31,6 @@ export interface TimelineEventQueryParams {
   since?: number;
   q?: string;
 }
-
 export interface TimelineFeedController {
   queryParams: TimelineEventQueryParams;
   filterSignature: string;
@@ -101,4 +100,3 @@ export function buildTimelineResetParams(): Record<string, string> {
     q: "",
   };
 }
-

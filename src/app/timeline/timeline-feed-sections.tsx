@@ -28,7 +28,6 @@ export function EventSkeleton() {
     </div>
   );
 }
-
 export function EmptyState({
   onClearAll,
   activeChips,
@@ -279,4 +278,3 @@ export function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }
     </section>
   );
 }
-

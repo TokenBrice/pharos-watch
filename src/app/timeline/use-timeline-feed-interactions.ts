@@ -13,7 +13,6 @@ interface UseTimelineFeedInteractionsArgs {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
 }
-
 export function useTimelineFeedInteractions({
   filterSignature,
   permalinkId,
@@ -138,4 +137,3 @@ export function useTimelineFeedInteractions({
     handleLoadMore,
   };
 }
-

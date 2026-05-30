@@ -11,7 +11,6 @@ interface UseTimelineFeedDataArgs {
   permalinkId: string;
   nowMs: number;
 }
-
 export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTimelineFeedDataArgs) {
   const events = useEvents(
     queryParams,
@@ -65,4 +64,3 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
     permalinkResolved,
   };
 }
-

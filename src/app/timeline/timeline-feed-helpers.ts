@@ -12,7 +12,6 @@ export const TAPE_FRESH_WINDOW_MS = 10 * 60 * 1000;
 export function eventDomId(eventId: string): string {
   return `tape-event-card-${eventId}`;
 }
-
 export function formatDayLabel(dayKey: string, nowMs: number): { primary: string; secondary: string } {
   const todayKey = utcDayKey(nowMs);
   const yesterdayKey = utcDayKey(nowMs - DAY_MS);
@@ -91,4 +90,3 @@ export function openIncidentPrefix(event: TapeEvent, nowMs: number): string {
   }
   return `OPEN ${duration}`;
 }
-
