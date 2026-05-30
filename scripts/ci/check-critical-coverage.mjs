@@ -102,10 +102,10 @@ export function runCriticalCoverageCheck({
   let failed = false;
   consoleImpl.log(`[coverage] Critical file line coverage threshold: ${threshold.toFixed(1)}%`);
   if (baseline) {
-    if (touchedCritical.length > 0) {
-      consoleImpl.log(`[coverage] Ratchet targets (touched critical files): ${touchedCritical.join(", ")}`);
-    } else if (ratchetAll) {
+    if (ratchetAll) {
       consoleImpl.log("[coverage] Ratchet targets: all critical files (CRITICAL_COVERAGE_RATCHET_ALL=1)");
+    } else if (touchedCritical.length > 0) {
+      consoleImpl.log(`[coverage] Ratchet targets (touched critical files): ${touchedCritical.join(", ")}`);
     } else {
       consoleImpl.log("[coverage] No touched critical files detected; ratchet checks skipped.");
     }
@@ -137,7 +137,7 @@ export function runCriticalCoverageCheck({
   }
 
   if (baseline) {
-    const ratchetTargets = touchedCritical.length > 0 ? touchedCritical : (ratchetAll ? CRITICAL_FILES : []);
+    const ratchetTargets = ratchetAll ? CRITICAL_FILES : touchedCritical;
     for (const file of ratchetTargets) {
       const baselinePctRaw = baseline[file];
       const baselinePct = Number.parseFloat(String(baselinePctRaw));

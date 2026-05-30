@@ -4,7 +4,9 @@ import {
   getChangedFilesFromGit,
   isAllZeroSha,
   parseChangedFilesFromEnv,
+  runCriticalCoverageCheck,
 } from "../ci/check-critical-coverage.mjs";
+import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {
@@ -51,5 +53,55 @@ describe("critical coverage changed-file detection", () => {
       }),
     ).toEqual([]);
     expect(warnings[0]).toContain('Could not diff against ref "bad-ref"');
+  });
+
+  it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
+    const lcov = CRITICAL_FILES.map((file) => [
+      `SF:${file}`,
+      "DA:1,1",
+      "DA:2,1",
+      "LF:2",
+      "LH:2",
+      "end_of_record",
+    ].join("\n")).join("\n");
+    const baseline = {
+      files: Object.fromEntries(CRITICAL_FILES.map((file) => [file, 100])),
+    };
+    const logs: string[] = [];
+    const errors: string[] = [];
+    const files = new Map<string, string>([
+      ["coverage/lcov.info", lcov],
+      [".ci/critical-coverage-baseline.json", JSON.stringify(baseline)],
+    ]);
+    const exits: number[] = [];
+
+    runCriticalCoverageCheck({
+      env: {
+        CRITICAL_COVERAGE_CHANGED_FILES: CRITICAL_FILES[0],
+        CRITICAL_COVERAGE_RATCHET_ALL: "1",
+      },
+      fsImpl: {
+        existsSync: (path: string) => files.has(path),
+        readFileSync: (path: string) => {
+          const value = files.get(path);
+          if (value == null) throw new Error(`missing ${path}`);
+          return value;
+        },
+      },
+      execFile: () => "",
+      consoleImpl: {
+        log: (message: string) => logs.push(message),
+        error: (message: string) => errors.push(message),
+        warn: (message: string) => logs.push(message),
+      },
+      exit: (code: number) => {
+        exits.push(code);
+      },
+    });
+
+    expect(errors).toEqual([]);
+    expect(exits).toEqual([]);
+    expect(logs).toContain("[coverage] Ratchet targets: all critical files (CRITICAL_COVERAGE_RATCHET_ALL=1)");
+    expect(logs.filter((line) => line.includes("RATCHET PASS"))).toHaveLength(CRITICAL_FILES.length);
   });
 });

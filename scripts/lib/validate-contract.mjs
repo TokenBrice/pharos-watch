@@ -10,6 +10,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:attestor-tier-coverage",
   "npm run check:client-registry-imports",
   "npm run check:cron-abort-contract",
+  "npm run check:cron-console-usage",
   "npm run check:cron-connections",
   "npm run check:cron-sync",
   "npm run check:doc-counts",

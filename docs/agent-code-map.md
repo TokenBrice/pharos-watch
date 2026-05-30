@@ -745,4 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-attestor-tier-coverage.ts`
 - `scripts/ci/check-build-attribution.mjs`
 - `scripts/ci/check-classifier-sensitive-copy.mjs`
-- ... 140 more files omitted; use `rg --files scripts` for the full list.
+- ... 141 more files omitted; use `rg --files scripts` for the full list.

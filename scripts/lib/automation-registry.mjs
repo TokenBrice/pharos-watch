@@ -42,6 +42,14 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     paths: ["scripts/ci/check-cron-abort-contract.mjs"],
   },
   {
+    command: "npm run check:cron-console-usage",
+    deployImpact: "full",
+    paths: [
+      "scripts/ci/check-cron-console-usage.mjs",
+      "scripts/lib/cron-console-usage-baseline.json",
+    ],
+  },
+  {
     command: "npm run check:client-registry-imports",
     deployImpact: "pages",
     paths: ["scripts/ci/check-client-registry-imports.mjs"],

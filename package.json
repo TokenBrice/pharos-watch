@@ -56,6 +56,8 @@
     "test:smoke-ui:mobile": "node scripts/maintenance/smoke-mobile-ui.mjs --strict-touch-targets",
     "check:worker-boundary": "node scripts/ci/check-worker-import-boundary.mjs",
     "check:cron-abort-contract": "node scripts/ci/check-cron-abort-contract.mjs",
+    "check:cron-console-usage": "node scripts/ci/check-cron-console-usage.mjs",
+    "check:cron-console-usage:update-baseline": "node scripts/ci/check-cron-console-usage.mjs --update-baseline",
     "check:cemetery-dataset": "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     "check:openapi": "tsx scripts/maintenance/generate-openapi-spec.ts --check",
     "check:postman": "tsx scripts/maintenance/generate-postman-collection.ts --check",
