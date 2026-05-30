@@ -125,6 +125,9 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
   const missedOperationalLockCount = coverageRows.filter((row) =>
     isOperationalMissCause(row.operationalCoverageCause),
   ).length;
+  const operationalMissOpportunityCount = coverageRows.filter((row) =>
+    isOperationalMissCause(row.operationalCoverageCause) || row.predictionState === "publication_failed",
+  ).length;
   const missedNoPredictionCount =
     missedLockRecoveredCount + missedLockTerminalCount + missedLockOrphanClosedCount + missedLockDataQualityGapCount;
   const lockedPredictionCount = predictionRows.length;
@@ -205,7 +208,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
       lockedPredictionCount + noCallCount + invalidatedPredictionCount,
       currentEligibleOpportunityCount,
     ),
-    operationalMissRatePct: pct(missedOperationalLockCount + publicationFailedCount, finalizedOpportunityCount),
+    operationalMissRatePct: pct(operationalMissOpportunityCount, currentEligibleOpportunityCount),
     noCallRatePct: pct(noCallCount, finalizedOpportunityCount),
     preLockRecoveredPct: pct(resolvedBeforePredictionCount, policyUniverseIncidentCount),
     preLockTerminalPct: pct(terminalBeforePredictionCount, policyUniverseIncidentCount),

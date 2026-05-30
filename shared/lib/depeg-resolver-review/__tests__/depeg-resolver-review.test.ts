@@ -375,6 +375,33 @@ describe("DDRR v2 coverage metrics", () => {
     expect(summary.headline.predictionRatePct).toBe(0);
   });
 
+  it("keeps operational miss rate bounded when one coverage row has overlapping failure causes", () => {
+    const row = buildDdrrCoverageRow(
+      coverage({
+        incidentKey: "ddr2:failed-after-miss",
+        predictionState: "publication_failed",
+        coverageCause: "publication_failed",
+        operationalCoverageCause: "lock_missed",
+        sourceEventState: "recovered",
+        actualEndedAt: ELIGIBLE_AT + 3600,
+        failedPublication: {
+          publicPredictionId: 7,
+          assessmentId: 8,
+          lockedAt: LOCKED_AT,
+          outcomeKind: "prediction",
+          rowHash: "hash",
+          sealedPayloadRedacted: true,
+          lastAttemptedAt: LOCKED_AT + 60,
+        },
+      }),
+    );
+    const summary = summarizeDdrrRows([row]);
+
+    expect(summary.headline.missedOperationalLockCount).toBe(1);
+    expect(summary.headline.publicationFailedCount).toBe(1);
+    expect(summary.headline.operationalMissRatePct).toBe(1);
+  });
+
   it("tracks invalidations separately and includes them in trust denominators", () => {
     const { rows, summary } = reviewDdrrV2Rows({
       assessments: [assessment({ incidentKey: "ddr2:locked" })],
