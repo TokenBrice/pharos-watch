@@ -4,6 +4,7 @@ import {
   createCspNonce,
   isTelegramMiniAppPath,
 } from "../shared/lib/site-csp";
+import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
 
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };
@@ -24,7 +25,6 @@ const MARKDOWN_ROUTE_PREFIXES = [
 ] as const;
 
 const PASSTHROUGH_PREFIXES = ["/_site-data/", "/_next/"] as const;
-const CANONICAL_SITE_ORIGIN = "https://pharos.watch";
 const GENERATED_MARKDOWN_ASSET_SUFFIX = "/index.md";
 
 export { buildContentSecurityPolicy };
@@ -108,7 +108,7 @@ function addNegotiationCacheHeaders(headers: Headers): void {
 }
 
 function addDirectMarkdownAssetSeoHeaders(headers: Headers, canonicalPath: string): void {
-  const canonicalUrl = new URL(canonicalPath, CANONICAL_SITE_ORIGIN);
+  const canonicalUrl = new URL(canonicalPath, SITE_ORIGIN);
   const canonicalLink = `<${canonicalUrl.toString()}>; rel="canonical"`;
   const existingLink = headers.get("Link");
 

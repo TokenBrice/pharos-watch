@@ -39,14 +39,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "shared/lib/selector/engine.ts": {
-    "disposition": "queued-p4",
-    "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work.",
@@ -79,22 +71,6 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
-  "worker/src/cron/confirm-pending-depegs.ts": {
-    "disposition": "queued-p4",
-    "notes": "Phase 2 added the evaluateOffchainConfirmer discriminated union to flatten the 9-level branch tree. Residual height is in the main loop's structural orchestration (primary/native/DEX/CEX/pool collection). Next /simplify pass should extract buildConfirmationPlan and evaluatePromotionDecision.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "worker/src/cron/compute-depeg-resolver.ts": {
-    "disposition": "queued-p4",
-    "notes": "DDRv2 one-shot implementation expanded the cron shell to coordinate canonical incident resolution, lock-state writes, public sealing, first-publication manifests, stale-safe cache projection, and DDRR rebuild handoff. Split publication assembly/store orchestration from the cron shell once the v2 contract has production mileage.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-27",
-    "reviewAfter": "2026-08-27",
-    "nextAction": "Extract DDRv2 publication/cache orchestration into focused helpers after the initial v2 rollout stabilizes."
-  },
   "worker/src/cron/compute-depeg-resolver-review.ts": {
     "disposition": "queued-p4",
     "notes": "DDRv2 terminal-evidence completion added registry, cemetery, and tape lifecycle timestamp derivation to the review snapshot builder. Keep waived for the first v2 rollout; split terminal-evidence extraction and coverage-row assembly once the reviewer contract has production mileage.",
@@ -102,30 +78,6 @@
     "createdAt": "2026-05-27",
     "reviewAfter": "2026-08-27",
     "nextAction": "Extract DDRR terminal-evidence derivation and no-prediction coverage projection into focused helpers after the v2 rollout stabilizes."
-  },
-  "src/components/yield-leaderboard-table-row.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/app/pharoswatchbot/app/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Phase 4 Wave 3 extracted useTelegramBridge + 5 small components + the unified error formatter (-238 LOC). Remaining height needs the deferred priorities: hoist StatusPanel/WatchlistPanel/CoinCard and carve out useMiniAppMutations. Next Mini App pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/app/timeline/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Timeline client combines URL filters, pagination, feed hydration, summary-band controls, and tape render plumbing in one shell. A follow-up refactor should split control orchestration from data orchestration before adding another feature tranche.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
   "src/app/compare/client.tsx": {
     "disposition": "queued-p4",
@@ -167,6 +119,78 @@
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
   },
+  "worker/src/lib/depeg-resolver-incident-store.ts": {
+    "disposition": "queued-p4",
+    "notes": "DDRv2 incident store centralizes canonical incident upserts, lock-state projection, D1 row mapping, and compatibility reads. It surfaced after the compute cron split because store ownership is now clearer; split row mappers from mutation methods in a focused DDR store pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Extract canonical incident row mapping and lock-state mutation helpers behind the existing store API."
+  },
+  "worker/src/cron/fetch-tbill-rate.ts": {
+    "disposition": "queued-p4",
+    "notes": "T-bill rate sync combines provider fetches, validation, fallback/carry-forward behavior, cache writes, and cron result assembly. Keep enrolled for a future rate-source cleanup rather than widening the current audit remediation branch.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Split provider adapters, fallback decisioning, and persistence into focused helpers."
+  },
+  "worker/src/cron/blacklist/amount-recovery.ts": {
+    "disposition": "queued-p4",
+    "notes": "Blacklist amount recovery still owns source-specific parsing, chain normalization, aggregation, and recovery-state calculation. It is outside the audit remediation findings; enroll it for the next blacklist tracker cleanup pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Extract source parser/normalizer helpers and keep recovery-state calculation as the public facade."
+  },
+  "src/components/yield-history-chart.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Yield history chart owns data shaping, tooltip logic, range handling, and SVG/Recharts rendering in one component. It surfaced during the wider chart primitive cleanup; split series shaping and tooltip rendering in a focused yield chart pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Extract chart data projection and tooltip content before adding more yield chart states."
+  },
+  "worker/src/lib/depeg-resolver-publication-store.ts": {
+    "disposition": "queued-p4",
+    "notes": "DDR publication store now stands out after the compute cron split. It owns storage row mapping, publication projection, and typed compatibility reads; keep it queued for a focused DDR store pass rather than widening this remediation branch.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
+  },
+  "src/components/depeg-resolver-reviewer-module.tsx": {
+    "disposition": "queued-p4",
+    "notes": "DDR reviewer UI remains a large operator surface that combines filters, review state, table projection, and row rendering. It surfaced after the row-card extraction reduced a neighboring hotspot.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Extract reviewer filter state, row projection, and review-action panels in a focused DDR reviewer cleanup."
+  },
+  "src/app/stablecoin/[id]/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Stablecoin detail client still owns route orchestration, tab state, detail view-model wiring, and page section rendering. It is outside this audit remediation tranche and should be handled as a dedicated detail-route split.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Move route state and detail-section projection into focused helpers while preserving the existing route contract."
+  },
+  "src/app/screener/picker/selector-state.ts": {
+    "disposition": "queued-p4",
+    "notes": "Selector picker state concentrates URL parsing, persistence, filtering, and reducer-style state transitions. It surfaced after the selector engine split and should be decomposed separately from shared selector scoring.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
+  },
+  "worker/src/lib/redemption-backstop-live-metadata.ts": {
+    "disposition": "queued-p4",
+    "notes": "Redemption backstop metadata combines live source parsing, fallback handling, row shaping, and status projection. Keep queued for a focused redemption metadata cleanup instead of expanding the current DDR/API remediation scope.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-05-30",
+    "reviewAfter": "2026-08-30",
+    "nextAction": "Extract source adapters and status projection helpers behind the current metadata API."
+  },
   "src/components/peg-deviation-chart.tsx": {
     "disposition": "queued-p4",
     "notes": "Peg deviation chart owns chart domain shaping, annotations, tooltip branches, and responsive rendering in one visualization module. Split data shaping from chart rendering in the next chart-component cleanup pass.",
@@ -174,13 +198,5 @@
     "createdAt": "2026-05-22",
     "reviewAfter": "2026-08-22",
     "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
-  "src/components/depeg-resolver-row-card.tsx": {
-    "disposition": "queued-p4",
-    "notes": "DDRv2 added lock-state cards, publication-failure accountability, lock-anchored forecast timelines, live overlays, no-call/erratum states, and stablecoin-detail reuse to the shared DDR row renderer. Split state cards, lock metadata, and forecast/live visualizations after the v2 UI settles.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-27",
-    "reviewAfter": "2026-08-27",
-    "nextAction": "Extract DDR state-only cards and forecast/live timeline renderers into narrower components in the next DDR UI cleanup pass."
   }
 }

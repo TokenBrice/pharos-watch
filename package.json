@@ -68,6 +68,7 @@
     "check:supply-helper-usage": "node scripts/ci/check-supply-helper-usage.mjs",
     "check:hook-polling-window": "node scripts/ci/check-hook-polling-window.mjs",
     "check:hotspot-ratchet": "node scripts/ci/check-hotspot-ratchet.mjs",
+    "check:site-csp-sync": "tsx scripts/ci/check-site-csp-sync.ts",
     "check:redemption-backstops": "tsx scripts/ci/check-redemption-backstops.ts",
     "check:redemption-coverage-audit": "tsx scripts/maintenance/generate-redemption-coverage-audit.ts --check",
     "check:hotspot-ratchet:update-baseline": "node scripts/maintenance/update-hotspot-ratchet-baseline.mjs",

@@ -7,6 +7,11 @@ on:
         description: Git ref used by the critical coverage ratchet.
         required: false
         type: string
+      coverage-ratchet-all:
+        description: Whether the critical coverage ratchet should compare every critical file instead of only touched files.
+        required: false
+        default: false
+        type: boolean
       pages_changed:
         description: Whether the changed diff touches Pages deploy surfaces.
         required: false
@@ -119,6 +124,7 @@ jobs:
       contents: read
     env:
       CRITICAL_COVERAGE_COMPARE_REF: ${{ inputs.coverage-compare-ref }}
+      CRITICAL_COVERAGE_RATCHET_ALL: ${{ inputs.coverage-ratchet-all && '1' || '0' }}
       CRITICAL_COVERAGE_THRESHOLD: "40"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

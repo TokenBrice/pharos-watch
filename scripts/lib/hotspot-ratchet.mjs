@@ -327,12 +327,51 @@ export function validateHotspotWaiverMetadata(waivers, candidateFiles) {
   return errors;
 }
 
+export function collectHotspotWaiverReviewQueue(
+  waivers,
+  { today = new Date(), lookaheadDays = 14 } = {},
+) {
+  const todayString = toUtcDateOnly(today);
+  const lookahead = new Date(`${todayString}T00:00:00.000Z`);
+  lookahead.setUTCDate(lookahead.getUTCDate() + lookaheadDays);
+  const lookaheadString = toUtcDateOnly(lookahead);
+  const due = [];
+  const upcoming = [];
+
+  for (const [file, waiver] of Object.entries(waivers)) {
+    if (!isValidDateOnly(waiver?.reviewAfter)) continue;
+    const row = {
+      file,
+      owner: waiver.owner ?? "unknown",
+      reviewAfter: waiver.reviewAfter,
+      nextAction: waiver.nextAction ?? "",
+    };
+    if (waiver.reviewAfter <= todayString) {
+      due.push(row);
+    } else if (waiver.reviewAfter <= lookaheadString) {
+      upcoming.push(row);
+    }
+  }
+
+  const sortByReviewDate = (left, right) =>
+    left.reviewAfter.localeCompare(right.reviewAfter) || left.file.localeCompare(right.file);
+
+  return {
+    due: due.sort(sortByReviewDate),
+    upcoming: upcoming.sort(sortByReviewDate),
+  };
+}
+
 function isValidDateOnly(value) {
   if (typeof value !== "string" || !DATE_ONLY_RE.test(value)) {
     return false;
   }
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+
+function toUtcDateOnly(date) {
+  return date.toISOString().slice(0, 10);
 }
 
 function isFunctionLike(node) {

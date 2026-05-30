@@ -5,6 +5,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import {
+  addNonceToInlineScripts,
+  buildContentSecurityPolicy,
+  createCspNonce,
+  isTelegramMiniAppPath,
+} from "../../shared/lib/site-csp.ts";
 import origins from "../../shared/lib/runtime-origins.json" with { type: "json" };
 
 const CONTENT_TYPES = {
@@ -30,61 +36,6 @@ const EXCLUDED_PROXY_RESPONSE_HEADERS = new Set([
   "content-length",
   "transfer-encoding",
 ]);
-
-const CSP_NONCE_BYTES = 16;
-
-function bytesToBase64(bytes) {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function createCspNonce() {
-  const bytes = new Uint8Array(CSP_NONCE_BYTES);
-  crypto.getRandomValues(bytes);
-  return bytesToBase64(bytes);
-}
-
-function isTelegramMiniAppPath(pathname) {
-  return pathname === "/pharoswatchbot/app" || pathname.startsWith("/pharoswatchbot/app/");
-}
-
-function buildContentSecurityPolicy(nonce, requestPathname) {
-  const telegramMiniApp = isTelegramMiniAppPath(requestPathname);
-  const scriptSrc = [
-    "'self'",
-    `'nonce-${nonce}'`,
-    "'unsafe-eval'",
-    ...(telegramMiniApp ? ["https://telegram.org"] : []),
-    "https://www.googletagmanager.com",
-    "https://static.cloudflareinsights.com",
-  ].join(" ");
-  const frameAncestors = telegramMiniApp
-    ? "frame-ancestors https://telegram.org https://*.telegram.org"
-    : "frame-ancestors 'none'";
-
-  return [
-    "default-src 'self'",
-    `script-src ${scriptSrc}`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:",
-    "connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com",
-    "font-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    frameAncestors,
-  ].join("; ");
-}
-
-function addNonceToInlineScripts(html, nonce) {
-  return html.replace(
-    /<script(?![^>]*\bsrc=)(?![^>]*\bnonce=)([^>]*)>/gi,
-    `<script nonce="${nonce}"$1>`,
-  );
-}
 
 export function resolveStaticFilePath(rootDir, requestPathname) {
   const decodedPath = decodeURIComponent(requestPathname);
@@ -195,7 +146,9 @@ function sendStaticExportFile(res, method, { file, filePath }, requestPathname) 
   if (contentType.startsWith("text/html")) {
     const nonce = createCspNonce();
     body = Buffer.from(addNonceToInlineScripts(file.toString("utf8"), nonce), "utf8");
-    headers["Content-Security-Policy"] = buildContentSecurityPolicy(nonce, requestPathname);
+    headers["Content-Security-Policy"] = buildContentSecurityPolicy(nonce, {
+      telegramMiniApp: isTelegramMiniAppPath(requestPathname),
+    });
     headers["Cloudflare-CDN-Cache-Control"] = "no-store";
     headers["CDN-Cache-Control"] = "no-store";
     if (isTelegramMiniAppPath(requestPathname)) {

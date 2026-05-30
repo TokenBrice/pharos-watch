@@ -85,8 +85,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
   "shared/lib/chains/health-version.ts::getChainHealthMethodologyVersionAt",
   "shared/lib/chains/index.ts::CHAIN_RESILIENCE_TIER",
-  // Owned by the /tape agent; consumer was removed mid-development.
-  "src/lib/severity-colors.ts::severityToAccent",
   // Backward-compatible type export for callers that imported the old lib path.
   "shared/lib/cause-of-death.ts::CauseOfDeath",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
@@ -104,6 +102,9 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/report-cards.ts::resolveReportCardYieldRiskAdjustment",
   "shared/lib/report-cards.ts::ReportCardYieldRiskAdjustment",
   "shared/lib/report-cards.ts::ReportCardYieldRiskNoOpReason",
+  // Consumed by scripts/ci/check-site-csp-sync.ts and static-export tooling
+  // outside the runtime source graph scanned by this checker.
+  "shared/lib/site-csp.ts::buildStaticContentSecurityPolicy",
   "shared/lib/safety-score-version.ts::getSafetyScoreVersionAt",
   "shared/lib/stablecoin-id-registry.ts::ALL_LIVE_COINS",
   "shared/lib/stablecoins/schema.ts::StablecoinMetaAssetSchema",

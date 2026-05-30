@@ -36,6 +36,7 @@ import {
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
 } from "../../shared/lib/telegram-bot-registration";
+import { API_ORIGIN } from "../../shared/lib/runtime-origins";
 import { parseCliOptions } from "../lib/smoke-runtime.mjs";
 
 interface CliHandlerContext {
@@ -64,7 +65,7 @@ function parseOptions(argv: string[]): CliOptions {
     action: "commands",
     botToken: process.env.TELEGRAM_BOT_TOKEN?.trim() || null,
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || null,
-    webhookBaseUrl: process.env.WEBHOOK_BASE_URL?.trim() || "https://api.pharos.watch",
+    webhookBaseUrl: process.env.WEBHOOK_BASE_URL?.trim() || API_ORIGIN,
     scope: null,
     chatId: null,
     check: false,

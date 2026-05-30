@@ -55,6 +55,7 @@ jobs:
       ACTIONS_CHECKOUT_TOKEN: ${{ secrets.ACTIONS_CHECKOUT_TOKEN }}
     with:
       coverage-compare-ref: ${{ github.event.before }}
+      coverage-ratchet-all: true
       pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
       run_pages_build_and_seo: false
       worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}

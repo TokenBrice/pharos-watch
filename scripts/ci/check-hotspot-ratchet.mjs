@@ -3,6 +3,7 @@
 import {
   collectAllHotspotMetrics,
   collectAllRepoHotspotMetrics,
+  collectHotspotWaiverReviewQueue,
   collectHotspotCandidateFiles,
   collectHotspotCandidateRows,
   compareHotspotMetrics,
@@ -71,6 +72,28 @@ if (
 }
 
 const regressions = compareHotspotMetrics(current, baseline);
+const waiverReviewQueue = collectHotspotWaiverReviewQueue(waivers);
+
+if (waiverReviewQueue.due.length > 0) {
+  console.error("Hotspot waiver reviews are due or overdue:");
+  for (const waiver of waiverReviewQueue.due) {
+    console.error(
+      `  ${waiver.file} reviewAfter=${waiver.reviewAfter} owner=${waiver.owner} nextAction=${waiver.nextAction}`,
+    );
+  }
+  console.error("");
+  console.error("Update the waiver reviewAfter/nextAction after review, enroll the file in the baseline, or reduce the hotspot.");
+  process.exit(1);
+}
+
+if (waiverReviewQueue.upcoming.length > 0) {
+  console.log("Hotspot waiver reviews due soon:");
+  for (const waiver of waiverReviewQueue.upcoming) {
+    console.log(
+      `  ${waiver.file} reviewAfter=${waiver.reviewAfter} owner=${waiver.owner} nextAction=${waiver.nextAction}`,
+    );
+  }
+}
 
 if (regressions.length === 0) {
   console.log("Hotspot complexity ratchet passed.");

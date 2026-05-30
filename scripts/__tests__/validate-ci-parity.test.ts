@@ -209,6 +209,7 @@ describe("validate-ci parity", () => {
       "npm run check:redemption-coverage-audit",
       "npm run check:reserve-fixture-freshness",
       "npm run check:selector-banned-phrases",
+      "npm run check:site-csp-sync",
       "npm run check:script-entrypoints",
       "npm run check:shared-cycles",
       "npm run check:shared-types-imports",

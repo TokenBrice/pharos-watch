@@ -125,6 +125,16 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     deployImpact: "pages",
     paths: ["scripts/ci/check-selector-banned-phrases.mjs"],
   },
+  {
+    command: "npm run check:site-csp-sync",
+    deployImpact: "full",
+    paths: [
+      "scripts/ci/check-site-csp-sync.ts",
+      "shared/lib/site-csp.ts",
+      "shared/lib/runtime-origins.json",
+      "public/_headers",
+    ],
+  },
   { command: "npm run check:shared-cycles", deployImpact: "full", paths: ["scripts/ci/check-shared-cycles.mjs"] },
   {
     command: "npm run check:shared-types-imports",
