@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { classifyPegCohort, PEG_COHORTS } from "@/lib/peg-cohorts";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
 import type { PegSummaryCoin } from "@shared/types";
@@ -32,25 +33,6 @@ const DOT_MAX_R = 8;
 const ROW_HEIGHT = 56;
 const PAD_X = 24;
 const SVG_HEIGHT_MIN = 56;
-
-interface CohortDef {
-  key: "USD" | "EUR" | "GBP" | "GOLD" | "OTHER";
-  label: string;
-  membersOf: (peg: string) => boolean;
-}
-
-const COHORTS: CohortDef[] = [
-  { key: "USD", label: "USD", membersOf: (peg) => peg === "USD" },
-  { key: "EUR", label: "EUR", membersOf: (peg) => peg === "EUR" },
-  { key: "GBP", label: "GBP", membersOf: (peg) => peg === "GBP" },
-  { key: "GOLD", label: "Gold", membersOf: (peg) => peg === "GOLD" || peg === "SILVER" },
-  {
-    key: "OTHER",
-    label: "Other Fiat",
-    membersOf: (peg) =>
-      peg !== "USD" && peg !== "EUR" && peg !== "GBP" && peg !== "GOLD" && peg !== "SILVER",
-  },
-];
 
 function classifyBand(absBps: number): ThreatBand {
   if (absBps <= PEG_BAND_BPS.tight) return "CALM";
@@ -80,9 +62,9 @@ function buildCohorts(
   coins: Array<PegSummaryCoin & { currentDeviationBps: number }>,
   supplyById: Map<string, number>,
 ): CohortRow[] {
-  return COHORTS.map((cohort) => {
+  return PEG_COHORTS.map((cohort) => {
     const dots: DotData[] = coins
-      .filter((c) => cohort.membersOf(c.pegCurrency))
+      .filter((c) => classifyPegCohort(c.pegCurrency).key === cohort.key)
       .map((c) => {
         const bps = c.currentDeviationBps;
         const clampedBps = Math.max(-DOMAIN_BPS, Math.min(DOMAIN_BPS, bps));

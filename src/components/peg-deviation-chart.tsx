@@ -7,7 +7,6 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
@@ -15,82 +14,13 @@ import {
   ChartAnnotationLegend,
   ChartAnnotationLines,
 } from "@/components/chart-primitives/annotations";
+import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { ChartCrosshairOverlay, useMarketDataChartSync } from "@/components/chart-primitives/sync";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
 import { cn } from "@/lib/utils";
-
-function PegXTick({
-  x,
-  y,
-  payload,
-  range,
-}: {
-  x?: number;
-  y?: number;
-  payload?: { value: number };
-  range: TimeRangeOption;
-}) {
-  if (x === undefined || y === undefined || !payload) return null;
-  const d = new Date(payload.value);
-  const isJan = d.getMonth() === 0;
-
-  if (range === "all") {
-    const month = d.toLocaleDateString("en-US", { month: "short" });
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={12}
-          textAnchor="middle"
-          fontSize={11}
-          fontFamily="var(--font-mono, monospace)"
-          fill={isJan ? "var(--color-foreground)" : "var(--color-muted-foreground)"}
-          fontWeight={isJan ? 600 : 400}
-        >
-          {month}
-        </text>
-        {isJan && (
-          <text
-            x={0}
-            y={0}
-            dy={23}
-            textAnchor="middle"
-            fontSize={10}
-            fontFamily="var(--font-mono, monospace)"
-            fill="var(--color-muted-foreground)"
-          >
-            {d.getFullYear()}
-          </text>
-        )}
-      </g>
-    );
-  }
-
-  const label =
-    range === "7d" || range === "30d"
-      ? formatChartDate(payload.value, "short")
-      : formatChartDate(payload.value, "compact");
-
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        dy={12}
-        textAnchor="middle"
-        fontSize={12}
-        fontFamily="var(--font-mono, monospace)"
-        fill="var(--color-muted-foreground)"
-      >
-        {label}
-      </text>
-    </g>
-  );
-}
 
 function formatTooltip(value: number): [string, string] {
   const deviationBps = Math.round((value - 1) * 10000);
@@ -376,7 +306,7 @@ export function PegDeviationChart({
             dataKey="ts"
             ticks={xTicks}
             interval={range === "all" ? 0 : "preserveStartEnd"}
-            tick={<PegXTick range={range} />}
+            tick={<MarketDataXTick range={range} />}
             height={range === "all" ? 44 : 30}
           />
           <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />

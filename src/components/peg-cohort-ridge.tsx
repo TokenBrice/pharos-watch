@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { classifyPegCohort, PEG_COHORTS, type PegCohortKey } from "@/lib/peg-cohorts";
 import type { PegSummaryCoin } from "@shared/types";
 
 /* Compact ridge plot of current cohort peg-deviation distribution
@@ -29,26 +30,7 @@ const PAD_LEFT = 76;
 const PAD_RIGHT = 32;
 const SVG_VIEW_WIDTH = 800;
 
-interface CohortDef {
-  key: "USD" | "EUR" | "GBP" | "GOLD" | "OTHER";
-  label: string;
-  membersOf: (peg: string) => boolean;
-}
-
-const COHORTS: CohortDef[] = [
-  { key: "USD", label: "USD", membersOf: (peg) => peg === "USD" },
-  { key: "EUR", label: "EUR", membersOf: (peg) => peg === "EUR" },
-  { key: "GBP", label: "GBP", membersOf: (peg) => peg === "GBP" },
-  { key: "GOLD", label: "Gold", membersOf: (peg) => peg === "GOLD" || peg === "SILVER" },
-  {
-    key: "OTHER",
-    label: "Other Fiat",
-    membersOf: (peg) =>
-      peg !== "USD" && peg !== "EUR" && peg !== "GBP" && peg !== "GOLD" && peg !== "SILVER",
-  },
-];
-
-const COHORT_COLOR: Record<CohortDef["key"], string> = {
+const COHORT_COLOR: Record<PegCohortKey, string> = {
   USD: "#22c55e",
   EUR: "#8b5cf6",
   GBP: "#06b6d4",
@@ -120,7 +102,7 @@ function silvermanBandwidth(values: number[]): number {
 }
 
 interface CohortData {
-  key: CohortDef["key"];
+  key: PegCohortKey;
   label: string;
   values: number[];
   median: number;
@@ -129,9 +111,9 @@ interface CohortData {
 }
 
 function buildCohortData(coins: Array<PegSummaryCoin & { currentDeviationBps: number }>): CohortData[] {
-  return COHORTS.map((cohort) => {
+  return PEG_COHORTS.map((cohort) => {
     const values = coins
-      .filter((c) => cohort.membersOf(c.pegCurrency))
+      .filter((c) => classifyPegCohort(c.pegCurrency).key === cohort.key)
       .map((c) => c.currentDeviationBps);
     if (values.length === 0) {
       return {
