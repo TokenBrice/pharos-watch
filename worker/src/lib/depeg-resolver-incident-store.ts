@@ -492,6 +492,111 @@ async function assertNoAmbiguousNearbyIncident(
   }
 }
 
+async function linkUnsealedNearbyIncident(
+  db: D1Database,
+  event: DdrCanonicalIncidentEventInput,
+  options: EnsureCanonicalIncidentsOptions,
+  policyDelaySec: number,
+): Promise<DdrCanonicalIncident | null> {
+  const nowSec = optionNowSec(options);
+  const createdBy = options.createdBy ?? "ddr-v2";
+  const row = await db
+    .prepare(
+      `SELECT i.*,
+              m.incident_key AS membership_incident_key,
+              m.stablecoin_id AS membership_stablecoin_id,
+              m.prediction_policy_version,
+              m.public_tracked_at_first_seen,
+              m.psi_shadow_at_first_seen,
+              m.rollout_active_at_enablement,
+              m.policy_universe_included,
+              m.policy_universe_reason,
+              m.registry_snapshot_json,
+              m.created_at AS membership_created_at,
+              ls.eligible_at AS lock_eligible_at,
+              ls.deferral_count,
+              ls.last_deferral_reason,
+              ls.last_state
+       FROM depeg_resolver_incidents i
+       LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
+       LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
+       WHERE i.stablecoin_id = ?
+         AND i.peg_currency = ?
+         AND i.direction = ?
+         AND ABS(i.current_started_at - ?) <= ?
+         AND NOT EXISTS (
+           SELECT 1
+           FROM depeg_resolver_incident_event_links l
+           WHERE l.incident_key = i.incident_key
+             AND l.event_id = ?
+         )
+       ORDER BY ABS(i.current_started_at - ?) ASC, i.created_at ASC
+       LIMIT 1`,
+    )
+    .bind(
+      event.stablecoinId,
+      event.pegCurrency,
+      event.direction,
+      event.startedAt,
+      policyDelaySec,
+      event.eventId,
+      event.startedAt,
+    )
+    .first<IncidentRow>();
+  if (!row) return null;
+
+  const sealed = await db
+    .prepare(
+      `SELECT 1 AS sealed
+       FROM depeg_resolver_public_predictions
+       WHERE incident_key = ?
+       LIMIT 1`,
+    )
+    .bind(row.incident_key)
+    .first<{ sealed: number }>();
+  if (sealed) {
+    throw new Error(`Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`);
+  }
+
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_incident_event_links
+         (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+         VALUES (?, ?, 'repair_replacement', NULL, ?, ?)`,
+      )
+      .bind(row.incident_key, event.eventId, nowSec, "pre-lock nearby event adopted as current incident source"),
+    db
+      .prepare(
+        `INSERT INTO depeg_resolver_incident_revisions
+         (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+         VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)`,
+      )
+      .bind(row.incident_key, row.current_event_id, event.eventId, "pre-lock nearby event adopted as current incident source", nowSec, createdBy),
+    db
+      .prepare(
+        `UPDATE depeg_resolver_incidents
+         SET current_event_id = ?,
+             current_started_at = ?,
+             updated_at = ?
+         WHERE incident_key = ?`,
+      )
+      .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
+  ]);
+
+  return mapIncidentRow(
+    {
+      ...row,
+      current_event_id: event.eventId,
+      current_started_at: event.startedAt,
+      updated_at: nowSec,
+      event_id: event.eventId,
+      relation: "repair_replacement",
+    },
+    policyDelaySec,
+  );
+}
+
 export async function ensureCanonicalIncidents(
   db: D1Database,
   events: DdrCanonicalIncidentEventInput[],
@@ -525,6 +630,11 @@ export async function ensureCanonicalIncidents(
     const existingKeyRows = await loadCanonicalIncidents(db, { incidentKeys: [incidentKey] });
     if (existingKeyRows.length > 0) {
       throw new Error(`Unlinked depeg event ${event.eventId} maps to existing incident ${incidentKey}`);
+    }
+    const nearby = await linkUnsealedNearbyIncident(db, event, options, policyDelaySec);
+    if (nearby) {
+      ensured.set(event.eventId, nearby);
+      continue;
     }
     await assertNoAmbiguousNearbyIncident(db, event, policyDelaySec);
 

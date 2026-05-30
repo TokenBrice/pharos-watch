@@ -280,6 +280,79 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("adopts nearby pre-lock events into an unsealed canonical incident", async () => {
+    const db = makeSqliteD1();
+    try {
+      const incident = await ensureIncident(db);
+      const [nearby] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100900,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        { nowSec: 201000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+      );
+
+      expect(nearby?.incidentKey).toBe(incident.incidentKey);
+      expect(nearby?.eventId).toBe(2);
+      expect(nearby?.currentEventId).toBe(2);
+      expect(nearby?.relation).toBe("repair_replacement");
+
+      const link = db.sqlite
+        .prepare("SELECT relation, note FROM depeg_resolver_incident_event_links WHERE event_id = 2")
+        .get() as { relation: string; note: string };
+      expect(link).toEqual({
+        relation: "repair_replacement",
+        note: "pre-lock nearby event adopted as current incident source",
+      });
+
+      const revision = db.sqlite
+        .prepare("SELECT previous_event_id, current_event_id, reason, created_by FROM depeg_resolver_incident_revisions WHERE current_event_id = 2")
+        .get() as { previous_event_id: number; current_event_id: number; reason: string; created_by: string };
+      expect(revision).toEqual({
+        previous_event_id: 1,
+        current_event_id: 2,
+        reason: "pre-lock nearby event adopted as current incident source",
+        created_by: "vitest",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("still requires explicit repair for nearby events after a public prediction is sealed", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { incident } = await sealPredictionFixture(db);
+      await expect(
+        ensureCanonicalIncidents(
+          db,
+          [
+            {
+              eventId: 2,
+              stablecoinId: "lusd-liquity",
+              pegCurrency: "USD",
+              direction: "below",
+              startedAt: 100900,
+              peakDeviationBps: -350,
+              source: "live",
+            },
+          ],
+          { nowSec: 201000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+        ),
+      ).rejects.toThrow(`Unlinked depeg event 2 overlaps nearby canonical incident ${incident.incidentKey}; explicit repair required`);
+    } finally {
+      db.close();
+    }
+  });
+
   it("seals exactly one public prediction and makes the assessment immutable", async () => {
     const db = makeSqliteD1();
     try {

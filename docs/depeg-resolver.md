@@ -48,7 +48,7 @@ Before the lock point, rows use `pending_lock` and show live facts plus the lock
 
 Frozen means frozen. Later prices, supply changes, methodology versions, better input coverage, or a worse peak do not mutate the official public prediction. Live incident status, current deviation, age, staleness, and degraded overlay details are shown as live facts beside the frozen lock outcome.
 
-Errata are append-only. If a source event or input is later proven wrong, DDR keeps the original first-publication exposure visible as `invalidated`, shows the original frozen prediction or no-call outcome, and attaches the latest erratum/history. Repairs require explicit lineage/authorization rather than automatic nearby-event linking.
+Errata are append-only. If a source event or input is later proven wrong, DDR keeps the original first-publication exposure visible as `invalidated`, shows the original frozen prediction or no-call outcome, and attaches the latest erratum/history. Before any public prediction is sealed, nearby same-coin/same-direction source rows may be adopted into the unsealed canonical incident through append-only incident links and revisions. Once a public prediction exists, source-event repairs require explicit authorization/lineage rather than automatic nearby-event linking.
 
 Short depegs are not predicted after the fact. If a confirmed incident recovers before the 24h lock point, DDRR classifies it as `resolved_before_prediction`; reliable terminal evidence before the lock point becomes `terminal_before_prediction`. Incidents that crossed eligibility but never received a public prediction become explicit coverage debt such as `missed_lock_recovered`, `missed_lock_terminal`, `publication_failed`, `orphan_closed`, or `data_quality_gap`.
 

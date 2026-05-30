@@ -16,6 +16,7 @@ Promoted DDR from a live reassessment widget to a one-shot public forecast contr
 - **Coverage universe.** DDRR reports prediction coverage, scoreable coverage, publication success, no-call share, invalidation rate, missed locks, pre-lock recoveries/terminal outcomes, data-quality gaps, and retry/failed publication states over canonical incidents.
 - **Errata and invalidation.** Append-only errata keep original first-publication exposure visible while marking predictions invalidated and linking the latest correction/history.
 - **Live overlay split.** Frozen predictions keep lock-time verdict/duration anchored while the public DDR UI shows current deviation, incident age, stale/degraded status, and closure state separately.
+- **Pre-lock source-row adoption.** Nearby same-coin/same-direction source rows can be adopted into an unsealed canonical incident through append-only links/revisions, while sealed incidents still require explicit repair authorization.
 
 ## v1.1 — Depeg Duration Resolver Reviewer (May 25, 2026)
 
