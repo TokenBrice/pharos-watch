@@ -92,7 +92,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
     // key-info-card already has a "Learn how X stablecoins work" CTA adjacent to the diagram.
     // Use this slot for a screener deep-link instead to avoid a duplicate CTA.
     trackerLinks.push({
-      href: `/screener/?mechanism=${resolvedArchetype}`,
+      href: `/screener/?mechanisms=${resolvedArchetype}`,
       label: `See all ${getMechanismArchetypeCtaNoun(resolvedArchetype)} stablecoins`,
     });
   }

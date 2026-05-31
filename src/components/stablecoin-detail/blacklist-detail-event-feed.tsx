@@ -194,7 +194,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
       </DataTableShell>
       <div className="mt-3 flex justify-end">
         <Link
-          href={`/freezewatch?stablecoin=${symbol}`}
+          href={`/freezewatch/?stablecoin=${symbol}`}
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           See all events →

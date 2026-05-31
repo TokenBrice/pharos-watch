@@ -145,9 +145,9 @@ export function ScreenerClient() {
 
   const { searchParams, replaceParams } = useUrlFilters();
 
-  // Normalize singular deep-link aliases (e.g. `/screener/?mechanism=cdp` from
-  // the mechanism-explainer hub) into the canonical plural URL schema, once
-  // after hydration. Pins `lifecycle=active` when arriving via a mechanism
+  // Normalize legacy singular deep-link aliases (e.g. `/screener/?mechanism=cdp`)
+  // into the canonical plural URL schema, once after hydration. Pins
+  // `lifecycle=active` when arriving via a mechanism
   // deep-link without an explicit lifecycle so deep-linked views don't
   // accidentally include pre-launch or frozen coins.
   const aliasNormalizedRef = useRef(false);

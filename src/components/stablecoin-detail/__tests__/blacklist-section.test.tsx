@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 
 import { cleanup, render } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 
 afterEach(() => {
   cleanup();
@@ -21,7 +30,8 @@ import {
   BlacklistHistorySection,
   BlacklistSection,
 } from "@/components/stablecoin-detail/blacklist-section";
-import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import type { BlacklistEvent } from "@shared/types";
 
 function summaryStub(overrides: {
   perCoinTotalEvents?: Record<string, number>;
@@ -84,6 +94,45 @@ describe("BlacklistSection", () => {
       <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
     );
     expect(getByText(/Recent Blacklist Events/i)).toBeTruthy();
+  });
+
+  it("links the full event feed through the canonical Freezewatch URL", () => {
+    const event: BlacklistEvent = {
+      id: "evt-1",
+      stablecoin: "USDC",
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      eventType: "blacklist",
+      address: "0x0000000000000000000000000000000000000001",
+      amountNative: null,
+      amountUsdAtEvent: null,
+      amountSource: "unavailable",
+      amountStatus: "permanently_unavailable",
+      txHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      blockNumber: 1,
+      timestamp: Date.parse("2026-05-30T00:00:00Z"),
+      methodologyVersion: "5.91",
+      contractAddress: null,
+      configKey: null,
+      eventSignature: null,
+      eventTopic0: null,
+      explorerTxUrl: "https://etherscan.io/tx/0x0",
+      explorerAddressUrl: "https://etherscan.io/address/0x0",
+    };
+    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
+    vi.mocked(useBlacklistEventsPage).mockReturnValueOnce({
+      data: { events: [event], total: 1 },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useBlacklistEventsPage>);
+
+    const { getByRole } = render(
+      <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
+    );
+
+    expect(getByRole("link", { name: "See all events →" }).getAttribute("href")).toBe(
+      "/freezewatch/?stablecoin=USDC",
+    );
   });
 
   it("BlacklistHistorySection returns null for a supported coin with zero events", () => {

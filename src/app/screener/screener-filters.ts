@@ -336,9 +336,9 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
  * Singular deep-link aliases supported on `/screener/`.
  *
  * The screener's canonical URL contract uses plural enum-list keys (`mechanisms`,
- * `lifecycle`). For deep-links from the mechanism explainer hub
- * (`/learn/mechanisms/<slug>/`) we accept the shorter singular `mechanism=<slug>`
- * and singular `lifecycle=<single-status>` forms and normalize them in place.
+ * `lifecycle`). Legacy inbound links may still use the shorter singular
+ * `mechanism=<slug>` and singular `lifecycle=<single-status>` forms; accept them
+ * and normalize them in place.
  *
  * When `mechanism` is present and `lifecycle` is unset, this also pins
  * `lifecycle=active` so deep-linked views don't surface pre-launch or frozen
