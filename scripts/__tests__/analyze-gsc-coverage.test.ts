@@ -154,4 +154,30 @@ describe("analyze-gsc-coverage", () => {
       "[critical] Blocked due to access forbidden (403) | pages=2 | expected=export matching Table.csv drilldown",
     );
   });
+
+  it("uses standalone CSV filenames as drilldown issue names inside directories", async () => {
+    const root = fixtureDir();
+    writeFileSync(
+      join(root, "Critical issues.csv"),
+      ["Reason,Source,Validation,Trend,Pages", '"Crawled - currently not indexed",Google systems,Not Started,Flat,1'].join(
+        "\n",
+      ),
+    );
+    writeFileSync(
+      join(root, "Crawled - currently not indexed.csv"),
+      ["URL,Last crawled", "https://pharos.watch/stablecoin/usdc-circle/,2026-05-30"].join("\n"),
+    );
+
+    const report = await analyzeGscCoverageInputs([root]);
+    const rendered = renderGscCoverageReport(report);
+
+    expect(report.drilldowns).toEqual([
+      expect.objectContaining({
+        issueName: "Crawled - currently not indexed",
+        urlCount: 1,
+      }),
+    ]);
+    expect(report.missingDrilldowns).toEqual([]);
+    expect(rendered).toContain("Crawled - currently not indexed | urls=1 | pathQueryGroups=1 | matchedIssue=yes");
+  });
 });

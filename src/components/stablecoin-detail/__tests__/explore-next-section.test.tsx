@@ -34,11 +34,11 @@ const coin = {
 describe("ExploreNextSection", () => {
   afterEach(() => cleanup());
 
-  it("links mechanism tracker CTAs to the canonical plural screener parameter", () => {
+  it("links mechanism tracker CTAs to the canonical active screener filter", () => {
     render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={[]} logos={{}} />);
 
     expect(screen.getByRole("link", { name: "See all CDP stablecoins" }).getAttribute("href")).toBe(
-      "/screener/?mechanisms=cdp",
+      "/screener/?mechanisms=cdp&lifecycle=active",
     );
   });
 });

@@ -100,7 +100,7 @@ The guard runs in `validate:prebuild` and so blocks deploy even on non-Pages-imp
 
 - **Sidebar:** `src/lib/nav-config.ts` LEARN group → `Learn Overview`, `Mechanisms`, `Case Studies`, and `Glossary`
 - **Coin detail (`src/components/key-info-card.tsx`):** "Learn how X stablecoins work" link directly below the per-coin mechanism diagram, gated on `meta.mechanismArchetype`.
-- **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`key-info-card` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>` deep-link instead.
+- **Stablecoin detail Explore Next (`src/components/stablecoin-detail/explore-next-section.tsx`):** does **not** link the explainer (`key-info-card` already carries that CTA); its archetype-gated slot is a canonical `/screener/?mechanisms=<archetype>&lifecycle=active` deep-link instead.
 - **Methodology index (`src/app/methodology/page.tsx`):** single "Learn the mechanisms" callout near the top.
 - **About (`src/app/about/page.tsx`):** inline link on the word "mechanisms" inside the Classification section.
 - **Start Here (`src/lib/start-here-content.ts`):** single tile under the Learn / Reference group.

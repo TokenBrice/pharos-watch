@@ -84,6 +84,15 @@ function cleanPathLabel(value) {
     .trim();
 }
 
+function cleanStandaloneCsvIssueLabel(value) {
+  const base = path.basename(String(value ?? ""));
+  return base
+    .replace(/\.(csv|zip|xlsx|xls)$/i, "")
+    .replace(/_+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function displayPath(inputPath) {
   const relative = path.relative(process.cwd(), inputPath);
   if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return inputPath;
@@ -440,12 +449,14 @@ function walkDirectory(directoryPath, collected, inputPath, rootDirectory) {
     const relativePath = path.relative(rootDirectory, absolutePath).replaceAll(path.sep, "/");
     const ext = path.extname(entry.name).toLowerCase();
     if (ext === CSV_EXT) {
+      const fileName = path.posix.basename(relativePath).toLowerCase();
+      const isStandaloneCsv = !KNOWN_GSC_FILES.has(fileName);
       addCsvEntry(
         collected,
         inputPath,
-        rootDirectory,
-        cleanPathLabel(rootDirectory),
-        relativePath,
+        isStandaloneCsv ? absolutePath : rootDirectory,
+        isStandaloneCsv ? cleanStandaloneCsvIssueLabel(absolutePath) : cleanPathLabel(rootDirectory),
+        isStandaloneCsv ? path.basename(absolutePath) : relativePath,
         readFileSync(absolutePath),
         displayPath(absolutePath),
       );
