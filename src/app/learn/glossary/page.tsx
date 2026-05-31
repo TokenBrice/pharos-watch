@@ -14,7 +14,7 @@ import {
 } from "./content";
 
 const GLOSSARY_METADATA_DESCRIPTION =
-  "The Pharos vocabulary, alphabetized: PSI, DEWS, PegScore, LiquidityScore, FreezeWatch, Bluechip, Tape, Cemetery, PressureShift, and the bands and gates each one refers to. Authored, version-pinned, citable.";
+  "Stablecoin risk glossary for Pharos terms including PSI, DEWS, PegScore, LiquidityScore, FreezeWatch, Bluechip, PressureShift, bands, gates, and methodology anchors.";
 const GLOSSARY_PAGE_URL = `${SITE_ORIGIN}/learn/glossary/`;
 const GLOSSARY_DEFINED_TERM_SET_ID = `${GLOSSARY_PAGE_URL}#defined-term-set`;
 const GLOSSARY_DEFINED_TERM_SET_JSON_LD = {
@@ -43,7 +43,7 @@ const GLOSSARY_DEFINED_TERM_SET_JSON_LD = {
 } as const;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Glossary",
+  title: "Stablecoin Risk Glossary: PSI, DEWS, PegScore & More",
   description: GLOSSARY_METADATA_DESCRIPTION,
   canonical: "/learn/glossary/",
   ogImage: `${SITE_ORIGIN}/og-editorial-learn.png`,

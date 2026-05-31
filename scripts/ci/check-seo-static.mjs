@@ -47,6 +47,10 @@ const RICHNESS_CHECKS = [
 const LOADING_SHELL_PATTERN = /\b(?:loading|placeholder|skeleton|fetching|pending)\b/gi;
 const MAX_LOADING_WORD_RATIO = 0.15;
 const MAX_LOADING_WORD_COUNT = 4;
+const INDEXABLE_SNIPPET_LENGTHS = {
+  title: { min: 35, max: 70 },
+  description: { min: 110, max: 180 },
+};
 const REQUIRED_STATIC_HEADER_RULES = [
   { route: "/*.txt", header: "X-Robots-Tag", directives: ["noindex", "nofollow"], label: "raw .txt payloads" },
   { route: "/stablecoin/*/yield/", header: "X-Robots-Tag", directives: ["noindex"], label: "yield detail pages" },
@@ -785,6 +789,7 @@ function localOgImagePath(value) {
 
 export function collectSeoStaticCheckResult({
   outDir = DEFAULT_OUT_DIR,
+  enforceSnippetQuality = true,
   enforceStructuredDataMatrix = true,
   structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
 } = {}) {
@@ -807,7 +812,7 @@ export function collectSeoStaticCheckResult({
       filePath,
       route: routeFromFile(filePath, outDir),
       html,
-      title: extractAttr(html, /<title>([^<]*)<\/title>/i),
+      title: decodeHtml(extractAttr(html, /<title>([^<]*)<\/title>/i)),
       description: getMetaContents(html, "name", "description")[0] ?? "",
       canonical: getCanonical(html),
       ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
@@ -833,6 +838,28 @@ export function collectSeoStaticCheckResult({
     if (!record.title) errors.push(`${record.route}: missing <title>`);
     if (!record.description) errors.push(`${record.route}: missing meta description`);
     const indexable = isIndexable(record.robotsTags);
+    if (indexable && enforceSnippetQuality) {
+      if (record.title && record.title.length < INDEXABLE_SNIPPET_LENGTHS.title.min) {
+        errors.push(
+          `${record.route}: <title> is too short for search snippets (${record.title.length} chars, minimum ${INDEXABLE_SNIPPET_LENGTHS.title.min})`,
+        );
+      }
+      if (record.title && record.title.length > INDEXABLE_SNIPPET_LENGTHS.title.max) {
+        errors.push(
+          `${record.route}: <title> is too long for search snippets (${record.title.length} chars, maximum ${INDEXABLE_SNIPPET_LENGTHS.title.max})`,
+        );
+      }
+      if (record.description && record.description.length < INDEXABLE_SNIPPET_LENGTHS.description.min) {
+        errors.push(
+          `${record.route}: meta description is too short for search snippets (${record.description.length} chars, minimum ${INDEXABLE_SNIPPET_LENGTHS.description.min})`,
+        );
+      }
+      if (record.description && record.description.length > INDEXABLE_SNIPPET_LENGTHS.description.max) {
+        errors.push(
+          `${record.route}: meta description is too long for search snippets (${record.description.length} chars, maximum ${INDEXABLE_SNIPPET_LENGTHS.description.max})`,
+        );
+      }
+    }
     if (indexable && !record.canonical) errors.push(`${record.route}: missing canonical`);
     if (indexable && record.canonical) {
       const expectedCanonical = canonicalUrlForRoute(record.route);

@@ -104,6 +104,17 @@ const BACKING_CONTENT: Record<
   },
 };
 
+function buildCohortTitle(baseTitle: string, count: number): string {
+  const coinLabel = `${count} Coin${count === 1 ? "" : "s"}`;
+  const title = count === 1 ? `${baseTitle}: 1 Coin Tracked` : `${baseTitle}: ${coinLabel} Ranked by Risk`;
+  if (title.length <= 61) return title;
+
+  const compactBaseTitle = baseTitle.replace(" Infrastructure Stablecoins", " Stablecoins");
+  return count === 1
+    ? `${compactBaseTitle}: 1 Coin Tracked`
+    : `${compactBaseTitle}: ${coinLabel} Ranked by Risk`;
+}
+
 export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [GovernanceType, string][])
   .map(([value, slug]) => {
     const content = GOVERNANCE_CONTENT[value];
@@ -113,7 +124,7 @@ export const GOVERNANCE_TAXONOMY_PAGES = (Object.entries(GOVERNANCE_SLUGS) as [G
       slug,
       value,
       href: `/stablecoins/governance/${slug}/`,
-      title: content.title,
+      title: buildCohortTitle(content.title, coins.length),
       shortLabel: content.shortLabel,
       description: content.description(coins.length),
       intro: content.intro,
@@ -132,7 +143,7 @@ export const BACKING_TAXONOMY_PAGES = (Object.entries(BACKING_SLUGS) as [Backing
       slug,
       value,
       href: `/stablecoins/backing/${slug}/`,
-      title: content.title,
+      title: buildCohortTitle(content.title, coins.length),
       shortLabel: content.shortLabel,
       description: content.description(coins.length),
       intro: content.intro,
@@ -180,7 +191,7 @@ const INFRASTRUCTURE_CONTENT: Record<
     intro:
       "M0 stablecoins are built on the M0 issuance platform: minter governance, the SwapFacility, and the MExtension.sol contract pattern. Each issuer sets its own reserve composition, which may or may not include the underlying $M token. The shared infrastructure correlates governance and smart-contract risk across the cohort.",
     description: (count) =>
-      `${count} M0-built stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare branded extensions of the M0 issuance platform.`,
+      `${count} M0-built stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare branded extensions by issuer, reserve model, peg behavior, liquidity, and shared platform risk.`,
   },
 };
 
@@ -196,7 +207,7 @@ export const INFRASTRUCTURE_TAXONOMY_PAGES = (
       slug: content.slug,
       value,
       href: `/stablecoins/infrastructure/${content.slug}/`,
-      title: content.title,
+      title: buildCohortTitle(content.title, coins.length),
       shortLabel: content.shortLabel,
       description: content.description(coins.length),
       intro: content.intro,
@@ -212,7 +223,7 @@ export const STABLECOIN_TAXONOMY_HUB_ROUTES = {
     path: "/stablecoins/backing/",
     title: "Stablecoins by Backing Type",
     description: (total: number) =>
-      `Browse ${total} active stablecoins by backing model: real-world assets and crypto collateral.`,
+      `Browse ${total} active stablecoins by backing model. Compare RWA, crypto-backed, and algorithmic cohorts by peg stability, liquidity, collateral, and issuer risk.`,
     leadParagraphs: [
       "Compare stablecoin cohorts by reserve structure, from fiat and Treasury-backed issuers to crypto-collateralized designs.",
     ],
@@ -224,7 +235,7 @@ export const STABLECOIN_TAXONOMY_HUB_ROUTES = {
     path: "/stablecoins/governance/",
     title: "Stablecoins by Governance Model",
     description: (total: number) =>
-      `Browse ${total} active stablecoins by governance model: CeFi, CeFi-dependent, and DeFi-native designs.`,
+      `Browse ${total} active stablecoins by governance model. Compare CeFi, CeFi-dependent, and DeFi designs by peg stability, liquidity, issuer controls, and risk.`,
     leadParagraphs: [
       "Separate centralized issuers, CeFi-dependent designs, and DeFi-native stablecoins before comparing peg stability, liquidity, and control risk.",
     ],
@@ -236,7 +247,7 @@ export const STABLECOIN_TAXONOMY_HUB_ROUTES = {
     path: "/stablecoins/infrastructure/",
     title: "Stablecoins by Shared Infrastructure",
     description: (total: number) =>
-      `Browse ${total} active stablecoins grouped by shared infrastructure such as Liquity v1, Liquity v2, and M0.`,
+      `Browse ${total} active stablecoins grouped by shared infrastructure. Compare Liquity, M0, and other cohorts by peg design, liquidity, and correlated risk.`,
     leadParagraphs: [
       "Group stablecoins that inherit common architecture, contracts, or issuance frameworks so correlated infrastructure risk is easier to spot.",
     ],

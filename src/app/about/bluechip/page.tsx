@@ -15,9 +15,9 @@ import {
 } from "./content";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Bluechip — Pharos",
+  title: "Pharos Bluechip Stablecoins: Safety Criteria & List",
   description:
-    "Pharos Bluechip is the gated designation for stablecoins that simultaneously clear strict floors across safety, liquidity, and resilience.",
+    "See which stablecoins qualify for Pharos Bluechip status and the safety, liquidity, resilience, peg, and dependency-risk gates behind the designation.",
   canonical: "/about/bluechip/",
   ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });

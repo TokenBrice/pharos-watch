@@ -23,7 +23,7 @@ import { ExplainerPageShell } from "./explainer-page-shell";
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Mechanism Explainers",
   description:
-    "Six plain-English explainers covering every stablecoin mechanism Pharos tracks: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, and tokenized credit fund designs.",
+    "Learn six stablecoin mechanism designs: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, and tokenized credit funds.",
   canonical: "/learn/mechanisms/",
   ogImage: `${SITE_URL}/og-editorial-learn.png`,
 });

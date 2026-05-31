@@ -131,13 +131,13 @@ describe("buildStablecoinDetailMetadata", () => {
     const frozenCoin = frozen as Parameters<typeof buildStablecoinDetailMetadata>[0];
 
     expect(buildStablecoinDetailMetadata(activeCoin).title).toBe(
-      `${active.name} (${active.symbol}) Stablecoin Risk, Peg & Liquidity`,
+      `${active.symbol} Stablecoin Risk Profile: Peg, Liquidity & Safety`,
     );
     expect(buildStablecoinDetailMetadata(preLaunchCoin).title).toBe(
-      `${preLaunch.name} (${preLaunch.symbol}) Launch Status & Stablecoin Profile`,
+      `${preLaunch.symbol} Stablecoin Launch Tracker & Profile`,
     );
     expect(buildStablecoinDetailMetadata(frozenCoin).title).toBe(
-      `${frozen.name} (${frozen.symbol}) Failed Stablecoin Archive`,
+      `${frozen.symbol} Failed Stablecoin Archive & Timeline`,
     );
   });
 });

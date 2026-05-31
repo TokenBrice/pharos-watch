@@ -18,7 +18,7 @@ import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model"
 // alongside their parent tier so power-users see the whole surface area.
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Sitemap — Pharos",
+  title: "Pharos Sitemap: Stablecoin Dashboard Route Index",
   description:
     "Every public Pharos route grouped by Track, Analyze, Monitor, and Reference. The full surface area of the stablecoin dashboard on a single page.",
   canonical: "/sitemap-tree/",

@@ -23,6 +23,13 @@ import docsMetadata from "@/generated/docs-metadata.json";
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
 
+function buildDocMetadataTitle(doc: { slug: string; title: string; group: string }): string {
+  if (doc.slug === "api-reference") return "Stablecoin API Reference - Pharos Docs";
+  if (doc.group === "methodology") return `${doc.title} Methodology - Pharos Docs`;
+  if (doc.group === "design") return `${doc.title} System - Pharos Docs`;
+  return `${doc.title} Guide - Pharos Docs`;
+}
+
 const mdxComponents = {
   a: ({ href, children }: React.ComponentProps<"a">) => {
     const resolved = resolvePublicDocHref(href);
@@ -56,7 +63,7 @@ export async function generateMetadata({
   if (!doc) return { title: "Doc Not Found" };
 
   return buildPageMetadata({
-    title: `${doc.title} - Pharos Docs`,
+    title: buildDocMetadataTitle(doc),
     description: doc.summary,
     canonical: `/docs/${slug}/`,
   });

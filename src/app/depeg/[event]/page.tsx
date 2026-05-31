@@ -111,7 +111,7 @@ function buildHeroTitle(event: DepegEventEntry, coinName: string | null): string
 function buildHeroDescription(event: DepegEventEntry): string {
   const status = event.endedAt ? "Recovered" : "Ongoing";
   const dev = formatDeviation(event.peakDeviationBps);
-  return `${event.symbol} traded ${directionLabel(event.direction)} with a peak deviation of ${dev} starting ${formatIsoDate(event.startedAt)}. Confirmed depeg event, ${status}.`;
+  return `${event.symbol} traded ${directionLabel(event.direction)} with a peak deviation of ${dev} starting ${formatIsoDate(event.startedAt)}. Confirmed ${status.toLowerCase()} depeg event with timeline, severity, recovery, and Pharos methodology context.`;
 }
 
 export async function generateMetadata(

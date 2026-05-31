@@ -9,7 +9,7 @@ import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
-import { summarizeText } from "@/lib/page-metadata";
+import { summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
 import digests from "@data/digests.json";
@@ -34,6 +34,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDate: string): string {
+  const summary = summarizeText(digest.text, 150);
+  if (summary.length >= 110) return summary;
+
+  const edition = digest.digestType === "weekly" ? "weekly recap" : "daily brief";
+  return trimTextAtWordBoundary(
+    `${summary} Read the Pharos ${edition} for ${formattedDate}: PSI, depegs, flows, liquidity, and stablecoin risk signals.`,
+    160,
+  );
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;
   const digest = digestByDate.get(date);
@@ -44,7 +55,7 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
     };
   }
   const formatted = formatDate(digest.date);
-  const description = summarizeText(digest.text, 160);
+  const description = buildDigestMetadataDescription(digest, formatted);
   return {
     title: `${digest.title} (${formatted})`,
     description,
@@ -99,7 +110,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             image: [`${SITE_URL}/og-editorial-digest.png`],
             datePublished: new Date(digest.generatedAt * 1000).toISOString(),
             dateModified: new Date(digest.generatedAt * 1000).toISOString(),
-            description: summarizeText(digest.text, 160),
+            description: buildDigestMetadataDescription(digest, formatted),
             author: {
               "@type": "Organization",
               name: "Pharos",

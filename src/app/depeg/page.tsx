@@ -15,7 +15,7 @@ import {
 } from "@shared/lib/depeg-dews-version";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const depegDescription = `Use the Depeg Tracker as the live incident board for peg stress across ${ACTIVE_STABLECOIN_COUNT} stablecoins, with 15-minute peg data, 30-minute DEWS signals, active deviations, heatmaps, and depeg history in one surface.`;
+const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, heatmaps, severity, and history.`;
 
 export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",

@@ -29,9 +29,9 @@ import {
 } from "@/lib/api-reference-doc";
 
 export const metadata = buildPageMetadata({
-  title: "Pharos API Reference",
+  title: "Pharos API Reference: Stablecoin Data Contracts",
   description:
-    "Auth model, API-key requirements, host split, and the full Pharos endpoint reference for external integrations.",
+    "Pharos API reference for stablecoin integrations: auth model, API-key requirements, host split, endpoints, artifacts, and response contracts.",
   canonical: "/about/api/",
   ogImage: `${SITE_URL}/og-editorial-about.png`,
 });

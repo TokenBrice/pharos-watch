@@ -9,7 +9,7 @@ import { GLOSSARY_ENTRIES } from "./glossary/content";
 import { CASE_STUDY_LIST } from "./case-studies/content";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Learn — Pharos",
+  title: "Stablecoin Learning Center: Mechanisms & Case Studies",
   description:
     "The Pharos learning center: how each stablecoin design holds its peg, long-form depeg case studies, and a version-pinned glossary.",
   canonical: "/learn/",

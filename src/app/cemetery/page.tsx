@@ -12,11 +12,11 @@ import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merge
 import type { FaqItem } from "@/lib/faq";
 import { sortCemeteryCoins } from "@/lib/cemetery";
 
-const cemeteryDescription = `A memorial to ${DEAD_STABLECOINS.length} fallen stablecoins. From TerraUSD to HUSD: what went wrong, when, and why.`;
+const cemeteryMetadataDescription = `${DEAD_STABLECOINS.length} failed and defunct stablecoins documented by Pharos, with collapse dates, causes, obituaries, archived data, and lessons from TerraUSD to HUSD.`;
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",
-  description: cemeteryDescription,
+  description: cemeteryMetadataDescription,
   canonical: "/cemetery/",
   ogImage: `${SITE_URL}/og-editorial-cemetery.png`,
 });

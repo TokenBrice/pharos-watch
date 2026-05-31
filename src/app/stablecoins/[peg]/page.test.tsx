@@ -33,7 +33,7 @@ describe("PegPage", () => {
 
     expect(metadata).toMatchObject({
       title: page.title,
-      description: expect.stringContaining("leaders like"),
+      description: expect.stringContaining("leading symbols like"),
       alternates: { canonical: "/stablecoins/eur/" },
     });
   });

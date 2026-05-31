@@ -89,26 +89,26 @@
 ## Docs
 
 - [Documentation Archive](https://pharos.watch/docs/): Architecture, methodology, and design documentation.
-- [API Reference](https://pharos.watch/docs/api-reference/): HTTP contracts, authentication notes, and response conventions.
-- [Architecture](https://pharos.watch/docs/architecture/): Route map, API surfaces, runtime rules, and SEO ownership.
-- [Data Flow Map](https://pharos.watch/docs/data-flow-map/): End-to-end source-to-UI flows for each major data domain.
-- [Data Pipeline](https://pharos.watch/docs/data-pipeline/): Price enrichment, integrity guardrails, and sync behavior.
-- [Worker and API Limits](https://pharos.watch/docs/worker-and-api-limits/): Repo-enforced runtime limits, cron budgets, and polling guidance.
-- [Classification](https://pharos.watch/docs/classification/): Classification system, peg handling, and commodity treatment.
-- [Pricing Pipeline](https://pharos.watch/docs/pricing-pipeline/): Live-price consensus, overrides, and fallback enrichment.
-- [Depeg Detection](https://pharos.watch/docs/depeg-detection/): Two-stage detection, confirmation, and peg score inputs.
-- [DEWS](https://pharos.watch/docs/dews/): DEWS formula, sub-signals, bands, and API contract.
-- [DEX Liquidity](https://pharos.watch/docs/dex-liquidity/): Liquidity score, discovery pipeline, and cross-validation.
-- [Pharos Stability Index](https://pharos.watch/docs/stability-index/): PSI formula, bands, storage, and API surface.
-- [Report Cards](https://pharos.watch/docs/report-cards/): Report-card scoring, portfolio analyzer, and stress test.
-- [Redemption Backstops](https://pharos.watch/docs/redemption-backstops/): Redemption routes, effective-exit scoring, and storage.
-- [Chain Health](https://pharos.watch/docs/chain-health/): Chain Health Score inputs, formula, factors, and bands.
-- [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint/burn ingestion, scoring, and admin backfills.
-- [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): APY resolution, PYS scoring, and warning signals.
-- [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): PSI-only shadow asset boundary and UI exclusion rules.
-- [Design Context](https://pharos.watch/docs/design-context/): User, brand, and product-direction baseline.
-- [Design Language](https://pharos.watch/docs/design-language/): Live UI patterns, typography, spacing, and responsive rules.
-- [Design Tokens](https://pharos.watch/docs/design-tokens/): Token layers and CSS variable architecture.
+- [API Reference](https://pharos.watch/docs/api-reference/): Public Pharos API contracts for stablecoin data: endpoints, authentication, response schemas, pagination, freshness headers, and dataset exports.
+- [Architecture](https://pharos.watch/docs/architecture/): How Pharos is built: static Next.js export, Cloudflare Pages Functions, Worker API lanes, D1 storage, route ownership, and SEO metadata rules.
+- [Data Flow Map](https://pharos.watch/docs/data-flow-map/): Source-to-UI map for Pharos stablecoin data, covering market prices, peg monitoring, liquidity, report cards, alerts, and generated public artifacts.
+- [Data Pipeline](https://pharos.watch/docs/data-pipeline/): Stablecoin data pipeline guide for price enrichment, source priority, freshness checks, integrity guardrails, fallback behavior, and sync cadence.
+- [Worker and API Limits](https://pharos.watch/docs/worker-and-api-limits/): Operational limits for the Pharos Worker and API: cron budgets, fetch connection caps, polling intervals, cache behavior, and guardrail checks.
+- [Classification](https://pharos.watch/docs/classification/): Stablecoin classification methodology for peg currencies, backing models, governance labels, commodity pegs, lifecycle status, and taxonomy pages.
+- [Pricing Pipeline](https://pharos.watch/docs/pricing-pipeline/): How Pharos computes stablecoin prices: source consensus, peg-aware validation, fallback enrichment, stale-data handling, and override policy.
+- [Depeg Detection](https://pharos.watch/docs/depeg-detection/): Depeg detection methodology covering two-stage confirmation, peg-score inputs, severity bands, event lifecycle, and recovery handling.
+- [DEWS](https://pharos.watch/docs/dews/): Depeg Early Warning System methodology: DEWS formula, stress sub-signals, bands, downgrade gates, and API response contract.
+- [DEX Liquidity](https://pharos.watch/docs/dex-liquidity/): DEX Liquidity Score methodology for stablecoins: pool discovery, depth scoring, durability, pair diversity, cross-validation, and risk bands.
+- [Pharos Stability Index](https://pharos.watch/docs/stability-index/): Pharos Stability Index methodology explaining the PSI formula, active universe, stress bands, storage model, API surface, and replay rules.
+- [Report Cards](https://pharos.watch/docs/report-cards/): Stablecoin report-card methodology for safety scoring, peg risk, liquidity, reserves, resilience, decentralization, dependency exposure, and portfolios.
+- [Redemption Backstops](https://pharos.watch/docs/redemption-backstops/): Redemption Backstops methodology for exit routes, redemption terms, effective-exit scoring, operational disclosures, and stored review evidence.
+- [Chain Health](https://pharos.watch/docs/chain-health/): Chain Health Score methodology for stablecoin networks: supply concentration, venue health, deployment coverage, risk factors, and score bands.
+- [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.
+- [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.
+- [Shadow Stablecoins](https://pharos.watch/docs/shadow-stablecoins/): Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.
+- [Design Context](https://pharos.watch/docs/design-context/): Pharos design context for product direction, user needs, brand posture, information density, and how the dashboard should feel in daily use.
+- [Design Language](https://pharos.watch/docs/design-language/): Pharos design language reference for live UI patterns, typography, spacing, responsive behavior, visual hierarchy, and route-specific conventions.
+- [Design Tokens](https://pharos.watch/docs/design-tokens/): Design token reference for Pharos CSS variables, semantic layers, colors, spacing, component styling, and token ownership rules.
 
 Docs support `Accept: text/markdown` content negotiation for agent consumption.
 

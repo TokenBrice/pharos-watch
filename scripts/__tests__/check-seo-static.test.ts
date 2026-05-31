@@ -66,6 +66,8 @@ async function writePage(
     robots = [],
     ogType = "website",
     canonical = pageUrl(route),
+    title = `${h1} | Pharos`,
+    description = `${h1} description`,
     extraHead = "",
     quote = "\"",
   }: {
@@ -75,6 +77,8 @@ async function writePage(
     robots?: string[];
     ogType?: string | null;
     canonical?: string | null;
+    title?: string;
+    description?: string;
     extraHead?: string;
     quote?: "\"" | "'";
   } = {},
@@ -90,8 +94,8 @@ async function writePage(
     `<!doctype html>
 <html>
   <head>
-    <title>${h1} | Pharos</title>
-    <meta name="description" content="${h1} description"/>
+    <title>${title}</title>
+    <meta name="description" content="${description}"/>
     ${robotsTags}
     ${canonicalTag}
     <meta property="og:title" content="${h1}"/>
@@ -120,7 +124,11 @@ async function writeSitemap(root: string, routes: string[]) {
 }
 
 function collectFixtureSeoResult(root: string) {
-  return collectSeoStaticCheckResult({ outDir: root, enforceStructuredDataMatrix: false });
+  return collectSeoStaticCheckResult({
+    outDir: root,
+    enforceSnippetQuality: false,
+    enforceStructuredDataMatrix: false,
+  });
 }
 
 function jsonLdScript(data: unknown) {
@@ -186,6 +194,64 @@ describe("check-seo-static", () => {
     const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: missing og:type")]));
+  });
+
+  it("fails indexable pages with titles or descriptions outside the search-snippet envelope", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      title: "Tiny | Pharos",
+      description: "Too short.",
+    });
+    await writePage(root, "/stability-index/", {
+      h1: "Stability Index",
+      title:
+        "This Stability Index Title Is Deliberately Too Long For The Static Search Snippet Envelope | Pharos",
+      description:
+        "This description is deliberately much longer than the envelope used by Pharos because it keeps adding terms until the static SEO check catches it as snippet bloat, prevents vague search results, and asks the author to tighten the value proposition.",
+    });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      enforceStructuredDataMatrix: false,
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/: <title> is too short for search snippets"),
+        expect.stringContaining("/: meta description is too short for search snippets"),
+        expect.stringContaining("/stability-index/: <title> is too long for search snippets"),
+        expect.stringContaining("/stability-index/: meta description is too long for search snippets"),
+      ]),
+    );
+  });
+
+  it("does not apply search-snippet length checks to noindex pages", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/compare/"],
+      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
+      description:
+        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+    });
+    await writePage(root, "/compare/", {
+      h1: "Compare",
+      robots: ["noindex, follow"],
+      title: "Tiny",
+      description: "Short.",
+    });
+    await writeSitemap(root, ["/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      enforceStructuredDataMatrix: false,
+    });
+
+    expect(result.errors.some((error) => error.includes("/compare/: <title> is too short"))).toBe(false);
+    expect(result.errors.some((error) => error.includes("/compare/: meta description is too short"))).toBe(false);
   });
 
   it("fails same-origin og:image / twitter:image references that point at a missing file", async () => {

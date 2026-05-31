@@ -36,7 +36,7 @@ export async function generateMetadata({
   }
   return buildPageMetadata({
     title: chainPageTitle(meta.name),
-    description: `Stablecoin supply, market share, Chain Health, risk context, and tracked deployments on ${meta.name}. Compare which stablecoins are deployed on ${meta.name} and where concentration risk sits.`,
+    description: `Explore ${meta.name} stablecoins by supply, market share, Chain Health, top deployments, backing mix, and concentration risk across Pharos-tracked assets.`,
     canonical: `/chains/${chain}/`,
   });
 }
@@ -46,7 +46,7 @@ function stablecoinCountLabel(count: number): string {
 }
 
 function chainPageTitle(chainName: string): string {
-  return `Stablecoins on ${chainName}: Supply, Market Share & Risk`;
+  return `${chainName} Stablecoins: Supply, Risk & Top Deployments`;
 }
 
 function deploymentCountLabel(count: number): string {

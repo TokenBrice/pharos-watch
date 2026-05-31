@@ -41,7 +41,7 @@ const TELEGRAM_CTA_BUTTON_CLASS = cn(
 );
 const ABOUT_METADATA_TITLE = "About Pharos: Shining a Light on Every Peg";
 const ABOUT_METADATA_DESCRIPTION =
-  "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.";
+  "About Pharos: open stablecoin analytics for peg tracking, safety scores, liquidity, freeze monitoring, methodology, data sources, and failed-coin archives.";
 const ABOUT_PAGE_JSON_LD = {
   "@context": "https://schema.org",
   "@type": "AboutPage",

@@ -37,6 +37,12 @@ function formatCoinList(coins: readonly Pick<StablecoinClientMeta, "name" | "sym
   return `${coins[0].name} (${coins[0].symbol}), ${coins[1].name} (${coins[1].symbol}), and ${coins[2].name} (${coins[2].symbol})`;
 }
 
+function formatCoinSymbolList(coins: readonly Pick<StablecoinClientMeta, "symbol">[]): string {
+  if (coins.length === 0) return "tracked assets";
+  if (coins.length === 1) return coins[0].symbol;
+  return `${coins[0].symbol} and ${coins[1].symbol}`;
+}
+
 function getTopPegCoins(coins: readonly StablecoinClientMeta[]): StablecoinClientMeta[] {
   const primaryCoins = coins.filter((coin) => !coin.variantOf);
   return (primaryCoins.length > 0 ? primaryCoins : coins).slice(0, 3);
@@ -44,6 +50,13 @@ function getTopPegCoins(coins: readonly StablecoinClientMeta[]): StablecoinClien
 
 function getTopCountLabel(count: number): string {
   return `${count} tracked stablecoin${count === 1 ? "" : "s"}`;
+}
+
+function buildPegTaxonomyTitle(shortLabel: string, count: number): string {
+  const coinLabel = `${count} Coin${count === 1 ? "" : "s"}`;
+  return count === 1
+    ? `${shortLabel} Stablecoin: 1 Coin Tracked`
+    : `${shortLabel} Stablecoins: ${coinLabel} Ranked by Risk`;
 }
 
 function getLargestEntry<T extends string>(counts: Map<T, number>): [T, number] | null {
@@ -116,9 +129,9 @@ export const PEG_TAXONOMY_PAGES: readonly PegTaxonomyPage[] = ACTIVE_PEGS.map((p
     slug: slug!,
     value: peg,
     href: `/stablecoins/${slug}/`,
-    title: `${shortLabel} Stablecoins`,
+    title: buildPegTaxonomyTitle(shortLabel, coins.length),
     shortLabel,
-    description: `${getTopCountLabel(coins.length)} pegged to ${PEG_LABELS[peg]}. Compare peg stability, liquidity, risk, and leaders like ${formatCoinList(topCoins.slice(0, 2))}.`,
+    description: `${getTopCountLabel(coins.length)} pegged to ${PEG_LABELS[peg]}. Compare peg stability, liquidity, risk, and leading symbols like ${formatCoinSymbolList(topCoins.slice(0, 2))}.`,
     intro: buildPegIntro({ peg, coins, topCoins }),
     topCoins,
     contextSummary,

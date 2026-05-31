@@ -7,7 +7,7 @@ import { DOC_GROUPS, PUBLIC_DOCS } from "@shared/lib/public-docs";
 export const metadata: Metadata = buildPageMetadata({
   title: "Docs - Pharos Documentation Archive",
   description:
-    "Architectural, methodology, and design documentation for the Pharos stablecoin analytics platform.",
+    "Browse Pharos documentation for stablecoin methodology, API contracts, architecture, data pipelines, design rules, and public dashboard operations.",
   canonical: "/docs/",
 });
 

@@ -12,7 +12,7 @@ import {
 import type { FaqItem } from "@/lib/faq";
 
 const desc =
-  "Risk-adjusted stablecoin yield rankings refreshed from the hourly Pharos yield lane across native yield, lending venues, rate-derived sources, and curated opportunities. Compare APY, safety grades, source freshness, benchmarks, and the Pharos Yield Score.";
+  "Compare risk-adjusted stablecoin yield rankings by APY, safety grade, source freshness, benchmark spread, venue risk, and Pharos Yield Score.";
 
 export const metadata = buildPageMetadata({
   title: "Stablecoin Yield Intelligence",

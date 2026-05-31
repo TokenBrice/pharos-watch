@@ -11,7 +11,7 @@ const FLOWS_DESCRIPTION =
   "Configured issuance-chain minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Mint/Burn Flows",
+  title: "Stablecoin Mint/Burn Flows & Bank Run Gauge",
   description: FLOWS_DESCRIPTION,
   canonical: "/flows/",
   ogImage: `${SITE_URL}/og-flows.png`,

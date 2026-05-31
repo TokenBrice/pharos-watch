@@ -15,9 +15,9 @@ import {
 } from "@shared/lib/public-api-contract";
 
 export const metadata = buildPageMetadata({
-  title: "Pharos API Access",
+  title: "Pharos Stablecoin API: Key Access & Endpoints",
   description:
-    "Request an email-verified Pharos API key, verify ownership, and use the public integration lane at api.pharos.watch.",
+    "Request a Pharos API key and use stablecoin market, peg, liquidity, depeg, and risk endpoints from the public integration lane at api.pharos.watch.",
   canonical: "/api/",
 });
 

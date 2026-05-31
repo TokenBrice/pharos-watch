@@ -165,6 +165,35 @@ function getMetadataDifferentiator(coin: StablecoinMeta): string | null {
   return getReserveDifferentiator(coin) ?? null;
 }
 
+function buildStablecoinTitle(options: readonly string[]): string {
+  const maxCoreLength = 61; // Leaves room for the root " | Pharos" template in search snippets.
+  return options.find((option) => option.length <= maxCoreLength) ?? options[options.length - 1] ?? "";
+}
+
+function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
+  if (coin.status === "frozen") {
+    return buildStablecoinTitle([
+      `${coin.symbol} Failed Stablecoin Archive & Timeline`,
+      `${coin.symbol} Failed Stablecoin Archive`,
+    ]);
+  }
+
+  if (coin.status === "pre-launch") {
+    return buildStablecoinTitle([
+      `${coin.symbol} Stablecoin Launch Tracker & Profile`,
+      `${coin.symbol} Launch Tracker & Profile`,
+      `${coin.symbol} Launch Tracker`,
+    ]);
+  }
+
+  return buildStablecoinTitle([
+    `${coin.symbol} Stablecoin Risk Profile: Peg, Liquidity & Safety`,
+    `${coin.symbol} Risk Profile: Peg, Liquidity & Safety`,
+    `${coin.symbol} Stablecoin Risk: Peg & Liquidity`,
+    `${coin.symbol} Risk Profile`,
+  ]);
+}
+
 export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
   if (coin.status === "pre-launch") {
     const governancePhrase = GOVERNANCE_METADATA_PHRASES[coin.flags.governance];
@@ -172,12 +201,11 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
     const backingPhrase = BACKING_METADATA_PHRASES[coin.flags.backing];
     const structure =
       coin.flags.backing === "algorithmic"
-        ? `Planned ${pegLabel} peg; ${governancePhrase} ${backingPhrase}.`
-        : `Planned ${pegLabel} peg; ${backingPhrase}.`;
+        ? `planned ${pegLabel} peg, ${governancePhrase} ${backingPhrase}`
+        : `planned ${pegLabel} peg, ${backingPhrase}`;
     const description = [
-      `Pre-launch profile for ${coin.name} (${coin.symbol}).`,
-      structure,
-      "Track launch milestones before live data begins.",
+      `Pre-launch profile for ${coin.symbol}: ${structure}.`,
+      `Track launch milestones before live data begins for ${coin.name}.`,
     ]
       .filter(Boolean)
       .join(" ");
@@ -194,9 +222,9 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
       : `${governancePhrase} stablecoin ${backingPhrase} and pegged to ${pegLabel}`;
   const differentiator = getMetadataDifferentiator(coin);
   const description = [
-    `${coin.name} (${coin.symbol}) analytics for this ${structure}.`,
+    `${coin.symbol} risk profile for ${coin.name}: ${structure}.`,
     differentiator,
-    "Peg score, liquidity, supply trends, and risk profile.",
+    "Live peg score, liquidity, supply, freeze controls, reserves, and report-card signals.",
   ]
     .filter(Boolean)
     .join(" ");
@@ -212,7 +240,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       160,
     );
     return buildPageMetadata({
-      title: `${coin.name} (${coin.symbol}) Failed Stablecoin Archive`,
+      title: buildStablecoinStatusTitle(coin),
       description,
       canonical: buildStablecoinUrl(coin.id),
       // Preserve OG image so social previews render the same card as live coins.
@@ -222,7 +250,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
 
   if (coin.status === "pre-launch") {
     return buildPageMetadata({
-      title: `${coin.name} (${coin.symbol}) Launch Status & Stablecoin Profile`,
+      title: buildStablecoinStatusTitle(coin),
       description: buildStablecoinDetailDescription(coin),
       canonical: buildStablecoinUrl(coin.id),
       ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
@@ -230,7 +258,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
   }
 
   return buildPageMetadata({
-    title: `${coin.name} (${coin.symbol}) Stablecoin Risk, Peg & Liquidity`,
+    title: buildStablecoinStatusTitle(coin),
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
     ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),

@@ -132,7 +132,7 @@ function buildComparisonSummary(left: StablecoinMeta, right: StablecoinMeta): st
 
 function buildComparisonDescription(left: StablecoinMeta, right: StablecoinMeta): string {
   return trimTextAtWordBoundary(
-    `Compare ${left.name} (${left.symbol}) vs ${right.name} (${right.symbol}): governance, backing, blacklist controls, reserve structure, chain reach, and links to live Pharos analytics.`,
+    `${left.symbol} vs ${right.symbol} comparison: peg stability, liquidity, reserves, blacklist controls, chain reach, and live Pharos risk signals for ${left.name} and ${right.name}.`,
     160,
   );
 }
@@ -147,7 +147,7 @@ export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = STATIC_COMPARE_PA
   return {
     slug,
     href: `/compare/${slug}/`,
-    title: `${shortTitle}: ${left.name} vs ${right.name}`,
+    title: `${shortTitle}: Risk, Reserves & Liquidity Compared`,
     shortTitle,
     description: buildComparisonDescription(left, right),
     intro: buildComparisonIntro(left, right),

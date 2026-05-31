@@ -3,14 +3,16 @@ import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "Pharos privacy policy: what data we collect, how we use it, and your choices.",
+  title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
+  description:
+    "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
   alternates: {
     canonical: "/privacy/",
   },
   openGraph: {
-    title: "Privacy Policy",
-    description: "Pharos privacy policy: what data we collect, how we use it, and your choices.",
+    title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
+    description:
+      "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
     url: "/privacy/",
     type: "website",
     images: [{ url: "/og-card.png", width: 1200, height: 628 }],

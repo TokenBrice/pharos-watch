@@ -7,7 +7,7 @@ import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 import { TimelineClient } from "./client";
 
 const TIMELINE_DESCRIPTION =
-  "Every confirmed stablecoin event in one chronological timeline: depegs, freezes, score changes, and methodology bumps. Defaults to notice-and-above severity; drop the floor or filter by class to widen the lens.";
+  "Browse confirmed stablecoin events in one timeline: depegs, freezes, score changes, methodology updates, severity filters, classes, and linked Pharos context.";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Timeline — Stablecoin Market Events",

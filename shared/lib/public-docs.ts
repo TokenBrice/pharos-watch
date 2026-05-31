@@ -19,140 +19,160 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     source: "api-reference.md",
     slug: "api-reference",
     title: "API Reference",
-    summary: "HTTP contracts, authentication notes, and response conventions.",
+    summary:
+      "Public Pharos API contracts for stablecoin data: endpoints, authentication, response schemas, pagination, freshness headers, and dataset exports.",
     group: "system",
   },
   {
     source: "architecture.md",
     slug: "architecture",
     title: "Architecture",
-    summary: "Route map, API surfaces, runtime rules, and SEO ownership.",
+    summary:
+      "How Pharos is built: static Next.js export, Cloudflare Pages Functions, Worker API lanes, D1 storage, route ownership, and SEO metadata rules.",
     group: "system",
   },
   {
     source: "data-flow-map.md",
     slug: "data-flow-map",
     title: "Data Flow Map",
-    summary: "End-to-end source-to-UI flows for each major data domain.",
+    summary:
+      "Source-to-UI map for Pharos stablecoin data, covering market prices, peg monitoring, liquidity, report cards, alerts, and generated public artifacts.",
     group: "system",
   },
   {
     source: "data-pipeline.md",
     slug: "data-pipeline",
     title: "Data Pipeline",
-    summary: "Price enrichment, integrity guardrails, and sync behavior.",
+    summary:
+      "Stablecoin data pipeline guide for price enrichment, source priority, freshness checks, integrity guardrails, fallback behavior, and sync cadence.",
     group: "system",
   },
   {
     source: "worker-and-api-limits.md",
     slug: "worker-and-api-limits",
     title: "Worker and API Limits",
-    summary: "Repo-enforced runtime limits, cron budgets, and polling guidance.",
+    summary:
+      "Operational limits for the Pharos Worker and API: cron budgets, fetch connection caps, polling intervals, cache behavior, and guardrail checks.",
     group: "system",
   },
   {
     source: "classification.md",
     slug: "classification",
     title: "Classification",
-    summary: "Classification system, peg handling, and commodity treatment.",
+    summary:
+      "Stablecoin classification methodology for peg currencies, backing models, governance labels, commodity pegs, lifecycle status, and taxonomy pages.",
     group: "methodology",
   },
   {
     source: "pricing-pipeline.md",
     slug: "pricing-pipeline",
     title: "Pricing Pipeline",
-    summary: "Live-price consensus, overrides, and fallback enrichment.",
+    summary:
+      "How Pharos computes stablecoin prices: source consensus, peg-aware validation, fallback enrichment, stale-data handling, and override policy.",
     group: "methodology",
   },
   {
     source: "depeg-detection.md",
     slug: "depeg-detection",
     title: "Depeg Detection",
-    summary: "Two-stage detection, confirmation, and peg score inputs.",
+    summary:
+      "Depeg detection methodology covering two-stage confirmation, peg-score inputs, severity bands, event lifecycle, and recovery handling.",
     group: "methodology",
   },
   {
     source: "dews.md",
     slug: "dews",
     title: "DEWS",
-    summary: "DEWS formula, sub-signals, bands, and API contract.",
+    summary:
+      "Depeg Early Warning System methodology: DEWS formula, stress sub-signals, bands, downgrade gates, and API response contract.",
     group: "methodology",
   },
   {
     source: "dex-liquidity.md",
     slug: "dex-liquidity",
     title: "DEX Liquidity",
-    summary: "Liquidity score, discovery pipeline, and cross-validation.",
+    summary:
+      "DEX Liquidity Score methodology for stablecoins: pool discovery, depth scoring, durability, pair diversity, cross-validation, and risk bands.",
     group: "methodology",
   },
   {
     source: "stability-index.md",
     slug: "stability-index",
     title: "Pharos Stability Index",
-    summary: "PSI formula, bands, storage, and API surface.",
+    summary:
+      "Pharos Stability Index methodology explaining the PSI formula, active universe, stress bands, storage model, API surface, and replay rules.",
     group: "methodology",
   },
   {
     source: "report-cards.md",
     slug: "report-cards",
     title: "Report Cards",
-    summary: "Report-card scoring, portfolio analyzer, and stress test.",
+    summary:
+      "Stablecoin report-card methodology for safety scoring, peg risk, liquidity, reserves, resilience, decentralization, dependency exposure, and portfolios.",
     group: "methodology",
   },
   {
     source: "redemption-backstops.md",
     slug: "redemption-backstops",
     title: "Redemption Backstops",
-    summary: "Redemption routes, effective-exit scoring, and storage.",
+    summary:
+      "Redemption Backstops methodology for exit routes, redemption terms, effective-exit scoring, operational disclosures, and stored review evidence.",
     group: "methodology",
   },
   {
     source: "chain-health.md",
     slug: "chain-health",
     title: "Chain Health",
-    summary: "Chain Health Score inputs, formula, factors, and bands.",
+    summary:
+      "Chain Health Score methodology for stablecoin networks: supply concentration, venue health, deployment coverage, risk factors, and score bands.",
     group: "methodology",
   },
   {
     source: "mint-burn-flows.md",
     slug: "mint-burn-flows",
     title: "Mint Burn Flows",
-    summary: "Mint/burn ingestion, scoring, and admin backfills.",
+    summary:
+      "Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.",
     group: "methodology",
   },
   {
     source: "yield-intelligence.md",
     slug: "yield-intelligence",
     title: "Yield Intelligence",
-    summary: "APY resolution, PYS scoring, and warning signals.",
+    summary:
+      "Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.",
     group: "methodology",
   },
   {
     source: "shadow-stablecoins.md",
     slug: "shadow-stablecoins",
     title: "Shadow Stablecoins",
-    summary: "PSI-only shadow asset boundary and UI exclusion rules.",
+    summary:
+      "Shadow stablecoin policy for PSI-only assets, eligibility boundaries, UI exclusions, data handling, and why these assets stay out of main rankings.",
     group: "methodology",
   },
   {
     source: "design-context.md",
     slug: "design-context",
     title: "Design Context",
-    summary: "User, brand, and product-direction baseline.",
+    summary:
+      "Pharos design context for product direction, user needs, brand posture, information density, and how the dashboard should feel in daily use.",
     group: "design",
   },
   {
     source: "design-language.md",
     slug: "design-language",
     title: "Design Language",
-    summary: "Live UI patterns, typography, spacing, and responsive rules.",
+    summary:
+      "Pharos design language reference for live UI patterns, typography, spacing, responsive behavior, visual hierarchy, and route-specific conventions.",
     group: "design",
   },
   {
     source: "design-tokens.md",
     slug: "design-tokens",
     title: "Design Tokens",
-    summary: "Token layers and CSS variable architecture.",
+    summary:
+      "Design token reference for Pharos CSS variables, semantic layers, colors, spacing, component styling, and token ownership rules.",
     group: "design",
   },
 ] as const;
