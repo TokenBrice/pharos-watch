@@ -11,6 +11,7 @@ import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { BackingType, MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 interface BuildPageMetadataInput {
@@ -309,7 +310,7 @@ export function buildPageMetadata({
       description,
       images: [resolvedImage],
     },
-    robots,
+    robots: robots ?? INDEXABLE_ROBOTS,
   };
 }
 // ---------------------------------------------------------------------------

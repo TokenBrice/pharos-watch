@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
+import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 
 interface ChangelogSourceEntry {
   version: string;
@@ -26,6 +27,7 @@ export function buildMethodologyChangelogMetadata({
     title,
     description,
     alternates: { canonical: path },
+    robots: INDEXABLE_ROBOTS,
     openGraph: {
       title,
       description,

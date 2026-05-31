@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 
 export const metadata: Metadata = {
   title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/privacy/",
   },
+  robots: INDEXABLE_ROBOTS,
   openGraph: {
     title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
     description:

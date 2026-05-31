@@ -64,6 +64,7 @@ async function writePage(
     links = [],
     mainText = "Static body text for a crawlable page.",
     robots = [],
+    googleBotRobots = [],
     ogType = "website",
     canonical = pageUrl(route),
     title = `${h1} | Pharos`,
@@ -75,6 +76,7 @@ async function writePage(
     links?: string[];
     mainText?: string;
     robots?: string[];
+    googleBotRobots?: string[];
     ogType?: string | null;
     canonical?: string | null;
     title?: string;
@@ -86,6 +88,7 @@ async function writePage(
   const filePath = pagePath(root, route);
   await mkdir(path.dirname(filePath), { recursive: true });
   const robotsTags = robots.map((content) => `<meta name="robots" content="${content}"/>`).join("");
+  const googleBotTags = googleBotRobots.map((content) => `<meta name="googlebot" content="${content}"/>`).join("");
   const linkTags = links.map((href) => `<a href=${quote}${href}${quote}>${href}</a>`).join("");
   const ogTypeTag = ogType ? `<meta property="og:type" content="${ogType}"/>` : "";
   const canonicalTag = canonical ? `<link rel="canonical" href="${canonical}"/>` : "";
@@ -97,6 +100,7 @@ async function writePage(
     <title>${title}</title>
     <meta name="description" content="${description}"/>
     ${robotsTags}
+    ${googleBotTags}
     ${canonicalTag}
     <meta property="og:title" content="${h1}"/>
     <meta property="og:description" content="${h1} description"/>
@@ -126,6 +130,7 @@ async function writeSitemap(root: string, routes: string[]) {
 function collectFixtureSeoResult(root: string) {
   return collectSeoStaticCheckResult({
     outDir: root,
+    enforceGooglePreviewDirectives: false,
     enforceSnippetQuality: false,
     enforceStructuredDataMatrix: false,
   });
@@ -252,6 +257,92 @@ describe("check-seo-static", () => {
 
     expect(result.errors.some((error) => error.includes("/compare/: <title> is too short"))).toBe(false);
     expect(result.errors.some((error) => error.includes("/compare/: meta description is too short"))).toBe(false);
+  });
+
+  it("fails indexable pages without Google preview directives", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
+      description:
+        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+    });
+    await writePage(root, "/stability-index/", {
+      h1: "Stability Index",
+      title: "Pharos Stability Index: Stablecoin Market Stress | Pharos",
+      description:
+        "Monitor stablecoin market stress through PSI, depeg breadth, severity, liquidity, safety signals, and historical stability-index context.",
+      googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large"],
+    });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      enforceStructuredDataMatrix: false,
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "/: missing Google preview directive max-snippet:-1",
+        "/: missing Google preview directive max-image-preview:large",
+        "/: missing Google preview directive max-video-preview:-1",
+        "/stability-index/: missing Google preview directive max-video-preview:-1",
+      ]),
+    );
+  });
+
+  it("accepts Google preview directives from robots or googlebot tags", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
+      description:
+        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+      googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
+    });
+    await writePage(root, "/stability-index/", {
+      h1: "Stability Index",
+      title: "Pharos Stability Index: Stablecoin Market Stress | Pharos",
+      description:
+        "Monitor stablecoin market stress through PSI, depeg breadth, severity, liquidity, safety signals, and historical stability-index context.",
+      robots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
+    });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      enforceStructuredDataMatrix: false,
+    });
+
+    expect(result.errors.some((error) => error.includes("missing Google preview directive"))).toBe(false);
+  });
+
+  it("does not require Google preview directives on noindex pages", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/compare/"],
+      title: "Stablecoin Analytics Dashboard: Risk, Pegs & Liquidity | Pharos",
+      description:
+        "Track stablecoin risk, peg health, liquidity, supply, freeze controls, safety scores, and market structure across the Pharos dashboard.",
+      googleBotRobots: ["index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"],
+    });
+    await writePage(root, "/compare/", {
+      h1: "Compare",
+      robots: ["noindex, follow"],
+      title: "Compare",
+      description: "Short.",
+    });
+    await writeSitemap(root, ["/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      enforceStructuredDataMatrix: false,
+    });
+
+    expect(result.errors.some((error) => error.includes("/compare/: missing Google preview directive"))).toBe(false);
   });
 
   it("fails same-origin og:image / twitter:image references that point at a missing file", async () => {

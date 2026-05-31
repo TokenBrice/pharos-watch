@@ -10,6 +10,7 @@ import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
 import digests from "@data/digests.json";
@@ -60,6 +61,7 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
     title: `${digest.title} (${formatted})`,
     description,
     alternates: { canonical: `/digest/${digest.date}/` },
+    robots: INDEXABLE_ROBOTS,
     openGraph: {
       title: `${digest.title} (${formatted}) | Pharos`,
       description,

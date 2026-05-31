@@ -4,6 +4,7 @@ import { HomeAltClient } from "@/components/home-alt-client";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
+import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  robots: INDEXABLE_ROBOTS,
   openGraph: {
     title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
     description:

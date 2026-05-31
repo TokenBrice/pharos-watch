@@ -51,6 +51,7 @@ const INDEXABLE_SNIPPET_LENGTHS = {
   title: { min: 35, max: 70 },
   description: { min: 110, max: 180 },
 };
+const REQUIRED_GOOGLE_PREVIEW_DIRECTIVES = ["max-snippet:-1", "max-image-preview:large", "max-video-preview:-1"];
 const REQUIRED_STATIC_HEADER_RULES = [
   { route: "/*.txt", header: "X-Robots-Tag", directives: ["noindex", "nofollow"], label: "raw .txt payloads" },
   { route: "/stablecoin/*/yield/", header: "X-Robots-Tag", directives: ["noindex"], label: "yield detail pages" },
@@ -789,6 +790,7 @@ function localOgImagePath(value) {
 
 export function collectSeoStaticCheckResult({
   outDir = DEFAULT_OUT_DIR,
+  enforceGooglePreviewDirectives = true,
   enforceSnippetQuality = true,
   enforceStructuredDataMatrix = true,
   structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
@@ -822,6 +824,7 @@ export function collectSeoStaticCheckResult({
       twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
       twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
       robotsTags,
+      googleBotTags: getMetaContents(html, "name", "googlebot"),
       h1Count: (html.match(/<h1\b/gi) ?? []).length,
       structuredData: [],
       structuredDataNodes: [],
@@ -876,6 +879,15 @@ export function collectSeoStaticCheckResult({
     const robotsConflicts = getRobotsConflicts(record.robotsTags);
     for (const conflict of robotsConflicts) {
       errors.push(`${record.route}: conflicting robots directives (${conflict}) in ${record.robotsTags.join(" | ")}`);
+    }
+
+    if (indexable && enforceGooglePreviewDirectives) {
+      const previewDirectives = getRobotsDirectives([...record.robotsTags, ...record.googleBotTags]);
+      for (const directive of REQUIRED_GOOGLE_PREVIEW_DIRECTIVES) {
+        if (!previewDirectives.has(directive)) {
+          errors.push(`${record.route}: missing Google preview directive ${directive}`);
+        }
+      }
     }
 
     if (indexable && !record.ogType) {
