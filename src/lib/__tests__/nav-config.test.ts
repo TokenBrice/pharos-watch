@@ -5,23 +5,23 @@ describe("nav-config", () => {
   it("promotes dashboard and Pharos core features to the primary nav block in the intended order", () => {
     expect(PRIMARY_NAV_ITEMS.map((item) => item.href)).toEqual([
       "/",
-      "/stability-index",
-      "/safety-scores",
-      "/yield",
-      "/alt-pegs",
-      "/freezewatch",
-      "/pharoswatchbot",
+      "/stability-index/",
+      "/safety-scores/",
+      "/yield/",
+      "/alt-pegs/",
+      "/freezewatch/",
+      "/pharoswatchbot/",
     ]);
-    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Alt-Pegs");
-    expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot", label: "PharosWatchBot" });
+    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs/")?.label).toBe("Alt-Pegs");
+    expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot/", label: "PharosWatchBot" });
 
     // FreezeWatch and PharosWatchBot are main routes now, immediately after
     // the Alt-Pegs market-structure page. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
-    expect(dataGroup?.items.some((item) => item.href === "/freezewatch")).toBe(false);
-    expect(dataGroup?.items.some((item) => item.href === "/pharoswatchbot")).toBe(false);
-    expect(monitorGroup?.items.some((item) => item.href === "/pharoswatchbot")).toBe(false);
+    expect(dataGroup?.items.some((item) => item.href === "/freezewatch/")).toBe(false);
+    expect(dataGroup?.items.some((item) => item.href === "/pharoswatchbot/")).toBe(false);
+    expect(monitorGroup?.items.some((item) => item.href === "/pharoswatchbot/")).toBe(false);
   });
 
   it("orders the sidebar groups and routes as requested while excluding legacy Risk Lab grouping", () => {
@@ -44,42 +44,42 @@ describe("nav-config", () => {
 
     expect(analyzeGroup?.label).toBe("ANALYZE");
     expect(analyzeGroup?.items.map((item) => item.href)).toEqual([
-      "/screener",
-      "/dependency-map",
-      "/portfolio",
-      "/compare",
+      "/screener/",
+      "/dependency-map/",
+      "/portfolio/",
+      "/compare/",
     ]);
 
     expect(monitorGroup?.label).toBe("MONITOR");
     expect(monitorGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/timeline", label: "Timeline" },
-      { href: "/compliance", label: "Compliance" },
-      { href: "/upcoming", label: "Upcoming" },
-      { href: "/digest", label: "Digest" },
-      { href: "/status", label: "Pharos Status" },
+      { href: "/timeline/", label: "Timeline" },
+      { href: "/compliance/", label: "Compliance" },
+      { href: "/upcoming/", label: "Upcoming" },
+      { href: "/digest/", label: "Digest" },
+      { href: "/status/", label: "Pharos Status" },
     ]);
 
     expect(infoGroup?.label).toBe("REFERENCE");
-    expect(infoGroup?.items.some((item) => item.href === "/digest")).toBe(false);
-    expect(infoGroup?.items.some((item) => item.href === "/status")).toBe(false);
+    expect(infoGroup?.items.some((item) => item.href === "/digest/")).toBe(false);
+    expect(infoGroup?.items.some((item) => item.href === "/status/")).toBe(false);
     expect(infoGroup?.items.map((item) => item.href)).toEqual([
-      "/about",
-      "/funding",
-      "/methodology",
-      "/coverage",
-      "/api",
-      "/changelog",
+      "/about/",
+      "/funding/",
+      "/methodology/",
+      "/coverage/",
+      "/api/",
+      "/changelog/",
     ]);
-    expect(infoGroup?.items.find((item) => item.href === "/api")?.label).toBe("API Access");
+    expect(infoGroup?.items.find((item) => item.href === "/api/")?.label).toBe("API Access");
 
     // LEARN groups the educational surfaces (mechanisms moved here from REFERENCE).
     const learnGroup = NAV_GROUPS.find((group) => group.key === "learn");
     expect(learnGroup?.label).toBe("LEARN");
     expect(learnGroup?.items.map((item) => item.href)).toEqual([
-      "/learn",
-      "/learn/mechanisms",
-      "/learn/case-studies",
-      "/learn/glossary",
+      "/learn/",
+      "/learn/mechanisms/",
+      "/learn/case-studies/",
+      "/learn/glossary/",
     ]);
   });
 

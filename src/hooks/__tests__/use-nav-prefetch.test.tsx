@@ -50,13 +50,13 @@ describe("useNavPrefetch", () => {
     vi.useRealTimers();
   });
 
-  it("warms /flows with the same meta-envelope query shape used by the consuming hook", async () => {
+  it("warms /flows/ with the same meta-envelope query shape used by the consuming hook", async () => {
     const { result } = renderHook(() => useNavPrefetch(), {
       wrapper: createWrapper(),
     });
 
     await act(async () => {
-      result.current.prefetch("/flows");
+      result.current.prefetch("/flows/");
       await vi.advanceTimersByTimeAsync(100);
     });
 
@@ -68,6 +68,6 @@ describe("useNavPrefetch", () => {
       undefined,
     );
     expect(apiFetchMock).not.toHaveBeenCalled();
-    expect(routerPrefetchMock).toHaveBeenCalledWith("/flows");
+    expect(routerPrefetchMock).toHaveBeenCalledWith("/flows/");
   });
 });

@@ -1,4 +1,6 @@
 export function isRouteActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const normalizedPathname = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
+  const normalizedHref = href === "/" ? "/" : href.replace(/\/+$/, "");
+  if (normalizedHref === "/") return normalizedPathname === "/";
+  return normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`);
 }

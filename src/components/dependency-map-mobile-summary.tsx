@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { DependencyHubsModel } from "@/app/dependency-map/dependency-hubs-model";
 
 interface DependencyMapMobileSummaryProps {
@@ -35,7 +36,7 @@ export function DependencyMapMobileSummary({ model, logos }: DependencyMapMobile
         {hubs.map((hub, index) => (
           <Link
             key={hub.id}
-            href={`/stablecoin/${hub.id}`}
+            href={buildStablecoinUrl(hub.id)}
             className="flex items-start gap-3 px-1 py-3 transition-colors hover:bg-muted/30 first:pt-0"
           >
             <span className="mt-0.5 font-mono text-xs text-muted-foreground">

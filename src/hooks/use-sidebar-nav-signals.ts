@@ -47,12 +47,12 @@ export function useSidebarNavSignals() {
 
   return useMemo<Record<string, SidebarNavSignal | null>>(
     () => ({
-      "/depeg": getDepegNavSignal(pegSummary),
-      "/timeline": getTapeNavSignal(pegSummary),
-      "/stability-index": getStabilityIndexNavSignal(stabilityIndex),
-      "/freezewatch": getBlacklistNavSignal(blacklistSummary),
-      "/status": getStatusNavSignal(health),
-      "/digest": getDigestNavSignal(dailyDigest?.generatedAt, seenDigestGeneratedAt),
+      "/depeg/": getDepegNavSignal(pegSummary),
+      "/timeline/": getTapeNavSignal(pegSummary),
+      "/stability-index/": getStabilityIndexNavSignal(stabilityIndex),
+      "/freezewatch/": getBlacklistNavSignal(blacklistSummary),
+      "/status/": getStatusNavSignal(health),
+      "/digest/": getDigestNavSignal(dailyDigest?.generatedAt, seenDigestGeneratedAt),
     }),
     [blacklistSummary, dailyDigest?.generatedAt, health, pegSummary, seenDigestGeneratedAt, stabilityIndex],
   );

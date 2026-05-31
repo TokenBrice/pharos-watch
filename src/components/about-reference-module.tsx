@@ -25,7 +25,7 @@ export function AboutReferenceModule() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {(NAV_GROUPS.find((g) => g.key === "info")?.items.filter((i) => i.href !== "/about") ?? []).map((item, i) => {
+        {(NAV_GROUPS.find((g) => g.key === "info")?.items.filter((i) => i.href !== "/about/") ?? []).map((item, i) => {
           const Icon = item.icon;
           const accent = CARD_ACCENTS[i % CARD_ACCENTS.length];
 

@@ -379,7 +379,7 @@ function validateStaticHeaders(outDir, errors) {
   }
 }
 
-function normalizeHref(href) {
+function internalHrefParts(href) {
   if (!href) return null;
   if (href.startsWith("#")) {
     return null;
@@ -388,19 +388,31 @@ function normalizeHref(href) {
   if (scheme && scheme !== "http:" && scheme !== "https:") return null;
 
   try {
-    let target = href;
-    if (target.startsWith("http://") || target.startsWith("https://")) {
-      const parsed = new URL(target);
-      if (parsed.hostname !== PHAROS_HOSTNAME) return null;
-      target = parsed.pathname;
-    }
-
-    target = target.split("#")[0].split("?")[0];
-    if (!target.startsWith("/")) return null;
-    return target.endsWith("/") ? target : `${target}/`;
+    const parsed = new URL(href, PHAROS_ORIGIN);
+    if (parsed.hostname !== PHAROS_HOSTNAME) return null;
+    if (!href.startsWith("/") && !scheme) return null;
+    return { pathname: parsed.pathname, search: parsed.search, hash: parsed.hash };
   } catch {
     return null;
   }
+}
+
+function normalizeHref(href) {
+  const parts = internalHrefParts(href);
+  if (!parts) return null;
+  const target = parts.pathname;
+  if (!target.startsWith("/")) return null;
+  return target.endsWith("/") ? target : `${target}/`;
+}
+
+function slashlessInternalRouteMatch(href, routeSet) {
+  const parts = internalHrefParts(href);
+  if (!parts) return null;
+  const { pathname, search, hash } = parts;
+  if (pathname === "/" || pathname.endsWith("/")) return null;
+  const canonicalPath = `${pathname}/`;
+  if (!routeSet.has(canonicalPath)) return null;
+  return `${canonicalPath}${search}${hash}`;
 }
 
 function retiredInternalRouteMatch(normalizedHref) {
@@ -908,6 +920,11 @@ export function collectSeoStaticCheckResult({
 
   for (const record of pageRecords) {
     for (const href of getAnchorHrefs(record.html)) {
+      const slashlessRoute = slashlessInternalRouteMatch(href, routeSet);
+      if (slashlessRoute) {
+        errors.push(`${record.route}: internal anchor href omits canonical trailing slash: ${href} (use ${slashlessRoute})`);
+      }
+
       const normalized = normalizeHref(href);
       if (!normalized) continue;
 

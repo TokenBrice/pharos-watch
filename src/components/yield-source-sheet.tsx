@@ -18,6 +18,7 @@ import {
   classifyYieldSourceFreshness,
 } from "@/lib/yield-source-risk";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
@@ -63,8 +64,8 @@ function YieldSourceSheetBody({
   const freshness = classifyYieldSourceFreshness(ranking.sourceRisk?.sourceAgeSeconds ?? null);
   const hasAlternateSelected = selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
   const deepDiveHref = hasAlternateSelected
-    ? `/stablecoin/${ranking.id}/yield/?sources=${encodeURIComponent(selectedSourceKey!)}`
-    : `/stablecoin/${ranking.id}/yield/`;
+    ? `${buildStablecoinUrl(ranking.id)}yield/?sources=${encodeURIComponent(selectedSourceKey!)}`
+    : `${buildStablecoinUrl(ranking.id)}yield/`;
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -305,7 +306,7 @@ function YieldSourceSheetBody({
           Deep dive yield &rarr;
         </Link>
         <Link
-          href={`/stablecoin/${ranking.id}`}
+          href={buildStablecoinUrl(ranking.id)}
           className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => onOpenChange(false)}
         >

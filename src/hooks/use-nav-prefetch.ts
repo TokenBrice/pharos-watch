@@ -16,7 +16,7 @@ const PREFETCH_DEBOUNCE_MS = 100;
  * factory never have to share a tuple type.
  */
 const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
-  "/screener": (qc) => {
+  "/screener/": (qc) => {
     const reg = FRONTEND_API_QUERY_REGISTRY;
     void qc.prefetchQuery(
       createApiPollingQueryOptionsWithMeta(
@@ -35,7 +35,7 @@ const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
       ),
     );
   },
-  "/safety-scores": (qc) => {
+  "/safety-scores/": (qc) => {
     const reg = FRONTEND_API_QUERY_REGISTRY;
     void qc.prefetchQuery(
       createApiPollingQueryOptionsWithMeta(
@@ -54,7 +54,7 @@ const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
       ),
     );
   },
-  "/yield": (qc) => {
+  "/yield/": (qc) => {
     const reg = FRONTEND_API_QUERY_REGISTRY;
     void qc.prefetchQuery(
       createApiPollingQueryOptionsWithMeta(
@@ -65,7 +65,7 @@ const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
       ),
     );
   },
-  "/depeg": (qc) => {
+  "/depeg/": (qc) => {
     const reg = FRONTEND_API_QUERY_REGISTRY;
     void qc.prefetchQuery(
       createApiPollingQueryOptionsWithMeta(
@@ -84,7 +84,7 @@ const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
       ),
     );
   },
-  "/liquidity": (qc) => {
+  "/liquidity/": (qc) => {
     const reg = FRONTEND_API_QUERY_REGISTRY;
     void qc.prefetchQuery(
       createApiPollingQueryOptionsWithMeta(
@@ -95,7 +95,7 @@ const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
       ),
     );
   },
-  "/flows": (qc) => {
+  "/flows/": (qc) => {
     const flows = FRONTEND_API_QUERY_REGISTRY.mintBurnFlows();
     void qc.prefetchQuery(
       createApiPollingQueryOptionsWithMeta(

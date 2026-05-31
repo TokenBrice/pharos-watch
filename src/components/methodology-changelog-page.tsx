@@ -87,7 +87,7 @@ export function MethodologyChangelogPage({
             Dashboard
           </Link>
           <span>/</span>
-          <Link href="/methodology" className="hover:text-foreground transition-colors">
+          <Link href="/methodology/" className="hover:text-foreground transition-colors">
             Methodology
           </Link>
           <span>/</span>

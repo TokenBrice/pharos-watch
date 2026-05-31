@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
 import { DEPENDENCY_TYPE_PRESENTATION, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { DependencyHub, DependencyHubsModel } from "./dependency-hubs-model";
@@ -41,7 +42,7 @@ function DependencyHubRow({
           <StablecoinLogo src={logos?.[hub.id]} name={hub.label} size={30} />
           <div className="min-w-0">
             <Link
-              href={`/stablecoin/${hub.id}`}
+              href={buildStablecoinUrl(hub.id)}
               className="pharos-focus-ring truncate rounded-sm text-sm font-semibold text-foreground hover:text-frost-blue"
             >
               {hub.label}
@@ -107,7 +108,7 @@ function DependencyHubRow({
       </td>
       <td className="px-3 py-3 align-top">
         <Link
-          href={`/stablecoin/${hub.id}`}
+          href={buildStablecoinUrl(hub.id)}
           className="pharos-focus-ring rounded-sm font-mono text-[11px] uppercase tracking-[0.14em] text-frost-blue hover:text-foreground"
           aria-label={`Trace ${hub.label} dependency hub`}
         >

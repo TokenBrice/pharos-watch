@@ -198,7 +198,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                 burnVolume24hUsd={coin.burnVolume24hUsd}
               />
               <Link
-                href="/flows"
+                href="/flows/"
                 className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 View all flows

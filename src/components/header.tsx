@@ -76,9 +76,9 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const { isExpanded: isGroupExpanded, toggle } = useNavCollapse();
   const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
-  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start" || (startHereReady && shouldShowStartHereNav));
-  const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start");
-  const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start");
+  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
+  const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
+  const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
   const [dashboardNavItem, ...remainingPrimaryNavItems] = PRIMARY_NAV_ITEMS;
   const mobileLeadItemCount = PRIMARY_NAV_ITEMS.length + priorityBottomNavItems.length;
 

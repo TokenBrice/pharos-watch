@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 
 const PREVIEW_COUNT = 9;
@@ -19,7 +20,7 @@ function CollateralUsageItem({ entry, logoSrc }: { entry: CollateralUsageEntry; 
 
   return (
     <Link
-      href={`/stablecoin/${entry.coin.id}`}
+      href={buildStablecoinUrl(entry.coin.id)}
       className="pharos-focus-ring flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/40"
     >
       <StablecoinLogo src={logoSrc} name={entry.coin.name} size={24} />

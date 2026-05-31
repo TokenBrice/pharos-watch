@@ -127,7 +127,7 @@ function ChainRouteCta({
             </Link>
           ) : null}
           <Link
-            href="/pharoswatchbot#bot"
+            href="/pharoswatchbot/#bot"
             className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:min-h-9"
           >
             Set up alerts

@@ -302,7 +302,7 @@ function SurfaceCard({ action, index }: { action: (typeof TELEGRAM_ACTIONS)[numb
           <>
             {" "}
             <Link
-              href="/digest"
+              href="/digest/"
               className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
             >
               Browse archive
@@ -793,7 +793,7 @@ export default function PharosWatchBotPage() {
                   <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono">/set USDT dews WARNING</code>{" "}
                   to raise the floor. See{" "}
                   <Link
-                    href="/methodology#pegscore-dews-methodology"
+                    href="/methodology/#pegscore-dews-methodology"
                     className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
                   >
                     the DEWS methodology
@@ -949,7 +949,7 @@ export default function PharosWatchBotPage() {
 
         <p className="text-xs text-muted-foreground">
           Methodology for DEWS, safety-grade, and depeg scoring lives on the{" "}
-          <Link href="/methodology" className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground">
+          <Link href="/methodology/" className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground">
             methodology page
           </Link>
           .

@@ -361,6 +361,23 @@ describe("check-seo-static", () => {
     expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(false);
   });
 
+  it("fails slashless internal anchor hrefs that map to static routes", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", { h1: "Home", links: ["/stability-index", "https://pharos.watch/about#sources"] });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writePage(root, "/about/", { h1: "About" });
+    await writeSitemap(root, ["/", "/stability-index/", "/about/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/: internal anchor href omits canonical trailing slash: /stability-index (use /stability-index/)"),
+        expect.stringContaining("/: internal anchor href omits canonical trailing slash: https://pharos.watch/about#sources (use /about/#sources)"),
+      ]),
+    );
+  });
+
   it("fails internal anchor hrefs that point at retired route prefixes", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", {

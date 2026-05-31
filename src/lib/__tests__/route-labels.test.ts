@@ -14,7 +14,7 @@ describe("route-labels", () => {
   it("derives visible route labels from navigation metadata", () => {
     const navLabels = new Map(NAV_ITEMS.filter((item) => !item.external).map((item) => [item.href, item.label]));
 
-    expect(routeLabelFor("/stability-index")).toBe(navLabels.get("/stability-index"));
+    expect(routeLabelFor("/stability-index")).toBe(navLabels.get("/stability-index/"));
     expect(routeLabelFor("/chains/")).toBe(navLabels.get("/chains/"));
   });
 

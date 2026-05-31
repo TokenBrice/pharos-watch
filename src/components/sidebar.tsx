@@ -336,7 +336,7 @@ export function Sidebar() {
   const navSignals = useSidebarNavSignals();
   const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
   const { prefetch } = useNavPrefetch();
-  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start" || (startHereReady && shouldShowStartHereNav));
+  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
 
   // Keyboard shortcut: [ and ] toggle sidebar pin state.
   // Inputs/textareas are excluded. No modifier key is used intentionally

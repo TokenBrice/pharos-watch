@@ -11,16 +11,16 @@ const KNOWN_ROUTES: { href: string; label: string }[] = [
   { href: "/", label: "Dashboard" },
   { href: "/stablecoins/usd/", label: "Stablecoins · USD" },
   { href: "/stablecoins/eur/", label: "Stablecoins · EUR" },
-  { href: "/digest", label: "Daily Digest" },
-  { href: "/depeg", label: "Depeg" },
-  { href: "/timeline", label: "Timeline" },
-  { href: "/changelog", label: "Changelog" },
-  { href: "/screener", label: "Screener" },
-  { href: "/compare", label: "Compare" },
-  { href: "/methodology", label: "Methodology" },
-  { href: "/cemetery", label: "Cemetery" },
-  { href: "/about", label: "About" },
-  { href: "/api", label: "API Access" },
+  { href: "/digest/", label: "Daily Digest" },
+  { href: "/depeg/", label: "Depeg" },
+  { href: "/timeline/", label: "Timeline" },
+  { href: "/changelog/", label: "Changelog" },
+  { href: "/screener/", label: "Screener" },
+  { href: "/compare/", label: "Compare" },
+  { href: "/methodology/", label: "Methodology" },
+  { href: "/cemetery/", label: "Cemetery" },
+  { href: "/about/", label: "About" },
+  { href: "/api/", label: "API Access" },
   ...NAV_ITEMS
     .filter((item) => !item.external)
     .map((item) => ({ href: item.href, label: item.label })),
@@ -28,9 +28,9 @@ const KNOWN_ROUTES: { href: string; label: string }[] = [
 
 /** Canonical aliases — common legacy paths the user might still type. */
 const ALIASES: { match: RegExp; href: string; label: string }[] = [
-  { match: /^\/peg[-_]?tracker\/?$/i, href: "/depeg", label: "Depeg" },
-  { match: /^\/tape\/?$/i, href: "/timeline", label: "Timeline" },
-  { match: /^\/news\/?$/i, href: "/digest", label: "Daily Digest" },
+  { match: /^\/peg[-_]?tracker\/?$/i, href: "/depeg/", label: "Depeg" },
+  { match: /^\/tape\/?$/i, href: "/timeline/", label: "Timeline" },
+  { match: /^\/news\/?$/i, href: "/digest/", label: "Daily Digest" },
   { match: /^\/dashboard\/?$/i, href: "/", label: "Dashboard" },
 ];
 

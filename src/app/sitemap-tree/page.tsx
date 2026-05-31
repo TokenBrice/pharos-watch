@@ -65,7 +65,7 @@ const TAXONOMY_ROUTES: readonly RouteRow[] = [
     description: "Full tracked directory with peg, backing, and risk filters",
   },
   ...["governance", "backing", "infrastructure"]
-    .map((slug) => findExtraPage(`/stablecoins/${slug}`))
+    .map((slug) => findExtraPage(`/stablecoins/${slug}/`))
     .filter((p): p is NavItem => Boolean(p))
     .map(navToRow),
 ];

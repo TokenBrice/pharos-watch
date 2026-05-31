@@ -363,7 +363,7 @@ export function KeyInfoCard({
                   )}
                   {meta.mica && micaStatus && (
                     <Link
-                      href="/compliance?regime=mica"
+                      href="/compliance/?regime=mica"
                       title={`${MICA_STATUS_DESCRIPTIONS[meta.mica.status]}${meta.status === "frozen" ? " Historical status retained for this frozen asset." : ""}`}
                       aria-label={`${micaBadgePrefix} status: ${micaStatus.label} — view the Compliance Tracker`}
                       className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${micaStatus.cls}`}

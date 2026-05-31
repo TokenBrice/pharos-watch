@@ -190,7 +190,7 @@ export default function PrivacyPage() {
             </a>{" "}
             or via the{" "}
             <Link
-              href="/about"
+              href="/about/"
               className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
             >
               About page
