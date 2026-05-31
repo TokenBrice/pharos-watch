@@ -24,7 +24,9 @@ const DEFAULT_BUDGETS = {
   totalStaticMediaBytes: 2_000_000,
   largestHtmlBytes: 2_200_000,
   largestTxtBytes: 1_250_000,
-  representativeDetailHtmlBytes: 220_000,
+  // Production Pages builds hydrate mirrors from live API data. USDC's detail
+  // page now carries richer SEO JSON-LD, so keep a small ratchet above 220 KB.
+  representativeDetailHtmlBytes: 230_000,
   representativeDetailPageTxtBytes: 90_000,
 };
 
