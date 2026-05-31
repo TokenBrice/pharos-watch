@@ -51,11 +51,13 @@ function buildStablecoinThingJsonLd({
   detailUrl,
   description,
   sameAs,
+  image,
 }: {
   coin: StablecoinMeta;
   detailUrl: string;
   description: string;
   sameAs: readonly string[];
+  image?: string;
 }): Record<string, unknown> {
   return {
     "@type": "Thing",
@@ -64,31 +66,37 @@ function buildStablecoinThingJsonLd({
     alternateName: coin.symbol,
     description,
     url: detailUrl,
+    ...(image ? { image } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
-    identifier: [
-      buildPharosUrnJsonLdIdentifier("coin", coin.id),
-      ...buildStablecoinIdentifierProperties(coin),
-    ],
+    identifier: [buildPharosUrnJsonLdIdentifier("coin", coin.id), ...buildStablecoinIdentifierProperties(coin)],
   };
+}
+
+function absoluteSiteUrl(siteUrl: string, pathOrUrl: string | undefined): string | undefined {
+  if (!pathOrUrl) return undefined;
+  try {
+    return new URL(pathOrUrl, siteUrl).toString();
+  } catch {
+    return undefined;
+  }
 }
 
 export function buildStablecoinDatasetJsonLd(
   coin: StablecoinMeta,
-  options: { siteUrl?: string; dateModified?: string } = {},
+  options: { siteUrl?: string; dateModified?: string; logoPath?: string } = {},
 ) {
   const siteUrl = options.siteUrl ?? SITE_URL;
   const detailUrl = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
+  const image = absoluteSiteUrl(siteUrl, options.logoPath);
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const datasetSameAs = buildStablecoinSameAs(coin);
-  const contractIdentifiers = (coin.contracts ?? [])
-    .slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT)
-    .map((contract) => ({
-      "@type": "PropertyValue",
-      propertyID: `contract:${contract.chain}`,
-      value: contract.address,
-    }));
+  const contractIdentifiers = (coin.contracts ?? []).slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => ({
+    "@type": "PropertyValue",
+    propertyID: `contract:${contract.chain}`,
+    value: contract.address,
+  }));
 
   const statusCopy =
     coin.status === "frozen"
@@ -126,6 +134,7 @@ export function buildStablecoinDatasetJsonLd(
     detailUrl,
     description: statusCopy.description,
     sameAs: datasetSameAs,
+    image,
   });
 
   return {
@@ -138,6 +147,7 @@ export function buildStablecoinDatasetJsonLd(
     inLanguage: "en",
     mainEntityOfPage: detailUrl,
     about: stablecoinThing,
+    ...(image ? { image } : {}),
     ...(datasetSameAs.length > 0 ? { sameAs: datasetSameAs } : {}),
     creator: { "@id": `${siteUrl}#organization` },
     ...(coin.proofOfReserves?.url ? { citation: [coin.proofOfReserves.url] } : {}),
@@ -180,10 +190,7 @@ export function buildStablecoinDatasetJsonLd(
   };
 }
 
-export function buildPreLaunchStablecoinJsonLd(
-  coin: StablecoinMeta,
-  options: { siteUrl?: string } = {},
-) {
+export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta, options: { siteUrl?: string } = {}) {
   const siteUrl = options.siteUrl ?? SITE_URL;
   const detailUrl = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;

@@ -9,10 +9,12 @@ import {
   buildComparisonFaqItems,
   buildComparisonResearchLinks,
   buildComparisonSnippetAnswer,
+  buildStaticComparisonJsonLd,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
 } from "@/lib/compare-pages";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { safeJsonLd } from "@/lib/json-ld";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
@@ -65,6 +67,12 @@ export default async function StaticComparisonPage({ params }: { params: Promise
       ]}
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
+      preface={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(buildStaticComparisonJsonLd(page)) }}
+        />
+      }
     >
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.58fr)]">
         <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">

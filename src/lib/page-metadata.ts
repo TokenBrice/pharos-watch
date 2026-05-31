@@ -174,6 +174,7 @@ function buildStablecoinTitle(options: readonly string[]): string {
 function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
   if (coin.status === "frozen") {
     return buildStablecoinTitle([
+      `${coin.symbol} (${coin.name}) Failed Stablecoin Archive`,
       `${coin.symbol} Failed Stablecoin Archive & Timeline`,
       `${coin.symbol} Failed Stablecoin Archive`,
     ]);
@@ -181,6 +182,7 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
 
   if (coin.status === "pre-launch") {
     return buildStablecoinTitle([
+      `${coin.symbol} (${coin.name}) Stablecoin Launch Tracker`,
       `${coin.symbol} Stablecoin Launch Tracker & Profile`,
       `${coin.symbol} Launch Tracker & Profile`,
       `${coin.symbol} Launch Tracker`,
@@ -188,6 +190,8 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
   }
 
   return buildStablecoinTitle([
+    `${coin.symbol} (${coin.name}) Stablecoin Risk Profile`,
+    `${coin.symbol} (${coin.name}) Risk Profile`,
     `${coin.symbol} Stablecoin Risk Profile: Peg, Liquidity & Safety`,
     `${coin.symbol} Risk Profile: Peg, Liquidity & Safety`,
     `${coin.symbol} Stablecoin Risk: Peg & Liquidity`,
@@ -329,20 +333,17 @@ export function buildDefinedTermSetJsonLd(): Record<string, unknown> {
     "@type": "DefinedTermSet",
     "@id": hubUrl,
     name: "Stablecoin Mechanism Archetypes",
-    description:
-      "Six mechanism archetypes covering every stablecoin design Pharos tracks.",
+    description: "Six mechanism archetypes covering every stablecoin design Pharos tracks.",
     url: hubUrl,
-    hasDefinedTerm: MECHANISM_ARCHETYPE_VALUES.map(
-      (archetype: MechanismArchetype) => ({
-        "@type": "DefinedTerm",
-        "@id": `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`,
-        name: getMechanismArchetypeLabel(archetype),
-        termCode: archetype,
-        description: getMechanismArchetypeOneLiner(archetype),
-        inDefinedTermSet: hubUrl,
-        url: `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`,
-      }),
-    ),
+    hasDefinedTerm: MECHANISM_ARCHETYPE_VALUES.map((archetype: MechanismArchetype) => ({
+      "@type": "DefinedTerm",
+      "@id": `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`,
+      name: getMechanismArchetypeLabel(archetype),
+      termCode: archetype,
+      description: getMechanismArchetypeOneLiner(archetype),
+      inDefinedTermSet: hubUrl,
+      url: `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`,
+    })),
   };
 }
 
@@ -355,9 +356,7 @@ const BUILD_DATE_MODIFIED = new Date().toISOString();
 /**
  * Build an `Article` JSON-LD document for a per-archetype explainer page.
  */
-export function buildArchetypeArticleJsonLd(
-  archetype: MechanismArchetype,
-): Record<string, unknown> {
+export function buildArchetypeArticleJsonLd(archetype: MechanismArchetype): Record<string, unknown> {
   const url = `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`;
   return {
     "@context": "https://schema.org",

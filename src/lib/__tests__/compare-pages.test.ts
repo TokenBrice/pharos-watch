@@ -3,6 +3,7 @@ import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   buildComparisonAtAGlanceRows,
   buildComparisonSnippetAnswer,
+  buildStaticComparisonJsonLd,
   getPrimaryStaticComparisonPageForCoin,
   STATIC_COMPARE_PAIRS,
   STATIC_COMPARISON_PAGES,
@@ -19,8 +20,7 @@ describe("compare page blacklist copy", () => {
 
     expect(blacklistRow).toBeDefined();
     expect(
-      blacklistRow?.left === "Upstream freeze exposure" ||
-        blacklistRow?.right === "Upstream freeze exposure",
+      blacklistRow?.left === "Upstream freeze exposure" || blacklistRow?.right === "Upstream freeze exposure",
     ).toBe(true);
   });
 });
@@ -70,5 +70,47 @@ describe("STATIC_COMPARISON_PAGES", () => {
     expect(snippet.question).toBe("Which is safer, USDT or USDC?");
     expect(snippet.answer).toContain("categorically safer");
     expect(snippet.caveat).toContain("Open the live USDT vs USDC compare tool");
+  });
+
+  it("builds WebPage and ItemList JSON-LD for static comparison pages", () => {
+    const page = getPrimaryStaticComparisonPageForCoin("usdt-tether");
+
+    expect(page).not.toBeNull();
+
+    const jsonLd = buildStaticComparisonJsonLd(page!, {
+      siteUrl: "https://pharos.watch",
+    });
+
+    expect(jsonLd).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          "@type": "WebPage",
+          "@id": "https://pharos.watch/compare/usdt-tether-vs-usdc-circle/#webpage",
+          about: expect.arrayContaining([
+            expect.objectContaining({
+              "@id": "https://pharos.watch/stablecoin/usdt-tether/#stablecoin",
+              alternateName: "USDT",
+            }),
+            expect.objectContaining({
+              "@id": "https://pharos.watch/stablecoin/usdc-circle/#stablecoin",
+              alternateName: "USDC",
+            }),
+          ]),
+        }),
+        expect.objectContaining({
+          "@type": "ItemList",
+          "@id": "https://pharos.watch/compare/usdt-tether-vs-usdc-circle/#comparison-rows",
+          numberOfItems: expect.any(Number),
+          itemListElement: expect.arrayContaining([
+            expect.objectContaining({
+              item: expect.objectContaining({
+                "@type": "PropertyValue",
+                name: "Governance",
+              }),
+            }),
+          ]),
+        }),
+      ]),
+    );
   });
 });

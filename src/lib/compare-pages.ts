@@ -1,9 +1,11 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { STATIC_COMPARE_PAIRS, buildLiveCompareUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 export { STATIC_COMPARE_PAIRS };
@@ -260,6 +262,59 @@ export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
       label: "Tracked chains",
       left: `${left.contracts?.length ?? 0} deployments`,
       right: `${right.contracts?.length ?? 0} deployments`,
+    },
+  ];
+}
+
+function buildComparisonCoinThingJsonLd(coin: StablecoinMeta, siteUrl: string) {
+  const url = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
+
+  return {
+    "@type": "Thing",
+    "@id": `${url}#stablecoin`,
+    name: coin.name,
+    alternateName: coin.symbol,
+    url,
+    identifier: [buildPharosUrnJsonLdIdentifier("coin", coin.id)],
+  };
+}
+
+export function buildStaticComparisonJsonLd(page: StaticComparisonPage, options: { siteUrl?: string } = {}) {
+  const siteUrl = options.siteUrl ?? SITE_URL;
+  const pageUrl = `${siteUrl}${page.href}`;
+  const itemListId = `${pageUrl}#comparison-rows`;
+  const leftThing = buildComparisonCoinThingJsonLd(page.left, siteUrl);
+  const rightThing = buildComparisonCoinThingJsonLd(page.right, siteUrl);
+  const rows = buildComparisonAtAGlanceRows(page);
+
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": `${pageUrl}#webpage`,
+      name: page.title,
+      description: page.description,
+      url: pageUrl,
+      inLanguage: "en",
+      isPartOf: { "@id": `${siteUrl}#website` },
+      about: [leftThing, rightThing],
+      mainEntity: { "@id": itemListId },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "@id": itemListId,
+      name: `${page.shortTitle} structural comparison rows`,
+      numberOfItems: rows.length,
+      itemListElement: rows.map((row, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "PropertyValue",
+          name: row.label,
+          value: `${page.left.symbol}: ${row.left}; ${page.right.symbol}: ${row.right}`,
+        },
+      })),
     },
   ];
 }

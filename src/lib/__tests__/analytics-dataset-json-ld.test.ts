@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
+import { buildCoverageDatasetJsonLd, buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 
 describe("buildCoverageDatasetJsonLd", () => {
   it("describes the coverage matrix dataset without live values or site-data proxy URLs", () => {
@@ -32,6 +32,46 @@ describe("buildCoverageDatasetJsonLd", () => {
         expect.objectContaining({ name: "reserveViewCoverage", description: expect.any(String) }),
         expect.objectContaining({ name: "mintBurnFlowCoverage", description: expect.any(String) }),
         expect.objectContaining({ name: "dependencyMapCoverage", description: expect.any(String) }),
+      ]),
+    );
+  });
+});
+
+describe("buildPublicDatasetMirrorJsonLd", () => {
+  it("describes public mirrored datasets with downloadable distributions", () => {
+    const jsonLd = buildPublicDatasetMirrorJsonLd("scores-latest", {
+      siteUrl: "https://pharos.watch",
+    });
+    const serialized = JSON.stringify(jsonLd);
+
+    expect(serialized).not.toContain("/_site-data/");
+    expect(jsonLd).toMatchObject({
+      "@context": "https://schema.org",
+      "@type": "Dataset",
+      "@id": "https://pharos.watch/datasets/scores-latest/#dataset",
+      name: "Pharos Latest Stablecoin Scores Dataset",
+      url: "https://pharos.watch/datasets/scores-latest/latest.json",
+      creator: { "@id": "https://pharos.watch#organization" },
+      publisher: { "@id": "https://pharos.watch#organization" },
+      includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+    });
+    expect(jsonLd.distribution).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          "@type": "DataDownload",
+          contentUrl: "https://pharos.watch/datasets/scores-latest/latest.json",
+          encodingFormat: "application/json",
+        }),
+        expect.objectContaining({
+          "@type": "DataDownload",
+          contentUrl: "https://pharos.watch/datasets/scores-latest/latest.csv",
+          encodingFormat: "text/csv",
+        }),
+        expect.objectContaining({
+          "@type": "DataDownload",
+          contentUrl: "https://pharos.watch/sheets/scores-latest.csv",
+          encodingFormat: "text/csv",
+        }),
       ]),
     );
   });

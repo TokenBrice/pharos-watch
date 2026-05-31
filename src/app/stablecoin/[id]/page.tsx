@@ -156,12 +156,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   if (coin.status === "pre-launch") {
     return (
       <>
-        <PreLaunchDetail
-          coin={coin}
-          logoSrc={logosById[coin.id]}
-          summary={summary}
-          logos={logosById}
-        />
+        <PreLaunchDetail coin={coin} logoSrc={logosById[coin.id]} summary={summary} logos={logosById} />
         <BreadcrumbJsonLd
           items={[
             { name: "Home", url: "/" },
@@ -190,17 +185,19 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <Suspense fallback={
-        <DetailPageShellFallback
-          coin={staticCoin}
-          logoSrc={logosById[coin.id]}
-          staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
-          staticComparisonLinks={staticComparisonPages.map((page) => ({
-            href: page.href,
-            shortTitle: page.shortTitle,
-          }))}
-        />
-      }>
+      <Suspense
+        fallback={
+          <DetailPageShellFallback
+            coin={staticCoin}
+            logoSrc={logosById[coin.id]}
+            staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
+            staticComparisonLinks={staticComparisonPages.map((page) => ({
+              href: page.href,
+              shortTitle: page.shortTitle,
+            }))}
+          />
+        }
+      >
         <StablecoinDetailClient
           id={id}
           coin={clientCoin}
@@ -239,9 +236,12 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd(buildStablecoinDatasetJsonLd(coin, {
-            dateModified: structuredDataDateModified,
-          })),
+          __html: safeJsonLd(
+            buildStablecoinDatasetJsonLd(coin, {
+              dateModified: structuredDataDateModified,
+              logoPath: logosById[coin.id],
+            }),
+          ),
         }}
       />
     </>

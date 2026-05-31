@@ -42,14 +42,14 @@ Current treatment:
 - **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
 - **Per-archetype accent:** lives only in the **section kicker color** via `ARCHETYPE_VISUALS[archetype].kickerClass`. The visual differentiation between archetypes already lives in the diagram itself (loop arc for tbill, dashed flow + callout for algorithmic, return arc for cdp, split spot+perp legs for synthetic).
 
-| Archetype                 | Kicker pair                            |
-| ------------------------- | -------------------------------------- |
-| fiat-cash                 | `text-blue-700 dark:text-blue-400`     |
-| tbill                     | `text-violet-700 dark:text-violet-400` |
-| cdp                       | `text-cyan-700 dark:text-cyan-400`     |
-| synthetic-delta-neutral   | `text-teal-700 dark:text-teal-400`     |
-| algorithmic               | `text-rose-700 dark:text-rose-400`     |
-| rwa-credit-fund           | `text-amber-700 dark:text-amber-400`   |
+| Archetype               | Kicker pair                            |
+| ----------------------- | -------------------------------------- |
+| fiat-cash               | `text-blue-700 dark:text-blue-400`     |
+| tbill                   | `text-violet-700 dark:text-violet-400` |
+| cdp                     | `text-cyan-700 dark:text-cyan-400`     |
+| synthetic-delta-neutral | `text-teal-700 dark:text-teal-400`     |
+| algorithmic             | `text-rose-700 dark:text-rose-400`     |
+| rwa-credit-fund         | `text-amber-700 dark:text-amber-400`   |
 
 Excludes red/green (peg severity) and emerald (PoR big4) to avoid semantic collisions.
 
@@ -78,7 +78,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 - Description: hand-tuned per archetype, ≤160 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
-- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
+- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 
 ---
 

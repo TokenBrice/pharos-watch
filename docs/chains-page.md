@@ -71,6 +71,7 @@ Default sort is `totalUsd desc`.
 - rejects unknown chain IDs with `notFound()`
 - statically generates params from `getActiveChainIds()` / the current `CHAIN_META` key set
 - sets canonical metadata at `/chains/[chain]/`
+- builds the title/description from the mapped deployment count and leading ticker symbols when they fit the search-snippet title budget
 - emits `CollectionPage` + `ItemList` JSON-LD for tracked deployments, with chain/deployment entities typed as `Thing` and no `Product` markup
 - renders the live client first, followed by related taxonomy and research route hubs; the page does not duplicate the client table with a visible static deployment list
 

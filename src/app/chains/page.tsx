@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chain-health-version";
+import {
+  CHAIN_HEALTH_METHODOLOGY_VERSION,
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+} from "@shared/lib/chain-health-version";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -10,15 +13,12 @@ import { FaqSection } from "@/components/faq-section";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import {
-  getChainDirectoryEntries,
-  getChainRuntimeContext,
-  type ChainDirectoryEntry,
-} from "./static-chain-content";
+import { getChainDirectoryEntries, getChainRuntimeContext, type ChainDirectoryEntry } from "./static-chain-content";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Distribution by Chain",
-  description: "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
+  description:
+    "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
   ogImage: `${SITE_URL}/og-chains.png`,
 });
@@ -26,11 +26,13 @@ export const metadata: Metadata = buildPageMetadata({
 const CHAINS_FAQ_ITEMS = [
   {
     question: "What is the Chain Health Score?",
-    answer: "The Chain Health Score is a composite rating (0–100) that evaluates a blockchain's stablecoin ecosystem across five dimensions: stablecoin quality (supply-weighted Safety Scores), chain environment (resilience tier), concentration risk (supply distribution across coins), peg stability (supply-weighted proximity to target prices), and backing diversity (RWA-backed vs crypto-backed supply mix).",
+    answer:
+      "The Chain Health Score is a composite rating (0–100) that evaluates a blockchain's stablecoin ecosystem across five dimensions: stablecoin quality (supply-weighted Safety Scores), chain environment (resilience tier), concentration risk (supply distribution across coins), peg stability (supply-weighted proximity to target prices), and backing diversity (RWA-backed vs crypto-backed supply mix).",
   },
   {
     question: "Which chains have the most stablecoin supply?",
-    answer: "The leaderboard ranks chains by the latest stablecoin supply snapshot, but supply alone doesn't tell the full story. Concentration risk and backing diversity also matter: a chain with slightly lower total supply but better distribution across high-quality, diverse stablecoins may have a higher Chain Health Score.",
+    answer:
+      "The leaderboard ranks chains by the latest stablecoin supply snapshot, but supply alone doesn't tell the full story. Concentration risk and backing diversity also matter: a chain with slightly lower total supply but better distribution across high-quality, diverse stablecoins may have a higher Chain Health Score.",
   },
 ] satisfies readonly FaqItem[];
 
@@ -40,7 +42,10 @@ function ChainDirectory({ entries }: { entries: readonly ChainDirectoryEntry[] }
   return (
     <section className="space-y-3" aria-labelledby="chain-directory-heading">
       <div className="space-y-1.5">
-        <h2 id="chain-directory-heading" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2
+          id="chain-directory-heading"
+          className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           Chain Profile Directory
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -55,15 +60,13 @@ function ChainDirectory({ entries }: { entries: readonly ChainDirectoryEntry[] }
             className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
           >
             <span className="flex items-center justify-between gap-2">
-              <span className="font-medium text-foreground">{entry.name}</span>
+              <span className="font-medium text-foreground">{entry.name} stablecoins</span>
               <ChainTypeBadge type={entry.type} />
             </span>
             <span className="mt-2 block text-xs text-muted-foreground">
               {entry.deploymentCount} tracked deployment{entry.deploymentCount === 1 ? "" : "s"}
             </span>
-            <span className="mt-1 block text-xs text-muted-foreground">
-              {getChainRuntimeContext(entry)}
-            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">{getChainRuntimeContext(entry)}</span>
           </Link>
         ))}
       </nav>
@@ -80,10 +83,11 @@ export default function ChainsPage() {
       breadcrumbName="Chains"
       path="/chains/"
       title="Chains"
-      methodology={{ version: CHAIN_HEALTH_METHODOLOGY_VERSION, changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH }}
-      leadParagraphs={[
-        "Blockchain networks ranked by stablecoin supply and ecosystem health.",
-      ]}
+      methodology={{
+        version: CHAIN_HEALTH_METHODOLOGY_VERSION,
+        changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+      }}
+      leadParagraphs={["Blockchain networks ranked by stablecoin supply and ecosystem health."]}
       preface={
         <script
           type="application/ld+json"

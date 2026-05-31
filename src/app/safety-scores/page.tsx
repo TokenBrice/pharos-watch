@@ -6,12 +6,11 @@ import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
+import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
+import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import {
-  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-  SAFETY_SCORE_VERSION_LABEL,
-} from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 
 const reportCardsDescription =
   "Compare stablecoin safety grades by peg stability, liquidity, resilience, decentralization, dependency risk, and contagion stress-test impact.";
@@ -32,7 +31,7 @@ const FAQ_ITEMS = [
   {
     question: "What does the contagion simulation show?",
     answer:
-      "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
+      'The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to "fail" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A\'s grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.',
   },
   {
     question: "How often do safety grades change?",
@@ -63,6 +62,12 @@ export default createClientFeaturePage({
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
+    preface: (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest")) }}
+      />
+    ),
     leadParagraphs: [
       "Letter grades from A+ to F computed from live reserve feeds, transitive dependency scoring, and redemption-backstop blending — not just market-cap rankings.",
     ],
@@ -76,7 +81,10 @@ export default createClientFeaturePage({
   },
   afterClient: (
     <>
-      <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+      <CalloutBanner
+        icon={<Bell className="h-4 w-4" />}
+        className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+      >
         Get notified when a safety grade changes.{" "}
         <Link
           href="/pharoswatchbot/#bot"

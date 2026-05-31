@@ -15,7 +15,11 @@ import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
-import { ACTIVE_PEG_CURRENCY_COUNT, ACTIVE_STABLECOIN_COUNT, DEAD_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import {
+  ACTIVE_PEG_CURRENCY_COUNT,
+  ACTIVE_STABLECOIN_COUNT,
+  DEAD_STABLECOIN_COUNT,
+} from "@/lib/stablecoin-static-data";
 
 const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
 
@@ -74,8 +78,18 @@ export default function RootLayout({
         {gaId && <link rel="preload" href={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} as="script" />}
         <link rel="alternate" type="application/rss+xml" title="Pharos · Daily digest" href="/feed/digest.xml" />
         <link rel="alternate" type="application/rss+xml" title="Pharos · Depeg events" href="/feed/depeg.xml" />
-        <link rel="alternate" type="application/rss+xml" title="Pharos · Methodology changelog" href="/feed/methodology.xml" />
-        <link rel="alternate" type="application/rss+xml" title="Pharos · Stablecoin cemetery" href="/feed/cemetery.xml" />
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="Pharos · Methodology changelog"
+          href="/feed/methodology.xml"
+        />
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="Pharos · Stablecoin cemetery"
+          href="/feed/cemetery.xml"
+        />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {gaId && <GoogleAnalytics measurementId={gaId} />}
@@ -106,9 +120,7 @@ export default function RootLayout({
                 <SidebarSpacer />
               </RouteChrome>
               <div className="flex-1 flex flex-col min-w-0">
-                <MainContent>
-                  {children}
-                </MainContent>
+                <MainContent>{children}</MainContent>
                 <RouteChrome>
                   <Footer />
                 </RouteChrome>
@@ -130,6 +142,7 @@ export default function RootLayout({
                 "@type": "WebSite",
                 "@id": `${SITE_URL}#website`,
                 name: "Pharos",
+                alternateName: ["Pharos Watch", "pharos.watch"],
                 url: SITE_URL,
                 description: siteDescription,
                 inLanguage: "en",

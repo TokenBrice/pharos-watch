@@ -12,10 +12,9 @@ describe("buildStablecoinDatasetJsonLd", () => {
     const jsonLd = buildStablecoinDatasetJsonLd(coin, {
       siteUrl: "https://pharos.watch",
       dateModified: "2026-05-13T00:00:00.000Z",
+      logoPath: "/logos/usdt-tether.png",
     });
-    const identifiers = jsonLd.identifier.filter(
-      (identifier) => identifier.propertyID.startsWith("contract:"),
-    );
+    const identifiers = jsonLd.identifier.filter((identifier) => identifier.propertyID.startsWith("contract:"));
 
     expect((coin.contracts ?? []).length).toBeGreaterThan(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
     expect(identifiers).toHaveLength(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
@@ -42,7 +41,9 @@ describe("buildStablecoinDatasetJsonLd", () => {
         "@id": "https://pharos.watch/stablecoin/usdt-tether/#stablecoin",
         name: "Tether",
         alternateName: "USDT",
+        image: "https://pharos.watch/logos/usdt-tether.png",
       },
+      image: "https://pharos.watch/logos/usdt-tether.png",
     });
     expect(jsonLd).not.toHaveProperty("isPartOf");
     expect(jsonLd.distribution).toEqual(

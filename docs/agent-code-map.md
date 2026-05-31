@@ -204,7 +204,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/alt-peg-market.ts` - AltPegDistributionRow, AltPegLinkHubGroup, AltPegLinkHubItem, AltPegRegion, AltPegSnapshot, AltPegTrendPoint
 - `src/lib/alt-peg-packing.ts` - PackedCoin, PackingInput, arrangeClusterCoins, resolvePackedCoinOverlaps
 - `src/lib/alt-peg-sizing.ts` - FIAT_MAP_SIZE_CAP_MARKET_CAP, FIAT_MAP_SIZE_CEIL, SIZE_CEIL, SIZE_FLOOR, SKY_COHORT_SIZE_CEIL, coinEmblemSize
-- `src/lib/analytics-dataset-json-ld.ts` - buildCoverageDatasetJsonLd
+- `src/lib/analytics-dataset-json-ld.ts` - PUBLIC_DATASET_JSON_LD_DESCRIPTORS, PublicDatasetDescriptor, buildCoverageDatasetJsonLd, buildPublicDatasetMirrorJsonLd
 - `src/lib/analytics.ts` - trackEvent, trackSearch
 - `src/lib/api-artifact-json-ld.ts` - buildApiArtifactCatalogJsonLd
 - `src/lib/api-key-admin-view-model.ts` - ApiKeySummaryItem, CreateExpiryMode, CreateKeyState, DEFAULT_CREATE_KEY_STATE, EditableKeyState, buildApiKeyInventorySummary
@@ -686,6 +686,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 ## Validation and tooling
 
 - `scripts/__tests__/analyze-gsc-coverage.test.ts`
+- `scripts/__tests__/analyze-gsc-performance.test.ts`
 - `scripts/__tests__/audit-dex-pricing-source-gaps.test.ts` - CURVE_POOL_CONFIGS
 - `scripts/__tests__/audit-dia-provider-poc.test.ts`
 - `scripts/__tests__/audit-mint-authority.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-agent-skill-symlinks.mjs`
 - `scripts/ci/check-archetype-explainer-coverage.ts` - ArchetypeExplainerCheckResult, ArchetypeExplainerFinding, validateArchetypeExplainerCoverage
 - `scripts/ci/check-attestor-tier-coverage.ts`
-- `scripts/ci/check-build-attribution.mjs`
-- ... 143 more files omitted; use `rg --files scripts` for the full list.
+- ... 145 more files omitted; use `rg --files scripts` for the full list.

@@ -86,18 +86,12 @@ describe("buildPageMetadata", () => {
   });
 
   it("adds markdown alternates only for generated markdown route families", () => {
-    expect(getMarkdownAlternateForCanonical("/stablecoin/usdt-tether/")).toBe(
-      "/stablecoin/usdt-tether/index.md",
-    );
+    expect(getMarkdownAlternateForCanonical("/stablecoin/usdt-tether/")).toBe("/stablecoin/usdt-tether/index.md");
     expect(getMarkdownAlternateForCanonical("/methodology/scoring-changelog/")).toBe(
       "/methodology/scoring-changelog/index.md",
     );
-    expect(getMarkdownAlternateForCanonical("/docs/api-reference/")).toBe(
-      "/docs/api-reference/index.md",
-    );
-    expect(getMarkdownAlternateForCanonical("/changelog/")).toBe(
-      "/changelog/index.md",
-    );
+    expect(getMarkdownAlternateForCanonical("/docs/api-reference/")).toBe("/docs/api-reference/index.md");
+    expect(getMarkdownAlternateForCanonical("/changelog/")).toBe("/changelog/index.md");
     expect(getMarkdownAlternateForCanonical("/learn/glossary/")).toBeNull();
     expect(getMarkdownAlternateForCanonical("/stablecoin/not-a-coin/")).toBeNull();
   });
@@ -131,13 +125,25 @@ describe("buildStablecoinDetailMetadata", () => {
     const frozenCoin = frozen as Parameters<typeof buildStablecoinDetailMetadata>[0];
 
     expect(buildStablecoinDetailMetadata(activeCoin).title).toBe(
-      `${active.symbol} Stablecoin Risk Profile: Peg, Liquidity & Safety`,
+      `${active.symbol} (${active.name}) Stablecoin Risk Profile`,
     );
     expect(buildStablecoinDetailMetadata(preLaunchCoin).title).toBe(
-      `${preLaunch.symbol} Stablecoin Launch Tracker & Profile`,
+      `${preLaunch.symbol} (${preLaunch.name}) Stablecoin Launch Tracker`,
     );
     expect(buildStablecoinDetailMetadata(frozenCoin).title).toBe(
-      `${frozen.symbol} Failed Stablecoin Archive & Timeline`,
+      `${frozen.symbol} (${frozen.name}) Failed Stablecoin Archive`,
+    );
+  });
+
+  it("falls back to symbol-led stablecoin titles when names are too long for snippets", () => {
+    const longNameCoin = {
+      ...fixtures.active,
+      name: "A Very Long Protocol-Issued Stablecoin With Governance Extensions",
+      symbol: "LONG",
+    } as Parameters<typeof buildStablecoinDetailMetadata>[0];
+
+    expect(buildStablecoinDetailMetadata(longNameCoin).title).toBe(
+      "LONG Stablecoin Risk Profile: Peg, Liquidity & Safety",
     );
   });
 });

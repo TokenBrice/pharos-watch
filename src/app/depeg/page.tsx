@@ -7,6 +7,8 @@ import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
 import { DepegLoadingState } from "@/app/depeg/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
+import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
@@ -54,6 +56,12 @@ export default createClientFeaturePage({
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     },
     headerActions: <ShareButton ogPath="/api/og/depeg" />,
+    preface: (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history")) }}
+      />
+    ),
     leadParagraphs: [
       "A live incident board for confirmed peg deviations, pending confirmation, and early stress signals. DEWS anticipate upcoming depeg risk. DDR predicts depeg resolution chances and duration.",
     ],

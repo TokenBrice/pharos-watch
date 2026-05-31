@@ -11,6 +11,7 @@ This document covers two frontend-only feature surfaces that are not backed by d
 ## Stablecoin Cemetery (`/cemetery`)
 
 Primary files:
+
 - `src/app/cemetery/page.tsx`
 - `src/components/cemetery-client.tsx`
 - `src/components/stablecoin-cemetery.tsx`
@@ -28,6 +29,7 @@ Primary files:
 Cemetery data is static and versioned in-repo. The curated dead-coin dataset lives in `shared/data/dead-stablecoins.json` and is validated/exported as `DEAD_STABLECOINS` by `shared/lib/dead-stablecoins.ts`. The route, charts, and public dataset export consume `CEMETERY_ENTRIES` from `shared/lib/cemetery-merged.ts`, which combines those curated dead rows with frozen tracked stablecoins.
 
 Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such as:
+
 - identity (`id`, `name`, `symbol`, optional `llamaId`)
 - context (`pegCurrency`, `causeOfDeath`, `deathDate`)
 - narrative (`epitaph`, `obituary`, `sourceUrl`, `sourceLabel`)
@@ -92,6 +94,7 @@ Each appendix includes the epitaph for every newly added coin plus a rotating da
 ## Compare (`/compare` + `/compare/[slug]`)
 
 Primary files:
+
 - `src/app/compare/page.tsx`
 - `src/app/compare/[slug]/page.tsx`
 - `src/app/compare/client.tsx`
@@ -111,6 +114,7 @@ Primary files:
 - `src/app/compare/page.tsx` is the live comparison entry point. It uses `buildPageMetadata(...)` with canonical `/compare/`, serves through `createClientFeaturePage(...)`, and is intentionally `robots: { index: false, follow: true }`.
 - `src/app/compare/[slug]/page.tsx` is the indexable static comparison surface. It statically generates params from `STATIC_COMPARISON_PAGES`, builds per-page metadata from each page descriptor, and calls `notFound()` for unknown slugs.
 - Static comparison URLs follow `/compare/<left-id>-vs-<right-id>/`, with metadata/title/description derived from `src/lib/compare-pages.ts`.
+- Static comparison pages emit route-specific `WebPage` + `ItemList` JSON-LD from `buildStaticComparisonJsonLd(...)`, including the two compared stablecoins as `Thing` nodes and the visible comparison rows as `PropertyValue` items. The live `/compare/` tool remains `noindex`.
 - `src/app/cemetery/page.tsx` emits `CollectionPage` and `ItemList` JSON-LD for the defunct-stablecoin archive. Dead coins intentionally use `Thing` items rather than fabricated internal detail URLs.
 
 ### Selection and URL contract

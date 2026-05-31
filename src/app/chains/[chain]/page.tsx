@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -21,11 +21,7 @@ export function generateStaticParams() {
   return getActiveChainIds().map((chain) => ({ chain }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ chain: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ chain: string }> }): Promise<Metadata> {
   const { chain } = await params;
   const meta = CHAIN_META[chain];
   if (!meta) {
@@ -34,9 +30,10 @@ export async function generateMetadata({
       robots: { index: false },
     };
   }
+  const deployments = getTrackedDeploymentsForChain(chain);
   return buildPageMetadata({
-    title: chainPageTitle(meta.name),
-    description: `Explore ${meta.name} stablecoins by supply, market share, Chain Health, top deployments, backing mix, and concentration risk across Pharos-tracked assets.`,
+    title: chainPageTitle(meta.name, deployments),
+    description: buildChainMetaDescription(meta.name, deployments),
     canonical: `/chains/${chain}/`,
   });
 }
@@ -45,8 +42,36 @@ function stablecoinCountLabel(count: number): string {
   return `${count} stablecoin${count === 1 ? "" : "s"}`;
 }
 
-function chainPageTitle(chainName: string): string {
-  return `${chainName} Stablecoins: Supply, Risk & Top Deployments`;
+function formatSymbolList(deployments: readonly Pick<ChainTrackedDeployment, "symbol">[]): string {
+  const symbols = [...new Set(deployments.map((deployment) => deployment.symbol))].slice(0, 3);
+  if (symbols.length === 0) return "";
+  if (symbols.length === 1) return symbols[0];
+  if (symbols.length === 2) return `${symbols[0]} and ${symbols[1]}`;
+  return `${symbols[0]}, ${symbols[1]} and ${symbols[2]}`;
+}
+
+function chainPageTitle(chainName: string, deployments: readonly ChainTrackedDeployment[] = []): string {
+  const topSymbols = formatSymbolList(deployments);
+  const options = [
+    topSymbols ? `${chainName} Stablecoins: ${topSymbols}, Supply & Risk` : "",
+    `${chainName} Stablecoins: Supply, Risk & Top Deployments`,
+    `${chainName} Stablecoins: Supply & Risk`,
+  ].filter(Boolean);
+
+  return options.find((option) => option.length <= 61) ?? `${chainName} Stablecoins`;
+}
+
+function buildChainMetaDescription(chainName: string, deployments: readonly ChainTrackedDeployment[]): string {
+  const trackedDeploymentCount = deployments.reduce((sum, deployment) => sum + deployment.contractCount, 0);
+  const topSymbols = formatSymbolList(deployments);
+  const lead = topSymbols
+    ? `Track ${deploymentCountLabel(trackedDeploymentCount)} on ${chainName}, including ${topSymbols}.`
+    : `Track stablecoin deployment coverage on ${chainName}.`;
+
+  return trimTextAtWordBoundary(
+    `${lead} Compare supply, market share, Chain Health, backing mix, concentration risk, and Pharos-tracked assets.`,
+    160,
+  );
 }
 
 function deploymentCountLabel(count: number): string {
@@ -81,9 +106,7 @@ function buildChainEditorialIntro({
 }
 
 function RelatedLinkCard({ link }: { link: ChainTaxonomyLink | ChainFeatureLink }) {
-  const detail = "count" in link
-    ? `${stablecoinCountLabel(link.count)} in this chain profile`
-    : link.description;
+  const detail = "count" in link ? `${stablecoinCountLabel(link.count)} in this chain profile` : link.description;
 
   return (
     <Link
@@ -91,9 +114,7 @@ function RelatedLinkCard({ link }: { link: ChainTaxonomyLink | ChainFeatureLink 
       className="pharos-focus-ring rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
     >
       <span className="block font-medium text-foreground">{link.title}</span>
-      <span className="mt-1 block text-xs text-muted-foreground">
-        {detail}
-      </span>
+      <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
     </Link>
   );
 }
@@ -142,7 +163,9 @@ function ChainResearchSurfaces({ chainName }: { chainName: string }) {
   return (
     <section className="space-y-3" aria-label={`${chainName} stablecoin research surfaces`}>
       <div className="space-y-1.5">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Stablecoin Research Surfaces</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Stablecoin Research Surfaces
+        </h2>
         <p className="text-sm text-muted-foreground">
           Use these feature pages to compare the same stablecoin set from other angles.
         </p>
@@ -156,17 +179,14 @@ function ChainResearchSurfaces({ chainName }: { chainName: string }) {
   );
 }
 
-function ChainRelatedHubs({
-  chainId,
-  taxonomyLinks,
-}: {
-  chainId: string;
-  taxonomyLinks: ChainTaxonomyLink[];
-}) {
+function ChainRelatedHubs({ chainId, taxonomyLinks }: { chainId: string; taxonomyLinks: ChainTaxonomyLink[] }) {
   return (
     <section className="space-y-3" aria-labelledby={`${chainId}-related-hubs-heading`}>
       <div className="space-y-1.5">
-        <h2 id={`${chainId}-related-hubs-heading`} className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2
+          id={`${chainId}-related-hubs-heading`}
+          className="text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           Related Stablecoin Hubs
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -188,11 +208,7 @@ function ChainRelatedHubs({
   );
 }
 
-export default async function ChainProfilePage({
-  params,
-}: {
-  params: Promise<{ chain: string }>;
-}) {
+export default async function ChainProfilePage({ params }: { params: Promise<{ chain: string }> }) {
   const { chain } = await params;
   const meta = CHAIN_META[chain];
   if (!meta) notFound();
@@ -209,7 +225,7 @@ export default async function ChainProfilePage({
         { name: "Chains", url: "/chains/" },
         { name: meta.name, url: `/chains/${chain}/` },
       ]}
-      title={chainPageTitle(meta.name)}
+      title={chainPageTitle(meta.name, deployments)}
       leadParagraphs={[buildChainEditorialIntro({ chainName: meta.name, deployments })]}
       preface={
         <script

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
@@ -86,6 +87,7 @@ export default function StablecoinsHubPage() {
                   url: `${SITE_URL}${page.href}`,
                 })),
               },
+              buildPublicDatasetMirrorJsonLd("top-stablecoins"),
             ]),
           }}
         />
