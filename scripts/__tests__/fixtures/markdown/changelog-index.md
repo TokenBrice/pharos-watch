@@ -6,6 +6,17 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-05-25 to 2026-05-31
+
+The Depeg Resolver (DDR/DDRR) v2 ships at /depeg, dashboard cards flatten, and the data layer gets a two-pass audit.
+
+- **Depeg Resolver (DDR/DDRR) v2**: /depeg goes public: DDR predicts how long an active depeg will last with sticky locked forecasts and a verdict-band lockup; DDRR scores past predictions on a reviewer. DDR also shows on each coin page.
+- **Data audit & remediation**: Data passes plus follow-ups recover crvUSD and Reservoir reserve breakers, move ZCHF capacity to CHFAU, switch fxSAVE redemption to live capacity, align USG/HLUSD/JPYC/YUSD, and pin StablR's EURR/USDR multisig exploit.
+- **Compliance & GENIUS tracker**: A new GENIUS Act tracker surface launches alongside expanded compliance metadata research, and the MiCA tracker now enforces out-of-scope constraints to keep deliberately-undefined coins distinct from unassessed ones.
+- **Pre-launch additions**: Tenbin Gold (tGLD) — a synthetic gold debt-note from a CME-futures basket — and GEL₮, Tether's pre-launch Georgian Lari, join the pre-launch list, and the weekly upcoming sweep tracks Flipcash's launch and USDPT.
+- **Flat-card design pass**: Card accents flatten — the colored border-l retires except for data-driven indicators. Price Transparency and Redemption Backstop go full-width on coin pages, and depeg page hierarchy tightens around the resolver.
+- **Platform hygiene**: Cron cache helpers centralize, depeg resolver and DEWS D1 retries harden, admin API contracts get schema validation, and several large surfaces (yield, command palette, timeline, picker) split into smaller modules.
+
 ## 2026-05-18 to 2026-05-24
 
 Design-system overhaul lands, the MiCA tracker goes live, and the yield page gets a ground-up rebuild.
