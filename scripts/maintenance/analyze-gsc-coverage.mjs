@@ -468,7 +468,7 @@ function walkDirectory(directoryPath, collected, inputPath, rootDirectory) {
   }
 }
 
-function collectInputEntries(inputPaths) {
+export function collectInputEntries(inputPaths) {
   const collected = { entries: [], notes: [], inputs: [] };
   const resolvedInputs = inputPaths.map((inputPath) => path.resolve(inputPath)).sort(compareText);
 
