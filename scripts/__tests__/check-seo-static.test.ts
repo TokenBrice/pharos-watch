@@ -361,6 +361,55 @@ describe("check-seo-static", () => {
     expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(false);
   });
 
+  it("fails internal anchor hrefs that point at retired route prefixes", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: [
+        "/stability-index/",
+        "/blacklist/usdt-tether?view=issuer#top",
+        "https://pharos.watch/tape?event=depeg",
+      ],
+    });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /blacklist: /blacklist/usdt-tether?view=issuer#top (use /freezewatch/)",
+        ),
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /tape: https://pharos.watch/tape?event=depeg (use /timeline/)",
+        ),
+      ]),
+    );
+  });
+
+  it("ignores retired route text, canonical route links, and external retired-route links", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: [
+        "/stability-index/",
+        "/freezewatch/",
+        "/timeline/",
+        "/blacklist-report/",
+        "https://docs.example.com/blacklist/",
+        "https://example.com/tape/",
+      ],
+      mainText: "Plain text mentions /blacklist/ and https://pharos.watch/tape/ without linking to either route.",
+    });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors.filter((error) => error.includes("retired route prefix"))).toEqual([]);
+  });
+
   it("fails thin representative chain detail static HTML", async () => {
     const root = await makeOutDir();
     await writeBaselinePages(root, ["/chains/ethereum/"]);

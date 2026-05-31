@@ -6,6 +6,10 @@ const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
 const PHAROS_ORIGIN = "https://pharos.watch";
 const PHAROS_HOSTNAME = new URL(PHAROS_ORIGIN).hostname;
+const RETIRED_INTERNAL_ROUTE_PREFIXES = [
+  { prefix: "/blacklist", replacement: "/freezewatch/" },
+  { prefix: "/tape", replacement: "/timeline/" },
+];
 const VOID_TAGS = new Set([
   "area",
   "base",
@@ -397,6 +401,15 @@ function normalizeHref(href) {
   } catch {
     return null;
   }
+}
+
+function retiredInternalRouteMatch(normalizedHref) {
+  return (
+    RETIRED_INTERNAL_ROUTE_PREFIXES.find((route) => {
+      const normalizedPrefix = route.prefix.endsWith("/") ? route.prefix : `${route.prefix}/`;
+      return normalizedHref.startsWith(normalizedPrefix);
+    }) ?? null
+  );
 }
 
 function parseSitemapLocs(xml) {
@@ -896,7 +909,16 @@ export function collectSeoStaticCheckResult({
   for (const record of pageRecords) {
     for (const href of getAnchorHrefs(record.html)) {
       const normalized = normalizeHref(href);
-      if (normalized && routeSet.has(normalized)) {
+      if (!normalized) continue;
+
+      const retiredRoute = retiredInternalRouteMatch(normalized);
+      if (retiredRoute) {
+        errors.push(
+          `${record.route}: internal anchor href points to retired route prefix ${retiredRoute.prefix}: ${href} (use ${retiredRoute.replacement})`,
+        );
+      }
+
+      if (routeSet.has(normalized)) {
         graph.get(record.route).add(normalized);
         inbound.set(normalized, (inbound.get(normalized) ?? 0) + 1);
       }

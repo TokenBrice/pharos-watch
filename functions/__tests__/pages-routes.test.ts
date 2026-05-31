@@ -110,4 +110,28 @@ describe("Pages legacy redirects", () => {
       ]),
     );
   });
+
+  it("redirects retired Tape URLs to the canonical timeline page", () => {
+    const lines = activeRedirectLines();
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "/tape/* /timeline/:splat 301",
+        "/tape/ /timeline/ 301",
+        "/tape /timeline/ 301",
+      ]),
+    );
+  });
+
+  it("redirects retired blacklist URLs to the canonical Freezewatch page", () => {
+    const lines = activeRedirectLines();
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "/blacklist/* /freezewatch/:splat 301",
+        "/blacklist/ /freezewatch/ 301",
+        "/blacklist /freezewatch/ 301",
+      ]),
+    );
+  });
 });
