@@ -23,6 +23,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/BDACSKorea"
+    },
+    {
+      "label": "KRW1 site",
+      "url": "https://krw1.kr/"
     }
   ],
   "jurisdiction": {
@@ -116,6 +120,13 @@
       "title": "KRW1 launches on Polygon network",
       "description": "Multi-chain expansion following the Avalanche PoC; Polygon selected for high throughput, low fees, and integrations with Stripe, Circle, and Mastercard, enabling payments, remittances, and enterprise use cases.",
       "sourceUrl": "https://crypto.news/bdacs-brings-krw-stablecoin-krw1-to-polygon/"
+    },
+    {
+      "date": "2025-12-11",
+      "type": "milestone",
+      "title": "KRW1 deploys on BNB Chain",
+      "description": "Multi-chain expansion to BNB Chain; on-chain BEP-20 contract live (0x8c2f2784cbab626846a53d20d8104ff42b3594c2).",
+      "sourceUrl": "https://bscscan.com/token/0x8c2f2784cbab626846a53d20d8104ff42b3594c2"
     },
     {
       "date": "2026-02-11",

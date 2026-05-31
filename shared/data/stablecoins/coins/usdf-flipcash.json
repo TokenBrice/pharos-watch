@@ -84,9 +84,12 @@
   "custodyModel": "institutional-unregulated",
   "status": "pre-launch",
   "announcedDate": "2026-01",
-  "expectedLaunchDate": "2026",
-  "launchPhase": "beta",
-  "launchPhaseDetail": "First Coinbase Custom Stablecoin; 1:1 collateralized by USDC via Coinbase's stablecoin-as-a-service platform; backend testing confirmed Jan 2026; Coinbase Custom Stablecoins lets any business launch branded coins backed by USDC",
+  "expectedLaunchDate": "2026-05",
+  "dateHistory": [
+    { "date": "2026", "setOn": "2026-05-31" }
+  ],
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data.",
   "dependencies": [
     {
       "id": "usdc-circle",
@@ -101,6 +104,12 @@
       "title": "Coinbase experiments: Flipcash USDF rolls out as first Custom Stablecoin",
       "description": "First stablecoin issued through Coinbase's Custom Stablecoins platform, backed 1:1 by USDC.",
       "source": "Yahoo Finance"
+    },
+    {
+      "type": "article",
+      "url": "https://cryptobriefing.com/coinbase-usdf-launch-flipcash/",
+      "title": "Coinbase debuts Custom Stablecoins, USDF by Flipcash launches as first partner",
+      "source": "Crypto Briefing"
     }
   ],
   "milestones": [
@@ -110,6 +119,13 @@
       "title": "USDF launches as first Coinbase Custom Stablecoin",
       "description": "Flipcash's USDF is the first stablecoin issued through Coinbase's stablecoin-as-a-service platform, backed 1:1 by USDC.",
       "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
+    },
+    {
+      "date": "2026-05-20",
+      "type": "milestone",
+      "title": "USDF goes live on Solana via Coinbase's Custom Stablecoin platform",
+      "description": "Flipcash launches USDF, 1:1 USDC-backed, on Solana with Coinbase Onramp fiat access.",
+      "sourceUrl": "https://cryptobriefing.com/coinbase-usdf-launch-flipcash/"
     }
   ]
 }

@@ -4911,6 +4911,12 @@
         "title": "Brazilian stock exchange B3 to launch its own tokenization platform and stablecoin",
         "description": "B3 plans a BRL settlement stablecoin for tokenized asset trading as Brazil's Drex CBDC scope narrows.",
         "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://borainvestir.b3.com.br/tipos-de-investimentos/renda-variavel/criptoativos/b3-anuncia-lancamento-de-stablecoin-para-2026/",
+        "title": "B3 anuncia lançamento de stablecoin para 2026",
+        "source": "B3 (Bora Investir)"
       }
     ],
     "milestones": [
@@ -20850,7 +20856,7 @@
       },
       {
         "label": "Whitepaper",
-        "url": "https://www.gyndore.com/Gyndore-Whitepaper.pdf"
+        "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf"
       }
     ],
     "canBeBlacklisted": "possible",
@@ -20859,7 +20865,7 @@
       "sources": [
         {
           "label": "Whitepaper",
-          "url": "https://www.gyndore.com/Gyndore-Whitepaper.pdf"
+          "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf"
         }
       ],
       "evidence": "gynUSD contracts are non-upgradable with no direct blacklist function; however, the sole collateral (cbBTC) is controlled by Coinbase, which can freeze cbBTC addresses and impair the protocol collateral pool.",
@@ -26056,6 +26062,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/BDACSKorea"
+      },
+      {
+        "label": "KRW1 site",
+        "url": "https://krw1.kr/"
       }
     ],
     "jurisdiction": {
@@ -26149,6 +26159,13 @@
         "title": "KRW1 launches on Polygon network",
         "description": "Multi-chain expansion following the Avalanche PoC; Polygon selected for high throughput, low fees, and integrations with Stripe, Circle, and Mastercard, enabling payments, remittances, and enterprise use cases.",
         "sourceUrl": "https://crypto.news/bdacs-brings-krw-stablecoin-krw1-to-polygon/"
+      },
+      {
+        "date": "2025-12-11",
+        "type": "milestone",
+        "title": "KRW1 deploys on BNB Chain",
+        "description": "Multi-chain expansion to BNB Chain; on-chain BEP-20 contract live (0x8c2f2784cbab626846a53d20d8104ff42b3594c2).",
+        "sourceUrl": "https://bscscan.com/token/0x8c2f2784cbab626846a53d20d8104ff42b3594c2"
       },
       {
         "date": "2026-02-11",
@@ -36613,13 +36630,6 @@
         "title": "Revolut secures MiCA license in Cyprus, is a stablecoin next?",
         "description": "EU counsel describes a Revolut stablecoin in 2026 as 'plausible' under MiCA; clarifies that the Cyprus CASP licence does not itself authorise issuance, which must come via Revolut's Lithuanian EMI.",
         "source": "Decrypt"
-      },
-      {
-        "type": "article",
-        "url": "https://cointelegraph.com/news/revolut-secures-mica-license-in-cyprus",
-        "title": "Revolut secures MiCA licence in Cyprus to launch Europe-wide crypto services",
-        "description": "Crypto 2.0 product suite includes 280+ tokens, zero-fee staking and 1:1 stablecoin-to-USD conversion without spreads.",
-        "source": "Cointelegraph"
       }
     ],
     "milestones": [
@@ -44670,10 +44680,6 @@
       {
         "label": "Docs",
         "url": "https://docs.tori.finance/"
-      },
-      {
-        "label": "App",
-        "url": "https://app.tori.finance/"
       }
     ],
     "blacklistabilityReview": {
@@ -44693,7 +44699,7 @@
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
+    "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
     "featuredContent": [
       {
         "type": "tweet",
@@ -44737,6 +44743,13 @@
         "title": "Nethermind security review completed",
         "description": "Full protocol scope security review; all findings addressed.",
         "sourceUrl": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
+      },
+      {
+        "date": "2026-05-31",
+        "type": "testnet",
+        "title": "trUSD testnet live on Ethereum Sepolia and Base Sepolia",
+        "description": "Dedicated testnet docs published with verified Sepolia / Base Sepolia contracts (LayerZero OFT); date reflects observation, not a stated deployment date.",
+        "sourceUrl": "https://docs.tori.finance/"
       }
     ]
   },
@@ -45998,10 +46011,10 @@
     "featuredContent": [
       {
         "type": "article",
-        "url": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions",
-        "title": "Nubank plans stablecoin integration for credit card transactions",
+        "url": "https://financefeeds.com/nubank-to-pilot-stablecoin-payments-via-credit-cards/",
+        "title": "Nubank to pilot stablecoin payments via credit cards",
         "description": "Campos Neto reveals Nubank credit-card stablecoin pilot at Meridian 2025; positions tokenized deposits as the underlying infrastructure play.",
-        "source": "Cointelegraph"
+        "source": "FinanceFeeds"
       },
       {
         "type": "article",
@@ -46017,7 +46030,7 @@
         "type": "announcement",
         "title": "Roberto Campos Neto announces Nubank credit-card stablecoin pilot at Meridian 2025",
         "description": "Nubank vice-chair (former BCB governor) tells local media stablecoin credit-card testing will begin later in 2025; part of a broader roadmap to tokenize deposits and use them as collateral for credit issuance.",
-        "sourceUrl": "https://cointelegraph.com/news/nubank-plans-stablecoin-integration-credit-card-transactions"
+        "sourceUrl": "https://financefeeds.com/nubank-to-pilot-stablecoin-payments-via-credit-cards/"
       }
     ]
   },
@@ -48056,7 +48069,7 @@
         "sourceUrl": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/"
       },
       {
-        "date": "2026-02-25",
+        "date": "2026-03-03",
         "type": "partnership",
         "title": "Visa and Bridge expand stablecoin-linked cards from 18 to 100+ countries",
         "description": "Visa + Bridge program lets fintechs and wallets issue cards that spend stablecoin balances at Visa's 175M merchant locations; expansion targeted across Europe, Asia Pacific, Africa, and the Middle East by end of 2026.",
@@ -49804,9 +49817,9 @@
     "custodyModel": "institutional-unregulated",
     "status": "pre-launch",
     "announcedDate": "2026-01",
-    "expectedLaunchDate": "2026",
-    "launchPhase": "beta",
-    "launchPhaseDetail": "First Coinbase Custom Stablecoin; 1:1 collateralized by USDC via Coinbase's stablecoin-as-a-service platform; backend testing confirmed Jan 2026; Coinbase Custom Stablecoins lets any business launch branded coins backed by USDC",
+    "expectedLaunchDate": "2026-05",
+    "launchPhase": "launching-soon",
+    "launchPhaseDetail": "Debut token on Coinbase's Custom Stablecoin platform; went live 2026-05-20 on Solana, 1:1 backed by USDC, with Coinbase Onramp fiat access; serves as the settlement asset for Flipcash's user-created currencies. Not yet listed on DefiLlama or CoinGecko under the Flipcash identity and no public Solana mint address disclosed, so it cannot yet enter Pharos runtime data.",
     "featuredContent": [
       {
         "type": "article",
@@ -49814,6 +49827,12 @@
         "title": "Coinbase experiments: Flipcash USDF rolls out as first Custom Stablecoin",
         "description": "First stablecoin issued through Coinbase's Custom Stablecoins platform, backed 1:1 by USDC.",
         "source": "Yahoo Finance"
+      },
+      {
+        "type": "article",
+        "url": "https://cryptobriefing.com/coinbase-usdf-launch-flipcash/",
+        "title": "Coinbase debuts Custom Stablecoins, USDF by Flipcash launches as first partner",
+        "source": "Crypto Briefing"
       }
     ],
     "milestones": [
@@ -49823,6 +49842,19 @@
         "title": "USDF launches as first Coinbase Custom Stablecoin",
         "description": "Flipcash's USDF is the first stablecoin issued through Coinbase's stablecoin-as-a-service platform, backed 1:1 by USDC.",
         "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
+      },
+      {
+        "date": "2026-05-20",
+        "type": "milestone",
+        "title": "USDF goes live on Solana via Coinbase's Custom Stablecoin platform",
+        "description": "Flipcash launches USDF, 1:1 USDC-backed, on Solana with Coinbase Onramp fiat access.",
+        "sourceUrl": "https://cryptobriefing.com/coinbase-usdf-launch-flipcash/"
+      }
+    ],
+    "dateHistory": [
+      {
+        "date": "2026",
+        "setOn": "2026-05-31"
       }
     ]
   },
@@ -53497,6 +53529,13 @@
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-05-27"
     },
+    "contracts": [
+      {
+        "chain": "solana",
+        "address": "HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3",
+        "decimals": 6
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -53510,7 +53549,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 a live Solana mint shows on-chain supply (~$1.5M), but DefiLlama does not yet track USDPT and the CoinGecko entry (usdpt-western-union) is preview-only with no price or supply — so Pharos promotion remains pending a verified contract address and a fetchable runtime price/market-cap path",
+    "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian. As of late May 2026 DefiLlama tracks USDPT with ~$1.5M circulating against a verified Solana mint (HVWf8JmLoHs99Lw8Psf3fyqAtA4crWxCPkrmSdNjhNH3); the CoinGecko entry (usdpt-western-union) remains preview-only with no price feed, so promotion to active is pending confirmation of a fetchable runtime price path",
     "featuredContent": [
       {
         "type": "tweet",

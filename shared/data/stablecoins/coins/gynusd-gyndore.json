@@ -23,7 +23,7 @@
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [
-      { "label": "Whitepaper", "url": "https://www.gyndore.com/Gyndore-Whitepaper.pdf" }
+      { "label": "Whitepaper", "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf" }
     ],
     "evidence": "gynUSD contracts are non-upgradable with no direct blacklist function; however, the sole collateral (cbBTC) is controlled by Coinbase, which can freeze cbBTC addresses and impair the protocol collateral pool.",
     "reviewer": "Pharos pre-launch addition 2026-05-19",
@@ -57,6 +57,6 @@
     { "label": "Medium", "url": "https://medium.com/@gyndore" },
     { "label": "YouTube", "url": "https://www.youtube.com/@Gyndore" },
     { "label": "GitHub", "url": "https://github.com/Ayeteasea" },
-    { "label": "Whitepaper", "url": "https://www.gyndore.com/Gyndore-Whitepaper.pdf" }
+    { "label": "Whitepaper", "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf" }
   ]
 }

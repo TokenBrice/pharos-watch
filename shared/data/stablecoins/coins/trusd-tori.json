@@ -34,10 +34,6 @@
     {
       "label": "Docs",
       "url": "https://docs.tori.finance/"
-    },
-    {
-      "label": "App",
-      "url": "https://app.tori.finance/"
     }
   ],
   "blacklistabilityReview": {
@@ -50,7 +46,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; testnet live on Ethereum Sepolia + Base Sepolia (ERC-20 + LayerZero OFT); mainnet contract addresses still TBA in docs; app not yet live; not tracked on DefiLlama or CoinGecko",
   "featuredContent": [
     {
       "type": "tweet",
@@ -97,6 +93,13 @@
       "title": "Nethermind security review completed",
       "description": "Full protocol scope security review; all findings addressed.",
       "sourceUrl": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
+    },
+    {
+      "date": "2026-05-31",
+      "type": "testnet",
+      "title": "trUSD testnet live on Ethereum Sepolia and Base Sepolia",
+      "description": "Dedicated testnet docs published with verified Sepolia / Base Sepolia contracts (LayerZero OFT); date reflects observation, not a stated deployment date.",
+      "sourceUrl": "https://docs.tori.finance/"
     }
   ],
   "yieldConfig": {
