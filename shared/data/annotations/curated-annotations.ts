@@ -1163,6 +1163,17 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       severity: "low",
       href: "https://www.stablr.com/insights/stablr-usdr-and-eurr-now-listed-on-bitfinex",
     },
+    {
+      // 2026-05-24 — Attacker compromised one key on StablR's 1-of-3 minting
+      // multisig, minted ~$13.5M unbacked USDR/EURR and dumped on DEXs. StablR
+      // froze mint/redeem 05-26, acknowledged supply not 1:1-backed under MiCA.
+      // EURR remained deeply depegged/frozen; bottom unsettled, lead with cause.
+      ts: Date.UTC(2026, 4, 24),
+      kind: "depeg",
+      label: "StablR multisig key compromise — unbacked mint, EURR depeg",
+      severity: "high",
+      href: "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
+    },
   ],
   "eurs-stasis": [
     {
@@ -1614,6 +1625,16 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       kind: "regulatory",
       label: "StablR USDR launch — MFSA EMI license, MiCA-compliant via Hadron",
       severity: "med",
+    },
+    {
+      // 2026-05-24 — Same StablR 1-of-3 minting multisig key compromise; attacker
+      // minted ~8.35M unbacked USDR. USDR fell to ~$0.64, repegged to ~$0.994 by
+      // 05-26 after StablR froze mint/redeem and asked exchanges to halt trading.
+      ts: Date.UTC(2026, 4, 24),
+      kind: "depeg",
+      label: "StablR multisig key compromise — unbacked mint, USDR depeg low ~$0.64",
+      severity: "high",
+      href: "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
     },
   ],
   "usdsui-sui": [
