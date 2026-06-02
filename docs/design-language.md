@@ -122,7 +122,7 @@ Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top
 Behavioral contract: [Homepage](./homepage.md)
 
 - Masthead strip: `pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3` — stacked on mobile, side-by-side from `md` upward
-- Live tape: homepage-only strip mounted directly below the global PSI `RegimeBar`, before the masthead. It spans the full viewport on mobile and starts at the active sidebar width on desktop so the ticker never covers the navigation column.
+- Core top rail: the live tape is mounted directly below the global PSI `RegimeBar` on core pages, with a compact horizontally-centered submenu underneath for Dashboard, Safety Scores, Depeg/DDR, Yield Intelligence, Alt-Pegs, FreezeWatch, Stability Index, PharosWatchBot, Learn, Timeline, and Status. The tape starts at the active sidebar width on desktop; the submenu spans the full viewport and centers its run when it fits. While a core page is active, the sidebar suppresses duplicate core shortcuts and keeps Dashboard as the only core entry there.
 - Page Discovery module: compact five-link route board under the digest preview. It keeps the analytics `pharos-card-shell` treatment, rotates the five internal route suggestions once per homepage visit from browser-local state, and uses small semantic accents plus Lucide route icons rather than the older static product-callout emblems.
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup

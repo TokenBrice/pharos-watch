@@ -18,7 +18,7 @@ import {
   Sun,
 } from "lucide-react";
 import { PharosIcon } from "@/components/pharos-icon";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, getSidebarNavForPath } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
 import { useSidebarNavSignals } from "@/hooks/use-sidebar-nav-signals";
@@ -340,6 +340,7 @@ export function Sidebar() {
   const navSignals = useSidebarNavSignals();
   const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
   const { prefetch } = useNavPrefetch();
+  const { primaryItems, groups } = getSidebarNavForPath(pathname);
   const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
 
   // Keyboard shortcut: [ and ] toggle sidebar pin state.
@@ -399,7 +400,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-2 space-y-4" aria-label="Main navigation">
         {/* Primary pages */}
         <div className="space-y-0.5">
-          {PRIMARY_NAV_ITEMS.map((item) => (
+          {primaryItems.map((item) => (
             <SidebarNavItem
               key={item.href}
               item={item}
@@ -410,7 +411,7 @@ export function Sidebar() {
             />
           ))}
         </div>
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <SidebarGroup
             key={group.key}
             groupKey={group.key}

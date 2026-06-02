@@ -8,7 +8,7 @@ Route contract for `/`, the main Pharos dashboard.
 
 - **Server shell:** `src/app/page.tsx`
 - **Desktop masthead:** `src/components/site-header.tsx`
-- **Homepage top tape:** `src/components/homepage-top-tape.tsx` + `src/components/homepage-tape.tsx`
+- **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
 - **Page discovery module:** `src/components/homepage-discovery-module.tsx` + `src/hooks/use-homepage-discovery.ts` + `src/lib/homepage-discovery.ts`
 
@@ -32,7 +32,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 The visible top fold is split across four independently composed surfaces:
 
-- `HomepageTopTape`, rendered directly under the global PSI `RegimeBar` on `/`; it uses full mobile width and the available desktop width to the right of the sidebar
+- `CoreTopRail`, rendered directly under the global PSI `RegimeBar` on `/` and the core pages; it pairs the recent-events tape with the centered horizontal core submenu. The tape uses full mobile width plus the available desktop width to the right of the sidebar, while the submenu spans the full viewport.
 - `SiteHeader` (the masthead; renders across breakpoints with a mobile layout below `md` and a desktop layout at `md`+)
 - `HomeAltHero`
 - `HomeAltMiniCardGrid`
@@ -92,7 +92,7 @@ Repeated hook usage is expected. These surfaces share TanStack Query cache state
 
 ### `HomepageTape`
 
-The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `HomepageTopTape` mounts it only on `/`, directly under the global PSI regime bar. On desktop it starts at the active sidebar width so it does not cover the main navigation; on mobile it spans the full viewport. The component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it on the core route set, directly under the global PSI regime bar and above each page's local content. On desktop the tape starts at the active sidebar width so it does not cover the main navigation; on mobile it spans the full viewport. The centered core submenu spans the full viewport and includes Dashboard, Safety Scores, Depeg/DDR, Yield Intelligence, Alt-Pegs, FreezeWatch, Stability Index, PharosWatchBot, Learn, Timeline, and Status. While a core page is active, the sidebar hides duplicate core links and leaves Dashboard as the only core sidebar entry. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, while the core submenu still renders for navigation, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
 Each item carries the class styling from the homepage tape component. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
 
@@ -120,7 +120,7 @@ Rules:
 
 Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 
-1. `HomepageTopTape` directly below the global PSI `RegimeBar`
+1. `CoreTopRail` directly below the global PSI `RegimeBar`
 2. `SiteHeader`
 3. `HomeAltHero`
 4. `HomeAltMiniCardGrid`

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { COMPANION_NAV_ITEMS, NAV_GROUPS, NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import {
+  COMPANION_NAV_ITEMS,
+  CORE_NAV_ITEMS,
+  getSidebarNavForPath,
+  isCoreNavPath,
+  NAV_GROUPS,
+  NAV_ITEMS,
+  PRIMARY_NAV_ITEMS,
+} from "@/lib/nav-config";
 
 describe("nav-config", () => {
   it("promotes dashboard and Pharos core features to the primary nav block in the intended order", () => {
@@ -82,6 +90,36 @@ describe("nav-config", () => {
       "/learn/case-studies/",
       "/learn/glossary/",
     ]);
+  });
+
+  it("defines the core top rail run and hides duplicate core links in the sidebar on core pages", () => {
+    expect(CORE_NAV_ITEMS.map((item) => ({ href: item.href, label: item.label }))).toEqual([
+      { href: "/", label: "Dashboard" },
+      { href: "/safety-scores/", label: "Safety Scores" },
+      { href: "/depeg/", label: "Depeg/DDR" },
+      { href: "/yield/", label: "Yield Intelligence" },
+      { href: "/alt-pegs/", label: "Alt-Pegs" },
+      { href: "/freezewatch/", label: "FreezeWatch" },
+      { href: "/stability-index/", label: "Stability Index" },
+      { href: "/pharoswatchbot/", label: "PharosWatchBot" },
+      { href: "/learn/", label: "Learn" },
+      { href: "/timeline/", label: "Timeline" },
+      { href: "/status/", label: "Status" },
+    ]);
+
+    expect(isCoreNavPath("/timeline/")).toBe(true);
+    expect(isCoreNavPath("/learn/mechanisms/")).toBe(false);
+
+    const corePageNav = getSidebarNavForPath("/yield/");
+    expect(corePageNav.primaryItems.map((item) => item.href)).toEqual(["/"]);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/timeline/")).toBe(false);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/learn/")).toBe(false);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/status/")).toBe(false);
+    expect(corePageNav.groups.flatMap((group) => group.items).some((item) => item.href === "/screener/")).toBe(true);
+
+    const nonCorePageNav = getSidebarNavForPath("/stablecoin/usdt-tether/");
+    expect(nonCorePageNav.primaryItems).toBe(PRIMARY_NAV_ITEMS);
+    expect(nonCorePageNav.groups).toBe(NAV_GROUPS);
   });
 
   it("exposes PharosVille as an external companion entry, not a primary or group route", () => {

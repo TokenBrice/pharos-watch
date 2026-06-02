@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
+import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, getSidebarNavForPath } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
@@ -79,8 +79,9 @@ export function Header() {
   const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start/" || (startHereReady && shouldShowStartHereNav));
   const priorityBottomNavItems = visibleBottomNavItems.filter((item) => item.href === "/start/");
   const remainingBottomNavItems = visibleBottomNavItems.filter((item) => item.href !== "/start/");
-  const [dashboardNavItem, ...remainingPrimaryNavItems] = PRIMARY_NAV_ITEMS;
-  const mobileLeadItemCount = PRIMARY_NAV_ITEMS.length + priorityBottomNavItems.length;
+  const { primaryItems, groups } = getSidebarNavForPath(pathname);
+  const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
+  const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
 
   return (
     <header className="lg:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
@@ -169,7 +170,7 @@ export function Header() {
               ))}
 
               {/* Grouped sections */}
-              {NAV_GROUPS.map((group, groupIndex) => {
+              {groups.map((group, groupIndex) => {
                 const groupIsActive = group.items.some((item) => isRouteActive(pathname, item.href));
                 const groupExpanded = isGroupExpanded(group.key);
                 return (
@@ -214,7 +215,7 @@ export function Header() {
                   className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
                     remainingBottomNavItems.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
                   }`}
-                  style={{ animationDelay: `${(PRIMARY_NAV_ITEMS.length + NAV_GROUPS.length) * 50}ms`, animationDuration: "200ms" }}
+                  style={{ animationDelay: `${(primaryItems.length + groups.length) * 50}ms`, animationDuration: "200ms" }}
                 >
                   {remainingBottomNavItems.map((item) => (
                     <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
@@ -225,7 +226,7 @@ export function Header() {
               {COMPANION_NAV_ITEMS.length > 0 ? (
                 <div
                   className="mt-4 pl-[14px] animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                  style={{ animationDelay: `${(PRIMARY_NAV_ITEMS.length + NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
+                  style={{ animationDelay: `${(primaryItems.length + groups.length + 1) * 50}ms`, animationDuration: "200ms" }}
                 >
                   <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">Companion</p>
                   {COMPANION_NAV_ITEMS.map((item) => (

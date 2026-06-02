@@ -10,7 +10,7 @@ import { GoogleAnalytics } from "@/components/google-analytics";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
-import { HomepageTopTape } from "@/components/homepage-top-tape";
+import { CoreTopRail } from "@/components/core-top-rail";
 import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -111,7 +111,7 @@ export default function RootLayout({
             <RouteChrome>
               <RegimeBar />
               <div className="h-[3px] shrink-0" />
-              <HomepageTopTape />
+              <CoreTopRail />
               <Header />
             </RouteChrome>
             <div className="flex min-h-screen">
