@@ -17,6 +17,7 @@ describe("HomepageDiscoveryModule", () => {
       {
         title: "Safety Scores",
         description: "Cross-market safety grades",
+        shortDescription: "Report cards per coin",
         href: "/safety-scores/",
         groupLabel: "CORE",
         accent: "var(--brand-accent)",
@@ -25,6 +26,7 @@ describe("HomepageDiscoveryModule", () => {
       {
         title: "Liquidity",
         description: "DEX depth and durability",
+        shortDescription: "DEX liquidity scores",
         href: "/liquidity/",
         groupLabel: "TRACK",
         accent: "var(--p-teal-500)",
@@ -33,6 +35,7 @@ describe("HomepageDiscoveryModule", () => {
       {
         title: "Depeg Tracker",
         description: "Live incident board",
+        shortDescription: "Peg incidents and DDR",
         href: "/depeg/",
         groupLabel: "MONITOR",
         accent: "var(--p-amber-500)",
@@ -41,6 +44,7 @@ describe("HomepageDiscoveryModule", () => {
       {
         title: "Portfolio",
         description: "Audit your holdings",
+        shortDescription: "Holdings risk audit",
         href: "/portfolio/",
         groupLabel: "ANALYZE",
         accent: "var(--p-purple-500)",
@@ -49,6 +53,7 @@ describe("HomepageDiscoveryModule", () => {
       {
         title: "Methodology",
         description: "Formula reference",
+        shortDescription: "Formula reference",
         href: "/methodology/",
         groupLabel: "REFERENCE",
         accent: "var(--p-blue-500)",
@@ -58,11 +63,13 @@ describe("HomepageDiscoveryModule", () => {
 
     render(<HomepageDiscoveryModule suggestions={suggestions} />);
 
-    const nav = screen.getByRole("navigation", { name: /next surfaces to inspect/i });
+    const nav = screen.getByRole("navigation", { name: /page discovery/i });
     expect(nav).toBeTruthy();
 
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(5);
     expect(screen.getByRole("link", { name: /safety scores/i }).getAttribute("href")).toBe("/safety-scores");
+    expect(screen.getByText("DEX liquidity scores")).toBeTruthy();
+    expect(screen.queryByText("DEX depth and durability")).toBeNull();
   });
 });

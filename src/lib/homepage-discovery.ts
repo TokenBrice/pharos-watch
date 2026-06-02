@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
 import {
-  BOTTOM_NAV_ITEMS,
   NAV_GROUPS,
   PRIMARY_NAV_ITEMS,
   type NavItem,
@@ -11,6 +10,7 @@ import { readJsonStorageValue, writeJsonStorageValue } from "@/lib/browser-stora
 export interface HomepageDiscoverySuggestion {
   title: string;
   description: string;
+  shortDescription: string;
   href: string;
   groupLabel: string;
   accent: string;
@@ -25,6 +25,7 @@ const HOMEPAGE_DISCOVERY_VISIBLE_COUNT = 5;
 export const HOMEPAGE_DISCOVERY_STORAGE_KEY = "pharos.homepageDiscovery.v1";
 
 const DEFAULT_ROTATION_STATE: HomepageDiscoveryRotationState = { cursor: 0 };
+const DISCOVERY_NAV_GROUP_KEYS = new Set(["data", "tools", "monitor"]);
 
 const GROUP_ACCENTS: Record<string, string> = {
   CORE: "var(--brand-accent)",
@@ -36,10 +37,34 @@ const GROUP_ACCENTS: Record<string, string> = {
   GUIDE: "var(--p-pink-500)",
 };
 
+const SHORT_DESCRIPTIONS: Record<string, string> = {
+  "/safety-scores/": "Report cards per coin",
+  "/depeg/": "Peg incidents and DDR",
+  "/yield/": "Risk-graded yields",
+  "/alt-pegs/": "Non-dollar peg cohorts",
+  "/freezewatch/": "Issuer freeze control",
+  "/stability-index/": "Market regime signal",
+  "/pharoswatchbot/": "Telegram peg alerts",
+  "/liquidity/": "DEX liquidity scores",
+  "/flows/": "Mint and burn pressure",
+  "/chains/": "Stablecoin chain mix",
+  "/cemetery/": "Failure post-mortems",
+  "/screener/": "Filter every stablecoin",
+  "/dependency-map/": "Collateral risk graph",
+  "/portfolio/": "Holdings risk audit",
+  "/compare/": "Side-by-side peers",
+  "/timeline/": "Live event tape",
+  "/compliance/": "MiCA and GENIUS status",
+  "/upcoming/": "Launch watchlist",
+  "/digest/": "Daily market briefing",
+  "/status/": "Pipeline health",
+};
+
 function toDiscoverySuggestion(item: NavItem, groupLabel: string): HomepageDiscoverySuggestion {
   return {
     title: item.label,
     description: item.description ?? "Open this Pharos surface.",
+    shortDescription: SHORT_DESCRIPTIONS[item.href] ?? item.description ?? "Open this surface",
     href: item.href,
     groupLabel,
     accent: GROUP_ACCENTS[groupLabel] ?? "var(--brand-accent)",
@@ -97,14 +122,11 @@ export const HOMEPAGE_DISCOVERY_POOL: readonly HomepageDiscoverySuggestion[] = [
   ...PRIMARY_NAV_ITEMS
     .filter((item) => item.href !== "/" && !item.external)
     .map((item) => toDiscoverySuggestion(item, "CORE")),
-  ...NAV_GROUPS.flatMap((group) =>
+  ...NAV_GROUPS.filter((group) => DISCOVERY_NAV_GROUP_KEYS.has(group.key)).flatMap((group) =>
     group.items
       .filter((item) => !item.external)
       .map((item) => toDiscoverySuggestion(item, group.label)),
   ),
-  ...BOTTOM_NAV_ITEMS
-    .filter((item) => !item.external)
-    .map((item) => toDiscoverySuggestion(item, "GUIDE")),
 ];
 
 export const HOMEPAGE_DISCOVERY_ROTATION_POOL: readonly HomepageDiscoverySuggestion[] =
@@ -112,10 +134,10 @@ export const HOMEPAGE_DISCOVERY_ROTATION_POOL: readonly HomepageDiscoverySuggest
 
 export function getHomepageDiscoveryCycleLength(
   poolLength = HOMEPAGE_DISCOVERY_ROTATION_POOL.length,
-  visibleCount = HOMEPAGE_DISCOVERY_VISIBLE_COUNT,
+  _visibleCount = HOMEPAGE_DISCOVERY_VISIBLE_COUNT,
 ): number {
-  if (poolLength <= 0 || visibleCount <= 0) return 1;
-  return Math.max(1, Math.ceil(poolLength / visibleCount));
+  if (poolLength <= 0) return 1;
+  return Math.max(1, Math.floor(poolLength));
 }
 
 function positiveModulo(value: number, modulus: number): number {
@@ -125,17 +147,16 @@ function positiveModulo(value: number, modulus: number): number {
 
 export function selectHomepageDiscoverySuggestions(
   pool: readonly HomepageDiscoverySuggestion[] = HOMEPAGE_DISCOVERY_ROTATION_POOL,
-  visitIndex = 0,
+  spotlightIndex = 0,
   visibleCount = HOMEPAGE_DISCOVERY_VISIBLE_COUNT,
 ): HomepageDiscoverySuggestion[] {
   if (pool.length === 0 || visibleCount <= 0) return [];
-  if (pool.length <= visibleCount) return [...pool];
 
-  const cycleLength = getHomepageDiscoveryCycleLength(pool.length, visibleCount);
-  const start = positiveModulo(visitIndex, cycleLength) * visibleCount;
+  const start = positiveModulo(spotlightIndex, pool.length);
+  const count = Math.min(pool.length, visibleCount);
   const selected: HomepageDiscoverySuggestion[] = [];
 
-  for (let offset = 0; offset < visibleCount; offset += 1) {
+  for (let offset = 0; offset < count; offset += 1) {
     selected.push(pool[(start + offset) % pool.length]);
   }
 
@@ -167,18 +188,39 @@ function readHomepageDiscoveryRotationState(
   );
 }
 
+function chooseHomepageDiscoveryCursor(
+  cycleLength: number,
+  previousCursor: number,
+  random: () => number,
+): number {
+  const safeCycleLength = Math.max(1, Math.floor(cycleLength));
+  if (safeCycleLength <= 1) return 0;
+
+  const value = random();
+  const normalizedRandom = Number.isFinite(value)
+    ? Math.min(0.999999999, Math.max(0, value))
+    : 0;
+  const previous = positiveModulo(previousCursor, safeCycleLength);
+  const candidate = Math.floor(normalizedRandom * safeCycleLength);
+
+  return candidate === previous ? (candidate + 1) % safeCycleLength : candidate;
+}
+
 export function advanceHomepageDiscoveryRotation(
   storage: Storage | null | undefined,
   cycleLength = getHomepageDiscoveryCycleLength(),
+  random: () => number = Math.random,
 ): number {
-  if (!storage) return 0;
-
   const safeCycleLength = Math.max(1, Math.floor(cycleLength));
-  const current = readHomepageDiscoveryRotationState(storage);
-  const cursor = positiveModulo(current.cursor, safeCycleLength);
+  const current = storage
+    ? readHomepageDiscoveryRotationState(storage)
+    : DEFAULT_ROTATION_STATE;
+  const cursor = chooseHomepageDiscoveryCursor(safeCycleLength, current.cursor, random);
+
+  if (!storage) return cursor;
 
   writeJsonStorageValue(storage, HOMEPAGE_DISCOVERY_STORAGE_KEY, {
-    cursor: (cursor + 1) % safeCycleLength,
+    cursor,
   });
 
   return cursor;
