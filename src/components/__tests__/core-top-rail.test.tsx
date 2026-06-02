@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
 const pathnameMock = vi.fn<() => string>();
@@ -22,6 +22,12 @@ vi.mock("@/components/sidebar", () => ({
 
 import { CoreTopRail } from "@/components/core-top-rail";
 
+beforeAll(() => {
+  // jsdom does not implement scrollIntoView; the rail centers the active pill on
+  // mount/route change. Stub it so the effect runs without throwing.
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -41,7 +47,25 @@ describe("CoreTopRail", () => {
     expect(nav).toBeTruthy();
     expect(nav.className).not.toContain("lg:ml-[var(--pharos-core-rail-offset)]");
     expect(nav.querySelector(".justify-center")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Dashboard" }).getAttribute("aria-current")).toBe("page");
+    const active = screen.getByRole("link", { name: "Dashboard" });
+    expect(active.getAttribute("aria-current")).toBe("page");
+    // The active pill mounts the one-shot frost beam and carries the lit-tab class.
+    expect(active.className).toContain("pharos-rail-tab-active");
+    expect(active.querySelector(".pharos-nav-beam")).toBeTruthy();
+    // Per-item icons are decorative — kept out of the link's accessible name.
+    const icon = active.querySelector("svg");
+    expect(icon?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("only the active link mounts the beam", () => {
+    pathnameMock.mockReturnValue("/");
+    sidebarMock.mockReturnValue({ expanded: true });
+
+    render(<CoreTopRail />);
+
+    const inactive = screen.getByRole("link", { name: "Safety Scores" });
+    expect(inactive.className).not.toContain("pharos-rail-tab-active");
+    expect(inactive.querySelector(".pharos-nav-beam")).toBeNull();
   });
 
   it("marks the active core page and keeps the full primary run available", () => {
