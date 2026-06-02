@@ -20,7 +20,7 @@ import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins with live peg deviations, DEWS early warnings, active incidents, heatmaps, severity, and history.`;
 
 export const metadata = buildPageMetadata({
-  title: "Depeg Tracker and Depeg Duration Resolver: Live Peg Monitoring & Recovery Outlooks",
+  title: "Depeg Tracker: Live Peg Alerts, DDR & DEWS",
   description: depegDescription,
   canonical: "/depeg/",
   ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
@@ -48,9 +48,9 @@ export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.DepegClient })),
   loading: <DepegLoadingState />,
   shell: {
-    breadcrumbName: "Depeg Tracker and Depeg Duration Resolver",
+    breadcrumbName: "Depeg Tracker",
     path: "/depeg/",
-    title: "Depeg Tracker and Depeg Duration Resolver",
+    title: "Depeg Tracker",
     methodology: {
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

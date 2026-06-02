@@ -6,9 +6,9 @@ describe("nav-config", () => {
     expect(PRIMARY_NAV_ITEMS.map((item) => item.href)).toEqual([
       "/",
       "/safety-scores/",
-      "/alt-pegs/",
       "/depeg/",
       "/yield/",
+      "/alt-pegs/",
       "/freezewatch/",
       "/stability-index/",
       "/pharoswatchbot/",
@@ -17,7 +17,7 @@ describe("nav-config", () => {
     expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/depeg/")?.label).toBe("Depeg/DDR");
     expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot/", label: "PharosWatchBot" });
 
-    // Depeg/DDR stays in the main route run after Alt-Pegs. Digest and Status stay in MONITOR.
+    // Depeg/DDR stays in the main route run so active incidents are visible. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
     expect(dataGroup?.items.some((item) => item.href === "/depeg/")).toBe(false);

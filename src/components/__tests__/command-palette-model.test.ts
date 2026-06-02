@@ -182,4 +182,16 @@ describe("command palette model", () => {
       expect(results.some((result) => result.section === "Pages" && result.href === href)).toBe(true);
     }
   });
+
+  it("keeps depeg methodology acronyms searchable in the command palette", () => {
+    for (const query of ["ddr", "dews"]) {
+      const results = buildCommandPaletteResultDescriptors({
+        query,
+        history: [],
+        isDark: false,
+      });
+
+      expect(results.some((result) => result.section === "Pages" && result.href === "/depeg/")).toBe(true);
+    }
+  });
 });
