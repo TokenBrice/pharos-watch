@@ -29,7 +29,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: May 2026"]}
+      leadParagraphs={["Last updated: June 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="rounded-[1.35rem] border border-border/60 bg-card/70 px-5 py-4 shadow-[0_14px_32px_oklch(0_0_0_/0.1)]">
@@ -37,8 +37,8 @@ export default function PrivacyPage() {
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share
             links encode holdings in the URL, analytics are anonymized when enabled, and support or API-access requests
-            route through the feedback/contact channels listed below. The Stablecoin Picker uses functional browser
-            storage and content-addressed share snapshots, described below.
+            route through the feedback/contact channels listed below. The homepage discovery module and Stablecoin
+            Picker use functional browser storage, and Picker share snapshots are described below.
           </p>
         </div>
 
@@ -54,8 +54,20 @@ export default function PrivacyPage() {
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API access, Pharos stores the
             email address you verify plus any name, organization, project URL, use-case, intended-endpoint, cadence, and
             volume details you submit; request throttling stores salted hashes of IP address and user-agent data. The
-            Stablecoin Picker stores local browser state for callout dismissal and tab-scoped result recovery, and
-            share links can store a content-addressed snapshot of the generated selector output in Cloudflare KV.
+            homepage page discovery module stores a local rotation cursor for the suggested internal pages. The
+            Stablecoin Picker stores local browser state for callout dismissal and tab-scoped result recovery, and share
+            links can store a content-addressed snapshot of the generated selector output in Cloudflare KV.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-foreground">Functional Browser Storage</h2>
+          <p>
+            The homepage page discovery module uses{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">localStorage</code> to store a small rotation cursor
+            under <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.homepageDiscovery.v1</code>. It is only
+            used to show a different five-route suggestion set between homepage visits. It does not contain route
+            history, account identifiers, wallet addresses, IP addresses, or a browser fingerprint.
           </p>
         </section>
 
