@@ -5,20 +5,22 @@ describe("nav-config", () => {
   it("promotes dashboard and Pharos core features to the primary nav block in the intended order", () => {
     expect(PRIMARY_NAV_ITEMS.map((item) => item.href)).toEqual([
       "/",
-      "/stability-index/",
       "/safety-scores/",
-      "/yield/",
       "/alt-pegs/",
+      "/depeg/",
+      "/yield/",
       "/freezewatch/",
+      "/stability-index/",
       "/pharoswatchbot/",
     ]);
     expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs/")?.label).toBe("Alt-Pegs");
+    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/depeg/")?.label).toBe("Depeg/DDR");
     expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot/", label: "PharosWatchBot" });
 
-    // FreezeWatch and PharosWatchBot are main routes now, immediately after
-    // the Alt-Pegs market-structure page. Digest and Status stay in MONITOR.
+    // Depeg/DDR stays in the main route run after Alt-Pegs. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
+    expect(dataGroup?.items.some((item) => item.href === "/depeg/")).toBe(false);
     expect(dataGroup?.items.some((item) => item.href === "/freezewatch/")).toBe(false);
     expect(dataGroup?.items.some((item) => item.href === "/pharoswatchbot/")).toBe(false);
     expect(monitorGroup?.items.some((item) => item.href === "/pharoswatchbot/")).toBe(false);
@@ -36,7 +38,6 @@ describe("nav-config", () => {
     expect(trackGroup?.label).toBe("TRACK");
     expect(trackGroup?.items.map((item) => item.label)).toEqual([
       "Liquidity",
-      "Depeg",
       "Mint/Burn Flows",
       "Chains",
       "Cemetery",

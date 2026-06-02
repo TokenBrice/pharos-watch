@@ -66,11 +66,12 @@ const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: Layou
 
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   DASHBOARD_NAV_ITEM,
-  { href: "/stability-index/", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
   { href: "/safety-scores/", label: "Safety Scores", icon: ShieldCheck, description: "Cross-market safety grades and contagion scenarios" },
-  { href: "/yield/", label: "Yield Intelligence", icon: CircleDollarSign, description: "Yield ranked after adjusting for stablecoin risk" },
   { href: "/alt-pegs/", label: "Alt-Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
+  { href: "/depeg/", label: "Depeg/DDR", icon: Activity, description: "Live incident board for peg stress, duration resolution, and reviewer outcomes" },
+  { href: "/yield/", label: "Yield Intelligence", icon: CircleDollarSign, description: "Yield ranked after adjusting for stablecoin risk" },
   { href: "/freezewatch/", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
+  { href: "/stability-index/", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
   { href: "/pharoswatchbot/", label: "PharosWatchBot", icon: Send, description: "Push alerts for depegs, DEWS shifts, launches, and the daily digest" },
 ];
 
@@ -80,7 +81,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "TRACK",
     items: [
       { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and market support" },
-      { href: "/depeg/", label: "Depeg", icon: Activity, description: "Live incident board for peg stress and early warnings" },
       { href: "/flows/", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
       { href: "/cemetery/", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
