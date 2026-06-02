@@ -634,6 +634,59 @@
     box-shadow: 0 0 8px -1px color-mix(in oklab, var(--frost-blue) 42%, transparent);
   }
 
+  /* ── Core top rail: the horizontal echo of the watch column ───────
+     The inline tab equivalents of the sidebar's lit rows. The base tab
+     is a calm ghost; the active tab is a self-contained frost-lit pill
+     (wash + hairline frost inset ring + soft halo) reusing the exact
+     color-mix recipe from .pharos-nav-active, scaled for a small inline
+     chip rather than a full-width row. No left-edge accent stripe. */
+  .pharos-rail-tab {
+    color: var(--muted-foreground);
+  }
+
+  .pharos-rail-tab:hover {
+    color: var(--foreground);
+    background-color: color-mix(in oklab, var(--muted) 45%, transparent);
+  }
+
+  .pharos-rail-tab-active,
+  .pharos-rail-tab-active:hover {
+    color: var(--foreground);
+    background-image: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--frost-blue) 18%, transparent),
+      color-mix(in oklab, var(--frost-blue) 6%, transparent) 58%,
+      transparent
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 26%, transparent),
+      0 0 14px -4px color-mix(in oklab, var(--frost-blue) 24%, transparent);
+  }
+
+  .dark .pharos-rail-tab-active,
+  .dark .pharos-rail-tab-active:hover {
+    background-image: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--frost-blue) 26%, transparent),
+      color-mix(in oklab, var(--frost-blue) 9%, transparent) 58%,
+      transparent
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 36%, transparent),
+      0 0 16px -3px color-mix(in oklab, var(--frost-blue) 32%, transparent);
+  }
+
+  /* Faint frost-tinted ground that distinguishes "your navigation" from
+     the neutral-card "live ticker" tape stacked directly above it. Kept
+     very subtle — calm authority, not a loud fill. */
+  .pharos-rail-ground {
+    background-color: color-mix(in oklab, var(--frost-blue) 4%, var(--background));
+  }
+
+  .dark .pharos-rail-ground {
+    background-color: color-mix(in oklab, var(--frost-blue) 7%, var(--background));
+  }
+
   .pharos-chart-stage {
     @apply rounded-2xl border p-3 sm:p-4;
     background: var(--chart-stage-bg);
