@@ -49,7 +49,7 @@ export function CoreTopRail() {
                   {index > 0 && (
                     <ChevronRight
                       aria-hidden="true"
-                      className="h-3.5 w-3.5 shrink-0 text-muted-foreground/45"
+                      className="h-3 w-3 shrink-0 text-muted-foreground/35"
                     />
                   )}
                   <Link
@@ -57,7 +57,7 @@ export function CoreTopRail() {
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 items-center gap-1.5 overflow-hidden rounded-md px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] whitespace-nowrap sm:min-h-8",
+                      "group pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 items-center gap-1.5 overflow-hidden rounded-md px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] whitespace-nowrap sm:min-h-8",
                       isActive && "pharos-rail-tab-active",
                     )}
                   >
@@ -66,7 +66,9 @@ export function CoreTopRail() {
                       aria-hidden="true"
                       className={cn(
                         "h-3.5 w-3.5 shrink-0",
-                        isActive ? "text-frost-blue" : "text-muted-foreground/80",
+                        isActive
+                          ? "text-frost-blue"
+                          : "text-muted-foreground/80 group-hover:text-foreground",
                       )}
                     />
                     {item.label}

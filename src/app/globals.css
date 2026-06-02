@@ -646,33 +646,35 @@
 
   .pharos-rail-tab:hover {
     color: var(--foreground);
-    background-color: color-mix(in oklab, var(--muted) 45%, transparent);
+    background-color: color-mix(in oklab, var(--frost-blue) 8%, transparent);
   }
 
+  /* Unlike the wide sidebar rows (.pharos-nav-active), which read a 90deg
+     wash as light raking across a full-width row, these are compact chips:
+     a directional fade leaves the right half empty. Fill the chip evenly
+     with a soft top-lit vertical wash so the pill reads as one lit unit. */
   .pharos-rail-tab-active,
   .pharos-rail-tab-active:hover {
     color: var(--foreground);
     background-image: linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--frost-blue) 18%, transparent),
-      color-mix(in oklab, var(--frost-blue) 6%, transparent) 58%,
-      transparent
+      180deg,
+      color-mix(in oklab, var(--frost-blue) 15%, transparent),
+      color-mix(in oklab, var(--frost-blue) 9%, transparent)
     );
     box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 26%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 28%, transparent),
       0 0 14px -4px color-mix(in oklab, var(--frost-blue) 24%, transparent);
   }
 
   .dark .pharos-rail-tab-active,
   .dark .pharos-rail-tab-active:hover {
     background-image: linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--frost-blue) 26%, transparent),
-      color-mix(in oklab, var(--frost-blue) 9%, transparent) 58%,
-      transparent
+      180deg,
+      color-mix(in oklab, var(--frost-blue) 24%, transparent),
+      color-mix(in oklab, var(--frost-blue) 14%, transparent)
     );
     box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 36%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--frost-blue) 38%, transparent),
       0 0 16px -3px color-mix(in oklab, var(--frost-blue) 32%, transparent);
   }
 
