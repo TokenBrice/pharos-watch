@@ -170,20 +170,23 @@ function SidebarNavItem({
   const externalSuffix = item.external ? " (opens in new tab)" : "";
   const title = expanded ? undefined : signal ? `${item.label} — ${signal.title}${externalSuffix}` : `${item.label}${externalSuffix}`;
   const ariaLabel = signal ? `${item.label} — ${signal.title}${externalSuffix}` : `${item.label}${externalSuffix}`;
-  const className = `pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
+  const stateClass = accentBg
+    ? isActive
+      ? `${accentBg} pharos-nav-active`
+      : `${accentBg} text-foreground/80 hover:text-foreground`
+    : isActive
+      ? "pharos-nav-active"
+      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground";
+  const className = `pharos-focus-ring relative isolate flex items-center gap-3 rounded-md ${
     expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
-  } ${
-    accentBg
-      ? `${accentBg} ${isActive ? "border-l-frost-blue text-foreground shadow-sm" : "border-l-transparent text-foreground/80 hover:text-foreground"}`
-      : isActive
-        ? "border-l-frost-blue bg-muted/60 text-foreground shadow-sm"
-        : "border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground"
-  }`;
+  } ${stateClass}`;
 
   if (item.external) {
     // PharosVille-flavoured hint: warm parchment/brass tint that sets
     // companion experiences apart from the dashboard's analytical chrome.
-    const externalClassName = `pharos-focus-ring relative flex items-center gap-3 rounded-md border-l-[3px] border-l-[color:oklch(0.62_0.13_84)] bg-[linear-gradient(180deg,oklch(0.94_0.07_88_/_0.18),oklch(0.86_0.13_78_/_0.06))] text-[oklch(0.32_0.07_60)] transition-[background-color,border-color,color,box-shadow] duration-200 hover:bg-[linear-gradient(180deg,oklch(0.94_0.07_88_/_0.32),oklch(0.86_0.13_78_/_0.12))] hover:border-l-[color:oklch(0.78_0.16_84)] dark:text-[oklch(0.92_0.05_84)] dark:bg-[linear-gradient(180deg,oklch(0.32_0.06_60_/_0.55),oklch(0.22_0.04_50_/_0.4))] dark:hover:bg-[linear-gradient(180deg,oklch(0.36_0.07_60_/_0.7),oklch(0.24_0.05_50_/_0.55))] ${
+    // A brass inset ring (not a left stripe) keeps it in step with the
+    // watch-column language while preserving its harbor warmth.
+    const externalClassName = `pharos-focus-ring relative flex items-center gap-3 rounded-md bg-[linear-gradient(180deg,oklch(0.95_0.06_88_/_0.16),oklch(0.86_0.13_78_/_0.05))] text-[oklch(0.34_0.07_60)] shadow-[inset_0_0_0_1px_oklch(0.6_0.13_84_/_0.24)] transition-[background-color,box-shadow,color] duration-200 hover:bg-[linear-gradient(180deg,oklch(0.95_0.06_88_/_0.3),oklch(0.86_0.13_78_/_0.1))] hover:shadow-[inset_0_0_0_1px_oklch(0.72_0.15_84_/_0.42)] dark:text-[oklch(0.92_0.05_84)] dark:bg-[linear-gradient(180deg,oklch(0.34_0.06_60_/_0.5),oklch(0.22_0.04_50_/_0.35))] dark:shadow-[inset_0_0_0_1px_oklch(0.62_0.13_84_/_0.34)] dark:hover:bg-[linear-gradient(180deg,oklch(0.38_0.07_60_/_0.66),oklch(0.24_0.05_50_/_0.5))] ${
       expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
     }`;
 
@@ -222,7 +225,8 @@ function SidebarNavItem({
       onMouseEnter={handlePrefetch}
       onFocus={handlePrefetch}
     >
-      <PharosIcon icon={Icon} className="shrink-0" />
+      {isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
+      <PharosIcon icon={Icon} className={cn("shrink-0", isActive && "text-frost-blue")} />
       {expanded && <span className="min-w-0 text-sm truncate">{item.label}</span>}
       {expanded && signal ? <SidebarNavSignalIndicator signal={signal} /> : null}
     </Link>
@@ -237,7 +241,7 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
       onClick={toggleTheme}
       title={expanded ? undefined : label}
       aria-label={label}
-      className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
+      className={`pharos-focus-ring flex items-center gap-3 rounded-md text-muted-foreground transition-[background-color,color] duration-200 hover:bg-muted/50 hover:text-foreground ${
         expanded ? "w-full mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
       }`}
     >
@@ -274,7 +278,7 @@ function SidebarGroup({
       {sidebarExpanded && (
         <button type="button"
           onClick={onToggle}
-          className="flex min-h-7 w-full items-center justify-between px-5 py-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground transition-colors hover:text-foreground"
+          className="flex min-h-7 w-full items-center justify-between px-5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/75 transition-colors hover:text-foreground"
           aria-expanded={isGroupExpanded}
           aria-controls={`nav-group-${groupKey}`}
         >
@@ -362,27 +366,30 @@ export function Sidebar() {
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* Logo */}
-      <div className={`flex items-center h-14 shrink-0 border-b border-border/65 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
+      {/* Brand lockup — the tower. A thin shaft of frost light rides the
+          header divider and fades to the right like a real beam. */}
+      <div className={`relative flex items-center h-14 shrink-0 border-b border-border/55 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
         <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
           <PharosLogo size={28} />
-          {expanded && <span className="text-sm font-mono uppercase tracking-[0.18em] font-semibold">PHAROS</span>}
+          {expanded && <span className="text-sm font-mono uppercase tracking-[0.2em] font-semibold text-foreground">PHAROS</span>}
         </Link>
+        <span aria-hidden className="pharos-brand-beam pointer-events-none absolute inset-x-0 -bottom-px h-px" />
       </div>
 
-      {/* Search */}
+      {/* Search — a command field, not a nav row: bordered + inset, with a
+          frost edge on hover so it reads as the entry point to everything. */}
       <button type="button"
         onClick={openCommandPalette}
         title={expanded ? undefined : "Search (Ctrl+K)"}
         aria-label="Search (Ctrl+K)"
-        className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
-          expanded ? "mx-2 mt-1 px-3 py-2.5" : "mx-auto mt-1 px-0 py-2 justify-center w-10"
+        className={`pharos-focus-ring group/search flex items-center rounded-md border border-border/70 bg-background/40 text-muted-foreground transition-[color,background-color,border-color] duration-200 hover:border-frost-blue/45 hover:bg-background/70 hover:text-foreground ${
+          expanded ? "mx-2 mt-2 gap-2.5 px-3 py-2" : "mx-auto mt-2 w-10 justify-center py-2"
         }`}
       >
         <PharosIcon icon={Search} className="shrink-0" />
         {expanded && <span className="text-sm">Search</span>}
         {expanded && (
-          <kbd className="ml-auto rounded-md border border-border/75 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+          <kbd className="ml-auto rounded border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors group-hover/search:text-foreground">
             Ctrl+K
           </kbd>
         )}
@@ -449,7 +456,7 @@ export function Sidebar() {
           onClick={togglePin}
           title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
           aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-          className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
+          className={`pharos-focus-ring flex items-center gap-3 rounded-md text-muted-foreground transition-[background-color,color] duration-200 hover:bg-muted/50 hover:text-foreground ${
             expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
           }`}
         >

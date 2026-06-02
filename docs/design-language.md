@@ -349,7 +349,7 @@ The decorative per-card colored left stripe (`border-l-[3px] border-l-*-500`) ha
 - stablecoin-detail hero metric accents (`accentClass` in `hero-card-metrics`)
 - internal admin status sections (`StatusSection` still accepts an optional `accentClassName`)
 
-Navigation active state uses `border-l-frost-blue`.
+The **desktop sidebar** navigation active state no longer uses a left stripe (June 2026 "watch column" pass). It is now a frost lit-tab — a frost wash falling from the icon side, a hairline frost inset ring, a soft halo, and a frost-lit icon — defined by `.pharos-nav-active` in `globals.css`. See `### Navigation Active vs Inactive` below. The **mobile drawer** (`header.tsx`) still uses `border-l-2 border-l-frost-blue` on the active route group as its own treatment.
 
 ### Interactive Card Pattern
 
@@ -503,10 +503,14 @@ Common chart skeletons:
 
 ### Navigation Active vs Inactive
 
-- Active sidebar item:
-  - `border-l-[3px] border-l-frost-blue bg-muted/60 text-foreground shadow-sm`
-- Inactive sidebar item:
-  - `border-l-[3px] border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground`
+The desktop sidebar (`src/components/sidebar.tsx`) frames navigation as a lighthouse "watch column": the active route reads as **lit by the beam** rather than flagged by a left stripe.
+
+- Active sidebar item: `pharos-nav-active` — a frost wash falling from the icon side, a hairline frost inset ring + soft halo (no border stripe), `text-foreground`, and the Lucide icon lit `text-frost-blue`. The row also mounts a one-shot `pharos-nav-beam` light sweep on activation (gated on `prefers-reduced-motion: no-preference`).
+- Inactive sidebar item: `text-muted-foreground hover:bg-muted/50 hover:text-foreground` (no left border at any state).
+- When a live signal supplies an `accentClass` (the `/stability-index/` PSI band tint), the band background composes *beneath* `pharos-nav-active`, so an active item shows frost light on the icon side with the regime band persisting to the right.
+- The brand lockup casts a thin frost shaft (`pharos-brand-beam`) along the header divider; the Search row is a bordered inset command field, not a nav link, and brightens its border toward frost on hover.
+
+The mobile drawer (`header.tsx`) keeps its own active treatment (`border-border/70 bg-muted/60` links, `border-l-2 border-l-frost-blue` group accents) and was intentionally left unchanged in this pass.
 
 ### Focus Treatment
 
