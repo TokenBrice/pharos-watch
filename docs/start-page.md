@@ -8,7 +8,7 @@ Route contract for `/start/`, the onboarding and route-selection surface.
 
 - **Server route:** `src/app/start/page.tsx`
 - **Main content component:** `src/components/start-here-page.tsx`
-- **Homepage callout retirement marker:** `src/components/start-here-visit-marker.tsx`
+- **Start Here shortcut retirement marker:** `src/components/start-here-visit-marker.tsx`
 - **Curated content registry:** `src/lib/start-here-content.ts`
 
 `src/app/start/page.tsx` renders:
@@ -24,7 +24,7 @@ The route is static. It does not call worker APIs directly.
 
 ## Homepage Integration
 
-`StartHereVisitMarker` is the bridge between `/start/` and the shared onboarding-retirement state used by both the homepage callout and the shell navigation shortcut.
+`StartHereVisitMarker` is the bridge between `/start/` and the shared onboarding-retirement state used by the shell navigation shortcut.
 
 On mount it:
 
@@ -32,8 +32,7 @@ On mount it:
 - applies `markStartHereOpened(...)`
 - writes the updated state back
 
-This is what retires the homepage Start Here CTA after the route has been visited once. The homepage-side behavior is documented in [Homepage](./homepage.md).
-This same persisted flag also retires the shell-level `Start Here` shortcut in the desktop sidebar and mobile nav for repeat sessions.
+This persisted flag retires the shell-level `Start Here` shortcut in the desktop sidebar and mobile nav for repeat sessions.
 
 ---
 

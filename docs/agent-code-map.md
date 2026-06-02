@@ -172,6 +172,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-events.ts` - TAPE_FILTER_SEVERITY_VALUES, UseEventsFilter, UseEventsOptions, UseLatestEventsOptions, useEvents, useLatestEvents
 - `src/hooks/use-flash-on-change.ts` - useFlashOnChange
 - `src/hooks/use-home-alt-filters.ts` - HomeAltPegFilter, UseHomeAltFiltersReturn, useHomeAltFilters
+- `src/hooks/use-homepage-discovery.ts` - useHomepageDiscoverySuggestions
 - `src/hooks/use-hydrated.ts` - useHydrated
 - `src/hooks/use-is-mobile.ts` - useIsMobile
 - `src/hooks/use-logos.ts` - useLogos
@@ -193,8 +194,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-sidebar-nav-signal-data.ts` - useSidebarBlacklistSignal, useSidebarDailyDigestSignal, useSidebarHealthSignal, useSidebarPegSummarySignal, useSidebarStabilityIndexSignal
 - `src/hooks/use-sidebar-nav-signals.ts` - useSidebarNavSignals
 - `src/hooks/use-sort.ts` - SortDirection, SortState, getNextSortState, shouldToggleSortOnKeyDown, useSort
-- `src/hooks/use-sorted-paginated-table.ts` - useSortedPaginatedTable
-- ... 21 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 22 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -248,7 +248,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
 - `src/lib/coverage-matrix-model.ts` - CoverageMatrixModel, CoverageMatrixModelInput, buildCoverageMatrixModel
-- ... 122 more files omitted; use `rg --files src/lib` for the full list.
+- ... 123 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-selector.tsx` - CoinSelector
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
 - `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
-- ... 347 more files omitted; use `rg --files src/components` for the full list.
+- ... 342 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 

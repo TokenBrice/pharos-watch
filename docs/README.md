@@ -76,7 +76,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 
 ## Route And Page Contracts
 
-- [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, Start Here callout behavior, and primary variant-browse ownership
+- [homepage.md](./homepage.md) - `/` dashboard composition, filter/query contract, page discovery rotation, and primary variant-browse ownership
 - [alt-pegs-page.md](./alt-pegs-page.md) - `/alt-pegs/` non-USD market-structure route, crawlability pattern, and homepage integration contract
 - [start-page.md](./start-page.md) - `/start/` onboarding route, curated route map, and homepage integration contract
 - [upcoming-page.md](./upcoming-page.md) - `/upcoming/` pre-launch tracker, filter model, and crawlability contract

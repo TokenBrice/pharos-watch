@@ -29,7 +29,7 @@ The page renders through `FeaturePageShell` with:
 - `path = "/privacy/"`
 - `variant = "longform"`
 - `containerClassName = "max-w-2xl"`
-- lead copy: `Last updated: May 2026`
+- lead copy: `Last updated: June 2026`
 
 ---
 
@@ -48,9 +48,18 @@ The current policy copy covers:
 9. the full enumeration of Telegram-owned D1 tables and their retention windows (see below)
 10. the Mini App auth note: `initData` is never persisted — it is validated request-locally (HMAC signature + freshness window); mutations use a 5-minute auth window plus a per-user mutation cooldown, and session reads use a 24-hour read-only window
 11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
-12. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
+12. homepage page discovery stores a browser-local rotation cursor so the five suggested routes can change between visits
+13. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
+
+### Functional browser storage
+
+The homepage page discovery module stores only a small rotation cursor:
+
+- `pharos.homepageDiscovery.v1` (`localStorage`) — non-negative integer cursor for rotating the five suggested internal pages shown under the homepage digest preview. It survives reloads and clears when the user clears site data.
+
+This cursor does not contain an IP address, account identifier, wallet address, route history, or browser fingerprint.
 
 ### Stablecoin Picker storage
 

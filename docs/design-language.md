@@ -123,7 +123,7 @@ Behavioral contract: [Homepage](./homepage.md)
 
 - Masthead strip: `pharos-card-shell flex flex-col gap-2 px-3 py-2 sm:gap-2.5 sm:px-4 sm:py-2.5 md:flex-row md:items-center md:justify-between md:gap-6 md:px-5 md:py-3` — stacked on mobile, side-by-side from `md` upward
 - Live tape: homepage-only strip mounted directly below the global PSI `RegimeBar`, before the masthead. It spans the full viewport on mobile and starts at the active sidebar width on desktop so the ticker never covers the navigation column.
-- Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
+- Page Discovery module: compact five-link route board under the digest preview. It keeps the analytics `pharos-card-shell` treatment, rotates the five internal route suggestions once per homepage visit from browser-local state, and uses small semantic accents plus Lucide route icons rather than the older static product-callout emblems.
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup
 - Digest preview: broadsheet split with a mono masthead, hairline `Executive Summary` label, newspaper-style `Newsreader` title on the left, and the lead paragraph plus CTA rail on the right at desktop

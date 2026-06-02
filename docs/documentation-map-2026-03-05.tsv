@@ -3,8 +3,8 @@ docs/documentation-map-2026-03-05.tsv	tsv	Legacy-named non-canonical documentati
 README.md	md	Repo overview and top-level entry point	current	Canonical repo-adjacent doc outside `/docs/`; covers setup, architecture summary, and deploy overview.
 docs/README.md	md	Documentation index	current	Canonical index into the `/docs/` corpus.
 docs/	dir	Canonical product and system docs	current	Active Pharos documentation corpus.
-docs/homepage.md	md	Homepage route contract	current	Documents `/` dashboard composition, URL filter contract, and Start Here onboarding callout behavior.
-docs/start-page.md	md	Start Here route contract	current	Documents `/start/` onboarding route structure, curated route atlas, and homepage callout retirement handshake.
+docs/homepage.md	md	Homepage route contract	current	Documents `/` dashboard composition, URL filter contract, and page discovery rotation behavior.
+docs/start-page.md	md	Start Here route contract	current	Documents `/start/` onboarding route structure, curated route atlas, and Start Here shortcut retirement handshake.
 docs/telegram-alerts.md	md	Telegram alert subscriptions and dispatch	current	Dedicated doc for webhook commands, D1 tables, snapshot diffing, and bot operations.
 worker/migrations/MANIFEST.md	md	D1 migration manifest	current	Repo-adjacent operational reference for checked-in migration history and known duplicate-prefix anomalies.
 shared/data/stablecoins/PROVENANCE_NOTES.md	md	Stablecoin registry provenance notes	current	Archival provenance reference; preserved comments still use historical pre-JSON file names and line anchors.

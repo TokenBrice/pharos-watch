@@ -10,6 +10,7 @@ Route contract for `/`, the main Pharos dashboard.
 - **Desktop masthead:** `src/components/site-header.tsx`
 - **Homepage top tape:** `src/components/homepage-top-tape.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
+- **Page discovery module:** `src/components/homepage-discovery-module.tsx` + `src/hooks/use-homepage-discovery.ts` + `src/lib/homepage-discovery.ts`
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
@@ -64,12 +65,20 @@ Derived helpers:
 - `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegRates`, `pegScores`, and `filteredRowCount`; the optional builder derives `reportCardMap` and `dewsRiskLevel`)
 - `selectVisibleMcap(...)` and mini-card aggregate helpers in `src/lib/home-alt-aggregates.ts`
 - `useHomeAltFilters()` for URL-backed peg cohort filtering
+- `useHomepageDiscoverySuggestions()` for the under-fold page discovery module
 
 Starred stablecoin state is local to the browser:
 
 - localStorage key: `pharos-watchlist-v1` (the shared watchlist store; the legacy `pharos-pinned-stablecoins` key is migrated once and then only echo-written for back-compat)
 - value: normalized stablecoin ID array
 - invalid, inactive, duplicate, or over-limit IDs are ignored on read
+
+Homepage page discovery rotation is also browser-local:
+
+- localStorage key: `pharos.homepageDiscovery.v1`
+- value: `{ cursor: number }`, normalized to a non-negative integer
+- `HomeAltClient` advances the cursor on homepage-client mount so the five suggestions rotate once per homepage visit, even though the visual module is lazy-mounted below the fold
+- the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS`, `NAV_GROUPS`, `BOTTOM_NAV_ITEMS`), excludes the dashboard itself, de-duplicates by `href`, and interleaves groups before selecting each five-link window
 
 ### `SiteHeader`
 
@@ -119,7 +128,7 @@ Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 Under the fold (`HomeAltClient`):
 
 1. `DailyDigest` in `preview` mode
-2. `HomeAltCalloutStrip`
+2. `HomepageDiscoveryModule`
 3. `PegBrowseStrip`
 4. `StablecoinTable`
 
