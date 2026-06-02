@@ -44,6 +44,8 @@ describe("buildStablecoinDatasetJsonLd", () => {
         image: "https://pharos.watch/logos/usdt-tether.png",
       },
       image: "https://pharos.watch/logos/usdt-tether.png",
+      creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
+      publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
     });
     expect(jsonLd).not.toHaveProperty("isPartOf");
     expect(jsonLd.distribution).toEqual(

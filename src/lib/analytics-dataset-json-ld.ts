@@ -4,6 +4,8 @@ import depegHistoryExport from "../../public/datasets/depeg-history/latest.json"
 import pegMechanismDistributionExport from "../../public/datasets/peg-mechanism-distribution/latest.json";
 import scoresLatestExport from "../../public/datasets/scores-latest/latest.json";
 import topStablecoinsExport from "../../public/datasets/top-stablecoins/latest.json";
+import { buildPharosOrganizationNode } from "@/lib/json-ld";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
 type PublicDatasetExport = {
   _meta: {
@@ -98,6 +100,8 @@ const COVERAGE_VARIABLES = [
   },
 ] as const;
 
+const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE";
+
 function datasetDate(dataset: PublicDatasetExport): string | undefined {
   return dataset._meta.asOfISO?.slice(0, 10);
 }
@@ -148,7 +152,7 @@ export function buildPublicDatasetMirrorJsonLd(
     throw new Error(`Unknown public dataset topic for JSON-LD: ${topic}`);
   }
 
-  const organization = { "@id": `${siteUrl}#organization` };
+  const organization = buildPharosOrganizationNode(siteUrl);
   const rowFields = Object.keys(descriptor.export.rows[0] ?? {});
   const date = datasetDate(descriptor.export);
   const additionalProperty = [
@@ -167,8 +171,10 @@ export function buildPublicDatasetMirrorJsonLd(
     creator: organization,
     publisher: organization,
     isAccessibleForFree: true,
-    license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
+    license: PHAROS_DATA_LICENSE_URL,
     includedInDataCatalog: { "@id": catalogId },
+    identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
+    sameAs: `${siteUrl}/datasets/${descriptor.slug}/latest.json`,
     ...(date ? { dateModified: date } : {}),
     keywords: descriptor.keywords,
     variableMeasured: rowFields.map((name) => ({
@@ -182,7 +188,7 @@ export function buildPublicDatasetMirrorJsonLd(
 
 export function buildCoverageDatasetJsonLd(options: { siteUrl?: string } = {}) {
   const siteUrl = options.siteUrl ?? SITE_URL;
-  const organization = { "@id": `${siteUrl}#organization` };
+  const organization = buildPharosOrganizationNode(siteUrl);
 
   return {
     "@context": "https://schema.org",
@@ -196,7 +202,10 @@ export function buildCoverageDatasetJsonLd(options: { siteUrl?: string } = {}) {
     creator: organization,
     publisher: organization,
     isAccessibleForFree: true,
+    license: PHAROS_DATA_LICENSE_URL,
     includedInDataCatalog: { "@id": `${siteUrl}/about/api/#data-catalog` },
+    identifier: [buildPharosUrnJsonLdIdentifier("dataset", "coverage")],
+    sameAs: `${siteUrl}/coverage/`,
     mainEntityOfPage: { "@id": `${siteUrl}/coverage/` },
     keywords: [
       "stablecoin coverage",

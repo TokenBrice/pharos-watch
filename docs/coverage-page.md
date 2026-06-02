@@ -22,7 +22,7 @@ The page is intentionally product-facing, not admin-facing. It should describe u
 - **Client implementation:** `src/app/coverage/client.tsx`
 - **Error boundary:** `src/app/coverage/error.tsx`
 - **Core helpers:** `src/lib/coverage-matrix-model.ts`, `src/lib/coverage.ts`, `src/lib/coverage/*`
-- **Structured data:** `src/app/coverage/page.tsx` emits `COVERAGE_FAQ_JSON_LD` and a static methodological `Dataset` descriptor through JSON-LD `<script>` tags in the page shell
+- **Structured data:** `src/app/coverage/page.tsx` emits `COVERAGE_FAQ_JSON_LD` and a static methodological `Dataset` descriptor through JSON-LD `<script>` tags in the page shell. The Dataset descriptor is metadata-only: it inlines the Pharos `Organization` for `creator` / `publisher`, includes the Pharos data license URL, a `urn:pharos:dataset:coverage` identifier, and `sameAs` pointing at `/coverage/`, while deliberately avoiding live metric values or private `/_site-data/*` URLs.
 
 The page uses `createClientFeaturePage(...)`, which wraps the route in the shared feature-page shell for public client-heavy surfaces. It remains indexable like the rest of the public feature routes.
 

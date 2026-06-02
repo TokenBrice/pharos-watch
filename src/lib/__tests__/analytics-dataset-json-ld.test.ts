@@ -17,10 +17,13 @@ describe("buildCoverageDatasetJsonLd", () => {
       name: "Pharos Stablecoin Feature Coverage Dataset",
       url: "https://pharos.watch/coverage/",
       inLanguage: "en",
-      creator: { "@id": "https://pharos.watch#organization" },
-      publisher: { "@id": "https://pharos.watch#organization" },
+      creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
+      publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
       isAccessibleForFree: true,
+      license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
       includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+      identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:coverage" }],
+      sameAs: "https://pharos.watch/coverage/",
       mainEntityOfPage: { "@id": "https://pharos.watch/coverage/" },
     });
     expect(jsonLd).not.toHaveProperty("isPartOf");
@@ -51,9 +54,12 @@ describe("buildPublicDatasetMirrorJsonLd", () => {
       "@id": "https://pharos.watch/datasets/scores-latest/#dataset",
       name: "Pharos Latest Stablecoin Scores Dataset",
       url: "https://pharos.watch/datasets/scores-latest/latest.json",
-      creator: { "@id": "https://pharos.watch#organization" },
-      publisher: { "@id": "https://pharos.watch#organization" },
+      creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
+      publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
+      license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
       includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
+      identifier: [{ "@type": "PropertyValue", propertyID: "Pharos URN", value: "urn:pharos:dataset:scores-latest" }],
+      sameAs: "https://pharos.watch/datasets/scores-latest/latest.json",
     });
     expect(jsonLd.distribution).toEqual(
       expect.arrayContaining([

@@ -75,3 +75,22 @@ export const PHAROS_ORG_NODE = {
   },
   founder: { "@id": `${SITE_URL}#person-tokenbrice` },
 } as const;
+
+export function buildPharosOrganizationNode(siteUrl: string = SITE_URL) {
+  if (siteUrl === SITE_URL) return PHAROS_ORG_NODE;
+
+  return {
+    ...PHAROS_ORG_NODE,
+    "@id": `${siteUrl}#organization`,
+    url: siteUrl,
+    logo: `${siteUrl}/pharos-icon.png`,
+    ethicsPolicy: `${siteUrl}/about/principles/`,
+    correctionsPolicy: `${siteUrl}/about/principles/#principles-corrections-title`,
+    funding: {
+      ...PHAROS_ORG_NODE.funding,
+      "@id": `${siteUrl}/funding/#community-support`,
+      url: `${siteUrl}/funding/`,
+    },
+    founder: { "@id": `${siteUrl}#person-tokenbrice` },
+  };
+}

@@ -12,10 +12,11 @@ describe("buildCemeteryDatasetJsonLd", () => {
       name: "Pharos Stablecoin Cemetery Dataset",
       description: expect.stringContaining("defunct"),
       url: "https://pharos.watch/cemetery/",
-      creator: { "@id": "https://pharos.watch#organization" },
-      publisher: { "@id": "https://pharos.watch#organization" },
-      license: "MIT",
+      creator: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
+      publisher: { "@id": "https://pharos.watch#organization", "@type": "Organization", name: "Pharos" },
+      license: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE",
       isAccessibleForFree: true,
+      sameAs: "https://pharos.watch/datasets/stablecoin-cemetery.json",
       distribution: [
         {
           "@type": "DataDownload",
@@ -51,6 +52,7 @@ describe("buildCemeteryDatasetJsonLd", () => {
     );
     expect(jsonLd.identifier).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ propertyID: "Pharos URN", value: "urn:pharos:dataset:stablecoin-cemetery" }),
         expect.objectContaining({ propertyID: "sourceChecksum" }),
         expect.objectContaining({ propertyID: "sourceChecksum:shared/data/dead-stablecoins.json" }),
         expect.objectContaining({

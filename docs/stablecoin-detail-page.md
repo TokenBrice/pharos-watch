@@ -23,7 +23,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - renders `ExploreNextSection` after the interactive client
 - emits N-level `BreadcrumbJsonLd` plus a Dataset JSON-LD payload for active assets
 
-Active stablecoin Dataset JSON-LD is intentionally static and crawlable: `variableMeasured` advertises price, market cap, circulating supply, Peg Score, DEWS, Safety Grade, and Redemption Backstop coverage. Frozen assets use archive-specific historical variables, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD instead of a live analytics `Dataset`.
+Active stablecoin Dataset JSON-LD is intentionally static and crawlable: `variableMeasured` advertises price, market cap, circulating supply, Peg Score, DEWS, Safety Grade, and Redemption Backstop coverage. Dataset nodes inline the Pharos `Organization` for `creator` / `publisher`, expose the CC BY 4.0 license URL, carry the stable Pharos coin URN in `identifier`, and keep `sameAs` populated from provider/profile URLs or the canonical detail page. Frozen assets use archive-specific historical variables, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD instead of a live analytics `Dataset`.
 
 If the ID is not tracked, the server shell returns a not-found-style fallback instead of mounting the full client.
 

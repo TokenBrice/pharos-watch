@@ -4,6 +4,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
+import { buildPharosOrganizationNode } from "@/lib/json-ld";
 
 export const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
 const STABLECOIN_IDENTIFIER_FIELD_KEYS = [
@@ -92,6 +93,8 @@ export function buildStablecoinDatasetJsonLd(
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const datasetSameAs = buildStablecoinSameAs(coin);
+  const datasetIdentityUrls = datasetSameAs.length > 0 ? datasetSameAs : [detailUrl];
+  const organization = buildPharosOrganizationNode(siteUrl);
   const contractIdentifiers = (coin.contracts ?? []).slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => ({
     "@type": "PropertyValue",
     propertyID: `contract:${contract.chain}`,
@@ -148,10 +151,10 @@ export function buildStablecoinDatasetJsonLd(
     mainEntityOfPage: detailUrl,
     about: stablecoinThing,
     ...(image ? { image } : {}),
-    ...(datasetSameAs.length > 0 ? { sameAs: datasetSameAs } : {}),
-    creator: { "@id": `${siteUrl}#organization` },
+    sameAs: datasetIdentityUrls,
+    creator: organization,
     ...(coin.proofOfReserves?.url ? { citation: [coin.proofOfReserves.url] } : {}),
-    publisher: { "@id": `${siteUrl}#organization` },
+    publisher: organization,
     isAccessibleForFree: true,
     license: "https://creativecommons.org/licenses/by/4.0/",
     keywords: [

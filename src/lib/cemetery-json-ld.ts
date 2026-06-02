@@ -1,5 +1,7 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import cemeteryDatasetExport from "../../public/datasets/stablecoin-cemetery.json";
+import { buildPharosOrganizationNode } from "@/lib/json-ld";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
 type CemeteryDatasetExport = {
   schemaVersion: string;
@@ -23,6 +25,7 @@ type CemeteryDatasetExport = {
 };
 
 const cemeteryDataset = cemeteryDatasetExport as CemeteryDatasetExport;
+const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE";
 const cemeterySourceData = cemeteryDataset.sourceData ?? [
   {
     path: cemeteryDataset.sourceDataPath,
@@ -32,6 +35,8 @@ const cemeterySourceData = cemeteryDataset.sourceData ?? [
 ];
 
 export function buildCemeteryDatasetJsonLd() {
+  const organization = buildPharosOrganizationNode(SITE_URL);
+
   return {
     "@context": "https://schema.org",
     "@type": "Dataset",
@@ -39,10 +44,11 @@ export function buildCemeteryDatasetJsonLd() {
     name: cemeteryDataset.name,
     description: cemeteryDataset.description,
     url: cemeteryDataset.canonicalUrl,
-    creator: { "@id": `${SITE_URL}#organization` },
-    publisher: { "@id": `${SITE_URL}#organization` },
-    license: cemeteryDataset.license,
+    creator: organization,
+    publisher: organization,
+    license: PHAROS_DATA_LICENSE_URL,
     isAccessibleForFree: true,
+    sameAs: cemeteryDataset.jsonUrl,
     keywords: [
       "stablecoin cemetery",
       "defunct stablecoins",
@@ -51,6 +57,7 @@ export function buildCemeteryDatasetJsonLd() {
       "stablecoin dataset",
     ],
     identifier: [
+      buildPharosUrnJsonLdIdentifier("dataset", "stablecoin-cemetery"),
       { "@type": "PropertyValue", propertyID: "sourceChecksum", value: cemeteryDataset.sourceChecksum },
       { "@type": "PropertyValue", propertyID: "schemaVersion", value: cemeteryDataset.schemaVersion },
       ...cemeterySourceData.map((source) => ({
