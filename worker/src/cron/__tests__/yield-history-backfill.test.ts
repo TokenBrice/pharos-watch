@@ -3,9 +3,11 @@ import { buildBackfillRows } from "../yield-history-backfill";
 
 describe("buildBackfillRows", () => {
   it("converts DL chart data to yield_history rows", () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400 * 1000).toISOString();
+    const yesterday = new Date(Date.now() - 86400 * 1000).toISOString();
     const dlData = [
-      { timestamp: "2025-06-01T23:00:00.000Z", tvlUsd: 100_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, il7d: null, apyBase7d: null },
-      { timestamp: "2025-06-02T23:00:00.000Z", tvlUsd: 101_000_000, apy: 3.6, apyBase: 3.6, apyReward: null, il7d: null, apyBase7d: null },
+      { timestamp: twoDaysAgo, tvlUsd: 100_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, il7d: null, apyBase7d: null },
+      { timestamp: yesterday, tvlUsd: 101_000_000, apy: 3.6, apyBase: 3.6, apyReward: null, il7d: null, apyBase7d: null },
     ];
     const rows = buildBackfillRows("usde-ethena", "66985a81-pool-uuid", dlData);
     expect(rows.length).toBe(2);
