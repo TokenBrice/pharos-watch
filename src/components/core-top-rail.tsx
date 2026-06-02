@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { HomepageTape } from "@/components/homepage-tape";
 import { useSidebar } from "@/components/sidebar";
 import { CORE_NAV_ITEMS, isCoreNavPath, normalizeNavPath } from "@/lib/nav-config";
@@ -11,10 +11,17 @@ import { cn } from "@/lib/utils";
 export function CoreTopRail() {
   const pathname = usePathname();
   const { expanded } = useSidebar();
-
-  if (!isCoreNavPath(pathname)) return null;
+  const activeRef = useRef<HTMLAnchorElement | null>(null);
 
   const normalizedPath = normalizeNavPath(pathname ?? "/");
+
+  // Keep the lit pill in view: center it on mount and whenever the route
+  // changes so the active anchor never scrolls off-screen with no affordance.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+  }, [normalizedPath]);
+
+  if (!isCoreNavPath(pathname)) return null;
 
   return (
     <div
@@ -27,30 +34,34 @@ export function CoreTopRail() {
       <HomepageTape placement="top" />
       <nav
         aria-label="Core pages"
-        className="relative z-50 w-full overflow-x-auto overscroll-x-contain border-b border-border/70 bg-background/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-background/88"
+        className="pharos-rail-ground relative z-50 w-full overflow-x-auto overscroll-x-contain border-b border-border/70 shadow-[0_1px_0_oklch(1_0_0_/0.04)]"
       >
-        <div className="mx-auto flex w-max min-w-full items-center justify-center gap-1 px-2 py-1.5 sm:px-3">
-          {CORE_NAV_ITEMS.map((item, index) => {
+        <div className="mx-auto flex w-max min-w-full items-center justify-center [justify-content:safe_center] gap-1 px-2 py-2 sm:px-3 sm:py-1.5">
+          {CORE_NAV_ITEMS.map((item) => {
             const isActive = normalizeNavPath(item.href) === normalizedPath;
+            const Icon = item.icon;
 
             return (
-              <div key={item.href} className="flex items-center gap-1">
-                {index > 0 ? (
-                  <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/45" />
-                ) : null}
-                <Link
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
+              <Link
+                key={item.href}
+                ref={isActive ? activeRef : undefined}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "pharos-rail-tab pharos-focus-ring relative isolate inline-flex min-h-11 items-center gap-1.5 overflow-hidden rounded-md px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] whitespace-nowrap sm:min-h-8",
+                  isActive && "pharos-rail-tab-active",
+                )}
+              >
+                {isActive ? <span aria-hidden className="pharos-nav-beam" /> : null}
+                <Icon
+                  aria-hidden="true"
                   className={cn(
-                    "pharos-focus-ring inline-flex h-8 items-center rounded-md px-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] whitespace-nowrap transition-[background-color,border-color,color,box-shadow]",
-                    isActive
-                      ? "pharos-nav-active text-foreground"
-                      : "text-muted-foreground hover:bg-muted/45 hover:text-foreground",
+                    "h-3.5 w-3.5 shrink-0",
+                    isActive ? "text-frost-blue" : "text-muted-foreground/80",
                   )}
-                >
-                  {item.label}
-                </Link>
-              </div>
+                />
+                {item.label}
+              </Link>
             );
           })}
         </div>
