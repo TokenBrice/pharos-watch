@@ -132,11 +132,21 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const _allNavItems: NavItem[] = [...PRIMARY_NAV_ITEMS, ...NAV_GROUPS.flatMap((g) => g.items)];
+const _byHref = (href: string): NavItem => _allNavItems.find((item) => item.href === href)!;
+
 export const CORE_NAV_ITEMS: NavItem[] = [
-  ...PRIMARY_NAV_ITEMS,
-  { ...NAV_GROUPS.find((group) => group.key === "learn")!.items.find((item) => item.href === "/learn/")!, label: "Learn" },
-  NAV_GROUPS.find((group) => group.key === "monitor")!.items.find((item) => item.href === "/timeline/")!,
-  { ...NAV_GROUPS.find((group) => group.key === "monitor")!.items.find((item) => item.href === "/status/")!, label: "Status" },
+  _byHref("/"),
+  _byHref("/safety-scores/"),
+  _byHref("/depeg/"),
+  _byHref("/freezewatch/"),
+  _byHref("/alt-pegs/"),
+  _byHref("/yield/"),
+  _byHref("/stability-index/"),
+  _byHref("/timeline/"),
+  _byHref("/pharoswatchbot/"),
+  { ..._byHref("/learn/"), label: "Learn" },
+  { ..._byHref("/status/"), label: "Status" },
 ];
 
 export function normalizeNavPath(pathname: string): string {

@@ -97,13 +97,13 @@ describe("nav-config", () => {
       { href: "/", label: "Dashboard" },
       { href: "/safety-scores/", label: "Safety Scores" },
       { href: "/depeg/", label: "Depeg/DDR" },
-      { href: "/yield/", label: "Yield Intelligence" },
-      { href: "/alt-pegs/", label: "Alt-Pegs" },
       { href: "/freezewatch/", label: "FreezeWatch" },
+      { href: "/alt-pegs/", label: "Alt-Pegs" },
+      { href: "/yield/", label: "Yield Intelligence" },
       { href: "/stability-index/", label: "Stability Index" },
+      { href: "/timeline/", label: "Timeline" },
       { href: "/pharoswatchbot/", label: "PharosWatchBot" },
       { href: "/learn/", label: "Learn" },
-      { href: "/timeline/", label: "Timeline" },
       { href: "/status/", label: "Status" },
     ]);
 
