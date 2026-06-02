@@ -13,6 +13,7 @@ import {
 } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
+import { useHomepageDiscoverySuggestions } from "@/hooks/use-homepage-discovery";
 import {
   buildHomepageCriticalViewModel,
   buildHomepageOptionalViewModel,
@@ -20,7 +21,7 @@ import {
 
 import { HomeAltHero } from "@/components/home-alt-hero";
 import { HomeAltMiniCardGrid } from "@/components/home-alt-mini-card-grid";
-import { HomeAltCalloutStrip } from "@/components/home-alt-callout-strip";
+import { HomepageDiscoveryModule } from "@/components/homepage-discovery-module";
 import { LazySection } from "@/components/lazy-section";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,6 +97,7 @@ export function HomeAltClient() {
   const { data: reportCardsData } = useReportCards();
   const { data: stressData } = useStressSignals();
   const pinned = usePinnedStablecoins();
+  const discoverySuggestions = useHomepageDiscoverySuggestions();
 
   const { reportCardMap } = useMemo(
     () => buildHomepageOptionalViewModel({ reportCardsData, stressData }),
@@ -129,7 +131,7 @@ export function HomeAltClient() {
         </section>
 
         <div className="mt-3 sm:mt-3.5">
-          <HomeAltCalloutStrip />
+          <HomepageDiscoveryModule suggestions={discoverySuggestions} />
         </div>
       </BelowFold>
 

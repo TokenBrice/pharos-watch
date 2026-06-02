@@ -16,6 +16,7 @@ const {
   useReportCardsMock,
   useStressSignalsMock,
   useHomeAltFiltersMock,
+  useHomepageDiscoverySuggestionsMock,
   usePinnedStablecoinsMock,
 } = vi.hoisted(() => ({
   stablecoinTablePropsMock: vi.fn(),
@@ -27,6 +28,7 @@ const {
   useReportCardsMock: vi.fn(),
   useStressSignalsMock: vi.fn(),
   useHomeAltFiltersMock: vi.fn(),
+  useHomepageDiscoverySuggestionsMock: vi.fn(),
   usePinnedStablecoinsMock: vi.fn(),
 }));
 
@@ -69,6 +71,10 @@ vi.mock("@/hooks/use-home-alt-filters", () => ({
   useHomeAltFilters: useHomeAltFiltersMock,
 }));
 
+vi.mock("@/hooks/use-homepage-discovery", () => ({
+  useHomepageDiscoverySuggestions: useHomepageDiscoverySuggestionsMock,
+}));
+
 vi.mock("@/hooks/use-pinned-stablecoins", () => ({
   usePinnedStablecoins: usePinnedStablecoinsMock,
 }));
@@ -93,8 +99,8 @@ vi.mock("@/components/home-alt-mini-card-grid", () => ({
   HomeAltMiniCardGrid: () => <div data-testid="home-alt-mini-card-grid" />,
 }));
 
-vi.mock("@/components/home-alt-callout-strip", () => ({
-  HomeAltCalloutStrip: () => <div data-testid="home-alt-callout-strip" />,
+vi.mock("@/components/homepage-discovery-module", () => ({
+  HomepageDiscoveryModule: () => <div data-testid="homepage-discovery-module" />,
 }));
 
 vi.mock("@/components/peg-distribution-grid", () => ({
@@ -115,6 +121,7 @@ describe("HomeAltClient", () => {
     useReportCardsMock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } } });
     useStressSignalsMock.mockReturnValue({ data: { signals: {} } });
     useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
+    useHomepageDiscoverySuggestionsMock.mockReturnValue([]);
     usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: ["usdc-circle"], togglePinned: togglePinnedMock });
   });
 
