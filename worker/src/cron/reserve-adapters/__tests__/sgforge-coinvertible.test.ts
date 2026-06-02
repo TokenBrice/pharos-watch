@@ -49,6 +49,18 @@ describe("adaptSgForgeCoinvertible", () => {
     });
   });
 
+  it("accepts current SG Forge markup with a line break and four-digit slash date", () => {
+    const html = SAMPLE_HTML
+      .replace("92 476 840,64 <span", "92 476 840,64 <br/><span")
+      .replace("Last update 20/03/26", "Last update 2/06/2026");
+    const result = adaptSgForgeCoinvertible(html, "eur", { nowSec: Date.UTC(2026, 5, 2, 12) / 1000 });
+
+    expect(result.metadata).toMatchObject({
+      lastUpdate: "2/06/2026",
+      sourceTimestamp: Date.UTC(2026, 5, 2) / 1000,
+    });
+  });
+
   it("falls back to U.S. slash dates when the European interpretation would be future-dated", () => {
     const html = SAMPLE_HTML.replace("Last update 20/03/26", "Last update 5/07/26");
     const result = adaptSgForgeCoinvertible(html, "eur", { nowSec: MAY_7_2026_NOON_UTC });

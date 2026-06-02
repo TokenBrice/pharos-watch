@@ -8,6 +8,7 @@ import {
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
+  stripTags,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -45,14 +46,15 @@ function getHeadingNeedle(coinType: SgForgeCoinType): string {
   return coinType === "eur" ? "EUR CoinVertible in circulation" : "USD CoinVertible in circulation";
 }
 
-function buildShortDateUtc(day: number, month: number, year: number): number | null {
+function buildSlashDateUtc(day: number, month: number, year: number): number | null {
   if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
   if (day < 1 || month < 1 || month > 12) return null;
 
-  const parsed = Date.UTC(2000 + year, month - 1, day);
+  const fullYear = year < 100 ? 2000 + year : year;
+  const parsed = Date.UTC(fullYear, month - 1, day);
   const date = new Date(parsed);
   if (
-    date.getUTCFullYear() !== 2000 + year
+    date.getUTCFullYear() !== fullYear
     || date.getUTCMonth() !== month - 1
     || date.getUTCDate() !== day
   ) {
@@ -66,16 +68,16 @@ function parseSgForgeLastUpdate(value: string | null | undefined, nowSec: number
   const trimmed = value?.trim();
   if (!trimmed) return null;
 
-  const shortDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
-  if (!shortDateMatch) {
+  const slashDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (!slashDateMatch) {
     return parseTimestampLikeToUnixSeconds(trimmed);
   }
 
-  const first = Number(shortDateMatch[1]);
-  const second = Number(shortDateMatch[2]);
-  const year = Number(shortDateMatch[3]);
-  const european = buildShortDateUtc(first, second, year);
-  const us = buildShortDateUtc(second, first, year);
+  const first = Number(slashDateMatch[1]);
+  const second = Number(slashDateMatch[2]);
+  const year = Number(slashDateMatch[3]);
+  const european = buildSlashDateUtc(first, second, year);
+  const us = buildSlashDateUtc(second, first, year);
 
   if (european != null && european - nowSec <= SG_FORGE_FUTURE_TOLERANCE_SEC) {
     return european;
@@ -101,26 +103,48 @@ function extractDisclosureBlock(html: string, coinType: SgForgeCoinType): string
   return html.slice(start, nextBlockStart === -1 ? undefined : nextBlockStart);
 }
 
+function extractNumberAndLastUpdate(disclosureBlock: string): { amount: string; lastUpdate: string | null } | null {
+  const classNeedle = 'class="coinvertible_number"';
+  const classIndex = disclosureBlock.indexOf(classNeedle);
+  if (classIndex === -1) return null;
+
+  const openTagEnd = disclosureBlock.indexOf(">", classIndex + classNeedle.length);
+  if (openTagEnd === -1) return null;
+
+  const closeTagStart = disclosureBlock.indexOf("</div>", openTagEnd + 1);
+  if (closeTagStart === -1) return null;
+
+  const blockHtml = disclosureBlock.slice(openTagEnd + 1, closeTagStart);
+  const spanStart = blockHtml.indexOf("<span");
+  if (spanStart === -1) return null;
+
+  const amount = stripTags(blockHtml.slice(0, spanStart)).replace(/\s+/g, " ").trim();
+  const lastUpdateText = stripTags(blockHtml.slice(spanStart)).replace(/\s+/g, " ").trim();
+  const lastUpdateMatch = lastUpdateText.match(/^Last update\s+(.+)$/i);
+  return {
+    amount,
+    lastUpdate: lastUpdateMatch?.[1]?.trim() ?? null,
+  };
+}
+
 export function adaptSgForgeCoinvertible(
   html: string,
   coinType: SgForgeCoinType,
   options: SgForgeAdaptOptions = {},
 ): AdapterResult {
   const disclosureBlock = extractDisclosureBlock(html, coinType);
-  const numberMatch = disclosureBlock.match(
-    /class="coinvertible_number">\s*([^<]+?)\s*<span[^>]*>Last update\s*([^<]+)</i,
-  );
+  const numberAndLastUpdate = extractNumberAndLastUpdate(disclosureBlock);
   const bankMatch = disclosureBlock.match(/class="bank">\s*([^:]+?)\s*:\s*([\d.]+)%/i);
   const cashMatch = disclosureBlock.match(
     /class="coinvertible_cash"[\s\S]*?<div class="number">\s*([^<€$]+?)\s*[€$]/i,
   );
 
-  if (!numberMatch || !bankMatch || !cashMatch) {
+  if (!numberAndLastUpdate || !numberAndLastUpdate.lastUpdate || !bankMatch || !cashMatch) {
     throw htmlLayoutChangedError("sgforge-coinvertible", "incomplete reserve-bank metadata");
   }
 
-  const circulationAmount = normalizeLocalizedNumber(numberMatch[1]);
-  const lastUpdate = numberMatch[2]?.trim();
+  const circulationAmount = normalizeLocalizedNumber(numberAndLastUpdate.amount);
+  const lastUpdate = numberAndLastUpdate.lastUpdate;
   const bankName = bankMatch[1]?.replace(/\s+/g, " ").trim();
   const bankPct = Number.parseFloat(bankMatch[2] ?? "");
   const cashAmount = normalizeLocalizedNumber(cashMatch[1]);
