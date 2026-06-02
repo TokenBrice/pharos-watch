@@ -77,8 +77,9 @@ Homepage page discovery rotation is also browser-local:
 
 - localStorage key: `pharos.homepageDiscovery.v1`
 - value: `{ cursor: number }`, normalized to a non-negative integer
-- `HomeAltClient` advances the cursor on homepage-client mount so the five suggestions rotate once per homepage visit, even though the visual module is lazy-mounted below the fold
-- the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS`, `NAV_GROUPS`, `BOTTOM_NAV_ITEMS`), excludes the dashboard itself, de-duplicates by `href`, and interleaves groups before selecting each five-link window
+- `HomeAltClient` chooses and stores a randomized spotlight cursor on homepage-client mount, even though the visual module is lazy-mounted below the fold
+- the suggestion pool is derived from internal navigation config (`PRIMARY_NAV_ITEMS` plus Track/Analyze/Monitor `NAV_GROUPS`), excludes the dashboard itself and Learn/Reference/Guide pages, de-duplicates by `href`, interleaves groups, then renders one spotlight plus the next four compact modules
+- compact Page Discovery modules use route-specific `shortDescription` copy so the four minor tiles stay one-line and match the available tile width
 
 ### `SiteHeader`
 
