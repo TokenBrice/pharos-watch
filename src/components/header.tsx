@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, getSidebarNavForPath } from "@/lib/nav-config";
+import { BOTTOM_NAV_ITEMS, COMPANION_NAV_ITEMS, getSidebarNavForPath, isCoreNavPath } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
@@ -82,9 +82,15 @@ export function Header() {
   const { primaryItems, groups } = getSidebarNavForPath(pathname);
   const [dashboardNavItem, ...remainingPrimaryNavItems] = primaryItems;
   const mobileLeadItemCount = primaryItems.length + priorityBottomNavItems.length;
+  const isCorePath = isCoreNavPath(pathname);
 
   return (
-    <header className="lg:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
+    <header
+      className={`lg:hidden sticky z-50 border-b border-border/80 bg-background ${
+        isCorePath ? "top-[calc(3px+3.75rem)] sm:top-[calc(3px+2.75rem)]" : "top-[3px]"
+      }`}
+      style={{ boxShadow: "var(--elevation-rest)" }}
+    >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold">
           <PharosLogo size={32} priority />
