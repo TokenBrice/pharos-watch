@@ -144,7 +144,7 @@ export function normalizeNavPath(pathname: string): string {
   return pathname.replace(/\/+$/, "");
 }
 
-export function isCoreNavHref(href: string): boolean {
+function isCoreNavHref(href: string): boolean {
   const normalizedHref = normalizeNavPath(href);
   return CORE_NAV_ITEMS.some((item) => normalizeNavPath(item.href) === normalizedHref);
 }

@@ -21,7 +21,7 @@ export interface HomepageDiscoveryRotationState {
   cursor: number;
 }
 
-export const HOMEPAGE_DISCOVERY_VISIBLE_COUNT = 5;
+const HOMEPAGE_DISCOVERY_VISIBLE_COUNT = 5;
 export const HOMEPAGE_DISCOVERY_STORAGE_KEY = "pharos.homepageDiscovery.v1";
 
 const DEFAULT_ROTATION_STATE: HomepageDiscoveryRotationState = { cursor: 0 };
@@ -156,7 +156,7 @@ export function normalizeHomepageDiscoveryRotationState(
   };
 }
 
-export function readHomepageDiscoveryRotationState(
+function readHomepageDiscoveryRotationState(
   storage: Storage | null | undefined,
 ): HomepageDiscoveryRotationState {
   return readJsonStorageValue(
