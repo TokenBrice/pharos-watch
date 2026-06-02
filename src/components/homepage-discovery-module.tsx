@@ -20,9 +20,24 @@ function discoveryAccentStyle(suggestion: HomepageDiscoverySuggestion): CSSPrope
   return { "--discovery-accent": suggestion.accent } as CSSProperties;
 }
 
+function staggerStyle(index: number): CSSProperties {
+  return { "--stagger-index": index } as CSSProperties;
+}
+
 function GroupTag({ label }: { label: string }): JSX.Element {
   return (
     <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-muted-foreground">
+      {label}
+    </span>
+  );
+}
+
+// Category chip: carries the nav-group accent so each route reads as its own
+// destination. Text is mixed toward foreground so the hue stays legible on the
+// pale chip fill in light mode and lifts on dark surfaces.
+function GroupChip({ label }: { label: string }): JSX.Element {
+  return (
+    <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.14em] [color:color-mix(in_oklab,var(--discovery-accent)_82%,var(--foreground))] [border-color:color-mix(in_oklab,var(--discovery-accent)_28%,var(--border))] bg-[color-mix(in_oklab,var(--discovery-accent)_9%,transparent)]">
       {label}
     </span>
   );
@@ -41,7 +56,7 @@ function DiscoveryIcon({
     <span
       aria-hidden="true"
       className={cn(
-        "grid shrink-0 place-items-center rounded-md border bg-[color-mix(in_oklab,var(--discovery-accent)_8%,transparent)] text-[var(--discovery-accent)] transition-colors [border-color:color-mix(in_oklab,var(--discovery-accent)_23%,var(--border))] group-hover:bg-[color-mix(in_oklab,var(--discovery-accent)_14%,transparent)] group-hover:[border-color:color-mix(in_oklab,var(--discovery-accent)_42%,var(--border))] group-focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_14%,transparent)] group-focus-visible:[border-color:color-mix(in_oklab,var(--discovery-accent)_42%,var(--border))]",
+        "grid shrink-0 place-items-center rounded-md border bg-[color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] text-[var(--discovery-accent)] transition-[background-color,border-color,box-shadow] duration-200 [border-color:color-mix(in_oklab,var(--discovery-accent)_24%,var(--border))] group-hover:bg-[color-mix(in_oklab,var(--discovery-accent)_16%,transparent)] group-hover:[border-color:color-mix(in_oklab,var(--discovery-accent)_46%,var(--border))] group-hover:shadow-[0_0_0_4px_color-mix(in_oklab,var(--discovery-accent)_9%,transparent)] group-focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_16%,transparent)] group-focus-visible:[border-color:color-mix(in_oklab,var(--discovery-accent)_46%,var(--border))]",
         featured ? "h-20 w-20 sm:h-24 sm:w-24" : "h-14 w-14 sm:h-16 sm:w-16 xl:h-20 xl:w-20",
       )}
     >
@@ -59,16 +74,24 @@ function FeaturedSurface({ suggestion }: { suggestion: HomepageDiscoverySuggesti
     <Link
       href={suggestion.href}
       style={discoveryAccentStyle(suggestion)}
-      className="group pharos-focus-ring relative isolate flex h-full min-h-36 items-center gap-4 overflow-hidden px-4 py-4 transition-colors hover:bg-muted/35 focus-visible:bg-muted/35 focus-visible:outline-none sm:gap-5 sm:px-5 xl:min-h-32"
+      className="group pharos-focus-ring relative isolate flex h-full min-h-40 items-center gap-4 overflow-hidden px-5 py-5 transition-colors hover:bg-[color-mix(in_oklab,var(--discovery-accent)_5%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_5%,transparent)] focus-visible:outline-none sm:gap-5 sm:px-6 xl:min-h-36"
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(130%_140%_at_0%_0%,color-mix(in_oklab,var(--discovery-accent)_13%,transparent),transparent_58%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(130%_150%_at_0%_0%,color-mix(in_oklab,var(--discovery-accent)_16%,transparent),transparent_60%)]"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-300 bg-[radial-gradient(130%_150%_at_0%_0%,color-mix(in_oklab,var(--discovery-accent)_9%,transparent),transparent_72%)] group-hover:opacity-100 group-focus-visible:opacity-100"
       />
       <DiscoveryIcon suggestion={suggestion} featured />
-      <div className="flex min-w-0 flex-col gap-2.5">
+      <div className="flex min-w-0 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--discovery-accent)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--discovery-accent)] [border-color:color-mix(in_oklab,var(--discovery-accent)_30%,var(--border))] bg-[color-mix(in_oklab,var(--discovery-accent)_10%,transparent)]">
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 rounded-full bg-[var(--discovery-accent)] motion-safe:animate-pulse"
+            />
             Spotlight
           </span>
           <GroupTag label={suggestion.groupLabel} />
@@ -77,12 +100,14 @@ function FeaturedSurface({ suggestion }: { suggestion: HomepageDiscoverySuggesti
         <p className="text-xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-2xl">
           {suggestion.title}
         </p>
-        <p className="line-clamp-2 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
+        <p className="line-clamp-2 max-w-[40ch] text-sm leading-relaxed text-muted-foreground">
           {suggestion.description}
         </p>
 
         <div className="flex items-center gap-1.5 pt-1">
-          <span className="font-mono text-xs text-[var(--discovery-accent)]">{suggestion.href}</span>
+          <span className="font-mono text-xs font-medium text-[var(--discovery-accent)]">
+            {suggestion.href}
+          </span>
           <ArrowUpRight
             aria-hidden="true"
             className="h-4 w-4 text-[var(--discovery-accent)] opacity-0 transition-all duration-200 motion-safe:-translate-x-1 group-hover:opacity-100 motion-safe:group-hover:translate-x-0 group-focus-visible:opacity-100 motion-safe:group-focus-visible:translate-x-0"
@@ -103,18 +128,23 @@ function CompactSurface({
     <Link
       href={suggestion.href}
       style={discoveryAccentStyle(suggestion)}
-      className="group pharos-focus-ring flex h-full min-h-28 items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/35 focus-visible:bg-muted/35 focus-visible:outline-none sm:gap-3.5 sm:px-5 xl:min-h-32"
+      className="group pharos-focus-ring flex h-full min-h-28 items-center gap-3.5 px-4 py-4 transition-colors hover:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:bg-[color-mix(in_oklab,var(--discovery-accent)_7%,transparent)] focus-visible:outline-none sm:px-5 xl:min-h-32"
     >
       <DiscoveryIcon suggestion={suggestion} />
-      <div className="min-w-0">
-        <GroupTag label={suggestion.groupLabel} />
-        <p className="mt-1 font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-foreground">
+      <div className="min-w-0 flex-1">
+        <GroupChip label={suggestion.groupLabel} />
+        <p className="mt-1.5 font-mono text-[11px] font-semibold uppercase leading-tight tracking-wider text-foreground sm:text-[12px]">
           {suggestion.title}
         </p>
         <p className="mt-1 truncate text-[11px] leading-snug text-muted-foreground">
           {suggestion.shortDescription}
         </p>
       </div>
+      <ArrowUpRight
+        aria-hidden="true"
+        className="h-3.5 w-3.5 shrink-0 self-center text-[var(--discovery-accent)] opacity-0 transition-all duration-200 motion-safe:-translate-x-1 group-hover:opacity-100 motion-safe:group-hover:translate-x-0 group-focus-visible:opacity-100 motion-safe:group-focus-visible:translate-x-0"
+        strokeWidth={2}
+      />
     </Link>
   );
 }
@@ -132,17 +162,32 @@ export function HomepageDiscoveryModule({
         Page Discovery
       </h2>
 
+      <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2.5 sm:px-5">
+        <div className="flex items-baseline gap-2.5">
+          <span className="font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.18em] [color:color-mix(in_oklab,var(--brand-accent)_74%,var(--foreground))]">
+            Chart your route
+          </span>
+          <span className="hidden text-xs leading-none text-muted-foreground sm:inline">
+            Five ways into Pharos, refreshed each visit
+          </span>
+        </div>
+        <span className="hidden shrink-0 font-mono text-[10px] uppercase leading-none tracking-[0.14em] text-muted-foreground/70 sm:inline">
+          {suggestions.length} routes
+        </span>
+      </div>
+
       <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2.85fr)]">
         {featured ? (
-          <div className="border-b border-border/40 lg:border-r lg:border-b-0">
+          <div className="pharos-stagger-entrance border-b border-border/40 lg:border-r lg:border-b-0">
             <FeaturedSurface suggestion={featured} />
           </div>
         ) : null}
 
-        <ul className="grid md:grid-cols-2 xl:grid-cols-4">
+        <ul className="pharos-stagger-entrance grid md:grid-cols-2 xl:grid-cols-4">
           {rest.map((suggestion, index) => (
             <li
               key={suggestion.href}
+              style={staggerStyle(index + 1)}
               className={cn(
                 "border-border/40",
                 index < rest.length - 1 && "border-b",

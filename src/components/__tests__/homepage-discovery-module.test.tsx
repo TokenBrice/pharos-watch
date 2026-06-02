@@ -26,7 +26,7 @@ describe("HomepageDiscoveryModule", () => {
       {
         title: "Liquidity",
         description: "DEX depth and durability",
-        shortDescription: "DEX liquidity scores",
+        shortDescription: "DEX scores",
         href: "/liquidity/",
         groupLabel: "TRACK",
         accent: "var(--p-teal-500)",
@@ -69,7 +69,7 @@ describe("HomepageDiscoveryModule", () => {
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(5);
     expect(screen.getByRole("link", { name: /safety scores/i }).getAttribute("href")).toBe("/safety-scores");
-    expect(screen.getByText("DEX liquidity scores")).toBeTruthy();
+    expect(screen.getByText("DEX scores")).toBeTruthy();
     expect(screen.queryByText("DEX depth and durability")).toBeNull();
   });
 });
