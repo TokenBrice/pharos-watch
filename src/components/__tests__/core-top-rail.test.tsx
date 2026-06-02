@@ -43,6 +43,7 @@ describe("CoreTopRail", () => {
     const tape = screen.getByTestId("core-top-tape");
     expect(tape.getAttribute("data-placement")).toBe("top");
     expect(tape.parentElement?.getAttribute("style")).toContain("--pharos-core-rail-offset");
+    expect(tape.parentElement?.className).toContain("contents");
     expect(tape.parentElement?.className).toContain("lg:sticky");
     expect(tape.parentElement?.className).toContain("lg:top-[3px]");
     const nav = screen.getByRole("navigation", { name: "Core pages" });

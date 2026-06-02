@@ -31,7 +31,7 @@ export function CoreTopRail() {
           ? "var(--sidebar-width-expanded)"
           : "var(--sidebar-width-collapsed)",
       }}
-      className="lg:sticky lg:top-[3px] lg:z-50"
+      className="contents lg:sticky lg:top-[3px] lg:z-50 lg:block"
     >
       <HomepageTape placement="top" />
       <nav
