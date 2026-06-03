@@ -96,8 +96,8 @@
     "notes": "The staging split landed. Keep the cron shell focused on phase order and progress coordination; pricing and intake detail should stay in `sync-stablecoins/*` helpers."
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "fileLines": 230,
-    "maxFunctionLines": 216,
+    "fileLines": 229,
+    "maxFunctionLines": 215,
     "branchCount": 0,
     "disposition": "stabilized",
     "targetBudget": {
@@ -108,8 +108,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 27,
-    "maxFunctionLines": 17,
+    "fileLines": 26,
+    "maxFunctionLines": 16,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -120,8 +120,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 154,
-    "maxFunctionLines": 146,
+    "fileLines": 153,
+    "maxFunctionLines": 145,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -132,8 +132,8 @@
     "notes": "Liquidity copy is isolated now. A follow-up split should extract long table-heavy detail blocks if the section grows again."
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
-    "fileLines": 310,
-    "maxFunctionLines": 298,
+    "fileLines": 309,
+    "maxFunctionLines": 297,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -144,8 +144,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 293,
-    "maxFunctionLines": 278,
+    "fileLines": 303,
+    "maxFunctionLines": 287,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -156,8 +156,8 @@
     "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
   },
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "fileLines": 27,
-    "maxFunctionLines": 17,
+    "fileLines": 26,
+    "maxFunctionLines": 16,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -168,8 +168,8 @@
     "notes": "PegScore and DEWS now share an isolated section body, but the dual-surface copy is still oversized. Split PegScore-specific and DEWS-specific detail blocks before adding more content."
   },
   "src/app/methodology/scoring-changelog/content-v7-0.tsx": {
-    "fileLines": 767,
-    "maxFunctionLines": 45,
+    "fileLines": 740,
+    "maxFunctionLines": 44,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -180,8 +180,8 @@
     "notes": "The v7.0-v7.25 changelog tranche is isolated from older scoring history and split into per-entry components. Split into narrower version-range modules if another large v7 tranche lands."
   },
   "src/app/methodology/scoring-changelog/content-v6.tsx": {
-    "fileLines": 273,
-    "maxFunctionLines": 268,
+    "fileLines": 264,
+    "maxFunctionLines": 259,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -192,8 +192,8 @@
     "notes": "The changelog shell now composes by major version. Keep v6 additions in this module or split again if another large tranche lands."
   },
   "src/app/methodology/scoring-changelog/content-v5.tsx": {
-    "fileLines": 305,
-    "maxFunctionLines": 302,
+    "fileLines": 295,
+    "maxFunctionLines": 292,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -204,8 +204,8 @@
     "notes": "v5 remains large after the first split. Extract reference-heavy cards again if more v5 corrective history is added."
   },
   "src/app/methodology/scoring-changelog/content-legacy.tsx": {
-    "fileLines": 355,
-    "maxFunctionLines": 352,
+    "fileLines": 348,
+    "maxFunctionLines": 345,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -265,8 +265,8 @@
   },
   "src/lib/stablecoin-detail-view-model.ts": {
     "fileLines": 1099,
-    "maxFunctionLines": 189,
-    "branchCount": 68,
+    "maxFunctionLines": 188,
+    "branchCount": 67,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
@@ -420,9 +420,9 @@
     "notes": "Atomic roundtrip sweep updates now include chain predicates. Keep D1 mutation shape changes paired with SQL-bind regression coverage."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 519,
+    "fileLines": 399,
     "maxFunctionLines": 118,
-    "branchCount": 35,
+    "branchCount": 22,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
@@ -432,8 +432,8 @@
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. The current baseline includes resumable deferred-tail cursor handling plus surfaced reserve-sync pressure metrics; the next pass should still separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 235,
-    "maxFunctionLines": 160,
+    "fileLines": 229,
+    "maxFunctionLines": 153,
     "branchCount": 9,
     "disposition": "stabilized",
     "targetBudget": {
@@ -492,7 +492,7 @@
     "notes": "The yield adapter registry is large but mostly data-heavy. Keep additions structured, and extract manifest families before allowing the registry file to grow further."
   },
   "worker/src/cron/yield-sync/sources.ts": {
-    "fileLines": 32,
+    "fileLines": 33,
     "maxFunctionLines": 0,
     "branchCount": 0,
     "disposition": "deferred",
