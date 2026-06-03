@@ -271,6 +271,7 @@ function normalizeDeploymentPlace(place: YieldDeploymentPlace | null | undefined
     case "lp-or-dex":
       return "lp";
     case "lending-market":
+    case "structured-tranche":
       return "lending";
     default:
       return null;

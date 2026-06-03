@@ -36,7 +36,9 @@ export function YieldIntelligenceMethodologySection() {
                 pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Rate-derived coverage includes cgUSD, USDN, BENJI, WTGXX, USTBL, and EUTBL, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
                 supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware,
-                with missing source-risk evidence treated as neutral. Curve Savings crvUSD now follows the active on-chain
+                with missing source-risk evidence treated as neutral. Royco Dawn structured-tranche rows now attach senior
+                and junior opportunities to the tracked underlying stablecoin when the deposit token resolves, using
+                opportunity-level tranche safety for PYS without changing the underlying Report Card score. Curve Savings crvUSD now follows the active on-chain
                 profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible
                 as intentional gaps but cannot publish into the live leaderboard before launch.
               </p>
@@ -162,7 +164,9 @@ export function YieldIntelligenceMethodologySection() {
                       <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated
                       protocol-owned APIs and protocol-specific on-chain venue readers when the canonical savings path is
                       not representable as a reliable DeFiLlama pool; these rows stay in the curated tier rather than
-                      inheriting Tier 1 deterministic precedence reserved for native wrapper readers
+                      inheriting Tier 1 deterministic precedence reserved for native wrapper readers. Royco Dawn senior
+                      and junior tranches publish here as <code className="text-xs bg-muted px-1 py-0.5 rounded">structured-tranche</code>{" "}
+                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>
                     </li>
                     <li>
                       <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
@@ -192,6 +196,12 @@ export function YieldIntelligenceMethodologySection() {
                   <p>
                     Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,
                     the asset is marked as an intentional gap rather than silently disappearing from audit coverage.
+                  </p>
+                  <p>
+                    Royco Dawn tranche rows are opportunity rows, not stablecoin registry additions. Senior rows are capped
+                    at or below the underlying Safety Score; junior rows receive first-loss, utilization, coverage,
+                    market-status, drawdown, TVL, withdrawal, explicit access, and venue-posture penalties. These tranche scores are
+                    used by PYS for the opportunity row only.
                   </p>
                   <p>
                     Deterministic rows keep their own source identity (`onchain:&lt;stablecoinId&gt;`) rather than sharing

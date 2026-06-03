@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.17`; this file includes the staged `v8.18` changelog entry, but `v8.18` is not the active methodology version until `shared/lib/methodology-versions/yield-methodology.ts` is bumped.
+Internal changelog reconstructed from git history. Runtime currently reports Yield Intelligence `v8.19`.
+
+---
+
+## v8.19 - Royco Dawn Tranche Opportunities (June 3, 2026)
+
+- Royco Dawn is ingested as a protocol-native Yield Intelligence source, not as synthetic stablecoin registry entries for each tranche share token
+- Runtime source keys are `royco-dawn:<chainId>:<marketId>:senior` and `royco-dawn:<chainId>:<marketId>:junior`
+- Rows attach to the tracked underlying stablecoin when the Royco deposit-token address resolves to a tracked contract or configured wrapper variant, including the `sNUSD` -> `nusd-neutrl` variant route
+- `structured-tranche` joins the yield-type taxonomy so Royco tranche rows can be distinguished from generic lending opportunities and bypass base-asset lending size gates that are not appropriate for tranche share tokens
+- PYS uses an opportunity-level tranche Safety Score for Royco rows. Senior rows are capped at or below the underlying Safety Score; junior rows carry first-loss, utilization, coverage, market-status, drawdown, TVL, withdrawal, explicit access, and venue-posture penalties.
+- The raw underlying Report Card Safety Score is not changed. Royco tranche inputs and computed scores publish under nested `sourceRisk` fields, and read-time hydration recomputes the opportunity score from the live underlying report-card snapshot.
 
 ---
 

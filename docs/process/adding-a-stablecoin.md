@@ -236,7 +236,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `governanceQuality`            | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper`                            |
 | `dependencies[].type`          | `wrapper` \| `mechanism` \| `collateral`                                                                                            |
 | `variantKind`                  | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity`                                                   |
-| `yieldConfig.yieldType`        | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity`     |
+| `yieldConfig.yieldType`        | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` \| `structured-tranche` |
 | `infrastructures[]`            | `liquity-v1` \| `liquity-v2` \| `m0`                                                                                                |
 | `mechanismArchetype`           | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund`                                  |
 | `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none`                                                                                 |
@@ -253,6 +253,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 ### Classification rules that are easy to get wrong
 
 - `flags.backing` should describe the actual reserve base, not the marketing story.
+- `structured-tranche` is reserved for runtime opportunity rows such as Royco Dawn senior/junior vaults. Do not use it for ordinary static stablecoin metadata unless the tracked asset is itself a tranche wrapper.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every explicit value requires `blacklistabilityReview` with a matching `reviewedStatus`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
 - `mintAuthority` is descriptive. It does not change Safety Score, report-card raw inputs, selector exclusions, or rankings. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review.

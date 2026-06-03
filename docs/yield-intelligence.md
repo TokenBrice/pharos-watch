@@ -6,11 +6,15 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.17`
+- **Current methodology version:** `v8.19`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.19 adds Royco Dawn structured-tranche opportunities as protocol-native Yield Intelligence rows. Senior and junior rows publish under `royco-dawn:<chainId>:<marketId>:senior` / `royco-dawn:<chainId>:<marketId>:junior`, attach to the tracked underlying stablecoin when the deposit token resolves, and use an opportunity-level tranche Safety Score for PYS while leaving the underlying Report Card Safety Score unchanged.
+
+Yield v8.18 corrects base-asset source ownership for GHO, DOLA, and USDN/SMARDEX routing. GHO and DOLA no longer publish wrapper APY through base rows, and `usdn-smardex` now uses its exact single-exposure DeFiLlama pool after the asset was corrected from NAV-token to rebase semantics.
 
 Yield v8.17 tracks `sdusd-dtrinity` as the first-class dTRINITY dStake yield wrapper. The existing Ethereum/Fraxtal weighted sdUSD DeFiLlama source now publishes under `sdusd-dtrinity`, while `dusd-dtrinity` stops owning wrapper yield metadata and parent-side sdUSD history is suppressed by the ownership-handoff cleanup path.
 
@@ -78,6 +82,7 @@ Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/regi
 | `nav-appreciation`    | NAV          | Token price appreciates as backing grows                       |
 | `governance-set`      | Gov. Set     | Yield rate set by governance vote                              |
 | `lending-opportunity` | Lending Opp. | Auto-discovered best lending market from the curated allowlist |
+| `structured-tranche`  | Tranche      | Senior/junior tranche opportunity over an underlying yield market |
 
 Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`), both typed as `Record<YieldType, ...>` so adding a new variant without updating the maps is a compile error.
 
@@ -227,6 +232,8 @@ Protocol-specific lending-market readers that query protocol state directly also
 
 This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. K3 `sBOLD` now owns this path directly as `sbold-k3-capital`, while base BOLD keeps its Yearn `yBOLD` native-wrapper source.
 
+Royco Dawn markets also live in this tier. The supplemental source lane reads the Dawn market explorer API and emits separate `structured-tranche` rows for the senior and junior vaults in each verified market above the local Royco TVL floor. Rows use the stable source keys `royco-dawn:<chainId>:<marketId>:senior` and `royco-dawn:<chainId>:<marketId>:junior`; the tranche share tokens are not added to the stablecoin registry. Identity resolution maps the Royco deposit token back to a tracked underlying stablecoin by chain/address first, with configured wrapper-variant addresses such as Neutrl `sNUSD` attached to their tracked parent when the wrapper is not a first-class stablecoin row.
+
 Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. They now also require observable venue TVL and must clear a size floor equal to the higher of the existing absolute floor and `0.1%` of the tracked stablecoin's current supply. These filters are scoped to the suggestion layer for base assets such as USDC or USDT; they do not remove native tracked yield assets from the broader methodology inventory.
 
 **Current tracked optional adapters:**
@@ -243,9 +250,17 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 
 The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. Low-signal rows with negligible TVL or effectively zero APR are dropped instead of being published as meaningful yield. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
 
+The Royco Dawn adapter maps APY ratios to percent APY, tranche vault TVL to `sourceTvlUsd`, and market coverage/utilization/status/drawdown plus share-token addresses into nested `sourceRisk` fields. Royco rows carry `venueRiskTier: "medium"` until a reviewed venue-risk audit assigns a different tier. They also carry investability flags for withdrawal constraints, verified listing status, and whether the row is senior protected or junior first-loss. KYC/access booleans are nullable; the current Dawn market payload does not expose explicit KYC or jurisdiction restriction fields, so those penalties apply only if future source evidence populates them.
+
 The Etherfuse CETES adapter reads the current CETES Stablebond issuance from Etherfuse's first-party Next data and maps `interestRateBps / 100` to APY. It publishes `protocol-api:etherfuse-cetes-current-issuance` with the current token amount as the exchange-rate observation when available. This source prevents MXN NAV appreciation plus USD/MXN FX movement from being annualized by the generic price-derived fallback.
 
 The Zephyr adapter reads the protocol's historical-return API and publishes the one-day effective APY only for `zys-zephyr-protocol`. This keeps base ZSD non-yield-bearing while still showing the native ZYS yield-share return on `/yield`.
+
+### Opportunity-Level Tranche Safety
+
+Royco Dawn rows use a row-level tranche Safety Score for PYS instead of blindly reusing the underlying stablecoin's Report Card Safety Score. The raw underlying score remains the ceiling for senior rows unless a future methodology explicitly allows first-loss protection to create an uplift. The current implementation does not uplift senior rows; it only subtracts tranche-specific penalties. Junior rows start with a large first-loss penalty, then add utilization, coverage, market-status, drawdown, TVL, withdrawal, access, and venue-posture penalties. At high utilization, junior rows should usually score materially below the underlying stablecoin.
+
+Published Royco source-risk metadata includes `trancheSide`, `underlyingSafetyScore`, `trancheSafetyScore`, `trancheSafetyPenalty`, `marketCoverageRatio`, `marketMinCoverageRatio`, `marketUtilizationRatio`, `marketUtilizationLimitRatio`, `marketDrawdownRatio`, `marketStatus`, `marketTvlUsd`, `trancheTvlUsd`, `withdrawalDelaySeconds`, `kycRequired`, and `accessRestricted` when available. API hydration recomputes those scores from the live underlying Report Card snapshot before ranking, so a stale cached Royco score is not allowed to overwrite current stablecoin safety data.
 
 ### Tier 3: Price-Derived APY
 

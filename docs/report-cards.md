@@ -26,11 +26,12 @@ Current-version note: v7.29 keeps the v7.28 four-status FreezeWatch model and mo
 
 ## Yield Source-Risk Boundary
 
-Yield Intelligence source-risk evidence is not a report-card input in the current methodology. `sourceRisk.*` fields can affect the Pharos Yield Score (PYS) and same-confidence yield source arbitration, but they do not change the Safety Score, Resilience, or Dependency Risk dimensions here.
+Yield Intelligence source-risk evidence is not a report-card input in the current methodology. `sourceRisk.*` fields can affect the Pharos Yield Score (PYS), opportunity-level tranche Safety Scores, and same-confidence yield source arbitration, but they do not change the underlying stablecoin's Safety Score, Resilience, or Dependency Risk dimensions here.
 
 `shared/lib/report-card-yield-risk.ts` keeps the integration boundary explicit by returning no-op adjustments for the current cases:
 
 - `external-lending-opportunity`: an external lending venue belongs to an opportunity row, not the base stablecoin's Safety Score.
+- `external-structured-tranche`: an external senior/junior tranche belongs to an opportunity row, not the base stablecoin's Safety Score.
 - `missing-yield-config`: the asset lacks a yield configuration that would define how a report-card adjustment should be interpreted.
 - `missing-source-risk`: the yield row has no source-risk payload to evaluate.
 - `source-risk-unconsumed`: source-risk exists, but the report-card methodology has not defined a scored cap, haircut, or modifier for it.

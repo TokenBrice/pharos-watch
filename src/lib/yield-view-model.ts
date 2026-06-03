@@ -416,7 +416,9 @@ function getBenchmarkKey(row: YieldRanking): YieldBenchmarkKey {
 }
 
 function getOpportunity(row: YieldRanking): Exclude<YieldOpportunityFilter, "all"> {
-  return row.yieldType === "lending-opportunity" ? "lending-opportunity" : "holder-yield";
+  return row.yieldType === "lending-opportunity" || row.yieldType === "structured-tranche"
+    ? "lending-opportunity"
+    : "holder-yield";
 }
 
 function getSourceDepthLens(row: YieldRanking): YieldSourceDepthLens {
@@ -609,7 +611,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
     opportunity: [
       { value: "all", label: "All opportunities", count: facets.length },
       { value: "holder-yield", label: "Holder yield", count: holderYieldCount },
-      { value: "lending-opportunity", label: "Lending opp.", count: lendingOpportunityCount },
+      { value: "lending-opportunity", label: "Opportunity rows", count: lendingOpportunityCount },
     ],
     depth: [
       { value: "all", label: "All depth", count: facets.length },

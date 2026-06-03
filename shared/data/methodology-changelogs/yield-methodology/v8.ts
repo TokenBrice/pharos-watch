@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.19",
+    title: "Royco Dawn Tranche Opportunities",
+    date: "2026-06-03",
+    effectiveAt: 1780444800,
+    summary:
+      "Royco Dawn is now ingested as a Yield Intelligence protocol-API source with separate senior and junior structured-tranche opportunity rows attached to the tracked underlying stablecoin where the deposit token can be resolved.",
+    impact: [
+      "Royco Dawn market rows publish under `royco-dawn:<chainId>:<marketId>:senior` and `royco-dawn:<chainId>:<marketId>:junior` source keys rather than creating synthetic stablecoin registry entries for tranche share tokens",
+      "The supplemental source lane maps Royco deposit-token addresses against tracked stablecoin contracts and configured wrapper variants, including the Neutrl `sNUSD` -> `nusd-neutrl` route",
+      "A new `structured-tranche` yield type labels tranche opportunities without applying generic base-asset lending size gates designed for ordinary lending suggestions",
+      "PYS now consumes an opportunity-level tranche Safety Score for Royco rows: senior rows are capped at or below the underlying Safety Score, while junior rows carry first-loss, utilization, coverage, drawdown, market-status, TVL, withdrawal, explicit access, and venue-posture penalties",
+      "Royco tranche safety is exposed through nested `sourceRisk` fields such as `trancheSide`, `underlyingSafetyScore`, `trancheSafetyScore`, `marketCoverageRatio`, `marketUtilizationRatio`, and `marketStatus`; the underlying Report Card Safety Score itself is unchanged",
+      "Read-time safety hydration recomputes Royco tranche safety from the live underlying Report Card snapshot instead of overwriting the row with the raw underlying Safety Score",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.18",
     title: "Base Asset Yield Source Corrections",
     date: "2026-05-22",

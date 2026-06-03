@@ -539,7 +539,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | ------------------------- | ------------------------- | -------------------------------------------- | --------------------------------------------- |
 | `sync-yield-supplemental` | `syncYieldSupplemental()` | `worker/src/cron/sync-yield-supplemental.ts` | [Yield Intelligence](./yield-intelligence.md) |
 
-**Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
+**Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3, Royco Dawn). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
 
 ### Trigger 13: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
