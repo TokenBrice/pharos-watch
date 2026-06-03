@@ -1,17 +1,9 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
-import {
-  filterStaleLiveReserveCircuitStates,
-  getCircuitStates,
-  recoverBreakerOnNoCandidate,
-  recordOutcomeSafe,
-} from "../lib/circuit-breaker";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
-  cleanupStaleLiveReserveArtifacts,
   loadReserveSyncStateMap,
-  pruneLiveReserveHistory,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
 import { syncReserveCoin } from "./sync-live-reserves-core";
@@ -20,14 +12,13 @@ import {
   buildReserveAdapterAttemptChainError,
   breakerKeyForConfig,
   CONFIGURED_COINS,
-  type ReserveAttemptFailureSummary,
   type ConfiguredCoin,
   type LiveReserveConfig,
 } from "./sync-live-reserves-shared";
+import { finalizeReserveSyncRun, type ReserveSyncAttemptFailureGroup } from "./sync-live-reserves-finalize";
 import { createAdapterIoLimiter, RESERVE_ADAPTER_MAX_PARALLEL_IO } from "./reserve-adapters/concurrency";
 import {
   loadLiveReserveCursorState,
-  persistLiveReserveCursorState,
   recordDeferredTail,
   rotateConfiguredCoins,
 } from "./sync-live-reserves-run-state";
@@ -47,11 +38,7 @@ interface ReserveCoinQueueResult {
   breakerOutcomes: Map<string, boolean>;
   deferredCoins: number;
   nextCursorStablecoinId: string | null;
-  attemptFailureSummaries: Array<{
-    stablecoinId: string;
-    adapter: string;
-    attempts: ReserveAttemptFailureSummary[];
-  }>;
+  attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
 }
 
 function createAbortableAttemptSignal(
@@ -348,155 +335,6 @@ async function runReserveCoinQueue(args: {
     deferredCoins,
     nextCursorStablecoinId,
     attemptFailureSummaries,
-  };
-}
-
-async function recoverNoCandidateLiveReserveBreakers(db: D1Database): Promise<void> {
-  const circuits = await getCircuitStates(db);
-  const configuredCircuits = filterStaleLiveReserveCircuitStates(circuits);
-  for (const source of Object.keys(circuits)) {
-    if (!source.startsWith("live-reserves:") || Object.prototype.hasOwnProperty.call(configuredCircuits, source)) {
-      continue;
-    }
-    await recoverBreakerOnNoCandidate(db, source);
-  }
-}
-
-async function finalizeReserveSyncRun(args: {
-  db: D1Database;
-  total: number;
-  runStartedAt: number;
-  reportProgress?: CronProgressReporter;
-  synced: number;
-  failed: number;
-  skipped: number;
-  warningMessages: string[];
-  coinsWithErrors: string[];
-  coinsWithWarnings: string[];
-  breakerKeys: ReadonlySet<string>;
-  breakerOutcomes: ReadonlyMap<string, boolean>;
-  deferredCoins: number;
-  nextCursorStablecoinId: string | null;
-  attemptFailureSummaries: ReserveCoinQueueResult["attemptFailureSummaries"];
-  budgetConfig: LiveReserveSyncBudgetConfig;
-}): Promise<CronResult> {
-  await reportLiveReserveProgress(args.reportProgress, {
-    stage: "finalizing",
-    message: "Recording reserve sync outcomes and cleanup",
-    itemsDone: args.total,
-    itemsTotal: args.total,
-    synced: args.synced,
-    failed: args.failed,
-    skipped: args.skipped,
-  });
-
-  // Deferred breaker outcome recording: worst outcome per key wins.
-  for (const [key, success] of args.breakerOutcomes) {
-    await recordOutcomeSafe(args.db, key, success);
-  }
-
-  try {
-    await recoverNoCandidateLiveReserveBreakers(args.db);
-  } catch (error) {
-    console.warn("[sync-live-reserves] Failed to recover stale live-reserve circuit breakers:", error);
-  }
-
-  try {
-    await cleanupStaleLiveReserveArtifacts(
-      args.db,
-      CONFIGURED_COINS.map((coin) => coin.id),
-      args.breakerKeys,
-    );
-  } catch (error) {
-    console.warn("[sync-live-reserves] Ghost reserve artifact cleanup failed:", error);
-  }
-
-  let cursorPersistFailed = false;
-  let cursorPersistError: string | null = null;
-  try {
-    await persistLiveReserveCursorState(
-      args.db,
-      args.deferredCoins,
-      args.nextCursorStablecoinId,
-    );
-  } catch (error) {
-    cursorPersistFailed = true;
-    cursorPersistError = error instanceof Error ? error.message : String(error);
-    await logCronEvent(args.db, {
-      job: "sync-live-reserves",
-      eventType: "live-reserve-cursor-finalize-failed",
-      severity: "warning",
-      message:
-        args.deferredCoins > 0
-          ? "Live reserve cursor persistence failed; the next run may restart from the previous cursor."
-          : "Live reserve cursor cleanup failed; status may show the previous deferred tail until cleanup succeeds.",
-      metadata: {
-        deferredCoins: args.deferredCoins,
-        nextCursorStablecoinId: args.nextCursorStablecoinId,
-        error: cursorPersistError,
-      },
-    });
-  }
-
-  let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
-  try {
-    historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt);
-  } catch (error) {
-    console.warn("[sync-live-reserves] Live reserve history prune failed:", error);
-  }
-
-  const historyWriteFailedCoins = Array.from(new Set(
-    args.warningMessages
-      .filter((message) => message.endsWith(":history-write-failed"))
-      .map((message) => message.slice(0, -":history-write-failed".length)),
-  ));
-  if (historyWriteFailedCoins.length > 0) {
-    await logCronEvent(args.db, {
-      job: "sync-live-reserves",
-      eventType: "live-reserve-history-write-failed",
-      severity: "warning",
-      message:
-        `${historyWriteFailedCoins.length} live reserve successful attempt(s) missed history writes after authoritative state was recorded.`,
-      metadata: {
-        coins: historyWriteFailedCoins,
-      },
-    });
-  }
-
-  const status: CronResult["status"] =
-    args.synced === 0 && (args.failed > 0 || args.skipped > 0)
-      ? "error"
-      : (args.failed + args.skipped) > Math.ceil(args.total * 0.1)
-        ? "degraded"
-        : "ok";
-
-  return {
-    itemCount: args.synced,
-    status,
-    metadata: JSON.stringify({
-      structureVersion: 2,
-      synced: args.synced,
-      failed: args.failed,
-      skipped: args.skipped,
-      total: args.total,
-      warningCount: args.warningMessages.length,
-      runBudgetTruncated: args.deferredCoins > 0,
-      deferredCoins: args.deferredCoins,
-      nextCursorStablecoinId: args.nextCursorStablecoinId,
-      budgetMs: args.budgetConfig.runBudgetMs,
-      adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
-      d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
-      finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
-      cursorPersistFailed,
-      ...(cursorPersistError ? { cursorPersistError } : {}),
-      ...(historyWriteFailedCoins.length > 0 ? { historyWriteFailedCoins } : {}),
-      ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
-      ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),
-      ...(args.attemptFailureSummaries.length > 0 ? { attemptFailureSummaries: args.attemptFailureSummaries } : {}),
-      ...(args.warningMessages.length > 0 ? { warnings: args.warningMessages } : {}),
-      ...(historyPrune ? { historyPrune } : {}),
-      breakerKeys: Array.from(args.breakerKeys),
-    }),
   };
 }
 
