@@ -38755,11 +38755,6 @@
     ],
     "notices": [
       {
-        "type": "danger",
-        "title": "Inherits dTRINITY exploit risk",
-        "message": "sdUSD is backed by dUSD deposits in dLEND, so holders inherit dUSD and dTRINITY protocol risk, including the March 17 2026 exploit notice on the dUSD profile."
-      },
-      {
         "type": "warning",
         "title": "Liquidity-gated unstaking",
         "message": "sdUSD unstaking depends on available dUSD liquidity in dLEND; when utilization is high, holders may need to wait for borrowers to repay or sell sdUSD on secondary markets."
