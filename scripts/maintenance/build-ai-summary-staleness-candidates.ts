@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+/* eslint-disable security/detect-non-literal-regexp, security/detect-unsafe-regex */
 /**
  * Detects AI editorial summaries whose baked-in scores/grades have drifted
  * away from live Pharos data, and writes an editorial refresh queue.
@@ -20,7 +21,7 @@
  * pre-fetched `<endpoint>.json` files instead of hitting the network.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const ROOT = process.cwd();
@@ -54,6 +55,36 @@ interface Current {
   dewsBand: string | null;
   dewsScore: number | null;
   depegCount: number | null;
+}
+
+interface ReportCardDimension {
+  grade?: string | null;
+  score?: number | null;
+}
+
+interface ReportCardRow {
+  id: string;
+  name?: string | null;
+  symbol?: string | null;
+  overallGrade?: string | null;
+  overallScore?: number | null;
+  dimensions?: {
+    pegStability?: ReportCardDimension | null;
+    liquidity?: ReportCardDimension | null;
+    resilience?: ReportCardDimension | null;
+    decentralization?: ReportCardDimension | null;
+    dependencyRisk?: ReportCardDimension | null;
+  } | null;
+}
+
+interface StressRow {
+  band?: string | null;
+  score?: number | null;
+}
+
+interface PegRow {
+  id: string;
+  eventCount?: number | null;
 }
 
 interface Finding {
@@ -132,10 +163,10 @@ async function loadCurrent(): Promise<Map<string, Current>> {
     fetchJson("peg-summary"),
   ]);
 
-  const cards = (cardsRaw as { cards?: any[] }).cards ?? [];
-  const stress = (stressRaw as { signals?: Record<string, any> }).signals ?? {};
-  const peg = (pegRaw as { coins?: any[] }).coins ?? [];
-  const pegById = new Map(peg.map((c: any) => [c.id as string, c]));
+  const cards = (cardsRaw as { cards?: ReportCardRow[] }).cards ?? [];
+  const stress = (stressRaw as { signals?: Record<string, StressRow> }).signals ?? {};
+  const peg = (pegRaw as { coins?: PegRow[] }).coins ?? [];
+  const pegById = new Map(peg.map((c) => [c.id, c]));
 
   const map = new Map<string, Current>();
   for (const card of cards) {
