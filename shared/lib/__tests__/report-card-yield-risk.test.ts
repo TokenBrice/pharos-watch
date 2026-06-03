@@ -41,6 +41,26 @@ describe("resolveReportCardYieldRiskAdjustment", () => {
     });
   });
 
+  it("keeps external structured tranches out of the base Safety Score", () => {
+    const adjustment = resolveReportCardYieldRiskAdjustment({
+      flags: { yieldBearing: true, navToken: true },
+      yieldType: "structured-tranche",
+      sourceRisk: {
+        sourceRiskPenalty: 1.2,
+        trancheSide: "senior",
+        trancheSafetyScore: 60,
+      },
+    });
+
+    expect(adjustment).toMatchObject({
+      appliesToBaseScore: false,
+      scoreModifier: null,
+      resilienceCap: null,
+      dependencyRiskCap: null,
+      reason: "external-structured-tranche",
+    });
+  });
+
   it("keeps yield-bearing rows without a yield config neutral", () => {
     const adjustment = resolveReportCardYieldRiskAdjustment({
       flags: { yieldBearing: true, navToken: false },

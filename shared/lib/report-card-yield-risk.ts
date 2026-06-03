@@ -4,6 +4,7 @@ import type { YieldSourceRisk } from "../types/yield";
 export type ReportCardYieldRiskNoOpReason =
   | "not-yield-bearing"
   | "external-lending-opportunity"
+  | "external-structured-tranche"
   | "missing-yield-config"
   | "missing-source-risk"
   | "source-risk-unconsumed";
@@ -44,6 +45,9 @@ export function resolveReportCardYieldRiskAdjustment(
 
   if (yieldType === "lending-opportunity") {
     return noOp("external-lending-opportunity");
+  }
+  if (yieldType === "structured-tranche") {
+    return noOp("external-structured-tranche");
   }
 
   if (!input.flags.yieldBearing && !input.flags.navToken) {

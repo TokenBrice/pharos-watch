@@ -501,7 +501,8 @@ export type YieldType =
   | "lp-receipt"
   | "nav-appreciation"
   | "governance-set"
-  | "lending-opportunity";
+  | "lending-opportunity"
+  | "structured-tranche";
 
 export const YIELD_TYPE_VALUES = [
   "lending-vault",
@@ -511,6 +512,7 @@ export const YIELD_TYPE_VALUES = [
   "nav-appreciation",
   "governance-set",
   "lending-opportunity",
+  "structured-tranche",
 ] as const;
 
 export const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);

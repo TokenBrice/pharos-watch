@@ -44,14 +44,17 @@ export const YIELD_PYS_NULL_REASONS = [
 ] as const;
 export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
-export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
+export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety" | "opportunity-safety";
 export type YieldPublicationStatus = "staged" | "published" | "failed";
 export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
+export type YieldTrancheSide = "senior" | "junior";
+export type YieldMarketStatus = "normal" | "protected" | "unhealthy" | "critical";
 export const YIELD_DEPLOYMENT_PLACE_VALUES = [
   "native-wrapper",
   "issuer-savings",
   "lending-market",
   "strategy-vault",
+  "structured-tranche",
   "lp-or-dex",
   "rwa-fund",
   "reward-program",
@@ -151,6 +154,24 @@ export interface YieldSourceRisk {
   venueProtocol?: string | null;
   venueChain?: string | null;
   venueRiskTier?: YieldVenueRiskTier | null;
+  trancheSide?: YieldTrancheSide | null;
+  trancheSafetyScore?: number | null;
+  trancheSafetyPenalty?: number | null;
+  underlyingSafetyScore?: number | null;
+  marketCoverageRatio?: number | null;
+  marketMinCoverageRatio?: number | null;
+  marketUtilizationRatio?: number | null;
+  marketUtilizationLimitRatio?: number | null;
+  marketDrawdownRatio?: number | null;
+  marketTotalDrawdowns?: number | null;
+  marketStatus?: YieldMarketStatus | null;
+  marketTvlUsd?: number | null;
+  trancheTvlUsd?: number | null;
+  trancheShareTokenAddress?: string | null;
+  trancheDepositTokenAddress?: string | null;
+  withdrawalDelaySeconds?: number | null;
+  kycRequired?: boolean | null;
+  accessRestricted?: boolean | null;
   investabilityFlags?: string[];
 }
 
@@ -315,6 +336,24 @@ const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
   venueProtocol: z.string().nullable().optional(),
   venueChain: z.string().nullable().optional(),
   venueRiskTier: z.enum(["low", "medium", "high", "unknown"]).nullable().optional(),
+  trancheSide: z.enum(["senior", "junior"]).nullable().optional(),
+  trancheSafetyScore: z.number().min(0).max(100).nullable().optional(),
+  trancheSafetyPenalty: z.number().min(0).max(100).nullable().optional(),
+  underlyingSafetyScore: z.number().min(0).max(100).nullable().optional(),
+  marketCoverageRatio: z.number().min(0).nullable().optional(),
+  marketMinCoverageRatio: z.number().min(0).nullable().optional(),
+  marketUtilizationRatio: z.number().min(0).nullable().optional(),
+  marketUtilizationLimitRatio: z.number().min(0).nullable().optional(),
+  marketDrawdownRatio: z.number().min(0).nullable().optional(),
+  marketTotalDrawdowns: z.number().int().min(0).nullable().optional(),
+  marketStatus: z.enum(["normal", "protected", "unhealthy", "critical"]).nullable().optional(),
+  marketTvlUsd: z.number().min(0).nullable().optional(),
+  trancheTvlUsd: z.number().min(0).nullable().optional(),
+  trancheShareTokenAddress: z.string().nullable().optional(),
+  trancheDepositTokenAddress: z.string().nullable().optional(),
+  withdrawalDelaySeconds: z.number().int().min(0).nullable().optional(),
+  kycRequired: z.boolean().nullable().optional(),
+  accessRestricted: z.boolean().nullable().optional(),
   investabilityFlags: z.array(z.string()).optional(),
 });
 
@@ -423,7 +462,7 @@ const YieldRankingProvenanceSchema = z.object({
   previousBestSourceKey: z.string().nullable(),
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
-  safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety"]).optional(),
+  safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety", "opportunity-safety"]).optional(),
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),

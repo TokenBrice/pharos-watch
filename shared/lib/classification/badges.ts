@@ -159,6 +159,7 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "nav-appreciation": "NAV",
   "governance-set": "Gov. Set",
   "lending-opportunity": "Lending Opp.",
+  "structured-tranche": "Tranche",
 };
 
 export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }> = {
@@ -178,6 +179,7 @@ export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }
     hex: "#f97316",
   },
   "lending-opportunity": { badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20", hex: "#0ea5e9" },
+  "structured-tranche": { badge: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20", hex: "#e11d48" },
 };
 
 /** Chart hex colors for blacklist stablecoin breakdown.
