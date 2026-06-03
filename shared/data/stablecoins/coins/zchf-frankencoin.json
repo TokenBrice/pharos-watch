@@ -126,6 +126,7 @@
     }
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "dao-governance",
   "notices": [
     {
       "type": "warning",
