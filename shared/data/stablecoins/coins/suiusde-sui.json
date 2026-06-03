@@ -54,18 +54,13 @@
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
-  "dependencies": [
-    {
-      "id": "usde-ethena",
-      "weight": 1,
-      "type": "mechanism"
-    }
-  ],
   "reserves": [
     {
       "name": "Ethena whitelabel synthetic-dollar backing",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "depType": "mechanism"
     }
   ],
   "mintAuthority": {

@@ -9443,13 +9443,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "mechanism"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -9479,7 +9472,9 @@
       {
         "name": "Short-term U.S. Treasury Bills",
         "pct": 85,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "mechanism"
       },
       {
         "name": "Cash and cash equivalents",
@@ -41297,13 +41292,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "usde-ethena",
-        "weight": 1,
-        "type": "mechanism"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -41323,7 +41311,9 @@
       {
         "name": "Ethena whitelabel synthetic-dollar backing",
         "pct": 100,
-        "risk": "high"
+        "risk": "high",
+        "coinId": "usde-ethena",
+        "depType": "mechanism"
       }
     ]
   },
@@ -47778,13 +47768,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -47814,7 +47797,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
         "pct": 100,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -51185,13 +51170,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -51216,7 +51194,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
         "pct": 100,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -52446,13 +52426,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
     "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
       "reviewedStatus": "possible",
@@ -52482,7 +52455,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via $M / M0 Protocol)",
         "pct": 99,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       },
       {
         "name": "Stability Reserve buffer",
@@ -55064,13 +55039,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -55099,7 +55067,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
         "pct": 100,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -65128,13 +65098,6 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
-      {
-        "id": "m-m0",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -65159,7 +65122,9 @@
       {
         "name": "Short-term U.S. Treasury Bills (via M0 SPVs)",
         "pct": 85,
-        "risk": "very-low"
+        "risk": "very-low",
+        "coinId": "m-m0",
+        "depType": "wrapper"
       },
       {
         "name": "Cash and cash equivalents",

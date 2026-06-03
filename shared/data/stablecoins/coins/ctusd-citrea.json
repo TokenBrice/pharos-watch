@@ -201,19 +201,14 @@
     {
       "name": "Short-term U.S. Treasury Bills",
       "pct": 85,
-      "risk": "very-low"
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "mechanism"
     },
     {
       "name": "Cash and cash equivalents",
       "pct": 15,
       "risk": "very-low"
-    }
-  ],
-  "dependencies": [
-    {
-      "id": "m-m0",
-      "weight": 1,
-      "type": "mechanism"
     }
   ],
   "liveReservesConfig": {

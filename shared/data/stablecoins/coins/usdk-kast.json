@@ -207,18 +207,13 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "deploymentModel": "single-chain",
-  "dependencies": [
-    {
-      "id": "m-m0",
-      "weight": 1,
-      "type": "wrapper"
-    }
-  ],
   "reserves": [
     {
       "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper"
     }
   ],
   "liveReservesConfig": {

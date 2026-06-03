@@ -153,18 +153,13 @@
   "governanceQuality": "single-entity",
   "deploymentModel": "native-multichain",
   "chainTier": "ethereum",
-  "dependencies": [
-    {
-      "id": "m-m0",
-      "weight": 1,
-      "type": "wrapper"
-    }
-  ],
   "reserves": [
     {
       "name": "Short-term U.S. Treasury Bills (via $M / M0 Protocol)",
       "pct": 99,
-      "risk": "very-low"
+      "risk": "very-low",
+      "coinId": "m-m0",
+      "depType": "wrapper"
     },
     {
       "name": "Stability Reserve buffer",
