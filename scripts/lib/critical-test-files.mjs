@@ -32,6 +32,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/stress-signals.test.ts",
   "worker/src/api/__tests__/mint-burn-flows.test.ts",
   "worker/src/api/__tests__/stablecoin-detail.test.ts",
+  "worker/src/api/__tests__/stablecoin-reserves.test.ts",
   "worker/src/api/__tests__/status.test.ts",
   "worker/src/cron/__tests__/daily-digest.test.ts",
   "worker/src/cron/__tests__/sync-stablecoins.test.ts",
@@ -54,6 +55,7 @@ export const CRITICAL_CONTRACT_TEST_FILES = [
   "worker/src/api/__tests__/yield-history.test.ts",
   "worker/src/api/__tests__/stress-signals.test.ts",
   "worker/src/api/__tests__/mint-burn-flows.test.ts",
+  "worker/src/api/__tests__/stablecoin-reserves.test.ts",
   "worker/src/api/__tests__/depeg-events.test.ts",
   "worker/src/api/__tests__/events.test.ts",
 ];
