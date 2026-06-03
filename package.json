@@ -98,6 +98,7 @@
     "check:mechanism-archetype-coverage": "tsx scripts/ci/check-mechanism-archetype-coverage.ts",
     "check:archetype-explainer-coverage": "tsx scripts/ci/check-archetype-explainer-coverage.ts",
     "candidates:annotations": "tsx scripts/maintenance/build-annotation-candidates.ts",
+    "candidates:ai-summaries": "tsx scripts/maintenance/build-ai-summary-staleness-candidates.ts",
     "backfill:ai-summary-provenance": "node scripts/maintenance/backfill-ai-summary-provenance.mjs",
     "generate:pwa-icons": "node scripts/maintenance/generate-pwa-icons.mjs",
     "subset:fonts": "node scripts/maintenance/subset-fonts.mjs",
