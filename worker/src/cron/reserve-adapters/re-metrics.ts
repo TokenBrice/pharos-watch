@@ -74,6 +74,12 @@ const SYMBOL_CONFIG: Record<string, {
     risk: "low",
     coinId: "usdt-tether",
   },
+  susds: {
+    name: "sUSDS (Sky savings USDS)",
+    risk: "low",
+    coinId: "susds-sky",
+    depType: "collateral",
+  },
   dai: {
     name: "DAI reserves",
     risk: "low",

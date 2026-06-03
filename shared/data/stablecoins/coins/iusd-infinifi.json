@@ -147,7 +147,9 @@
     {
       "name": "Cap stcUSD (illiquid vault)",
       "pct": 3,
-      "risk": "medium"
+      "risk": "medium",
+      "coinId": "stcusd-cap",
+      "depType": "collateral"
     },
     {
       "name": "Aave Horizon USDC/RLUSD (institutional pools)",

@@ -58,15 +58,19 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "aavev3-rlusd-farm":       { risk: "low", ...wrapperAssetMeta("usdc") },
   "euler-sentora-usdc":      { risk: "low", ...wrapperAssetMeta("usdc") },
   "morpho-steakUSDCinfinifi": { risk: "medium", ...wrapperAssetMeta("usdc") },
-  "capfarm":                 { risk: "medium" },
+  "capfarm":                 { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
   SwapFarm:                  { risk: "low" },
   "tokemak-autoUSD":         { risk: "medium" },
   "tokemak-auto-infinifiUSD": { risk: "medium" },
   "gauntlet-alpha-farm":     { risk: "medium" },
   "reservoir-wsrUSD":        { risk: "medium" },
   "sGHO":                    { risk: "medium", coinId: "sgho-aave", depType: "collateral" },
-  "liquid-cap":              { risk: "medium" },
+  "liquid-cap":              { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
   "cowswap-fxSave":          { risk: "medium" },
+  "pendle-v3-PT-apxUSD-18JUN2026": { risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
+  "pendle-v3-PT-apyUSD-18JUN2026": { risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
+  "new-silver-junior":       { risk: "high", ...cefiPositionMeta() },
+  "morpho-v2-sentora-prime": { risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;

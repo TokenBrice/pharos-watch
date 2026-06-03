@@ -64,6 +64,21 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     expect(result.warnings).toBeUndefined();
   });
 
+  it("maps sUSDS explicitly instead of degrading as an unmapped token", () => {
+    const html = `
+<html><body><script>
+self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\\":\\"2026-06-03T10:27:10.907Z\\",\\"rows\\":[{\\"tokenSymbol\\":\\"sUSDS\\",\\"valueWei\\":\\"100000000000000000000\\",\\"valueKnown\\":true}]}},\\"series\\":[{\\"seriesKey\\":\\"offchain_capital\\",\\"stats\\":{\\"current\\":100},\\"points\\":[{\\"date\\":\\"2026-06-03\\",\\"value\\":100}]}]..."]);
+</script></body></html>
+`;
+    const result = adaptReMetrics(html);
+
+    expect(result.slices).toEqual([
+      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
+    ]);
+    expect(result.warnings).toBeUndefined();
+  });
+
   it("parses large wei-denominated token values without raw Number conversion", () => {
     const html = `
 <html><body><script>

@@ -128,8 +128,36 @@ describe("adaptInfiniFi", () => {
     const result = adaptInfiniFi(response);
     expect(result.unknownFarms).toEqual([]);
     expect(result.slices).toEqual([
-      { name: "Liquid Cap", pct: 60, risk: "medium" },
+      { name: "Liquid Cap", pct: 60, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
       { name: "CoW Swap fxSave", pct: 40, risk: "medium" },
+    ]);
+  });
+
+  it("recognizes current Pendle, New Silver, stcUSD, and Sentora PRIME positions", () => {
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        farms: [
+          { name: "pendle-v3-PT-apxUSD-18JUN2026", label: "Pendle PT-apxUSD-18JUN2026", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "PT-apxUSD-18JUN2026" },
+          { name: "pendle-v3-PT-apyUSD-18JUN2026", label: "Pendle PT-apyUSD-18JUN2026", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "PT-apyUSD-18JUN2026" },
+          { name: "new-silver-junior", label: "New Silver", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "morpho-v2-sentora-prime", label: "Sentora PRIME Main", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "senPYUSDPRIMEv2" },
+          { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 20, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
+        ],
+        stats: { asset: { totalTVLAssetNormalized: 100 } },
+      },
+    };
+
+    const result = adaptInfiniFi(response);
+    expect(result.unknownFarms).toEqual([]);
+    expect(result.unknownExposurePct).toBe(0);
+    expect(result.slices).toEqual([
+      { name: "Pendle PT-apxUSD-18JUN2026", pct: 20, risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
+      { name: "Pendle PT-apyUSD-18JUN2026", pct: 20, risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
+      { name: "New Silver", pct: 20, risk: "high", blacklistable: true },
+      { name: "Sentora PRIME Main", pct: 20, risk: "high", coinId: "pyusd-paypal", depType: "collateral" },
+      { name: "Cap stcUSD", pct: 20, risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
     ]);
   });
 
@@ -161,7 +189,8 @@ describe("adaptInfiniFi", () => {
           { name: "morpho-steakUSDCinfinifi", label: "Morpho steakUSDC", assetsNormalized: 25, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
           { name: "sGHO", label: "Staked GHO", assetsNormalized: 20, type: "LIQUID", underlyingAssetSymbol: "GHO" },
           { name: "maple-farm-syrup", label: "Maple Syrup USDC", assetsNormalized: 15, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
-          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL", assetsNormalized: 10, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+          { name: "capfarm", label: "Cap stcUSD", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
+          { name: "fasanara-gdaf", label: "Fasanara mGLOBAL", assetsNormalized: 5, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
         ],
       },
     };
@@ -171,6 +200,7 @@ describe("adaptInfiniFi", () => {
     expect(slices.find((s) => s.name === "Morpho steakUSDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
     expect(slices.find((s) => s.name === "Staked GHO")).toMatchObject({ coinId: "sgho-aave", depType: "collateral" });
     expect(slices.find((s) => s.name === "Maple Syrup USDC")).toMatchObject({ coinId: "usdc-circle", depType: "collateral" });
+    expect(slices.find((s) => s.name === "Cap stcUSD")).toMatchObject({ coinId: "stcusd-cap", depType: "collateral" });
     // fasanara has no coinId — should be absent
     expect(slices.find((s) => s.name === "Fasanara mGLOBAL")).not.toHaveProperty("coinId");
   });
