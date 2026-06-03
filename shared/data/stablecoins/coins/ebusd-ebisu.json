@@ -118,7 +118,9 @@
     {
       "name": "stcUSD",
       "pct": 5.7,
-      "risk": "medium"
+      "risk": "medium",
+      "coinId": "stcusd-cap",
+      "depType": "collateral"
     },
     {
       "name": "weETH",
@@ -199,7 +201,9 @@
             "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
             "decimals": 18
           },
-          "risk": "medium"
+          "risk": "medium",
+          "coinId": "stcusd-cap",
+          "depType": "collateral"
         }
       ]
     }

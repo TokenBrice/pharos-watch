@@ -159,15 +159,21 @@ describe("generate-dependency-coverage-audit", () => {
       staticEdgeCount: 2,
       participantCount: 4,
       dependentCount: 2,
+      reserveSlicesMissingCoinId: 2,
+      depTypeWithoutCoinIdWarnings: 1,
     })).toEqual([]);
     expect(evaluateDependencyCoverageBaseline(audit, {
       staticEdgeCount: 3,
       participantCount: 5,
       dependentCount: 3,
+      reserveSlicesMissingCoinId: 1,
+      depTypeWithoutCoinIdWarnings: 0,
     })).toEqual([
       "static edge count regressed from 3 to 2",
       "static participant count regressed from 5 to 4",
       "static dependent count regressed from 3 to 2",
+      "reserve slices missing coinId increased from 1 to 2",
+      "depType without coinId warnings increased from 0 to 1",
     ]);
   });
 

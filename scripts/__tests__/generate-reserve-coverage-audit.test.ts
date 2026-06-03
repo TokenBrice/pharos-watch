@@ -66,8 +66,21 @@ const activeCoins = [
     reserves: [{ name: "Single token", pct: 100, risk: "low", coinId: "usdt-tether" }],
     liveReservesConfig: liveConfig("single-asset"),
   }),
-  coin({ id: "plain", symbol: "PLN", reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] }),
+  coin({ id: "plain", symbol: "PLN", name: "Plain Coin", reserves: [{ name: "Cash", pct: 100, risk: "very-low" }] }),
+  coin({
+    id: "busd0-usual",
+    symbol: "bUSD0",
+    name: "Bond USD0",
+    reserves: [{ name: "Locked USD0", pct: 100, risk: "low", coinId: "usd0-usual", depType: "wrapper" }],
+  }),
 ] satisfies StablecoinMeta[];
+
+const stablecoinsPayload = {
+  peggedAssets: [
+    { id: "plain", circulating: { peggedUSD: 20_000_000 } },
+    { id: "busd0-usual", circulating: { peggedUSD: 10_000_000 } },
+  ],
+};
 
 describe("generate-reserve-coverage-audit", () => {
   it("counts reserve coverage, evidence buckets, and score-grade gaps", () => {
@@ -82,26 +95,30 @@ describe("generate-reserve-coverage-audit", () => {
           { id: "live-b", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
           { id: "live-c", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
           { id: "plain", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
+          { id: "busd0-usual", rawInputs: { collateralFromLive: false, dependencyFromLive: false } },
           { id: "defunct", isDefunct: true, rawInputs: { collateralFromLive: true, dependencyFromLive: true } },
         ],
       },
+      stablecoins: stablecoinsPayload,
       generatedAt: "2026-06-03T00:00:00.000Z",
     });
 
     expect(audit.summary).toMatchObject({
-      trackedCount: 6,
-      activeCount: 4,
+      trackedCount: 7,
+      activeCount: 5,
       preLaunchCount: 1,
       frozenCount: 1,
-      activeWithCuratedReserves: 4,
-      activeReserveSliceCount: 6,
-      activeLinkedReserveSliceCount: 2,
+      activeWithCuratedReserves: 5,
+      activeReserveSliceCount: 7,
+      activeLinkedReserveSliceCount: 3,
       activeUnlinkedReserveSliceCount: 4,
       activeUnlinkedReserveSlicePctGte10Count: 3,
       activeUnlinkedReserveSlicePctGte50Count: 2,
-      activeWithLinkedReserveSliceCount: 2,
+      activeWithLinkedReserveSliceCount: 3,
       liveEnabledActiveCount: 3,
-      reportCardActiveCount: 4,
+      curatedOnlyActiveCount: 2,
+      curatedOnlyCandidateRankSource: "stablecoin-api-market-cap",
+      reportCardActiveCount: 5,
       collateralFromLiveActiveCount: 1,
       dependencyFromLiveActiveCount: 1,
       independentConfiguredButNotScoreGradeCount: 0,
@@ -112,6 +129,11 @@ describe("generate-reserve-coverage-audit", () => {
       "weak-live-probe": 1,
     });
     expect(audit.independentConfiguredButNotScoreGradeIds).toEqual([]);
+    expect(audit.curatedOnlyActiveCandidates.map((row) => row.coinId)).toEqual(["plain", "busd0-usual"]);
+    expect(audit.curatedOnlyActiveCandidates.find((row) => row.coinId === "busd0-usual")).toMatchObject({
+      sourceQuality: "independent",
+      scoreGradePlausible: true,
+    });
   });
 
   it("renders missing score-grade independent configs when report cards are supplied", () => {
@@ -127,12 +149,15 @@ describe("generate-reserve-coverage-audit", () => {
     expect(markdown).toContain("# Reserve Coverage Audit");
     expect(markdown).toContain("- Live-enabled independent: 1");
     expect(markdown).toContain("- live-a");
+    expect(markdown).toContain("## Highest-Market-Cap Curated-Only Active Candidates");
   });
 
   it("parses CLI options", () => {
     expect(parseArgs([
       "--report-cards",
       "agents/report-cards.json",
+      "--stablecoins",
+      "agents/stablecoins.json",
       "--json",
       "--report",
       "agents/reserve-coverage.json",
@@ -140,6 +165,7 @@ describe("generate-reserve-coverage-audit", () => {
       "2026-06-03T00:00:00.000Z",
     ])).toMatchObject({
       reportCardsPath: "agents/report-cards.json",
+      stablecoinsPath: "agents/stablecoins.json",
       format: "json",
       reportPath: "agents/reserve-coverage.json",
       generatedAt: "2026-06-03T00:00:00.000Z",
@@ -147,10 +173,19 @@ describe("generate-reserve-coverage-audit", () => {
     expect(() => parseArgs(["--prod", "--api-base", "https://api.example.test"])).toThrow(
       "Choose only one of --prod or --api-base.",
     );
+    expect(() => parseArgs(["--prod", "--stablecoins", "agents/stablecoins.json"])).toThrow(
+      "Choose fetched reserve coverage inputs or local input files, not both.",
+    );
   });
 
-  it("sends site-origin headers when fetching prod report cards", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ cards: [] }), { status: 200 }));
+  it("sends site-origin headers when fetching prod site-data", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const href = String(url);
+      return new Response(
+        JSON.stringify(href.includes("report-cards") ? { cards: [] } : { peggedAssets: [] }),
+        { status: 200 },
+      );
+    });
     const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
     try {
@@ -166,6 +201,15 @@ describe("generate-reserve-coverage-audit", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://pharos.watch/_site-data/report-cards",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Origin: "https://pharos.watch",
+          Referer: "https://pharos.watch/coverage/",
+        }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://pharos.watch/_site-data/stablecoins",
       expect.objectContaining({
         headers: expect.objectContaining({
           Origin: "https://pharos.watch",

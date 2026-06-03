@@ -75,6 +75,42 @@
       "depType": "wrapper"
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "busd0-usual",
+    "display": {
+      "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0",
+      "label": "Usual bUSD0"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "etherscan-proxy"
+      }
+    },
+    "params": {
+      "branches": [
+        {
+          "name": "Locked USD0",
+          "holder": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+          "token": {
+            "chain": "ethereum",
+            "address": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
+            "decimals": 18
+          },
+          "risk": "low",
+          "coinId": "usd0-usual",
+          "depType": "wrapper",
+          "priceUsd": 1
+        }
+      ],
+      "debtSelector": "0x18160ddd",
+      "debtContract": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+    }
+  },
   "yieldConfig": {
     "defiLlamaPoolId": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
     "yieldSource": "Usual bUSD0 daily USUAL coupons",

@@ -66,6 +66,8 @@ export interface DependencyCoverageBaseline {
   staticEdgeCount?: number;
   participantCount?: number;
   dependentCount?: number;
+  reserveSlicesMissingCoinId?: number;
+  depTypeWithoutCoinIdWarnings?: number;
 }
 
 export interface DependencyCoverageAudit {
@@ -501,6 +503,22 @@ export function evaluateDependencyCoverageBaseline(
   if (baseline.dependentCount != null && audit.summary.staticDependentCount < baseline.dependentCount) {
     failures.push(`static dependent count regressed from ${baseline.dependentCount} to ${audit.summary.staticDependentCount}`);
   }
+  if (
+    baseline.reserveSlicesMissingCoinId != null
+    && audit.summary.reserveSlicesMissingCoinId > baseline.reserveSlicesMissingCoinId
+  ) {
+    failures.push(
+      `reserve slices missing coinId increased from ${baseline.reserveSlicesMissingCoinId} to ${audit.summary.reserveSlicesMissingCoinId}`,
+    );
+  }
+  if (
+    baseline.depTypeWithoutCoinIdWarnings != null
+    && audit.summary.depTypeWithoutCoinIdWarnings > baseline.depTypeWithoutCoinIdWarnings
+  ) {
+    failures.push(
+      `depType without coinId warnings increased from ${baseline.depTypeWithoutCoinIdWarnings} to ${audit.summary.depTypeWithoutCoinIdWarnings}`,
+    );
+  }
   return failures;
 }
 
@@ -510,6 +528,8 @@ function parseBaseline(payload: unknown): DependencyCoverageBaseline {
     staticEdgeCount: numberValue(payload.staticEdgeCount) ?? undefined,
     participantCount: numberValue(payload.participantCount) ?? undefined,
     dependentCount: numberValue(payload.dependentCount) ?? undefined,
+    reserveSlicesMissingCoinId: numberValue(payload.reserveSlicesMissingCoinId) ?? undefined,
+    depTypeWithoutCoinIdWarnings: numberValue(payload.depTypeWithoutCoinIdWarnings) ?? undefined,
   };
 }
 
