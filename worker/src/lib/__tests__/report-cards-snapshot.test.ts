@@ -312,6 +312,48 @@ describe("buildReportCardsSnapshot", () => {
     expect(snapshot.dependencyGraph.edges).not.toContainEqual(expect.objectContaining({ to: "dai-makerdao" }));
   });
 
+  it("uses score-grade live collateral slices for report-card resilience and dependency inputs", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "dai-makerdao", symbol: "DAI" })]);
+
+    const curatedSnapshot = await buildReportCardsSnapshot(db);
+    const curatedCard = curatedSnapshot.cards.find((entry) => entry.id === "dai-makerdao");
+    expect(curatedCard?.rawInputs.collateralFromLive).toBe(false);
+    expect(curatedCard?.rawInputs.dependencyFromLive).toBe(false);
+    expect(curatedCard?.rawInputs.dependencies).toEqual([]);
+
+    loadFreshIndependentLiveReserveMapMock.mockResolvedValueOnce(
+      new Map([
+        [
+          "dai-makerdao",
+          [
+            { name: "Live USDT PSM", pct: 40, risk: "low", coinId: "usdt-tether", depType: "mechanism" },
+            { name: "Live opaque strategy", pct: 60, risk: "very-high" },
+          ],
+        ],
+      ]),
+    );
+
+    const liveSnapshot = await buildReportCardsSnapshot(db);
+    const liveCard = liveSnapshot.cards.find((entry) => entry.id === "dai-makerdao");
+
+    expect(liveCard?.rawInputs.collateralFromLive).toBe(true);
+    expect(liveCard?.dimensions.resilience.score).not.toBe(curatedCard?.dimensions.resilience.score);
+    expect(liveCard?.dimensions.resilience.score).toBeLessThan(curatedCard?.dimensions.resilience.score ?? 0);
+    expect(liveCard?.rawInputs.dependencyFromLive).toBe(true);
+    expect(liveCard?.rawInputs.dependencies).toEqual([
+      { id: "usdt-tether", weight: 0.4, type: "mechanism" },
+    ]);
+    expect(liveSnapshot.dependencyGraph.edges).toContainEqual({
+      from: "usdt-tether",
+      to: "dai-makerdao",
+      weight: 0.4,
+      type: "mechanism",
+    });
+    expect(liveSnapshot.dependencyGraph.edges).not.toContainEqual(
+      expect.objectContaining({ to: "dai-makerdao", from: expect.not.stringMatching("usdt-tether") }),
+    );
+  });
+
   it("matches /api/report-cards response payload", async () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     const snapshot = await buildReportCardsSnapshot(db);

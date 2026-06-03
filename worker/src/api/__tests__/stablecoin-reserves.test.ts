@@ -118,6 +118,56 @@ describe("handleStablecoinReserves", () => {
     });
   });
 
+  it("falls back to curated reserves and fallback cache when stored live slices are corrupt", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: "not json",
+          fetched_at: now,
+          source: "infinifi",
+          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+          adapter_source_model: "dynamic-mix",
+          adapter_evidence_class: "independent",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const res = await handleStablecoinReserves(db, "iusd-infinifi");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
+    const body = StablecoinReservesResponseSchema.parse(await res.json());
+    expect(body.mode).toBe("curated-fallback");
+    expect(body.provenance).toBeUndefined();
+    expect(body.displayBadge).toBeUndefined();
+    expect(body.sync).toMatchObject({
+      enabled: true,
+      status: "degraded",
+      bootstrap: false,
+      warnings: ["Stored live reserve snapshot is unreadable"],
+      lastError: "Stored live reserve snapshot rejected: Stored live reserve snapshot is unreadable",
+    });
+  });
+
   it("does not serialize internal malformed redemption telemetry markers", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
