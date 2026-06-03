@@ -126,6 +126,7 @@ describe("fetchRoycoDawnSources", () => {
         marketMinCoverageRatio: 0.15,
         marketUtilizationRatio: 0.41,
         marketStatus: "normal",
+        venueRiskTier: "unknown",
         kycRequired: null,
         accessRestricted: null,
       },
@@ -186,5 +187,108 @@ describe("fetchRoycoDawnSources", () => {
       withdrawalDelaySeconds: 86_400,
       trancheDepositTokenAddress: "0x08efcc2f3e61185d0ea7f8830b3fec9bfa2ee313",
     });
+  });
+
+  it("resolves each tranche vault to its own tracked deposit token", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            count: 1,
+            data: [
+              {
+                chainId: 1,
+                marketId: "0x4444444444444444444444444444444444444444",
+                name: "Mixed deposit market",
+                listingType: "verified",
+                status: "normal",
+                tvlUsd: 2_000_000,
+                coverage: { currentRatio: 0.12, requiredRatio: 0.1 },
+                utilization: { currentRatio: 0.4, requiredRatio: 0.9 },
+                drawdown: { ratio: 0 },
+                totalDrawdowns: 0,
+                juniorRedemptionDelay: 0,
+                seniorVault: makeVault({
+                  address: "0x5555555555555555555555555555555555555555",
+                  apy: 0.05,
+                  tvlUsd: 1_200_000,
+                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                  depositSymbol: "apyUSD",
+                  shareAddress: "0x5555555555555555555555555555555555555555",
+                }),
+                juniorVault: makeVault({
+                  address: "0x6666666666666666666666666666666666666666",
+                  apy: 0.09,
+                  tvlUsd: 800_000,
+                  depositAddress: "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
+                  depositSymbol: "sNUSD",
+                  shareAddress: "0x6666666666666666666666666666666666666666",
+                }),
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const candidates = await fetchRoycoDawnSources();
+
+    expect(candidates).toHaveLength(2);
+    expect(candidates.map((candidate) => [candidate.yield.sourceRisk?.trancheSide, candidate.stablecoinId])).toEqual([
+      ["senior", "apyusd-apyx"],
+      ["junior", "nusd-neutrl"],
+    ]);
+  });
+
+  it("drops tranche vaults below the tranche TVL floor", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            count: 1,
+            data: [
+              {
+                chainId: 1,
+                marketId: "0x7777777777777777777777777777777777777777",
+                name: "Thin junior market",
+                listingType: "verified",
+                status: "normal",
+                tvlUsd: 2_000_000,
+                coverage: { currentRatio: 0.12, requiredRatio: 0.1 },
+                utilization: { currentRatio: 0.4, requiredRatio: 0.9 },
+                drawdown: { ratio: 0 },
+                totalDrawdowns: 0,
+                juniorRedemptionDelay: 0,
+                seniorVault: makeVault({
+                  address: "0x8888888888888888888888888888888888888888",
+                  apy: 0.05,
+                  tvlUsd: 1_200_000,
+                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                  depositSymbol: "apyUSD",
+                  shareAddress: "0x8888888888888888888888888888888888888888",
+                }),
+                juniorVault: makeVault({
+                  address: "0x9999999999999999999999999999999999999999",
+                  apy: 0.09,
+                  tvlUsd: 4_500,
+                  depositAddress: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+                  depositSymbol: "apyUSD",
+                  shareAddress: "0x9999999999999999999999999999999999999999",
+                }),
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    const candidates = await fetchRoycoDawnSources();
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.yield.sourceRisk?.trancheSide).toBe("senior");
   });
 });

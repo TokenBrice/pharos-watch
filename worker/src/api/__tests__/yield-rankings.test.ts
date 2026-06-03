@@ -482,7 +482,7 @@ describe("handleYieldRankings", () => {
             deploymentPlace: "structured-tranche",
             venueProtocol: "royco-dawn",
             venueChain: "ethereum",
-            venueRiskTier: "medium",
+            venueRiskTier: "unknown",
             trancheSide: "senior",
             marketStatus: "normal",
             marketCoverageRatio: 0.36,
@@ -495,6 +495,35 @@ describe("handleYieldRankings", () => {
             accessRestricted: true,
             investabilityFlags: ["kyc-required", "us-persons-restricted", "withdrawals-underlying-dependent"],
           },
+          altSources: [
+            {
+              sourceKey: "royco-dawn:1:0xabc:junior",
+              yieldSource: "Royco Dawn Junior: Rated Coin",
+              yieldType: "structured-tranche",
+              currentApy: 12,
+              apy30d: 11,
+              sourceTvlUsd: 1_500_000,
+              dataSource: "protocol-api",
+              sourceRisk: {
+                sourceRiskPenalty: 1.3,
+                deploymentPlace: "structured-tranche",
+                venueProtocol: "royco-dawn",
+                venueChain: "ethereum",
+                venueRiskTier: "unknown",
+                trancheSide: "junior",
+                marketStatus: "normal",
+                marketCoverageRatio: 0.36,
+                marketMinCoverageRatio: 0.15,
+                marketUtilizationRatio: 0.41,
+                marketUtilizationLimitRatio: 0.9,
+                marketDrawdownRatio: 0,
+                trancheTvlUsd: 1_500_000,
+                underlyingSafetyScore: 50,
+                trancheSafetyScore: 20,
+                trancheSafetyPenalty: 30,
+              },
+            },
+          ],
         },
       ],
       updatedAt,
@@ -505,19 +534,25 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as YieldRankingsResponse;
     const row = body.rankings[0];
 
-    expect(row?.safetyScore).toBe(60);
+    expect(row?.safetyScore).toBe(61);
     expect(row?.safetyGrade).toBe("C+");
     expect(row?.provenance?.safetyProvenance).toBe("opportunity-safety");
     expect(row?.provenance?.usedDefaultSafety).toBe(false);
     expect(row?.sourceRisk).toMatchObject({
       underlyingSafetyScore: 66,
-      trancheSafetyScore: 60,
-      trancheSafetyPenalty: 6,
+      trancheSafetyScore: 61,
+      trancheSafetyPenalty: 5,
       trancheSide: "senior",
+    });
+    expect(row?.altSources[0]?.sourceRisk).toMatchObject({
+      underlyingSafetyScore: 66,
+      trancheSafetyScore: 37,
+      trancheSafetyPenalty: 29,
+      trancheSide: "junior",
     });
     expect(row?.pharosYieldScore).toBe(computePYS({
       apy30d: payload.rankings[0].apy30d,
-      safetyScore: 60,
+      safetyScore: 61,
       apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
       scalingFactor: payload.scalingFactor,
       benchmarkRate: payload.rankings[0].benchmarkRate ?? null,

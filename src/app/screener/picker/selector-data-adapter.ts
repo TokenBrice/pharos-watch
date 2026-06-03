@@ -73,6 +73,14 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     const dex = args.dexData?.[id];
     const yieldEntry = yieldById.get(id);
     const yieldRisk = yieldEntry?.sourceRisk ?? null;
+    const rowSafetyScore =
+      yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyScore != null
+        ? yieldEntry.safetyScore
+        : safety?.overallScore ?? null;
+    const rowSafetyGrade =
+      yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyGrade != null
+        ? yieldEntry.safetyGrade
+        : safety?.overallGrade ?? null;
     const redemption = args.redemptionData?.coins?.[id];
     const bluechip = args.bluechipData?.[id];
     const currentDeviationBps =
@@ -104,8 +112,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       lastEventAt: peg?.lastEventAt ?? rawInputs?.lastEventAt ?? null,
 
       dewsScore: stress?.score ?? null,
-      safetyGrade: safety?.overallGrade ?? null,
-      safetyScore: safety?.overallScore ?? null,
+      safetyGrade: rowSafetyGrade,
+      safetyScore: rowSafetyScore,
       safetyResilienceScore: safety?.dimensions.resilience.score ?? null,
       safetyDependencyRiskScore: safety?.dimensions.dependencyRisk.score ?? null,
       safetyDecentralizationScore: safety?.dimensions.decentralization.score ?? null,

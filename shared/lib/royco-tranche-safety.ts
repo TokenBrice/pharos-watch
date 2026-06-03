@@ -14,7 +14,7 @@ export function isRoycoDawnTrancheSourceRisk(
   sourceRisk: Pick<YieldSourceRisk, "deploymentPlace" | "trancheSide" | "venueProtocol"> | null | undefined,
 ): sourceRisk is YieldSourceRisk & { trancheSide: YieldTrancheSide } {
   const hasTrancheSide = sourceRisk?.trancheSide === "senior" || sourceRisk?.trancheSide === "junior";
-  return hasTrancheSide && (sourceRisk.venueProtocol === "royco-dawn" || sourceRisk.deploymentPlace === "structured-tranche");
+  return hasTrancheSide && sourceRisk.venueProtocol === "royco-dawn";
 }
 
 function statusPenalty(status: YieldSourceRisk["marketStatus"], side: YieldTrancheSide): number {

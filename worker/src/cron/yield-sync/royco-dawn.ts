@@ -12,6 +12,7 @@ import type { ResolvedYieldCandidate } from "./types";
 const ROYCO_DAWN_EXPLORE_URL = "https://dawn.royco.org/api/v1/market/explore";
 const ROYCO_DAWN_PAGE_SIZE = 100;
 const ROYCO_DAWN_MIN_MARKET_TVL_USD = 100_000;
+const ROYCO_DAWN_MIN_TRANCHE_TVL_USD = 100_000;
 const ROYCO_DAWN_MAX_APY_RATIO = 2;
 
 interface RoycoToken {
@@ -104,14 +105,9 @@ function buildTrackedAssetByChainAddress(): Map<string, RoycoTrackedAsset> {
   return byChainAddress;
 }
 
-function resolveDepositToken(market: RoycoMarket, chain: string, lookup: Map<string, RoycoTrackedAsset>): RoycoTrackedAsset | null {
-  for (const token of [market.seniorVault?.depositToken, market.juniorVault?.depositToken]) {
-    const address = normalizeTokenAddress(token?.contractAddress ?? "");
-    if (!address) continue;
-    const trackedAsset = lookup.get(buildChainAddressKey(chain, address));
-    if (trackedAsset) return trackedAsset;
-  }
-  return null;
+function resolveVaultDepositToken(vault: RoycoVault, chain: string, lookup: Map<string, RoycoTrackedAsset>): RoycoTrackedAsset | null {
+  const address = normalizeTokenAddress(vault.depositToken?.contractAddress ?? "");
+  return address ? lookup.get(buildChainAddressKey(chain, address)) ?? null : null;
 }
 
 function readMarketStatus(value: string | null | undefined): YieldMarketStatus | null {
@@ -141,7 +137,7 @@ function sourceRiskForTranche(params: {
     deploymentPlace: "structured-tranche",
     venueProtocol: "royco-dawn",
     venueChain: params.chain,
-    venueRiskTier: "medium",
+    venueRiskTier: "unknown",
     trancheSide: params.side,
     marketCoverageRatio: finiteNumber(params.market.coverage?.currentRatio),
     marketMinCoverageRatio: finiteNumber(params.market.coverage?.requiredRatio),
@@ -181,6 +177,7 @@ function buildTrancheCandidate(params: {
   if (apyRatio == null || apyRatio <= 0 || apyRatio > ROYCO_DAWN_MAX_APY_RATIO) return null;
 
   const sourceTvlUsd = finiteNumber(params.vault.tvl?.tokenAmountUsd);
+  if (sourceTvlUsd == null || sourceTvlUsd < ROYCO_DAWN_MIN_TRANCHE_TVL_USD) return null;
   const sourcePool = normalizeTokenAddress(params.vault.address ?? params.vault.shareToken?.contractAddress ?? "");
   const marketName = params.market.name?.trim() || "Royco Dawn market";
   const sourceKey = `royco-dawn:${params.market.chainId}:${marketId}:${params.side}`;
@@ -274,33 +271,36 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
         if (marketTvlUsd == null || marketTvlUsd < ROYCO_DAWN_MIN_MARKET_TVL_USD) continue;
         if (market.listingType !== "verified") continue;
 
-        const trackedAsset = resolveDepositToken(market, chain, trackedByAddress);
-        if (!trackedAsset) continue;
-
         const seniorVault = market.seniorVault ?? null;
         if (seniorVault) {
-          const candidate = buildTrancheCandidate({
-            side: "senior",
-            market,
-            vault: seniorVault,
-            chain,
-            trackedAsset,
-            observedAt,
-          });
-          if (candidate) results.push(candidate);
+          const trackedAsset = resolveVaultDepositToken(seniorVault, chain, trackedByAddress);
+          if (trackedAsset) {
+            const candidate = buildTrancheCandidate({
+              side: "senior",
+              market,
+              vault: seniorVault,
+              chain,
+              trackedAsset,
+              observedAt,
+            });
+            if (candidate) results.push(candidate);
+          }
         }
 
         const juniorVault = market.juniorVault ?? null;
         if (juniorVault) {
-          const candidate = buildTrancheCandidate({
-            side: "junior",
-            market,
-            vault: juniorVault,
-            chain,
-            trackedAsset,
-            observedAt,
-          });
-          if (candidate) results.push(candidate);
+          const trackedAsset = resolveVaultDepositToken(juniorVault, chain, trackedByAddress);
+          if (trackedAsset) {
+            const candidate = buildTrancheCandidate({
+              side: "junior",
+              market,
+              vault: juniorVault,
+              chain,
+              trackedAsset,
+              observedAt,
+            });
+            if (candidate) results.push(candidate);
+          }
         }
       }
 

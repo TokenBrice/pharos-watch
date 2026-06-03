@@ -64,7 +64,7 @@ export const DEPEG_OPTIONS: readonly SelectorOption<SelectorDepeg>[] = [
 
 export const VENUE_OPTIONS_BY_PROFILE: Record<SelectorProfile, readonly SelectorOption<SelectorVenue>[]> = {
   yield: [
-    { value: "lend", label: "Major lending protocols" },
+    { value: "lend", label: "Lending and structured opportunities" },
     { value: "dex", label: "DEX liquidity pools" },
     { value: "wrap", label: "Yield-bearing wrappers" },
     { value: "all", label: "All of the above" },

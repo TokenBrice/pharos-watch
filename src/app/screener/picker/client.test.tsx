@@ -753,7 +753,7 @@ describe("SelectorClient — Q4 multi-select", () => {
       .toBeGreaterThan(0);
 
     // Tick a checkbox; the URL stays on step 5 and the exit prompt does NOT appear.
-    const checkbox = screen.getByLabelText(/Major lending protocols/i);
+    const checkbox = screen.getByLabelText(/Lending and structured opportunities/i);
     fireEvent.click(checkbox);
 
     expect(screen.queryByText(/how fast do you need to be out/i)).toBeNull();

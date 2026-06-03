@@ -182,6 +182,26 @@ function buildRankChangeAttribution(params: {
   };
 }
 
+function hydrateRoycoTrancheSourceRisk(params: {
+  sourceRisk: YieldRanking["sourceRisk"];
+  underlyingSafetyScore: number;
+}): YieldRanking["sourceRisk"] {
+  if (!isRoycoDawnTrancheSourceRisk(params.sourceRisk)) return params.sourceRisk;
+
+  const trancheSafety = computeRoycoDawnTrancheSafetyScore({
+    underlyingSafetyScore: params.underlyingSafetyScore,
+    sourceRisk: params.sourceRisk,
+  });
+  if (!trancheSafety) return params.sourceRisk;
+
+  return {
+    ...params.sourceRisk,
+    underlyingSafetyScore: params.underlyingSafetyScore,
+    trancheSafetyScore: trancheSafety.score,
+    trancheSafetyPenalty: trancheSafety.penalty,
+  };
+}
+
 function resolveHydratedSafety(params: {
   row: YieldRanking;
   card: ReportCard | undefined;
@@ -195,21 +215,18 @@ function resolveHydratedSafety(params: {
   const underlyingSafetyScore = params.card?.overallScore ?? DEFAULT_SAFETY_SCORE;
   const usedDefaultSafety = params.card?.overallScore == null;
 
-  if (isRoycoDawnTrancheSourceRisk(params.row.sourceRisk)) {
-    const trancheSafety = computeRoycoDawnTrancheSafetyScore({
-      underlyingSafetyScore,
-      sourceRisk: params.row.sourceRisk,
-    });
-    if (trancheSafety) {
+  const hydratedSourceRisk = hydrateRoycoTrancheSourceRisk({
+    sourceRisk: params.row.sourceRisk,
+    underlyingSafetyScore,
+  });
+
+  if (isRoycoDawnTrancheSourceRisk(hydratedSourceRisk)) {
+    const trancheSafetyScore = hydratedSourceRisk.trancheSafetyScore;
+    if (trancheSafetyScore != null) {
       return {
-        score: trancheSafety.score,
-        grade: scoreToGrade(trancheSafety.score),
-        sourceRisk: {
-          ...params.row.sourceRisk,
-          underlyingSafetyScore,
-          trancheSafetyScore: trancheSafety.score,
-          trancheSafetyPenalty: trancheSafety.penalty,
-        },
+        score: trancheSafetyScore,
+        grade: scoreToGrade(trancheSafetyScore),
+        sourceRisk: hydratedSourceRisk,
         provenance: "opportunity-safety",
         usedDefaultSafety,
       };
@@ -219,10 +236,23 @@ function resolveHydratedSafety(params: {
   return {
     score: underlyingSafetyScore,
     grade: params.card?.overallGrade ?? "NR",
-    sourceRisk: params.row.sourceRisk,
+    sourceRisk: hydratedSourceRisk,
     provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
     usedDefaultSafety,
   };
+}
+
+function hydrateAltSourcesWithLiveSafety(
+  row: YieldRanking,
+  underlyingSafetyScore: number,
+): YieldRanking["altSources"] {
+  return row.altSources.map((source) => {
+    const sourceRisk = hydrateRoycoTrancheSourceRisk({
+      sourceRisk: source.sourceRisk ?? null,
+      underlyingSafetyScore,
+    });
+    return sourceRisk === source.sourceRisk ? source : { ...source, sourceRisk };
+  });
 }
 
 function hydrateYieldRankingsWithLiveSafety(
@@ -236,6 +266,7 @@ function hydrateYieldRankingsWithLiveSafety(
       const card = reportCardById.get(row.id);
       const hydratedSafety = resolveHydratedSafety({ row, card });
       const safetyInputScore = hydratedSafety.score;
+      const underlyingSafetyScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
       const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
       const pysNullReason = pharosYieldScore > 0
         ? null
@@ -259,6 +290,7 @@ function hydrateYieldRankingsWithLiveSafety(
           pysNullReason,
           yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
           sourceRisk: hydratedSafety.sourceRisk,
+          altSources: hydrateAltSourcesWithLiveSafety(row, underlyingSafetyScore),
           provenance: row.provenance
             ? {
                 ...row.provenance,

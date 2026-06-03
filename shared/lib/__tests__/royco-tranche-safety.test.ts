@@ -67,13 +67,13 @@ describe("computeRoycoDawnTrancheSafetyScore", () => {
     ).toBeNull();
   });
 
-  it("returns null when tranche side is present without Royco tranche markers", () => {
+  it("returns null when tranche side is present without the Royco venue marker", () => {
     expect(
       computeRoycoDawnTrancheSafetyScore({
         underlyingSafetyScore: 82,
         sourceRisk: {
           ...baseRisk,
-          deploymentPlace: "lending-market",
+          deploymentPlace: "structured-tranche",
           venueProtocol: "other-protocol",
           trancheSide: "senior",
         },

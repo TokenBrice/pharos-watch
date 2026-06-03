@@ -477,6 +477,75 @@ describe("buildSelectorRows", () => {
     );
   });
 
+  it("uses opportunity-level safety for selected structured tranche yield rows", () => {
+    const result = buildSelectorRows(baseArgs({
+      yieldData: {
+        rankings: [
+          {
+            id: "usdc-usd-coin",
+            symbol: "USDC",
+            name: "USD Coin",
+            currentApy: 9,
+            apy7d: 8.8,
+            apy30d: 8.5,
+            apyBase: 8.5,
+            apyReward: null,
+            yieldSource: "Royco Dawn Senior: USD Coin",
+            yieldType: "structured-tranche",
+            dataSource: "protocol-api",
+            sourceTvlUsd: 1_500_000,
+            pharosYieldScore: 62,
+            safetyScore: 61,
+            safetyGrade: "C+",
+            yieldToRisk: 0.2,
+            excessYield: 4,
+            benchmarkRate: 4.5,
+            yieldStability: 0.8,
+            apyVariance30d: 0.2,
+            apyMin30d: 8,
+            apyMax30d: 9,
+            warningSignals: [],
+            altSources: [],
+            provenance: {
+              sourceKey: "royco-dawn:1:0xabc:senior",
+              sourceObservedAt: NOW_SEC - 90,
+              sourceAgeSeconds: 90,
+              confidenceTier: "curated",
+              selectionMethod: "confidence-weighted",
+              selectionReason: "best-by-confidence-and-apy",
+              sourceSwitch: false,
+              previousBestSourceKey: null,
+              usedLegacyHistory: false,
+              usedDefaultSafety: false,
+              safetyProvenance: "opportunity-safety",
+              anomalies: [],
+            },
+            sourceRisk: {
+              deploymentPlace: "structured-tranche",
+              venueProtocol: "royco-dawn",
+              venueChain: "ethereum",
+              venueRiskTier: "unknown",
+              trancheSide: "senior",
+              trancheSafetyScore: 61,
+              underlyingSafetyScore: 91,
+              trancheSafetyPenalty: 30,
+            },
+          },
+        ],
+        riskFreeRate: 4.5,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: NOW_SEC,
+        methodology: { version: "8.19" },
+      } as YieldRankingsResponse,
+    }));
+
+    const row = result.rows.get("usdc-usd-coin");
+    expect(row?.safetyScore).toBe(61);
+    expect(row?.safetyGrade).toBe("C+");
+    expect(row?.safetyResilienceScore).toBe(86);
+  });
+
   it("prefers Safety-gated report-card effective exit and maps raw inputs", () => {
     const result = buildSelectorRows(baseArgs({
       reportData: reportData({
