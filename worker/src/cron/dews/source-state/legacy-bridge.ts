@@ -39,7 +39,7 @@ export function getString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-export function getBoolean(value: unknown): boolean | null {
+function getBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
