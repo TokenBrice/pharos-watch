@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-selector.tsx` - CoinSelector
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
 - `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
-- ... 342 more files omitted; use `rg --files src/components` for the full list.
+- ... 344 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -698,6 +698,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-critical-coverage.test.ts`
 - `scripts/__tests__/check-glossary-coverage.test.ts`
 - `scripts/__tests__/check-redemption-backstops.test.ts`
+- `scripts/__tests__/check-reserve-fixture-freshness.test.ts`
 - `scripts/__tests__/check-selector-banned-phrases.test.ts` - keys
 - `scripts/__tests__/check-seo-static.test.ts`
 - `scripts/__tests__/check-shared-types-imports.test.ts`
@@ -718,6 +719,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/generate-markdown-exports.test.ts`
 - `scripts/__tests__/generate-public-datasets.test.ts`
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
+- `scripts/__tests__/generate-reserve-coverage-audit.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
 - `scripts/__tests__/remote-d1.test.ts`
@@ -743,6 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectGeniusProfile, projectMintAuthoritySummary, readCanonicalClientFields
 - `scripts/ci/check-agent-doc-sync.mjs`
 - `scripts/ci/check-agent-skill-symlinks.mjs`
-- `scripts/ci/check-archetype-explainer-coverage.ts` - ArchetypeExplainerCheckResult, ArchetypeExplainerFinding, validateArchetypeExplainerCoverage
-- `scripts/ci/check-attestor-tier-coverage.ts`
-- ... 145 more files omitted; use `rg --files scripts` for the full list.
+- ... 148 more files omitted; use `rg --files scripts` for the full list.
