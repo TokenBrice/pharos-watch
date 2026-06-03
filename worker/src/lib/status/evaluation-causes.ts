@@ -9,6 +9,11 @@ import type {
   StatusResponse,
 } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
+import {
+  STATUS_RESERVE_HIGH_DEFERRED_RATIO,
+  STATUS_RESERVE_REPEATED_TRUNCATION_COUNT,
+  type ReserveCompositionOperationalSignals,
+} from "./evaluation-state";
 
 function formatRatio(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
@@ -464,6 +469,102 @@ export function buildDataQualityCauses(input: {
   const persistentStaleIndependentFeedText = formatPersistentStaleIndependentFeeds(
     input.reserveComposition.persistentlyStaleIndependentCoins,
   );
+  const reserveOperationalSignals =
+    input.reserveComposition as StatusResponse["reserveComposition"] & ReserveCompositionOperationalSignals & {
+      cursorTailError?: string | null;
+      cursorRecordedAt?: number | null;
+      cursorTailFailedAt?: number | null;
+    };
+  const reserveDeferredRatio = input.reserveComposition.configuredCoins > 0
+    ? input.reserveComposition.deferredCoins / input.reserveComposition.configuredCoins
+    : 0;
+  const reserveTruncationCount = reserveOperationalSignals.runBudgetTruncationCount ?? 0;
+
+  if (input.reserveComposition.writeTimeoutUncertain > 0) {
+    pushCause(dataQualityCauses, {
+      code: "reserve_sync_write_uncertain",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `${input.reserveComposition.writeTimeoutUncertain} live reserve coin(s) have uncertain D1 write outcomes; ` +
+        "operators should wait for a clean follow-up run or inspect reserve_sync_state.",
+      metric: "reserveWriteTimeoutUncertain",
+      value: input.reserveComposition.writeTimeoutUncertain,
+      threshold: 1,
+    });
+  }
+
+  if (
+    reserveOperationalSignals.cursorTailState === "recording" ||
+    reserveOperationalSignals.cursorTailState === "incomplete"
+  ) {
+    pushCause(dataQualityCauses, {
+      code: "reserve_sync_tail_incomplete",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `Live reserve deferred-tail recording is ${reserveOperationalSignals.cursorTailState}` +
+        (reserveOperationalSignals.cursorTailError ? ` (${reserveOperationalSignals.cursorTailError}).` : "."),
+      metric: "reserveCursorTailIncomplete",
+      value: 1,
+      threshold: 1,
+    });
+  }
+
+  if (input.reserveComposition.runBudgetTruncated) {
+    const pressureReasons = [
+      reserveDeferredRatio >= STATUS_RESERVE_HIGH_DEFERRED_RATIO
+        ? `high deferred share ${formatRatio(reserveDeferredRatio)}`
+        : null,
+      reserveTruncationCount >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT
+        ? `${reserveTruncationCount} consecutive truncation(s)`
+        : null,
+    ].filter((entry): entry is string => entry != null);
+    pushCause(dataQualityCauses, {
+      code: "reserve_sync_budget_truncated",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `Latest live reserve run deferred ${input.reserveComposition.deferredCoins} coin(s)` +
+        (input.reserveComposition.nextCursorStablecoinId
+          ? `; next cursor ${input.reserveComposition.nextCursorStablecoinId}`
+          : "") +
+        (pressureReasons.length > 0 ? ` (${pressureReasons.join(", ")}).` : "."),
+      metric: "reserveDeferredRatio",
+      value: reserveDeferredRatio,
+      threshold: STATUS_RESERVE_HIGH_DEFERRED_RATIO,
+    });
+  }
+
+  const historyWriteGaps = (
+    input.reserveComposition as StatusResponse["reserveComposition"] & {
+      historyWriteGaps?: Array<{
+        stablecoinId: string;
+        compositionHistoryMissing: boolean;
+        attemptHistoryMissing: boolean;
+      }>;
+    }
+  ).historyWriteGaps ?? [];
+  if (historyWriteGaps.length > 0) {
+    const examples = historyWriteGaps.slice(0, 3).map((gap) => {
+      const missing = [
+        gap.compositionHistoryMissing ? "composition" : null,
+        gap.attemptHistoryMissing ? "attempt" : null,
+      ].filter((entry): entry is string => entry != null).join("+");
+      return `${gap.stablecoinId}:${missing || "history"}`;
+    }).join(", ");
+    pushCause(dataQualityCauses, {
+      code: "reserve_sync_history_write_gap",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `${historyWriteGaps.length} authoritative live reserve snapshot(s) are missing history rows` +
+        (examples ? ` (${examples}${historyWriteGaps.length > 3 ? ", ..." : ""}).` : "."),
+      metric: "reserveHistoryWriteGaps",
+      value: historyWriteGaps.length,
+      threshold: 1,
+    });
+  }
 
   if (input.reserveComposition.status === "stale") {
     pushCause(dataQualityCauses, {

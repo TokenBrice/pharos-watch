@@ -16,6 +16,14 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
   stale: 2,
 };
 
+export const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
+export const STATUS_RESERVE_REPEATED_TRUNCATION_COUNT = 2;
+
+export interface ReserveCompositionOperationalSignals {
+  cursorTailState?: "recording" | "incomplete" | "complete" | null;
+  runBudgetTruncationCount?: number | null;
+}
+
 export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
   return STATUS_SEVERITY[a] >= STATUS_SEVERITY[b] ? a : b;
 }
@@ -30,6 +38,7 @@ export interface ReserveCompositionAssessment {
 export function deriveReserveCompositionStatus(
   reserveComposition: StatusResponse["reserveComposition"],
 ): ReserveCompositionAssessment {
+  const operationalSignals = reserveComposition as StatusResponse["reserveComposition"] & ReserveCompositionOperationalSignals;
   const bootstrap =
     reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
   const authoritativeFreshCoins =
@@ -41,6 +50,17 @@ export function deriveReserveCompositionStatus(
   const authoritativeFreshCoverageRatio =
     reserveComposition.configuredCoins > 0 ? authoritativeFreshCoins / reserveComposition.configuredCoins : 0;
   const hasPersistentlyStaleIndependentFeeds = reserveComposition.persistentlyStaleIndependentCoins.length > 0;
+  const deferredShare =
+    reserveComposition.configuredCoins > 0 ? reserveComposition.deferredCoins / reserveComposition.configuredCoins : 0;
+  const hasUncertainWrites = reserveComposition.writeTimeoutUncertain > 0;
+  const hasIncompleteCursorTail =
+    operationalSignals.cursorTailState === "recording" || operationalSignals.cursorTailState === "incomplete";
+  const hasRepeatedTruncation =
+    (operationalSignals.runBudgetTruncationCount ?? 0) >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT;
+  const hasMaterialDeferredTail =
+    reserveComposition.runBudgetTruncated && deferredShare >= STATUS_RESERVE_HIGH_DEFERRED_RATIO;
+  const hasReserveCapacityPressure =
+    hasUncertainWrites || hasIncompleteCursorTail || hasRepeatedTruncation || hasMaterialDeferredTail;
   const status: StatusResponse["reserveComposition"]["status"] =
     bootstrap || reserveComposition.configuredCoins === 0
       ? "healthy"
@@ -49,6 +69,7 @@ export function deriveReserveCompositionStatus(
         : freshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedFreshCoverageRatio
             || authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
             || hasPersistentlyStaleIndependentFeeds
+            || hasReserveCapacityPressure
           ? "degraded"
           : "healthy";
 

@@ -323,7 +323,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - **Two or more consecutive** failed runs on the same critical cron escalate to `stale` via `summary.availabilityImpactingConsecutiveCronErrors > 0`.
 - Multiple critical crons simultaneously unhealthy (`summary.availabilityImpactingUnhealthyCrons >= 2`) also escalate to `stale`.
 - Cache-age stale (`worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale`) and the `publicAvailabilityFloor` (circuit outages, mint/burn sync stale) paths remain unchanged.
-- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `deferredCoins`, `runBudgetTruncated`, `deferredAt`, `nextCursorStablecoinId`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`). Any persistent stale independent feed keeps the reserve composition status at least `degraded` even if aggregate fresh coverage remains high.
+- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `deferredCoins`, `runBudgetTruncated`, `deferredAt`, `nextCursorStablecoinId`, `cursorTailState`, `cursorTailError`, `cursorRecordedAt`, `cursorTailCompletedAt`, `cursorTailFailedAt`, `runBudgetTruncationCount`, `historyWriteGaps`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`). Any persistent stale independent feed keeps the reserve composition status at least `degraded` even if aggregate fresh coverage remains high.
 - `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, live-safety hydration coverage, supplemental cache age, benchmark age/fallback mode, coverage-audit age, source-risk field coverage, latest cron status, a field-level status, status-impact class, and the yield runbook link.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
@@ -369,7 +369,7 @@ Behavior:
 - coins currently failing before their first successful snapshot count as `errorCoins`, not `missingCoins`
 - after bootstrap, reserve health is coverage-based:
   - `status: "stale"` when `freshCoins === 0`
-  - `status: "degraded"` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, or any independent feed is persistently stale
+  - `status: "degraded"` when `freshCoverageRatio < 0.75`, `authoritativeFreshCoverageRatio < 0.5`, any independent feed is persistently stale, any write is uncertain, the cursor tail is incomplete, the deferred tail is high-share, or run-budget truncation repeats
   - `status: "healthy"` otherwise
 - low raw counts of degraded/missing reserve feeds no longer degrade `dataQualityStatus` on their own if coverage remains above those thresholds
 - the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
@@ -377,6 +377,9 @@ Behavior:
 - `persistentlyStaleIndependentCoins` lists independent feeds older than the persistent-stale threshold and keeps the reserve sync card/action cause degraded until the source recovers
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
 - `runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose whether the latest live-reserve run stopped at its internal budget and where the next run will resume
+- `cursorTailState`, `cursorTailError`, `cursorRecordedAt`, `cursorTailCompletedAt`, `cursorTailFailedAt`, and `runBudgetTruncationCount` expose deferred-tail partial write state and repeated truncation pressure
+- `historyWriteGaps` lists authoritative current snapshots whose matching composition-history or attempt-history row is missing
+- Data-quality causes now include `reserve_sync_budget_truncated`, `reserve_sync_tail_incomplete`, `reserve_sync_write_uncertain`, and `reserve_sync_history_write_gap`; one-off low-share truncation is warning-level observability, while repeated/high-share truncation and uncertain writes can degrade reserve health before freshness collapses
 
 ### Yield health summary
 

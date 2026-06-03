@@ -128,6 +128,19 @@ export interface ReserveCompositionOverview {
   runBudgetTruncated: boolean;
   deferredAt: number | null;
   nextCursorStablecoinId: string | null;
+  cursorTailState?: "recording" | "incomplete" | "complete" | null;
+  cursorTailError?: string | null;
+  cursorRecordedAt?: number | null;
+  cursorTailCompletedAt?: number | null;
+  cursorTailFailedAt?: number | null;
+  runBudgetTruncationCount?: number;
+  historyWriteGaps?: Array<{
+    stablecoinId: string;
+    fetchedAt: number;
+    attemptId: string;
+    compositionHistoryMissing: boolean;
+    attemptHistoryMissing: boolean;
+  }>;
   /**
    * Coins whose adapter is classified as `independent` but whose latest source
    * has been stuck in `degraded` or `error` with the last successful snapshot
@@ -156,6 +169,13 @@ export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCom
     runBudgetTruncated: false,
     deferredAt: null,
     nextCursorStablecoinId: null,
+    cursorTailState: null,
+    cursorTailError: null,
+    cursorRecordedAt: null,
+    cursorTailCompletedAt: null,
+    cursorTailFailedAt: null,
+    runBudgetTruncationCount: 0,
+    historyWriteGaps: [],
     persistentlyStaleIndependentCoins: [],
     lastSuccessAt: null,
     oldestFreshAgeSec: null,

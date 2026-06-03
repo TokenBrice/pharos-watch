@@ -157,6 +157,58 @@ describe("status evaluation policy", () => {
     expect(assessment.authoritativeFreshCoverageRatio).toBe(0.8);
   });
 
+  it("keeps one-off low-share reserve truncation healthy while surfacing it as a cause", () => {
+    const assessment = deriveReserveCompositionStatus({
+      ...makeReserveComposition({
+        runBudgetTruncated: true,
+        deferredCoins: 1,
+        nextCursorStablecoinId: "coin-a",
+      }),
+      runBudgetTruncationCount: 1,
+      cursorTailState: "complete",
+    } as StatusResponse["reserveComposition"]);
+
+    expect(assessment.status).toBe("healthy");
+  });
+
+  it("degrades reserve status for repeated or high-share truncation pressure", () => {
+    const repeated = deriveReserveCompositionStatus({
+      ...makeReserveComposition({
+        runBudgetTruncated: true,
+        deferredCoins: 1,
+      }),
+      runBudgetTruncationCount: 2,
+      cursorTailState: "complete",
+    } as StatusResponse["reserveComposition"]);
+    const highShare = deriveReserveCompositionStatus({
+      ...makeReserveComposition({
+        runBudgetTruncated: true,
+        deferredCoins: 3,
+      }),
+      runBudgetTruncationCount: 1,
+      cursorTailState: "complete",
+    } as StatusResponse["reserveComposition"]);
+
+    expect(repeated.status).toBe("degraded");
+    expect(highShare.status).toBe("degraded");
+  });
+
+  it("degrades reserve status for incomplete deferred-tail state or uncertain writes", () => {
+    const incompleteTail = deriveReserveCompositionStatus({
+      ...makeReserveComposition({
+        runBudgetTruncated: true,
+        deferredCoins: 1,
+      }),
+      cursorTailState: "incomplete",
+    } as StatusResponse["reserveComposition"]);
+    const uncertainWrite = deriveReserveCompositionStatus(makeReserveComposition({
+      writeTimeoutUncertain: 1,
+    }));
+
+    expect(incompleteTail.status).toBe("degraded");
+    expect(uncertainWrite.status).toBe("degraded");
+  });
+
   it("marks reserve status stale only when no fresh coverage remains", () => {
     const assessment = deriveReserveCompositionStatus(makeReserveComposition({
       freshCoins: 0,
@@ -212,6 +264,86 @@ describe("status cause text", () => {
     expect(causes).toContainEqual(expect.objectContaining({
       code: "reserve_sync_degraded",
       message: expect.stringContaining("4 persistently stale independent feed(s) (coin-a, coin-b, coin-c, +1 more)."),
+    }));
+  });
+
+  it("emits a warning cause for one-off low-share reserve truncation", () => {
+    const reserveComposition = {
+      ...makeReserveComposition({
+        status: "healthy",
+        runBudgetTruncated: true,
+        deferredCoins: 1,
+        nextCursorStablecoinId: "coin-a",
+      }),
+      cursorTailState: "complete",
+      runBudgetTruncationCount: 1,
+    } as StatusResponse["reserveComposition"];
+
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality(),
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition,
+    });
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_budget_truncated",
+      severity: "warning",
+      message: expect.stringContaining("deferred 1 coin(s)"),
+    }));
+  });
+
+  it("emits reserve causes for truncation, incomplete tail state, and uncertain writes", () => {
+    const reserveComposition = {
+      ...makeReserveComposition({
+        status: "degraded",
+        runBudgetTruncated: true,
+        deferredCoins: 3,
+        nextCursorStablecoinId: "coin-tail",
+      writeTimeoutUncertain: 1,
+      }),
+      cursorTailState: "incomplete",
+      cursorTailError: "batch unavailable",
+      runBudgetTruncationCount: 2,
+      historyWriteGaps: [
+        {
+          stablecoinId: "coin-history",
+          fetchedAt: 1_700_000_000,
+          attemptId: "coin-history:attempt",
+          compositionHistoryMissing: true,
+          attemptHistoryMissing: true,
+        },
+      ],
+    } as StatusResponse["reserveComposition"];
+
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality(),
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition,
+    });
+
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_write_uncertain",
+      severity: "warning",
+    }));
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_tail_incomplete",
+      message: expect.stringContaining("batch unavailable"),
+    }));
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_budget_truncated",
+      message: expect.stringContaining("next cursor coin-tail"),
+    }));
+    expect(causes).toContainEqual(expect.objectContaining({
+      code: "reserve_sync_history_write_gap",
+      message: expect.stringContaining("coin-history:composition+attempt"),
     }));
   });
 });

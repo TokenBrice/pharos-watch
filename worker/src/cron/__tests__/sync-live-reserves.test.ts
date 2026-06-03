@@ -282,6 +282,38 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeyCount);
   });
 
+  it("keeps cursor cleanup best-effort and records a durable warning event", async () => {
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "DELETE FROM cache WHERE key = ?",
+        matchBinds: ["live-reserves:run-cursor"],
+        rows: [],
+        throwError: new Error("cursor delete unavailable"),
+      },
+    ]);
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as {
+      cursorPersistFailed?: boolean;
+      cursorPersistError?: string;
+    };
+
+    expect(result?.status).toBe("ok");
+    expect(metadata).toMatchObject({
+      cursorPersistFailed: true,
+      cursorPersistError: "cursor delete unavailable",
+    });
+    const cursorEvent = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-cursor-finalize-failed"
+    ));
+    expect(cursorEvent).toBeDefined();
+  });
+
   it("reuses identical shared HTTP reserve sources within a run", async () => {
     const adapterFetch = mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
@@ -608,6 +640,7 @@ describe("syncLiveReserves", () => {
       failed?: number;
       warningCount?: number;
       warnings?: string[];
+      historyWriteFailedCoins?: string[];
     };
 
     expect(result?.itemCount).toBe(1);
@@ -615,8 +648,14 @@ describe("syncLiveReserves", () => {
       synced: 1,
       failed: 0,
       warningCount: 1,
+      historyWriteFailedCoins: ["usdt-tether"],
     });
     expect(metadata.warnings).toContain("usdt-tether:history-write-failed");
+    const historyWriteEvent = db.getHistory().find((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-history-write-failed"
+    ));
+    expect(historyWriteEvent).toBeDefined();
     const storageTimeoutAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds.some((bind) => typeof bind === "string" && bind.includes("storage-write-timeout"))

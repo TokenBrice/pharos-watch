@@ -5,6 +5,7 @@ import {
   beginReserveSyncAttempt,
   computeReserveCompositionOverview,
   finalizeReserveSyncSuccess,
+  loadLiveReserveHistoryWriteGaps,
   loadFreshIndependentLiveReserveMap,
   pruneLiveReserveHistory,
   recordReserveSyncDeferred,
@@ -1743,6 +1744,70 @@ describe("live-reserves-store", () => {
       + overview.errorCoins
       + overview.corruptCoins;
     expect(primarySum).toBe(overview.configuredCoins);
+  });
+
+  it("surfaces partial deferred-tail cursor diagnostics in the overview", async () => {
+    const now = 10_000;
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["live-reserves:run-cursor"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            nextStablecoinId: "coin-tail",
+            deferredCount: 12,
+            deferredAt: 9_900,
+            reason: "run-budget-exhausted",
+            tailState: "incomplete",
+            tailError: "batch unavailable",
+            cursorRecordedAt: 9_900,
+            tailFailedAt: 9_905,
+            runBudgetTruncationCount: 2,
+          }),
+          updated_at: 9_905,
+        },
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+
+    expect(overview.runBudgetTruncated).toBe(true);
+    expect(overview.deferredCoins).toBeGreaterThanOrEqual(12);
+    expect(overview.nextCursorStablecoinId).toBe("coin-tail");
+    expect(overview.cursorTailState).toBe("incomplete");
+    expect(overview.cursorTailError).toBe("batch unavailable");
+    expect(overview.cursorRecordedAt).toBe(9_900);
+    expect(overview.cursorTailFailedAt).toBe(9_905);
+    expect(overview.cursorTailCompletedAt).toBeNull();
+    expect(overview.runBudgetTruncationCount).toBe(2);
+  });
+
+  it("detects authoritative reserve snapshots missing history rows", async () => {
+    const db = mockD1([
+      {
+        match: "FROM reserve_composition c",
+        rows: [
+          {
+            stablecoin_id: "coin-a",
+            fetched_at: 1_700_000_000,
+            attempt_id: "coin-a:attempt",
+            composition_history_missing: 1,
+            attempt_history_missing: 0,
+          },
+        ],
+      },
+    ]);
+
+    await expect(loadLiveReserveHistoryWriteGaps(db)).resolves.toEqual([
+      {
+        stablecoinId: "coin-a",
+        fetchedAt: 1_700_000_000,
+        attemptId: "coin-a:attempt",
+        compositionHistoryMissing: true,
+        attemptHistoryMissing: false,
+      },
+    ]);
   });
 
   it("counts malformed stored slices as corruptCoins, not freshCoins", async () => {

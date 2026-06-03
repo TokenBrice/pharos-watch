@@ -1,5 +1,5 @@
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
-import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
+import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import {
   filterStaleLiveReserveCircuitStates,
@@ -411,17 +411,57 @@ async function finalizeReserveSyncRun(args: {
     console.warn("[sync-live-reserves] Ghost reserve artifact cleanup failed:", error);
   }
 
-  await persistLiveReserveCursorState(
-    args.db,
-    args.deferredCoins,
-    args.nextCursorStablecoinId,
-  );
+  let cursorPersistFailed = false;
+  let cursorPersistError: string | null = null;
+  try {
+    await persistLiveReserveCursorState(
+      args.db,
+      args.deferredCoins,
+      args.nextCursorStablecoinId,
+    );
+  } catch (error) {
+    cursorPersistFailed = true;
+    cursorPersistError = error instanceof Error ? error.message : String(error);
+    console.warn("[sync-live-reserves] Live reserve cursor finalization failed:", error);
+    await logCronEvent(args.db, {
+      job: "sync-live-reserves",
+      eventType: "live-reserve-cursor-finalize-failed",
+      severity: "warning",
+      message:
+        args.deferredCoins > 0
+          ? "Live reserve cursor persistence failed; the next run may restart from the previous cursor."
+          : "Live reserve cursor cleanup failed; status may show the previous deferred tail until cleanup succeeds.",
+      metadata: {
+        deferredCoins: args.deferredCoins,
+        nextCursorStablecoinId: args.nextCursorStablecoinId,
+        error: cursorPersistError,
+      },
+    });
+  }
 
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;
   try {
     historyPrune = await pruneLiveReserveHistory(args.db, args.runStartedAt);
   } catch (error) {
     console.warn("[sync-live-reserves] Live reserve history prune failed:", error);
+  }
+
+  const historyWriteFailedCoins = Array.from(new Set(
+    args.warningMessages
+      .filter((message) => message.endsWith(":history-write-failed"))
+      .map((message) => message.slice(0, -":history-write-failed".length)),
+  ));
+  if (historyWriteFailedCoins.length > 0) {
+    await logCronEvent(args.db, {
+      job: "sync-live-reserves",
+      eventType: "live-reserve-history-write-failed",
+      severity: "warning",
+      message:
+        `${historyWriteFailedCoins.length} live reserve successful attempt(s) missed history writes after authoritative state was recorded.`,
+      metadata: {
+        coins: historyWriteFailedCoins,
+      },
+    });
   }
 
   const status: CronResult["status"] =
@@ -448,6 +488,9 @@ async function finalizeReserveSyncRun(args: {
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
       finalizationMarginMs: args.budgetConfig.finalizationMarginMs,
+      cursorPersistFailed,
+      ...(cursorPersistError ? { cursorPersistError } : {}),
+      ...(historyWriteFailedCoins.length > 0 ? { historyWriteFailedCoins } : {}),
       ...(args.coinsWithWarnings.length > 0 ? { coinsWithWarnings: args.coinsWithWarnings } : {}),
       ...(args.coinsWithErrors.length > 0 ? { coinsWithErrors: args.coinsWithErrors } : {}),
       ...(args.attemptFailureSummaries.length > 0 ? { attemptFailureSummaries: args.attemptFailureSummaries } : {}),

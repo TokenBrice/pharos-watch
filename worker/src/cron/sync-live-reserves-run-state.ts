@@ -7,7 +7,7 @@ import {
   buildReserveSyncRecordDeferredStatement,
 } from "../lib/live-reserves-store-statements";
 
-const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
+export const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 
 interface LiveReserveCursorState {
   nextStablecoinId: string | null;
@@ -17,7 +17,9 @@ interface LiveReserveCursorState {
   tailState?: "recording" | "incomplete" | "complete";
   cursorRecordedAt?: number;
   tailCompletedAt?: number;
+  tailFailedAt?: number;
   tailError?: string;
+  runBudgetTruncationCount?: number;
 }
 
 export function rotateConfiguredCoins(
@@ -34,6 +36,9 @@ export async function loadLiveReserveCursorState(db: D1Database): Promise<{
   tailState: "recording" | "incomplete" | "complete" | null;
   cursorRecordedAt: number | null;
   tailCompletedAt: number | null;
+  tailFailedAt: number | null;
+  tailError: string | null;
+  runBudgetTruncationCount: number;
 } | null> {
   const cached = await getCache(db, RESERVE_SYNC_CURSOR_CACHE_KEY);
   if (!cached) return null;
@@ -51,6 +56,12 @@ export async function loadLiveReserveCursorState(db: D1Database): Promise<{
           tailState,
           cursorRecordedAt: typeof parsed.cursorRecordedAt === "number" ? parsed.cursorRecordedAt : null,
           tailCompletedAt: typeof parsed.tailCompletedAt === "number" ? parsed.tailCompletedAt : null,
+          tailFailedAt: typeof parsed.tailFailedAt === "number" ? parsed.tailFailedAt : null,
+          tailError: typeof parsed.tailError === "string" ? parsed.tailError : null,
+          runBudgetTruncationCount:
+            typeof parsed.runBudgetTruncationCount === "number" && parsed.runBudgetTruncationCount > 0
+              ? parsed.runBudgetTruncationCount
+              : 1,
         }
       : null;
   } catch {
@@ -83,6 +94,15 @@ export async function recordDeferredTail(
 ): Promise<{ deferredCoins: number; nextCursorStablecoinId: string | null }> {
   const deferredCoins = remainingCoins.length;
   const nextCursorStablecoinId = remainingCoins[0]?.id ?? null;
+  let previousCursorState: Awaited<ReturnType<typeof loadLiveReserveCursorState>> = null;
+  try {
+    previousCursorState = await loadLiveReserveCursorState(db);
+  } catch (error) {
+    console.warn("[sync-live-reserves] Failed to read previous deferred cursor state:", error);
+  }
+  const runBudgetTruncationCount = previousCursorState
+    ? previousCursorState.runBudgetTruncationCount + 1
+    : 1;
   const statements: D1PreparedStatement[] = [];
   const metadata = {
     failureCategory: "run-budget-exhausted",
@@ -95,6 +115,7 @@ export async function recordDeferredTail(
         deferredAt: attemptedAt,
         reason: "run-budget-exhausted" as const,
         cursorRecordedAt: attemptedAt,
+        runBudgetTruncationCount,
       }
     : null;
 
@@ -148,6 +169,7 @@ export async function recordDeferredTail(
             {
               ...cursorBaseState,
               tailState: "incomplete",
+              tailFailedAt: Math.floor(Date.now() / 1000),
               tailError: message,
             },
             Math.floor(Date.now() / 1000),

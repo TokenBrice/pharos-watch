@@ -114,6 +114,10 @@ describe("recordDeferredTail", () => {
             history.push({ sql, binds });
             return { success: true, meta: { changes: 1 } };
           },
+          first: async () => {
+            history.push({ sql, binds });
+            return null;
+          },
         }),
       }),
       batch: async (statements: D1PreparedStatement[]) => {
@@ -171,6 +175,44 @@ describe("loadLiveReserveCursorState", () => {
       tailState: null,
       cursorRecordedAt: null,
       tailCompletedAt: null,
+      tailFailedAt: null,
+      tailError: null,
+      runBudgetTruncationCount: 1,
+    });
+  });
+
+  it("loads partial-tail cursor diagnostics", async () => {
+    const db = {
+      prepare: (_sql: string) => ({
+        bind: (..._binds: unknown[]) => ({
+          first: async () => ({
+            value: JSON.stringify({
+              nextStablecoinId: "coin-a",
+              deferredCount: 8,
+              deferredAt: 1_700_000_000,
+              reason: "run-budget-exhausted",
+              tailState: "incomplete",
+              tailError: "batch unavailable",
+              cursorRecordedAt: 1_700_000_000,
+              tailFailedAt: 1_700_000_005,
+              runBudgetTruncationCount: 3,
+            }),
+            updated_at: 1_700_000_005,
+          }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await expect(loadLiveReserveCursorState(db)).resolves.toEqual({
+      nextStablecoinId: "coin-a",
+      deferredCount: 8,
+      deferredAt: 1_700_000_000,
+      tailState: "incomplete",
+      cursorRecordedAt: 1_700_000_000,
+      tailCompletedAt: null,
+      tailFailedAt: 1_700_000_005,
+      tailError: "batch unavailable",
+      runBudgetTruncationCount: 3,
     });
   });
 });

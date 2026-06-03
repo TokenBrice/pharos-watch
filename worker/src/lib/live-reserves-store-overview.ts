@@ -27,6 +27,56 @@ function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord)
     && syncState.metadata.failureCategory === "circuit-open";
 }
 
+export async function loadLiveReserveHistoryWriteGaps(
+  db: D1Database,
+  limit = 20,
+): Promise<NonNullable<ReserveCompositionOverview["historyWriteGaps"]>> {
+  const boundedLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const rows = await db
+    .prepare(
+      `SELECT
+         c.stablecoin_id AS stablecoin_id,
+         c.fetched_at AS fetched_at,
+         c.attempt_id AS attempt_id,
+         CASE WHEN ch.attempt_id IS NULL THEN 1 ELSE 0 END AS composition_history_missing,
+         CASE WHEN ah.attempt_id IS NULL THEN 1 ELSE 0 END AS attempt_history_missing
+       FROM reserve_composition c
+       JOIN reserve_sync_state s
+         ON s.stablecoin_id = c.stablecoin_id
+       LEFT JOIN reserve_composition_history ch
+         ON ch.stablecoin_id = c.stablecoin_id
+        AND ch.attempt_id = c.attempt_id
+       LEFT JOIN reserve_sync_attempt_history ah
+         ON ah.stablecoin_id = c.stablecoin_id
+        AND ah.attempt_id = c.attempt_id
+       WHERE c.attempt_id IS NOT NULL
+         AND s.last_success_at = c.fetched_at
+         AND s.last_success_attempt_id = c.attempt_id
+         AND s.pending_attempt_id IS NULL
+         AND (ch.attempt_id IS NULL OR ah.attempt_id IS NULL)
+       ORDER BY c.fetched_at DESC
+       LIMIT ?`,
+    )
+    .bind(boundedLimit)
+    .all<{
+      stablecoin_id: string;
+      fetched_at: number;
+      attempt_id: string;
+      composition_history_missing: number;
+      attempt_history_missing: number;
+    }>();
+
+  return (rows.results ?? [])
+    .filter((row) => typeof row.stablecoin_id === "string" && typeof row.attempt_id === "string")
+    .map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      fetchedAt: Number(row.fetched_at),
+      attemptId: row.attempt_id,
+      compositionHistoryMissing: Number(row.composition_history_missing) === 1,
+      attemptHistoryMissing: Number(row.attempt_history_missing) === 1,
+    }));
+}
+
 export async function computeReserveCompositionOverview(
   db: D1Database,
   now: number,
@@ -57,6 +107,14 @@ export async function computeReserveCompositionOverview(
   let deferredCoins = 0;
   let runBudgetTruncated = false;
   let deferredAt: number | null = null;
+  let cursorDeferredCount: number | null = null;
+  let cursorTailState: ReserveCompositionOverview["cursorTailState"] = null;
+  let cursorTailError: string | null = null;
+  let cursorRecordedAt: number | null = null;
+  let cursorTailCompletedAt: number | null = null;
+  let cursorTailFailedAt: number | null = null;
+  let runBudgetTruncationCount = 0;
+  let historyWriteGaps: NonNullable<ReserveCompositionOverview["historyWriteGaps"]> = [];
   const persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }> = [];
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
@@ -69,17 +127,51 @@ export async function computeReserveCompositionOverview(
         nextStablecoinId?: unknown;
         deferredCount?: unknown;
         deferredAt?: unknown;
+        tailState?: unknown;
+        tailError?: unknown;
+        cursorRecordedAt?: unknown;
+        tailCompletedAt?: unknown;
+        tailFailedAt?: unknown;
+        runBudgetTruncationCount?: unknown;
       };
       if (typeof parsed.nextStablecoinId === "string") {
         nextCursorStablecoinId = parsed.nextStablecoinId;
       }
-      runBudgetTruncated = typeof parsed.deferredCount === "number" && parsed.deferredCount > 0;
+      cursorDeferredCount = typeof parsed.deferredCount === "number" ? parsed.deferredCount : null;
+      runBudgetTruncated = cursorDeferredCount != null && cursorDeferredCount > 0;
       deferredAt = typeof parsed.deferredAt === "number" ? parsed.deferredAt : null;
+      cursorTailState =
+        parsed.tailState === "recording" || parsed.tailState === "incomplete" || parsed.tailState === "complete"
+          ? parsed.tailState
+          : null;
+      cursorTailError = typeof parsed.tailError === "string" ? parsed.tailError : null;
+      cursorRecordedAt = typeof parsed.cursorRecordedAt === "number" ? parsed.cursorRecordedAt : null;
+      cursorTailCompletedAt = typeof parsed.tailCompletedAt === "number" ? parsed.tailCompletedAt : null;
+      cursorTailFailedAt = typeof parsed.tailFailedAt === "number" ? parsed.tailFailedAt : null;
+      runBudgetTruncationCount =
+        typeof parsed.runBudgetTruncationCount === "number" && parsed.runBudgetTruncationCount > 0
+          ? parsed.runBudgetTruncationCount
+          : runBudgetTruncated
+            ? 1
+            : 0;
     } catch {
       nextCursorStablecoinId = null;
       runBudgetTruncated = false;
       deferredAt = null;
+      cursorDeferredCount = null;
+      cursorTailState = null;
+      cursorTailError = null;
+      cursorRecordedAt = null;
+      cursorTailCompletedAt = null;
+      cursorTailFailedAt = null;
+      runBudgetTruncationCount = 0;
     }
+  }
+
+  try {
+    historyWriteGaps = await loadLiveReserveHistoryWriteGaps(db);
+  } catch (error) {
+    console.warn("[live-reserves] Failed to reconcile reserve history write gaps:", error);
   }
 
   for (const coin of configuredCoins) {
@@ -186,10 +278,17 @@ export async function computeReserveCompositionOverview(
     staticValidatedFresh,
     weakProbeFresh,
     writeTimeoutUncertain,
-    deferredCoins,
+    deferredCoins: Math.max(deferredCoins, cursorDeferredCount ?? 0),
     runBudgetTruncated,
     deferredAt,
     nextCursorStablecoinId,
+    cursorTailState,
+    cursorTailError,
+    cursorRecordedAt,
+    cursorTailCompletedAt,
+    cursorTailFailedAt,
+    runBudgetTruncationCount,
+    historyWriteGaps,
     persistentlyStaleIndependentCoins: persistentlyStaleIndependentCoins.sort(
       (a, b) => b.ageSec - a.ageSec,
     ),
