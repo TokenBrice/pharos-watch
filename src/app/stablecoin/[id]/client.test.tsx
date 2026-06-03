@@ -51,8 +51,23 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/overview-section", () => ({
-  OverviewSection: () => null,
+vi.mock("@/components/stablecoin-detail/reserve-panel", () => ({
+  ReservePanel: ({
+    reserves,
+    onRetry,
+    isFetching,
+  }: {
+    reserves?: { mode?: string } | null;
+    onRetry?: () => Promise<unknown> | void;
+    isFetching?: boolean;
+  }) => (
+    <section id="reserves" data-testid="reserve-panel">
+      <span>{reserves?.mode ?? "no-reserves"}</span>
+      <button type="button" disabled={isFetching} onClick={() => { void onRetry?.(); }}>
+        Retry reserves
+      </button>
+    </section>
+  ),
 }));
 
 vi.mock("@/components/stablecoin-detail/price-transparency-card", () => ({
@@ -103,7 +118,9 @@ vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
 }));
 
 vi.mock("@/components/report-card", () => ({
-  ReportCardDetail: () => <div data-testid="report-card" />,
+  ReportCardDetail: ({ rightColumn }: { rightColumn?: ReactNode }) => (
+    <div data-testid="report-card">{rightColumn}</div>
+  ),
 }));
 
 function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
@@ -115,6 +132,7 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     summary: null,
     logoSrc: undefined,
     reportCard: null,
+    reportCardUpdatedAt: null,
     variantParent: null,
     variantSiblings: [],
     childVariants: [TRACKED_META_BY_ID.get("susds-sky")!, TRACKED_META_BY_ID.get("stusds-sky")!],
@@ -158,6 +176,8 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     earliestTrackingDate: null,
     reserves: null,
     reserveFetchError: null,
+    refetchReserves: null,
+    isFetchingReserves: false,
     supplyError: null,
     staleQueries: [],
     verdict: {
@@ -210,6 +230,32 @@ describe("StablecoinDetailClient", () => {
     expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(false);
     expect(screen.getAllByText("Sky Savings USDS").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
+  });
+
+  it("renders reserve view in the overview stream when report-card data is unavailable", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const refetchReserves = vi.fn().mockResolvedValue({ status: "success" });
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      reportCard: null,
+      reserves: {
+        reserves: [{ name: "Curated reserve", pct: 100, risk: "low" }],
+        estimated: false,
+        mode: "curated-fallback",
+      },
+      refetchReserves,
+      isFetchingReserves: true,
+    }));
+
+    const { container } = render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const reservePanel = screen.getByTestId("reserve-panel");
+    const reportCardAnchor = container.querySelector("#report-card");
+    expect(screen.queryByTestId("report-card")).toBeNull();
+    expect(reservePanel.textContent).toContain("curated-fallback");
+    expect(reportCardAnchor?.contains(reservePanel)).toBe(false);
+    expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("renders the underlying asset card outside the overview section for variants", () => {

@@ -63,7 +63,7 @@ The hook currently wires these sources:
 - `useStressSignals()` for DEWS detail context
 - `useBlacklistSummary()` for blacklist-support and summary badges
 - `useMintBurnFlows()` for flow-surface availability checks
-- `useStablecoinReserves(id, enabled)` for live reserve presentation when `coin.liveReservesConfig` exists
+- `useStablecoinReserves(id, enabled)` for live reserve presentation, reserve-local retry state, and fetch progress when `coin.liveReservesConfig` exists
 
 Depeg events are not part of the main view model. The `useInfiniteDepegEvents({ stablecoinId })` hook is called inside the lazily-imported `DepegHistory` component (History zone), which itself only mounts for non-NAV coins; it uses the default options (enabled, no auto-load).
 
@@ -95,7 +95,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 7. `MobileStickySummary`
 8. `LongformScrollspyNav`
 9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
-10. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `OverviewSection` as its `rightColumn` slot to render the reserves panel) → `StablecoinDepegResolverCard` when the coin has an active depeg with a DDR row → `CoinNotices` → `DEWSDetail` for non-NAV coins
+10. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `ReservePanel` as its `rightColumn` slot when report-card data is available) → standalone `ReservePanel` when reserve data exists but report-card data is unavailable → `StablecoinDepegResolverCard` when the coin has an active depeg with a DDR row → `CoinNotices` → `DEWSDetail` for non-NAV coins
 11. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MintAuthoritySection` only when compact review data exists, `MarketDataSection` for USD-pegged non-NAV coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
 12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when available, `RedemptionBackstopCard` and `PriceTransparencyCard` render as full-width stacked cards beneath it, in that order
 13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
@@ -137,7 +137,7 @@ Below the identity block, the classification line uses `buildGovernanceTaxonomyU
 
 ### Reserves anchor
 
-When reserves render, the treemap block is wrapped in `<section id="reserves">` so the scrollspy's Reserves pill scrolls to it.
+When reserves render, `ReservePanel` wraps the treemap block in `<section id="reserves">`. `#reserves` is a stable deep-link anchor inside the Overview zone, not a top-level scrollspy rail pill.
 
 ### Explore Next anchor
 
@@ -163,7 +163,7 @@ The detail page prefers live reserve data when the coin is live-enabled:
 - otherwise it falls back to `getReserves(coin)` from curated/template metadata
 - authoritative `live` / `live-stale` reserve responses can carry a separate reserve badge taxonomy: `Live`, `Curated-Validated`, or `Proof`
 
-`OverviewSection` is responsible for translating reserve modes and reserve badge semantics into user-visible notices:
+`ReservePanel` is responsible for translating reserve modes and reserve badge semantics into user-visible notices:
 
 - `live`
 - `live-stale`
@@ -171,7 +171,7 @@ The detail page prefers live reserve data when the coin is live-enabled:
 - `template-fallback`
 - `unavailable`
 
-Live-reserve fetch failures do not take the full page down. They surface as reserve-specific messaging inside the overview section.
+Live-reserve fetch failures do not take the full page down. They surface as reserve-specific messaging inside the overview section, with a reserve-local retry action when the live-reserve hook can refetch the feed. When report-card data is unavailable, the Reserve View still renders as an Overview sibling instead of depending on the report-card right-column slot.
 
 ### Shared stale banner
 
@@ -195,6 +195,7 @@ Those presets intentionally track the major page-defining datasets rather than e
 - dex liquidity
 - report cards
 - redemption backstops
+- live reserves for live-enabled coins
 
 That shared retry is used by the page-level error surfaces.
 
@@ -208,7 +209,7 @@ That shared retry is used by the page-level error surfaces.
 | `ReportCardDetail`            | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line                                                                                                                                                                                                                                                                                              |
 | `StablecoinDepegResolverCard` | Per-coin Depeg Duration Resolver readout for active depegs. It lazy-loads after the Safety Score, fetches the shared DDR snapshot only for active-depeg detail pages, and renders only rows matching the current stablecoin before the DEWS block.                                                                                                                                                         |
 | `SafetyScoreHistorySection`   | Grade-transition timeline                                                                                                                                                                                                                                                                                                                                                                                  |
-| `OverviewSection`             | Reserve treemap, reserve/live-fallback notices, and reviewed reserve source context                                                                                                                                                                                                                                                                                                                        |
+| `ReservePanel`                | Reserve treemap, reserve/live-fallback notices, reserve retry action, and reviewed reserve source context                                                                                                                                                                                                                                                                                                   |
 | `RedemptionBackstopCard`      | Liquidity-zone redemption route card. It distinguishes scored routes from resolved-but-unscored, configured-but-unrated, and impaired route states; eventual-only routes remain visible without being presented as immediate exit capacity.                                                                                                                                                                |
 | `CoinNotices`                 | Coin-specific warnings/info blocks from metadata                                                                                                                                                                                                                                                                                                                                                           |
 | `KeyInfoCard`                 | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction                                                                                                                                                                                                                                                                                                                          |
@@ -249,7 +250,9 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | `src/lib/stablecoin-detail-view-model.ts`                           | Pure derivation and fallback assembly                      |
 | `src/components/stablecoin-detail/hero-card.tsx`                    | Detail hero surface                                        |
 | `src/components/stablecoin-detail/section-banner.tsx`               | Section banner heading shared by the detail zones          |
-| `src/components/stablecoin-detail/overview-section.tsx`             | Summary and reserves                                       |
+| `src/components/stablecoin-detail/overview-section.tsx`             | Compatibility wrapper for the Reserve View panel           |
+| `src/components/stablecoin-detail/reserve-panel.tsx`                | Reserve View panel, notices, links, retry action           |
+| `src/components/stablecoin-detail/reserve-presentation.ts`          | Pure reserve notice, footnote, and sync-copy helpers       |
 | `src/components/stablecoin-detail/price-transparency-card.tsx`      | Price source transparency and confidence card              |
 | `src/components/stablecoin-detail/depeg-resolver-card.tsx`          | Per-coin DDR snapshot wrapper for active depeg pages       |
 | `src/components/depeg-resolver-row-card.tsx`                        | Shared DDR row-card wrapper used by `/depeg/` and details  |

@@ -13,12 +13,12 @@ import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import { refetchQueryGroup } from "@/lib/query-refetch-group";
+import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailCoinMeta,
   type StablecoinDetailSummary,
-  type StablecoinDetailViewModel,
+  type StablecoinDetailViewModel as BaseStablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model";
 
 interface UseStablecoinDetailViewModelParams {
@@ -28,7 +28,14 @@ interface UseStablecoinDetailViewModelParams {
   logoSrc?: string;
 }
 
-export type { StablecoinDetailSummary, StablecoinDetailViewModel };
+export type StablecoinDetailViewModel =
+  | Exclude<BaseStablecoinDetailViewModel, { status: "ready" }>
+  | (Extract<BaseStablecoinDetailViewModel, { status: "ready" }> & {
+      refetchReserves: QueryRefetchFn | null;
+      isFetchingReserves: boolean;
+    });
+
+export type { StablecoinDetailSummary };
 
 export function useStablecoinDetailViewModel({
   id,
@@ -83,7 +90,8 @@ export function useStablecoinDetailViewModel({
   const { data: stressSignalsData } = useStressSignals();
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
   const { data: blacklistSummary, isLoading: isBlacklistLoading } = useBlacklistSummary();
-  const liveReserves = useStablecoinReserves(id, !!coin?.liveReservesConfig);
+  const reservesEnabled = !!coin?.liveReservesConfig;
+  const liveReserves = useStablecoinReserves(id, reservesEnabled);
 
   const handleRetryAll = useCallback(() => {
     return refetchQueryGroup([
@@ -93,19 +101,22 @@ export function useStablecoinDetailViewModel({
       refetchLiquidity,
       refetchReportCards,
       refetchRedemptionBackstops,
+      ...(reservesEnabled ? [liveReserves.refetch] : []),
     ], {
       warnLabel: "[refetch] Some queries failed to refresh",
     });
   }, [
+    liveReserves.refetch,
     refetchLiquidity,
     refetchList,
     refetchPeg,
     refetchRedemptionBackstops,
     refetchReportCards,
     refetchSupply,
+    reservesEnabled,
   ]);
 
-  return buildStablecoinDetailViewModel({
+  const viewModel = buildStablecoinDetailViewModel({
     core: {
       id,
       coin,
@@ -169,4 +180,14 @@ export function useStablecoinDetailViewModel({
       },
     },
   });
+
+  if (viewModel.status !== "ready") {
+    return viewModel;
+  }
+
+  return {
+    ...viewModel,
+    refetchReserves: reservesEnabled ? liveReserves.refetch : null,
+    isFetchingReserves: liveReserves.isFetching,
+  };
 }

@@ -1,16 +1,31 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { cleanup, render, screen } from "@testing-library/react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ApiFetchError } from "@/lib/api";
-import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
+import { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 
-describe("OverviewSection", () => {
+beforeAll(() => {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("ReservePanel", () => {
   it("surfaces live-reserve API failures when falling back to curated reserve metadata", () => {
     const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: coin!.reserves ?? [{ name: "Curated fallback", pct: 100, risk: "low" }],
@@ -30,7 +45,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
@@ -52,7 +67,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
@@ -89,7 +104,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
@@ -121,7 +136,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
@@ -154,7 +169,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 67, risk: "medium" }],
@@ -182,7 +197,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "stataUSDC GSM", pct: 100, risk: "low" }],
@@ -207,12 +222,45 @@ describe("OverviewSection", () => {
     expect(html).toContain("https://aave.com/help/gho-stablecoin/stability-module");
   });
 
+  it("renders status, source and evidence links, and badge labels accessibly", () => {
+    const coin = TRACKED_META_BY_ID.get("gho-aave");
+    expect(coin).toBeDefined();
+
+    render(
+      <ReservePanel
+        coin={coin!}
+        reserves={{
+          reserves: [{ name: "stataUSDC GSM", pct: 100, risk: "low" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "gho",
+          displayUrl: "https://aave.tokenlogic.xyz/gho",
+          evidenceUrls: ["https://aave.com/help/gho-stablecoin/stability-module"],
+          displayBadge: {
+            kind: "live",
+            label: "Live",
+          },
+        }}
+        reserveFetchError={new TypeError("Failed to fetch")}
+        onRetry={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("status").textContent).toContain("Live reserve refresh delayed");
+    expect(screen.getByRole("link", { name: "Source" }).getAttribute("href")).toBe("https://aave.tokenlogic.xyz/gho");
+    expect(screen.getByRole("link", { name: "Evidence" }).getAttribute("href")).toBe(
+      "https://aave.com/help/gho-stablecoin/stability-module",
+    );
+    expect(screen.getByText("Live")).toBeTruthy();
+  });
+
   it("renders static-validated reserve provenance messaging", () => {
     const coin = TRACKED_META_BY_ID.get("frax-frax");
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Reviewed baseline", pct: 100, risk: "very-low" }],
@@ -243,7 +291,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Issuer reserves", pct: 100, risk: "very-low" }],
@@ -274,7 +322,7 @@ describe("OverviewSection", () => {
     expect(coin).toBeDefined();
 
     const html = renderToStaticMarkup(
-      <OverviewSection
+      <ReservePanel
         coin={coin!}
         reserves={{
           reserves: [{ name: "Tracked vaults", pct: 100, risk: "medium" }],

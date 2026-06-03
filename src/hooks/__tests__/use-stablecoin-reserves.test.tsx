@@ -14,7 +14,7 @@ vi.mock("@/lib/api", () => ({
   fetchStablecoinReserves: vi.fn(),
 }));
 
-import { useStablecoinReserves } from "../use-stablecoin-reserves";
+import { useStablecoinReserves, toReserveResult } from "../use-stablecoin-reserves";
 
 describe("useStablecoinReserves", () => {
   beforeEach(() => {
@@ -22,8 +22,10 @@ describe("useStablecoinReserves", () => {
   });
 
   it("maps the reserve payload into the public reserveResult shape", () => {
+    const refetch = vi.fn().mockResolvedValue({ status: "success" });
     useQueryMock.mockReturnValue({
       data: {
+        stablecoinId: "usdc-circle",
         reserves: [{ name: "T-Bills", pct: 100, risk: "very-low" }],
         estimated: false,
         mode: "live",
@@ -47,6 +49,8 @@ describe("useStablecoinReserves", () => {
         },
       },
       error: null,
+      refetch,
+      isFetching: true,
     });
 
     const { result } = renderHook(() => useStablecoinReserves("usdc-circle", true));
@@ -60,11 +64,29 @@ describe("useStablecoinReserves", () => {
       displayBadge: { kind: "live", label: "Live" },
       metadata: { yieldBasisCollateralPct: 89.7 },
     });
+    expect(result.current.reserveResult).not.toHaveProperty("stablecoinId");
     expect(result.current.error).toBeNull();
+    expect(result.current.refetch).toBe(refetch);
+    expect(result.current.isFetching).toBe(true);
+  });
+
+  it("projects reserve API responses from the shared endpoint shape", () => {
+    const result = toReserveResult({
+      stablecoinId: "usdc-circle",
+      reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+      estimated: false,
+      mode: "curated-fallback",
+    });
+
+    expect(result).toEqual({
+      reserves: [{ name: "Cash", pct: 100, risk: "very-low" }],
+      estimated: false,
+      mode: "curated-fallback",
+    });
   });
 
   it("uses long polling for live reserve responses and short polling for fallback responses", () => {
-    useQueryMock.mockReturnValue({ data: null, error: null });
+    useQueryMock.mockReturnValue({ data: null, error: null, refetch: vi.fn(), isFetching: false });
 
     renderHook(() => useStablecoinReserves("usdc-circle", true));
     const options = useQueryMock.mock.calls[0][0] as {
@@ -84,7 +106,7 @@ describe("useStablecoinReserves", () => {
   });
 
   it("uses recovery polling for live responses with active sync issues", () => {
-    useQueryMock.mockReturnValue({ data: null, error: null });
+    useQueryMock.mockReturnValue({ data: null, error: null, refetch: vi.fn(), isFetching: false });
 
     renderHook(() => useStablecoinReserves("usdc-circle", true));
     const options = useQueryMock.mock.calls[0][0] as {
