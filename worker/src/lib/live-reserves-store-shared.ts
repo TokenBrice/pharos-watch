@@ -128,13 +128,13 @@ export interface ReserveCompositionOverview {
   runBudgetTruncated: boolean;
   deferredAt: number | null;
   nextCursorStablecoinId: string | null;
-  cursorTailState?: "recording" | "incomplete" | "complete" | null;
-  cursorTailError?: string | null;
-  cursorRecordedAt?: number | null;
-  cursorTailCompletedAt?: number | null;
-  cursorTailFailedAt?: number | null;
-  runBudgetTruncationCount?: number;
-  historyWriteGaps?: Array<{
+  cursorTailState: "recording" | "incomplete" | "complete" | null;
+  cursorTailError: string | null;
+  cursorRecordedAt: number | null;
+  cursorTailCompletedAt: number | null;
+  cursorTailFailedAt: number | null;
+  runBudgetTruncationCount: number;
+  historyWriteGaps: Array<{
     stablecoinId: string;
     fetchedAt: number;
     attemptId: string;

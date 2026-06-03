@@ -864,6 +864,19 @@ export interface StatusResponse {
     runBudgetTruncated: boolean;
     deferredAt: number | null;
     nextCursorStablecoinId: string | null;
+    cursorTailState: "recording" | "incomplete" | "complete" | null;
+    cursorTailError: string | null;
+    cursorRecordedAt: number | null;
+    cursorTailCompletedAt: number | null;
+    cursorTailFailedAt: number | null;
+    runBudgetTruncationCount: number;
+    historyWriteGaps: Array<{
+      stablecoinId: string;
+      fetchedAt: number;
+      attemptId: string;
+      compositionHistoryMissing: boolean;
+      attemptHistoryMissing: boolean;
+    }>;
     /**
      * Coins whose adapter is classified as independent evidence but whose
      * latest source has been stuck in degraded/error with the last
@@ -966,6 +979,49 @@ const StatusTransitionSchema = z.object({
   at: z.number(),
 });
 
+const ReserveCompositionHistoryWriteGapSchema = z.object({
+  stablecoinId: z.string(),
+  fetchedAt: z.number(),
+  attemptId: z.string(),
+  compositionHistoryMissing: z.boolean(),
+  attemptHistoryMissing: z.boolean(),
+});
+
+const ReserveCompositionOverviewSchema = z.object({
+  configuredCoins: z.number(),
+  freshCoins: z.number(),
+  staleCoins: z.number(),
+  missingCoins: z.number(),
+  degradedCoins: z.number(),
+  errorCoins: z.number(),
+  corruptCoins: z.number(),
+  independentFreshEligible: z.number(),
+  independentFreshUnverified: z.number(),
+  staticValidatedFresh: z.number(),
+  weakProbeFresh: z.number(),
+  writeTimeoutUncertain: z.number(),
+  deferredCoins: z.number(),
+  runBudgetTruncated: z.boolean(),
+  deferredAt: z.number().nullable(),
+  nextCursorStablecoinId: z.string().nullable(),
+  cursorTailState: z.enum(["recording", "incomplete", "complete"]).nullable(),
+  cursorTailError: z.string().nullable(),
+  cursorRecordedAt: z.number().nullable(),
+  cursorTailCompletedAt: z.number().nullable(),
+  cursorTailFailedAt: z.number().nullable(),
+  runBudgetTruncationCount: z.number(),
+  historyWriteGaps: z.array(ReserveCompositionHistoryWriteGapSchema),
+  persistentlyStaleIndependentCoins: z.array(z.object({
+    stablecoinId: z.string(),
+    ageSec: z.number(),
+  })),
+  lastSuccessAt: z.number().nullable(),
+  oldestFreshAgeSec: z.number().nullable(),
+  status: z.enum(["healthy", "degraded", "stale"]),
+  freshCoverageRatio: z.number(),
+  authoritativeFreshCoverageRatio: z.number(),
+});
+
 export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   timestamp: z.number(),
   dbHealthy: z.boolean(),
@@ -1000,7 +1056,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   d1Usage: StatusJsonObjectSchema.nullable(),
   discoveryCandidates: z.array(StatusJsonObjectSchema).nullable(),
   mintBurnReconciliation: StatusJsonObjectSchema.nullable(),
-  reserveComposition: StatusJsonObjectSchema,
+  reserveComposition: ReserveCompositionOverviewSchema,
   cacheBlobSizes: z.record(z.string(), z.number()).optional(),
   reserveDrift: z.array(StatusJsonObjectSchema).optional(),
   classificationWarnings: z.array(StatusJsonObjectSchema).optional(),
@@ -1013,7 +1069,7 @@ export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.o
   probe: StatusProbeSummarySchema,
   discrepancy: StatusDiscrepancySchema,
   transitions: z.array(StatusTransitionSchema),
-  reserveComposition: StatusJsonObjectSchema.nullable(),
+  reserveComposition: ReserveCompositionOverviewSchema.nullable(),
 }).transform((value): StatusHistoryResponse => value as unknown as StatusHistoryResponse);
 
 export interface PublicStatusTransition {

@@ -241,6 +241,15 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
     expect(body).toHaveProperty("reserveComposition");
+    expect(body.reserveComposition).toMatchObject({
+      cursorTailState: null,
+      cursorTailError: null,
+      cursorRecordedAt: null,
+      cursorTailCompletedAt: null,
+      cursorTailFailedAt: null,
+      runBudgetTruncationCount: 0,
+      historyWriteGaps: [],
+    });
     expect(typeof body.dbHealthy).toBe("boolean");
     expect(body.datasetFreshness).toHaveProperty("stablecoins");
     expect(body.datasetFreshness).toHaveProperty("mintBurn");

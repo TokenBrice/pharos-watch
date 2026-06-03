@@ -12,7 +12,6 @@ import type { PublicHealthAssessment } from "../public-health-assessment";
 import {
   STATUS_RESERVE_HIGH_DEFERRED_RATIO,
   STATUS_RESERVE_REPEATED_TRUNCATION_COUNT,
-  type ReserveCompositionOperationalSignals,
 } from "./evaluation-state";
 
 function formatRatio(value: number): string {
@@ -469,16 +468,10 @@ export function buildDataQualityCauses(input: {
   const persistentStaleIndependentFeedText = formatPersistentStaleIndependentFeeds(
     input.reserveComposition.persistentlyStaleIndependentCoins,
   );
-  const reserveOperationalSignals =
-    input.reserveComposition as StatusResponse["reserveComposition"] & ReserveCompositionOperationalSignals & {
-      cursorTailError?: string | null;
-      cursorRecordedAt?: number | null;
-      cursorTailFailedAt?: number | null;
-    };
   const reserveDeferredRatio = input.reserveComposition.configuredCoins > 0
     ? input.reserveComposition.deferredCoins / input.reserveComposition.configuredCoins
     : 0;
-  const reserveTruncationCount = reserveOperationalSignals.runBudgetTruncationCount ?? 0;
+  const reserveTruncationCount = input.reserveComposition.runBudgetTruncationCount;
 
   if (input.reserveComposition.writeTimeoutUncertain > 0) {
     pushCause(dataQualityCauses, {
@@ -495,16 +488,16 @@ export function buildDataQualityCauses(input: {
   }
 
   if (
-    reserveOperationalSignals.cursorTailState === "recording" ||
-    reserveOperationalSignals.cursorTailState === "incomplete"
+    input.reserveComposition.cursorTailState === "recording" ||
+    input.reserveComposition.cursorTailState === "incomplete"
   ) {
     pushCause(dataQualityCauses, {
       code: "reserve_sync_tail_incomplete",
       layer: "data-quality",
       severity: "warning",
       message:
-        `Live reserve deferred-tail recording is ${reserveOperationalSignals.cursorTailState}` +
-        (reserveOperationalSignals.cursorTailError ? ` (${reserveOperationalSignals.cursorTailError}).` : "."),
+        `Live reserve deferred-tail recording is ${input.reserveComposition.cursorTailState}` +
+        (input.reserveComposition.cursorTailError ? ` (${input.reserveComposition.cursorTailError}).` : "."),
       metric: "reserveCursorTailIncomplete",
       value: 1,
       threshold: 1,
@@ -536,15 +529,7 @@ export function buildDataQualityCauses(input: {
     });
   }
 
-  const historyWriteGaps = (
-    input.reserveComposition as StatusResponse["reserveComposition"] & {
-      historyWriteGaps?: Array<{
-        stablecoinId: string;
-        compositionHistoryMissing: boolean;
-        attemptHistoryMissing: boolean;
-      }>;
-    }
-  ).historyWriteGaps ?? [];
+  const historyWriteGaps = input.reserveComposition.historyWriteGaps;
   if (historyWriteGaps.length > 0) {
     const examples = historyWriteGaps.slice(0, 3).map((gap) => {
       const missing = [

@@ -19,11 +19,6 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
 export const STATUS_RESERVE_HIGH_DEFERRED_RATIO = 0.25;
 export const STATUS_RESERVE_REPEATED_TRUNCATION_COUNT = 2;
 
-export interface ReserveCompositionOperationalSignals {
-  cursorTailState?: "recording" | "incomplete" | "complete" | null;
-  runBudgetTruncationCount?: number | null;
-}
-
 export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
   return STATUS_SEVERITY[a] >= STATUS_SEVERITY[b] ? a : b;
 }
@@ -38,7 +33,6 @@ export interface ReserveCompositionAssessment {
 export function deriveReserveCompositionStatus(
   reserveComposition: StatusResponse["reserveComposition"],
 ): ReserveCompositionAssessment {
-  const operationalSignals = reserveComposition as StatusResponse["reserveComposition"] & ReserveCompositionOperationalSignals;
   const bootstrap =
     reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
   const authoritativeFreshCoins =
@@ -54,9 +48,9 @@ export function deriveReserveCompositionStatus(
     reserveComposition.configuredCoins > 0 ? reserveComposition.deferredCoins / reserveComposition.configuredCoins : 0;
   const hasUncertainWrites = reserveComposition.writeTimeoutUncertain > 0;
   const hasIncompleteCursorTail =
-    operationalSignals.cursorTailState === "recording" || operationalSignals.cursorTailState === "incomplete";
+    reserveComposition.cursorTailState === "recording" || reserveComposition.cursorTailState === "incomplete";
   const hasRepeatedTruncation =
-    (operationalSignals.runBudgetTruncationCount ?? 0) >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT;
+    reserveComposition.runBudgetTruncationCount >= STATUS_RESERVE_REPEATED_TRUNCATION_COUNT;
   const hasMaterialDeferredTail =
     reserveComposition.runBudgetTruncated && deferredShare >= STATUS_RESERVE_HIGH_DEFERRED_RATIO;
   const hasReserveCapacityPressure =
