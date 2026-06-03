@@ -103,6 +103,54 @@ describe("recordDeferredTail", () => {
     expect(typeof parseCursorWrite(cursorWrites[1])?.tailCompletedAt).toBe("number");
   });
 
+  it("records a durable event when previous cursor state cannot be read", async () => {
+    const batchSizes: number[] = [];
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    let cursorReadFailed = false;
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          sql,
+          binds,
+          run: async () => {
+            history.push({ sql, binds });
+            return { success: true, meta: { changes: 1 } };
+          },
+          first: async () => {
+            history.push({ sql, binds });
+            if (!cursorReadFailed && sql.includes("SELECT value, updated_at FROM cache")) {
+              cursorReadFailed = true;
+              throw new Error("cache read unavailable");
+            }
+            return null;
+          },
+        }),
+      }),
+      batch: async (statements: D1PreparedStatement[]) => {
+        batchSizes.push(statements.length);
+        for (const statement of statements as unknown as Array<{ sql: string; binds: unknown[] }>) {
+          history.push({ sql: statement.sql, binds: statement.binds });
+        }
+        return statements.map(() => ({ success: true, meta: { changes: 1 } }));
+      },
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await recordDeferredTail(db, [makeCoin("coin-a")], new Set(), 1_700_000_000);
+
+    expect(batchSizes).toEqual([2]);
+    const cursorReadEvent = history.find((entry) => (
+      entry.sql.includes("INSERT OR REPLACE INTO cache")
+      && entry.binds[0] === "cron:event:sync-live-reserves:live-reserve-cursor-read-failed"
+    ));
+    expect(cursorReadEvent).toBeDefined();
+    const eventRecord = JSON.parse(cursorReadEvent?.binds[1] as string) as {
+      metadata?: { error?: string };
+    };
+    expect(eventRecord.metadata?.error).toBe("cache read unavailable");
+  });
+
   it("keeps the cursor advanced and marks it incomplete when deferred row batching fails", async () => {
     const history: Array<{ sql: string; binds: unknown[] }> = [];
     const db = {

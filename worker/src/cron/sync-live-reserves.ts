@@ -422,7 +422,6 @@ async function finalizeReserveSyncRun(args: {
   } catch (error) {
     cursorPersistFailed = true;
     cursorPersistError = error instanceof Error ? error.message : String(error);
-    console.warn("[sync-live-reserves] Live reserve cursor finalization failed:", error);
     await logCronEvent(args.db, {
       job: "sync-live-reserves",
       eventType: "live-reserve-cursor-finalize-failed",

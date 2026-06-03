@@ -6,6 +6,7 @@ import {
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncRecordDeferredStatement,
 } from "../lib/live-reserves-store-statements";
+import { logCronEvent } from "../lib/cron-logger";
 
 export const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 
@@ -98,7 +99,15 @@ export async function recordDeferredTail(
   try {
     previousCursorState = await loadLiveReserveCursorState(db);
   } catch (error) {
-    console.warn("[sync-live-reserves] Failed to read previous deferred cursor state:", error);
+    await logCronEvent(db, {
+      job: "sync-live-reserves",
+      eventType: "live-reserve-cursor-read-failed",
+      severity: "warning",
+      message: "Failed to read previous deferred reserve cursor state; truncation count will restart from one.",
+      metadata: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
   }
   const runBudgetTruncationCount = previousCursorState
     ? previousCursorState.runBudgetTruncationCount + 1
