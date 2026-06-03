@@ -101,6 +101,16 @@ interface FirstSeenCachePayload {
   firstSeenById: Record<string, number>;
 }
 
+export interface FirstSeenObservation {
+  id: string;
+  observedAtSec: number | null | undefined;
+}
+
+interface FirstSeenCacheRead {
+  map: Map<string, number>;
+  fresh: boolean;
+}
+
 function parseFirstSeenCache(value: string): Map<string, number> | null {
   try {
     const payload = JSON.parse(value) as Partial<FirstSeenCachePayload>;
@@ -120,13 +130,18 @@ function parseFirstSeenCache(value: string): Map<string, number> | null {
   }
 }
 
-async function readFirstSeenCache(db: D1Database, nowSec: number): Promise<Map<string, number> | null> {
+async function readFirstSeenCache(db: D1Database, nowSec: number): Promise<FirstSeenCacheRead | null> {
   const row = await db
     .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
     .bind(FIRST_SEEN_CACHE_KEY)
     .first<{ value: string; updated_at: number }>();
-  if (!row || nowSec - row.updated_at > FIRST_SEEN_CACHE_MAX_AGE_SEC) return null;
-  return parseFirstSeenCache(row.value);
+  if (!row) return null;
+  const parsed = parseFirstSeenCache(row.value);
+  if (!parsed) return null;
+  return {
+    map: parsed,
+    fresh: nowSec - row.updated_at <= FIRST_SEEN_CACHE_MAX_AGE_SEC,
+  };
 }
 
 async function writeFirstSeenCache(db: D1Database, firstSeen: Map<string, number>, nowSec: number): Promise<void> {
@@ -138,19 +153,58 @@ async function writeFirstSeenCache(db: D1Database, firstSeen: Map<string, number
     .run();
 }
 
-/** Earliest supply_history snapshot per coin — used so young coins aren't scored over a phantom 4-year window. */
-export async function getFirstSeenDates(db: D1Database): Promise<Map<string, number>> {
+function mergeFirstSeen(map: Map<string, number>, id: string, firstSeenSec: number): boolean {
+  if (!id || !Number.isFinite(firstSeenSec) || firstSeenSec <= 0) return false;
+  const current = map.get(id);
+  if (current != null && current <= firstSeenSec) return false;
+  map.set(id, Math.floor(firstSeenSec));
+  return true;
+}
+
+function mergeObservedFirstSeen(
+  map: Map<string, number>,
+  observations: readonly FirstSeenObservation[],
+  nowSec: number,
+): boolean {
+  let changed = false;
+  for (const observation of observations) {
+    const observedAtSec = observation.observedAtSec;
+    if (typeof observedAtSec !== "number" || !Number.isFinite(observedAtSec) || observedAtSec <= 0) continue;
+    // Provider timestamps can occasionally skew forward; do not let them create a future tracking anchor.
+    const boundedObservedAt = Math.min(Math.floor(observedAtSec), nowSec);
+    changed = mergeFirstSeen(map, observation.id, boundedObservedAt) || changed;
+  }
+  return changed;
+}
+
+/** Earliest tracking anchor per coin — used so young coins aren't scored over a phantom 4-year window. */
+export async function getFirstSeenDates(
+  db: D1Database,
+  observations: readonly FirstSeenObservation[] = [],
+): Promise<Map<string, number>> {
   const nowSec = Math.floor(Date.now() / 1000);
   const cached = await readFirstSeenCache(db, nowSec);
-  if (cached) return cached;
+  if (cached?.fresh && observations.length === 0) return cached.map;
 
-  const result = await db
-    .prepare("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history GROUP BY stablecoin_id")
-    .all<{ stablecoin_id: string; first_seen: number }>();
-  const map = new Map<string, number>();
-  for (const row of result.results ?? []) {
-    map.set(row.stablecoin_id, row.first_seen);
+  const map = cached?.fresh ? new Map(cached.map) : new Map<string, number>();
+
+  if (!cached?.fresh) {
+    for (const [id, firstSeen] of cached?.map ?? []) {
+      mergeFirstSeen(map, id, firstSeen);
+    }
+
+    const result = await db
+      .prepare("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history GROUP BY stablecoin_id")
+      .all<{ stablecoin_id: string; first_seen: number }>();
+    for (const row of result.results ?? []) {
+      mergeFirstSeen(map, row.stablecoin_id, row.first_seen);
+    }
   }
-  await writeFirstSeenCache(db, map, nowSec);
+
+  const changed = mergeObservedFirstSeen(map, observations, nowSec);
+  if (!cached?.fresh || changed) {
+    await writeFirstSeenCache(db, map, nowSec);
+  }
+
   return map;
 }

@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.01",
+    title: "Priced-observation PegScore anchors",
+    date: "2026-06-03",
+    effectiveAt: 1780444800,
+    summary:
+      "PegScore tracking windows can now anchor from the first durable Pharos price observation when supply-history coverage is absent, so priced non-NAV assets no longer remain unrated solely because they have not written a supply snapshot.",
+    impact: [
+      "Curated launch dates remain the preferred tracking anchor, followed by the earliest supply_history snapshot",
+      "For priced assets without either anchor, the stablecoins cache now contributes a durable first-observed valid-price timestamp through the same first-seen cache used by PegScore",
+      "Newly observed priced assets still need at least 7 days of tracking before PegScore is rated; missing-price assets and pure NAV tokens remain NR",
+      "Low-cap assets below the live depeg-event floor can receive a PegScore anchor, while the existing coverage-limited flag continues to warn that empty event history is not full depeg coverage",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.0",
     title: "Historical provenance, quality-aware PegScore, and calibration metrics",
     date: "2026-05-14",

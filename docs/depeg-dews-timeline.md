@@ -1,6 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.0` (2026-02-18 -> 2026-05-14).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.01` (2026-02-18 -> 2026-06-03).
+
+---
+
+## v6.01 — Priced-observation PegScore anchors (Jun 3, 2026)
+
+- PegScore tracking windows can now use the first durable Pharos valid-price observation when both curated launch date and `supply_history` coverage are absent
+- The fallback is persisted through the first-seen cache, so a priced asset does not reset to "new" on every report-card or peg-summary run
+- Newly first-observed priced assets still need at least 7 days of tracking before PegScore is rated; missing-price assets and pure NAV tokens remain NR
+- Low-cap assets below the live depeg-event floor can receive a tracking anchor, while the existing coverage-limited flag continues to warn that empty depeg history is limited coverage
 
 ---
 

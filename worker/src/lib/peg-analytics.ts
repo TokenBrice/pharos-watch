@@ -30,6 +30,29 @@ function parseLaunchDateSec(dateText: string | undefined): number | null {
   return Number.isFinite(parsedMs) ? Math.floor(parsedMs / 1000) : null;
 }
 
+function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
+  return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+}
+
+function buildPriceFirstSeenObservations(
+  assets: readonly StablecoinData[],
+  fallbackObservedAtSec: number,
+): Array<{ id: string; observedAtSec: number }> {
+  const observations: Array<{ id: string; observedAtSec: number }> = [];
+  for (const asset of assets) {
+    if (!hasUsableCurrentPrice(asset)) continue;
+    const observedAtSec =
+      asset.priceSyncedAt ??
+      asset.priceUpdatedAt ??
+      asset.priceObservedAt ??
+      fallbackObservedAtSec;
+    if (typeof observedAtSec === "number" && Number.isFinite(observedAtSec) && observedAtSec > 0) {
+      observations.push({ id: asset.id, observedAtSec });
+    }
+  }
+  return observations;
+}
+
 export async function derivePegAnalyticsSnapshot(
   db: D1Database,
   options: DerivePegAnalyticsOptions,
@@ -42,7 +65,10 @@ export async function derivePegAnalyticsSnapshot(
     db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
       .bind(fourYearsAgoSec)
       .all<DepegRow>(),
-    getFirstSeenDates(db),
+    getFirstSeenDates(
+      db,
+      buildPriceFirstSeenObservations(options.peggedAssets, options.methodologyAsOf),
+    ),
   ]);
 
   const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
@@ -71,10 +97,13 @@ export async function derivePegAnalyticsSnapshot(
       supply < DEPEG_EVENT_MIN_SUPPLY_USD;
 
     let currentDeviationBps: number | null = null;
-    if (asset?.price != null && typeof asset.price === "number" && Number.isFinite(asset.price)) {
+    if (asset && hasUsableCurrentPrice(asset)) {
       if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
         const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
-        currentDeviationBps = deriveDepegSignal(asset.price, pegRef)?.bps ?? null;
+        currentDeviationBps =
+          pegRef != null && Number.isFinite(pegRef) && pegRef > 0
+            ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
+            : null;
       }
     }
 

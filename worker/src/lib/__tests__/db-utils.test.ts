@@ -313,4 +313,69 @@ describe("db utility helpers", () => {
     expect(firstSeen.get("usdc-circle")).toBe(1680000000);
     expect(calls.some((call) => call.sql.includes("MIN(snapshot_date)"))).toBe(false);
   });
+
+  it("adds priced observations to a fresh first-seen cache without querying supply history", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { db, calls } = makeDb({
+      cache: new Map([
+        [
+          "supply-history:first-seen-dates",
+          {
+            value: JSON.stringify({
+              version: 1,
+              firstSeenById: {
+                "usdt-tether": 1690000000,
+              },
+            }),
+            updated_at: nowSec,
+          },
+        ],
+      ]),
+      firstSeenRows: [
+        { stablecoin_id: "ignored", first_seen: 1 },
+      ],
+    });
+
+    const firstSeen = await getFirstSeenDates(db, [
+      { id: "new-priced-asset", observedAtSec: 1700000000 },
+      { id: "future-priced-asset", observedAtSec: nowSec + 600 },
+      { id: "bad-observation", observedAtSec: null },
+    ]);
+
+    expect(firstSeen.get("usdt-tether")).toBe(1690000000);
+    expect(firstSeen.get("new-priced-asset")).toBe(1700000000);
+    expect(firstSeen.get("future-priced-asset")).toBe(nowSec);
+    expect(firstSeen.has("bad-observation")).toBe(false);
+    expect(calls.some((call) => call.sql.includes("MIN(snapshot_date)"))).toBe(false);
+    expect(calls.some((call) => call.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(true);
+  });
+
+  it("merges stale cached price anchors with supply-history anchors", async () => {
+    const { db } = makeDb({
+      cache: new Map([
+        [
+          "supply-history:first-seen-dates",
+          {
+            value: JSON.stringify({
+              version: 1,
+              firstSeenById: {
+                "priced-only": 1700000000,
+                "history-asset": 1700000000,
+              },
+            }),
+            updated_at: 1,
+          },
+        ],
+      ]),
+      firstSeenRows: [
+        { stablecoin_id: "history-asset", first_seen: 1690000000 },
+        { stablecoin_id: "history-only", first_seen: 1680000000 },
+      ],
+    });
+
+    const firstSeen = await getFirstSeenDates(db);
+    expect(firstSeen.get("priced-only")).toBe(1700000000);
+    expect(firstSeen.get("history-asset")).toBe(1690000000);
+    expect(firstSeen.get("history-only")).toBe(1680000000);
+  });
 });

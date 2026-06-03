@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.0`
+- **Current methodology version:** `v6.01`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -450,9 +450,12 @@ pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPen
 
 v6.0 quality gate: events with provenance `auditVerdict` of `false_positive` or `disputed` are excluded from PegScore inputs. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. The result includes quality counters so consumers can tell when provenance changed the score inputs.
 
-**Tracking window**: `coinTrackingStart()` prefers a curated launch date when one is available and otherwise falls back to the coin's earliest `supply_history` snapshot
-(queried via `getFirstSeenDates()`) so young coins aren't diluted across a phantom 4-year window.
-Falls back to earliest depeg event, then to the 4-year lookback cap.
+**Tracking window**: `coinTrackingStart()` prefers a curated launch date when one is available, then falls back to the
+coin's earliest `supply_history` snapshot, then to the first durable Pharos valid-price observation persisted through
+`getFirstSeenDates()`. This gives priced assets without supply-history coverage a real age anchor instead of leaving
+them unrated indefinitely, while still requiring at least 7 days of tracking before PegScore is rated. If none of those
+anchors exists, a coin with depeg events falls back to the earliest event; a coin with no anchor and no events returns
+`pegScore = null`.
 
 **Magnitude floor**: Every depeg event carries a minimum severity penalty proportional
 to its peak deviation, regardless of how brief. This prevents hundreds of short

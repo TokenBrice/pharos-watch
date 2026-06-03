@@ -143,7 +143,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 7. **Depeg dedup**: `UNIQUE INDEX (stablecoin_id, started_at, source)` prevents duplicate depeg events. Partial index on `ended_at IS NULL` speeds up open-event queries
 8. **Depeg interval merge**: `computePegScore()` and `computePegStability()` merge overlapping depeg intervals before summing duration
 9. **Depeg direction handling**: If a coin flips from below-peg to above-peg (or vice versa) without recovering, the old event is closed and a new one opened with the correct direction
-10. **Peg score consistency**: Both the detail page and peg-summary API use the same tracking-window start helper: `coinTrackingStart(...)`, which applies `max(firstSeen, fourYearsAgo)` when first-seen data exists
+10. **Peg score consistency**: Both the detail page and peg-summary API use the same tracking-window start helper: `coinTrackingStart(...)`, which applies `max(firstSeen, fourYearsAgo)` when first-seen data exists. First-seen data is anchored by curated launch date first, then earliest `supply_history`, then a durable first valid-price observation for priced assets that have not yet written supply history.
 11. **Backfill batch safety**: `backfill-depegs.ts` chunks depeg INSERT statements into groups of 100 and executes them sequentially after the per-coin DELETE to stay within D1 batch limits
 12. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 13. **Freshness header**: `/api/stablecoins` returns `X-Data-Age` (seconds since last cache write)

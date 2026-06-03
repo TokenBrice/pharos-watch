@@ -68,6 +68,7 @@ describe("derivePegAnalyticsSnapshot", () => {
 
   beforeEach(() => {
     vi.mocked(getFirstSeenDates).mockResolvedValue(new Map<string, number>());
+    vi.mocked(getFirstSeenDates).mockClear();
     vi.mocked(coinTrackingStart).mockClear();
     db = mockD1([
       {
@@ -107,6 +108,38 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.has("usdc-circle")).toBe(false); // nav token excluded by default
     expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBe(100);
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(false);
+  });
+
+  it("uses current priced assets as first-seen observations for PegScore anchoring", async () => {
+    await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "AAA",
+          name: "AAA Stable",
+          pegType: "peggedUSD",
+          price: 1,
+          priceSyncedAt: 1_700_000_500,
+          priceUpdatedAt: 1_700_000_100,
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+        {
+          id: "missing-price",
+          symbol: "MISS",
+          name: "Missing Price",
+          pegType: "peggedUSD",
+          price: null,
+          priceSyncedAt: 1_700_000_600,
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_000,
+    });
+
+    expect(vi.mocked(getFirstSeenDates)).toHaveBeenCalledWith(
+      db,
+      [{ id: "usdt-tether", observedAtSec: 1_700_000_500 }],
+    );
   });
 
   it("flags low-cap coins as coverage-limited while keeping current deviation null", async () => {

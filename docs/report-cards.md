@@ -62,6 +62,7 @@ Mint Authority review is descriptive and not scored in the current methodology. 
 
 - Direct passthrough of `computePegScore()` output (see [Depeg Detection Pipeline](./depeg-detection.md) for the composite formula)
 - v5.5 peg fairness fixes apply automatically: tracking window is capped to coin age (`coinTrackingStart()`), per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper
+- PegScore can use a durable first valid-price observation as its age anchor when a priced asset lacks both a curated launch date and `supply_history`, so report cards no longer stay NR solely because a priced non-NAV asset has not written a supply snapshot. The 7-day minimum tracking requirement still applies.
 - The report-card peg dimension does not apply a second active-depeg cap before the multiplier; final D/F active-depeg caps are applied after the peg multiplier from the open event's peak deviation.
 - Pure NAV fund-share tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
 - Configured NAV wrappers over a stablecoin inherit peg stability from a referenced base asset; their own appreciating share price is ignored for peg scoring and active-depeg caps
