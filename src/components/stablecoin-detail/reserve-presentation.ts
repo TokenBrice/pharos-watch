@@ -96,7 +96,7 @@ export function buildReserveFetchNotice(
   };
 }
 
-export function formatReserveUpdatedAt(timestamp: number | undefined): string {
+function formatReserveUpdatedAt(timestamp: number | undefined): string {
   return timestamp
     ? new Date(timestamp * 1000).toLocaleDateString("en-US", {
         month: "short",

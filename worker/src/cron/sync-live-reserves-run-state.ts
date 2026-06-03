@@ -8,7 +8,7 @@ import {
 } from "../lib/live-reserves-store-statements";
 import { logCronEvent } from "../lib/cron-logger";
 
-export const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
+const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 
 interface LiveReserveCursorState {
   nextStablecoinId: string | null;
