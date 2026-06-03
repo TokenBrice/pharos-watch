@@ -10,7 +10,6 @@ import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-hel
 import type { ResolvedYieldCandidate } from "./types";
 
 const ROYCO_DAWN_EXPLORE_URL = "https://dawn.royco.org/api/v1/market/explore";
-const ROYCO_DAWN_APP_URL = "https://dawn.royco.org/explore";
 const ROYCO_DAWN_PAGE_SIZE = 100;
 const ROYCO_DAWN_MIN_MARKET_TVL_USD = 100_000;
 const ROYCO_DAWN_MAX_APY_RATIO = 2;
@@ -315,10 +314,8 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Resol
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (budget.budgetController.signal.aborted) {
-      console.warn("[yield] Royco Dawn sources budget exhausted; keeping partial results");
       return results;
     }
-    console.warn(`[yield] Royco Dawn sources failed (${ROYCO_DAWN_APP_URL}):`, error);
     return results;
   } finally {
     budget.cleanup();
