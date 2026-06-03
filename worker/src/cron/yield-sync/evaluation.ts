@@ -1,6 +1,8 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { scoreToGrade } from "@shared/lib/report-card-core";
+import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
 import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
-import type { YieldSourceInputMeta } from "@shared/types/yield";
+import type { YieldSafetyProvenance, YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { computeApyVarianceScore, computePYS, computeYieldStability, derivePysNullReason, detectWarningSignals } from "../yield-helpers";
@@ -205,8 +207,29 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       const safety = input.safetyScores.get(stablecoinId);
       const usedDefaultSafety = safety == null;
       if (usedDefaultSafety) defaultSafetyIds.add(stablecoinId);
-      const safetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
-      const safetyGrade = safety?.grade ?? "NR";
+      const underlyingSafetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
+      const underlyingSafetyGrade = safety?.grade ?? "NR";
+      let safetyScore = underlyingSafetyScore;
+      let safetyGrade = underlyingSafetyGrade;
+      let safetyProvenance: YieldSafetyProvenance = usedDefaultSafety ? "default-safety" : "cached-publish";
+      let sourceRisk = y.sourceRisk ?? null;
+      if (isRoycoDawnTrancheSourceRisk(sourceRisk)) {
+        const trancheSafety = computeRoycoDawnTrancheSafetyScore({
+          underlyingSafetyScore,
+          sourceRisk,
+        });
+        if (trancheSafety) {
+          safetyScore = trancheSafety.score;
+          safetyGrade = scoreToGrade(trancheSafety.score);
+          safetyProvenance = "opportunity-safety";
+          sourceRisk = {
+            ...sourceRisk,
+            underlyingSafetyScore,
+            trancheSafetyScore: trancheSafety.score,
+            trancheSafetyPenalty: trancheSafety.penalty,
+          };
+        }
+      }
       const benchmarkSelection = resolveBenchmarkForStablecoin({
         stablecoinId,
         benchmarks: input.riskFreeRates,
@@ -232,11 +255,11 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
       const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
       const resolvedVenueRiskTier =
-        y.sourceRisk?.venueRiskTier ??
+        sourceRisk?.venueRiskTier ??
         resolveReviewedYieldRiskConfig(inferVenueProtocol(y))?.venueRiskTier ??
         "unknown";
       const sourceRiskPenaltyInput =
-        y.sourceRisk?.sourceRiskPenalty ??
+        sourceRisk?.sourceRiskPenalty ??
         derivePysSourceRiskPenalty({
           rewardShare,
           sourceDepthRatio,
@@ -291,7 +314,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         sourceTvlUsd: y.sourceTvlUsd,
         venueProtocol: y.project ?? null,
         venueChain: y.chain ?? null,
-        sourceRisk: y.sourceRisk ?? null,
+        sourceRisk,
         sourceRiskPenalty: pysComponents.sourceRiskPenalty,
         sourceRiskPenaltyReason: pysComponents.sourceRiskPenaltyReason,
         sourceRiskPenaltyProvided: pysComponents.sourceRiskPenaltyProvided,
@@ -309,6 +332,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         yieldStability,
         safetyScore,
         safetyGrade,
+        safetyProvenance,
         yieldToRisk,
         excessYield,
         benchmarkKey: benchmarkSelection.key,

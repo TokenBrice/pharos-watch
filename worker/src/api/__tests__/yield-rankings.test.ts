@@ -458,6 +458,73 @@ describe("handleYieldRankings", () => {
     }));
   });
 
+  it("hydrates Royco tranche rows with opportunity-level safety instead of raw underlying safety", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          yieldSource: "Royco Dawn Senior: Rated Coin",
+          yieldType: "structured-tranche",
+          safetyScore: 50,
+          safetyGrade: "C-",
+          provenance: {
+            ...v748RankingsPayload.rankings[0].provenance,
+            sourceKey: "royco-dawn:1:0xabc:senior",
+            safetyProvenance: "cached-publish",
+          },
+          sourceRisk: {
+            sourceRiskPenalty: 1.2,
+            deploymentPlace: "structured-tranche",
+            venueProtocol: "royco-dawn",
+            venueChain: "ethereum",
+            venueRiskTier: "medium",
+            trancheSide: "senior",
+            marketStatus: "normal",
+            marketCoverageRatio: 0.36,
+            marketMinCoverageRatio: 0.15,
+            marketUtilizationRatio: 0.41,
+            marketUtilizationLimitRatio: 0.9,
+            marketDrawdownRatio: 0,
+            trancheTvlUsd: 2_900_000,
+            kycRequired: true,
+            accessRestricted: true,
+            investabilityFlags: ["kyc-required", "us-persons-restricted", "withdrawals-underlying-dependent"],
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.safetyScore).toBe(60);
+    expect(row?.safetyGrade).toBe("C+");
+    expect(row?.provenance?.safetyProvenance).toBe("opportunity-safety");
+    expect(row?.provenance?.usedDefaultSafety).toBe(false);
+    expect(row?.sourceRisk).toMatchObject({
+      underlyingSafetyScore: 66,
+      trancheSafetyScore: 60,
+      trancheSafetyPenalty: 6,
+      trancheSide: "senior",
+    });
+    expect(row?.pharosYieldScore).toBe(computePYS({
+      apy30d: payload.rankings[0].apy30d,
+      safetyScore: 60,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
+      scalingFactor: payload.scalingFactor,
+      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
+      sourceRiskPenalty: 1.2,
+    }));
+  });
+
   it("synthesizes publication metadata from generation-aware rows and preserves nested source risk", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const rewardHeavyRisk = buildSourceRiskGoldenFixture("reward-heavy", {

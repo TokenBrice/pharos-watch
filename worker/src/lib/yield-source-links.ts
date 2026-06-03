@@ -131,6 +131,10 @@ export function resolveYieldSourceUrl(params: {
   sourceKey?: string | null;
   yieldSource?: string | null;
 }): string | null {
+  if (params.sourceKey?.startsWith("royco-dawn:")) {
+    return "https://dawn.royco.org/explore";
+  }
+
   const labelCandidates = params.yieldSource
     ? [
         params.yieldSource,

@@ -8,6 +8,8 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types/yield";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { scoreToGrade } from "@shared/lib/report-card-core";
+import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
 import { derivePysNullReason } from "../cron/yield-helpers";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -180,6 +182,49 @@ function buildRankChangeAttribution(params: {
   };
 }
 
+function resolveHydratedSafety(params: {
+  row: YieldRanking;
+  card: ReportCard | undefined;
+}): {
+  score: number;
+  grade: YieldRanking["safetyGrade"];
+  sourceRisk: YieldRanking["sourceRisk"];
+  provenance: NonNullable<YieldRanking["provenance"]>["safetyProvenance"];
+  usedDefaultSafety: boolean;
+} {
+  const underlyingSafetyScore = params.card?.overallScore ?? DEFAULT_SAFETY_SCORE;
+  const usedDefaultSafety = params.card?.overallScore == null;
+
+  if (isRoycoDawnTrancheSourceRisk(params.row.sourceRisk)) {
+    const trancheSafety = computeRoycoDawnTrancheSafetyScore({
+      underlyingSafetyScore,
+      sourceRisk: params.row.sourceRisk,
+    });
+    if (trancheSafety) {
+      return {
+        score: trancheSafety.score,
+        grade: scoreToGrade(trancheSafety.score),
+        sourceRisk: {
+          ...params.row.sourceRisk,
+          underlyingSafetyScore,
+          trancheSafetyScore: trancheSafety.score,
+          trancheSafetyPenalty: trancheSafety.penalty,
+        },
+        provenance: "opportunity-safety",
+        usedDefaultSafety,
+      };
+    }
+  }
+
+  return {
+    score: underlyingSafetyScore,
+    grade: params.card?.overallGrade ?? "NR",
+    sourceRisk: params.row.sourceRisk,
+    provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
+    usedDefaultSafety,
+  };
+}
+
 function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
   cards: ReportCard[],
@@ -189,7 +234,8 @@ function hydrateYieldRankingsWithLiveSafety(
   const hydratedRows = payload.rankings
     .map((row) => {
       const card = reportCardById.get(row.id);
-      const safetyInputScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
+      const hydratedSafety = resolveHydratedSafety({ row, card });
+      const safetyInputScore = hydratedSafety.score;
       const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
       const pysNullReason = pharosYieldScore > 0
         ? null
@@ -208,16 +254,16 @@ function hydrateYieldRankingsWithLiveSafety(
         row: {
           ...row,
           safetyScore: safetyInputScore,
-          safetyGrade: card?.overallGrade ?? "NR",
+          safetyGrade: hydratedSafety.grade,
           pharosYieldScore,
           pysNullReason,
           yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
+          sourceRisk: hydratedSafety.sourceRisk,
           provenance: row.provenance
             ? {
                 ...row.provenance,
-                usedDefaultSafety: card?.overallScore == null,
-                safetyProvenance:
-                  card?.overallScore == null ? ("default-safety" as const) : ("live-report-card" as const),
+                usedDefaultSafety: hydratedSafety.usedDefaultSafety,
+                safetyProvenance: hydratedSafety.provenance,
               }
             : null,
         },
@@ -248,7 +294,10 @@ function hydrateYieldRankingsWithLiveSafety(
       : { ...row, rankChangeAttribution };
   });
 
-  const coveredCount = rankings.filter((row) => row.provenance?.safetyProvenance === "live-report-card").length;
+  const coveredCount = rankings.filter((row) =>
+    row.provenance?.safetyProvenance === "live-report-card" ||
+    (row.provenance?.safetyProvenance === "opportunity-safety" && row.provenance.usedDefaultSafety !== true)
+  ).length;
   const trackedCount = rankings.length;
   const coverageRatio = trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1;
   const degradationReasons = coverageRatio < 0.75 ? ["low-row-safety-coverage"] : [];

@@ -71,7 +71,7 @@ function evaluatedSourceToRanking(
     provenance: provenance
       ? {
           ...provenance,
-          safetyProvenance: source.usedDefaultSafety ? "default-safety" : "cached-publish",
+          safetyProvenance: source.safetyProvenance,
         }
       : null,
   };

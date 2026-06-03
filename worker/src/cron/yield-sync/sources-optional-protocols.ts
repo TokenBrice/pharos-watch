@@ -10,6 +10,9 @@ export {
   fetchZephyrZysSource,
 } from "./sources-optional-protocols-protocol-api";
 export {
+  fetchRoycoDawnSources,
+} from "./royco-dawn";
+export {
   fetchBeefySources,
   fetchMorphoVaultSources,
   fetchPendleMarketSources,

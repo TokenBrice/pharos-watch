@@ -39,6 +39,10 @@ export function getString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+export function getBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
 export type LegacyDecodeResult<T> =
   | { ok: true; payload: T }
   | { ok: false; reason: PersistedJsonDecodeReason };
@@ -74,6 +78,8 @@ export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null
   if (!row) return null;
   const venueRiskTier = getString(row.venueRiskTier);
   const deploymentPlace = getString(row.deploymentPlace);
+  const trancheSide = getString(row.trancheSide);
+  const marketStatus = getString(row.marketStatus);
   return {
     sourceRiskScore: getNumber(row.sourceRiskScore),
     sourceRiskPenalty: getNumber(row.sourceRiskPenalty),
@@ -87,6 +93,7 @@ export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null
       deploymentPlace === "issuer-savings" ||
       deploymentPlace === "lending-market" ||
       deploymentPlace === "strategy-vault" ||
+      deploymentPlace === "structured-tranche" ||
       deploymentPlace === "lp-or-dex" ||
       deploymentPlace === "rwa-fund" ||
       deploymentPlace === "reward-program" ||
@@ -103,6 +110,30 @@ export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null
     investabilityFlags: Array.isArray(row.investabilityFlags)
       ? row.investabilityFlags.filter((flag): flag is string => typeof flag === "string")
       : [],
+    trancheSide: trancheSide === "senior" || trancheSide === "junior" ? trancheSide : null,
+    trancheSafetyScore: getNumber(row.trancheSafetyScore),
+    trancheSafetyPenalty: getNumber(row.trancheSafetyPenalty),
+    underlyingSafetyScore: getNumber(row.underlyingSafetyScore),
+    marketCoverageRatio: getNumber(row.marketCoverageRatio),
+    marketMinCoverageRatio: getNumber(row.marketMinCoverageRatio),
+    marketUtilizationRatio: getNumber(row.marketUtilizationRatio),
+    marketUtilizationLimitRatio: getNumber(row.marketUtilizationLimitRatio),
+    marketDrawdownRatio: getNumber(row.marketDrawdownRatio),
+    marketTotalDrawdowns: getNumber(row.marketTotalDrawdowns),
+    marketStatus:
+      marketStatus === "normal" ||
+      marketStatus === "protected" ||
+      marketStatus === "unhealthy" ||
+      marketStatus === "critical"
+        ? marketStatus
+        : null,
+    marketTvlUsd: getNumber(row.marketTvlUsd),
+    trancheTvlUsd: getNumber(row.trancheTvlUsd),
+    trancheShareTokenAddress: getString(row.trancheShareTokenAddress),
+    trancheDepositTokenAddress: getString(row.trancheDepositTokenAddress),
+    withdrawalDelaySeconds: getNumber(row.withdrawalDelaySeconds),
+    kycRequired: getBoolean(row.kycRequired),
+    accessRestricted: getBoolean(row.accessRestricted),
   };
 }
 

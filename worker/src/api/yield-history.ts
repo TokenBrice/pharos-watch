@@ -110,8 +110,22 @@ function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
   assignNumber("sourceAgeSeconds");
   assignNumber("observationCount30d");
   assignNumber("sourceSwitchCount30d");
+  assignNumber("trancheSafetyScore");
+  assignNumber("trancheSafetyPenalty");
+  assignNumber("underlyingSafetyScore");
+  assignNumber("marketCoverageRatio");
+  assignNumber("marketMinCoverageRatio");
+  assignNumber("marketUtilizationRatio");
+  assignNumber("marketUtilizationLimitRatio");
+  assignNumber("marketDrawdownRatio");
+  assignNumber("marketTotalDrawdowns");
+  assignNumber("marketTvlUsd");
+  assignNumber("trancheTvlUsd");
+  assignNumber("withdrawalDelaySeconds");
   assignString("venueProtocol");
   assignString("venueChain");
+  assignString("trancheShareTokenAddress");
+  assignString("trancheDepositTokenAddress");
 
   if (hasOwn(value, "deploymentPlace")) {
     const deploymentPlace = readNullableDeploymentPlace(value.deploymentPlace);
@@ -126,6 +140,30 @@ function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
       sourceRisk.venueRiskTier = venueRiskTier;
       hasKnownField = true;
     }
+  }
+  if (hasOwn(value, "trancheSide") && (value.trancheSide === "senior" || value.trancheSide === "junior")) {
+    sourceRisk.trancheSide = value.trancheSide;
+    hasKnownField = true;
+  }
+  if (
+    hasOwn(value, "marketStatus") &&
+    (
+      value.marketStatus === "normal" ||
+      value.marketStatus === "protected" ||
+      value.marketStatus === "unhealthy" ||
+      value.marketStatus === "critical"
+    )
+  ) {
+    sourceRisk.marketStatus = value.marketStatus;
+    hasKnownField = true;
+  }
+  if (hasOwn(value, "kycRequired") && typeof value.kycRequired === "boolean") {
+    sourceRisk.kycRequired = value.kycRequired;
+    hasKnownField = true;
+  }
+  if (hasOwn(value, "accessRestricted") && typeof value.accessRestricted === "boolean") {
+    sourceRisk.accessRestricted = value.accessRestricted;
+    hasKnownField = true;
   }
   if (hasOwn(value, "investabilityFlags")) {
     if (Array.isArray(value.investabilityFlags)) {

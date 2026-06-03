@@ -400,7 +400,7 @@ describe("loadYieldHealthSummary", () => {
           updated_at: NOW - 20 * 3600,
           value: JSON.stringify({ sourceCount: 20 }),
         },
-        ...["morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3"].map((family) => ({
+        ...["morpho", "pendle", "yearnKong", "beefy", "compoundV3", "aaveV3", "roycoDawn"].map((family) => ({
           key: `yield:supplemental-sources:v1:${family}`,
           updated_at: NOW - 1800,
           value: JSON.stringify({ sourceCount: 2 }),
@@ -417,8 +417,8 @@ describe("loadYieldHealthSummary", () => {
 
     expect(summary.supplemental).toMatchObject({
       status: "healthy",
-      familyCount: 6,
-      freshFamilyCount: 6,
+      familyCount: 7,
+      freshFamilyCount: 7,
       missingFamilyCount: 0,
     });
   });
@@ -461,7 +461,7 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.freshFamilyCount).toBe(1);
     expect(summary.supplemental.degradedFamilyCount).toBe(1);
     expect(summary.supplemental.staleFamilyCount).toBe(0);
-    expect(summary.supplemental.missingFamilyCount).toBe(4);
+    expect(summary.supplemental.missingFamilyCount).toBe(5);
     expect(summary.supplemental.families?.morpho?.sourceCount).toBe(4);
   });
 });

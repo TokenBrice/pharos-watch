@@ -8,6 +8,7 @@ export {
   fetchMorphoVaultSources,
   fetchOndoUsdyOracleSource,
   fetchPendleMarketSources,
+  fetchRoycoDawnSources,
   fetchYearnKongSources,
   fetchZephyrZysSource,
 } from "./sources-optional-protocols";

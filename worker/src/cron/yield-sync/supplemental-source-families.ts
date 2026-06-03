@@ -8,6 +8,7 @@ import {
   fetchCompoundV3SupplyRates,
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
+  fetchRoycoDawnSources,
   fetchYearnKongSources,
   type AaveV3SupplyRateRow,
   type AaveV3RateTarget,
@@ -50,7 +51,8 @@ export type SupplementalSourceFamilyKey =
   | "yearnKong"
   | "beefy"
   | "compoundV3"
-  | "aaveV3";
+  | "aaveV3"
+  | "roycoDawn";
 
 type SourceFamilyCountRecord = Record<SupplementalSourceFamilyKey, number>;
 type SourceFamilyExampleRecord = Record<SupplementalSourceFamilyKey, string[]>;
@@ -80,6 +82,7 @@ export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "beefy",
   "compoundV3",
   "aaveV3",
+  "roycoDawn",
 ];
 
 export function getSupplementalCandidateFamily(
@@ -98,6 +101,7 @@ export function getSupplementalCandidateFamily(
   if (sourceKey.startsWith("protocol-api:beefy:")) return "beefy";
   if (sourceKey.startsWith("protocol-api:compound-v3-supply:")) return "compoundV3";
   if (sourceKey.startsWith("aave-v3-onchain:")) return "aaveV3";
+  if (sourceKey.startsWith("royco-dawn:")) return "roycoDawn";
   return null;
 }
 
@@ -109,6 +113,7 @@ function buildSourceFamilyCountRecord(): SourceFamilyCountRecord {
     beefy: 0,
     compoundV3: 0,
     aaveV3: 0,
+    roycoDawn: 0,
   };
 }
 
@@ -120,6 +125,7 @@ function buildSourceFamilyExampleRecord(): SourceFamilyExampleRecord {
     beefy: [],
     compoundV3: [],
     aaveV3: [],
+    roycoDawn: [],
   };
 }
 
@@ -390,6 +396,18 @@ async function runAaveFamily(
   };
 }
 
+async function runRoycoDawnFamily(
+  context: SupplementalSourceFamilyContext,
+): Promise<SupplementalSourceFamilyResult> {
+  const candidates = await runOptionalSourceFamily(
+    "Royco Dawn supplemental family",
+    context.signal,
+    () => fetchRoycoDawnSources(context.signal),
+    [] as ResolvedYieldCandidate[],
+  );
+  return { key: "roycoDawn", candidates, sourceFamilyCount: candidates.length };
+}
+
 const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
   runMorphoFamily,
   runPendleFamily,
@@ -397,6 +415,7 @@ const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
   runBeefyFamily,
   runCompoundFamily,
   runAaveFamily,
+  runRoycoDawnFamily,
 ] as const;
 
 async function runSupplementalFamiliesWithConcurrency(

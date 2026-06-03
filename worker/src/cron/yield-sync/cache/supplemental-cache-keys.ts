@@ -19,7 +19,8 @@ type SupplementalSourceFamilyKey =
   | "yearnKong"
   | "beefy"
   | "compoundV3"
-  | "aaveV3";
+  | "aaveV3"
+  | "roycoDawn";
 
 export function getYieldSupplementalFamilyCacheKey(family: SupplementalSourceFamilyKey): string {
   return `${YIELD_SUPPLEMENTAL_CACHE_KEY}:${family}`;

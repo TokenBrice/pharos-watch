@@ -42,6 +42,7 @@ vi.mock("../yield-sync/sources", () => ({
   COMPOUND_V3_COMETS: [],
   fetchMorphoVaultSources: vi.fn(async () => []),
   fetchPendleMarketSources: vi.fn(async () => []),
+  fetchRoycoDawnSources: vi.fn(async () => []),
   fetchYearnKongSources: vi.fn(async () => []),
   fetchBeefySources: vi.fn(async () => []),
   fetchCompoundV3SupplyRates: vi.fn(async () => ({
@@ -88,6 +89,7 @@ import {
   fetchCompoundV3SupplyRates,
   fetchMorphoVaultSources,
   fetchPendleMarketSources,
+  fetchRoycoDawnSources,
   fetchYearnKongSources,
 } from "../yield-sync/sources";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
@@ -107,6 +109,7 @@ describe("syncYieldSupplemental", () => {
     vi.setSystemTime(new Date("2026-03-26T12:00:00.000Z"));
     vi.mocked(fetchMorphoVaultSources).mockResolvedValue([]);
     vi.mocked(fetchPendleMarketSources).mockResolvedValue([]);
+    vi.mocked(fetchRoycoDawnSources).mockResolvedValue([]);
     vi.mocked(fetchYearnKongSources).mockResolvedValue([]);
     vi.mocked(fetchCompoundV3SupplyRates).mockResolvedValue({ results: [], telemetry: emptyTelemetry });
     vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map(), results: [], telemetry: emptyTelemetry });
@@ -432,7 +435,7 @@ describe("syncYieldSupplemental", () => {
   });
 
   it("bounds supplemental source family execution concurrency", async () => {
-    type PendingSource = "morpho" | "pendle" | "yearnKong" | "beefy" | "compoundV3" | "aaveV3";
+    type PendingSource = "morpho" | "pendle" | "yearnKong" | "beefy" | "compoundV3" | "aaveV3" | "roycoDawn";
 
     const started: PendingSource[] = [];
     const pending = new Map<PendingSource, () => void>();
@@ -458,6 +461,7 @@ describe("syncYieldSupplemental", () => {
     vi.mocked(fetchPendleMarketSources).mockImplementation(trackFamily("pendle", []));
     vi.mocked(fetchYearnKongSources).mockImplementation(trackFamily("yearnKong", []));
     vi.mocked(fetchBeefySources).mockImplementation(trackFamily("beefy", []));
+    vi.mocked(fetchRoycoDawnSources).mockImplementation(trackFamily("roycoDawn", []));
     vi.mocked(fetchCompoundV3SupplyRates).mockImplementation(trackFamily("compoundV3", {
       results: [],
       telemetry: emptyTelemetry,
@@ -491,7 +495,7 @@ describe("syncYieldSupplemental", () => {
 
     expect(maxActive).toBeLessThanOrEqual(SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY);
     expect(result.supplementalSourceAccounting.familyExecution).toEqual({
-      familyCount: 6,
+      familyCount: 7,
       concurrencyLimit: SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
     });
   });

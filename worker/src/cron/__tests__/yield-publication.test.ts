@@ -122,6 +122,7 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     rejected: false,
     usedLegacyHistory: false,
     usedDefaultSafety: false,
+    safetyProvenance: "live-report-card",
     previousBestSourceKey: null,
     ...overrides,
   };
