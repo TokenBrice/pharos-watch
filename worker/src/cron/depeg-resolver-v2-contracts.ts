@@ -5,6 +5,7 @@ export const DDR_PUBLICATION_SNAPSHOT_KIND = "ddr_public";
 export type DdrDirection = "above" | "below";
 export type DdrOutcomeKind = "prediction" | "no_call";
 export type DdrLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
+export type DdrLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
 export type DdrLockAction =
   | "pending"
   | "deferred"
@@ -48,6 +49,12 @@ export interface DdrPredictionLockState {
     | "publication_retry_pending"
     | "publication_failed"
     | "published";
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
 }
 
 export interface DdrCanonicalIncident {
@@ -79,6 +86,12 @@ export interface DdrSealedPublicPrediction {
   lockedAt: number;
   eventAgeAtLockSec: number;
   lockTiming: DdrLockTiming;
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
   rowHash: string;
   sealedPayload: Record<string, unknown>;
 }
@@ -115,6 +128,12 @@ export interface DdrLockOpportunityInput {
   confirmationAt?: number | null;
   outcomeAt?: number | null;
   syncCapabilities: Record<string, unknown>;
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
 }
 
 export interface DdrSealInput {
@@ -127,6 +146,12 @@ export interface DdrSealInput {
   lockTiming: DdrLockTiming;
   predictionPolicyVersion: string;
   policyDelaySec: number;
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
   methodologyVersion: string;
   methodologyVersionLabel: string;
   resolutionRubricVersion: string;

@@ -2,7 +2,7 @@ import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shar
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import { buildInClause, chunkArray } from "./db";
 import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
-import type { DdrIncidentDirection, DdrLockHealthStatus } from "./depeg-resolver-incident-store";
+import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
 
 export type DdrPublicPredictionOutcomeKind = "prediction" | "no_call";
 export type DdrPublicPredictionLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
@@ -45,6 +45,12 @@ export interface DdrPublicAssessmentSealInput {
   createdAt: number;
   runId?: string | null;
   healthStatus?: DdrLockHealthStatus;
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
 }
 
 export interface DdrSealedPublicPrediction {
@@ -66,6 +72,12 @@ export interface DdrSealedPublicPrediction {
   lockedAt: number;
   eventAgeAtLockSec: number;
   lockTiming: DdrPublicPredictionLockTiming;
+  lockTrigger: DdrLockTrigger | null;
+  forecastReadinessScore: number | null;
+  forecastReadinessVersion: string | null;
+  readinessThreshold: number | null;
+  backstopAt: number | null;
+  backstopDelaySec: number | null;
   sealedPayloadJson: string;
   sealedPayload: Record<string, unknown>;
   rowHash: string;
@@ -144,6 +156,12 @@ interface SealedPublicPredictionRow {
   locked_at: number;
   event_age_at_lock_sec: number;
   lock_timing: DdrPublicPredictionLockTiming;
+  lock_trigger: DdrLockTrigger | null;
+  forecast_readiness_score: number | null;
+  forecast_readiness_version: string | null;
+  readiness_threshold: number | null;
+  backstop_at: number | null;
+  backstop_delay_sec: number | null;
   sealed_payload_json: string;
   row_hash: string;
   created_at: number;
@@ -189,8 +207,48 @@ function assertNonNegativeInteger(value: number, name: string): void {
   }
 }
 
+function assertNonNegativeFiniteNumber(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative finite number`);
+  }
+}
+
 function assertNonEmpty(value: string, name: string): void {
   if (value.trim().length === 0) throw new Error(`${name} must be non-empty`);
+}
+
+function assertLockMetadata(input: {
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
+}): void {
+  if (input.forecastReadinessScore != null) {
+    assertNonNegativeFiniteNumber(input.forecastReadinessScore, "forecastReadinessScore");
+  }
+  if (input.forecastReadinessVersion != null) {
+    assertNonEmpty(input.forecastReadinessVersion, "forecastReadinessVersion");
+  }
+  if (input.readinessThreshold != null) {
+    assertNonNegativeFiniteNumber(input.readinessThreshold, "readinessThreshold");
+  }
+  if (input.backstopAt != null) {
+    assertPositiveInteger(input.backstopAt, "backstopAt");
+  }
+  if (input.backstopDelaySec != null) {
+    assertNonNegativeInteger(input.backstopDelaySec, "backstopDelaySec");
+  }
+  if (input.lockTrigger === "forecast_readiness") {
+    if (input.forecastReadinessScore == null) throw new Error("readiness lock requires forecastReadinessScore");
+    if (input.forecastReadinessVersion == null) throw new Error("readiness lock requires forecastReadinessVersion");
+    if (input.readinessThreshold == null) throw new Error("readiness lock requires readinessThreshold");
+  }
+  if (input.lockTrigger === "readiness_backstop") {
+    if (input.backstopAt == null) throw new Error("backstop lock requires backstopAt");
+    if (input.backstopDelaySec == null) throw new Error("backstop lock requires backstopDelaySec");
+  }
 }
 
 function assertHash(value: string, name: string): void {
@@ -266,6 +324,12 @@ function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPub
     lockedAt: row.locked_at,
     eventAgeAtLockSec: row.event_age_at_lock_sec,
     lockTiming: row.lock_timing,
+    lockTrigger: row.lock_trigger ?? null,
+    forecastReadinessScore: row.forecast_readiness_score ?? null,
+    forecastReadinessVersion: row.forecast_readiness_version ?? null,
+    readinessThreshold: row.readiness_threshold ?? null,
+    backstopAt: row.backstop_at ?? null,
+    backstopDelaySec: row.backstop_delay_sec ?? null,
     sealedPayloadJson: row.sealed_payload_json,
     sealedPayload: parseJsonObject(row.sealed_payload_json, "sealedPayloadJson"),
     rowHash: row.row_hash,
@@ -436,12 +500,20 @@ function lockStateStatement(
     .prepare(
       `INSERT INTO depeg_resolver_prediction_lock_state
        (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
-        last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)
+        last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
+        lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
+        backstop_at, backstop_delay_sec)
+       VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(incident_key) DO UPDATE SET
          last_attempted_at = excluded.last_attempted_at,
          last_state = excluded.last_state,
          last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
+         lock_trigger = COALESCE(depeg_resolver_prediction_lock_state.lock_trigger, excluded.lock_trigger),
+         forecast_readiness_score = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_score, excluded.forecast_readiness_score),
+         forecast_readiness_version = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_version, excluded.forecast_readiness_version),
+         readiness_threshold = COALESCE(depeg_resolver_prediction_lock_state.readiness_threshold, excluded.readiness_threshold),
+         backstop_at = COALESCE(depeg_resolver_prediction_lock_state.backstop_at, excluded.backstop_at),
+         backstop_delay_sec = COALESCE(depeg_resolver_prediction_lock_state.backstop_delay_sec, excluded.backstop_delay_sec),
          updated_at = excluded.updated_at`,
     )
     .bind(
@@ -454,6 +526,12 @@ function lockStateStatement(
       state,
       input.createdAt,
       input.createdAt,
+      input.lockTrigger ?? null,
+      input.forecastReadinessScore ?? null,
+      input.forecastReadinessVersion ?? null,
+      input.readinessThreshold ?? null,
+      input.backstopAt ?? null,
+      input.backstopDelaySec ?? null,
     );
 }
 
@@ -470,8 +548,10 @@ function sealedPredictionStatement(
         prediction_methodology_version, prediction_methodology_version_label,
         resolution_rubric_version, duration_model_version, incident_grouping_version,
         support_rules_version, policy_delay_sec, eligible_at, locked_at,
-        event_age_at_lock_sec, lock_timing, sealed_payload_json, row_hash, created_at)
-       SELECT ?, a.event_id, a.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        event_age_at_lock_sec, lock_timing, sealed_payload_json, row_hash, created_at,
+        lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
+        backstop_at, backstop_delay_sec)
+       SELECT ?, a.event_id, a.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        FROM depeg_resolver_assessments a
        WHERE a.event_id = ?
          AND a.checkpoint = 'public_prediction'
@@ -496,6 +576,12 @@ function sealedPredictionStatement(
       payloadJson,
       input.rowHash,
       input.createdAt,
+      input.lockTrigger ?? null,
+      input.forecastReadinessScore ?? null,
+      input.forecastReadinessVersion ?? null,
+      input.readinessThreshold ?? null,
+      input.backstopAt ?? null,
+      input.backstopDelaySec ?? null,
       input.eventId,
       input.methodologyVersion,
       input.assessedAt,
@@ -511,8 +597,9 @@ function lockAuditStatement(
     .prepare(
       `INSERT INTO depeg_resolver_lock_opportunity_audit
        (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
-        confirmation_at, outcome_at, reason, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?)`,
+        confirmation_at, outcome_at, reason, created_at, lock_trigger, forecast_readiness_score,
+        forecast_readiness_version, readiness_threshold, backstop_at, backstop_delay_sec)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       input.incidentKey,
@@ -523,6 +610,12 @@ function lockAuditStatement(
       input.healthStatus ?? "healthy",
       action,
       input.createdAt,
+      input.lockTrigger ?? null,
+      input.forecastReadinessScore ?? null,
+      input.forecastReadinessVersion ?? null,
+      input.readinessThreshold ?? null,
+      input.backstopAt ?? null,
+      input.backstopDelaySec ?? null,
     );
 }
 
@@ -542,6 +635,7 @@ async function sealPublicOutcome(
   assertPositiveInteger(input.lockedAt, "lockedAt");
   assertNonNegativeInteger(input.eventAgeAtLockSec, "eventAgeAtLockSec");
   assertHash(input.rowHash, "rowHash");
+  assertLockMetadata(input);
 
   const existing = await loadSealedPublicPredictions(db, { incidentKeys: [input.incidentKey] });
   if (existing.length > 0) return existing[0];

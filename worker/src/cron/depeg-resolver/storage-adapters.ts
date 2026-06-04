@@ -147,6 +147,12 @@ function mapStoreSealedPublicPrediction(row: StoreDdrSealedPublicPrediction): Dd
     lockedAt: row.lockedAt,
     eventAgeAtLockSec: row.eventAgeAtLockSec,
     lockTiming: row.lockTiming,
+    lockTrigger: row.lockTrigger,
+    forecastReadinessScore: row.forecastReadinessScore,
+    forecastReadinessVersion: row.forecastReadinessVersion,
+    readinessThreshold: row.readinessThreshold,
+    backstopAt: row.backstopAt,
+    backstopDelaySec: row.backstopDelaySec,
     rowHash: row.rowHash,
     sealedPayload: sealedPayloadFromStore(row),
   };
@@ -235,6 +241,12 @@ function toStoreSealInput(input: DdrSealInput): StoreDdrPublicAssessmentSealInpu
     lockedAt: input.lockedAt,
     eventAgeAtLockSec: input.eventAgeAtLockSec,
     lockTiming: input.lockTiming,
+    lockTrigger: input.lockTrigger ?? null,
+    forecastReadinessScore: input.forecastReadinessScore ?? null,
+    forecastReadinessVersion: input.forecastReadinessVersion ?? null,
+    readinessThreshold: input.readinessThreshold ?? null,
+    backstopAt: input.backstopAt ?? null,
+    backstopDelaySec: input.backstopDelaySec ?? null,
     createdAt: input.lockedAt,
     runId: input.runId,
     healthStatus: "healthy",
@@ -299,6 +311,12 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
         action: input.action,
         confirmationAt: input.confirmationAt,
         outcomeAt: input.outcomeAt,
+        lockTrigger: input.lockTrigger ?? null,
+        forecastReadinessScore: input.forecastReadinessScore ?? null,
+        forecastReadinessVersion: input.forecastReadinessVersion ?? null,
+        readinessThreshold: input.readinessThreshold ?? null,
+        backstopAt: input.backstopAt ?? null,
+        backstopDelaySec: input.backstopDelaySec ?? null,
       });
       return;
     }
@@ -313,6 +331,12 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
       reason: input.reason,
       healthStatus: input.healthStatus,
       action: input.action,
+      lockTrigger: input.lockTrigger ?? null,
+      forecastReadinessScore: input.forecastReadinessScore ?? null,
+      forecastReadinessVersion: input.forecastReadinessVersion ?? null,
+      readinessThreshold: input.readinessThreshold ?? null,
+      backstopAt: input.backstopAt ?? null,
+      backstopDelaySec: input.backstopDelaySec ?? null,
     });
   },
   async sealPublicPrediction(db, input) {

@@ -17,6 +17,7 @@ export type DdrLockState =
   | "publication_failed"
   | "published";
 export type DdrLockHealthStatus = "healthy" | "degraded" | "skipped";
+export type DdrLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
 export type DdrLockAuditAction =
   | "pending"
   | "deferred"
@@ -84,6 +85,12 @@ export interface DdrCanonicalIncident {
     deferralCount: number;
     lastDeferralReason: string | null;
     lastState: DdrLockState;
+    lockTrigger: DdrLockTrigger | null;
+    forecastReadinessScore: number | null;
+    forecastReadinessVersion: string | null;
+    readinessThreshold: number | null;
+    backstopAt: number | null;
+    backstopDelaySec: number | null;
   } | null;
 }
 
@@ -122,6 +129,12 @@ export interface RecordLockDeferralInput {
   action?: DdrLockAuditAction;
   confirmationAt?: number | null;
   outcomeAt?: number | null;
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
 }
 
 interface IncidentRow {
@@ -155,6 +168,12 @@ interface IncidentRow {
   deferral_count?: number | null;
   last_deferral_reason?: string | null;
   last_state?: DdrLockState | null;
+  lock_trigger?: DdrLockTrigger | null;
+  forecast_readiness_score?: number | null;
+  forecast_readiness_version?: string | null;
+  readiness_threshold?: number | null;
+  backstop_at?: number | null;
+  backstop_delay_sec?: number | null;
 }
 
 function assertPositiveInteger(value: number, name: string): void {
@@ -163,8 +182,54 @@ function assertPositiveInteger(value: number, name: string): void {
   }
 }
 
+function assertNonNegativeInteger(value: number, name: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative safe integer`);
+  }
+}
+
+function assertNonNegativeFiniteNumber(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative finite number`);
+  }
+}
+
 function assertNonEmpty(value: string, name: string): void {
   if (value.trim().length === 0) throw new Error(`${name} must be non-empty`);
+}
+
+function assertLockMetadata(input: {
+  lockTrigger?: DdrLockTrigger | null;
+  forecastReadinessScore?: number | null;
+  forecastReadinessVersion?: string | null;
+  readinessThreshold?: number | null;
+  backstopAt?: number | null;
+  backstopDelaySec?: number | null;
+}): void {
+  if (input.forecastReadinessScore != null) {
+    assertNonNegativeFiniteNumber(input.forecastReadinessScore, "forecastReadinessScore");
+  }
+  if (input.forecastReadinessVersion != null) {
+    assertNonEmpty(input.forecastReadinessVersion, "forecastReadinessVersion");
+  }
+  if (input.readinessThreshold != null) {
+    assertNonNegativeFiniteNumber(input.readinessThreshold, "readinessThreshold");
+  }
+  if (input.backstopAt != null) {
+    assertPositiveInteger(input.backstopAt, "backstopAt");
+  }
+  if (input.backstopDelaySec != null) {
+    assertNonNegativeInteger(input.backstopDelaySec, "backstopDelaySec");
+  }
+  if (input.lockTrigger === "forecast_readiness") {
+    if (input.forecastReadinessScore == null) throw new Error("readiness lock requires forecastReadinessScore");
+    if (input.forecastReadinessVersion == null) throw new Error("readiness lock requires forecastReadinessVersion");
+    if (input.readinessThreshold == null) throw new Error("readiness lock requires readinessThreshold");
+  }
+  if (input.lockTrigger === "readiness_backstop") {
+    if (input.backstopAt == null) throw new Error("backstop lock requires backstopAt");
+    if (input.backstopDelaySec == null) throw new Error("backstop lock requires backstopDelaySec");
+  }
 }
 
 function optionNowSec(options: EnsureCanonicalIncidentsOptions): number {
@@ -336,6 +401,12 @@ function mapIncidentRow(
             deferralCount: row.deferral_count ?? 0,
             lastDeferralReason: row.last_deferral_reason ?? null,
             lastState: row.last_state,
+            lockTrigger: row.lock_trigger ?? null,
+            forecastReadinessScore: row.forecast_readiness_score ?? null,
+            forecastReadinessVersion: row.forecast_readiness_version ?? null,
+            readinessThreshold: row.readiness_threshold ?? null,
+            backstopAt: row.backstop_at ?? null,
+            backstopDelaySec: row.backstop_delay_sec ?? null,
           },
   };
 }
@@ -367,7 +438,13 @@ async function loadIncidentsByEventIds(
                 ls.eligible_at AS lock_eligible_at,
                 ls.deferral_count,
                 ls.last_deferral_reason,
-                ls.last_state
+                ls.last_state,
+                ls.lock_trigger,
+                ls.forecast_readiness_score,
+                ls.forecast_readiness_version,
+                ls.readiness_threshold,
+                ls.backstop_at,
+                ls.backstop_delay_sec
          FROM depeg_resolver_incident_event_links l
          JOIN depeg_resolver_incidents i ON i.incident_key = l.incident_key
          LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
@@ -516,7 +593,13 @@ async function linkUnsealedNearbyIncident(
               ls.eligible_at AS lock_eligible_at,
               ls.deferral_count,
               ls.last_deferral_reason,
-              ls.last_state
+              ls.last_state,
+              ls.lock_trigger,
+              ls.forecast_readiness_score,
+              ls.forecast_readiness_version,
+              ls.readiness_threshold,
+              ls.backstop_at,
+              ls.backstop_delay_sec
        FROM depeg_resolver_incidents i
        LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
        LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
@@ -696,7 +779,13 @@ export async function loadCanonicalIncidents(
                 ls.eligible_at AS lock_eligible_at,
                 ls.deferral_count,
                 ls.last_deferral_reason,
-                ls.last_state
+                ls.last_state,
+                ls.lock_trigger,
+                ls.forecast_readiness_score,
+                ls.forecast_readiness_version,
+                ls.readiness_threshold,
+                ls.backstop_at,
+                ls.backstop_delay_sec
          FROM depeg_resolver_incidents i
          LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
          LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
@@ -768,6 +857,7 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
   assertPositiveInteger(input.runAt, "runAt");
   assertNonEmpty(input.incidentKey, "incidentKey");
   assertNonEmpty(input.predictionPolicyVersion, "predictionPolicyVersion");
+  assertLockMetadata(input);
 
   const createdAt = input.createdAt ?? input.runAt;
   const reason = input.reason ?? null;
@@ -776,13 +866,21 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
       .prepare(
         `INSERT INTO depeg_resolver_prediction_lock_state
          (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
-          last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'lock_deferred', ?, ?)
+          last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
+          lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
+          backstop_at, backstop_delay_sec)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'lock_deferred', ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(incident_key) DO UPDATE SET
            last_attempted_at = excluded.last_attempted_at,
            deferral_count = depeg_resolver_prediction_lock_state.deferral_count + 1,
            last_deferral_reason = excluded.last_deferral_reason,
            last_state = 'lock_deferred',
+           lock_trigger = excluded.lock_trigger,
+           forecast_readiness_score = excluded.forecast_readiness_score,
+           forecast_readiness_version = excluded.forecast_readiness_version,
+           readiness_threshold = excluded.readiness_threshold,
+           backstop_at = excluded.backstop_at,
+           backstop_delay_sec = excluded.backstop_delay_sec,
            updated_at = excluded.updated_at`,
       )
       .bind(
@@ -795,13 +893,20 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         reason,
         createdAt,
         createdAt,
+        input.lockTrigger ?? null,
+        input.forecastReadinessScore ?? null,
+        input.forecastReadinessVersion ?? null,
+        input.readinessThreshold ?? null,
+        input.backstopAt ?? null,
+        input.backstopDelaySec ?? null,
       ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_lock_opportunity_audit
          (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
-          confirmation_at, outcome_at, reason, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`,
+          confirmation_at, outcome_at, reason, created_at, lock_trigger, forecast_readiness_score,
+          forecast_readiness_version, readiness_threshold, backstop_at, backstop_delay_sec)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         input.incidentKey,
@@ -813,6 +918,12 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         input.action ?? "deferred",
         reason,
         createdAt,
+        input.lockTrigger ?? null,
+        input.forecastReadinessScore ?? null,
+        input.forecastReadinessVersion ?? null,
+        input.readinessThreshold ?? null,
+        input.backstopAt ?? null,
+        input.backstopDelaySec ?? null,
       ),
   ]);
 }
@@ -831,6 +942,7 @@ export async function recordLockOpportunity(
   assertPositiveInteger(input.runAt, "runAt");
   assertNonEmpty(input.incidentKey, "incidentKey");
   assertNonEmpty(input.predictionPolicyVersion, "predictionPolicyVersion");
+  assertLockMetadata(input);
 
   const createdAt = input.createdAt ?? input.runAt;
   const stateAction = input.action === "publication_retry_pending" || input.action === "publication_failed" || input.action === "published"
@@ -843,12 +955,20 @@ export async function recordLockOpportunity(
         .prepare(
           `INSERT INTO depeg_resolver_prediction_lock_state
            (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
-            last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+            last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
+            lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
+            backstop_at, backstop_delay_sec)
+           VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(incident_key) DO UPDATE SET
              last_attempted_at = excluded.last_attempted_at,
              last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
              last_state = excluded.last_state,
+             lock_trigger = COALESCE(depeg_resolver_prediction_lock_state.lock_trigger, excluded.lock_trigger),
+             forecast_readiness_score = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_score, excluded.forecast_readiness_score),
+             forecast_readiness_version = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_version, excluded.forecast_readiness_version),
+             readiness_threshold = COALESCE(depeg_resolver_prediction_lock_state.readiness_threshold, excluded.readiness_threshold),
+             backstop_at = COALESCE(depeg_resolver_prediction_lock_state.backstop_at, excluded.backstop_at),
+             backstop_delay_sec = COALESCE(depeg_resolver_prediction_lock_state.backstop_delay_sec, excluded.backstop_delay_sec),
              updated_at = excluded.updated_at`,
         )
         .bind(
@@ -862,6 +982,12 @@ export async function recordLockOpportunity(
           stateAction,
           createdAt,
           createdAt,
+          input.lockTrigger ?? null,
+          input.forecastReadinessScore ?? null,
+          input.forecastReadinessVersion ?? null,
+          input.readinessThreshold ?? null,
+          input.backstopAt ?? null,
+          input.backstopDelaySec ?? null,
         ),
     );
   }
@@ -870,8 +996,9 @@ export async function recordLockOpportunity(
       .prepare(
         `INSERT INTO depeg_resolver_lock_opportunity_audit
          (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
-          confirmation_at, outcome_at, reason, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          confirmation_at, outcome_at, reason, created_at, lock_trigger, forecast_readiness_score,
+          forecast_readiness_version, readiness_threshold, backstop_at, backstop_delay_sec)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         input.incidentKey,
@@ -885,6 +1012,12 @@ export async function recordLockOpportunity(
         input.outcomeAt ?? null,
         input.reason ?? null,
         createdAt,
+        input.lockTrigger ?? null,
+        input.forecastReadinessScore ?? null,
+        input.forecastReadinessVersion ?? null,
+        input.readinessThreshold ?? null,
+        input.backstopAt ?? null,
+        input.backstopDelaySec ?? null,
       ),
   );
   await db.batch(statements);
