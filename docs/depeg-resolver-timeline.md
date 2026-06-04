@@ -1,10 +1,21 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v2.0`.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.0`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
 
 ---
+
+## v3.0 — Forecast Readiness Contract (June 4, 2026)
+
+Added the shared DDR forecast-readiness contract for readiness-gated locks with immutable public metadata.
+
+- **Forecast readiness trigger.** Active confirmed incidents can seal as soon as the first healthy run observes forecast readiness with a strict score `>0.75`. A score equal to `0.75` is not ready, and the score is readiness metadata, not a probability or confidence label.
+- **72h backstop.** Incidents that stay active without crossing readiness seal on the first healthy run at or after `started_at + 72h`. The backstop is a public accountability deadline, not a relaxed readiness score.
+- **Health deferrals.** If the readiness trigger or 72h backstop arrives while global/system health predicates fail, DDR records `lock_deferred` and waits for the next healthy run. Deferrals do not create no-calls, predictions, or accuracy samples.
+- **Pre-lock recovery/terminal outcomes.** Incidents that recover before a healthy lock become `resolved_before_prediction`; reliable terminal evidence before a healthy lock becomes `terminal_before_prediction`, including health-deferred incidents that resolve before the next healthy sealing run.
+- **Immutable trigger/readiness metadata.** First-published rows preserve public `lockTrigger`, `readiness` (`version`, score, threshold, reasons, components), `backstop` (`delaySec`, `backstopAt`, `reached`), health/deferral metadata, and policy version as part of the public exposure.
+- **Sticky-policy compatibility.** Existing `sticky-24h-v1` DDRv2 predictions/no-calls keep their original 24h lock metadata, hashes, and DDRR review status. Legacy public rows default to `lockTrigger = "scheduled_24h"`, while v3 readiness rows use `forecast_readiness` or `readiness_backstop`.
 
 ## v2.0 — Sticky Public Prediction Contract (May 27, 2026)
 

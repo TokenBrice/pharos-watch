@@ -373,11 +373,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver-review/summary.ts` - summarizeDdrrMetrics, summarizeDdrrRows
 - `shared/lib/depeg-resolver-version.ts`
 - `shared/lib/depeg-resolver/duration.ts` - HORIZON_SECONDS, computeDuration
+- `shared/lib/depeg-resolver/forecast-readiness.ts` - DdrForecastReadinessInput, buildForecastReadinessBackstop, forecastReadinessLockTrigger, forecastReadinessScore, meetsStrictEarlyLockReadiness
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- `shared/lib/depeg-resolver/inputs.ts` - DdrActiveEventInput, DdrCoinStructural, DdrHistoricalEvent, DdrLiveContext, DdrSupplyContext
-- ... 238 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 239 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -692,6 +692,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/audit-mint-authority.test.ts`
 - `scripts/__tests__/audit-price-source-depth.test.ts`
 - `scripts/__tests__/audit-pricing-provider-config.test.ts`
+- `scripts/__tests__/backtest-depeg-resolver-lock-policy.test.ts`
 - `scripts/__tests__/blacklistability-review.test.ts`
 - `scripts/__tests__/check-archetype-explainer-coverage.test.ts`
 - `scripts/__tests__/check-attestor-tier-coverage.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
 - `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectGeniusProfile, projectMintAuthoritySummary, readCanonicalClientFields
 - `scripts/ci/check-agent-doc-sync.mjs`
-- `scripts/ci/check-agent-skill-symlinks.mjs`
-- ... 149 more files omitted; use `rg --files scripts` for the full list.
+- ... 151 more files omitted; use `rg --files scripts` for the full list.

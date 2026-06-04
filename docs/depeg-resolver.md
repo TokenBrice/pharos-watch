@@ -1,28 +1,28 @@
 # Depeg Duration Resolver (DDR)
 
-When Pharos confirms an active depeg, the Depeg Duration Resolver answers the two questions an analyst actually asks, in order, but it now does so as a public forecast contract instead of a live-moving widget:
+When Pharos confirms an active depeg, the Depeg Duration Resolver answers the two questions an analyst actually asks, in order, as a public forecast contract instead of a live-moving widget:
 
-1. **Will it come back?** — a *Resolution Outlook*: an ordinal verdict (Recovery Likely / At Risk / Recovery Unlikely / Insufficient Signal) driven by transparent mechanistic rules over the coin's structure and the depeg's fingerprint. **No fitted ML, no false-precision probability** — the death-label corpus is too thin to fit a supervised terminal classifier. Each verdict shows the contributing factors.
-2. **If it comes back, when?** — an *Expected Duration*: an empirical landmark-survival estimate over Pharos's clean corpus of *recovered* depeg incidents, conditioned on the depeg's structural stratum (depth, direction, structural class, peg currency), with explicit data-sufficiency gates and per-horizon (6h / 24h / 7d / 30d) resolution probabilities.
+1. **Will it come back?** — a *Resolution Outlook*: an ordinal verdict (Recovery Likely / At Risk / Recovery Unlikely / Insufficient Signal) driven by transparent mechanistic rules over the coin's structure and the depeg's fingerprint. **No fitted ML, no false-precision forecast probability** — the death-label corpus is too thin to fit a supervised terminal classifier. Each verdict shows the contributing factors.
+2. **If it comes back, when?** — an *Expected Duration*: an empirical landmark-survival estimate over Pharos's clean corpus of *recovered* depeg incidents, conditioned on the depeg's structural stratum (depth, direction, structural class, peg currency), with explicit data-sufficiency gates and per-horizon (6h / 24h / 7d / 30d) resolution-likelihood cells.
 
-Stage 2 only renders when Stage 1 is not terminal-leaning. The result is a two-readout module: a verdict with reasons, and — when recovery is plausible — a "typically resolves within X–Y" band. Under DDRv2, that headline readout is frozen once per canonical incident at the public lock point and later live facts are shown separately.
+Stage 2 only renders when Stage 1 is not terminal-leaning. The result is a two-readout module: a verdict with reasons, and — when recovery is plausible — a "typically resolves within X–Y" band. Under DDRv3, that headline readout is frozen once per canonical incident when the incident reaches forecast readiness or the 72h backstop, and later live facts are shown separately.
 
 DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" verdict is a structural read, not a guarantee, and the inverse is equally true.
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v2.0`
+- **Current methodology version:** `v3.0`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
 
-Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion`, `durationModelVersion`, `incidentGroupingVersion`, `supportRulesVersion`, snapshot generation fields, public prediction IDs, and first-publication hashes.
+Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion`, `durationModelVersion`, `incidentGroupingVersion`, `supportRulesVersion`, snapshot generation fields, public prediction IDs, immutable lock trigger/readiness metadata, and first-publication hashes.
 
 ## Trigger & Scope
 
-DDRv2 maintains one official public lock outcome per **canonical confirmed depeg incident**. The live `/api/depeg-resolver` board is active/current only, but each row is a stateful projection of the durable incident:
+DDR maintains one official public lock outcome per **canonical confirmed depeg incident**. The live `/api/depeg-resolver` board is active/current only, but each row is a stateful projection of the durable incident:
 
 - `depeg_events.ended_at IS NULL` (the event is still open), and
 - the tracked stablecoin has not already entered a terminal lifecycle state (`frozen`, `dead`, `defunct`, `failed`, or `cemetery`), and
@@ -30,27 +30,37 @@ DDRv2 maintains one official public lock outcome per **canonical confirmed depeg
 
 Closed and terminal events feed DDRR coverage and review, not new live DDR predictions. Terminal lifecycle events also leave the live DDR board even when the raw depeg row remains open: once registry status proves the asset is frozen/dead, the "time to repeg" question has no finite observable answer, so DDRR owns the audit result instead of DDR publishing an infinite-duration live incident. DDR inherits the clean confirmed-event stream from the [depeg detection pipeline](./depeg-detection.md) (100 bps USD / 150 bps non-USD thresholds plus multi-source confirmation), so it does not re-run depeg detection.
 
-## DDRv2 Public Forecast Contract
+## DDRv3 Public Forecast Contract
 
-DDRv2 freezes exactly one official lock outcome per canonical incident key. The public identity is `incidentKey`, not the mutable `depeg_events.id`, so delete/reinsert repair, merge, split, or start-time repair cannot silently create a second public prediction. The lock policy is methodology-owned:
+DDRv3 freezes exactly one official lock outcome per canonical incident key using a **forecast readiness or 72h backstop** contract. The public identity is `incidentKey`, not the mutable `depeg_events.id`, so delete/reinsert repair, merge, split, or start-time repair cannot silently create a second public prediction. The lock policy and readiness contract are methodology-owned:
 
-- `DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1"`
-- `DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600`
+- `DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1"` remains the stored public-prediction policy version for compatibility with existing policy-universe rows.
+- `DDR_FORECAST_READINESS_VERSION = "readiness-72h-v1"`
+- `DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD = 0.75`
+- Readiness passes only when the forecast readiness score is **strictly greater than `0.75`**. A score equal to `0.75` is not ready.
+- `DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC = 72 * 3600`
 - `DDR_LOCK_ON_TIME_GRACE_SEC = 20 * 60`
-- `DDR_V2_EFFECTIVE_AT = 1779897600` (May 27, 2026 00:00:00 UTC)
 
-The first healthy run at or after `started_at + 24h` seals either:
+The first healthy run that observes `readiness.score > 0.75` seals either:
 
 - a frozen prediction (`prediction.state = "frozen"`) with the Stage 1 verdict, anchored duration, lock timestamp, lock timing, and first-publication metadata, or
 - a no-call (`prediction.state = "no_call"`) when the run is healthy but row-level inputs are insufficient.
 
-Before the lock point, rows use `pending_lock` and show live facts plus the lock countdown without a verdict or duration. If the lock point arrives while global/system health predicates fail, rows use `lock_deferred`; system-health deferrals do not create no-calls. If sealing succeeds but the first-publication manifest has not finalized, rows use `publication_retry_pending`; the sealed verdict, duration, and no-call details remain hidden until first publication succeeds.
+If no healthy run sees readiness before the backstop, the **first healthy run at or after `started_at + 72h`** seals under the same rules. The 72h backstop is not a weaker forecast-readiness score; it is the public accountability deadline for incidents that stay open without becoming ready sooner.
+
+Before a readiness or backstop trigger, rows use `pending_lock` and show live facts plus forecast-readiness/backstop metadata without a verdict or duration. If a trigger arrives while global/system health predicates fail, rows use `lock_deferred`; system-health deferrals do not create no-calls, predictions, or accuracy samples. After a deferral, the first later healthy run seals if the incident is still unresolved and non-terminal, preserving the original trigger path and deferral count in immutable metadata. If sealing succeeds but the first-publication manifest has not finalized, rows use `publication_retry_pending`; the sealed verdict, duration, and no-call details remain hidden until first publication succeeds.
 
 Frozen means frozen. Later prices, supply changes, methodology versions, better input coverage, or a worse peak do not mutate the official public prediction. Live incident status, current deviation, age, staleness, and degraded overlay details are shown as live facts beside the frozen lock outcome.
 
+Lock trigger and readiness metadata are part of the immutable public exposure. Public prediction metadata records `lockTrigger` as `forecast_readiness`, `readiness_backstop`, or legacy/default `scheduled_24h`; stores also preserve the readiness lock as `readiness`, `backstop`, or legacy `sticky_24h`. The public `readiness` object preserves `version`, `score`, `threshold`, `strictEarlyLockReady`, reasons, and weighted components, while `backstop` preserves `version`, `delaySec`, `backstopAt`, and `reached`. Deferral count, lock timing, and policy version stay attached to the same exposure. Errata may correct or invalidate an exposure, but they do not rewrite those lock-time fields in place.
+
 Errata are append-only. If a source event or input is later proven wrong, DDR keeps the original first-publication exposure visible as `invalidated`, shows the original frozen prediction or no-call outcome, and attaches the latest erratum/history. Before any public prediction is sealed, nearby same-coin/same-direction source rows may be adopted into the unsealed canonical incident through append-only incident links and revisions. Once a public prediction exists, source-event repairs require explicit authorization/lineage rather than automatic nearby-event linking.
 
-Short depegs are not predicted after the fact. If a confirmed incident recovers before the 24h lock point, DDRR classifies it as `resolved_before_prediction`; reliable terminal evidence before the lock point becomes `terminal_before_prediction`. Incidents that crossed eligibility but never received a public prediction become explicit coverage debt such as `missed_lock_recovered`, `missed_lock_terminal`, `publication_failed`, `orphan_closed`, or `data_quality_gap`.
+Short depegs are not predicted after the fact. If a confirmed incident recovers before a healthy readiness/backstop lock, DDRR classifies it as `resolved_before_prediction`; reliable terminal evidence before a healthy lock becomes `terminal_before_prediction`. Health-deferred incidents that recover or become terminal before the next healthy sealing run remain pre-lock coverage outcomes rather than retroactive predictions. Incidents that crossed eligibility but never received a public prediction become explicit coverage debt such as `missed_lock_recovered`, `missed_lock_terminal`, `publication_failed`, `orphan_closed`, or `data_quality_gap`.
+
+### Compatibility with DDRv2 Sticky 24h Outcomes
+
+DDRv3 does not rewrite or re-score old public predictions created under the fixed 24h sticky behavior. Existing DDRv2 rows remain valid first-publication exposures with their original 24h policy delay, lock timing, hashes, and review status. API consumers must continue to accept `predictionPolicyVersion = "sticky-24h-v1"`, `policyDelaySec = 86400`, and default/legacy `lockTrigger = "scheduled_24h"` for those rows. DDRR reports policy-version breakdowns so v3 readiness/backstop outcomes and v2 sticky outcomes can be audited side by side without silently mixing their trigger rules.
 
 **Both directions are in scope.** For a below-peg break (underpeg) the kill signals do real work — this is where the terminal-vs-recoverable call matters. For an above-peg break (overpeg) recovery is quasi-certain (a premium mean-reverts as soon as minting/arbitrage works), so Stage 1 is almost always `recovery_likely` and the headline shifts to Stage 2 duration: how long the premium persists. The exception is a structurally sticky premium (minting paused or capped, or a NAV/yield token), which Stage 1 surfaces as `at_risk` rather than terminal.
 
@@ -127,25 +137,25 @@ Stage 2 is an empirical **landmark survival** estimate over the clean corpus of 
 
    The fallback order is: exact full stratum → drop currency → drop or pool the non-minor depth split while preserving structural class → drop the structural split, reporting the actual stratum used. Finer splits (full 4-bucket depth at all times, 3-way structural class) are deferred until real-data counts justify the support.
 
-3. **Landmark estimate at age `t`.** Among historical incidents in the stratum still open at age `t` and label-observable for a given horizon, compute the empirical resolution likelihood and the conditional remaining-time distribution. Historical depth is evaluated as observed by landmark age `t`, not from a closed incident's final peak. The headline is the **median remaining time-to-repeg plus an interquartile remaining-time band**; the secondary readout is per-horizon (6h / 24h / 7d / 30d) resolution probability.
+3. **Landmark estimate at age `t`.** Among historical incidents in the stratum still open at age `t` and label-observable for a given horizon, compute the empirical resolution-likelihood cell and the conditional remaining-time distribution. Historical depth is evaluated as observed by landmark age `t`, not from a closed incident's final peak. The headline is the **median remaining time-to-repeg plus an interquartile remaining-time band**; the secondary readout is per-horizon (6h / 24h / 7d / 30d) resolution likelihood.
 
-4. **Support gates + intervals.** Cells carry one of the support states (`benchmarked`, `thin_support`, `no_comparable_closures`, `chronic_tail`, `unsupported`, `data_issue`). Coin-capped effective-N (each coin contributes at most 1.0), leave-one-coin sensitivity, and Wilson display intervals rounded to 5pp guard the published numbers. When a gate fails, the cell shows its support state — never a fabricated 0% / 100%. A `chronic_tail` flag appears when the active event already exceeds the stratum's P99, surfaced as "unusually prolonged."
+4. **Support gates + intervals.** Cells carry one of the support states (`benchmarked`, `thin_support`, `no_comparable_closures`, `chronic_tail`, `unsupported`, `data_issue`). Coin-capped effective-N (each coin contributes at most 1.0), leave-one-coin sensitivity, and Wilson display intervals rounded to 5pp guard the published likelihood cells. When a gate fails, the cell shows its support state — never a fabricated 0% / 100%. A `chronic_tail` flag appears when the active event already exceeds the stratum's P99, surfaced as "unusually prolonged."
 
 No leakage: a closed event's final peak severity is never used to estimate a live event's duration.
 
 ### Output
 
 - `Expected to resolve within ~6–24h` (median plus IQR band), labeled with the stratum and its support state.
-- Horizon cells with a resolution probability where gates pass, otherwise the support state.
+- Horizon cells with resolution-likelihood display where gates pass, otherwise the support state.
 - A `chronic_tail` indicator when the open event is already past the stratum's P99.
 
 ## DDRR — Depeg Duration Resolver Reviewer
 
 The Depeg Duration Resolver Reviewer (DDRR) is the audit companion to DDR. DDR answers an open-event question; DDRR asks whether a stored DDR answer later matched canonical Pharos event data.
 
-DDRR does **not** replay today's resolver over old events. DDRv2 scores only frozen outcomes that entered the first-publication manifest through `checkpoint = 'public_prediction'`. Diagnostic checkpoints (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) remain useful for audit, but they are not headline public predictions. The review layer compares the frozen first-published outcome with the later canonical incident state and tracked-coin lifecycle status.
+DDRR does **not** replay today's resolver over old events. DDR scores only frozen outcomes that entered the first-publication manifest through `checkpoint = 'public_prediction'`. Diagnostic checkpoints (`first`, `age_1h`, `age_6h`, `age_24h`, `age_7d`, and `latest`) remain useful for audit, but they are not headline public predictions. The review layer compares the frozen first-published outcome with the later canonical incident state and tracked-coin lifecycle status.
 
-The public module on `/depeg/` sits directly below DDR and separates coverage/accountability from accuracy. It surfaces prediction coverage, scoreable coverage, publication success, no-call share, invalidation rate, and missed-lock/deferred states before treating any row as an accuracy sample.
+The public module on `/depeg/` sits directly below DDR and separates coverage/accountability from accuracy. It surfaces prediction coverage, scoreable coverage, publication success, no-call share, invalidation rate, pre-lock recovery/terminal outcomes, and missed-lock/deferred states before treating any row as an accuracy sample.
 
 - **Recovery likelihood** — strict accuracy for scored DDR recovery verdicts. Correct recoverable and correct terminal calls count in the numerator; false terminal, false recoverable, and `at_risk` terminal outcomes are scored in the denominator. Pending, insufficient-signal, and data-issue rows are excluded.
 - **Recovery duration** — average signed observed-minus-DDR duration error for recovered rows with a duration estimate. Positive means the observed recovery took longer than DDR's median remaining-time estimate; negative means it recovered faster. The module also shows the average absolute error as context.
@@ -161,7 +171,7 @@ The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same revi
 
 ## Honest Limitations & Failure Modes
 
-- **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set. We state this plainly and never dress a verdict up as a probability.
+- **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set. We state this plainly; forecast readiness is a publication trigger, not a stronger/weaker verdict label.
 - **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage exists for only about 141 of 401 tracked coins (the configured issuance chains). A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing.
 - **Empty provenance, so no verdict gating.** The depeg-event provenance side-table is unpopulated in production (0 rows). Audit-verdict filtering would discard the entire corpus, so DDR treats a null verdict as included and relies on incident grouping, quarantine, and the severity floor for quality. Provenance is a future enrichment, not a v1 dependency.
 - **Terminal ≠ event-recovery.** A backfilled dead coin (for example IRON) shows "recovered" events because replay closed them on a transient in-band print. Stage 1 terminal truth derives from cemetery / frozen `status` and the live deep-and-sustained-open or orphan pattern (the USR signature), never from the presence of a `recovery_price` on a historical row.
@@ -183,9 +193,9 @@ DDR is validated by a replay harness over historical events plus the label corpu
 
 ## Data Plumbing
 
-Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by cache-backed endpoints. The writer resolves canonical incidents, records lock deferrals, seals immutable predictions/no-calls, finalizes first-publication manifests, and then projects the public DDR cache from sealed outcomes plus live overlays. The same job rebuilds the DDRR review snapshot from first-publication exposure, errata, and policy-universe coverage rows. DDRR persistence or snapshot failures are recorded in cron metadata without failing an already-written DDR run unless the cron abort signal has fired. The frontend reads the caches only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes degraded lock-deferral overlays rather than inventing verdicts during unhealthy runs.
+Both stages are precomputed by a cron writer hooked into the existing `sync-stablecoins` flow after depeg-event updates (no new cron trigger), cached in D1, and served by cache-backed endpoints. The writer resolves canonical incidents, evaluates forecast readiness, records health deferrals, seals immutable predictions/no-calls at readiness or the 72h backstop, finalizes first-publication manifests, and then projects the public DDR cache from sealed outcomes plus live overlays. The same job rebuilds the DDRR review snapshot from first-publication exposure, errata, and policy-universe coverage rows. DDRR persistence or snapshot failures are recorded in cron metadata without failing an already-written DDR run unless the cron abort signal has fired. The frontend reads the caches only; there is no model math at request time. The compute layer honors the per-trigger Cloudflare connection pool and writes degraded lock-deferral overlays rather than inventing verdicts during unhealthy runs.
 
-The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, `public-contract.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer seals first-publication manifests through `worker/src/cron/depeg-resolver/publication.ts`, projects public rows through `worker/src/cron/depeg-resolver/public-projection.ts`, and the cache-backed `GET /api/depeg-resolver` handler degrades to a `200` with empty rows when the cache is missing, and serves stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus live overlay facts.
+The runtime-neutral engine lives in `shared/lib/depeg-resolver/` (`inputs.ts`, `strata.ts`, `incident-groups.ts`, `resolution.ts`, `duration.ts`, `public-contract.ts`, and `index.ts` exposing `resolveDepeg`). Shared types and Zod schemas live in `shared/types/depeg-resolver.ts`. The worker precompute writer seals first-publication manifests through `worker/src/cron/depeg-resolver/publication.ts`, projects public rows through `worker/src/cron/depeg-resolver/public-projection.ts`, and the cache-backed `GET /api/depeg-resolver` handler degrades to a `200` with empty rows when the cache is missing, and serves stale rows with warnings. Pre-publication rows never expose verdicts or duration bands; frozen rows expose anchored predictions plus immutable trigger/readiness metadata and live overlay facts.
 
 The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with shared schemas in `shared/types/depeg-resolver-review.ts`. The worker snapshot builder lives in `worker/src/cron/compute-depeg-resolver-review.ts`; its public cache helper and endpoint are `worker/src/lib/depeg-resolver-review-snapshot-cache.ts` and `worker/src/api/depeg-resolver-review.ts`.
 

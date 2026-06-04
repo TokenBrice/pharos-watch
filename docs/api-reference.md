@@ -1048,7 +1048,7 @@ Results are ordered by `startedAt` descending (most recent first).
 
 ### `GET /api/depeg-resolver`
 
-Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg incidents. DDRv2 emits one row per canonical incident projection, keyed by `incidentKey`, and separates live facts from the official public lock outcome.
+Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg incidents. DDRv3 emits one row per canonical incident projection, keyed by `incidentKey`, and separates live facts from the official public lock outcome.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true` and `rows: []`; stale snapshots mark `_meta.degraded=true`, include the read overlay when available, and keep pre-publication rows free of verdict/duration details.
 
@@ -1056,12 +1056,22 @@ Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg
 
 | State | Meaning |
 | ----- | ------- |
-| `pending_lock` | Incident is active and younger than the 24h public lock point. Live facts and lock metadata may render; no verdict or duration is exposed. |
-| `lock_deferred` | The lock point arrived, but a deterministic system-health predicate failed. Shows deferral/retry status only; no no-call, verdict, or duration is created. |
+| `pending_lock` | Incident is active but has not sealed through forecast readiness or the 72h backstop. Live facts plus trigger/readiness metadata may render; no verdict or duration is exposed. |
+| `lock_deferred` | Forecast readiness or the 72h backstop triggered, but a deterministic system-health predicate failed. Shows deferral/retry status only; no no-call, verdict, or duration is created. |
 | `publication_retry_pending` | A lock outcome sealed, but first-publication manifest finalization has not succeeded. The sealed outcome stays hidden until publication. |
-| `frozen` | First-published official prediction. Shows frozen verdict/duration, lock timestamp, lock timing, anchored duration, and live overlay facts separately. |
+| `frozen` | First-published official prediction. Shows frozen verdict/duration, lock timestamp, lock timing, anchored duration, immutable trigger/readiness metadata, and live overlay facts separately. |
 | `no_call` | Healthy lock run had insufficient row-level signal. Shows missing inputs and lock metadata, not a recovery/terminal verdict. |
 | `invalidated` | Append-only erratum invalidated the original first-published prediction or no-call; original exposure remains visible with correction history. |
+
+**DDRv3 readiness/backstop contract**
+
+- Forecast readiness is a readiness score, not a probability or confidence value.
+- A readiness lock is eligible only when `prediction.readiness.score > 0.75` (strictly greater than; exactly `0.75` is not ready). The readiness contract version is `readiness-72h-v1`.
+- If no healthy run crosses readiness first, the backstop seals on the first healthy run at or after `startedAt + 72h`.
+- Health failures at either trigger produce `lock_deferred`; the next healthy run seals only if the incident is still unresolved and non-terminal.
+- If the incident recovers before a healthy lock, DDRR reports `resolved_before_prediction`; reliable terminal evidence before a healthy lock becomes `terminal_before_prediction`.
+- First-published prediction metadata is immutable and includes `lockTrigger` (`forecast_readiness`, `readiness_backstop`, or legacy/default `scheduled_24h`), the `readiness` object (`version`, `score`, `threshold`, `strictEarlyLockReady`, `reasons`, `components`), the `backstop` object (`version`, `delaySec`, `backstopAt`, `reached`), health/deferral metadata, and policy version.
+- Existing `predictionPolicyVersion="sticky-24h-v1"` rows from DDRv2 remain valid and keep `policyDelaySec=86400`; clients should continue to parse default `lockTrigger="scheduled_24h"` rows alongside v3 readiness/backstop rows.
 
 **Response**
 
@@ -1085,7 +1095,7 @@ Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg
     },
     "degraded": false,
     "degradedReason": null,
-    "publicWarning": "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.",
+    "publicWarning": "Forecast from Pharos historical data. Not investment advice or a credit rating.",
     "resolutionRubricVersion": "resolution-rubric-v1",
     "durationModelVersion": "duration-landmark-v1",
     "incidentGroupingVersion": "incident-group-v1",
@@ -1093,17 +1103,17 @@ Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg
     "lineage": { "eventCount": 34129, "incidentCount": 1820, "coinCount": 142, "quarantinedCoins": 7 }
   },
   "rows": [DdrV2ResponseRow, ...],
-  "methodology": { "version": "2.0", "versionLabel": "v2.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "methodology": { "version": "3.0", "versionLabel": "v3.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 
-`DdrV2ResponseRow.kind` is one of `pending`, `prediction`, `no_call`, or `invalidated_prediction`. `prediction.state` carries the public state above. Prediction rows include `frozen.resolution` and `frozen.duration`; no-call rows include `noCall.missingReasons`; invalidated rows include `originalOutcome`, `latestErratum`, and errata history. All rows include a `live` overlay with current event age, peak/current deviation, event state, freshness, and degraded reason.
+`DdrV2ResponseRow.kind` is one of `pending`, `prediction`, `no_call`, or `invalidated_prediction`; the type name remains for backward compatibility with the v2 schema generation. `prediction.state` carries the public state above. Prediction rows include `frozen.resolution` and `frozen.duration`; no-call rows include `noCall.missingReasons`; invalidated rows include `originalOutcome`, `latestErratum`, and errata history. All rows include a `live` overlay with current event age, peak/current deviation, event state, freshness, and degraded reason.
 
 ---
 
 ### `GET /api/depeg-resolver-review`
 
-Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR v2 reviews frozen public predictions and no-calls that reached first publication, then reports the full incident-scoped policy universe so missing predictions are visible coverage debt rather than silently excluded.
+Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR reviews frozen public predictions and no-calls that reached first publication, then reports the full incident-scoped policy universe so missing predictions are visible coverage debt rather than silently excluded. The reviewer engine is still identified by `reviewerVersion="ddr-reviewer-v2"` while DDR methodology versions can advance independently.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 900 s. Missing or invalid snapshots return `200` with `_meta.degraded=true`, an empty summary, and `rows: []`; stale snapshots keep review rows but set `_meta.degraded=true` and `degradedReason="stale-cache"`.
 
@@ -1135,11 +1145,11 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR v2 reviews frozen p
     "pendingEventCount": 8,
     "durationScoredCount": 6,
     "verdictScoredCount": 10,
-    "methodologyVersions": ["2.0"]
+    "methodologyVersions": ["3.0"]
   },
   "summary": {
     "headlineScope": "current_policy",
-    "headlineLabel": "DDR v2 public predictions",
+    "headlineLabel": "Current DDRv2 public prediction policy",
     "headline": {
       "policyUniverseIncidentCount": 20,
       "predictionRatePct": 0.65,
@@ -1154,11 +1164,11 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR v2 reviews frozen p
     "byPredictionPolicy": []
   },
   "rows": [DdrrRow, ...],
-  "methodology": { "version": "2.0", "versionLabel": "v2.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
+  "methodology": { "version": "3.0", "versionLabel": "v3.0", "changelogPath": "/methodology/depeg-resolver-changelog/" }
 }
 ```
 
-`DdrrRow.kind` is one of `prediction_review`, `no_call_review`, `coverage`, or `invalidated_prediction`. Only `prediction_review` rows enter recovery-likelihood and duration accuracy. `no_call_review` rows are deliberate lock outcomes but unscored. `coverage` rows include states such as `resolved_before_prediction`, `terminal_before_prediction`, `missed_lock_recovered`, `missed_lock_terminal`, `publication_retry_pending`, and `publication_failed`. `invalidated_prediction` rows retain original exposure and attach errata history.
+`DdrrRow.kind` is one of `prediction_review`, `no_call_review`, `coverage`, or `invalidated_prediction`. Only `prediction_review` rows enter recovery-likelihood and duration accuracy. `no_call_review` rows are deliberate lock outcomes but unscored. `coverage` rows include states such as `resolved_before_prediction`, `terminal_before_prediction`, `missed_lock_recovered`, `missed_lock_terminal`, `publication_retry_pending`, and `publication_failed`. `invalidated_prediction` rows retain original exposure and attach errata history. Policy-version breakdowns keep old `sticky-24h-v1` rows separate from v3 readiness/backstop rows when reviewing trigger behavior.
 
 ---
 

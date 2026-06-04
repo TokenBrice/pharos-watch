@@ -11,7 +11,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Downstream: Depeg Duration Resolver
 
-Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), which resolves them into canonical incidents and, under DDRv2, freezes one public prediction or no-call for incidents still active at the 24h lock point. DDR does not run its own detection — it inherits the clean confirmed-event stream described here. See [depeg-resolver.md](./depeg-resolver.md).
+Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), which resolves them into canonical incidents and, under DDRv3, freezes one public prediction or no-call when an active incident reaches forecast readiness (`score >0.75`, strictly) or the first healthy run at/after the 72h backstop. DDR does not run its own detection — it inherits the clean confirmed-event stream described here. If the incident recovers or receives reliable terminal evidence before a healthy DDR lock, DDRR records `resolved_before_prediction` or `terminal_before_prediction` instead of creating a retroactive forecast. See [depeg-resolver.md](./depeg-resolver.md).
 
 ## Thresholds & Constants
 
