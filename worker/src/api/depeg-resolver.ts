@@ -70,6 +70,10 @@ function degradedResponse(reason: string): DdrResponse {
   };
 }
 
+function ddrCacheControl(payload: DdrResponse): string {
+  return payload._meta.degraded ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard;
+}
+
 interface DdrApiEventStateRow {
   id: number;
   ended_at: number | null;
@@ -558,7 +562,7 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
       const manifestFallback = await manifestFallbackResponse(db, contract.reason);
       if (manifestFallback) {
         return jsonFreshResponse(manifestFallback, {
-          cacheControl: CACHE_PROFILES.standard,
+          cacheControl: ddrCacheControl(manifestFallback),
           updatedAt: manifestFallback._meta.computedAt,
           maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
         });
@@ -567,7 +571,7 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
       const nowSec = Math.floor(Date.now() / 1000);
       const payload = await decorateDdrResponse(db, degradedResponse(contract.reason));
       return jsonFreshResponse(payload, {
-        cacheControl: CACHE_PROFILES.standard,
+        cacheControl: ddrCacheControl(payload),
         updatedAt: nowSec,
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
       });
@@ -578,7 +582,7 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
       const manifestFallback = await manifestFallbackResponse(db, manifestContract.reason);
       if (manifestFallback) {
         return jsonFreshResponse(manifestFallback, {
-          cacheControl: CACHE_PROFILES.standard,
+          cacheControl: ddrCacheControl(manifestFallback),
           updatedAt: manifestFallback._meta.computedAt,
           maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
         });
@@ -587,7 +591,7 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
       const nowSec = Math.floor(Date.now() / 1000);
       const payload = await decorateDdrResponse(db, degradedResponse(manifestContract.reason));
       return jsonFreshResponse(payload, {
-        cacheControl: CACHE_PROFILES.standard,
+        cacheControl: ddrCacheControl(payload),
         updatedAt: nowSec,
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
       });
@@ -596,7 +600,7 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
     const basePayload = nowSec > cached.payload._meta.expiresAt ? await staleSnapshotResponse(db, cached.payload) : cached.payload;
     const payload = await decorateDdrResponse(db, basePayload);
     return jsonFreshResponse(payload, {
-      cacheControl: CACHE_PROFILES.standard,
+      cacheControl: ddrCacheControl(payload),
       updatedAt: cached.payload._meta.computedAt,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
     });
@@ -609,7 +613,7 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
   const nowSec = Math.floor(Date.now() / 1000);
   const payload = await decorateDdrResponse(db, degradedResponse(cached.reason));
   return jsonFreshResponse(payload, {
-    cacheControl: CACHE_PROFILES.standard,
+    cacheControl: ddrCacheControl(payload),
     updatedAt: nowSec,
     maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
   });

@@ -48,6 +48,10 @@ function degradedResponse(reason: string): DdrrResponse {
   };
 }
 
+function ddrrCacheControl(payload: DdrrResponse): string {
+  return payload._meta.degraded ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard;
+}
+
 function staleSnapshotResponse(snapshot: DdrrResponse): DdrrResponse {
   return {
     ...snapshot,
@@ -69,7 +73,7 @@ export const handleDepegResolverReview = withErrorHandler(
         ? staleSnapshotResponse(cached.payload)
         : cached.payload;
       return jsonFreshResponse(payload, {
-        cacheControl: CACHE_PROFILES.standard,
+        cacheControl: ddrrCacheControl(payload),
         updatedAt: cached.payload._meta.computedAt,
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
       });
@@ -77,8 +81,9 @@ export const handleDepegResolverReview = withErrorHandler(
 
     console.warn(`[depeg-resolver-review] snapshot unavailable; serving degraded reason=${cached.reason}`);
     const nowSec = Math.floor(Date.now() / 1000);
-    return jsonFreshResponse(degradedResponse(cached.reason), {
-      cacheControl: CACHE_PROFILES.standard,
+    const payload = degradedResponse(cached.reason);
+    return jsonFreshResponse(payload, {
+      cacheControl: ddrrCacheControl(payload),
       updatedAt: nowSec,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
     });

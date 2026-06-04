@@ -163,6 +163,7 @@ describe("handleDepegResolverReview", () => {
     const body = (await res.json()) as DdrrApiTestBody;
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(["invalid-payload", "reviewer-version-mismatch"]).toContain(body._meta.degradedReason);
     expect(body._meta.reviewerVersion).toBe(DDRR_REVIEWER_VERSION);
@@ -179,6 +180,7 @@ describe("handleDepegResolverReview", () => {
     const body = (await res.json()) as DdrrApiTestBody;
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("missing-cache");
     expect(body.summary.headline.recoveryLikelihoodScoredCount).toBe(0);

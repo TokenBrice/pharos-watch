@@ -282,6 +282,7 @@ describe("handleDepegResolver", () => {
     const body = (await res.json()) as DdrResponse;
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.schemaVersion).toBe(2);
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("stale-cache");
@@ -475,6 +476,7 @@ describe("handleDepegResolver", () => {
     const body = (await res.json()) as DdrResponse;
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.snapshotToken).toBe("ddrpub_002");
     expect(body._meta.degradedReason).toBe("manifest-fallback:cache-manifest-token-behind");
     expect(body.rows[0].live.currentEventId).toBeNull();
@@ -492,6 +494,7 @@ describe("handleDepegResolver", () => {
     const body = (await res.json()) as DdrResponse;
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.degradedReason).toBe("base-payload-hash-mismatch");
     expect(body.rows).toEqual([]);
@@ -530,6 +533,7 @@ describe("handleDepegResolver", () => {
     const body = (await res.json()) as DdrResponse;
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
     expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");
     expect(body.rows[0].kind).toBe("pending");
