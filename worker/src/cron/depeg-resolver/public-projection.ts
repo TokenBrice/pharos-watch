@@ -10,6 +10,7 @@ import {
 } from "@shared/types/depeg-resolver";
 import {
   buildForecastReadinessBackstop,
+  forecastReadinessLockTrigger,
   forecastReadinessScore,
 } from "@shared/lib/depeg-resolver/forecast-readiness";
 import {
@@ -141,15 +142,37 @@ function buildPendingReadinessMeta(row: DdrRow, nowSec: number): {
   backstop: DdrForecastReadinessBackstop;
   eligibleAt: number;
   policyDelaySec: number;
+  lockTrigger: Exclude<DdrLockTrigger, "scheduled_24h"> | null;
 } {
   const readiness = forecastReadinessScore(row);
   const backstop = buildForecastReadinessBackstop({ startedAt: row.startedAt, nowSec });
+  const trigger = forecastReadinessLockTrigger({ readiness, backstop });
+  if (trigger === "readiness_backstop") {
+    const eligibleAt = backstop.backstopAt ?? row.startedAt;
+    return {
+      readiness,
+      backstop,
+      eligibleAt,
+      policyDelaySec: backstop.delaySec,
+      lockTrigger: "readiness_backstop",
+    };
+  }
+  if (trigger === "forecast_readiness") {
+    return {
+      readiness,
+      backstop,
+      eligibleAt: nowSec,
+      policyDelaySec: Math.max(0, nowSec - row.startedAt),
+      lockTrigger: "forecast_readiness",
+    };
+  }
   const eligibleAt = backstop.backstopAt ?? row.startedAt;
   return {
     readiness,
     backstop,
     eligibleAt,
     policyDelaySec: Math.max(0, eligibleAt - row.startedAt),
+    lockTrigger: null,
   };
 }
 
@@ -433,7 +456,7 @@ function buildPublicRows(input: {
           backstop: pendingReadiness?.backstop ?? null,
           eligibleAt: pendingReadiness?.eligibleAt ?? incident.eligibleAt,
           policyDelaySec: pendingReadiness?.policyDelaySec ?? Math.max(0, incident.eligibleAt - incident.startedAt),
-          lockTrigger: incident.lockState?.lockTrigger ?? null,
+          lockTrigger: incident.lockState?.lockTrigger ?? pendingReadiness?.lockTrigger ?? null,
         }),
         frozen: null,
         live,

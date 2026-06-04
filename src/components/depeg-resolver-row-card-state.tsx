@@ -19,7 +19,7 @@ const STATE_COPY: Record<
   pending_lock: {
     badge: "Pending lock",
     title: "Prediction lock pending",
-    body: "This incident is still before the 24h public lock point. DDR shows live facts only until the official lock run.",
+    body: "This incident has not reached forecast readiness or the 72h backstop. DDR shows live facts only until the official lock run.",
     tone: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
   },
   lock_deferred: {

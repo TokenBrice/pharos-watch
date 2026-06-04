@@ -10,6 +10,7 @@ import {
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
+  DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
 } from "@shared/lib/depeg-resolver-version";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
@@ -471,6 +472,7 @@ function assessmentFromPrediction(
   const iqr = arrayValue(duration.iqrSec);
   const parsed = DdrrAssessmentSchema.safeParse({
     ...baseFieldsForIncident(incident, payload),
+    eligibleAt: sealed.eligibleAt,
     publicPredictionId: publicPredictionIdOf(sealed),
     assessmentId: sealed.assessmentId,
     lockedAt: sealed.lockedAt,
@@ -504,6 +506,7 @@ function assessmentFromNoCall(
   const missingReasons = arrayValue(noCall.missingReasons).filter((entry): entry is string => typeof entry === "string");
   const parsed = DdrrAssessmentSchema.safeParse({
     ...baseFieldsForIncident(incident, payload),
+    eligibleAt: sealed.eligibleAt,
     publicPredictionId: publicPredictionIdOf(sealed),
     assessmentId: sealed.assessmentId,
     lockedAt: sealed.lockedAt,
@@ -683,6 +686,7 @@ function failedPublicationCoverageRow(
   const predictionState = publicationFailed ? "publication_failed" : "publication_retry_pending";
   return {
     ...baseFieldsForIncident(incident, recordValue(sealed.sealedPayload)),
+    eligibleAt: sealed.eligibleAt,
     sourceEventState: sourceEventState(actual),
     terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
     terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
@@ -743,6 +747,7 @@ async function buildDurableDdrV2ReviewSnapshot(db: D1Database, source: DdrrV2Rev
       if (originalOutcome) {
         invalidatedPredictions.push({
           ...baseFieldsForIncident(incident, payload),
+          eligibleAt: sealed.eligibleAt,
           sourceEventState: "invalidated",
           terminalEvidenceAt: actual?.terminalEvidenceAt ?? null,
           terminalEvidenceInterval: actual?.terminalEvidenceInterval ?? null,
@@ -848,6 +853,7 @@ async function maybeBuildDdrV2ReviewSnapshot(
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
     policyUniverseIncluded: true,
     includeSuperseded: true,
+    policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   });
   const incidentKeys = incidents.map((incident) => incident.incidentKey);
   const sealedPublicPredictions = await stores.loadSealedPublicPredictions(db, {

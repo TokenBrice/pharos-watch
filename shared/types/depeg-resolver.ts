@@ -154,7 +154,7 @@ export type DdrRow = z.infer<typeof DdrRowSchema>;
 // --- Response envelope -----------------------------------------------------
 
 export const DDR_PUBLIC_WARNING =
-  "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.";
+  "Forecast from Pharos historical data. Not investment advice or a credit rating.";
 
 export const DDR_ASSESSMENT_CHECKPOINT_VALUES = [
   "first",

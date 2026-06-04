@@ -1,3 +1,4 @@
+import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
 import { buildInClause, chunkArray } from "./db";
 
 export type DdrIncidentDirection = "above" | "below";
@@ -114,6 +115,7 @@ export interface LoadCanonicalIncidentsFilters {
   predictionPolicyVersion?: string;
   policyUniverseIncluded?: boolean;
   includeSuperseded?: boolean;
+  policyDelaySec?: number;
 }
 
 export interface RecordLockDeferralInput {
@@ -188,9 +190,9 @@ function assertNonNegativeInteger(value: number, name: string): void {
   }
 }
 
-function assertNonNegativeFiniteNumber(value: number, name: string): void {
-  if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`${name} must be a non-negative finite number`);
+function assertUnitIntervalNumber(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${name} must be a finite number in [0, 1]`);
   }
 }
 
@@ -207,19 +209,22 @@ function assertLockMetadata(input: {
   backstopDelaySec?: number | null;
 }): void {
   if (input.forecastReadinessScore != null) {
-    assertNonNegativeFiniteNumber(input.forecastReadinessScore, "forecastReadinessScore");
+    assertUnitIntervalNumber(input.forecastReadinessScore, "forecastReadinessScore");
   }
   if (input.forecastReadinessVersion != null) {
     assertNonEmpty(input.forecastReadinessVersion, "forecastReadinessVersion");
   }
   if (input.readinessThreshold != null) {
-    assertNonNegativeFiniteNumber(input.readinessThreshold, "readinessThreshold");
+    assertUnitIntervalNumber(input.readinessThreshold, "readinessThreshold");
   }
   if (input.backstopAt != null) {
     assertPositiveInteger(input.backstopAt, "backstopAt");
   }
   if (input.backstopDelaySec != null) {
     assertNonNegativeInteger(input.backstopDelaySec, "backstopDelaySec");
+    if (input.backstopDelaySec !== DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC) {
+      throw new Error("backstop metadata requires the readiness-72h backstop delay");
+    }
   }
   if (input.lockTrigger === "forecast_readiness") {
     if (input.forecastReadinessScore == null) throw new Error("readiness lock requires forecastReadinessScore");
@@ -757,8 +762,9 @@ export async function loadCanonicalIncidents(
   db: D1Database,
   filters: LoadCanonicalIncidentsFilters = {},
 ): Promise<DdrCanonicalIncident[]> {
+  const policyDelaySec = optionPolicyDelaySec(filters);
   if (filters.eventIds && filters.eventIds.length > 0) {
-    return [...(await loadIncidentsByEventIds(db, filters.eventIds)).values()];
+    return [...(await loadIncidentsByEventIds(db, filters.eventIds, policyDelaySec)).values()];
   }
 
   const rows: DdrCanonicalIncident[] = [];
@@ -794,7 +800,7 @@ export async function loadCanonicalIncidents(
       )
       .bind(...binds)
       .all<IncidentRow>();
-    rows.push(...(result.results ?? []).map(mapIncidentRow));
+    rows.push(...(result.results ?? []).map((row) => mapIncidentRow(row, policyDelaySec)));
   };
 
   if (filters.incidentKeys) {

@@ -9,6 +9,7 @@ import {
   DdrResponseSchema,
   DdrV2RowSchema,
   type DdrResponse,
+  type DdrForecastReadinessBackstop,
   type DdrV2LiveOverlay,
   type DdrV2ResponseRow,
   type DdrV2Row,
@@ -88,6 +89,9 @@ interface DdrApiLockDeferralRow {
   last_attempted_at: number | null;
   updated_at: number;
   lock_trigger: "scheduled_24h" | "forecast_readiness" | "readiness_backstop" | null;
+  forecast_readiness_score: number | null;
+  forecast_readiness_version: string | null;
+  readiness_threshold: number | null;
   backstop_at: number | null;
   backstop_delay_sec: number | null;
   symbol: string;
@@ -121,6 +125,16 @@ function cacheMatchesLatestManifest(snapshot: DdrResponse, manifest: DdrPublicat
     return { ok: false, reason: "cache-manifest-row-hash-mismatch" };
   }
   return { ok: true };
+}
+
+function withOverlayBaseHashCleared(response: DdrResponse): DdrResponse {
+  return {
+    ...response,
+    _meta: {
+      ...response._meta,
+      basePayloadHash: null,
+    },
+  };
 }
 
 async function loadApiEventState(db: D1Database, eventIds: number[]): Promise<Map<number, DdrApiEventStateRow>> {
@@ -182,6 +196,7 @@ async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promis
   }
   if (errata.size === 0) return response;
 
+  let changed = false;
   const rows = response.rows.map((row): DdrV2ResponseRow => {
     const publicPredictionId = row.prediction.publicPredictionId;
     const history = publicPredictionId == null ? null : errata.get(publicPredictionId) ?? null;
@@ -192,6 +207,7 @@ async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promis
     }
 
     const latestErratum = history[0];
+    changed = true;
     if (row.kind === "invalidated_prediction") {
       return {
         ...row,
@@ -224,7 +240,7 @@ async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promis
     };
   });
 
-  return { ...response, rows };
+  return changed ? withOverlayBaseHashCleared({ ...response, rows }) : response;
 }
 
 async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralRow[]> {
@@ -244,6 +260,9 @@ async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralR
                 ls.last_attempted_at,
                 ls.updated_at,
                 ls.lock_trigger,
+                ls.forecast_readiness_score,
+                ls.forecast_readiness_version,
+                ls.readiness_threshold,
                 ls.backstop_at,
                 ls.backstop_delay_sec,
                 e.symbol,
@@ -273,6 +292,19 @@ async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralR
     console.warn(`[depeg-resolver] lock deferral overlay unavailable: ${error instanceof Error ? error.message : String(error)}`);
     return [];
   }
+}
+
+function buildApiBackstop(
+  row: Pick<DdrApiLockDeferralRow, "backstop_at" | "backstop_delay_sec" | "current_started_at">,
+  nowSec: number,
+): DdrForecastReadinessBackstop | null {
+  if (row.backstop_at == null) return null;
+  return {
+    version: DDR_FORECAST_READINESS_VERSION,
+    delaySec: row.backstop_delay_sec ?? Math.max(0, row.backstop_at - row.current_started_at),
+    backstopAt: row.backstop_at,
+    reached: nowSec >= row.backstop_at,
+  };
 }
 
 function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2ResponseRow | null {
@@ -312,12 +344,7 @@ function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2
       lockTiming: null,
       lockTrigger: row.lock_trigger ?? "scheduled_24h",
       readiness: null,
-      backstop: row.backstop_at == null ? null : {
-        version: DDR_FORECAST_READINESS_VERSION,
-        delaySec: row.backstop_delay_sec ?? Math.max(0, row.backstop_at - row.current_started_at),
-        backstopAt: row.backstop_at,
-        reached: nowSec >= row.backstop_at,
-      },
+      backstop: buildApiBackstop(row, nowSec),
       source: "pending",
       deferralReason: row.last_deferral_reason,
       deferralCount: row.deferral_count,
@@ -350,6 +377,7 @@ async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): 
   const deferralByIncidentKey = new Map(deferrals.map((row) => [row.incident_key, row]));
   const deferralKeys = new Set(response._meta.readOverlay?.degradedLockDeferralIncidentKeys ?? []);
   const seenKeys = new Set<string>();
+  let overlayApplied = false;
 
   const rows = response.rows.map((row): DdrV2ResponseRow => {
     const deferral = deferralByIncidentKey.get(row.incidentKey);
@@ -357,11 +385,16 @@ async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): 
     seenKeys.add(row.incidentKey);
     deferralKeys.add(row.incidentKey);
     if (row.kind !== "pending") return row;
+    overlayApplied = true;
     return {
       ...row,
       prediction: {
         ...row.prediction,
         state: "lock_deferred",
+        eligibleAt: deferral.eligible_at,
+        policyDelaySec: Math.max(0, deferral.eligible_at - row.startedAt),
+        lockTrigger: deferral.lock_trigger ?? row.prediction.lockTrigger,
+        backstop: buildApiBackstop(deferral, nowSec) ?? row.prediction.backstop,
         deferralReason: deferral.last_deferral_reason,
         deferralCount: deferral.deferral_count,
         modelAsOf: deferral.last_attempted_at ?? deferral.updated_at ?? row.prediction.modelAsOf,
@@ -380,11 +413,12 @@ async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): 
     if (!appended) continue;
     rows.push(appended);
     deferralKeys.add(deferral.incident_key);
+    overlayApplied = true;
   }
 
-  if (deferralKeys.size === 0) return response;
+  if (!overlayApplied || deferralKeys.size === 0) return response;
 
-  return {
+  return withOverlayBaseHashCleared({
     ...response,
     _meta: {
       ...response._meta,
@@ -396,7 +430,7 @@ async function applyLockDeferralOverlay(db: D1Database, response: DdrResponse): 
       },
     },
     rows,
-  };
+  });
 }
 
 async function decorateDdrResponse(db: D1Database, response: DdrResponse): Promise<DdrResponse> {

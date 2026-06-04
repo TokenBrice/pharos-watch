@@ -109,6 +109,26 @@ describe("backtest-depeg-resolver-lock-policy", () => {
     });
   });
 
+  it("attributes locks at or after 72h to the backstop even when readiness is high", () => {
+    const decision = evaluateDdrLockPolicy(
+      row({
+        readinessScore: DDR_LOCK_READINESS_THRESHOLD + 0.01,
+        evaluatedAt: STARTED_AT + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      }),
+    );
+
+    expect(decision).toMatchObject({
+      action: "lock_prediction",
+      eligibilityReason: "backstop_72h",
+      shouldSeal: true,
+      eligibleAt: STARTED_AT + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      readiness: {
+        earlyLockSatisfied: true,
+        backstopAt: STARTED_AT + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      },
+    });
+  });
+
   it("defers eligible locks when health is degraded", () => {
     const decision = evaluateDdrLockPolicy(
       row({

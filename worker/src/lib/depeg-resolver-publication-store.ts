@@ -1,5 +1,6 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
 import { buildInClause, chunkArray } from "./db";
 import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
 import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
@@ -207,9 +208,9 @@ function assertNonNegativeInteger(value: number, name: string): void {
   }
 }
 
-function assertNonNegativeFiniteNumber(value: number, name: string): void {
-  if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`${name} must be a non-negative finite number`);
+function assertUnitIntervalNumber(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${name} must be a finite number in [0, 1]`);
   }
 }
 
@@ -226,19 +227,22 @@ function assertLockMetadata(input: {
   backstopDelaySec?: number | null;
 }): void {
   if (input.forecastReadinessScore != null) {
-    assertNonNegativeFiniteNumber(input.forecastReadinessScore, "forecastReadinessScore");
+    assertUnitIntervalNumber(input.forecastReadinessScore, "forecastReadinessScore");
   }
   if (input.forecastReadinessVersion != null) {
     assertNonEmpty(input.forecastReadinessVersion, "forecastReadinessVersion");
   }
   if (input.readinessThreshold != null) {
-    assertNonNegativeFiniteNumber(input.readinessThreshold, "readinessThreshold");
+    assertUnitIntervalNumber(input.readinessThreshold, "readinessThreshold");
   }
   if (input.backstopAt != null) {
     assertPositiveInteger(input.backstopAt, "backstopAt");
   }
   if (input.backstopDelaySec != null) {
     assertNonNegativeInteger(input.backstopDelaySec, "backstopDelaySec");
+    if (input.backstopDelaySec !== DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC) {
+      throw new Error("backstop metadata requires the readiness-72h backstop delay");
+    }
   }
   if (input.lockTrigger === "forecast_readiness") {
     if (input.forecastReadinessScore == null) throw new Error("readiness lock requires forecastReadinessScore");
@@ -508,12 +512,12 @@ function lockStateStatement(
          last_attempted_at = excluded.last_attempted_at,
          last_state = excluded.last_state,
          last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
-         lock_trigger = COALESCE(depeg_resolver_prediction_lock_state.lock_trigger, excluded.lock_trigger),
-         forecast_readiness_score = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_score, excluded.forecast_readiness_score),
-         forecast_readiness_version = COALESCE(depeg_resolver_prediction_lock_state.forecast_readiness_version, excluded.forecast_readiness_version),
-         readiness_threshold = COALESCE(depeg_resolver_prediction_lock_state.readiness_threshold, excluded.readiness_threshold),
-         backstop_at = COALESCE(depeg_resolver_prediction_lock_state.backstop_at, excluded.backstop_at),
-         backstop_delay_sec = COALESCE(depeg_resolver_prediction_lock_state.backstop_delay_sec, excluded.backstop_delay_sec),
+         lock_trigger = excluded.lock_trigger,
+         forecast_readiness_score = excluded.forecast_readiness_score,
+         forecast_readiness_version = excluded.forecast_readiness_version,
+         readiness_threshold = excluded.readiness_threshold,
+         backstop_at = excluded.backstop_at,
+         backstop_delay_sec = excluded.backstop_delay_sec,
          updated_at = excluded.updated_at`,
     )
     .bind(

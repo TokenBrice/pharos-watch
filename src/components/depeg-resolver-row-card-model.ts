@@ -31,6 +31,19 @@ export type DdrCompatPrediction = {
   deferralReason?: string | null;
   retryStatus?: string | null;
   nextRetryAt?: number | null;
+  lockTrigger?: string | null;
+  policyDelaySec?: number | null;
+  readiness?: {
+    score?: number | null;
+    threshold?: number | null;
+    version?: string | null;
+  } | null;
+  backstop?: {
+    backstopAt?: number | null;
+    delaySec?: number | null;
+    reached?: boolean | null;
+    version?: string | null;
+  } | null;
   publicationSnapshotToken?: string | null;
   originalOutcomeKind?: string | null;
   outcomeKind?: string | null;
@@ -240,8 +253,10 @@ export function getAgeSec(row: DdrDisplayRow): number {
 
 export function getPeakDeviationBps(row: DdrDisplayRow): number {
   const compat = row as DdrCompatRow;
+  const lockAnchored = compat.kind === "prediction" || compat.prediction?.state === "frozen";
   return (
     ("peakDeviationBps" in row ? row.peakDeviationBps : undefined) ??
+    (lockAnchored ? compat.frozen?.sourceRow?.peakDeviationBps : undefined) ??
     compat.live?.peakDeviationBps ??
     compat.frozen?.sourceRow?.peakDeviationBps ??
     0
@@ -250,8 +265,10 @@ export function getPeakDeviationBps(row: DdrDisplayRow): number {
 
 export function getCurrentDeviationBps(row: DdrDisplayRow): number | null {
   const compat = row as DdrCompatRow;
+  const lockAnchored = compat.kind === "prediction" || compat.prediction?.state === "frozen";
   return (
     ("currentDeviationBps" in row ? row.currentDeviationBps : undefined) ??
+    (lockAnchored ? compat.frozen?.sourceRow?.currentDeviationBps : undefined) ??
     compat.live?.currentDeviationBps ??
     compat.frozen?.sourceRow?.currentDeviationBps ??
     null
@@ -316,6 +333,12 @@ export function getLockMetadata(row: DdrDisplayRow) {
     predictedAt,
     predictedAgeSec,
     lockTiming: prediction.lockTiming ?? compat.lockTiming ?? null,
+    lockTrigger: prediction.lockTrigger ?? null,
+    policyDelaySec: prediction.policyDelaySec ?? null,
+    readinessScore: prediction.readiness?.score ?? null,
+    readinessThreshold: prediction.readiness?.threshold ?? null,
+    backstopAt: prediction.backstop?.backstopAt ?? null,
+    backstopDelaySec: prediction.backstop?.delaySec ?? null,
     incidentKey: compat.incidentKey ?? null,
   };
 }

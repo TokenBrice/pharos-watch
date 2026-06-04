@@ -194,9 +194,9 @@ export function evaluateDdrLockPolicy(row: DdrLockPolicyBacktestRow): DdrLockPol
   if (existingPublicPredictionId != null) {
     action = "already_sealed";
     eligibilityReason = "existing_public_prediction";
-  } else if (earlyLockSatisfied || backstopSatisfied) {
-    eligibilityReason = earlyLockSatisfied ? "readiness_early_lock" : "backstop_72h";
-    eligibleAt = earlyLockSatisfied ? row.evaluatedAt : backstopAt;
+  } else if (backstopSatisfied || earlyLockSatisfied) {
+    eligibilityReason = backstopSatisfied ? "backstop_72h" : "readiness_early_lock";
+    eligibleAt = backstopSatisfied ? backstopAt : row.evaluatedAt;
     if (healthStatus !== "healthy") {
       action = "lock_deferred";
     } else {

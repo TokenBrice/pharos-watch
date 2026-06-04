@@ -2,6 +2,7 @@ import {
   attachDdrPublicRowHash,
   computeDdrPublicRowHash,
 } from "@shared/lib/depeg-resolver/public-contract";
+import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
 import {
   type DdrCanonicalIncident,
   type DdrCanonicalIncidentInput,
@@ -293,6 +294,7 @@ export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
       predictionPolicyVersion: filters.predictionPolicyVersion,
       policyUniverseIncluded: filters.policyUniverseIncluded,
       includeSuperseded: filters.includeSuperseded,
+      policyDelaySec: filters.policyDelaySec ?? DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
     });
     return incidents.map(mapStoreIncident);
   },

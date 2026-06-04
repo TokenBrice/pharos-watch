@@ -252,18 +252,17 @@ export async function writePublicationBeforeCache(input: {
   const activeIncidentKeys = [...new Set([...input.incidentsByEventId.values()].map((incident) => incident.incidentKey))];
   const snapshotToken = publicationSnapshotToken(input.ddrRunId, input.nowSec);
   const existingFirstPublication = firstPublicationByPredictionId(input.firstPublication);
+  const retryPendingSealed = input.sealed.filter((sealed) => !existingFirstPublication.has(publicPredictionIdOf(sealed)));
   const firstPublication = [
     ...input.firstPublication,
-    ...input.sealed
-      .filter((sealed) => !existingFirstPublication.has(publicPredictionIdOf(sealed)))
-      .map((sealed): DdrFirstPublicationMembership => ({
-        publicPredictionId: publicPredictionIdOf(sealed),
-        incidentKey: sealed.incidentKey,
-        snapshotToken,
-        snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
-        publishedAt: input.nowSec,
-        firstPublished: true,
-      })),
+    ...retryPendingSealed.map((sealed): DdrFirstPublicationMembership => ({
+      publicPredictionId: publicPredictionIdOf(sealed),
+      incidentKey: sealed.incidentKey,
+      snapshotToken,
+      snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
+      publishedAt: input.nowSec,
+      firstPublished: true,
+    })),
   ];
   const basePayload = buildV2PublicationBasePayload({
     snapshot: input.snapshot,
@@ -292,7 +291,7 @@ export async function writePublicationBeforeCache(input: {
     });
     return { attempted: true, ok: true, manifest, firstPublication, error: null };
   } catch (error) {
-    for (const sealed of input.sealed) {
+    for (const sealed of retryPendingSealed) {
       await input.stores.recordLockDeferral(input.db, {
         incidentKey: sealed.incidentKey,
         eventId: sealed.eventId,

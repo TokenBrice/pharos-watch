@@ -160,7 +160,7 @@ describe("api contract validation policy", () => {
         },
         degraded: false,
         degradedReason: null,
-        publicWarning: "Probabilistic estimate from Pharos historical data. Not investment advice or a credit rating.",
+        publicWarning: "Forecast from Pharos historical data. Not investment advice or a credit rating.",
         resolutionRubricVersion: "resolution-rubric-v1",
         durationModelVersion: "duration-landmark-v1",
         incidentGroupingVersion: "incident-group-v1",

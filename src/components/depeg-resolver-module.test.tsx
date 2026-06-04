@@ -208,22 +208,89 @@ describe("DepegResolverModule", () => {
   });
 
   it("shows frozen prediction lock metadata separately from live status", () => {
+    const sourceRow: DdrRow = {
+      ...row,
+      ageSec: 86_400,
+      currentDeviationBps: -250,
+      duration: {
+        ...row.duration,
+        suppressed: false,
+        medianSec: 7200,
+        iqrSec: [3600, 10_800],
+        horizons: [],
+      },
+    };
     render(
       <DepegResolverModule
         data={response({
           rows: [
             {
-              ...row,
-              prediction: { state: "frozen", lockedAt: 86_401, eligibleAt: 86_400, lockTiming: "on_time" },
-              live: { status: "active", ageSec: 90_000, currentDeviationBps: -180 },
-              duration: {
-                ...row.duration,
-                suppressed: false,
-                medianSec: 7200,
-                iqrSec: [3600, 10_800],
-                horizons: [],
+              stablecoinId: row.stablecoinId,
+              symbol: row.symbol,
+              name: row.name,
+              pegCurrency: row.pegCurrency,
+              governance: row.governance,
+              status: row.status,
+              eventId: row.eventId,
+              incidentKey: "ddr2:test",
+              startedAt: row.startedAt,
+              direction: row.direction,
+              kind: "prediction",
+              prediction: {
+                state: "frozen",
+                publicPredictionId: 7,
+                incidentKey: "ddr2:test",
+                predictionPolicyVersion: "sticky-24h-v1",
+                predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+                predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+                resolutionRubricVersion: "resolution-rubric-v1",
+                durationModelVersion: "duration-landmark-v1",
+                incidentGroupingVersion: "incident-group-v1",
+                supportRulesVersion: "support-rules-v1",
+                eligibleAt: 86_400,
+                policyDelaySec: 86_400,
+                lockedAt: 86_401,
+                publishedAt: 86_500,
+                publicationSnapshotToken: "ddrpub:test",
+                snapshotGeneration: 2,
+                eventAgeAtLockSec: 86_400,
+                lockTiming: "on_time",
+                lockTrigger: "scheduled_24h",
+                readiness: null,
+                backstop: null,
+                source: "public_prediction",
+                deferralReason: null,
+                deferralCount: null,
+                rowHash: "a".repeat(64),
+                lineage: null,
+                modelAsOf: 86_401,
+                latestErratum: null,
+                errataCount: 0,
+                errataHistory: [],
               },
-            } as DdrRow,
+              frozen: {
+                resolution: sourceRow.resolution,
+                duration: {
+                  ...sourceRow.duration,
+                  remainingAsOf: 86_401,
+                  medianResolveAt: 93_601,
+                  iqrResolveAt: [90_001, 97_201],
+                  horizons: [],
+                },
+                relatedContext: sourceRow.relatedContext,
+                sourceRow,
+              },
+              live: {
+                currentEventId: row.eventId,
+                ageSec: 90_000,
+                peakDeviationBps: -320,
+                currentDeviationBps: -180,
+                eventState: "active",
+                updatedAt: 90_000,
+                stale: false,
+                degradedReason: null,
+              },
+            } as DdrResponse["rows"][number],
           ],
         })}
       />,
@@ -232,7 +299,7 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("Prediction frozen")).toBeTruthy();
     expect(screen.getByText("anchored duration")).toBeTruthy();
     expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
-    expect(screen.getByRole("img", { name: /frozen at public lock/i })).toBeTruthy();
+    expect(screen.getByRole("img", { name: /lock deviation -250 bps/i })).toBeTruthy();
     expect(screen.getByText("From lock")).toBeTruthy();
     // Live overlay deviation (-180) renders in the Live incident strip, distinct from the frozen lock-side value.
     expect(screen.getByText("-180 bps")).toBeTruthy();

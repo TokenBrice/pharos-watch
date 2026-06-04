@@ -32,6 +32,26 @@ function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+function formatLockTrigger(value: string | null | undefined, lockedAt: number | null): string | null {
+  switch (value) {
+    case "forecast_readiness":
+      return "readiness";
+    case "readiness_backstop":
+      return "72h backstop";
+    case "scheduled_24h":
+      return lockedAt != null ? "legacy 24h" : null;
+    default:
+      return null;
+  }
+}
+
+function formatReadinessScore(score: number | null, threshold: number | null): string | null {
+  if (score == null || !Number.isFinite(score)) return null;
+  const scoreText = `${Math.round(score * 100)}%`;
+  if (threshold == null || !Number.isFinite(threshold)) return scoreText;
+  return `${scoreText}/${Math.round(threshold * 100)}%`;
+}
+
 export function CoinLockup({
   row,
   logos,
@@ -103,6 +123,12 @@ export function LockMetadataStrip({
   const lockedAt = formatUtcTimestamp(metadata.lockedAt);
   const eligibleAt = formatUtcTimestamp(metadata.eligibleAt);
   const predictedAt = formatUtcTimestamp(metadata.predictedAt);
+  const trigger = formatLockTrigger(metadata.lockTrigger, metadata.lockedAt);
+  const readiness = formatReadinessScore(metadata.readinessScore, metadata.readinessThreshold);
+  const backstop =
+    metadata.backstopAt != null
+      ? `${formatDurationSec(metadata.backstopDelaySec ?? 72 * 3600)} · ${formatUtcTimestamp(metadata.backstopAt)}`
+      : null;
   const anchoredDuration =
     showAnchoredDuration && duration.medianSec != null && !duration.suppressed
       ? `~${formatDurationSec(duration.medianSec)}${
@@ -118,6 +144,9 @@ export function LockMetadataStrip({
         label="predicted at"
         value={metadata.predictedAgeSec != null ? formatElapsedSeconds(metadata.predictedAgeSec) : null}
       />
+      <MetadataPill label="trigger" value={trigger} />
+      <MetadataPill label="readiness" value={readiness} />
+      <MetadataPill label="backstop" value={backstop} />
       <MetadataPill label="lock timing" value={compactLockTiming(metadata.lockTiming)} />
       <MetadataPill label="anchored duration" value={anchoredDuration} />
       <MetadataPill label="manifest" value={predictedAt && !lockedAt ? predictedAt : null} />

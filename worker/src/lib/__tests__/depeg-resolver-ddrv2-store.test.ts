@@ -14,6 +14,11 @@ import {
 import { appendPredictionErratum } from "../depeg-resolver-errata-store";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "../depeg-resolver-repair-store";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import {
+  DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+  DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+  DDR_FORECAST_READINESS_VERSION,
+} from "@shared/lib/depeg-resolver-version";
 
 const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
 interface SqliteD1 extends D1Database {
@@ -429,24 +434,33 @@ describe("DDRv2 storage migrations and stores", () => {
   it("stores readiness-triggered public predictions without fixed 24h eligibility", async () => {
     const db = makeSqliteD1();
     try {
-      insertOpenEvent(db);
-      const incident = await ensureIncident(db);
-      const eligibleAt = 143200;
-      const backstopAt = 186400;
-      const { payload, rowHash } = sealedPayloadWithHash(incident.incidentKey, "prediction", {
-        eligibleAt,
-        lockedAt: eligibleAt,
-        eventAgeAtLockSec: 43200,
-        policyDelaySec: 43200,
-        predictionExtras: {
-          lockTrigger: "forecast_readiness",
-          forecastReadinessScore: 0.92,
-          forecastReadinessVersion: "forecast-readiness-v1",
-          readinessThreshold: 0.9,
-          backstopAt,
-          backstopDelaySec: 86400,
-        },
-      });
+	      insertOpenEvent(db);
+	      const incident = await ensureIncident(db);
+	      const eligibleAt = 143200;
+	      const backstopAt = 100000 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
+	      const { payload, rowHash } = sealedPayloadWithHash(incident.incidentKey, "prediction", {
+	        eligibleAt,
+	        lockedAt: eligibleAt,
+	        eventAgeAtLockSec: 43200,
+	        policyDelaySec: 43200,
+	        predictionExtras: {
+	          lockTrigger: "forecast_readiness",
+	          readiness: {
+	            version: DDR_FORECAST_READINESS_VERSION,
+	            score: 0.92,
+	            threshold: 0.9,
+	            strictEarlyLockReady: true,
+	            reasons: [],
+	            components: [],
+	          },
+	          backstop: {
+	            version: DDR_FORECAST_READINESS_VERSION,
+	            delaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	            backstopAt,
+	            reached: false,
+	          },
+	        },
+	      });
 
       const prediction = await sealPublicPrediction(db, {
         incidentKey: incident.incidentKey,
@@ -484,20 +498,20 @@ describe("DDRv2 storage migrations and stores", () => {
         eventAgeAtLockSec: 43200,
         lockTiming: "on_time",
         createdAt: eligibleAt + 1,
-        runId: "ddr:test",
-        lockTrigger: "forecast_readiness",
-        forecastReadinessScore: 0.92,
-        forecastReadinessVersion: "forecast-readiness-v1",
-        readinessThreshold: 0.9,
-        backstopAt,
-        backstopDelaySec: 86400,
-      });
+	        runId: "ddr:test",
+	        lockTrigger: "forecast_readiness",
+	        forecastReadinessScore: 0.92,
+	        forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+	        readinessThreshold: 0.9,
+	        backstopAt,
+	        backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	      });
 
       expect(prediction.lockTrigger).toBe("forecast_readiness");
       expect(prediction.forecastReadinessScore).toBe(0.92);
       expect(prediction.readinessThreshold).toBe(0.9);
       expect(prediction.backstopAt).toBe(backstopAt);
-      expect(prediction.backstopDelaySec).toBe(86400);
+	      expect(prediction.backstopDelaySec).toBe(DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC);
 
       const state = db.sqlite
         .prepare(
@@ -517,11 +531,11 @@ describe("DDRv2 storage migrations and stores", () => {
       expect(state).toEqual({
         lock_trigger: "forecast_readiness",
         forecast_readiness_score: 0.92,
-        forecast_readiness_version: "forecast-readiness-v1",
+	        forecast_readiness_version: DDR_FORECAST_READINESS_VERSION,
         readiness_threshold: 0.9,
         backstop_at: backstopAt,
-        backstop_delay_sec: 86400,
-      });
+	        backstop_delay_sec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	      });
 
       const audit = db.sqlite
         .prepare("SELECT lock_trigger, forecast_readiness_score FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ?")
@@ -535,6 +549,91 @@ describe("DDRv2 storage migrations and stores", () => {
   it("stores backstop-triggered no-call locks with backstop metadata", async () => {
     const db = makeSqliteD1();
     try {
+	      insertOpenEvent(db);
+	      const incident = await ensureIncident(db);
+	      const backstopAt = 100000 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
+	      const { payload, rowHash } = sealedPayloadWithHash(incident.incidentKey, "no_call", {
+	        eligibleAt: backstopAt,
+	        lockedAt: backstopAt,
+	        eventAgeAtLockSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	        policyDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	        predictionExtras: {
+	          lockTrigger: "readiness_backstop",
+	          readiness: {
+	            version: DDR_FORECAST_READINESS_VERSION,
+	            score: 0.61,
+	            threshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+	            strictEarlyLockReady: false,
+	            reasons: [],
+	            components: [],
+	          },
+	          backstop: {
+	            version: DDR_FORECAST_READINESS_VERSION,
+	            delaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	            backstopAt,
+	            reached: true,
+	          },
+	        },
+	      });
+
+      const prediction = await sealPublicNoCall(db, {
+        incidentKey: incident.incidentKey,
+        eventId: 1,
+        stablecoinId: "lusd-liquity",
+        symbol: "LUSD",
+        name: "Liquity USD",
+        pegCurrency: "USD",
+        governance: "decentralized",
+	        direction: "below",
+	        startedAt: 100000,
+	        assessedAt: backstopAt,
+	        eventAgeSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	        methodologyVersion: "2.0",
+        methodologyVersionLabel: "v2.0",
+        resolutionRubricVersion: "resolution-rubric-v2",
+        durationModelVersion: "duration-landmark-v2",
+        incidentGroupingVersion: "incident-group-v2",
+        supportRulesVersion: "support-rules-v2",
+        sealedPayload: payload,
+	        rowHash,
+	        predictionPolicyVersion: "sticky-24h-v1",
+	        policyDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	        eligibleAt: backstopAt,
+	        lockedAt: backstopAt,
+	        eventAgeAtLockSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	        lockTiming: "on_time",
+	        createdAt: backstopAt + 1,
+	        lockTrigger: "readiness_backstop",
+	        forecastReadinessScore: 0.61,
+	        forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+	        readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+	        backstopAt,
+	        backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	      });
+
+      expect(prediction.outcomeKind).toBe("no_call");
+	      expect(prediction.lockTrigger).toBe("readiness_backstop");
+	      expect(prediction.backstopAt).toBe(backstopAt);
+	      expect(prediction.backstopDelaySec).toBe(DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC);
+	      expect(prediction.forecastReadinessScore).toBe(0.61);
+
+      const audit = db.sqlite
+        .prepare("SELECT action, lock_trigger, backstop_at, backstop_delay_sec FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ?")
+        .get(incident.incidentKey) as { action: string; lock_trigger: string; backstop_at: number; backstop_delay_sec: number };
+      expect(audit).toEqual({
+	        action: "locked_no_call",
+	        lock_trigger: "readiness_backstop",
+	        backstop_at: backstopAt,
+	        backstop_delay_sec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+	      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("rejects readiness backstop locks that do not use the 72h backstop delay", async () => {
+    const db = makeSqliteD1();
+    try {
       insertOpenEvent(db);
       const incident = await ensureIncident(db);
       const backstopAt = 143200;
@@ -545,12 +644,128 @@ describe("DDRv2 storage migrations and stores", () => {
         policyDelaySec: 43200,
         predictionExtras: {
           lockTrigger: "readiness_backstop",
-          backstopAt,
-          backstopDelaySec: 43200,
+          backstop: {
+            version: DDR_FORECAST_READINESS_VERSION,
+            delaySec: 43200,
+            backstopAt,
+            reached: true,
+          },
         },
       });
 
-      const prediction = await sealPublicNoCall(db, {
+      await expect(
+        sealPublicNoCall(db, {
+          incidentKey: incident.incidentKey,
+          eventId: 1,
+          stablecoinId: "lusd-liquity",
+          symbol: "LUSD",
+          name: "Liquity USD",
+          pegCurrency: "USD",
+          governance: "decentralized",
+          direction: "below",
+          startedAt: 100000,
+          assessedAt: backstopAt,
+          eventAgeSec: 43200,
+          methodologyVersion: "2.0",
+          methodologyVersionLabel: "v2.0",
+          resolutionRubricVersion: "resolution-rubric-v2",
+          durationModelVersion: "duration-landmark-v2",
+          incidentGroupingVersion: "incident-group-v2",
+          supportRulesVersion: "support-rules-v2",
+          sealedPayload: payload,
+          rowHash,
+          predictionPolicyVersion: "sticky-24h-v1",
+          policyDelaySec: 43200,
+          eligibleAt: backstopAt,
+          lockedAt: backstopAt,
+          eventAgeAtLockSec: 43200,
+          lockTiming: "on_time",
+          createdAt: backstopAt + 1,
+          lockTrigger: "readiness_backstop",
+          backstopAt,
+          backstopDelaySec: 43200,
+        }),
+      ).rejects.toThrow(/readiness-72h backstop delay/);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("rejects readiness metadata outside the unit interval", async () => {
+    const db = makeSqliteD1();
+    try {
+      insertOpenEvent(db);
+      const incident = await ensureIncident(db);
+      await expect(
+        recordLockOpportunity(db, {
+          incidentKey: incident.incidentKey,
+          eventId: 1,
+          predictionPolicyVersion: "sticky-24h-v1",
+          eligibleAt: 143200,
+          runAt: 143200,
+          action: "pending",
+          reason: null,
+          healthStatus: "healthy",
+          lockTrigger: "forecast_readiness",
+          forecastReadinessScore: 1.01,
+          forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+          readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+          backstopAt: 100000 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+          backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+        }),
+      ).rejects.toThrow(/\[0, 1\]/);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("overwrites unsealed lock-state metadata with the sealed lock metadata", async () => {
+    const db = makeSqliteD1();
+    try {
+      insertOpenEvent(db);
+      const incident = await ensureIncident(db);
+      const backstopAt = 100000 + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
+      await recordLockOpportunity(db, {
+        incidentKey: incident.incidentKey,
+        eventId: 1,
+        predictionPolicyVersion: "sticky-24h-v1",
+        eligibleAt: 143200,
+        runAt: 143200,
+        action: "pending",
+        reason: null,
+        healthStatus: "healthy",
+        lockTrigger: "forecast_readiness",
+        forecastReadinessScore: 0.92,
+        forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+        readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+        backstopAt,
+        backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+      });
+
+      const { payload, rowHash } = sealedPayloadWithHash(incident.incidentKey, "no_call", {
+        eligibleAt: backstopAt,
+        lockedAt: backstopAt,
+        eventAgeAtLockSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+        policyDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+        predictionExtras: {
+          lockTrigger: "readiness_backstop",
+          readiness: {
+            version: DDR_FORECAST_READINESS_VERSION,
+            score: 0.61,
+            threshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+            strictEarlyLockReady: false,
+            reasons: [],
+            components: [],
+          },
+          backstop: {
+            version: DDR_FORECAST_READINESS_VERSION,
+            delaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+            backstopAt,
+            reached: true,
+          },
+        },
+      });
+      await sealPublicNoCall(db, {
         incidentKey: incident.incidentKey,
         eventId: 1,
         stablecoinId: "lusd-liquity",
@@ -561,7 +776,7 @@ describe("DDRv2 storage migrations and stores", () => {
         direction: "below",
         startedAt: 100000,
         assessedAt: backstopAt,
-        eventAgeSec: 43200,
+        eventAgeSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
         methodologyVersion: "2.0",
         methodologyVersionLabel: "v2.0",
         resolutionRubricVersion: "resolution-rubric-v2",
@@ -571,31 +786,39 @@ describe("DDRv2 storage migrations and stores", () => {
         sealedPayload: payload,
         rowHash,
         predictionPolicyVersion: "sticky-24h-v1",
-        policyDelaySec: 43200,
+        policyDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
         eligibleAt: backstopAt,
         lockedAt: backstopAt,
-        eventAgeAtLockSec: 43200,
+        eventAgeAtLockSec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
         lockTiming: "on_time",
         createdAt: backstopAt + 1,
         lockTrigger: "readiness_backstop",
+        forecastReadinessScore: 0.61,
+        forecastReadinessVersion: DDR_FORECAST_READINESS_VERSION,
+        readinessThreshold: DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
         backstopAt,
-        backstopDelaySec: 43200,
+        backstopDelaySec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
       });
 
-      expect(prediction.outcomeKind).toBe("no_call");
-      expect(prediction.lockTrigger).toBe("readiness_backstop");
-      expect(prediction.backstopAt).toBe(backstopAt);
-      expect(prediction.backstopDelaySec).toBe(43200);
-      expect(prediction.forecastReadinessScore).toBeNull();
-
-      const audit = db.sqlite
-        .prepare("SELECT action, lock_trigger, backstop_at, backstop_delay_sec FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ?")
-        .get(incident.incidentKey) as { action: string; lock_trigger: string; backstop_at: number; backstop_delay_sec: number };
-      expect(audit).toEqual({
-        action: "locked_no_call",
+      const state = db.sqlite
+        .prepare(
+          `SELECT last_state, lock_trigger, forecast_readiness_score, backstop_at, backstop_delay_sec
+           FROM depeg_resolver_prediction_lock_state
+           WHERE incident_key = ?`,
+        )
+        .get(incident.incidentKey) as {
+          last_state: string;
+          lock_trigger: string;
+          forecast_readiness_score: number;
+          backstop_at: number;
+          backstop_delay_sec: number;
+        };
+      expect(state).toEqual({
+        last_state: "no_call",
         lock_trigger: "readiness_backstop",
+        forecast_readiness_score: 0.61,
         backstop_at: backstopAt,
-        backstop_delay_sec: 43200,
+        backstop_delay_sec: DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
       });
     } finally {
       db.close();

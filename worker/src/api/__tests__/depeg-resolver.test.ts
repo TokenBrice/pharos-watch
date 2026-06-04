@@ -349,6 +349,113 @@ describe("handleDepegResolver", () => {
     expect(body.rows[0].prediction.latestErratum?.reason).toBe("input_corruption");
     expect(body.rows[0].prediction.errataCount).toBe(1);
     expect(body.rows[0].originalOutcome).toEqual(body.rows[0].frozen);
+    expect(body._meta.basePayloadHash).toBeNull();
+  });
+
+  it("overlays pending lock deferrals with v3 trigger metadata and clears the base hash", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_000_000 * 1000);
+    const computedAt = 1_998_000;
+    const pendingPrediction: Extract<DdrV2ResponseRow, { kind: "pending" }>["prediction"] = {
+      ...basePredictionMeta(computedAt),
+      state: "pending_lock",
+      publicPredictionId: null,
+      incidentKey: "ddr2:22222222222222222222222222222222",
+      predictionMethodologyVersion: null,
+      predictionMethodologyVersionLabel: null,
+      resolutionRubricVersion: null,
+      durationModelVersion: null,
+      incidentGroupingVersion: null,
+      supportRulesVersion: null,
+      eligibleAt: 2_169_200,
+      policyDelaySec: 259200,
+      lockedAt: null,
+      publishedAt: null,
+      publicationSnapshotToken: null,
+      snapshotGeneration: null,
+      eventAgeAtLockSec: null,
+      lockTiming: null,
+      source: "pending",
+      rowHash: null,
+      readiness: {
+        version: "readiness-72h-v1",
+        score: 0.82,
+        threshold: 0.75,
+        strictEarlyLockReady: true,
+        reasons: [],
+        components: [],
+      },
+      backstop: {
+        version: "readiness-72h-v1",
+        delaySec: 259200,
+        backstopAt: 2_169_200,
+        reached: false,
+      },
+    };
+    const pendingRow: DdrV2ResponseRow = {
+      stablecoinId: "lusd-liquity",
+      symbol: "LUSD",
+      name: "Liquity USD",
+      pegCurrency: "USD",
+      governance: "decentralized",
+      status: null,
+      eventId: 2,
+      incidentKey: "ddr2:22222222222222222222222222222222",
+      startedAt: 1_910_000,
+      direction: "below",
+      kind: "pending",
+      prediction: pendingPrediction,
+      frozen: null,
+      live: live(computedAt, { currentEventId: 2 }),
+    };
+    const payload = snapshot(computedAt, 2_001_000, [pendingRow]);
+    const db = mockD1([
+      ...cacheRows(payload),
+      {
+        match: "FROM depeg_resolver_prediction_lock_state",
+        rows: [
+          {
+            incident_key: "ddr2:22222222222222222222222222222222",
+            stablecoin_id: "lusd-liquity",
+            peg_currency: "USD",
+            direction: "below",
+            current_started_at: 1_910_000,
+            current_event_id: 2,
+            prediction_policy_version: DDR_PREDICTION_POLICY_VERSION,
+            eligible_at: 1_999_500,
+            deferral_count: 3,
+            last_deferral_reason: "stablecoins-cache-unsafe",
+            last_attempted_at: 1_999_500,
+            updated_at: 1_999_500,
+            lock_trigger: "forecast_readiness",
+            forecast_readiness_score: 0.82,
+            forecast_readiness_version: "readiness-72h-v1",
+            readiness_threshold: 0.75,
+            backstop_at: 2_169_200,
+            backstop_delay_sec: 259200,
+            symbol: "LUSD",
+            peg_type: "peggedUSD",
+            peak_deviation_bps: -420,
+            started_at: 1_910_000,
+            ended_at: null,
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleDepegResolver(db);
+    const body = (await res.json()) as DdrResponse;
+
+    expect(res.status).toBe(200);
+    expect(body._meta.basePayloadHash).toBeNull();
+    expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");
+    expect(body.rows[0].kind).toBe("pending");
+    if (body.rows[0].kind !== "pending") throw new Error("expected pending row");
+    expect(body.rows[0].prediction.state).toBe("lock_deferred");
+    expect(body.rows[0].prediction.lockTrigger).toBe("forecast_readiness");
+    expect(body.rows[0].prediction.eligibleAt).toBe(1_999_500);
+    expect(body.rows[0].prediction.backstop?.backstopAt).toBe(2_169_200);
+    expect(body.rows[0].prediction.deferralCount).toBe(3);
   });
 
   it("falls back to the latest finalized manifest when cache metadata is behind", async () => {

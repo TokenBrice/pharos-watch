@@ -6,13 +6,13 @@ ALTER TABLE depeg_resolver_public_predictions ADD COLUMN lock_trigger TEXT CHECK
   lock_trigger IS NULL OR lock_trigger IN ('scheduled_24h', 'forecast_readiness', 'readiness_backstop')
 );
 ALTER TABLE depeg_resolver_public_predictions ADD COLUMN forecast_readiness_score REAL CHECK (
-  forecast_readiness_score IS NULL OR forecast_readiness_score >= 0
+  forecast_readiness_score IS NULL OR (forecast_readiness_score >= 0 AND forecast_readiness_score <= 1)
 );
 ALTER TABLE depeg_resolver_public_predictions ADD COLUMN forecast_readiness_version TEXT CHECK (
   forecast_readiness_version IS NULL OR length(trim(forecast_readiness_version)) > 0
 );
 ALTER TABLE depeg_resolver_public_predictions ADD COLUMN readiness_threshold REAL CHECK (
-  readiness_threshold IS NULL OR readiness_threshold >= 0
+  readiness_threshold IS NULL OR (readiness_threshold >= 0 AND readiness_threshold <= 1)
 );
 ALTER TABLE depeg_resolver_public_predictions ADD COLUMN backstop_at INTEGER CHECK (
   backstop_at IS NULL OR backstop_at > 0
@@ -25,13 +25,13 @@ ALTER TABLE depeg_resolver_prediction_lock_state ADD COLUMN lock_trigger TEXT CH
   lock_trigger IS NULL OR lock_trigger IN ('scheduled_24h', 'forecast_readiness', 'readiness_backstop')
 );
 ALTER TABLE depeg_resolver_prediction_lock_state ADD COLUMN forecast_readiness_score REAL CHECK (
-  forecast_readiness_score IS NULL OR forecast_readiness_score >= 0
+  forecast_readiness_score IS NULL OR (forecast_readiness_score >= 0 AND forecast_readiness_score <= 1)
 );
 ALTER TABLE depeg_resolver_prediction_lock_state ADD COLUMN forecast_readiness_version TEXT CHECK (
   forecast_readiness_version IS NULL OR length(trim(forecast_readiness_version)) > 0
 );
 ALTER TABLE depeg_resolver_prediction_lock_state ADD COLUMN readiness_threshold REAL CHECK (
-  readiness_threshold IS NULL OR readiness_threshold >= 0
+  readiness_threshold IS NULL OR (readiness_threshold >= 0 AND readiness_threshold <= 1)
 );
 ALTER TABLE depeg_resolver_prediction_lock_state ADD COLUMN backstop_at INTEGER CHECK (
   backstop_at IS NULL OR backstop_at > 0
@@ -44,13 +44,13 @@ ALTER TABLE depeg_resolver_lock_opportunity_audit ADD COLUMN lock_trigger TEXT C
   lock_trigger IS NULL OR lock_trigger IN ('scheduled_24h', 'forecast_readiness', 'readiness_backstop')
 );
 ALTER TABLE depeg_resolver_lock_opportunity_audit ADD COLUMN forecast_readiness_score REAL CHECK (
-  forecast_readiness_score IS NULL OR forecast_readiness_score >= 0
+  forecast_readiness_score IS NULL OR (forecast_readiness_score >= 0 AND forecast_readiness_score <= 1)
 );
 ALTER TABLE depeg_resolver_lock_opportunity_audit ADD COLUMN forecast_readiness_version TEXT CHECK (
   forecast_readiness_version IS NULL OR length(trim(forecast_readiness_version)) > 0
 );
 ALTER TABLE depeg_resolver_lock_opportunity_audit ADD COLUMN readiness_threshold REAL CHECK (
-  readiness_threshold IS NULL OR readiness_threshold >= 0
+  readiness_threshold IS NULL OR (readiness_threshold >= 0 AND readiness_threshold <= 1)
 );
 ALTER TABLE depeg_resolver_lock_opportunity_audit ADD COLUMN backstop_at INTEGER CHECK (
   backstop_at IS NULL OR backstop_at > 0
@@ -80,6 +80,7 @@ WHEN NOT EXISTS (
           NEW.backstop_at IS NULL
           OR (
             NEW.backstop_delay_sec IS NOT NULL
+            AND NEW.backstop_delay_sec = 259200
             AND NEW.backstop_at = e.started_at + NEW.backstop_delay_sec
           )
         )
@@ -88,6 +89,7 @@ WHEN NOT EXISTS (
         NEW.lock_trigger = 'readiness_backstop'
         AND NEW.backstop_at IS NOT NULL
         AND NEW.backstop_delay_sec IS NOT NULL
+        AND NEW.backstop_delay_sec = 259200
         AND NEW.backstop_at = e.started_at + NEW.backstop_delay_sec
         AND NEW.eligible_at = NEW.backstop_at
         AND NEW.policy_delay_sec = NEW.backstop_delay_sec
@@ -96,6 +98,30 @@ WHEN NOT EXISTS (
 )
 BEGIN
   SELECT RAISE(ABORT, 'sealed prediction lock policy metadata is inconsistent');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_ddr_public_predictions_payload_lock_metadata_match
+BEFORE INSERT ON depeg_resolver_public_predictions
+WHEN NOT (
+  (
+    NEW.lock_trigger IS json_extract(NEW.sealed_payload_json, '$.prediction.lockTrigger')
+    OR (
+      (NEW.lock_trigger IS NULL OR NEW.lock_trigger = 'scheduled_24h')
+      AND json_extract(NEW.sealed_payload_json, '$.prediction.lockTrigger') IS NULL
+    )
+    OR (
+      NEW.lock_trigger IS NULL
+      AND json_extract(NEW.sealed_payload_json, '$.prediction.lockTrigger') = 'scheduled_24h'
+    )
+  )
+  AND NEW.forecast_readiness_score IS json_extract(NEW.sealed_payload_json, '$.prediction.readiness.score')
+  AND NEW.forecast_readiness_version IS json_extract(NEW.sealed_payload_json, '$.prediction.readiness.version')
+  AND NEW.readiness_threshold IS json_extract(NEW.sealed_payload_json, '$.prediction.readiness.threshold')
+  AND NEW.backstop_at IS json_extract(NEW.sealed_payload_json, '$.prediction.backstop.backstopAt')
+  AND NEW.backstop_delay_sec IS json_extract(NEW.sealed_payload_json, '$.prediction.backstop.delaySec')
+)
+BEGIN
+  SELECT RAISE(ABORT, 'sealed prediction lock metadata does not match payload');
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_ddr_lock_state_sealed_policy_metadata_no_update

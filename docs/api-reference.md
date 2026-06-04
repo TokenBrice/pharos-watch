@@ -1070,8 +1070,8 @@ Cache-backed Depeg Duration Resolver readouts for active/current confirmed depeg
 - If no healthy run crosses readiness first, the backstop seals on the first healthy run at or after `startedAt + 72h`.
 - Health failures at either trigger produce `lock_deferred`; the next healthy run seals only if the incident is still unresolved and non-terminal.
 - If the incident recovers before a healthy lock, DDRR reports `resolved_before_prediction`; reliable terminal evidence before a healthy lock becomes `terminal_before_prediction`.
-- First-published prediction metadata is immutable and includes `lockTrigger` (`forecast_readiness`, `readiness_backstop`, or legacy/default `scheduled_24h`), the `readiness` object (`version`, `score`, `threshold`, `strictEarlyLockReady`, `reasons`, `components`), the `backstop` object (`version`, `delaySec`, `backstopAt`, `reached`), health/deferral metadata, and policy version.
-- Existing `predictionPolicyVersion="sticky-24h-v1"` rows from DDRv2 remain valid and keep `policyDelaySec=86400`; clients should continue to parse default `lockTrigger="scheduled_24h"` rows alongside v3 readiness/backstop rows.
+- First-published prediction metadata is immutable and includes `lockTrigger` (`forecast_readiness`, `readiness_backstop`, or legacy/default `scheduled_24h`), the `readiness` object (`version`, `score`, `threshold`, `strictEarlyLockReady`, `reasons`, `components`), the `backstop` object (`version`, `delaySec`, `backstopAt`, `reached`), deferral reason/count metadata, and policy version.
+- DDRv3 readiness/backstop rows may still carry `predictionPolicyVersion="sticky-24h-v1"` for compatibility with the existing policy universe. Distinguish fixed-24h legacy exposures from v3 outcomes using `lockTrigger`, `policyDelaySec`, readiness/backstop metadata, and methodology version. Existing DDRv2 rows remain valid and keep `policyDelaySec=86400` with default `lockTrigger="scheduled_24h"`.
 
 **Response**
 
