@@ -117,6 +117,57 @@ afterEach(() => {
 });
 
 describe("runTelegramDegradationWatchdog · pending backlog", () => {
+  it("uses a preloaded pending capacity snapshot instead of rereading the queue", async () => {
+    const store = installCacheStore();
+    const prepare = vi.fn((sql: string) => {
+      const first = vi.fn(async () => {
+        if (sql.includes("COUNT(*) AS total")) {
+          throw new Error("pending capacity should have been reused");
+        }
+        if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
+          return null;
+        }
+        return null;
+      });
+      const statement = { bind: vi.fn(() => statement), first } as unknown as D1PreparedStatement;
+      return statement;
+    });
+    const db = { prepare } as unknown as D1Database;
+
+    const result = await runTelegramDegradationWatchdog(
+      db,
+      "https://hooks.example/x",
+      undefined,
+      {
+        pendingCapacitySnapshot: {
+          total: PENDING_BACKLOG_THRESHOLD + 5,
+          active: PENDING_BACKLOG_THRESHOLD + 5,
+          due: PENDING_BACKLOG_THRESHOLD + 5,
+          deferred: 0,
+          expired: 0,
+          nearTtl: 0,
+          oldestPendingAgeSec: 60,
+          oldestDuePendingAgeSec: 60,
+          estimatedDrainTimeSec: 300,
+          drainBudgetPerRun: 900,
+          dispatchIntervalSec: 300,
+        },
+        safetySourceAssessment: {
+          state: "ok",
+          ageSeconds: 60,
+          generation: getAlertSafetySourceGeneration(),
+          envelope: null,
+        },
+      },
+    );
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(meta.pendingBacklog.count).toBe(PENDING_BACKLOG_THRESHOLD + 5);
+    expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) => String(sql).includes("COUNT(*) AS total"))).toBe(false);
+  });
+
   it("does not alert on first observation above threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);

@@ -69,7 +69,7 @@ describe("handleHealth", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
   });
 
-  it("returns Cache-Control: no-store", async () => {
+  it("returns the bounded realtime Cache-Control profile", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "cache", rows: [] },
@@ -79,7 +79,7 @@ describe("handleHealth", () => {
       { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
     ]);
     const res = await handleHealth(db);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=60, max-age=10");
   });
 
   it("does not mark quiet majors stale when the critical lane is syncing on time", async () => {

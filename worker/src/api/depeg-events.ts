@@ -61,7 +61,10 @@ async function loadDexAvailability(
   try {
     const where = stablecoinId ? " WHERE stablecoin_id = ?" : "";
     const stmt = db
-      .prepare(`SELECT stablecoin_id, source_pool_count, source_total_tvl, updated_at FROM dex_prices${where}`);
+      .prepare(
+        `SELECT /* pharos:depeg-events:dex-availability */
+           stablecoin_id, source_pool_count, source_total_tvl, updated_at FROM dex_prices${where}`,
+      );
     const result = stablecoinId
       ? await stmt.bind(stablecoinId).all<DexAvailabilityRow>()
       : await stmt.all<DexAvailabilityRow>();
@@ -87,7 +90,10 @@ async function loadPoolAvailability(
   try {
     const where = stablecoinId ? " WHERE stablecoin_id = ?" : " WHERE stablecoin_id != '__global__'";
     const stmt = db
-      .prepare(`SELECT stablecoin_id, snapshot_at, has_rows FROM dex_price_challenger_snapshots${where}`);
+      .prepare(
+        `SELECT /* pharos:depeg-events:pool-availability */
+           stablecoin_id, snapshot_at, has_rows FROM dex_price_challenger_snapshots${where}`,
+      );
     const result = stablecoinId
       ? await stmt.bind(stablecoinId).all<PoolAvailabilityRow>()
       : await stmt.all<PoolAvailabilityRow>();
@@ -140,7 +146,11 @@ async function loadPendingIncidents(
 ): Promise<DepegPendingIncident[]> {
   const nowSec = Math.floor(Date.now() / 1000);
   const where = stablecoinId ? " WHERE stablecoin_id = ?" : "";
-  const pendingQuery = `${SELECT_PENDING_DEPEGS_SQL}${where} ORDER BY first_seen_at DESC, id DESC`;
+  const pendingSelect = SELECT_PENDING_DEPEGS_SQL.replace(
+    /^\s*SELECT\s+/i,
+    "\n  SELECT /* pharos:depeg-events:pending-incidents */ ",
+  );
+  const pendingQuery = `${pendingSelect}${where} ORDER BY first_seen_at DESC, id DESC`;
   const pendingResult = stablecoinId
     ? await db.prepare(pendingQuery).bind(stablecoinId).all<PendingDepegRow>()
     : await db.prepare(pendingQuery).all<PendingDepegRow>();
@@ -204,6 +214,7 @@ export const handleDepegEvents = withErrorHandler(
     return buildPaginatedEventResponse<DepegRow, ReturnType<typeof rowToDepegEvent>>(db, {
       tableName: "depeg_events_with_provenance",
       orderBy: "started_at DESC, id DESC",
+      queryComment: "pharos:depeg-events",
       conditions,
       filterBindings,
       mapRow: rowToDepegEvent,

@@ -337,12 +337,14 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
   const publicationFilter = "AND (publication_generation_id IS NULL OR publication_state = 'published')";
 
   const sql = mode === "source"
-    ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish
+    ? `SELECT /* pharos:yield-history:source-window */
+         recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish
        FROM yield_history
        WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND source_key = ?
        ${publicationFilter}
        ORDER BY recorded_at ASC`
-    : `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish
+    : `SELECT /* pharos:yield-history:best-window */
+         recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish
        FROM yield_history
        WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND is_best = 1
        ${publicationFilter}

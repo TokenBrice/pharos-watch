@@ -232,6 +232,113 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockRecordOutcome).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the eventless fast path without fan-out when snapshots are healthy and unchanged", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      {
+        match: "FROM stress_signals",
+        rows: [{ stablecoin_id: "usdc-circle", score: 12, band: "CALM", signals_json: "{}" }],
+      },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventlessFastPath?: boolean;
+      eventsDetected: { dews: number; depeg: number; safety: number; launch: number };
+      messagesSent: number;
+      pendingAttempted: number;
+    };
+
+    expect(result.itemCount).toBe(0);
+    expect(metadata.eventlessFastPath).toBe(true);
+    expect(metadata.eventsDetected).toMatchObject({ dews: 0, depeg: 0, safety: 0, launch: 0 });
+    expect(metadata.messagesSent).toBe(0);
+    expect(metadata.pendingAttempted).toBe(0);
+    expect(mockSendToChat).not.toHaveBeenCalled();
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("sub.alert_dews = 1"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("WHERE global_alert_dews = 1"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("SELECT p.id, p.chat_id, p.message_html"))).toBe(false);
+  });
+
+  it("still drains due pending rows during an otherwise eventless run", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return makeSafetySnapshotCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        });
+      }
+      if (key === "alert:safety-source-cache") {
+        return makeSafetySourceCache({
+          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" },
+        }, now - 60);
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      {
+        match: "COUNT(*) AS total",
+        first: {
+          total: 1,
+          expired: 0,
+          due: 1,
+          deferred: 0,
+          near_ttl: 0,
+          oldest_pending_created_at: now - 120,
+          oldest_due_created_at: now - 120,
+        },
+        rows: [],
+      },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventlessFastPath?: boolean;
+      pendingTotal: number;
+    };
+
+    expect(metadata.eventlessFastPath).toBe(true);
+    expect(metadata.pendingTotal).toBe(1);
+    expect(result.itemCount).toBe(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("SELECT p.id, p.chat_id, p.message_html"))).toBe(true);
+  });
+
   it("detects DEWS/depeg/safety changes and fans out to subscribers", async () => {
     const now = Math.floor(Date.now() / 1000);
 

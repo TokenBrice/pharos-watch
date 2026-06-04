@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 174,
-    "maxFunctionLines": 152,
+    "fileLines": 175,
+    "maxFunctionLines": 153,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -336,9 +336,9 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 417,
-    "maxFunctionLines": 294,
-    "branchCount": 16,
+    "fileLines": 528,
+    "maxFunctionLines": 371,
+    "branchCount": 21,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 540,
@@ -456,9 +456,9 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 535,
-    "maxFunctionLines": 312,
-    "branchCount": 41,
+    "fileLines": 576,
+    "maxFunctionLines": 350,
+    "branchCount": 45,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 280,

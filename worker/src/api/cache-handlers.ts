@@ -24,6 +24,7 @@ export const handleStablecoins = createCacheHandler(
   {
     schema: StablecoinListResponseSchema,
     malformedMessage: "Cached stablecoins payload is malformed",
+    responseReadyCache: "json-object",
   },
 );
 

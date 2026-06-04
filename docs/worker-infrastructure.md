@@ -185,7 +185,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - Pages `functions/_site-data/[[path]].ts` writes same-origin site demand into `site_data_request_stats`
 - Low-value route/source attribution writes can be paused with `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true`
 - Per-key public API load writes can be paused separately with `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true`
-- Worker route/source and Pages site-data counters are buffered briefly in isolate-local minute buckets and flushed through D1 batches, so bursts against the same route/source dimension collapse into one weighted counter upsert
+- Worker route/source, Worker per-key, and Pages site-data counters are buffered briefly in isolate-local minute buckets and flushed through D1 batches, so bursts against the same route/source or key dimension collapse into one weighted counter upsert
 - both datasets are scoped to non-admin public-read traffic and exclude `/api/telegram-webhook`
 - worker load is stored by:
   - `lane`: `public-api` or `site-api`
@@ -246,7 +246,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 1. **Cache bypass rules**:
    - All non-GET requests bypass edge cache.
-   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`, including their dry-run preview variants).
+   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (status and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`, including their dry-run preview variants).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -256,7 +256,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 | Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
 | -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                 |
+| Realtime | `public, s-maxage=60, max-age=10`      | health, stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                         |
 | Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
 | Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |
@@ -383,7 +383,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 | `shared/lib/cloudflare-access-jwt.ts` | `jwksCache` | Cloudflare Access signing-key cache | 1-hour TTL; auth still re-fetches when cold or expired |
 | `worker/src/lib/rate-limit.ts` | `IsolateLocalState` limiter/prune state | Public API limiter emergency counters and pending prune coordination | Resets on isolate recycle/deploy; D1 remains source of truth |
 | `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-minute fresh / 15-minute stale key cache TTL; usage updates are best-effort and D1 remains source of truth |
-| `worker/src/lib/request-source-attribution.ts` | Worker route/source attribution buffer plus prune bucket/promise | Collapses same-route Worker attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Worker isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
+| `worker/src/lib/request-source-attribution.ts` | Worker route/source and per-key attribution buffers plus prune bucket/promise | Collapses same-route and same-key Worker attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Worker isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
 | `functions/lib/request-attribution.ts` | Pages attribution buffer plus prune bucket/promise | Collapses same-route site-data attribution bursts into batched D1 upserts and avoids duplicate attribution-prune work inside one Pages Functions isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
 
 **Constraints:**
@@ -453,7 +453,7 @@ crons = [
 | `status-self-check`         | `runStatusSelfCheck()`         | `worker/src/cron/status-self-check.ts`          | [Status Dashboard](./status-dashboard.md) |
 | `cron-staleness-watchdog`   | `runCronStalenessWatchdog()`   | `worker/src/cron/cron-staleness-watchdog.ts`    | [Status Dashboard](./status-dashboard.md) |
 
-Dedicated quarter-hourly offset trigger for public/admin status probes and freshness alerting. It runs at :09/:24/:39/:54 so real-HTTP probes and Tier-1 cache staleness checks do not compete with the heavier quarter-hourly stablecoin pricing slot. The watchdog reuses the same freshness-sentinel/table fallback status builder as `/api/health`, alerts through `ALERT_WEBHOOK_URL` when watched producer caches exceed `2x` their interval, and dedupes stale alerts through the D1 `cache` table.
+Dedicated quarter-hourly offset trigger for public/admin status probes and freshness alerting. It runs at :09/:24/:39/:54 so real-HTTP probes and Tier-1 cache staleness checks do not compete with the heavier quarter-hourly stablecoin pricing slot. `status-self-check` persists the raw `/api/status` computation to `cache["status:raw-snapshot:v1"]` with a compare-and-swap write; `/api/status` serves that snapshot while it is no more than 30 minutes old and falls back to live computation when it is missing, stale, or unreadable. The self-check probes `/api/health` through the public HTTP path every run so it observes the bounded realtime edge-cache behavior, then rotates the deeper public/admin probe set across up to three 15-minute buckets, so every registered deep probe is covered within 45 minutes without adding scheduled fetch volume. The watchdog reuses the same freshness-sentinel/table fallback status builder as `/api/health`, alerts through `ALERT_WEBHOOK_URL` when watched producer caches exceed `2x` their interval, and dedupes stale alerts through the D1 `cache` table.
 
 ### Trigger 3: `3 */6 * * *` (blacklist — dedicated, every 6h)
 
@@ -1195,6 +1195,8 @@ Cron result status is thresholded rather than all-or-nothing:
 
 Returns cache freshness for key data sources, with per-source staleness thresholds:
 
+The response uses the realtime cache profile (`public, s-maxage=60, max-age=10`) and participates in the Worker edge cache. This keeps the no-key public health surface bounded to roughly 60 seconds of cache lag while reducing repeated D1-backed health recomputation during browser polling and external probes.
+
 | Cache Key           | Stale threshold |
 | ------------------- | --------------- |
 | `stablecoins`       | 600s (10 min)   |
@@ -1213,6 +1215,8 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 ### GET /api/status
 
 Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 40 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
+
+Default reads use the raw status snapshot produced by `status-self-check` and recompute only the lightweight response wrappers, current status-state/probe/timeline views, and admin supplements. Snapshot age is bounded to 30 minutes; operators can force the previous live raw computation path with `GET /api/status?refresh=live`.
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |

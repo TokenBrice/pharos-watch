@@ -766,6 +766,7 @@ export interface D1UsageSummary {
 
 export type StatusSectionKey =
   | "statusState"
+  | "statusSnapshot"
   | "telegramBot"
   | "reserveComposition"
   | "d1Usage"

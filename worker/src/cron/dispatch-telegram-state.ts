@@ -29,6 +29,64 @@ import {
 } from "./telegram-alert-snapshots";
 
 type CachedValue = { value: string; updatedAt: number } | null;
+type DewsLatestRow = DewsRow & { computed_at: number };
+
+const TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC = 2 * 3600;
+
+function areDewsLatestRowsStale(rows: DewsLatestRow[], nowSec: number): boolean {
+  if (rows.length === 0) return true;
+  const newestComputedAt = rows.reduce(
+    (max, row) => Math.max(max, Number.isFinite(row.computed_at) ? row.computed_at : 0),
+    0,
+  );
+  return newestComputedAt <= 0 || nowSec - newestComputedAt > TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC;
+}
+
+function mergeNewestDewsRows(legacyRows: DewsLatestRow[], latestRows: DewsLatestRow[]): DewsRow[] {
+  const byId = new Map<string, DewsLatestRow>();
+  for (const row of legacyRows) {
+    byId.set(row.stablecoin_id, row);
+  }
+  for (const row of latestRows) {
+    const existing = byId.get(row.stablecoin_id);
+    if (!existing || row.computed_at >= existing.computed_at) {
+      byId.set(row.stablecoin_id, row);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function loadDewsRows(db: D1Database, nowSec: number): Promise<DewsRow[]> {
+  let latestRows: DewsLatestRow[] = [];
+  try {
+    const rows = await db
+      .prepare(
+        `SELECT /* pharos:telegram-dispatch:dews-latest */
+           stablecoin_id, score, band, signals_json, computed_at
+         FROM stress_signals_latest`,
+      )
+      .all<DewsLatestRow>();
+    latestRows = rows.results ?? [];
+  } catch {
+    latestRows = [];
+  }
+
+  const legacyRows = await db
+    .prepare(
+      `SELECT /* pharos:telegram-dispatch:dews-legacy */
+         s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
+         FROM stress_signals s
+         INNER JOIN (
+           SELECT stablecoin_id, MAX(computed_at) AS max_at
+             FROM stress_signals GROUP BY stablecoin_id
+      ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+    )
+    .all<DewsLatestRow>();
+  const legacyResults = legacyRows.results ?? [];
+  if (legacyResults.length === 0) return latestRows;
+  if (areDewsLatestRowsStale(latestRows, nowSec)) return legacyResults;
+  return mergeNewestDewsRows(legacyResults, latestRows);
+}
 
 function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
   if (!cached) return null;
@@ -85,7 +143,10 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
   const snoozeNowSec = Math.floor(Date.now() / 1000);
   const snoozedRows = await db
     .prepare(
-      "SELECT chat_id FROM telegram_subscribers WHERE alert_snooze_until_ts IS NOT NULL AND alert_snooze_until_ts > ?",
+      `SELECT /* pharos:telegram-dispatch:active-snoozes */
+         chat_id
+       FROM telegram_subscribers
+       WHERE alert_snooze_until_ts IS NOT NULL AND alert_snooze_until_ts > ?`,
     )
     .bind(snoozeNowSec)
     .all<{ chat_id: string }>();
@@ -101,26 +162,19 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     safetySourceCache,
     launchCache,
   ] = await Promise.all([
+    loadDewsRows(db, snoozeNowSec),
     db
       .prepare(
-        `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
-           FROM stress_signals s
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(computed_at) AS max_at
-               FROM stress_signals GROUP BY stablecoin_id
-           ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<DewsRow>()
-      .then((result) => result.results ?? []),
-    db
-      .prepare(
-        "SELECT id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference FROM depeg_events WHERE ended_at IS NULL",
+        `SELECT /* pharos:telegram-dispatch:active-depegs */
+           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference
+         FROM depeg_events WHERE ended_at IS NULL`,
       )
       .all<ActiveDepegRowWithEventId>()
       .then((result) => result.results ?? []),
     db
       .prepare(
-        `SELECT h.stablecoin_id,
+        `SELECT /* pharos:telegram-dispatch:safety-latest */
+                h.stablecoin_id,
                 h.grade,
                 h.score,
                 h.prev_grade,

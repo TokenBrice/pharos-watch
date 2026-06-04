@@ -1,11 +1,12 @@
 import type { ZodType } from "zod";
-import { getCache } from "./db-cache";
+import { getCache, setCacheIfNewer } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;
+const RESPONSE_READY_CACHE_VERSION = 1;
 
 const _cacheRead = new IsolateLocalState(() => ({
   jsonParseFailuresByContext: new Map<string, { count: number; lastMessage: string }>(),
@@ -97,6 +98,52 @@ export function readCachedJsonOr503<T>(
   };
 }
 
+export function getResponseReadyCacheKey(cacheKey: string): string {
+  return `${cacheKey}:response-ready:v${RESPONSE_READY_CACHE_VERSION}`;
+}
+
+export async function writeResponseReadyCache(
+  db: D1Database,
+  cacheKey: string,
+  body: string,
+  updatedAt: number,
+): Promise<void> {
+  await setCacheIfNewer(db, getResponseReadyCacheKey(cacheKey), body, updatedAt);
+}
+
+async function getResponseReadyCache(
+  db: D1Database,
+  cacheKey: string,
+): Promise<{ value: string; updatedAt: number } | null> {
+  try {
+    return await getCache(db, getResponseReadyCacheKey(cacheKey));
+  } catch (error) {
+    console.warn(
+      `[cache] Failed to read response-ready companion for "${cacheKey}":`,
+      error instanceof Error ? error.message : String(error),
+    );
+    return null;
+  }
+}
+
+function injectMetaIntoJsonObject(rawBody: string, updatedAt: number, maxAgeSec: number): string | null {
+  const trimmedStart = rawBody.search(/\S/);
+  if (trimmedStart < 0 || rawBody[trimmedStart] !== "{") return null;
+  const trimmedEnd = rawBody.search(/\s*$/);
+  const endIndex = trimmedEnd >= 0 ? trimmedEnd : rawBody.length;
+  let closeBraceIndex = endIndex - 1;
+  while (closeBraceIndex >= 0 && /\s/.test(rawBody[closeBraceIndex] ?? "")) {
+    closeBraceIndex--;
+  }
+  if (rawBody[closeBraceIndex] !== "}") return null;
+
+  const meta = JSON.stringify(buildFreshnessMeta(updatedAt, maxAgeSec));
+  const prefix = rawBody.slice(0, closeBraceIndex).trimEnd();
+  const suffix = rawBody.slice(closeBraceIndex);
+  const emptyObject = prefix.replace(/\s+/g, "") === "{";
+  return `${prefix}${emptyObject ? "" : ","}"_meta":${meta}${suffix}`;
+}
+
 export function createCacheHandler(
   endpoint: string,
   cacheKey: string,
@@ -112,11 +159,13 @@ export function createCacheHandler(
       },
     ) => Promise<unknown> | unknown;
     injectMeta?: "auto" | "never";
+    responseReadyCache?: "json-object" | "raw-json";
     malformedMessage?: string;
   },
 ): (db: D1Database) => Promise<Response> {
   return withErrorHandler(endpoint, async (db: D1Database): Promise<Response> => {
     const cached = await getCache(db, cacheKey);
+    const responseReady = cached && options?.responseReadyCache ? await getResponseReadyCache(db, cacheKey) : null;
     if (!cached) {
       return errorResponse(503, "Data not yet available");
     }
@@ -125,6 +174,15 @@ export function createCacheHandler(
       "Content-Type": "application/json",
       "Cache-Control": cacheControl,
     }, cached.updatedAt, maxAgeSec);
+
+    if (responseReady?.updatedAt === cached.updatedAt) {
+      const responseReadyBody = options?.responseReadyCache === "json-object" && options.injectMeta !== "never"
+        ? injectMetaIntoJsonObject(responseReady.value, cached.updatedAt, maxAgeSec)
+        : responseReady.value;
+      if (responseReadyBody != null) {
+        return new Response(responseReadyBody, { headers });
+      }
+    }
 
     const parsed = readCachedJsonOr503<unknown>(endpoint, cacheKey, cached);
     if (!parsed.ok) {

@@ -31,6 +31,10 @@ interface BufferedWorkerRequestAttribution extends BufferedAttributionEntry {
   consumerClass: ApiRequestConsumerClass;
 }
 
+interface BufferedApiKeyRequestAttribution extends BufferedAttributionEntry {
+  apiKeyId: number;
+}
+
 const workerRequestRecorder = createBufferedAttributionRecorder<BufferedWorkerRequestAttribution, D1Database>({
   batchSize: REQUEST_ATTRIBUTION_BATCH_SIZE,
   flushDelayMs: REQUEST_ATTRIBUTION_FLUSH_DELAY_MS,
@@ -69,8 +73,35 @@ const workerRequestRecorder = createBufferedAttributionRecorder<BufferedWorkerRe
   },
 });
 
+const apiKeyRequestRecorder = createBufferedAttributionRecorder<BufferedApiKeyRequestAttribution, D1Database>({
+  batchSize: REQUEST_ATTRIBUTION_BATCH_SIZE,
+  flushDelayMs: REQUEST_ATTRIBUTION_FLUSH_DELAY_MS,
+  pruneIntervalSec: REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
+  retentionSec: API_REQUEST_SOURCE_STATS_RETENTION_SEC,
+  insertSql: `INSERT INTO api_key_request_stats (
+       api_key_id,
+       bucket_start,
+       request_count
+     )
+     VALUES (?, ?, ?)
+     ON CONFLICT(api_key_id, bucket_start)
+     DO UPDATE SET request_count = request_count + excluded.request_count`,
+  pruneSql: [],
+  logLabel: "api-key",
+  buildKey: (entry) => `${entry.bucketStart}\t${entry.apiKeyId}`,
+  bindInsertParams: (entry) => [
+    entry.apiKeyId,
+    entry.bucketStart,
+    entry.requestCount,
+  ],
+  mergeBuffered: (existing, incoming) => {
+    existing.requestCount += incoming.requestCount;
+  },
+});
+
 export function resetRequestAttributionStateForTests(): void {
   workerRequestRecorder.reset();
+  apiKeyRequestRecorder.reset();
 }
 
 export function isApiKeyRequestAttributionDisabled(env: unknown): boolean {
@@ -107,18 +138,16 @@ export async function recordApiKeyRequestAttribution(
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<void> {
   const bucketStart = nowSec - (nowSec % 60);
-  await db.prepare(
-    `INSERT INTO api_key_request_stats (
-       api_key_id,
-       bucket_start,
-       request_count
-     )
-     VALUES (?, ?, 1)
-     ON CONFLICT(api_key_id, bucket_start)
-     DO UPDATE SET request_count = request_count + 1`,
-  )
-    .bind(apiKeyId, bucketStart)
-    .run();
+  await apiKeyRequestRecorder.record(
+    db,
+    {
+      apiKeyId,
+      bucketStart,
+      route: { routeKey: "api-key", routePath: "/api/*" },
+      requestCount: 1,
+    },
+    nowSec,
+  );
 
   await workerRequestRecorder.maybePrune(db, nowSec);
 }

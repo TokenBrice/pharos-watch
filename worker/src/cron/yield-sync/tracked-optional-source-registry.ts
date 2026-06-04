@@ -42,7 +42,8 @@ export async function loadOndoOracleAnchorRow(
 ): Promise<{ exchange_rate: number; recorded_at: number } | null> {
   const preferredPriorRow = await db
     .prepare(
-      `SELECT exchange_rate, recorded_at FROM yield_history
+      `SELECT /* pharos:yield-sync:ondo-prior-anchor-preferred */
+         exchange_rate, recorded_at FROM yield_history
        WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
          AND exchange_rate IS NOT NULL
          AND recorded_at <= ?
@@ -57,7 +58,8 @@ export async function loadOndoOracleAnchorRow(
 
   return db
     .prepare(
-      `SELECT exchange_rate, recorded_at FROM yield_history
+      `SELECT /* pharos:yield-sync:ondo-prior-anchor-fallback */
+         exchange_rate, recorded_at FROM yield_history
        WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
          AND exchange_rate IS NOT NULL
          AND recorded_at <= ?

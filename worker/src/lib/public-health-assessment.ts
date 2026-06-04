@@ -11,6 +11,7 @@ import type { CacheStatus, HealthResponse } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+  BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
   queryBlacklistGapMetrics,
   type BlacklistGapMetrics,
 } from "./blacklist-gaps";
@@ -245,6 +246,7 @@ export async function assessPublicHealth(
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now, {
       includeDistributions: false,
+      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
       cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
     })
       .then((metrics) => ({ metrics, error: null as string | null }))

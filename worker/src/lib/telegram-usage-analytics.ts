@@ -66,6 +66,10 @@ export interface TelegramCurrentLifecycleSnapshot {
   unavailableFields?: string[];
 }
 
+export interface TelegramCurrentLifecycleSnapshotOptions {
+  pendingDeliveryCount?: number;
+}
+
 export interface TelegramTopFollowedCoin {
   stablecoinId: string;
   explicitSubscribers: number;
@@ -347,6 +351,7 @@ async function loadPreviousLifecycleSnapshot(
 export async function computeTelegramCurrentLifecycleSnapshot(
   db: D1Database,
   nowSec = Math.floor(Date.now() / 1000),
+  options: TelegramCurrentLifecycleSnapshotOptions = {},
 ): Promise<TelegramCurrentLifecycleSnapshot> {
   const day = dayFromUnixSeconds(nowSec);
   const start = dayStartSeconds(day);
@@ -427,7 +432,9 @@ export async function computeTelegramCurrentLifecycleSnapshot(
       .bind(start, end)
       .first<CurrentAggregateRow>(),
     loadActivePresetFollowerRows(db),
-    loadPendingDeliveryCount(db),
+    options.pendingDeliveryCount == null
+      ? loadPendingDeliveryCount(db)
+      : Promise.resolve({ count: options.pendingDeliveryCount, unavailableFields: [] }),
     loadPreviousLifecycleSnapshot(db, day),
   ]);
 

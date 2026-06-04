@@ -203,20 +203,19 @@ describe("worker.fetch", () => {
   });
 
   it("skips edge cache for cache-bypass endpoints", async () => {
-    const env = makeEnv({ DB: mockD1(await validKeyDbTables(), { requireMatch: true }) });
+    const env = makeEnv();
     const { ctx, waits } = makeExecutionContext();
 
     const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/health", {
+      new Request("https://api.pharos.watch/api/status", {
         method: "GET",
-        headers: { "X-API-Key": VALID_API_KEY },
       }),
       env as never,
       ctx,
     );
     await Promise.all(waits);
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
   });
@@ -701,6 +700,7 @@ describe("worker.fetch", () => {
     const warmEnv = makeEnv({
       DB: mockD1(await validKeyDbTables(), { requireMatch: true }),
       REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
     });
     const { ctx: warmCtx, waits: warmWaits } = makeExecutionContext();
 
@@ -720,6 +720,7 @@ describe("worker.fetch", () => {
 
     const degradedEnv = makeEnv({
       REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",
+      API_KEY_REQUEST_ATTRIBUTION_DISABLED: "true",
       DB: mockD1([
         {
           match: "FROM api_keys",

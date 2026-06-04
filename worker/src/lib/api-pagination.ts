@@ -33,6 +33,7 @@ const PAGINATED_ORDER_DIRECTIONS = new Set(["ASC", "DESC"]);
 interface PaginatedEventQueryConfig<TRow, TEvent> {
   tableName: string;
   orderBy: string;
+  queryComment?: string;
   conditions: string[];
   filterBindings: (string | number)[];
   limit: number;
@@ -69,6 +70,7 @@ interface PaginatedEventCursorConfig<TRow> {
 interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<string, unknown>> {
   tableName: string;
   orderBy: string;
+  queryComment?: string;
   conditions: string[];
   filterBindings: (string | number)[];
   mapRow: (row: TRow) => TEvent;
@@ -182,6 +184,12 @@ function buildNextCursor<TRow>(
   return encodeCursor(values);
 }
 
+function buildSqlComment(comment: string | undefined, suffix: string): string {
+  if (!comment) return "";
+  if (!/^[a-z0-9:-]+$/.test(comment)) throw new Error(`Invalid query comment: ${comment}`);
+  return `/* ${comment}:${suffix} */ `;
+}
+
 export async function fetchPaginatedEvents<TRow, TEvent>(
   db: D1Database,
   config: PaginatedEventQueryConfig<TRow, TEvent>,
@@ -226,7 +234,8 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   });
 
   // SAFETY: `tableName` and every `ORDER BY` clause token are validated against allowlists above.
-  const dataSql = `SELECT * FROM ${config.tableName}${dataWhere} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
+  const dataSql =
+    `SELECT ${buildSqlComment(config.queryComment, "page")}* FROM ${config.tableName}${dataWhere} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
   const dataStatement = db.prepare(dataSql).bind(...dataFilterBindings, ...paginationBindings);
 
   let total: number | null = null;
@@ -239,7 +248,9 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
     });
     const [countBatch, dataResult] = await db.batch([
       // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
-      db.prepare(`SELECT COUNT(*) as total FROM ${config.tableName}${countWhere}`).bind(...config.filterBindings),
+      db.prepare(
+        `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${config.tableName}${countWhere}`,
+      ).bind(...config.filterBindings),
       dataStatement,
     ]);
     total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
@@ -328,6 +339,7 @@ export async function buildPaginatedEventResponse<
   const { events, total, totalExact, nextCursor } = await fetchPaginatedEvents<TRow, TEvent>(db, {
     tableName: config.tableName,
     orderBy: config.orderBy,
+    queryComment: config.queryComment,
     conditions: config.conditions,
     filterBindings: config.filterBindings,
     limit: pagination.limit,

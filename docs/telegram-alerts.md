@@ -89,6 +89,8 @@ primary navigation immediately after `/alt-pegs/`.
 
 The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, quiet-hours chats, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`. Replay-class auth counters are reserved for future telemetry unless a producer is wired.
 
+Pulse publication reuses heavy public sections on a 15-minute cadence, but only within the same UTC day. Mini App "today" counters reload after midnight UTC even when the previous heavy-section snapshot is still inside the reuse window.
+
 `quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
 
 Freshness is split deliberately:
@@ -96,6 +98,7 @@ Freshness is split deliberately:
 - `currentSnapshotAt` / `updatedAt` describe the current aggregate pulse, refreshed on the 5-minute Telegram pulse cadence.
 - `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when any lifecycle snapshot exists, including bootstrap periods where `historySource="live-fallback"` is used because older active-chat cohort points are prefixed ahead of the fixed daily snapshots.
 - `lifecycleHistoryEverySeconds=900` documents the lifecycle snapshot refresh cadence.
+- Heavy public pulse sections (`topCoins`, lifecycle history, and Mini App daily usage counters) are reused for up to 15 minutes when the cached pulse is valid. The current aggregate counts still refresh on the 5-minute pulse cadence, and pending-delivery count can reuse the dispatch lane's pending-capacity snapshot.
 
 The public chart labels snapshot-backed history as daily lifecycle snapshots. During bootstrap, it keeps the full lifecycle visible by prefixing fixed daily snapshots with live fallback points when active chats predate the first snapshot row. Those fallback prefix points are cumulative current active chats by subscriber-created date and should not be presented as stable churn-adjusted lifecycle history.
 
@@ -408,6 +411,12 @@ If the raw DEWS/depeg/safety snapshots are missing, unparsable, or older than 24
 
 This prevents a cold start from blasting subscribers with every current condition as if it were a new event.
 
+### Eventless Fast Path
+
+When the dispatch snapshots are healthy, the live safety source is generation-valid, and no DEWS, depeg, safety, or launch changes are detected, the dispatcher takes an eventless fast path. The fast path refreshes the snapshot cache and returns complete cron metadata, but skips subscriber fan-out, alert-job manifests, per-chat backoff reads, and fresh delivery assembly.
+
+The no-work branch is not used when snapshots need seeding, the safety source is missing/corrupt/stale/wrong-generation, any alert family has an actionable change, or due/expired pending rows need queue work. Due pending rows still drain on an otherwise eventless run; expired pending rows still run the TTL cleanup. The latest pending-capacity and safety-source assessment from dispatch are passed to the degradation watchdog and pulse snapshot sidecar in the same five-minute lane so those sidecars do not repeat the same D1 reads.
+
 ### Failure Modes
 
 If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `resolveTelegramPresetTargets()` cannot read the stablecoins cache, preset-backed delivery is marked degraded rather than treated as an empty subscriber list. Direct and global subscribers continue when they can be resolved safely, snapshot writes still proceed for the current run, and structured metadata/logging records whether the failure was query or resolution related. A persistent `telegram:preset-query-failure-count` cache counter accumulates across consecutive failed preset-resolution runs and resets on the next successful run; the current value is exposed as `presetQueryFailures` in the Telegram bot status metrics.
@@ -647,7 +656,7 @@ Additional Telegram bot status metrics now include:
 
 ### Alerting on degraded delivery
 
-`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reads fresh dispatch metadata and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any degraded-delivery condition holds; each condition emits a single "recovered" alert and clears its cache flag when it clears:
+`worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reuses the same-slot pending-capacity snapshot and safety-source assessment when dispatch produced them, falls back to live reads when they are unavailable, reads fresh dispatch metadata, and emits a one-shot alert via the existing `sendAlert(...)` webhook rail when any degraded-delivery condition holds; each condition emits a single "recovered" alert and clears its cache flag when it clears:
 
 - Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, or any row is inside the 15-minute near-TTL window. Count/age/drain breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
 - `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).

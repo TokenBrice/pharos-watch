@@ -19,8 +19,19 @@ import {
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
+const TELEGRAM_PULSE_HEAVY_SECTION_SECONDS = TELEGRAM_LIFECYCLE_HISTORY_SECONDS;
 const TELEGRAM_PULSE_CACHE_KEY = "telegram:pulse:snapshot";
+const TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY = "telegram:pulse:heavy-sections-updated-at";
 const PUBLIC_LOW_CARDINALITY_THRESHOLD = 5;
+
+interface TelegramPulseSnapshotOptions {
+  pendingCapacitySnapshot?: { active: number } | null;
+}
+
+interface CachedTelegramPulse {
+  pulse: TelegramPulse;
+  updatedAt: number;
+}
 
 const ACTIVE_WATCHER_SQL_CONDITION = `s.global_alert_dews = 1
   OR s.global_alert_depeg = 1
@@ -191,49 +202,133 @@ function needsBootstrapHistoryRebuild(pulse: TelegramPulse): boolean {
   return pulse.historySource === "snapshot" && pulse.watcherHistory.length < 2;
 }
 
-async function loadFreshTelegramPulseSnapshot(
-  db: D1Database,
-  nowSec: number,
-): Promise<TelegramPulse | null> {
+async function loadCachedTelegramPulseSnapshot(db: D1Database): Promise<CachedTelegramPulse | null> {
   try {
     const cached = await getCache(db, TELEGRAM_PULSE_CACHE_KEY);
-    if (!cached || nowSec - cached.updatedAt > TELEGRAM_PULSE_CACHE_SECONDS) return null;
+    if (!cached) return null;
     const pulse = parseCachedPulse(cached.value);
-    if (!pulse || needsBootstrapHistoryRebuild(pulse)) return null;
-    return pulse;
+    return pulse ? { pulse, updatedAt: cached.updatedAt } : null;
   } catch {
     return null;
   }
 }
 
+async function loadPulseHeavySectionsUpdatedAt(
+  db: D1Database,
+  cachedPulse: CachedTelegramPulse | null,
+): Promise<number | null> {
+  try {
+    const cached = await getCache(db, TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY);
+    const parsed = Number(cached?.value);
+    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+  } catch {
+    // Fall back to the pulse cache timestamp below.
+  }
+  return cachedPulse?.updatedAt ?? null;
+}
+
+async function recordPulseHeavySectionsUpdatedAt(db: D1Database, nowSec: number): Promise<void> {
+  try {
+    await setCache(db, TELEGRAM_PULSE_HEAVY_SECTION_CACHE_KEY, String(nowSec));
+  } catch {
+    // Heavy-section freshness is an optimization marker, not a response dependency.
+  }
+}
+
+async function loadFreshTelegramPulseSnapshot(
+  db: D1Database,
+  nowSec: number,
+): Promise<TelegramPulse | null> {
+  const cached = await loadCachedTelegramPulseSnapshot(db);
+  if (!cached || nowSec - cached.updatedAt > TELEGRAM_PULSE_CACHE_SECONDS) return null;
+  if (needsBootstrapHistoryRebuild(cached.pulse)) return null;
+  return cached.pulse;
+}
+
 async function buildTelegramPulseSnapshot(
   db: D1Database,
   nowSec: number,
+  options: TelegramPulseSnapshotOptions = {},
 ): Promise<TelegramPulse> {
-  const currentSnapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec);
+  const cachedPulse = await loadCachedTelegramPulseSnapshot(db);
+  const heavySectionsUpdatedAt = await loadPulseHeavySectionsUpdatedAt(db, cachedPulse);
+  const reusablePulse =
+    cachedPulse &&
+    heavySectionsUpdatedAt != null &&
+    nowSec - heavySectionsUpdatedAt < TELEGRAM_PULSE_HEAVY_SECTION_SECONDS &&
+    utcDayFromUnixSeconds(heavySectionsUpdatedAt) === utcDayFromUnixSeconds(nowSec) &&
+    !needsBootstrapHistoryRebuild(cachedPulse.pulse)
+      ? cachedPulse.pulse
+      : null;
+  const currentSnapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec, {
+    pendingDeliveryCount: options.pendingCapacitySnapshot?.active,
+  });
   await refreshTelegramLifecycleSnapshotIfStale(db, nowSec, currentSnapshot);
   const unavailableFields = new Set(currentSnapshot.unavailableFields ?? []);
-  const [topRows, snapshotHistory, miniAppDailyAggregate, fallbackHistory] = await Promise.all([
-    loadTelegramTopFollowedCoins(db, 5).catch((error) => {
-      console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
-      unavailableFields.add("topCoins");
-      return [];
-    }),
-    loadTelegramLifecycleHistory(db),
-    loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
-      console.warn("[telegram-pulse] mini-app daily aggregate unavailable:", error);
-      unavailableFields.add("miniAppDailyAggregate");
-      return null;
-    }),
-    loadFallbackWatcherHistory(db).catch((error) => {
-      console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
-      unavailableFields.add("watcherHistory");
-      return [];
-    }),
-  ]);
-  const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
-  const suppressedFields = new Set<string>();
-  const publicWatcherHistory = sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields);
+  const suppressedFields = new Set<string>(
+    reusablePulse?.privacy.suppressedFields.filter((field) => field !== "pendingDeliveries") ?? [],
+  );
+  const heavySections = reusablePulse
+    ? {
+        topCoins: reusablePulse.topCoins,
+        historySource: reusablePulse.historySource ?? "snapshot",
+        watcherHistory: reusablePulse.watcherHistory,
+        lifecycleHistoryUpdatedAt: reusablePulse.lifecycleHistoryUpdatedAt,
+        miniAppSessionsToday: reusablePulse.miniAppSessionsToday,
+        miniAppMutationsToday: reusablePulse.miniAppMutationsToday,
+        miniAppDeniedToday: reusablePulse.miniAppDeniedToday,
+        miniAppReplayClaimsToday: reusablePulse.miniAppReplayClaimsToday,
+      }
+    : await (async () => {
+        const [topRows, snapshotHistory, miniAppDailyAggregate, fallbackHistory] = await Promise.all([
+          loadTelegramTopFollowedCoins(db, 5).catch((error) => {
+            console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
+            unavailableFields.add("topCoins");
+            return [];
+          }),
+          loadTelegramLifecycleHistory(db),
+          loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
+            console.warn("[telegram-pulse] mini-app daily aggregate unavailable:", error);
+            unavailableFields.add("miniAppDailyAggregate");
+            return null;
+          }),
+          loadFallbackWatcherHistory(db).catch((error) => {
+            console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
+            unavailableFields.add("watcherHistory");
+            return [];
+          }),
+        ]);
+        const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
+        return {
+          topCoins: topRows.map(
+            (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
+          ),
+          historySource: lifecycleHistory.source,
+          watcherHistory: sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields),
+          lifecycleHistoryUpdatedAt: latestLifecycleHistoryUpdatedAt(snapshotHistory.points),
+          miniAppSessionsToday: miniAppDailyAggregate
+            ? publicOptionalCount(miniAppDailyAggregate.sessions, "miniAppSessionsToday", suppressedFields)
+            : null,
+          miniAppMutationsToday: miniAppDailyAggregate
+            ? publicOptionalCount(miniAppDailyAggregate.mutations, "miniAppMutationsToday", suppressedFields)
+            : null,
+          // Denied/replay counts are abuse-health counters, not adoption counters.
+          miniAppDeniedToday: miniAppDailyAggregate
+            ? miniAppDailyAggregate.denied
+            : null,
+          miniAppReplayClaimsToday: miniAppDailyAggregate
+            ? miniAppDailyAggregate.replayClaimed
+            : null,
+        };
+      })();
+  if (!reusablePulse) {
+    await recordPulseHeavySectionsUpdatedAt(db, nowSec);
+  }
+  if (reusablePulse) {
+    for (const field of reusablePulse.quality.unavailableFields) {
+      if (field !== "pendingDeliveries") unavailableFields.add(field);
+    }
+  }
   const qualityUnavailableFields = [...unavailableFields].sort();
 
   return {
@@ -249,11 +344,9 @@ async function buildTelegramPulseSnapshot(
       "reactivatedWatchersToday",
       suppressedFields,
     ),
-    historySource: lifecycleHistory.source,
-    topCoins: topRows.map(
-      (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
-    ),
-    watcherHistory: publicWatcherHistory,
+    historySource: heavySections.historySource,
+    topCoins: heavySections.topCoins,
+    watcherHistory: heavySections.watcherHistory,
     alertTypeChats: currentSnapshot.alertTypeOptIns,
     quietHoursEnabledChats: publicRequiredCount(
       currentSnapshot.quietHoursEnabledChats,
@@ -263,24 +356,15 @@ async function buildTelegramPulseSnapshot(
     pendingDeliveries: unavailableFields.has("pendingDeliveries")
       ? null
       : publicRequiredCount(currentSnapshot.pendingDeliveries, "pendingDeliveries", suppressedFields),
-    miniAppSessionsToday: miniAppDailyAggregate
-      ? publicOptionalCount(miniAppDailyAggregate.sessions, "miniAppSessionsToday", suppressedFields)
-      : null,
-    miniAppMutationsToday: miniAppDailyAggregate
-      ? publicOptionalCount(miniAppDailyAggregate.mutations, "miniAppMutationsToday", suppressedFields)
-      : null,
-    // Denied/replay counts are abuse-health counters, not adoption counters.
-    miniAppDeniedToday: miniAppDailyAggregate
-      ? miniAppDailyAggregate.denied
-      : null,
-    miniAppReplayClaimsToday: miniAppDailyAggregate
-      ? miniAppDailyAggregate.replayClaimed
-      : null,
+    miniAppSessionsToday: heavySections.miniAppSessionsToday,
+    miniAppMutationsToday: heavySections.miniAppMutationsToday,
+    miniAppDeniedToday: heavySections.miniAppDeniedToday,
+    miniAppReplayClaimsToday: heavySections.miniAppReplayClaimsToday,
     // P50 stays null until Wave 6 (T-64) wires bucketed session→first-mutation
     // latency through `telegram_usage_daily.latency_bucket`.
     miniAppOpenToFirstMutationP50Sec: null,
     currentSnapshotAt: currentSnapshot.snapshotAt,
-    lifecycleHistoryUpdatedAt: latestLifecycleHistoryUpdatedAt(snapshotHistory.points),
+    lifecycleHistoryUpdatedAt: heavySections.lifecycleHistoryUpdatedAt,
     lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,
     quality: {
       status: qualityUnavailableFields.length > 0 ? "partial" : "complete",
@@ -299,8 +383,9 @@ async function buildTelegramPulseSnapshot(
 export async function publishTelegramPulseSnapshot(
   db: D1Database,
   nowSec = Math.floor(Date.now() / 1000),
+  options: TelegramPulseSnapshotOptions = {},
 ): Promise<TelegramPulse> {
-  const pulse = await buildTelegramPulseSnapshot(db, nowSec);
+  const pulse = await buildTelegramPulseSnapshot(db, nowSec, options);
   try {
     await setCache(db, TELEGRAM_PULSE_CACHE_KEY, JSON.stringify(pulse));
   } catch {

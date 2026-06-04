@@ -263,7 +263,7 @@ function getYieldRankingsCachePayload(db: MockHistoryDb): unknown {
 
 function makeYieldOrphanDb(orphanIds: string[]) {
   return mockD1([
-    { match: "SELECT DISTINCT stablecoin_id FROM yield_data", rows: orphanIds.map((stablecoin_id) => ({ stablecoin_id })) },
+    { match: "pharos:yield-sync:yield-data-existing-ids", rows: orphanIds.map((stablecoin_id) => ({ stablecoin_id })) },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
     { match: "yield_history", rows: [] },
@@ -568,7 +568,7 @@ describe("syncYieldData", () => {
 
     const orphanScanCall = db
       .getHistory()
-      .find((entry) => entry.sql.includes("SELECT DISTINCT stablecoin_id FROM yield_data"));
+      .find((entry) => entry.sql.includes("pharos:yield-sync:yield-data-existing-ids"));
 
     expect(orphanScanCall).toBeDefined();
 

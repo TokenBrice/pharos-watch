@@ -24,7 +24,7 @@ Production Pages does not proxy public self-serve `/api/*` POST requests. The pu
 
 Self-serve API-key request honeypot submissions are intentionally no-op accepted: `POST /api/api-key-requests` returns `200 { "ok": true }` when the optional `website` field is non-empty, without creating an API-key request or sending email. Normal non-honeypot submissions return `202 Accepted` with `pending_verification`.
 
-The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`, without `Cache-Control: no-store`, and without freshness `Warning: 110`; it does not cache no-store routes such as `/api/health`.
+The direct Worker cache profiles below describe responses from `api.pharos.watch` / `site-api.pharos.watch`. The Pages `/_site-data/*` proxy adds a separate same-origin Cache API layer for successful responses without `Set-Cookie`, without `Cache-Control: no-store`, and without freshness `Warning: 110`; it does not cache no-store admin and control routes.
 
 ## Public API Auth
 
@@ -140,7 +140,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 
 | Profile            | `Cache-Control`                        | Used by                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| realtime           | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                                          |
+| realtime           | `public, s-maxage=60, max-age=10`      | health, stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                                                                                                                                                                  |
 | standard           | `public, s-maxage=300, max-age=60`     | stablecoin-charts, depeg-resolver, depeg-resolver-review, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                                                    |
 | custom             | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                                              |
 | per-coin           | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                  |
@@ -152,7 +152,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-live       | `public, s-maxage=3600, max-age=300`   | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                               |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`   | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                         |
 | reserve-fallback   | `public, s-maxage=300, max-age=60`     | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                             |
-| no-store           | `no-store`                             | health plus all admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `admin-telegram-chat/:chatId`, `status-probe-history`) |
+| no-store           | `no-store`                             | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `admin-telegram-chat/:chatId`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
 
@@ -170,7 +170,7 @@ Recommended minimum polling cadence for external integrations:
 | slow          | 3600 seconds          | Historical/timeline endpoints should generally be polled hourly |
 | archive       | 86400 seconds         | Historical digest snapshots and public snapshot index listings   |
 | immutable-snapshot | On-demand only        | Dated public dataset snapshots are content-addressed and immutable |
-| no-store      | On-demand only        | Health/admin diagnostics; avoid high-frequency polling          |
+| no-store      | On-demand only        | Admin/control diagnostics; avoid high-frequency polling         |
 
 Client best practices:
 
@@ -1822,7 +1822,7 @@ Returns a per-stablecoin projection from a dated public dataset snapshot. The pr
 
 ### `GET /api/health`
 
-Worker health check. Reports cache freshness, blacklist integrity, mint/burn freshness, and circuit-breaker states. Not served from Cloudflare edge cache (`no-store`).
+Worker health check. Reports cache freshness, blacklist integrity, mint/burn freshness, and circuit-breaker states. Public responses use the realtime cache profile (`public, s-maxage=60, max-age=10`), so edge responses can lag live D1 state by up to about 60 seconds.
 
 Cache freshness in `/api/health` separates producer cadence, endpoint freshness, and availability impact. `caches[*].maxAge` is the availability budget used by `/api/health`, `/api/status`, and the public/admin status pages. `endpointMaxAge` is the endpoint freshness basis used for `_meta`, `X-Data-Age`, and the generic freshness warning runway when it differs. `producerIntervalSec` is the expected writer cadence.
 

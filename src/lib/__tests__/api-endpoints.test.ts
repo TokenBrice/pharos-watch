@@ -211,7 +211,7 @@ describe("api endpoint registry", () => {
   });
 
   it("flags cache-bypass paths for edge cache skip rules", () => {
-    expect(isCacheBypassPath("/api/health")).toBe(true);
+    expect(isCacheBypassPath("/api/health")).toBe(false);
     expect(isCacheBypassPath("/api/status")).toBe(true);
     expect(isCacheBypassPath("/api/backfill-dews")).toBe(true);
     expect(isCacheBypassPath("/api/feedback")).toBe(true);
@@ -220,6 +220,7 @@ describe("api endpoint registry", () => {
     expect(isCacheBypassPath("/api/telegram-mini-app/session")).toBe(true);
     expect(isCacheBypassPath("/api/telegram-mini-app/mutate")).toBe(true);
     expect(isCacheBypassPath("/api/stablecoins")).toBe(false);
+    expect(getPublicApiAccess("/api/health")).toBe("exempt");
   });
 
   it("matches dynamic admin routes from the shared registry", () => {

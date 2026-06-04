@@ -7,6 +7,7 @@ import { cancelResponseBodyQuietly } from "../lib/response-body";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../lib/status-evaluation";
+import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { route } from "../router";
 import {
   buildDiscrepancy,
@@ -47,6 +48,10 @@ const CRITICAL_PROBE_PATHS = [
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const HEALTH_PROBE_PATH = "/api/health";
+const STATUS_SELF_CHECK_INTERVAL_SEC = 15 * 60;
+export const STATUS_DEEP_PROBE_ROTATION_BUCKETS = 3;
+export const STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC =
+  STATUS_SELF_CHECK_INTERVAL_SEC * STATUS_DEEP_PROBE_ROTATION_BUCKETS;
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_FAILURE_ALERT_THRESHOLD = 3;
 const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
@@ -119,6 +124,44 @@ function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
       latencyMs: probe.latencyMs,
       error: probe.error ?? null,
     }));
+}
+
+function uniquePaths(paths: string[]): string[] {
+  return [...new Set(paths)];
+}
+
+export function selectStatusProbePathsForRun(
+  nowSec: number,
+  paths = CRITICAL_PROBE_PATHS,
+): {
+  paths: string[];
+  rotationBucket: number;
+  rotationBucketCount: number;
+  fullSweepWindowSec: number;
+  deepProbeCount: number;
+  selectedDeepProbeCount: number;
+} {
+  const candidates = uniquePaths(paths);
+  const deepProbePaths = candidates.filter((path) => path !== HEALTH_PROBE_PATH);
+  const rotationBucketCount = Math.max(
+    1,
+    Math.min(STATUS_DEEP_PROBE_ROTATION_BUCKETS, deepProbePaths.length || 1),
+  );
+  const rotationBucket = deepProbePaths.length === 0
+    ? 0
+    : Math.floor(nowSec / STATUS_SELF_CHECK_INTERVAL_SEC) % rotationBucketCount;
+  const selectedDeepProbePaths = deepProbePaths.filter(
+    (_path, index) => index % rotationBucketCount === rotationBucket,
+  );
+
+  return {
+    paths: [HEALTH_PROBE_PATH, ...selectedDeepProbePaths],
+    rotationBucket,
+    rotationBucketCount,
+    fullSweepWindowSec: rotationBucketCount * STATUS_SELF_CHECK_INTERVAL_SEC,
+    deepProbeCount: deepProbePaths.length,
+    selectedDeepProbeCount: selectedDeepProbePaths.length,
+  };
 }
 
 export function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
@@ -325,16 +368,17 @@ export async function runStatusSelfCheck(
 ): Promise<CronResult> {
   const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
   const probeMode = shouldUseInternalProbe(probeBaseUrl, ctx) ? "internal-router" : "external-http";
+  const now = Math.floor(Date.now() / 1000);
+  const probeSelection = selectStatusProbePathsForRun(now);
   const probes: ProbeResult[] = [];
-  for (const path of CRITICAL_PROBE_PATHS) {
+  for (const path of probeSelection.paths) {
     if (signal?.aborted) break;
     probes.push(
-      (ctx && ADMIN_PROBE_PATHS.includes(path)) || (probeMode === "internal-router" && ctx)
+      (ctx && ADMIN_PROBE_PATHS.includes(path)) || (probeMode === "internal-router" && ctx && path !== HEALTH_PROBE_PATH)
         ? await probePathInternally(db, path, probeBaseUrl, ctx!, mintBurnFreshnessConfig)
         : await probePathExternally(path, probeBaseUrl, signal)
     );
   }
-  const now = Math.floor(Date.now() / 1000);
 
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
@@ -378,6 +422,13 @@ export async function runStatusSelfCheck(
       })),
       latencySummary,
       slowestProbes,
+      probeRotation: {
+        bucket: probeSelection.rotationBucket,
+        bucketCount: probeSelection.rotationBucketCount,
+        fullSweepWindowSec: probeSelection.fullSweepWindowSec,
+        deepProbeCount: probeSelection.deepProbeCount,
+        selectedDeepProbeCount: probeSelection.selectedDeepProbeCount,
+      },
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
     },
@@ -388,6 +439,7 @@ export async function runStatusSelfCheck(
     effectiveStatus,
     persistenceSucceeded: statusPersistenceSucceeded,
   } = await evaluateStatusAndPersist(db, now);
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
   const discrepancyObservation = buildDiscrepancy(
     effectiveStatus,
     {
@@ -478,10 +530,18 @@ export async function runStatusSelfCheck(
       effectiveStatus,
       probePersistenceSucceeded,
       statusPersistenceSucceeded,
+      rawSnapshotPersistenceSucceeded,
       discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
       slowestProbes,
+      probeRotation: {
+        bucket: probeSelection.rotationBucket,
+        bucketCount: probeSelection.rotationBucketCount,
+        fullSweepWindowSec: probeSelection.fullSweepWindowSec,
+        deepProbeCount: probeSelection.deepProbeCount,
+        selectedDeepProbeCount: probeSelection.selectedDeepProbeCount,
+      },
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
       probeFailureStreak: discrepancyState.consecutiveProbeFailures,

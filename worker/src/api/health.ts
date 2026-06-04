@@ -5,6 +5,7 @@ import {
 import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";
+import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -64,5 +65,5 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     telegramSummary,
   };
 
-  return jsonResponse(body, { "Cache-Control": "no-store" });
+  return jsonResponse(body, { "Cache-Control": CACHE_PROFILES.realtime });
 });

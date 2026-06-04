@@ -113,8 +113,10 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
   let pendingPrune: Promise<void> | null = null;
   const buffered = new Map<string, TEntry>();
   let pendingFlush: Promise<void> | null = null;
+  let generation = 0;
 
   function reset(): void {
+    generation++;
     lastPruneBucket = null;
     pendingPrune = null;
     buffered.clear();
@@ -168,10 +170,14 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
       return pendingFlush;
     }
 
+    const flushGeneration = generation;
     const flushPromise = new Promise<void>((resolve) => {
       setTimeout(resolve, options.flushDelayMs);
     })
-      .then(() => flush(db, nowSec))
+      .then(() => {
+        if (flushGeneration !== generation) return;
+        return flush(db, nowSec);
+      })
       .catch((error: unknown) => {
         console.warn(`[request-attribution] ${options.logLabel} attribution flush failed:`, error);
       })

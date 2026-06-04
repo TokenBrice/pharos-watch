@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { handleTelegramPulse } from "../telegram-pulse";
+import { handleTelegramPulse, publishTelegramPulseSnapshot } from "../telegram-pulse";
 
 describe("handleTelegramPulse", () => {
   it("serves a fresh materialized pulse snapshot without live aggregate reads", async () => {
@@ -799,5 +799,237 @@ describe("handleTelegramPulse", () => {
         reactivatedWatchers: 0,
       },
     ]);
+  });
+});
+
+describe("publishTelegramPulseSnapshot", () => {
+  it("reuses heavy public sections on the slower pulse cadence", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const cachedPulse = {
+      activeWatchers: 8,
+      coinSubscriptions: 13,
+      explicitCoinSubscriptions: 10,
+      presetImpliedCoinSubscriptions: 3,
+      activePresetFollowers: 2,
+      newWatchersToday: 5,
+      churnedWatchersToday: 0,
+      reactivatedWatchersToday: 0,
+      historySource: "live-fallback",
+      topCoins: ["USDC"],
+      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, allTypes: 1 },
+      quietHoursEnabledChats: 6,
+      pendingDeliveries: 5,
+      miniAppSessionsToday: 7,
+      miniAppMutationsToday: 6,
+      miniAppDeniedToday: 2,
+      miniAppReplayClaimsToday: 1,
+      miniAppOpenToFirstMutationP50Sec: null,
+      currentSnapshotAt: nowSec - 600,
+      lifecycleHistoryUpdatedAt: nowSec - 3_600,
+      lifecycleHistoryEverySeconds: 900,
+      quality: { status: "complete", unavailableFields: [] },
+      privacy: {
+        exactActiveWatchers: true,
+        lowCardinalityThreshold: 5,
+        suppressedFields: [],
+      },
+      updatedAt: nowSec - 600,
+      updatedEverySeconds: 300,
+      watcherHistory: [
+        {
+          date: "2026-05-10",
+          timestamp: 1_778_371_200_000,
+          snapshotAt: nowSec - 4_500,
+          newWatchers: 3,
+          activeWatchers: 6,
+          churnedWatchers: 0,
+          reactivatedWatchers: 0,
+        },
+        {
+          date: "2026-05-11",
+          timestamp: 1_778_457_600_000,
+          snapshotAt: nowSec - 3_600,
+          newWatchers: 5,
+          activeWatchers: 8,
+          churnedWatchers: 0,
+          reactivatedWatchers: 0,
+        },
+      ],
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "telegram:pulse:snapshot",
+            value: JSON.stringify(cachedPulse),
+            updated_at: nowSec - 600,
+          },
+          {
+            key: "telegram:pulse:heavy-sections-updated-at",
+            value: String(nowSec - 600),
+            updated_at: nowSec - 600,
+          },
+        ],
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 12,
+          new_watchers: 6,
+          explicit_coin_follows: 18,
+          active_preset_followers: 2,
+          active_dews_opt_ins: 10,
+          active_depeg_opt_ins: 9,
+          active_safety_opt_ins: 8,
+          active_launch_opt_ins: 7,
+          active_all_types_opt_ins: 6,
+          quiet_hours_enabled_chats: 6,
+        },
+        rows: [],
+      },
+      {
+        match: "ORDER BY day DESC",
+        first: null,
+        rows: [],
+      },
+      {
+        match: "FROM telegram_preset_subscriptions",
+        rows: [],
+      },
+    ]);
+
+    const pulse = await publishTelegramPulseSnapshot(db, nowSec, {
+      pendingCapacitySnapshot: { active: 42 },
+    });
+
+    expect(pulse.activeWatchers).toBe(12);
+    expect(pulse.coinSubscriptions).toBe(18);
+    expect(pulse.pendingDeliveries).toBe(42);
+    expect(pulse.topCoins).toEqual(["USDC"]);
+    expect(pulse.watcherHistory).toEqual(cachedPulse.watcherHistory);
+    expect(pulse.miniAppSessionsToday).toBe(7);
+    expect(pulse.lifecycleHistoryUpdatedAt).toBe(nowSec - 3_600);
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("FROM telegram_pending_alerts"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("GROUP BY stablecoin_id"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("ORDER BY day ASC"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("GROUP BY day"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("FROM telegram_usage_daily"))).toBe(false);
+  });
+
+  it("reloads daily Mini App counters across UTC midnight", async () => {
+    const nowSec = Math.floor(Date.parse("2026-05-12T00:05:00.000Z") / 1000);
+    const previousDaySec = Math.floor(Date.parse("2026-05-11T23:55:00.000Z") / 1000);
+    const cachedPulse = {
+      activeWatchers: 8,
+      coinSubscriptions: 13,
+      explicitCoinSubscriptions: 10,
+      presetImpliedCoinSubscriptions: 3,
+      activePresetFollowers: 2,
+      newWatchersToday: 5,
+      churnedWatchersToday: 0,
+      reactivatedWatchersToday: 0,
+      historySource: "live-fallback",
+      topCoins: ["USDC"],
+      alertTypeChats: { dews: 4, depeg: 5, safety: 6, launch: 1, allTypes: 1 },
+      quietHoursEnabledChats: 6,
+      pendingDeliveries: 5,
+      miniAppSessionsToday: 99,
+      miniAppMutationsToday: 98,
+      miniAppDeniedToday: 97,
+      miniAppReplayClaimsToday: 96,
+      miniAppOpenToFirstMutationP50Sec: null,
+      currentSnapshotAt: previousDaySec,
+      lifecycleHistoryUpdatedAt: previousDaySec,
+      lifecycleHistoryEverySeconds: 900,
+      quality: { status: "complete", unavailableFields: [] },
+      privacy: {
+        exactActiveWatchers: true,
+        lowCardinalityThreshold: 5,
+        suppressedFields: [],
+      },
+      updatedAt: previousDaySec,
+      updatedEverySeconds: 300,
+      watcherHistory: [
+        {
+          date: "2026-05-10",
+          timestamp: 1_778_371_200_000,
+          snapshotAt: previousDaySec - 900,
+          newWatchers: 3,
+          activeWatchers: 6,
+          churnedWatchers: 0,
+          reactivatedWatchers: 0,
+        },
+        {
+          date: "2026-05-11",
+          timestamp: 1_778_457_600_000,
+          snapshotAt: previousDaySec,
+          newWatchers: 5,
+          activeWatchers: 8,
+          churnedWatchers: 0,
+          reactivatedWatchers: 0,
+        },
+      ],
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "telegram:pulse:snapshot",
+            value: JSON.stringify(cachedPulse),
+            updated_at: previousDaySec,
+          },
+          {
+            key: "telegram:pulse:heavy-sections-updated-at",
+            value: String(previousDaySec),
+            updated_at: previousDaySec,
+          },
+        ],
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 12,
+          new_watchers: 6,
+          explicit_coin_follows: 18,
+          active_preset_followers: 2,
+          active_dews_opt_ins: 10,
+          active_depeg_opt_ins: 9,
+          active_safety_opt_ins: 8,
+          active_launch_opt_ins: 7,
+          active_all_types_opt_ins: 6,
+          quiet_hours_enabled_chats: 6,
+        },
+        rows: [],
+      },
+      { match: "ORDER BY day DESC", first: null, rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "FROM telegram_subscriptions", rows: [{ stablecoin_id: "usdc-circle", subscribers: 12 }] },
+      { match: "ORDER BY day ASC", rows: [] },
+      { match: "GROUP BY day", rows: [] },
+      {
+        match: "FROM telegram_usage_daily",
+        first: {
+          mini_app_sessions: 7,
+          mini_app_mutations: 6,
+          mini_app_denied: 2,
+          mini_app_replay_claimed: 1,
+        },
+        rows: [],
+      },
+    ]);
+
+    const pulse = await publishTelegramPulseSnapshot(db, nowSec, {
+      pendingCapacitySnapshot: { active: 42 },
+    });
+
+    expect(pulse.miniAppSessionsToday).toBe(7);
+    expect(pulse.miniAppMutationsToday).toBe(6);
+    expect(pulse.miniAppDeniedToday).toBe(2);
+    expect(pulse.miniAppReplayClaimsToday).toBe(1);
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_usage_daily"))).toBe(true);
   });
 });

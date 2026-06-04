@@ -328,6 +328,29 @@ describe("syncBlacklist", () => {
     expect(meta.currentBalanceCacheUpdated).toBe(0);
   });
 
+  it("records thrown config scan exceptions and continues the sync", async () => {
+    const db = makeDb();
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.apiErrors).toBe(1);
+    expect(meta.apiErrorClasses.TypeError).toBe(1);
+    expect(fetchEvmLogsForTopicWithCompleteness).toHaveBeenCalled();
+  });
+
   it("isolates per-chain errors — Etherscan 429 does not block Tron", async () => {
     const db = makeDb();
 
@@ -540,7 +563,7 @@ describe("syncBlacklist", () => {
 
     const history = db.getHistory();
     const tronLedgerMirrorRuns = history.filter((entry) =>
-      entry.sql.includes("amount_source = 'current_balance_snapshot'"),
+      entry.sql.includes("blacklist-tron-ledger-backfill-candidates"),
     );
     const currentBalanceUpserts = history.filter((entry) =>
       entry.sql.includes("INSERT INTO blacklist_current_balances"),
@@ -574,6 +597,9 @@ describe("syncBlacklist", () => {
     expect(meta.apiErrors).toBe(0);
     expect(meta.rowsWritten).toBe(0);
     expect(meta.eventsFetched).toBe(0);
+    expect(meta.producerGapMetricSnapshots).toBe(2);
+    expect(meta.producerSummarySnapshot).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
   });
 
   it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
@@ -603,6 +629,8 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
     expect(meta.runtimeBudgetReached).toBe(true);
     expect(meta.contractsSkipped).toBeGreaterThan(0);
+    expect(meta.producerSnapshotSkipped).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
   it("advances sync state for EVM chains toward chain head when no events", async () => {

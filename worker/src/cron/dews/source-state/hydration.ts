@@ -34,6 +34,13 @@ export const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 export const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
 const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 
+type PreviousStressSignalRow = {
+  stablecoin_id: string;
+  signals_json: string;
+  band: string;
+  computed_at: number;
+};
+
 export interface HydrationCallbacks {
   registerSourceFailure: (source: string, error: unknown, options?: { bootstrapAllowed?: boolean }) => void;
   registerMalformedPersistedInput: (options: {
@@ -54,6 +61,64 @@ export interface HydrationContext extends HydrationCallbacks {
 
 function getRowAgeSec(updatedAt: number | null | undefined, nowSec: number): number | null {
   return typeof updatedAt === "number" && Number.isFinite(updatedAt) ? Math.max(0, nowSec - updatedAt) : null;
+}
+
+function arePreviousStressSignalRowsStale(rows: PreviousStressSignalRow[], nowSec: number): boolean {
+  if (rows.length === 0) return true;
+  const newestComputedAt = rows.reduce(
+    (max, row) => Math.max(max, Number.isFinite(row.computed_at) ? row.computed_at : 0),
+    0,
+  );
+  return newestComputedAt <= 0 || nowSec - newestComputedAt > DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC;
+}
+
+function mergeNewestPreviousStressSignalRows(
+  legacyRows: PreviousStressSignalRow[],
+  latestRows: PreviousStressSignalRow[],
+): PreviousStressSignalRow[] {
+  const byId = new Map<string, PreviousStressSignalRow>();
+  for (const row of legacyRows) {
+    byId.set(row.stablecoin_id, row);
+  }
+  for (const row of latestRows) {
+    const existing = byId.get(row.stablecoin_id);
+    if (!existing || row.computed_at >= existing.computed_at) {
+      byId.set(row.stablecoin_id, row);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<PreviousStressSignalRow[]> {
+  let latestRows: PreviousStressSignalRow[] = [];
+  try {
+    const rows = await ctx.db
+      .prepare(
+        `SELECT /* pharos:dews:previous-stress-latest */
+           stablecoin_id, signals_json, band, computed_at
+         FROM stress_signals_latest`,
+      )
+      .all<PreviousStressSignalRow>();
+    latestRows = rows.results ?? [];
+  } catch {
+    latestRows = [];
+  }
+
+  const legacyRows = await ctx.db
+    .prepare(
+      `SELECT /* pharos:dews:previous-stress-legacy */
+         s.stablecoin_id, s.signals_json, s.band, s.computed_at
+       FROM stress_signals s
+       INNER JOIN (
+         SELECT stablecoin_id, MAX(computed_at) as max_at
+         FROM stress_signals GROUP BY stablecoin_id
+       ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+    )
+    .all<PreviousStressSignalRow>();
+  const legacyResults = legacyRows.results ?? [];
+  if (legacyResults.length === 0) return latestRows;
+  if (arePreviousStressSignalRowsStale(latestRows, ctx.nowSec)) return legacyResults;
+  return mergeNewestPreviousStressSignalRows(legacyResults, latestRows);
 }
 
 export interface DexLiquidityHydration {
@@ -179,7 +244,11 @@ export async function hydrateDexLiquidityHistory(ctx: HydrationContext): Promise
   try {
     const liqHistRows = await ctx.db
       .prepare(
-        "SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd FROM dex_liquidity_history WHERE snapshot_date >= ? ORDER BY snapshot_date ASC",
+        `SELECT /* pharos:dews:dex-liquidity-history */
+           stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd
+         FROM dex_liquidity_history
+         WHERE snapshot_date >= ?
+         ORDER BY snapshot_date ASC`,
       )
       .bind(liqHistCutoff)
       .all<{
@@ -218,11 +287,23 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
   let blacklistRowsRead = 0;
   try {
     const bl7d = await ctx.db
-      .prepare("SELECT stablecoin, COUNT(*) as cnt FROM blacklist_events WHERE timestamp >= ? GROUP BY stablecoin")
+      .prepare(
+        `SELECT /* pharos:dews:blacklist-events-7d */
+           stablecoin, COUNT(*) as cnt
+         FROM blacklist_events
+         WHERE timestamp >= ?
+         GROUP BY stablecoin`,
+      )
       .bind(ctx.nowSec - 7 * DAY_SECONDS)
       .all<{ stablecoin: string; cnt: number }>();
     const bl24h = await ctx.db
-      .prepare("SELECT stablecoin, COUNT(*) as cnt FROM blacklist_events WHERE timestamp >= ? GROUP BY stablecoin")
+      .prepare(
+        `SELECT /* pharos:dews:blacklist-events-24h */
+           stablecoin, COUNT(*) as cnt
+         FROM blacklist_events
+         WHERE timestamp >= ?
+         GROUP BY stablecoin`,
+      )
       .bind(ctx.nowSec - DAY_SECONDS)
       .all<{ stablecoin: string; cnt: number }>();
     blacklistRowsRead = (bl7d.results?.length ?? 0) + (bl24h.results?.length ?? 0);
@@ -258,18 +339,9 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
   const prevSignalStaleIds = new Set<string>();
   let prevSignalRowsRead = 0;
   try {
-    const prevRows = await ctx.db
-      .prepare(
-        `SELECT s.stablecoin_id, s.signals_json, s.band, s.computed_at
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<{ stablecoin_id: string; signals_json: string; band: string; computed_at: number }>();
-    prevSignalRowsRead = prevRows.results.length;
-    for (const row of prevRows.results) {
+    const prevRows = await loadPreviousStressSignalRows(ctx);
+    prevSignalRowsRead = prevRows.length;
+    for (const row of prevRows) {
       const ageSec = getRowAgeSec(row.computed_at, ctx.nowSec);
       if (ageSec == null || ageSec > DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC) {
         prevSignalStaleIds.add(row.stablecoin_id);
@@ -310,7 +382,8 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
   try {
     const mb24h = await ctx.db
       .prepare(
-        `SELECT stablecoin_id, chain_id,
+        `SELECT /* pharos:dews:mint-burn-24h */
+                stablecoin_id, chain_id,
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint
          FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
@@ -320,7 +393,8 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
 
     const mb30d = await ctx.db
       .prepare(
-        `SELECT stablecoin_id, chain_id,
+        `SELECT /* pharos:dews:mint-burn-30d */
+                stablecoin_id, chain_id,
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
                 COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data
@@ -387,7 +461,8 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
   try {
     const yieldRows = await ctx.db
       .prepare(
-        `SELECT stablecoin_id, warning_signals
+        `SELECT /* pharos:dews:yield-warning-signals */
+           stablecoin_id, warning_signals
          FROM yield_data
          WHERE is_best = 1
            AND warning_signals IS NOT NULL
@@ -438,7 +513,7 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
   const yieldRankChangeAttribution = new Map<string, YieldRankChangeAttribution>();
   try {
     const rankingsCache = await ctx.db
-      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .prepare("SELECT /* pharos:dews:yield-rankings-cache */ value, updated_at FROM cache WHERE key = ?")
       .bind("yield-rankings")
       .first<{ value: string | null; updated_at: number | null }>();
     const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(rankingsCache?.value ?? null, {
@@ -486,7 +561,10 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
 export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<number | null> {
   try {
     const psiRow = await ctx.db
-      .prepare("SELECT score FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .prepare(
+        `SELECT /* pharos:dews:latest-psi-score */
+           score FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1`,
+      )
       .first<{ score: number }>();
     return psiRow ? psiRow.score : null;
   } catch (error) {

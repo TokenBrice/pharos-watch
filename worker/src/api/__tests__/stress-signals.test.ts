@@ -5,6 +5,7 @@ import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
 } from "@shared/types/market";
+import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
 
 const nowSec = Math.floor(Date.now() / 1000);
 
@@ -14,7 +15,8 @@ const signalsJson = JSON.stringify({
 });
 
 const AGGREGATE_STRESS_SIGNALS_SQL = `
-  SELECT s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
+  SELECT /* pharos:stress-signals:legacy-latest-all */
+    s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
   FROM stress_signals s
   INNER JOIN (
     SELECT stablecoin_id, MAX(computed_at) as max_at
@@ -22,15 +24,30 @@ const AGGREGATE_STRESS_SIGNALS_SQL = `
   ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
 `;
 
+const LATEST_AGGREGATE_STRESS_SIGNALS_SQL = `
+  SELECT /* pharos:stress-signals:latest-all */
+    stablecoin_id, score, band, signals_json, computed_at
+  FROM stress_signals_latest
+`;
+
 const LATEST_STRESS_SIGNAL_SQL = `
-  SELECT score, band, signals_json, computed_at
+  SELECT /* pharos:stress-signals:latest-one */
+    score, band, signals_json, computed_at
+  FROM stress_signals_latest
+  WHERE stablecoin_id = ?
+`;
+
+const LEGACY_STRESS_SIGNAL_SQL = `
+  SELECT /* pharos:stress-signals:legacy-latest-one */
+    score, band, signals_json, computed_at
   FROM stress_signals
   WHERE stablecoin_id = ?
   ORDER BY computed_at DESC LIMIT 1
 `;
 
 const STRESS_SIGNAL_HISTORY_SQL = `
-  SELECT snapshot_date, score, band, signals_json
+  SELECT /* pharos:stress-signals:history-one */
+    snapshot_date, score, band, signals_json
   FROM stress_signal_history
   WHERE stablecoin_id = ? AND snapshot_date >= ?
   ORDER BY snapshot_date ASC
@@ -40,14 +57,41 @@ function makeStrictAggregateDb(rows: Record<string, unknown>[]) {
   return mockD1([{ match: AGGREGATE_STRESS_SIGNALS_SQL, rows }], { strict: true });
 }
 
+function makeStrictLatestAggregateDb(
+  rows: Record<string, unknown>[],
+  legacyRows: Record<string, unknown>[] = [],
+) {
+  return mockD1([
+    { match: LATEST_AGGREGATE_STRESS_SIGNALS_SQL, rows },
+    { match: AGGREGATE_STRESS_SIGNALS_SQL, rows: legacyRows },
+  ], { strict: true });
+}
+
 function makeStrictSingleCoinDb(
   current: Record<string, unknown> | null,
   historyRows: Record<string, unknown>[] = [],
 ) {
   return mockD1([
     {
-      match: LATEST_STRESS_SIGNAL_SQL,
+      match: LEGACY_STRESS_SIGNAL_SQL,
       rows: current ? [current] : [],
+      first: current,
+    },
+    {
+      match: STRESS_SIGNAL_HISTORY_SQL,
+      rows: historyRows,
+    },
+  ], { strict: true });
+}
+
+function makeStrictMaterializedSingleCoinDb(
+  current: Record<string, unknown>,
+  historyRows: Record<string, unknown>[] = [],
+) {
+  return mockD1([
+    {
+      match: LATEST_STRESS_SIGNAL_SQL,
+      rows: [current],
       first: current,
     },
     {
@@ -59,7 +103,7 @@ function makeStrictSingleCoinDb(
 
 describe("handleStressSignals contract tests", () => {
   it("aggregate mode returns shape matching StressSignalsAllResponseSchema", async () => {
-    const db = makeStrictAggregateDb([
+    const db = makeStrictLatestAggregateDb([
       {
         stablecoin_id: "usdt-tether",
         score: 12,
@@ -94,6 +138,68 @@ describe("handleStressSignals contract tests", () => {
     expect(body.eligibleCount ?? 0).toBeGreaterThanOrEqual(body.computedCount ?? 0);
     expect(body.signals["usdt-tether"]).toHaveProperty("methodologyVersion");
     expect(body.signals["usdt-tether"]).toHaveProperty("ageClassification");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("aggregate mode falls back to legacy stress_signals when latest materialization is unavailable", async () => {
+    const db = makeStrictAggregateDb([
+      {
+        stablecoin_id: "usdt-tether",
+        score: 12,
+        band: "CALM",
+        signals_json: signalsJson,
+        computed_at: nowSec,
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { computedCount: number; signals: Record<string, unknown> };
+    expect(body.computedCount).toBe(1);
+    expect(body.signals).toHaveProperty("usdt-tether");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("aggregate mode merges partial latest materialization over legacy rows", async () => {
+    const db = makeStrictLatestAggregateDb(
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 15,
+          band: "CALM",
+          signals_json: signalsJson,
+          computed_at: nowSec,
+        },
+      ],
+      [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 12,
+          band: "CALM",
+          signals_json: signalsJson,
+          computed_at: nowSec - 60,
+        },
+        {
+          stablecoin_id: "usdc-circle",
+          score: 33,
+          band: "WATCH",
+          signals_json: signalsJson,
+          computed_at: nowSec,
+        },
+      ],
+    );
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      computedCount: number;
+      signals: Record<string, { score: number }>;
+    };
+    expect(body.computedCount).toBe(2);
+    expect(body.signals["usdt-tether"]?.score).toBe(15);
+    expect(body.signals["usdc-circle"]?.score).toBe(33);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
@@ -134,6 +240,30 @@ describe("handleStressSignals contract tests", () => {
     expect(body.current).toHaveProperty("methodologyVersion");
     expect(body.current).toHaveProperty("ageClassification");
     expect(body.history[0]).toHaveProperty("methodologyVersion");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("single-coin mode serves fresh materialized latest rows before legacy fallback", async () => {
+    const db = makeStrictMaterializedSingleCoinDb({
+      score: 27,
+      band: "WATCH",
+      signals_json: signalsJson,
+      computed_at: nowSec,
+    });
+
+    const res = await handleStressSignals(
+      db,
+      new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      current: { score: number; computedAt: number } | null;
+      currentStatus: string;
+    };
+    expect(body.current?.score).toBe(27);
+    expect(body.current?.computedAt).toBe(nowSec);
+    expect(body.currentStatus).toBe("ok");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
@@ -211,6 +341,32 @@ describe("handleStressSignals contract tests", () => {
     };
     expect(body.signals).toHaveProperty("usdt-tether");
     expect(body.signals).not.toHaveProperty("999999999");
+  });
+
+  it("marks aggregate coverage ok when every readable stablecoin has a current row", async () => {
+    const rows = [...READABLE_IDS].map((stablecoinId) => ({
+      stablecoin_id: stablecoinId,
+      score: 12,
+      band: "CALM",
+      signals_json: signalsJson,
+      computed_at: nowSec,
+    }));
+    const db = makeStrictLatestAggregateDb(rows);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      computedCount: number;
+      missingCount: number;
+      coverageStatus: string;
+      coverageReasons: string[];
+    };
+    expect(body.computedCount).toBe(READABLE_IDS.size);
+    expect(body.missingCount).toBe(0);
+    expect(body.coverageStatus).toBe("ok");
+    expect(body.coverageReasons).toEqual([]);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
   it("includes amplifiers (psi + contagion) on aggregate entries, unwrapping the wrapped payload", async () => {

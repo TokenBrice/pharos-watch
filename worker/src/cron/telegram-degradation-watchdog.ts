@@ -1,6 +1,7 @@
 import {
   ALERT_SAFETY_SOURCE_CACHE_KEY,
   assessAlertSafetySourceCache,
+  type AlertSafetySourceAssessment,
 } from "../lib/alert-safety-source-cache";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { sendAlert } from "../lib/alerts";
@@ -51,6 +52,11 @@ interface WatchdogResult {
   };
   safetySource: WatchdogAlertOutcome & { state: string | null };
   zeroSend: WatchdogAlertOutcome & { streak: number };
+}
+
+export interface TelegramDegradationWatchdogOptions {
+  pendingCapacitySnapshot?: PendingCapacitySnapshot | null;
+  safetySourceAssessment?: AlertSafetySourceAssessment | null;
 }
 
 function emptyOutcome(): WatchdogAlertOutcome {
@@ -118,8 +124,9 @@ async function evaluatePendingBacklog(
   db: D1Database,
   alertWebhookUrl: string | null,
   nowSec: number,
+  preloadedCapacity?: PendingCapacitySnapshot | null,
 ): Promise<WatchdogResult["pendingBacklog"]> {
-  const capacity = await readPendingCapacity(db, nowSec);
+  const capacity = preloadedCapacity ?? await readPendingCapacity(db, nowSec);
   const count = capacity?.active ?? null;
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.pendingSince);
   const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.pendingAlerted);
@@ -200,11 +207,14 @@ async function evaluateSafetySource(
   db: D1Database,
   alertWebhookUrl: string | null,
   nowSec: number,
+  preloadedAssessment?: AlertSafetySourceAssessment | null,
 ): Promise<WatchdogResult["safetySource"]> {
   const producerIntervalSec = CRON_INTERVALS["publish-report-card-cache"];
   const sustainedSec = producerIntervalSec * 2;
-  const cached = await getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY);
-  const assessment = assessAlertSafetySourceCache(cached, { nowSec, producerIntervalSec });
+  const assessment = preloadedAssessment ?? assessAlertSafetySourceCache(
+    await getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
+    { nowSec, producerIntervalSec },
+  );
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.safetySourceSince);
   const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.safetySourceAlerted);
   const outcome: WatchdogResult["safetySource"] = { ...emptyOutcome(), state: assessment.state };
@@ -339,6 +349,7 @@ export async function runTelegramDegradationWatchdog(
   db: D1Database,
   alertWebhookUrl: string | null,
   signal?: AbortSignal,
+  options: TelegramDegradationWatchdogOptions = {},
 ): Promise<CronResult> {
   if (signal?.aborted) {
     throw signal.reason ?? new Error("telegram-degradation-watchdog aborted");
@@ -346,8 +357,18 @@ export async function runTelegramDegradationWatchdog(
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const pendingBacklog = await evaluatePendingBacklog(db, alertWebhookUrl, nowSec);
-  const safetySource = await evaluateSafetySource(db, alertWebhookUrl, nowSec);
+  const pendingBacklog = await evaluatePendingBacklog(
+    db,
+    alertWebhookUrl,
+    nowSec,
+    options.pendingCapacitySnapshot,
+  );
+  const safetySource = await evaluateSafetySource(
+    db,
+    alertWebhookUrl,
+    nowSec,
+    options.safetySourceAssessment,
+  );
   const zeroSend = await evaluateZeroSendStreak(db, alertWebhookUrl);
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };

@@ -7,6 +7,7 @@
  * Connection budget: 4/6 peak
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
+import type { TelegramDispatchSharedState } from "../../cron/dispatch-telegram-alerts";
 import { publishTelegramPulseSnapshot } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../cron/telegram-quiet-hours";
@@ -39,6 +40,7 @@ function logReconciliationSuccess(
 }
 
 function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  const sharedTelegramState: TelegramDispatchSharedState = {};
   return [
     {
       mode: "serial",
@@ -47,12 +49,22 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
         {
           job: "dispatch-telegram-alerts",
           errorMessage: "[cron] dispatch-telegram-alerts failed:",
-          run: (signal) => dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
+          run: (signal) =>
+            dispatchTelegramAlerts(
+              runtime.db,
+              runtime.env.TELEGRAM_BOT_TOKEN!,
+              signal,
+              sharedTelegramState,
+            ),
         },
         {
           job: "telegram-degradation-watchdog",
           errorMessage: "[cron] telegram-degradation-watchdog failed:",
-          run: (signal) => runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal),
+          run: (signal) =>
+            runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
+              pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
+              safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
+            }),
         },
         {
           job: "telegram-disambiguation-cleanup",
@@ -62,7 +74,10 @@ function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlo
         {
           job: "telegram-pulse-snapshot",
           errorMessage: "[cron] telegram-pulse-snapshot failed:",
-          run: () => publishTelegramPulseSnapshot(runtime.db).then(() => undefined),
+          run: () =>
+            publishTelegramPulseSnapshot(runtime.db, undefined, {
+              pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
+            }).then(() => undefined),
         },
       ],
     },

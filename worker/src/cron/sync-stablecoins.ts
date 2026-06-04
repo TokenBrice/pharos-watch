@@ -159,6 +159,7 @@ export async function syncStablecoins(
     payloadAccepted: true,
     cacheWriteSucceeded: true,
     cacheKey: cacheResult.cacheKey, syncStartSec: cacheResult.syncStartSec,
+    responseReadyCacheError: cacheResult.responseReadyCacheError,
     depegPipelineSucceeded: depegErrorCount === 0,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {

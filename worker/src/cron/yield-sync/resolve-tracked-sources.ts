@@ -62,7 +62,8 @@ export async function loadTier1PrevRateRows(
   const placeholders = tier1CandidateIds.map(() => "?").join(", ");
   const rows = await db
     .prepare(
-      `SELECT stablecoin_id, exchange_rate, recorded_at
+      `SELECT /* pharos:yield-sync:tier1-previous-rate */
+         stablecoin_id, exchange_rate, recorded_at
        FROM yield_history
        WHERE stablecoin_id IN (${placeholders})
          AND recorded_at <= ?

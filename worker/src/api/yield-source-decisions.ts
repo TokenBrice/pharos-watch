@@ -162,7 +162,7 @@ async function loadGenerations(
 ) {
   const rows = await db
     .prepare(
-      `SELECT
+      `SELECT /* pharos:yield-source-decisions:generations */
          generation_id, started_at, state, cache_key, ranking_updated_at, ranking_count,
          source_row_count, best_row_count, decision_count, published_at, failed_at,
          failure_reason, metadata_json, created_at
@@ -190,7 +190,7 @@ async function loadStablecoinDecisions(
 ) {
   const rows = await db
     .prepare(
-      `SELECT
+      `SELECT /* pharos:yield-source-decisions:stablecoin-decisions */
          d.generation_id, d.stablecoin_id, d.selected_source_key, d.selected_confidence_tier,
          d.selected_data_source, d.selected_apy_30d, d.selected_score, d.selected_reason,
          d.previous_best_source_key, d.source_switch, d.rejected_count, d.alternatives_json,
@@ -223,7 +223,8 @@ async function loadStablecoinDecisions(
       const placeholders = generationIds.map(() => "?").join(",");
       const altRows = await db
         .prepare(
-          `SELECT generation_id, stablecoin_id, alt_source_key, alt_yield_source,
+          `SELECT /* pharos:yield-source-decisions:public-alternatives */
+                  generation_id, stablecoin_id, alt_source_key, alt_yield_source,
                   alt_apy30d_delta, rejection_reason_code, recorded_at
            FROM yield_source_decision_alternatives
            WHERE stablecoin_id = ? AND generation_id IN (${placeholders})

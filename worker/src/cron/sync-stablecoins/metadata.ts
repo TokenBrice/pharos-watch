@@ -157,6 +157,7 @@ export function buildStablecoinsSyncResult(input: {
   cacheWriteSucceeded?: boolean;
   cacheKey?: string;
   syncStartSec?: number;
+  responseReadyCacheError?: string | null;
   depegPipelineSucceeded?: boolean;
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
@@ -195,6 +196,9 @@ export function buildStablecoinsSyncResult(input: {
     depegPipelineSucceeded: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
   };
   if (input.stalenessWarning) metadata.stalenessWarning = true;
+  if (input.responseReadyCacheError) {
+    metadata.responseReadyCacheError = input.responseReadyCacheError;
+  }
   if (input.stalenessSummary) metadata.priceStaleness = input.stalenessSummary;
   if (input.supplyGapReconciliation && input.supplyGapReconciliation.totalReconciled > 0) {
     metadata.supplyGapReconciliation = {

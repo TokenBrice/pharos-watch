@@ -354,7 +354,38 @@ describe("request-source-attribution", () => {
     const pruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_key_request_stats"));
 
     expect(insertStatements).toHaveLength(2);
-    expect(insertStatements[0]?.binds).toEqual([7, 1_710_000_000 - (1_710_000_000 % 60)]);
+    expect(insertStatements[0]?.binds).toEqual([7, 1_710_000_000 - (1_710_000_000 % 60), 1]);
     expect(pruneStatements).toHaveLength(1);
+  });
+
+  it("buffers concurrent per-key request stats into one upsert per key and minute", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM api_request_consumer_stats",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "DELETE FROM api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    await Promise.all([
+      recordApiKeyRequestAttribution(db, 7, 1_710_000_000),
+      recordApiKeyRequestAttribution(db, 7, 1_710_000_010),
+      recordApiKeyRequestAttribution(db, 7, 1_710_000_020),
+    ]);
+
+    const insertStatements = db.getHistory()
+      .filter((entry) => entry.sql.includes("INSERT INTO api_key_request_stats"));
+    expect(insertStatements).toHaveLength(1);
+    expect(insertStatements[0]?.binds).toEqual([7, 1_710_000_000 - (1_710_000_000 % 60), 3]);
   });
 });

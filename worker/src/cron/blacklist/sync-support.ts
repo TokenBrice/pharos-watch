@@ -2,6 +2,7 @@ import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { excludeFrozenIds } from "../shared/exclude-frozen";
 import { getLastBlock } from "../../lib/db";
 import { backfillTronFromLedger } from "./amount-recovery";
+import type { BlacklistRunBudget } from "./run-budget";
 
 type BlacklistConfigState = {
   config: (typeof CONTRACT_CONFIGS)[number];
@@ -99,9 +100,10 @@ export function recordApiErrorConfig(
 export async function applyTronLedgerMirrorPass(
   db: D1Database,
   phase: "initial" | "post-sync",
+  options: { runBudget?: BlacklistRunBudget; signal?: AbortSignal } = {},
 ): Promise<number> {
   try {
-    const ledgerResult = await backfillTronFromLedger(db);
+    const ledgerResult = await backfillTronFromLedger(db, options);
     if (ledgerResult.updated > 0) {
       const suffix = phase === "post-sync" ? " after current-balance sync" : "";
       console.log(`[sync-blacklist] Tron ledger mirror updated ${ledgerResult.updated} row(s)${suffix}`);

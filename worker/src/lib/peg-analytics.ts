@@ -62,7 +62,10 @@ export async function derivePegAnalyticsSnapshot(
   const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * DAY_SECONDS);
 
   const [eventsResult, firstSeenMap] = await Promise.all([
-    db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
+    db.prepare(
+      `SELECT /* pharos:peg-analytics:recent-depeg-events */
+         * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC`,
+    )
       .bind(fourYearsAgoSec)
       .all<DepegRow>(),
     getFirstSeenDates(

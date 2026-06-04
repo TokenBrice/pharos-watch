@@ -55,7 +55,7 @@ async function filterNewBlacklistRows(
     const ids = rows.slice(i, i + EXISTING_BLACKLIST_ID_QUERY_CHUNK).map((row) => row.id);
     const { sql, binds } = buildInClause(ids);
     const result = await db
-      .prepare(`SELECT id FROM blacklist_events WHERE id IN (${sql})`)
+      .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
       .bind(...binds)
       .all<{ id: string }>();
     for (const row of result.results ?? []) {

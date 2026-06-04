@@ -1,6 +1,8 @@
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { setLastBlock } from "../lib/db";
+import { materializeBlacklistGapMetrics } from "../lib/blacklist-gaps";
+import { materializeBlacklistSummarySnapshot } from "../api/blacklist-summary";
 import {
   type RateLimitedFetch,
   createRateLimiter,
@@ -18,6 +20,7 @@ import { backfillAmounts } from "./blacklist/amount-recovery";
 import { processFetchedBlacklistRows } from "./blacklist/post-fetch";
 import {
   blacklistShouldStopBeforeNextConfig,
+  blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
   createBlacklistRunBudget,
   type BlacklistRunBudget,
@@ -238,6 +241,10 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let providerCircuitSkips = 0;
   let etherscanCircuitSkips = 0;
   let tronGridCircuitSkips = 0;
+  let producerGapMetricSnapshots = 0;
+  let producerSummarySnapshot = false;
+  let producerSnapshotSkipped = false;
+  let producerSnapshotError: string | null = null;
   const counters = {
     totalInsertedRows: 0,
     enrichCounters: { attempted: 0, succeeded: 0, failed: 0 },
@@ -262,7 +269,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     return cache;
   };
   const { configStates, zeroCursorConfigs } = await loadBlacklistConfigStates(db);
-  let tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "initial");
+  let tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "initial", { runBudget, signal });
   const etherscanCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
 
   // Backfill NULL amounts first — this has priority over new event scanning
@@ -483,7 +490,42 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
-  tronLedgerUpdated += await applyTronLedgerMirrorPass(db, "post-sync");
+  tronLedgerUpdated += await applyTronLedgerMirrorPass(db, "post-sync", { runBudget, signal });
+
+  // Tolerate up to 25% of configs failing (transient upstream timeouts) before
+  // marking the run degraded.  More than 50% is a full error.
+  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit);
+  const status: SyncBlacklistResult["status"] =
+    derivedStatus === "ok" && providerCircuitSkips > 0 ? "degraded" : derivedStatus;
+
+  if (
+    status !== "ok" ||
+    blacklistRuntimeBudgetReached(runBudget) ||
+    blacklistSubrequestBudgetReached(runBudget) ||
+    blacklistShouldStopBeforeNextConfig(runBudget)
+  ) {
+    producerSnapshotSkipped = true;
+  } else {
+    try {
+      const snapshotNow = Math.floor(Date.now() / 1000);
+      const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow);
+      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow);
+      producerGapMetricSnapshots = gapSnapshot.written;
+      producerSummarySnapshot = summarySnapshot.written;
+    } catch (err) {
+      producerSnapshotError = err instanceof Error ? err.name : "UnknownError";
+      await reportCronProgress(onProgress, {
+        stage: "producer-snapshots",
+        itemsDone: configStates.length,
+        itemsTotal: configStates.length,
+        message: "Failed to materialize blacklist producer snapshots",
+        metadata: {
+          producerSnapshotError,
+          errorMessage: err instanceof Error ? err.message : String(err),
+        },
+      }, budget);
+    }
+  }
 
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   await reportCronProgress(onProgress, {
@@ -498,11 +540,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       apiErrors,
     },
   }, budget);
-  // Tolerate up to 25% of configs failing (transient upstream timeouts) before
-  // marking the run degraded.  More than 50% is a full error.
-  const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit);
-  const status: SyncBlacklistResult["status"] =
-    derivedStatus === "ok" && providerCircuitSkips > 0 ? "degraded" : derivedStatus;
   return {
     status,
     itemCount: counters.totalInsertedRows,
@@ -529,6 +566,10 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       currentBalanceCacheDeleted: counters.currentBalanceCacheCounters.deleted,
       currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
       tronLedgerUpdated,
+      producerGapMetricSnapshots,
+      producerSummarySnapshot,
+      producerSnapshotSkipped,
+      producerSnapshotError,
     })),
   };
 }

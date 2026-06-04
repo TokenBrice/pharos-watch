@@ -41,7 +41,7 @@ export async function pruneYieldTables(
       ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
       : "";
   await db
-    .prepare(`DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
+    .prepare(`/* pharos:yield-sync:history-retention-delete */ DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
     .bind(pruneCutoff, ...frozenIdsList)
     .run();
 
@@ -49,7 +49,8 @@ export async function pruneYieldTables(
     const auditCutoffSec = startSec - AUDIT_DECISION_RETENTION_DAYS * DAY_SECONDS;
     await db
       .prepare(
-        `DELETE FROM yield_source_decisions
+        `/* pharos:yield-sync:decision-retention-delete */
+         DELETE FROM yield_source_decisions
          WHERE created_at < ?
            AND (
              retention_reason = 'audit'
@@ -94,7 +95,8 @@ export async function pruneYieldTables(
       .run();
     await db
       .prepare(
-        `DELETE FROM yield_source_decision_alternatives
+        `/* pharos:yield-sync:decision-alternatives-retention-delete */
+         DELETE FROM yield_source_decision_alternatives
          WHERE recorded_at < ?
            AND NOT EXISTS (
              SELECT 1 FROM yield_source_decisions d

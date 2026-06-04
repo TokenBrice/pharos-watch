@@ -10,6 +10,7 @@ const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const DEWS_TABLES = new Set([
   "stress_signals",
   "stress_signal_history",
+  "stress_signals_latest",
 ]);
 
 /**
@@ -36,15 +37,22 @@ async function deleteOrphansForTable(
   db: D1Database,
   table: string,
   eligibleIds: Set<string>,
+  options: { ignoreMissingTable?: boolean } = {},
 ): Promise<number> {
   if (!DEWS_TABLES.has(table)) throw new Error(`Invalid DEWS table: ${table}`);
 
-  const existingIds = await runWithOverloadRetry(() =>
-    db
-      // SAFETY: validated against DEWS_TABLES allowlist above.
-      .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
-      .all<{ stablecoin_id: string }>(),
-  );
+  let existingIds: D1Result<{ stablecoin_id: string }>;
+  try {
+    existingIds = await runWithOverloadRetry(() =>
+      db
+        // SAFETY: validated against DEWS_TABLES allowlist above.
+        .prepare(`/* pharos:dews:orphan-ids:${table} */ SELECT DISTINCT stablecoin_id FROM ${table}`)
+        .all<{ stablecoin_id: string }>(),
+    );
+  } catch (error) {
+    if (options.ignoreMissingTable && isMissingStressLatestTableError(error)) return 0;
+    throw error;
+  }
   const allDbIds = new Set((existingIds.results ?? []).map((row) => row.stablecoin_id));
   const orphanIds = [...computeStressSignalPruneIds(allDbIds, eligibleIds)];
 
@@ -53,16 +61,27 @@ async function deleteOrphansForTable(
   let deleted = 0;
   for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
     const inClause = buildInClause(idChunk);
-    const result = await runWithOverloadRetry(() =>
-      db
-        // SAFETY: validated against DEWS_TABLES allowlist above.
-        .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
-        .bind(...inClause.binds)
-        .run(),
-    );
+    let result: D1Result;
+    try {
+      result = await runWithOverloadRetry(() =>
+        db
+          // SAFETY: validated against DEWS_TABLES allowlist above.
+          .prepare(`/* pharos:dews:orphan-delete:${table} */ DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
+          .bind(...inClause.binds)
+          .run(),
+      );
+    } catch (error) {
+      if (options.ignoreMissingTable && isMissingStressLatestTableError(error)) return deleted;
+      throw error;
+    }
     deleted += result.meta?.changes ?? 0;
   }
   return deleted;
+}
+
+function isMissingStressLatestTableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("no such table: stress_signals_latest");
 }
 
 async function deleteCurrentStressSignalRowsForIds(
@@ -77,11 +96,37 @@ async function deleteCurrentStressSignalRowsForIds(
     const inClause = buildInClause(idChunk);
     const result = await runWithOverloadRetry(() =>
       db
-        .prepare(`DELETE FROM stress_signals WHERE stablecoin_id IN (${inClause.sql})`)
+        .prepare(`/* pharos:dews:stress-current-delete */ DELETE FROM stress_signals WHERE stablecoin_id IN (${inClause.sql})`)
         .bind(...inClause.binds)
         .run(),
     );
     deleted += result.meta?.changes ?? 0;
+  }
+  return deleted;
+}
+
+async function deleteLatestStressSignalRowsForIds(
+  db: D1Database,
+  stablecoinIds: Iterable<string>,
+): Promise<number> {
+  const ids = [...new Set(stablecoinIds)];
+  if (ids.length === 0) return 0;
+
+  let deleted = 0;
+  for (const idChunk of chunkArray(ids, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+    const inClause = buildInClause(idChunk);
+    try {
+      const result = await runWithOverloadRetry(() =>
+        db
+          .prepare(`/* pharos:dews:stress-latest-delete */ DELETE FROM stress_signals_latest WHERE stablecoin_id IN (${inClause.sql})`)
+          .bind(...inClause.binds)
+          .run(),
+      );
+      deleted += result.meta?.changes ?? 0;
+    } catch (error) {
+      if (isMissingStressLatestTableError(error)) return deleted;
+      throw error;
+    }
   }
   return deleted;
 }
@@ -107,6 +152,37 @@ function buildStressSignalsEnvelope(result: DewsComputedRow): string {
   });
 }
 
+async function upsertLatestStressSignalRows(
+  db: D1Database,
+  results: DewsComputedRow[],
+  nowSec: number,
+): Promise<void> {
+  if (results.length === 0) return;
+  const stmts = results.map((result) =>
+    db
+      .prepare(
+        `/* pharos:dews:stress-latest-upsert */
+         INSERT OR REPLACE INTO stress_signals_latest
+           (stablecoin_id, computed_at, score, band, signals_json, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        result.stablecoinId,
+        nowSec,
+        result.score,
+        result.band,
+        buildStressSignalsEnvelope(result),
+        nowSec,
+      ),
+  );
+  try {
+    await batchExecute(db, stmts);
+  } catch (error) {
+    if (isMissingStressLatestTableError(error)) return;
+    throw error;
+  }
+}
+
 export async function persistDewsResults(params: {
   db: D1Database;
   results: DewsComputedRow[];
@@ -118,7 +194,9 @@ export async function persistDewsResults(params: {
     const stmts = params.results.map((result) =>
       params.db
         .prepare(
-          "INSERT OR REPLACE INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
+          `/* pharos:dews:stress-current-upsert */
+           INSERT OR REPLACE INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json)
+           VALUES (?, ?, ?, ?, ?)`,
         )
         .bind(
           result.stablecoinId,
@@ -129,6 +207,7 @@ export async function persistDewsResults(params: {
         ),
     );
     await batchExecute(params.db, stmts);
+    await upsertLatestStressSignalRows(params.db, params.results, params.nowSec);
   }
   await writeFreshnessSentinel(params.db, "dews", params.nowSec);
 
@@ -137,6 +216,7 @@ export async function persistDewsResults(params: {
     (stablecoinId) => params.eligibleIds.has(stablecoinId) && !computedIds.has(stablecoinId),
   );
   const rowsRetiredCurrent = await deleteCurrentStressSignalRowsForIds(params.db, noCurrentSupplyIds);
+  await deleteLatestStressSignalRowsForIds(params.db, noCurrentSupplyIds);
 
   const todayMidnight = getTodayMidnightUtcSec();
   const existing = await runWithOverloadRetry(() =>
@@ -170,6 +250,9 @@ export async function persistDewsResults(params: {
   let rowsDropped = rowsRetiredCurrent;
   if (params.eligibleIds.size > 0) {
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signals", params.eligibleIds);
+    rowsDropped += await deleteOrphansForTable(params.db, "stress_signals_latest", params.eligibleIds, {
+      ignoreMissingTable: true,
+    });
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signal_history", params.eligibleIds);
   }
 
@@ -179,7 +262,7 @@ export async function persistDewsResults(params: {
 
   const oldSignals = await runWithOverloadRetry(() =>
     params.db
-      .prepare(`DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
+      .prepare(`/* pharos:dews:stress-current-prune-old */ DELETE FROM stress_signals WHERE computed_at < ? ${frozenClause}`)
       .bind(params.nowSec - 7 * DAY_SECONDS, ...frozenIdsList)
       .run(),
   );
@@ -187,7 +270,7 @@ export async function persistDewsResults(params: {
 
   const oldHistory = await runWithOverloadRetry(() =>
     params.db
-      .prepare(`DELETE FROM stress_signal_history WHERE snapshot_date < ? ${frozenClause}`)
+      .prepare(`/* pharos:dews:stress-history-prune-old */ DELETE FROM stress_signal_history WHERE snapshot_date < ? ${frozenClause}`)
       .bind(params.nowSec - 365 * DAY_SECONDS, ...frozenIdsList)
       .run(),
   );

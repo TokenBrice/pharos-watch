@@ -161,6 +161,7 @@ export async function fetchAggregateData(
       db
         .prepare(
            `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                   /* pharos:mint-burn-flows:window-rows */
                    mint_volume_usd, burn_volume_usd, net_flow_usd
             FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
@@ -170,6 +171,7 @@ export async function fetchAggregateData(
       db
         .prepare(
            `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                   /* pharos:mint-burn-flows:window-24h-rows */
                    mint_volume_usd, burn_volume_usd, net_flow_usd
             FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
@@ -179,6 +181,7 @@ export async function fetchAggregateData(
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
+                  /* pharos:mint-burn-flows:net-7d */
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
@@ -188,6 +191,7 @@ export async function fetchAggregateData(
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
+                  /* pharos:mint-burn-flows:net-30d */
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
@@ -197,6 +201,7 @@ export async function fetchAggregateData(
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
+                  /* pharos:mint-burn-flows:net-90d */
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
@@ -206,6 +211,7 @@ export async function fetchAggregateData(
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
+                  /* pharos:mint-burn-flows:baseline-days */
                   (hour_ts / 86400) * 86400 as day_ts,
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs
@@ -216,7 +222,9 @@ export async function fetchAggregateData(
         .bind(...chainInClause.binds, params.baselineWindowStart, params.nowDayTs),
       db
         .prepare(
-          `SELECT stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
+          `SELECT stablecoin_id, chain_id,
+                  /* pharos:mint-burn-flows:first-hour */
+                  MIN(hour_ts) as first_hour_ts
            FROM mint_burn_hourly
            WHERE chain_id IN (${chainInClause.sql})
            GROUP BY stablecoin_id, chain_id`,

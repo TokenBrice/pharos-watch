@@ -11,10 +11,77 @@ import {
   type StatusPersistenceIssue,
 } from "../lib/status-reliability";
 import { computeRawStatus } from "../lib/status-evaluation";
+import {
+  loadStatusRawSnapshot,
+  type StatusRawSnapshotLoadResult,
+} from "../lib/status/raw-snapshot";
 import { loadStatusSupplements } from "./status-supplements";
-import type { StatusResponse } from "@shared/types/status";
+import type { StatusResponse, StatusSectionError } from "@shared/types/status";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import { runAdminRoute } from "../lib/route-wrappers";
+
+type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
+
+interface ResolvedRawStatus {
+  raw: Awaited<ReturnType<typeof computeRawStatus>>;
+  snapshotFallbackReason: StatusSnapshotFallbackReason | null;
+  snapshotError?: string;
+}
+
+function shouldBypassStatusSnapshot(request?: Request): boolean {
+  if (!request) return false;
+  try {
+    const url = new URL(request.url);
+    return url.searchParams.get("refresh") === "live";
+  } catch {
+    return false;
+  }
+}
+
+function statusSnapshotSectionError(
+  reason: StatusSnapshotFallbackReason | null,
+  error?: string,
+): StatusSectionError | null {
+  if (reason !== "read-error" && reason !== "stale" && reason !== "unreadable") return null;
+  const code = reason === "read-error"
+    ? "status_snapshot_read_failed"
+    : reason === "stale"
+      ? "status_snapshot_stale"
+      : "status_snapshot_unreadable";
+  return {
+    code,
+    message: error
+      ? `Status raw snapshot ${reason}; served live fallback. ${error}`
+      : `Status raw snapshot ${reason}; served live fallback.`,
+  };
+}
+
+async function resolveRawStatusForResponse(
+  db: D1Database,
+  now: number,
+  request?: Request,
+): Promise<ResolvedRawStatus> {
+  if (shouldBypassStatusSnapshot(request)) {
+    return {
+      raw: await computeRawStatus(db, now),
+      snapshotFallbackReason: "bypassed",
+    };
+  }
+
+  const snapshot = await loadStatusRawSnapshot(db, now);
+  if (snapshot.kind === "fresh") {
+    return {
+      raw: snapshot.raw,
+      snapshotFallbackReason: null,
+    };
+  }
+
+  return {
+    raw: await computeRawStatus(db, now),
+    snapshotFallbackReason: snapshot.kind,
+    snapshotError: snapshot.error,
+  };
+}
 
 export function handleStatus(
   db: D1Database,
@@ -31,7 +98,11 @@ export function handleStatus(
     },
     async () => {
       const now = Math.floor(Date.now() / 1000);
-      const raw = await computeRawStatus(db, now);
+      const {
+        raw,
+        snapshotFallbackReason,
+        snapshotError,
+      } = await resolveRawStatusForResponse(db, now, request);
       const persistenceIssues: StatusPersistenceIssue[] = [];
       const collectPersistenceIssue = (issue: StatusPersistenceIssue) => {
         persistenceIssues.push(issue);
@@ -81,6 +152,7 @@ export function handleStatus(
       persistenceIssues.push(...probeIssues, ...discrepancyIssues, ...timelineIssues);
       const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
+      const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
 
       const body: StatusResponse = {
         timestamp: now,
@@ -104,6 +176,7 @@ export function handleStatus(
           ...raw.sectionErrors,
           ...(statusStateError ? { statusState: statusStateError } : {}),
           ...supplements.sectionErrors,
+          ...(snapshotErrorSection ? { statusSnapshot: snapshotErrorSection } : {}),
         },
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,

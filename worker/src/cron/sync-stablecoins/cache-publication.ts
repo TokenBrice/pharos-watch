@@ -1,5 +1,6 @@
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
+import { writeResponseReadyCache } from "../../lib/api-cache-read";
 import { sendAlert } from "../../lib/alerts";
 import {
   savePriceCache,
@@ -26,6 +27,8 @@ export interface CacheValidationResult {
   syncStartSec: number;
   /** If validation failed, the degraded CronResult to return. */
   blockedResult?: CronResult;
+  /** Non-fatal companion-cache write failure for response-ready optimization. */
+  responseReadyCacheError?: string | null;
 }
 
 export interface ValidateAndCacheInput {
@@ -115,7 +118,16 @@ export async function validateAndWriteStablecoinsCache(
 
   const cacheWriteAbort = returnIfAborted(signal, validationContext === "fallback" ? "fallback-cache-write" : "persist-main-cache");
   if (cacheWriteAbort) return cacheWriteAbort;
-  const cacheResult = await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
+  const stablecoinsCacheBody = JSON.stringify(validation.data);
+  const cacheResult = await setCacheIfNewer(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
+  let responseReadyCacheError: string | null = null;
+  if (cacheResult.written) {
+    try {
+      await writeResponseReadyCache(db, "stablecoins", stablecoinsCacheBody, syncStartSec);
+    } catch (error) {
+      responseReadyCacheError = error instanceof Error ? error.name : "UnknownError";
+    }
+  }
   if (cacheResult.written) {
     console.log(`[sync-stablecoins] ${validationContext === "fallback" ? "CG fallback: cached" : "Cached"} ${assets.length} assets`);
   } else {
@@ -129,6 +141,7 @@ export async function validateAndWriteStablecoinsCache(
     ...cacheResult,
     cacheKey: "stablecoins",
     syncStartSec,
+    responseReadyCacheError,
   };
 }
 

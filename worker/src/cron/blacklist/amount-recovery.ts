@@ -1,7 +1,10 @@
 import {
+  buildBlacklistAddressCountKey,
+  buildBlacklistContractBalanceKey,
   computeBlacklistAmountUsdAtEvent,
   getBlacklistPriceAssetId,
 } from "@shared/lib/blacklist";
+import type { BlacklistStablecoin } from "@shared/types/market";
 import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
 import { shouldSuppressAsMirrorZero } from "./shared";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -12,7 +15,7 @@ import {
   getBlacklistEventByTopic,
   type ContractEventConfig,
 } from "../../lib/blacklist-contracts";
-import { batchExecute } from "../../lib/db";
+import { batchExecute, buildInClause, chunkArray } from "../../lib/db";
 import {
   type EtherscanLogEntry,
   type RateLimitedFetch,
@@ -35,6 +38,8 @@ import {
 // Conservative hourly recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
 const BACKFILL_BATCH_SIZE = 100;
+const TRON_LEDGER_BACKFILL_BATCH_SIZE = 100;
+const TRON_LEDGER_LOOKUP_CHUNK_SIZE = 90;
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -348,6 +353,26 @@ type RecoverableAmountRow = {
   tx_hash: string;
 };
 
+type TronLedgerCandidateRow = {
+  id: string;
+  stablecoin: BlacklistStablecoin;
+  chain_id: string;
+  address: string;
+  config_key: string | null;
+  contract_address: string | null;
+};
+
+type TronLedgerBalanceRow = {
+  id: string;
+  amount_native: number | null;
+  amount_usd: number | null;
+};
+
+type TronLedgerLookup = {
+  eventId: string;
+  balanceId: string;
+};
+
 export interface RecoverBlacklistAmountForRowOptions {
   etherscanApiKey: string | null;
   drpcApiKey: string | null;
@@ -472,7 +497,8 @@ export async function backfillAmounts(
 
   const result = await db
     .prepare(
-      `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash, config_key, contract_address,
+      `/* blacklist-amount-recovery-evm-candidates */
+       SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash, config_key, contract_address,
               amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider,
               amount_source
       FROM blacklist_events
@@ -697,91 +723,106 @@ export async function backfillAmounts(
 
 export async function backfillTronFromLedger(
   db: D1Database,
+  options: { runBudget?: BlacklistRunBudget; signal?: AbortSignal } = {},
 ): Promise<{ updated: number }> {
-  const result = await db
+  throwIfAborted(options.signal);
+  if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+    return { updated: 0 };
+  }
+
+  const candidates = await db
     .prepare(
-      `UPDATE blacklist_events
-       SET amount_native = (
-             SELECT bcb.amount_native
-             FROM blacklist_current_balances bcb
-             WHERE bcb.stablecoin = blacklist_events.stablecoin
-               AND bcb.chain_id = blacklist_events.chain_id
-               AND LOWER(bcb.address) = LOWER(blacklist_events.address)
-               AND (
-                 (blacklist_events.config_key IS NOT NULL AND bcb.config_key = blacklist_events.config_key)
-                 OR (
-                   blacklist_events.config_key IS NULL
-                   AND blacklist_events.contract_address IS NOT NULL
-                   AND LOWER(bcb.contract_address) = LOWER(blacklist_events.contract_address)
-                 )
-                 OR (
-                   blacklist_events.config_key IS NULL
-                   AND blacklist_events.contract_address IS NULL
-                   AND bcb.config_key IS NULL
-                   AND bcb.contract_address IS NULL
-                 )
-               )
-               AND bcb.amount_native IS NOT NULL
-             LIMIT 1
-           ),
-           amount_usd_at_event = (
-             SELECT bcb.amount_usd
-             FROM blacklist_current_balances bcb
-             WHERE bcb.stablecoin = blacklist_events.stablecoin
-               AND bcb.chain_id = blacklist_events.chain_id
-               AND LOWER(bcb.address) = LOWER(blacklist_events.address)
-               AND (
-                 (blacklist_events.config_key IS NOT NULL AND bcb.config_key = blacklist_events.config_key)
-                 OR (
-                   blacklist_events.config_key IS NULL
-                   AND blacklist_events.contract_address IS NOT NULL
-                   AND LOWER(bcb.contract_address) = LOWER(blacklist_events.contract_address)
-                 )
-                 OR (
-                   blacklist_events.config_key IS NULL
-                   AND blacklist_events.contract_address IS NULL
-                   AND bcb.config_key IS NULL
-                   AND bcb.contract_address IS NULL
-                 )
-               )
-               AND bcb.amount_native IS NOT NULL
-             LIMIT 1
-           ),
-           amount_source = 'current_balance_snapshot',
-           amount_status = 'resolved',
-           amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-           amount_last_attempted_at = ?,
-           amount_last_error_class = NULL,
-           amount_last_provider = 'current_balances_ledger'
+      `/* blacklist-tron-ledger-backfill-candidates */
+       SELECT id, stablecoin, chain_id, address, config_key, contract_address
+       FROM blacklist_events
        WHERE chain_id = 'tron'
          AND amount_native IS NULL
          AND suppression_reason IS NULL
          AND event_type IN ('blacklist', 'unblacklist')
-         AND EXISTS (
-           SELECT 1
-           FROM blacklist_current_balances bcb
-           WHERE bcb.stablecoin = blacklist_events.stablecoin
-             AND bcb.chain_id = blacklist_events.chain_id
-             AND LOWER(bcb.address) = LOWER(blacklist_events.address)
-             AND (
-               (blacklist_events.config_key IS NOT NULL AND bcb.config_key = blacklist_events.config_key)
-               OR (
-                 blacklist_events.config_key IS NULL
-                 AND blacklist_events.contract_address IS NOT NULL
-                 AND LOWER(bcb.contract_address) = LOWER(blacklist_events.contract_address)
-               )
-               OR (
-                 blacklist_events.config_key IS NULL
-                 AND blacklist_events.contract_address IS NULL
-                 AND bcb.config_key IS NULL
-                 AND bcb.contract_address IS NULL
-               )
-             )
-             AND bcb.amount_native IS NOT NULL
-         )`,
+       ORDER BY timestamp DESC, id DESC
+       LIMIT ?`,
     )
-    .bind(Math.floor(Date.now() / 1000))
-    .run();
+    .bind(TRON_LEDGER_BACKFILL_BATCH_SIZE)
+    .all<TronLedgerCandidateRow>();
 
-  return { updated: result.meta.changes ?? 0 };
+  const lookups: TronLedgerLookup[] = [];
+  for (const row of candidates.results ?? []) {
+    throwIfAborted(options.signal);
+    if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+      return { updated: 0 };
+    }
+    const scopedBalanceId = buildBlacklistContractBalanceKey(
+      row.stablecoin,
+      row.chain_id,
+      row.address,
+      row.config_key,
+      row.contract_address,
+    );
+    const legacyBalanceId = buildBlacklistAddressCountKey(row.stablecoin, row.chain_id, row.address);
+    for (const balanceId of [...new Set([scopedBalanceId, legacyBalanceId])]) {
+      lookups.push({ eventId: row.id, balanceId });
+    }
+  }
+
+  if (lookups.length === 0) return { updated: 0 };
+
+  const balanceById = new Map<string, TronLedgerBalanceRow>();
+  const uniqueBalanceIds = [...new Set(lookups.map((lookup) => lookup.balanceId))];
+  for (const chunk of chunkArray(uniqueBalanceIds, TRON_LEDGER_LOOKUP_CHUNK_SIZE)) {
+    throwIfAborted(options.signal);
+    if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+      return { updated: 0 };
+    }
+    const { sql, binds } = buildInClause(chunk);
+    const balances = await db
+      .prepare(
+        `/* blacklist-tron-ledger-balance-lookup */
+         SELECT id, amount_native, amount_usd
+         FROM blacklist_current_balances
+         WHERE id IN (${sql})
+           AND amount_native IS NOT NULL`,
+      )
+      .bind(...binds)
+      .all<TronLedgerBalanceRow>();
+
+    for (const balance of balances.results ?? []) {
+      balanceById.set(balance.id, balance);
+    }
+  }
+
+  const matchedByEventId = new Map<string, TronLedgerBalanceRow>();
+  for (const lookup of lookups) {
+    if (matchedByEventId.has(lookup.eventId)) continue;
+    const balance = balanceById.get(lookup.balanceId);
+    if (balance) matchedByEventId.set(lookup.eventId, balance);
+  }
+
+  if (matchedByEventId.size === 0) return { updated: 0 };
+  throwIfAborted(options.signal);
+  if (options.runBudget && blacklistRuntimeBudgetReached(options.runBudget)) {
+    return { updated: 0 };
+  }
+
+  const attemptedAt = Math.floor(Date.now() / 1000);
+  const stmts = [...matchedByEventId.entries()].map(([eventId, balance]) =>
+    db
+      .prepare(
+        `/* blacklist-tron-ledger-backfill-update */
+         UPDATE blacklist_events
+         SET amount_native = ?,
+             amount_usd_at_event = ?,
+             amount_source = 'current_balance_snapshot',
+             amount_status = 'resolved',
+             amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+             amount_last_attempted_at = ?,
+             amount_last_error_class = NULL,
+             amount_last_provider = 'current_balances_ledger'
+         WHERE id = ?`,
+      )
+      .bind(balance.amount_native, balance.amount_usd, attemptedAt, eventId),
+  );
+
+  const updated = await batchExecute(db, stmts);
+
+  return { updated };
 }

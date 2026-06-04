@@ -17,7 +17,8 @@ export async function purgeYieldHistoryOwnershipHandoffs(db: D1Database): Promis
     const inClause = buildInClause(sourceKeys);
     await db
       .prepare(
-        `DELETE FROM yield_history
+        `/* pharos:yield-sync:ownership-handoff-delete */
+         DELETE FROM yield_history
          WHERE stablecoin_id = ?
            AND (source_key IS NULL OR source_key = ? OR source_key IN (${inClause.sql}))`,
       )
@@ -65,7 +66,8 @@ export async function loadYieldHistorySnapshots(
     const [historyResult, prevTvlResult, prevBestResult] = await Promise.all([
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
+          `SELECT /* pharos:yield-sync:history-window */
+             stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql})
              AND recorded_at >= ?
@@ -76,7 +78,8 @@ export async function loadYieldHistorySnapshots(
         .all<YieldHistorySnapshotRow>(),
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, source_tvl_usd, recorded_at
+          `SELECT /* pharos:yield-sync:previous-tvl */
+             stablecoin_id, source_key, source_tvl_usd, recorded_at
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql})
              AND recorded_at <= ?
@@ -88,7 +91,8 @@ export async function loadYieldHistorySnapshots(
         .all<YieldHistorySnapshotRow>(),
       db
         .prepare(
-          `SELECT stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
+          `SELECT /* pharos:yield-sync:previous-best */
+             stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, source_tvl_usd, data_source, yield_source, yield_type, exchange_rate
            FROM yield_history
            WHERE stablecoin_id IN (${resolvedIdInClause.sql})
              AND is_best = 1
@@ -131,7 +135,8 @@ export async function deleteStaleYieldRows(
     const staleRowInClause = buildInClause(idChunk);
     await db
       .prepare(
-        `DELETE FROM yield_data
+        `/* pharos:yield-sync:stale-yield-data-delete */
+         DELETE FROM yield_data
          WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ? ${frozenClause}`,
       )
       .bind(...staleRowInClause.binds, startSec, ...frozenIdsList)
@@ -145,7 +150,7 @@ export async function deleteOrphanYieldRows(
 ): Promise<void> {
   const managedYieldIdSet = new Set(managedYieldIds);
   const existingIds = await db
-    .prepare("SELECT DISTINCT stablecoin_id FROM yield_data")
+    .prepare("SELECT /* pharos:yield-sync:yield-data-existing-ids */ DISTINCT stablecoin_id FROM yield_data")
     .all<{ stablecoin_id: string }>();
   const orphanIds = (existingIds.results ?? [])
     .map((row) => row.stablecoin_id)
@@ -155,7 +160,8 @@ export async function deleteOrphanYieldRows(
     const orphanInClause = buildInClause(idChunk);
     await db
       .prepare(
-        `DELETE FROM yield_data
+        `/* pharos:yield-sync:orphan-yield-data-delete */
+         DELETE FROM yield_data
          WHERE stablecoin_id IN (${orphanInClause.sql})`,
       )
       .bind(...orphanInClause.binds)

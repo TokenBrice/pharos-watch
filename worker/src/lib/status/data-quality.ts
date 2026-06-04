@@ -1,5 +1,6 @@
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+  BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
   queryBlacklistGapMetrics,
 } from "../blacklist-gaps";
 import type { BlacklistGapMetrics } from "../blacklist-gaps";
@@ -112,6 +113,7 @@ export async function getDataQuality(
     const gaps = options?.blacklistMetrics ?? await queryBlacklistGapMetrics(db, now, {
       recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
       includeDistributions: false,
+      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
       cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
     });
     blacklistTotal = gaps.totalEvents;

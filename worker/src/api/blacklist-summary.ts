@@ -18,6 +18,7 @@ import { getDeferredBlacklistCoverage } from "../lib/blacklist-coverage-manifest
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+  BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
   queryBlacklistGapMetrics,
   type BlacklistGapMetrics,
 } from "../lib/blacklist-gaps";
@@ -42,6 +43,23 @@ import {
 } from "@shared/lib/blacklist-active-records";
 
 const BLACKLIST_STABLECOIN_SET: ReadonlySet<string> = new Set(BLACKLIST_STABLECOINS);
+const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
+const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY = `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
+const BLACKLIST_SUMMARY_PRODUCER_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
+
+type BlacklistSummaryPayload = Record<string, unknown>;
+
+interface BuiltBlacklistSummary {
+  payload: BlacklistSummaryPayload;
+  freshnessTs: number;
+}
+
+interface CachedBlacklistSummarySnapshot {
+  version: typeof BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION;
+  materializedAt: number;
+  freshnessTs: number;
+  payload: BlacklistSummaryPayload;
+}
 
 function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
   return BLACKLIST_STABLECOIN_SET.has(value);
@@ -205,7 +223,7 @@ async function queryLatestBlacklistEventsForCurrentBalances(
 
   const result = await db
     .prepare(
-      `/* latest_event_type_by_balance */
+      `/* blacklist-summary-latest-event-type-by-balance latest_event_type_by_balance */
        SELECT
          b.id,
          b.stablecoin,
@@ -225,6 +243,7 @@ async function queryLatestBlacklistEventsForCurrentBalances(
           (b.config_key IS NOT NULL AND e.config_key = b.config_key)
           OR (b.config_key IS NULL AND b.contract_address IS NOT NULL AND LOWER(e.contract_address) = LOWER(b.contract_address))
           OR (b.config_key IS NULL AND b.contract_address IS NULL)
+          OR (e.config_key IS NULL AND e.contract_address IS NULL)
         )
        GROUP BY b.id, b.stablecoin, b.chain_id, b.address, b.config_key, b.contract_address`,
     )
@@ -250,7 +269,8 @@ async function queryLatestBlacklistEventsForCurrentBalances(
 async function queryLatestEventTypeHistory(db: D1Database): Promise<BlacklistEvent[]> {
   const activeHistoryResult = await db
     .prepare(
-      `WITH latest_event_type AS (
+      `/* blacklist-summary-latest-event-type-history */
+       WITH latest_event_type AS (
          SELECT
            id, stablecoin, chain_id, chain_name, event_type, address,
            amount_native, amount_usd_at_event, amount_source, amount_status,
@@ -391,12 +411,77 @@ function buildDataQuality(
   };
 }
 
-export const handleBlacklistSummary = withErrorHandler(
-  "blacklist-summary",
-  async (db: D1Database): Promise<Response> => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null && !Array.isArray(value);
+}
+
+function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPayload {
+  if (!isRecord(value)) return false;
+  return (
+    isRecord(value.stats)
+    && Array.isArray(value.chart)
+    && Array.isArray(value.chains)
+    && isRecord(value.coverage)
+    && isRecord(value.freezeLedgerMeta)
+    && isRecord(value.dataQuality)
+    && typeof value.totalEvents === "number"
+    && isRecord(value.methodology)
+  );
+}
+
+function parseBlacklistSummarySnapshot(value: string): CachedBlacklistSummarySnapshot | null {
+  try {
+    const parsed = JSON.parse(value) as Partial<CachedBlacklistSummarySnapshot>;
+    if (
+      parsed.version !== BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION
+      || typeof parsed.materializedAt !== "number"
+      || typeof parsed.freshnessTs !== "number"
+      || !isBlacklistSummaryPayload(parsed.payload)
+    ) {
+      return null;
+    }
+    return {
+      version: parsed.version,
+      materializedAt: parsed.materializedAt,
+      freshnessTs: parsed.freshnessTs,
+      payload: parsed.payload,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function readBlacklistSummarySnapshot(
+  db: D1Database,
+  now: number,
+): Promise<CachedBlacklistSummarySnapshot | null> {
+  const row = await db
+    .prepare("/* blacklist-summary-snapshot-read */ SELECT value, updated_at FROM cache WHERE key = ?")
+    .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY)
+    .first<{ value: string; updated_at: number }>();
+  if (!row || now - row.updated_at > BLACKLIST_SUMMARY_PRODUCER_SNAPSHOT_TTL_SEC) return null;
+  return parseBlacklistSummarySnapshot(row.value);
+}
+
+async function writeBlacklistSummarySnapshot(
+  db: D1Database,
+  snapshot: CachedBlacklistSummarySnapshot,
+): Promise<void> {
+  await db
+    .prepare("/* blacklist-summary-snapshot-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .bind(BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot), snapshot.materializedAt)
+    .run();
+}
+
+async function buildBlacklistSummaryPayload(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+  options?: { freshnessTsOverride?: number },
+): Promise<BuiltBlacklistSummary> {
     const perCoinResult = await db
       .prepare(
-        `SELECT stablecoin, event_type, COUNT(*) AS n, SUM(COALESCE(amount_usd_at_event, 0)) AS usd_sum
+        `/* blacklist-summary-per-coin-event-counts */
+         SELECT stablecoin, event_type, COUNT(*) AS n, SUM(COALESCE(amount_usd_at_event, 0)) AS usd_sum
          FROM blacklist_events
          WHERE suppression_reason IS NULL
          GROUP BY stablecoin, event_type`,
@@ -409,7 +494,8 @@ export const handleBlacklistSummary = withErrorHandler(
     // align with the main-page chart.
     const perCoinQuarterlyResult = await db
       .prepare(
-        `SELECT
+        `/* blacklist-summary-quarterly-event-counts */
+         SELECT
            stablecoin,
            (CAST(strftime('%Y', datetime(timestamp, 'unixepoch')) AS INTEGER) * 4 +
             CAST((CAST(strftime('%m', datetime(timestamp, 'unixepoch')) AS INTEGER) - 1) / 3 AS INTEGER)) AS quarter_sort_key,
@@ -425,10 +511,10 @@ export const handleBlacklistSummary = withErrorHandler(
     // RecentBlacklistBanner without forcing the client to fetch a 250-row event
     // payload just to compute three counters. Time window mirrors the 7d cutoff
     // applied client-side previously.
-    const sevenDayCutoffSec = Math.floor(Date.now() / 1000) - 7 * 86400;
+    const sevenDayCutoffSec = now - 7 * 86400;
     const perCoinRecentResult = await db
       .prepare(
-        `/* per_coin_recent_7d */
+        `/* blacklist-summary-per-coin-recent-7d per_coin_recent_7d */
          SELECT stablecoin, event_type, COUNT(*) AS n
          FROM blacklist_events
          WHERE suppression_reason IS NULL
@@ -441,10 +527,10 @@ export const handleBlacklistSummary = withErrorHandler(
     // Collapse total / max(timestamp) / recoverable-gap / recent-30d / recent-24h
     // into a single aggregate pass so we don't hit the public-events table five
     // separate times under the WHERE suppression_reason IS NULL predicate.
-    const now = Math.floor(Date.now() / 1000);
     const aggregateRow = await db
       .prepare(
-        `SELECT
+        `/* blacklist-summary-public-aggregate */
+         SELECT
            COUNT(*) AS total,
            MAX(timestamp) AS max_ts,
            SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS recent_30d,
@@ -454,7 +540,7 @@ export const handleBlacklistSummary = withErrorHandler(
       )
       .bind(now - 30 * 86400, now - 86400)
       .first<{ total: number; max_ts: number | null; recent_30d: number; recent_24h: number }>();
-    const latestTs = aggregateRow?.max_ts ?? Math.floor(Date.now() / 1000);
+    const latestTs = aggregateRow?.max_ts ?? now;
 
     const currentBalances = await loadBlacklistCurrentBalanceMap(db);
     const activeHistory = currentBalances.size === 0 ? await queryLatestEventTypeHistory(db) : [];
@@ -466,6 +552,7 @@ export const handleBlacklistSummary = withErrorHandler(
       ? latestByAddr.filter((e) => e.eventType === "blacklist").length
       : [...currentBalances.values()].filter((snapshot) => !isDestroySnapshot(snapshot)).length;
     const gapMetrics = await queryBlacklistGapMetrics(db, now, {
+      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
       cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
     });
     const activeStats = currentBalances.size === 0
@@ -595,10 +682,11 @@ export const handleBlacklistSummary = withErrorHandler(
       ).values(),
     ].sort((a, b) => a.name.localeCompare(b.name));
 
-    const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
+    const freshnessTs = options?.freshnessTsOverride
+      ?? await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
 
-    return jsonResponse(
-      {
+    return {
+      payload: {
         stats: {
           usdcBlacklisted,
           usdtBlacklisted,
@@ -637,11 +725,42 @@ export const handleBlacklistSummary = withErrorHandler(
           asOf: latestTs,
         }),
       },
-      addFreshnessHeaders(
-        { "Cache-Control": CACHE_PROFILES.realtime },
-        freshnessTs,
-        API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
-      ),
-    );
+      freshnessTs,
+    };
+}
+
+export async function materializeBlacklistSummarySnapshot(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+): Promise<{ written: boolean }> {
+  const built = await buildBlacklistSummaryPayload(db, now, { freshnessTsOverride: now });
+  await writeBlacklistSummarySnapshot(db, {
+    version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+    materializedAt: now,
+    freshnessTs: built.freshnessTs,
+    payload: built.payload,
+  });
+  return { written: true };
+}
+
+function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
+  return addFreshnessHeaders(
+    { "Cache-Control": CACHE_PROFILES.realtime },
+    freshnessTs,
+    API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
+  );
+}
+
+export const handleBlacklistSummary = withErrorHandler(
+  "blacklist-summary",
+  async (db: D1Database): Promise<Response> => {
+    const now = Math.floor(Date.now() / 1000);
+    const snapshot = await readBlacklistSummarySnapshot(db, now);
+    if (snapshot) {
+      return jsonResponse(snapshot.payload, blacklistSummaryHeaders(snapshot.freshnessTs));
+    }
+
+    const built = await buildBlacklistSummaryPayload(db, now);
+    return jsonResponse(built.payload, blacklistSummaryHeaders(built.freshnessTs));
   },
 );

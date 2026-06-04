@@ -251,7 +251,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   publicGet({
     key: "health",
     path: API_PATHS.health(),
-    cacheBypass: true,
     publicApiAccess: "exempt",
     probeGroup: "public",
   }),

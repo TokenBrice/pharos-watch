@@ -1,9 +1,143 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
-import { handleBlacklistSummary } from "../blacklist-summary";
+import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
+import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary";
 
 describe("handleBlacklistSummary", () => {
+  it("serves a fresh producer snapshot without live blacklist_events scans", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      stats: { usdtBlacklisted: 7 },
+      chart: [],
+      chains: [],
+      coverage: { counts: { supportedConfigs: 0 } },
+      freezeLedgerMeta: { gaps: { recoverable: 0 } },
+      dataQuality: { status: "ok" },
+      totalEvents: 7,
+      methodology: { asOf: now },
+    };
+    const db = mockD1([
+      {
+        match: "blacklist-summary-snapshot-read",
+        rows: [{
+          key: "blacklist:summary:producer:v1",
+          value: JSON.stringify({
+            version: 1,
+            materializedAt: now - 60,
+            freshnessTs: now - 60,
+            payload,
+          }),
+          updated_at: now - 60,
+        }],
+      },
+    ], { requireMatch: true });
+
+    const res = await handleBlacklistSummary(db);
+    const body = await res.json() as typeof payload;
+
+    expect(body).toEqual(payload);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(60);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist_events"))).toBe(false);
+  });
+
+  it("falls back from invalid producer snapshot shapes", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "blacklist-summary-snapshot-read",
+        rows: [{
+          key: "blacklist:summary:producer:v1",
+          value: JSON.stringify({
+            version: 1,
+            materializedAt: now,
+            freshnessTs: now,
+            payload: { stats: {} },
+          }),
+          updated_at: now,
+        }],
+      },
+    ]);
+
+    const res = await handleBlacklistSummary(db);
+    const body = await res.json() as { totalEvents: number };
+
+    expect(body.totalEvents).toBe(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
+  });
+
+  it("falls back from corrupt producer snapshots and counts other provider coverage", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const originalConfigCount = CONTRACT_CONFIGS.length;
+    const syntheticOtherConfig: ContractEventConfig = {
+      configKey: "synthetic-other-provider",
+      chain: {
+        chainId: "synthetic-other",
+        chainName: "Synthetic Other",
+        evmChainId: null,
+        explorerUrl: "https://example.invalid",
+        type: "other",
+      },
+      stablecoinId: "tether",
+      stablecoin: "USDT",
+      contractAddress: "synthetic-other-token",
+      decimals: 6,
+      events: [{
+        signature: "SyntheticBlacklist(address)",
+        topicHash: "0xsynthetic",
+        eventType: "blacklist",
+        hasAmount: false,
+      }],
+    };
+
+    CONTRACT_CONFIGS.push(syntheticOtherConfig);
+    try {
+      const db = mockD1([
+        {
+          match: "blacklist-summary-snapshot-read",
+          rows: [{
+            key: "blacklist:summary:producer:v1",
+            value: "{",
+            updated_at: now,
+          }],
+        },
+      ]);
+
+      const res = await handleBlacklistSummary(db);
+      const body = await res.json() as {
+        coverage: { counts: { byProviderSource: Record<string, number> } };
+      };
+
+      expect(body.coverage.counts.byProviderSource.other).toBe(1);
+      expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
+    } finally {
+      CONTRACT_CONFIGS.splice(originalConfigCount);
+    }
+  });
+
+  it("materializes a producer summary snapshot into the cache table", async () => {
+    const now = 1_777_000_000;
+    const db = mockD1();
+
+    const result = await materializeBlacklistSummarySnapshot(db, now);
+
+    expect(result).toEqual({ written: true });
+    const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
+    expect(write?.binds[0]).toBe("blacklist:summary:producer:v1");
+    const payload = JSON.parse(String(write?.binds[1])) as {
+      version: number;
+      materializedAt: number;
+      freshnessTs: number;
+      payload: { stats: unknown; chart: unknown[]; totalEvents: number };
+    };
+    expect(payload.version).toBe(1);
+    expect(payload.materializedAt).toBe(now);
+    expect(payload.freshnessTs).toBe(now);
+    expect(payload.payload.totalEvents).toBe(0);
+    expect(Array.isArray(payload.payload.chart)).toBe(true);
+    expect(write?.binds[2]).toBe(now);
+  });
+
   it("returns summary stats, chart payload, and chain options", async () => {
     const db = mockD1([
       {
@@ -768,6 +902,11 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.activeAddressCount).toBe(1);
     expect(json.stats.activeFrozenTotal).toBe(0);
     expect(json.chart[0]).toMatchObject({ quarter: "Q1 '24", total: 100 });
+    expect(
+      db.getHistory().some((entry) =>
+        entry.sql.includes("latest_event_type_by_balance")
+        && entry.sql.includes("e.config_key IS NULL AND e.contract_address IS NULL")),
+    ).toBe(true);
   });
 
   it("surfaces destroy-only coins without a freeze-ledger snapshot", async () => {

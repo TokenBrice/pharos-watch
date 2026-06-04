@@ -190,7 +190,8 @@ export async function getMintBurnReconciliation(
   const [flowRows, firstSeenRows] = await Promise.all([
     db
       .prepare(
-        `SELECT stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
+        `SELECT /* pharos:status-derived:mint-burn-24h */
+           stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
          FROM mint_burn_hourly
          WHERE hour_ts >= ?
          GROUP BY stablecoin_id, chain_id`,
@@ -199,7 +200,8 @@ export async function getMintBurnReconciliation(
       .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
     db
       .prepare(
-        `SELECT stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
+        `SELECT /* pharos:status-derived:mint-burn-first-hour */
+           stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
          FROM mint_burn_hourly
          GROUP BY stablecoin_id, chain_id`,
       )

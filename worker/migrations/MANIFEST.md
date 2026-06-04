@@ -87,6 +87,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0141     | `0141_depeg_resolver_public_prediction_guard_split.sql`  | Split the DDRv2 public-prediction assessment guard into smaller D1-compatible triggers                                                           |
 | 0142     | `0142_depeg_resolver_usdxl_prelock_repair.sql`           | Adopt unsealed USDXL May 2026 pre-lock source rows into their canonical DDRv2 incident through append-only links/revisions                       |
 | 0143     | `0143_depeg_resolver_readiness_lock_policy.sql`          | Add nullable DDR readiness/backstop lock metadata columns and public-prediction guard checks                                                     |
+| 0144     | `0144_worker_hot_query_indexes_and_stress_latest.sql`    | Add stress-signals latest-row materialization plus hot-query indexes for mint/burn, yield, and depeg Worker paths                                |
 
 ## Retired Individual Migrations
 

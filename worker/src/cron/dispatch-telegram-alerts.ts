@@ -1,4 +1,5 @@
 import { throwIfAborted } from "../lib/abort";
+import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import { getCache, setCache } from "../lib/db-cache";
 
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -12,9 +13,11 @@ import {
   drainPendingQueue,
   buildDedupeKey,
   cleanupExpiredPendingAlerts,
+  emptyDrainResult,
   loadChatsInBackoff,
   readPendingCapacitySnapshot,
   readTelegramGlobalBackoff,
+  type PendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
 } from "./telegram-pending-queue";
@@ -68,6 +71,11 @@ const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
 type SubscriberQueueEntry = ReturnType<typeof buildSubscriberQueue>[number];
 
+export interface TelegramDispatchSharedState {
+  pendingCapacitySnapshot?: PendingCapacitySnapshot;
+  safetySourceAssessment?: AlertSafetySourceAssessment;
+}
+
 function targetKeysForSubscriber(sub: SubscriberQueueEntry): string[] {
   return sub.chunks.map((chunk, chunkIndex) => buildDedupeKey({
     chatId: sub.chatId,
@@ -120,7 +128,38 @@ async function writePresetFailureCount(db: D1Database, value: number): Promise<v
   }
 }
 
-export async function dispatchTelegramAlerts(db: D1Database, botToken: string, signal?: AbortSignal): Promise<{ itemCount: number; metadata: string }> {
+function assignSharedDispatchState(
+  sharedState: TelegramDispatchSharedState | undefined,
+  updates: Partial<TelegramDispatchSharedState>,
+): void {
+  if (!sharedState) return;
+  Object.assign(sharedState, updates);
+}
+
+function hasDetectedTelegramEvents(events: {
+  dewsChanges: unknown[];
+  depegTriggered: unknown[];
+  depegResolved: unknown[];
+  depegWorsening: unknown[];
+  safetyChanges: unknown[];
+  launchPromoted: unknown[];
+}): boolean {
+  return (
+    events.dewsChanges.length > 0 ||
+    events.depegTriggered.length > 0 ||
+    events.depegResolved.length > 0 ||
+    events.depegWorsening.length > 0 ||
+    events.safetyChanges.length > 0 ||
+    events.launchPromoted.length > 0
+  );
+}
+
+export async function dispatchTelegramAlerts(
+  db: D1Database,
+  botToken: string,
+  signal?: AbortSignal,
+  sharedState?: TelegramDispatchSharedState,
+): Promise<{ itemCount: number; metadata: string }> {
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     return { itemCount: 0, metadata: JSON.stringify({ skipped: "circuit-open" }) };
@@ -144,9 +183,11 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       safetySnapshotNeedsSeed,
       safetySourceAssessment,
     } = snapshotState;
+    assignSharedDispatchState(sharedState, { safetySourceAssessment });
 
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
     const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
+    assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
 
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
@@ -160,6 +201,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       result.safetyAlertSourceGeneration = safetySourceAssessment.generation;
       result.safetyAlertsSuppressed = safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed;
       result.suppressedSafetyChangesAtSeed = suppressedSafetyChangesAtSeed;
+      assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
@@ -176,6 +218,74 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       safetyIds,
       launchIds,
     } = await buildTelegramDispatchEvents(db, sourceData, snapshotState, getSymbol, signal);
+
+    const hasEvents = hasDetectedTelegramEvents({
+      dewsChanges,
+      depegTriggered,
+      depegResolved,
+      depegWorsening,
+      safetyChanges,
+      launchPromoted,
+    });
+    const canUseEventlessFastPath =
+      !hasEvents &&
+      safetySourceAssessment.state === "ok" &&
+      !safetySnapshotNeedsSeed;
+
+    if (canUseEventlessFastPath) {
+      const drainResult = pendingCapacityBefore.due > 0
+        ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal)
+        : emptyDrainResult();
+      const expiredCount = pendingCapacityBefore.expired > 0
+        ? await cleanupExpiredPendingAlerts(db, nowSec)
+        : 0;
+      const pendingCapacityAfter =
+        pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0
+          ? await readPendingCapacitySnapshot(db, nowSec)
+          : pendingCapacityBefore;
+      assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+
+      await writeSnapshots(db, currentSnapshots);
+      await writePresetFailureCount(db, 0);
+
+      const result = emptyResult(false, chatsWithActiveSnooze);
+      result.eventsDetected.suppressedMethodologyChanges = suppressedMethodologyChanges;
+      Object.assign(result, {
+        messagesSent: drainResult.sent,
+        blockedUsersCleanedUp: drainResult.blockedCleanedUp,
+        blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
+        pendingAttempted: drainResult.attempted,
+        pendingDrained: drainResult.sent,
+        pendingSent: drainResult.sent,
+        pendingRetryQueued: drainResult.retryQueued,
+        pendingDropped: drainResult.dropped,
+        pendingDroppedTtlExpired: expiredCount,
+        pendingDroppedPermanentFailure: drainResult.droppedPermanentFailure,
+        pendingDroppedMaxAttemptsFallback: drainResult.droppedMaxAttemptsFallback,
+        pendingDeferred: drainResult.deferred,
+        pendingRateLimited: drainResult.rateLimited,
+        pendingRetryAfterSec: drainResult.retryAfterSec,
+        pendingExpired: expiredCount,
+        ...pendingCapacityFields(pendingCapacityAfter),
+        pendingCapacityBefore,
+        pendingCapacityAfter,
+        chatsWithActiveSnooze,
+        safetyAlertSourceState: safetySourceAssessment.state,
+        safetyAlertSourceAgeSeconds: safetySourceAssessment.ageSeconds,
+        safetyAlertsSuppressed: false,
+        safetyAlertSourceGeneration: safetySourceAssessment.generation,
+        suppressedSafetyChangesAtSeed,
+      } satisfies Partial<DispatchResult>);
+      (result as DispatchResult & { eventlessFastPath: boolean }).eventlessFastPath = true;
+
+      const hasSuccessfulEffect =
+        result.messagesSent > 0 ||
+        result.blockedUsersCleanedUp > 0 ||
+        result.pendingAttempted === 0;
+      await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
+
+      return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };
+    }
 
     const fanoutQueryStartedAtMs = Date.now();
     const {
@@ -341,6 +451,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     await writeSnapshots(db, currentSnapshots);
     const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
     const pendingCapacityAfter = await readPendingCapacitySnapshot(db, nowSec);
+    assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
     if (presetQueryFailures === 0 && presetResolutionFailures === 0) {
       await writePresetFailureCount(db, 0);
     }

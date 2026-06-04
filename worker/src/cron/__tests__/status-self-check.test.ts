@@ -32,6 +32,7 @@ const fetchMock = vi.fn();
 const routeMock = vi.fn();
 const sendAlertMock = vi.fn(async () => true);
 const writeStatusProbeRunMock = vi.fn(async () => true);
+const writeStatusRawSnapshotMock = vi.fn(async () => true);
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveDivergent: 2,
   lastAlertAt: null,
@@ -62,6 +63,9 @@ vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
 vi.mock("../../lib/status-evaluation", () => ({
   evaluateStatusAndPersist: evaluateStatusAndPersistMock,
 }));
+vi.mock("../../lib/status/raw-snapshot", () => ({
+  writeStatusRawSnapshot: writeStatusRawSnapshotMock,
+}));
 vi.mock("../../router", () => ({
   route: routeMock,
 }));
@@ -82,7 +86,13 @@ vi.mock("@shared/lib/api-endpoints", () => ({
   },
 }));
 
-const { runStatusSelfCheck, isBootstrapCacheMiss, classifyProbeStatus } = await import("../status-self-check");
+const {
+  runStatusSelfCheck,
+  isBootstrapCacheMiss,
+  classifyProbeStatus,
+  selectStatusProbePathsForRun,
+  STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC,
+} = await import("../status-self-check");
 const { STATUS_PROBE_THRESHOLDS } = await import("@shared/lib/status-thresholds");
 
 describe("runStatusSelfCheck", () => {
@@ -170,6 +180,7 @@ describe("runStatusSelfCheck", () => {
       p95LatencyMs?: number;
       latencySummary?: { p95Ms?: number; medianMs?: number; maxMs?: number; minMs?: number };
       slowestProbes?: Array<{ path?: string; latencyMs?: number; status?: number }>;
+      probeRotation?: { fullSweepWindowSec?: number; selectedDeepProbeCount?: number };
     };
 
     expect(metadata.latencySummary?.p95Ms).toBe(metadata.p95LatencyMs);
@@ -180,6 +191,60 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.slowestProbes).toHaveLength(2);
     expect(metadata.slowestProbes?.every((probe) => typeof probe.path === "string")).toBe(true);
     expect(metadata.slowestProbes?.every((probe) => typeof probe.latencyMs === "number")).toBe(true);
+    expect(metadata.probeRotation?.fullSweepWindowSec).toBe(900);
+    expect(metadata.probeRotation?.selectedDeepProbeCount).toBe(1);
+  });
+
+  it("persists a raw status snapshot after status evaluation", async () => {
+    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      rawSnapshotPersistenceSucceeded?: boolean;
+    };
+
+    expect(writeStatusRawSnapshotMock).toHaveBeenCalledTimes(1);
+    const firstSnapshotWrite = writeStatusRawSnapshotMock.mock.calls[0] as unknown as [
+      D1Database,
+      number,
+      { rawOverallStatus: string },
+    ];
+    expect(firstSnapshotWrite[2]).toMatchObject({
+      rawOverallStatus: "healthy",
+    });
+    expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
+  });
+
+  it("keeps health every run and rotates deeper probe buckets", () => {
+    const selectedAtStart = selectStatusProbePathsForRun(0, [
+      "/api/health",
+      "/api/a",
+      "/api/b",
+      "/api/c",
+      "/api/d",
+    ]);
+    const selectedNextBucket = selectStatusProbePathsForRun(900, [
+      "/api/health",
+      "/api/a",
+      "/api/b",
+      "/api/c",
+      "/api/d",
+    ]);
+    const selectedThirdBucket = selectStatusProbePathsForRun(1800, [
+      "/api/health",
+      "/api/a",
+      "/api/b",
+      "/api/c",
+      "/api/d",
+    ]);
+
+    expect(selectedAtStart.paths[0]).toBe("/api/health");
+    expect(selectedNextBucket.paths[0]).toBe("/api/health");
+    expect(selectedThirdBucket.paths[0]).toBe("/api/health");
+    expect(selectedAtStart.fullSweepWindowSec).toBe(STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC);
+    expect([
+      ...selectedAtStart.paths,
+      ...selectedNextBucket.paths,
+      ...selectedThirdBucket.paths,
+    ]).toEqual(expect.arrayContaining(["/api/a", "/api/b", "/api/c", "/api/d"]));
   });
 
   it("downgrades the probe aggregate when /api/health reports degraded in a 200 response", async () => {
@@ -320,7 +385,7 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.probeBaseUrl).toBe("https://staging.api.pharos.watch");
   });
 
-  it("uses internal router probes for the default production origin when execution context is available", async () => {
+  it("uses external health and internal deep probes for the default production origin when execution context is available", async () => {
     const ctx = {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
@@ -335,7 +400,7 @@ describe("runStatusSelfCheck", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(routeMock).toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith("https://api.pharos.watch/api/health", expect.any(Object));
     expect(metadata.probeMode).toBe("internal-router");
     expect(metadata.probeBaseUrl).toBe("https://api.pharos.watch");
   });

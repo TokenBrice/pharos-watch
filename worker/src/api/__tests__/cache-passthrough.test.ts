@@ -10,6 +10,7 @@ import {
   handleUsdsStatus,
   handleBluechipRatings,
 } from "../cache-handlers";
+import { getResponseReadyCacheKey } from "../../lib/api-cache-read";
 
 function makeBluechipRating(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -105,6 +106,77 @@ describe("cache-passthrough: handleStablecoins", () => {
   it("returns 503 when cached stablecoins JSON fails schema validation", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeCacheDb("stablecoins", { peggedAssets: "not-an-array" }, nowSec);
+    const res = await handleStablecoins(db);
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "Cached stablecoins payload is malformed" });
+  });
+
+  it("serves response-ready stablecoins body when it matches the canonical cache timestamp", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const responseReadyValue = JSON.stringify({ peggedAssets: [] });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: "{malformed", updated_at: nowSec },
+          { key: getResponseReadyCacheKey("stablecoins"), value: responseReadyValue, updated_at: nowSec },
+        ],
+      },
+    ]);
+
+    const res = await handleStablecoins(db);
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      peggedAssets: unknown[];
+      _meta: { updatedAt: number; ageSeconds: number };
+    };
+    expect(body.peggedAssets).toEqual([]);
+    expect(body._meta.updatedAt).toBe(nowSec);
+    expect(body._meta.ageSeconds).toBe(0);
+  });
+
+  it("falls back to canonical stablecoins cache when response-ready lookup fails", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: [] }), updated_at: nowSec }],
+      },
+      {
+        match: "cache",
+        matchBinds: [getResponseReadyCacheKey("stablecoins")],
+        rows: [],
+        throwError: new Error("response-ready cache unavailable"),
+      },
+    ]);
+
+    const res = await handleStablecoins(db);
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      peggedAssets: unknown[];
+      _meta: { updatedAt: number; ageSeconds: number };
+    };
+    expect(body.peggedAssets).toEqual([]);
+    expect(body._meta.updatedAt).toBe(nowSec);
+  });
+
+  it("ignores stale response-ready stablecoins body and keeps canonical schema validation", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const responseReadyValue = JSON.stringify({ peggedAssets: [] });
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify({ peggedAssets: "not-an-array" }), updated_at: nowSec },
+          { key: getResponseReadyCacheKey("stablecoins"), value: responseReadyValue, updated_at: nowSec - 1 },
+        ],
+      },
+    ]);
+
     const res = await handleStablecoins(db);
 
     expect(res.status).toBe(503);
