@@ -1396,22 +1396,22 @@
     "reserves": [
       {
         "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 60,
+        "pct": 37.8,
         "risk": "very-low"
       },
       {
         "name": "STRC (Strategy preferred equity, BTC-linked)",
-        "pct": 36.17,
+        "pct": 62.18,
         "risk": "high"
       },
       {
         "name": "SATA (Strive preferred equity, BTC-linked)",
-        "pct": 2.78,
+        "pct": 0.01,
         "risk": "high"
       },
       {
         "name": "Other",
-        "pct": 1.05,
+        "pct": 0.01,
         "risk": "high"
       }
     ],
@@ -1420,15 +1420,28 @@
       "semantics": "collateral-mix",
       "breakerScope": "apxusd-apyx",
       "display": {
-        "url": "https://apyx.fi",
-        "label": "APYX Finance"
+        "url": "https://accountable.apyx.fi/",
+        "label": "Accountable Dashboard"
       },
-      "adapter": "curated-validated",
+      "adapter": "accountable",
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://cache.accountable.capital/dashboard/apyx"
+        }
+      },
+      "params": {
+        "bucket": "reserves_split",
+        "riskMap": {
+          "STRC": "high",
+          "Cash & Equivalents": "very-low",
+          "SATA": "high",
+          "Other": "high"
+        },
+        "renameMap": {
+          "STRC": "STRC (Strategy preferred equity, BTC-linked)",
+          "Cash & Equivalents": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+          "SATA": "SATA (Strive preferred equity, BTC-linked)"
         }
       }
     }

@@ -394,7 +394,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | Adapter                    | Primary input                                    | Semantics                                             | Configured coins |
 | -------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
 | `abracadabra`              | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `accountable`              | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 8                |
+| `accountable`              | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 9                |
 | `anzen-usdz`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
 | `asymmetry`                | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `attestation-pdf-index`    | `http-html`                                      | `attestation-mix`                                     | 1                |
@@ -406,7 +406,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `circle-transparency`      | `http-html`                                      | `attestation-mix`                                     | 2                |
 | `collateral-positions-api` | `http-json`                                      | `collateral-mix`                                      | 2                |
 | `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 59               |
+| `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 58               |
 | `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 32               |
 | `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |

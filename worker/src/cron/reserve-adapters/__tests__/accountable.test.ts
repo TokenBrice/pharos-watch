@@ -4,6 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 
 const signal = AbortSignal.timeout(5_000);
@@ -291,6 +292,59 @@ describe("adaptAccountableTypeBreakdown", () => {
       code: "unmapped-bucket",
       effect: "degraded",
     });
+  });
+
+  it("maps the current Apyx Accountable reserves_split into STRC-heavy apxUSD slices", async () => {
+    const config = apxusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Apyx Accountable primary input to be http-json");
+    }
+    const url = primary.url;
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.001022,
+              ts: "1780583904415",
+              reserves: {
+                interval: "live",
+                verifiability: "100",
+                total_reserves: { value: 476_302_149.26, name: "Total Reserves" },
+                reserves_split: [
+                  { value: 296_181_048.36, name: "STRC" },
+                  { value: 180_040_870.38, name: "Cash & Equivalents" },
+                  { value: 48_748.50, name: "SATA" },
+                  { value: 31_482.01, name: "Other" },
+                ],
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      bucket: "reserves_split",
+      breakdownCount: 4,
+      mappedBucketCount: 4,
+      totalReserves: 476_302_149.26,
+    });
+    expect(result.slices).toEqual([
+      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 62.2, risk: "high" },
+      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 37.8, risk: "very-low" },
+    ]);
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 5, 4, 15) / 1000,
+    }).valid).toBe(true);
   });
 
   it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
