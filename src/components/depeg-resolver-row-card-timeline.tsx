@@ -97,13 +97,13 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
             className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center gap-0.5"
             style={{ left: `${stop.x}%` }}
           >
-            <span className="text-[8px] font-medium uppercase tracking-wide text-muted-foreground">{cell.horizon}</span>
+            <span className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">{cell.horizon}</span>
             {hasProb ? (
-              <span className="font-mono text-[9px] leading-none text-sky-700 dark:text-sky-400">
+              <span className="font-mono text-[10px] leading-none text-sky-700 dark:text-sky-400">
                 {Math.round((cell.probability ?? 0) * 100)}%
               </span>
             ) : (
-              <span className="font-mono text-[9px] leading-none text-muted-foreground/50">·</span>
+              <span className="font-mono text-[10px] leading-none text-muted-foreground/50">·</span>
             )}
           </div>
         );
@@ -123,10 +123,10 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
 
       {medianX != null && duration.medianSec != null ? (
         <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${medianX}%` }}>
-          <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] font-semibold leading-none text-foreground">
+          <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap font-mono text-xs font-semibold leading-none text-foreground">
             ~{formatDurationSec(duration.medianSec)}
           </span>
-          <span className="block h-2 w-2 rotate-45 bg-sky-500" aria-hidden="true" />
+          <span className="block h-2.5 w-2.5 rotate-45 bg-sky-500" aria-hidden="true" />
         </div>
       ) : null}
     </div>
@@ -181,8 +181,12 @@ export function ForecastTimeline({ row }: { row: DdrDisplayRow }) {
       }.`;
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/40 px-3 py-2.5" role="img" aria-label={ariaLabel}>
-      <div className="grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+    <div
+      className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3 sm:px-4"
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <div className="grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
         <span className="truncate">
           {lockAnchored ? "At lock" : "So far"}{" "}
           <span className="font-mono normal-case text-muted-foreground/90">· {formatElapsedSeconds(ageSec)}</span>
@@ -193,7 +197,7 @@ export function ForecastTimeline({ row }: { row: DdrDisplayRow }) {
         </span>
       </div>
 
-      <div className="mt-1 flex h-[58px] items-stretch gap-2">
+      <div className="mt-1.5 flex h-[76px] items-stretch gap-2 sm:h-[84px]">
         <div className="relative flex-[1.05]">
           <PastDeviationSpark row={row} />
         </div>

@@ -35,16 +35,18 @@ function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
 export function CoinLockup({
   row,
   logos,
+  logoSize = 26,
 }: {
   row: Pick<DdrDisplayRow, "stablecoinId" | "symbol" | "name">;
   logos?: Record<string, string>;
+  logoSize?: number;
 }) {
   return (
     <Link
       href={buildStablecoinUrl(row.stablecoinId)}
-      className="pharos-focus-ring group/lockup flex min-w-0 items-center gap-2 rounded-sm"
+      className="pharos-focus-ring group/lockup flex min-w-0 items-center gap-2.5 rounded-sm"
     >
-      <StablecoinLogo src={logos?.[row.stablecoinId]} name={row.symbol} size={26} />
+      <StablecoinLogo src={logos?.[row.stablecoinId]} name={row.symbol} size={logoSize} />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-foreground group-hover/lockup:underline">
           {row.symbol}
@@ -66,24 +68,24 @@ export function LiveFacts({ row }: { row: DdrDisplayRow }) {
     ("eventState" in live ? live.eventState : live.active === false ? "closed" : live.stale ? "stale" : "active");
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
-      <StageLabel>Live incident</StageLabel>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
+      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">
+        Live incident
+      </span>
+      <span>
+        age <span className="text-foreground">{formatElapsedSeconds(ageSec)}</span>
+      </span>
+      <span>
+        peak <span className="text-foreground">{formatBps(peakDeviationBps)}</span>
+      </span>
+      {currentDeviationBps != null ? (
         <span>
-          age <span className="text-foreground">{formatElapsedSeconds(ageSec)}</span>
+          now <span className="text-foreground">{formatBps(currentDeviationBps)}</span>
         </span>
-        <span>
-          peak <span className="text-foreground">{formatBps(peakDeviationBps)}</span>
-        </span>
-        {currentDeviationBps != null ? (
-          <span>
-            now <span className="text-foreground">{formatBps(currentDeviationBps)}</span>
-          </span>
-        ) : null}
-        {status ? <span className="uppercase tracking-wide">{status}</span> : null}
-      </div>
+      ) : null}
+      {status ? <span className="uppercase tracking-wide text-foreground/70">{status}</span> : null}
       {live.degradedReason ? (
-        <p className="mt-1.5 text-xs text-muted-foreground">Live overlay degraded: {live.degradedReason}.</p>
+        <span className="w-full text-muted-foreground">Live overlay degraded: {live.degradedReason}.</span>
       ) : null}
     </div>
   );

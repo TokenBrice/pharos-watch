@@ -234,7 +234,8 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
     expect(screen.getByRole("img", { name: /frozen at public lock/i })).toBeTruthy();
     expect(screen.getByText("From lock")).toBeTruthy();
-    expect(screen.getByText("live now")).toBeTruthy();
+    // Live overlay deviation (-180) renders in the Live incident strip, distinct from the frozen lock-side value.
+    expect(screen.getByText("-180 bps")).toBeTruthy();
     expect(screen.queryByText("Projected")).toBeNull();
     expect(screen.getByText("Live incident")).toBeTruthy();
     expect(screen.getByText("on time")).toBeTruthy();

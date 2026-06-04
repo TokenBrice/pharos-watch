@@ -115,26 +115,30 @@ const EMPTY_CONTEXT: DdrRow["relatedContext"] = {
   mintSurge: null,
 };
 
-export const TIER_META: Record<DdrResolutionTier, { label: string; blurb: string; band: string }> = {
+export const TIER_META: Record<DdrResolutionTier, { label: string; blurb: string; band: string; accent: string }> = {
   recovery_likely: {
     label: "Recovery Likely",
     blurb: "Structure and live signals favor a return to peg.",
     band: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    accent: "text-emerald-700 dark:text-emerald-400",
   },
   at_risk: {
     label: "At Risk",
     blurb: "Recovery is plausible but not assured — the kill signals are live.",
     band: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    accent: "text-amber-700 dark:text-amber-400",
   },
   recovery_unlikely: {
     label: "Recovery Unlikely",
     blurb: "Comparable structural failures did not return to peg.",
     band: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+    accent: "text-red-700 dark:text-red-400",
   },
   insufficient_signal: {
     label: "Insufficient Signal",
     blurb: "Not enough live signal for a verdict yet.",
     band: "border-border/70 bg-muted/50 text-foreground",
+    accent: "text-foreground",
   },
 };
 

@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { formatBps, formatPrice, pegCurrencySymbol } from "@shared/lib/format";
+import { formatPrice, pegCurrencySymbol } from "@shared/lib/format";
 import type { DdrFactor } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
   getCurrentDeviationBps,
   getDuration,
-  getPeakDeviationBps,
   getPredictionState,
   getRelatedContext,
   getResolution,
+  NOW_DOT_TONE,
   SEVERITY_LABEL,
   SEVERITY_WEIGHT,
   SUPPRESSED_REASON_LABELS,
@@ -90,12 +90,24 @@ function SignalPull({ killWeight, anchorWeight }: { killWeight: number; anchorWe
   );
 }
 
+const DISCLOSURE_SUMMARY =
+  "pharos-focus-ring -mx-1 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md px-1 text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-1";
+
+function DisclosureChevron() {
+  return (
+    <span aria-hidden="true" className="ml-auto inline-block text-muted-foreground/60 transition-transform group-open:rotate-90">
+      ›
+    </span>
+  );
+}
+
 export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) {
   const predictionState = getPredictionState(row);
   if (predictionState && predictionState !== "frozen") {
     return <StateOnlyCard row={row} state={predictionState} logos={logos} />;
   }
 
+  const frozen = predictionState === "frozen";
   const resolution = getResolution(row);
   const duration = getDuration(row);
   const tier = resolution.tier;
@@ -106,26 +118,28 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   const killWeight = kills.reduce((sum, f) => sum + SEVERITY_WEIGHT[f.severity], 0);
   const anchorWeight = anchors.reduce((sum, f) => sum + SEVERITY_WEIGHT[f.severity], 0);
 
-  const showTension = factors.length > 0 && tier !== "insufficient_signal";
+  const terminal = tier === "recovery_unlikely";
+  const insufficient = tier === "insufficient_signal";
+  const showTension = factors.length > 0 && !insufficient;
   const chronic = duration.ageStatus === "chronic_tail";
   const dirGlyph = row.direction === "below" ? "▼" : "▲";
-  const durationAnchorLabel = predictionState === "frozen" ? "from lock" : "~resolve";
   const currentDeviationBps = getCurrentDeviationBps(row);
   const priceLabel =
     currentDeviationBps != null
       ? formatPrice(1 + currentDeviationBps / 10_000, pegCurrencySymbol(row.pegCurrency))
       : null;
 
+  const showBand = !duration.suppressed && !terminal && !insufficient && (Boolean(duration.iqrSec) || Boolean(duration.stratum));
+
   return (
-    <Card className="gap-0 overflow-hidden p-4 sm:p-5">
-      <div className="space-y-3.5">
+    <Card className="@container/ddr gap-0 overflow-hidden p-4 sm:p-5">
+      <div className="space-y-3">
+        {/* Identity */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <CoinLockup row={row} logos={logos} />
             {priceLabel ? (
-              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
-                {priceLabel}
-              </span>
+              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
             ) : null}
           </div>
           <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -133,49 +147,42 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           </span>
         </div>
 
-        <div className={cn("rounded-lg border px-3 py-2.5", meta.band)}>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[0.95rem] font-bold uppercase tracking-wide leading-none">{meta.label}</p>
-            {predictionState === "frozen" ? (
+        {/* Verdict — the answer, as a tone-keyed eyebrow rather than a banner */}
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
+            <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>{meta.label}</span>
+            {frozen ? (
               <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
                 Prediction frozen
               </span>
             ) : null}
           </div>
-          <p className="mt-1.5 text-xs leading-snug opacity-80">{meta.blurb}</p>
+          {!terminal ? <p className="text-xs leading-snug text-muted-foreground">{meta.blurb}</p> : null}
         </div>
 
-        {predictionState === "frozen" ? <LockMetadataStrip row={row} showAnchoredDuration /> : null}
-
+        {/* Hero: the drawn forecast */}
         <ForecastTimeline row={row} />
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
-          <span>
-            peak <span className="text-foreground">{formatBps(getPeakDeviationBps(row))}</span>
-          </span>
-          {currentDeviationBps != null ? (
-            <span>
-              {predictionState === "frozen" ? "live now" : "now"}{" "}
-              <span className="text-foreground">{formatBps(currentDeviationBps)}</span>
-            </span>
-          ) : null}
-          {duration.medianSec != null && !duration.suppressed && tier !== "recovery_unlikely" ? (
-            <span>
-              {durationAnchorLabel} <span className="text-foreground">{formatDurationSec(duration.medianSec)}</span>
-              {duration.iqrSec ? (
-                <span className="text-muted-foreground">
-                  {" "}
-                  ({formatDurationSec(duration.iqrSec[0])}–{formatDurationSec(duration.iqrSec[1])})
+        {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
+        {showBand ? (
+          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono text-[11px] tabular-nums text-muted-foreground">
+            {duration.iqrSec ? (
+              <span>
+                band{" "}
+                <span className="text-foreground/80">
+                  {formatDurationSec(duration.iqrSec[0])}–{formatDurationSec(duration.iqrSec[1])}
                 </span>
-              ) : null}
-            </span>
-          ) : null}
-          {duration.stratum && !duration.suppressed && tier !== "recovery_unlikely" ? (
-            <span className="truncate text-muted-foreground/80" title={duration.stratum}>
-              {duration.stratum}
-            </span>
-          ) : null}
-        </div>
+              </span>
+            ) : null}
+            {duration.iqrSec && duration.stratum ? (
+              <span className="text-muted-foreground/40" aria-hidden="true">
+                ·
+              </span>
+            ) : null}
+            {duration.stratum ? <span className="text-muted-foreground/80">{duration.stratum}</span> : null}
+          </p>
+        ) : null}
 
         {chronic ? (
           <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
@@ -183,7 +190,8 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           </p>
         ) : null}
 
-        {tier === "recovery_unlikely" ? (
+        {/* Suppressed-duration reasons (terminal / insufficient / no-support) */}
+        {terminal ? (
           <div className="rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2.5">
             <p className="text-sm font-medium text-foreground">DDR does not expect this depeg to recover.</p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
@@ -196,7 +204,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
               See the Stablecoin Cemetery →
             </Link>
           </div>
-        ) : tier === "insufficient_signal" ? (
+        ) : insufficient ? (
           <div className="space-y-1.5">
             <StageLabel>Why no verdict</StageLabel>
             {resolution.insufficientReasons?.length ? (
@@ -220,31 +228,43 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           </p>
         ) : null}
 
-        {predictionState === "frozen" ? <LiveFacts row={row} /> : null}
+        {/* Live reality — one consolidated strip, kept distinct from the frozen forecast */}
+        <LiveFacts row={row} />
 
+        {/* Causes — collapsed by default, at-a-glance pull stays in the summary */}
         {showTension ? (
-          <div className="space-y-2.5 border-t border-border/50 pt-3">
-            <div className="flex items-center justify-between gap-2">
-              <StageLabel>Will it recover?</StageLabel>
-              <span className="font-mono text-[10px] text-muted-foreground">
+          <details className="group border-t border-border/50 pt-3">
+            <summary className={DISCLOSURE_SUMMARY}>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground group-hover:text-foreground">
+                Will it recover?
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground/80">
                 {kills.length} kill · {anchors.length} anchor
               </span>
+              <span className="ml-auto hidden w-24 shrink-0 sm:block">
+                <SignalPull killWeight={killWeight} anchorWeight={anchorWeight} />
+              </span>
+              <DisclosureChevron />
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="sm:hidden">
+                <SignalPull killWeight={killWeight} anchorWeight={anchorWeight} />
+              </div>
+              <div className="grid grid-cols-1 gap-x-5 gap-y-3 @[26rem]/ddr:grid-cols-2">
+                <FactorList kind="kill" factors={kills} />
+                <FactorList kind="anchor" factors={anchors} />
+              </div>
             </div>
-            <SignalPull killWeight={killWeight} anchorWeight={anchorWeight} />
-            <div className="grid grid-cols-1 gap-x-5 gap-y-3 sm:grid-cols-2">
-              <FactorList kind="kill" factors={kills} />
-              <FactorList kind="anchor" factors={anchors} />
-            </div>
-          </div>
+          </details>
         ) : null}
 
-        <RelatedContextDetails row={row} />
+        <PredictionDetails row={row} frozen={frozen} />
       </div>
     </Card>
   );
 }
 
-function RelatedContextDetails({ row }: { row: DdrDisplayRow }) {
+function PredictionDetails({ row, frozen }: { row: DdrDisplayRow; frozen: boolean }) {
   const c = getRelatedContext(row);
   const items: Array<{ label: string; value: string }> = [];
   if (c.dewsBand) {
@@ -272,24 +292,27 @@ function RelatedContextDetails({ row }: { row: DdrDisplayRow }) {
     items.push({ label: "Mint surge", value: c.mintSurge ? "yes" : "no" });
   }
 
-  if (items.length === 0) return null;
+  if (!frozen && items.length === 0) return null;
 
   return (
     <details className="group border-t border-border/50 pt-2.5">
-      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center rounded-md text-xs text-muted-foreground hover:text-foreground sm:min-h-0">
-        Related context
-        <span aria-hidden="true" className="ml-1 inline-block transition-transform group-open:rotate-90">
-          ›
-        </span>
+      <summary className={DISCLOSURE_SUMMARY}>
+        <span className="text-xs">{frozen ? "Prediction details" : "Related context"}</span>
+        <DisclosureChevron />
       </summary>
-      <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            <dt className="text-muted-foreground">{item.label}</dt>
-            <dd className="font-mono tabular-nums text-foreground">{item.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="mt-2.5 space-y-2.5">
+        {frozen ? <LockMetadataStrip row={row} showAnchoredDuration /> : null}
+        {items.length ? (
+          <dl className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+            {items.map((item) => (
+              <div key={item.label} className="flex items-center gap-1.5">
+                <dt className="text-muted-foreground">{item.label}</dt>
+                <dd className="font-mono tabular-nums text-foreground">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+      </div>
     </details>
   );
 }
