@@ -134,26 +134,22 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   return (
     <Card className="@container/ddr gap-0 overflow-hidden p-4 sm:p-5">
       <div className="space-y-3">
-        {/* Identity + verdict — the answer sits inline with the coin */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-            <CoinLockup row={row} logos={logos} logoSize={52} />
-            {priceLabel ? (
-              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
-            ) : null}
-            <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
-              <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>
-                {meta.label}
+        {/* Identity + verdict + direction — one inline row, direction aligned right */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <CoinLockup row={row} logos={logos} logoSize={52} />
+          {priceLabel ? (
+            <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
+          ) : null}
+          <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
+            <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>{meta.label}</span>
+            {frozen ? (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                Prediction frozen
               </span>
-              {frozen ? (
-                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                  Prediction frozen
-                </span>
-              ) : null}
-            </span>
-          </div>
-          <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+            ) : null}
+          </span>
+          <span className="ml-auto shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
             {dirGlyph} {row.direction} {row.pegCurrency}
           </span>
         </div>
@@ -225,9 +221,6 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           </p>
         ) : null}
 
-        {/* Live reality — one consolidated strip, kept distinct from the frozen forecast */}
-        <LiveFacts row={row} />
-
         {/* Causes — collapsed by default, at-a-glance pull stays in the summary */}
         {showTension ? (
           <details className="group border-t border-border/50 pt-3">
@@ -256,6 +249,11 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         ) : null}
 
         <PredictionDetails row={row} frozen={frozen} />
+
+        {/* Footer: live reality, kept distinct from the frozen forecast above */}
+        <div className="-mx-4 -mb-4 border-t border-border/50 bg-muted/25 px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5">
+          <LiveFacts row={row} />
+        </div>
       </div>
     </Card>
   );
