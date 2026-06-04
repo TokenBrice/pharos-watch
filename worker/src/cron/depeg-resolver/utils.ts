@@ -1,7 +1,7 @@
 import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
 import {
+  DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
-  DDR_PUBLIC_PREDICTION_DELAY_SEC,
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/depeg-resolver-version";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -94,7 +94,7 @@ function toDirection(value: string): DdrDirection {
 }
 
 export function eligibleAt(startedAt: number): number {
-  return startedAt + DDR_PUBLIC_PREDICTION_DELAY_SEC;
+  return startedAt + DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC;
 }
 
 function eventPolicyIncluded(row: DdrEventDbRow): boolean {
@@ -132,7 +132,7 @@ export function toCanonicalIncidentInput(row: DdrEventDbRow): DdrCanonicalIncide
     publicTrackedAtFirstSeen: meta != null,
     psiShadowAtFirstSeen: meta == null,
     predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-    policyDelaySec: DDR_PUBLIC_PREDICTION_DELAY_SEC,
+    policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
     policyEffectiveAt: DDR_V2_EFFECTIVE_AT,
     registrySnapshot: buildRegistrySnapshot(meta),
   };

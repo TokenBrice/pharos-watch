@@ -1,9 +1,10 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import {
-  attachDdrPublicRowHash,
-  computeDdrPublicRowHash,
-} from "@shared/lib/depeg-resolver/public-contract";
+import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
+import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
+import { sealEligibleLocks } from "../depeg-resolver/publication";
+import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
 
 afterEach(() => {
@@ -13,7 +14,7 @@ afterEach(() => {
 describe("computeDepegResolver", () => {
   const NOW_SEC = 1_779_984_600;
 
-  function activeEvent(overrides: Record<string, unknown> = {}) {
+  function activeEvent(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow & Record<string, unknown> {
     return {
       id: 42,
       stablecoin_id: "lane-b-test",
@@ -31,6 +32,107 @@ describe("computeDepegResolver", () => {
       provenance_replay_run_id: null,
       provenance_replay_version: null,
       ...overrides,
+    } as DdrEventDbRow & Record<string, unknown>;
+  }
+
+  function resolverRow(overrides: Partial<DdrRow> = {}): DdrRow {
+    return {
+      stablecoinId: "lane-b-test",
+      symbol: "LBT",
+      name: "Lane B Test",
+      pegCurrency: "USD",
+      governance: "decentralized",
+      status: "active",
+      eventId: 42,
+      startedAt: NOW_SEC - 12 * 3600,
+      ageSec: 12 * 3600,
+      direction: "below",
+      peakDeviationBps: -250,
+      currentDeviationBps: -180,
+      resolution: {
+        tier: "recovery_likely",
+        factors: [
+          {
+            code: "R2_hard_collateral_redemption",
+            kind: "anchor",
+            severity: "strong",
+            label: "Fixture has hard collateral and redemption",
+          },
+        ],
+      },
+      duration: {
+        suppressed: false,
+        suppressedReason: null,
+        stratum: "below - moderate - robust - USD",
+        medianSec: 3600,
+        iqrSec: [1800, 7200],
+        ageStatus: "ordinary",
+        horizons: [
+          {
+            horizon: "6h",
+            state: "benchmarked",
+            probability: 0.75,
+            probabilityDisplay: "70-80%",
+            probabilityInterval: { lower: 0.7, upper: 0.8 },
+            rawAtRisk: 20,
+            uniqueCoins: 12,
+            intervalClosures: 15,
+            intervalNonClosures: 5,
+          },
+        ],
+      },
+      relatedContext: {
+        dewsBand: "WATCH",
+        dewsScore: 22,
+        liquidityScore: 88,
+        safetyGrade: "A",
+        safetyScore: 91,
+        supplyChange7dPct: 0,
+        supplyChange30dPct: 0,
+        mintSurge: false,
+      },
+      ...overrides,
+    };
+  }
+
+  function canonicalIncident(overrides: Partial<DdrCanonicalIncident> = {}): DdrCanonicalIncident {
+    return {
+      incidentKey: "ddr2:readiness0000000000000000000000",
+      eventId: 42,
+      currentEventId: 42,
+      stablecoinId: "lane-b-test",
+      pegCurrency: "USD",
+      direction: "below",
+      startedAt: NOW_SEC - 12 * 3600,
+      eligibleAt: NOW_SEC,
+      policyUniverseIncluded: true,
+      rolloutActiveAtEnablement: false,
+      confirmedAt: null,
+      lockState: null,
+      ...overrides,
+    };
+  }
+
+  function sealedFromInput(
+    input: Parameters<DdrV2StoreContracts["sealPublicPrediction"]>[1],
+    outcomeKind: DdrSealedPublicPrediction["outcomeKind"],
+    id = 700,
+  ): DdrSealedPublicPrediction {
+    return {
+      id,
+      incidentKey: input.incidentKey,
+      eventId: input.eventId,
+      assessmentId: id * 10,
+      outcomeKind,
+      predictionPolicyVersion: input.predictionPolicyVersion,
+      predictionMethodologyVersion: input.methodologyVersion,
+      policyDelaySec: input.policyDelaySec,
+      eligibleAt: input.eligibleAt,
+      lockedAt: input.lockedAt,
+      eventAgeAtLockSec: input.eventAgeAtLockSec,
+      lockTiming: input.lockTiming,
+      rowHash: computeDdrPublicRowHash(input.sealedPayload),
+      sealedPayload: attachDdrPublicRowHash(input.sealedPayload, computeDdrPublicRowHash(input.sealedPayload)),
     };
   }
 
@@ -101,15 +203,13 @@ describe("computeDepegResolver", () => {
         lockTiming: input.lockTiming,
         sealedPayload: input.sealedPayload,
       })),
-      loadSealedPublicPredictions: vi.fn()
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([sealed]),
-      loadFirstPublicationMembership: vi.fn(async (): Promise<
-        Awaited<ReturnType<DdrV2StoreContracts["loadFirstPublicationMembership"]>>
-      > => []),
-      loadPredictionErrata: vi.fn(async (): Promise<
-        Awaited<ReturnType<NonNullable<DdrV2StoreContracts["loadPredictionErrata"]>>>
-      > => []),
+      loadSealedPublicPredictions: vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([sealed]),
+      loadFirstPublicationMembership: vi.fn(
+        async (): Promise<Awaited<ReturnType<DdrV2StoreContracts["loadFirstPublicationMembership"]>>> => [],
+      ),
+      loadPredictionErrata: vi.fn(
+        async (): Promise<Awaited<ReturnType<NonNullable<DdrV2StoreContracts["loadPredictionErrata"]>>>> => [],
+      ),
       writePublicationManifest: vi.fn(async () => ({
         snapshotToken: "ddr-public-1",
         snapshotGeneration: 2,
@@ -149,7 +249,9 @@ describe("computeDepegResolver", () => {
     const result = await computeDepegResolver({ db, storeContracts: null });
     const ddrCacheWrite = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot");
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
     const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
 
     expect(result.itemCount).toBe(0);
@@ -191,10 +293,10 @@ describe("computeDepegResolver", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 
-  it("seals an eligible insufficient-signal incident as a no-call before publication", async () => {
+  it("seals a backstop-eligible insufficient-signal incident as a no-call before publication", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
-    const event = activeEvent();
+    const event = activeEvent({ started_at: NOW_SEC - 72 * 3600 });
     const { stores, sealed } = storesFor();
     const db = mockD1([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
@@ -223,7 +325,8 @@ describe("computeDepegResolver", () => {
         incidentKey: sealed.incidentKey,
         runId: "ddr:quarter-hour:1779984600:test",
         predictionPolicyVersion: "sticky-24h-v1",
-        policyDelaySec: 86_400,
+        policyDelaySec: 72 * 3600,
+        lockTrigger: "readiness_backstop",
       }),
     );
     expect(stores.writePublicationManifest).toHaveBeenCalledTimes(1);
@@ -234,7 +337,7 @@ describe("computeDepegResolver", () => {
   it("publishes first-sealed rows with manifest payload hashes matching sealed rows", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
-    const event = activeEvent();
+    const event = activeEvent({ started_at: NOW_SEC - 72 * 3600 });
     const { stores, sealed } = storesFor();
     let created: typeof sealed | null = null;
     let createdRowHash: string | null = null;
@@ -290,14 +393,18 @@ describe("computeDepegResolver", () => {
     const publishedRow = (manifestBasePayload as { rows?: Array<Record<string, unknown>> }).rows?.[0];
     const prediction = publishedRow?.prediction as Record<string, unknown> | undefined;
     expect(publishedRow?.kind).toBe("no_call");
-    expect(prediction?.policyDelaySec).toBe(86_400);
+    expect(prediction?.policyDelaySec).toBe(72 * 3600);
+    expect(prediction?.lockTrigger).toBe("readiness_backstop");
     expect(computeDdrPublicRowHash(publishedRow)).toBe(createdRowHash);
 
     const ddrCacheWrite = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot");
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
     const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
-    expect(payload.rows[0].prediction.policyDelaySec).toBe(86_400);
+    expect(payload.rows[0].prediction.policyDelaySec).toBe(72 * 3600);
+    expect(payload.rows[0].prediction.lockTrigger).toBe("readiness_backstop");
   });
 
   it("projects first-published sealed no-calls as invalidated when errata exist", async () => {
@@ -365,7 +472,9 @@ describe("computeDepegResolver", () => {
     });
     const ddrCacheWrite = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot");
+      .find(
+        (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "depeg-resolver:snapshot",
+      );
     const payload = JSON.parse(ddrCacheWrite?.binds[1] as string).payload;
 
     expect(payload.rows[0]).toMatchObject({
@@ -394,6 +503,7 @@ describe("computeDepegResolver", () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent({
+      started_at: NOW_SEC - 73 * 3600,
       confirmation_sources: "dex:curve+dex:uniswap",
       pending_reason: "large-cap",
     });
@@ -445,5 +555,201 @@ describe("computeDepegResolver", () => {
         lockTiming: "late_confirmation",
       }),
     );
+  });
+
+  it("seals a policy-eligible prediction with canonical row hash metadata", async () => {
+    const row = resolverRow();
+    const incident = canonicalIncident();
+    const db = mockD1([]);
+    const stores = {
+      ...storesFor(incident.incidentKey).stores,
+      sealPublicPrediction: vi.fn(async (_db, input) => sealedFromInput(input, "prediction")),
+      sealPublicNoCall: vi.fn(async () => {
+        throw new Error("unexpected no-call seal");
+      }),
+    };
+
+    const result = await sealEligibleLocks({
+      stores,
+      db,
+      rows: [row],
+      activeEventById: new Map([[42, activeEvent({ started_at: row.startedAt })]]),
+      incidentsByEventId: new Map([[42, incident]]),
+      existingSealed: [],
+      nowSec: NOW_SEC,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      syncCapabilities: { depegPipeline: true },
+    });
+
+    const sealInput = stores.sealPublicPrediction.mock.calls[0]?.[1];
+    expect(result.lockedCount).toBe(1);
+    expect(result.noCallCount).toBe(0);
+    expect(result.pendingCount).toBe(0);
+    expect(sealInput?.sealedPayload).toMatchObject({
+      kind: "prediction",
+      prediction: {
+        incidentKey: incident.incidentKey,
+        eligibleAt: NOW_SEC,
+        lockedAt: NOW_SEC,
+        eventAgeAtLockSec: 12 * 3600,
+        policyDelaySec: 12 * 3600,
+        lockTrigger: "forecast_readiness",
+      },
+    });
+    expect(result.sealed[0]?.rowHash).toBe(computeDdrPublicRowHash(sealInput!.sealedPayload));
+  });
+
+  it("keeps a below-readiness incident pending when canonical eligibility has not arrived", async () => {
+    const startedAt = NOW_SEC - 3600;
+    const row = resolverRow({ startedAt, ageSec: 3600 });
+    const incident = canonicalIncident({ startedAt, eligibleAt: startedAt + 72 * 3600 });
+    const db = mockD1([]);
+    const stores = storesFor(incident.incidentKey).stores;
+
+    const result = await sealEligibleLocks({
+      stores,
+      db,
+      rows: [row],
+      activeEventById: new Map([[42, activeEvent({ started_at: row.startedAt })]]),
+      incidentsByEventId: new Map([[42, incident]]),
+      existingSealed: [],
+      nowSec: NOW_SEC,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      syncCapabilities: { depegPipeline: true },
+    });
+
+    expect(result).toMatchObject({ lockedCount: 0, noCallCount: 0, pendingCount: 1 });
+    expect(stores.recordLockDeferral).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        action: "pending",
+        healthStatus: "healthy",
+        eligibleAt: startedAt + 72 * 3600,
+      }),
+    );
+    expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
+    expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
+  });
+
+  it("uses a 72h canonical backstop eligibility to seal prediction and no-call outcomes", async () => {
+    const startedAt = NOW_SEC - 72 * 3600;
+    const db = mockD1([]);
+    const predictionIncident = canonicalIncident({
+      incidentKey: "ddr2:backstop-prediction000000000000",
+      startedAt,
+      eligibleAt: NOW_SEC,
+    });
+    const noCallIncident = canonicalIncident({
+      incidentKey: "ddr2:backstop-nocall0000000000000000",
+      eventId: 43,
+      currentEventId: 43,
+      startedAt,
+      eligibleAt: NOW_SEC,
+    });
+    const predictionRow = resolverRow({ startedAt, ageSec: 72 * 3600 });
+    const noCallRow = resolverRow({
+      eventId: 43,
+      startedAt,
+      ageSec: 72 * 3600,
+      resolution: {
+        tier: "insufficient_signal",
+        factors: [],
+        insufficientReasons: ["missing live price"],
+      },
+      duration: {
+        suppressed: true,
+        suppressedReason: "insufficient_signal",
+        stratum: null,
+        medianSec: null,
+        iqrSec: null,
+        ageStatus: "data_issue",
+        horizons: [],
+      },
+    });
+    const stores = {
+      ...storesFor(predictionIncident.incidentKey).stores,
+      sealPublicPrediction: vi.fn(async (_db, input) => sealedFromInput(input, "prediction", 701)),
+      sealPublicNoCall: vi.fn(async (_db, input) => sealedFromInput(input, "no_call", 702)),
+    };
+
+    const result = await sealEligibleLocks({
+      stores,
+      db,
+      rows: [predictionRow, noCallRow],
+      activeEventById: new Map([
+        [42, activeEvent({ started_at: startedAt })],
+        [43, activeEvent({ id: 43, started_at: startedAt })],
+      ]),
+      incidentsByEventId: new Map([
+        [42, predictionIncident],
+        [43, noCallIncident],
+      ]),
+      existingSealed: [],
+      nowSec: NOW_SEC,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      syncCapabilities: { depegPipeline: true },
+    });
+
+    expect(result.lockedCount).toBe(1);
+    expect(result.noCallCount).toBe(1);
+    expect(stores.sealPublicPrediction).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        eventAgeAtLockSec: 72 * 3600,
+        eligibleAt: NOW_SEC,
+      }),
+    );
+    expect(stores.sealPublicNoCall).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        eventAgeAtLockSec: 72 * 3600,
+        eligibleAt: NOW_SEC,
+      }),
+    );
+  });
+
+  it("does not duplicate-seal when a public outcome already exists for the incident", async () => {
+    const row = resolverRow();
+    const incident = canonicalIncident();
+    const db = mockD1([]);
+    const { stores } = storesFor(incident.incidentKey);
+    const existing = {
+      id: 77,
+      incidentKey: incident.incidentKey,
+      eventId: 42,
+      assessmentId: 770,
+      outcomeKind: "prediction" as const,
+      predictionPolicyVersion: "sticky-24h-v0",
+      predictionMethodologyVersion: "1.1",
+      policyDelaySec: 86_400,
+      eligibleAt: NOW_SEC - 86_400,
+      lockedAt: NOW_SEC - 80_000,
+      eventAgeAtLockSec: 90_000,
+      lockTiming: "late_freeze" as const,
+      rowHash: "d".repeat(64),
+      sealedPayload: { kind: "prediction" },
+    };
+
+    const result = await sealEligibleLocks({
+      stores,
+      db,
+      rows: [row],
+      activeEventById: new Map([[42, activeEvent({ started_at: row.startedAt })]]),
+      incidentsByEventId: new Map([[42, incident]]),
+      existingSealed: [existing],
+      nowSec: NOW_SEC,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      syncCapabilities: { depegPipeline: true },
+    });
+
+    expect(result.lockedCount).toBe(0);
+    expect(result.noCallCount).toBe(0);
+    expect(result.sealed).toEqual([existing]);
+    expect(stores.sealPublicPrediction).not.toHaveBeenCalled();
+    expect(stores.sealPublicNoCall).not.toHaveBeenCalled();
   });
 });

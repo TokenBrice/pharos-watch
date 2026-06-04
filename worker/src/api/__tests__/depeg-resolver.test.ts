@@ -7,7 +7,11 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION as DDR_PUBLIC_SNAPSHOT_CACHE_GENERATION,
 } from "@shared/lib/depeg-resolver-version";
-import { buildDdrManifestBasePayload, computeDdrManifestBasePayloadHash } from "@shared/lib/depeg-resolver/public-contract";
+import {
+  buildDdrManifestBasePayload,
+  computeDdrManifestBasePayloadHash,
+  computeDdrPublicRowHash,
+} from "@shared/lib/depeg-resolver/public-contract";
 import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION } from "../../lib/depeg-resolver-snapshot-cache";
 import type {
   DdrPredictionMeta,
@@ -21,12 +25,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const ROW_HASH = "2".repeat(64);
-
-function basePredictionMeta(
-  computedAt: number,
-  overrides: Partial<DdrPredictionMeta> = {},
-): DdrPredictionMeta {
+function basePredictionMeta(computedAt: number, overrides: Partial<DdrPredictionMeta> = {}): DdrPredictionMeta {
   return {
     state: "frozen",
     publicPredictionId: 7,
@@ -46,10 +45,13 @@ function basePredictionMeta(
     snapshotGeneration: DDR_PUBLIC_SNAPSHOT_CACHE_GENERATION,
     eventAgeAtLockSec: 24 * 3600,
     lockTiming: "on_time",
+    lockTrigger: "scheduled_24h",
+    readiness: null,
+    backstop: null,
     source: "public_prediction",
     deferralReason: null,
     deferralCount: null,
-    rowHash: ROW_HASH,
+    rowHash: null,
     lineage: null,
     modelAsOf: computedAt,
     latestErratum: null,
@@ -78,7 +80,7 @@ function predictionRow(computedAt: number): DdrV2PredictionRow & { live: DdrV2Li
     ...basePredictionMeta(computedAt),
     state: "frozen" as const,
   };
-  return {
+  const row: DdrV2PredictionRow & { live: DdrV2LiveOverlay } = {
     stablecoinId: "lusd-liquity",
     symbol: "LUSD",
     name: "Liquity USD",
@@ -166,9 +168,29 @@ function predictionRow(computedAt: number): DdrV2PredictionRow & { live: DdrV2Li
     },
     live: live(computedAt),
   };
+  row.prediction.rowHash = computeDdrPublicRowHash(row);
+  return row;
 }
 
-function snapshot(computedAt: number, expiresAt: number, rows: DdrResponse["rows"] = [predictionRow(computedAt)]): DdrResponse {
+function snapshot(
+  computedAt: number,
+  expiresAt: number,
+  rows: DdrResponse["rows"] = [predictionRow(computedAt)],
+): DdrResponse {
+  const publicPredictionIds = rows
+    .map((row) => row.prediction.publicPredictionId)
+    .filter((id): id is number => id != null)
+    .sort((left, right) => left - right);
+  const publicPredictionRowHashes = Object.fromEntries(
+    rows
+      .map((row) =>
+        row.prediction.publicPredictionId != null && row.prediction.rowHash
+          ? ([String(row.prediction.publicPredictionId), row.prediction.rowHash] as const)
+          : null,
+      )
+      .filter((entry): entry is readonly [string, string] => entry != null)
+      .sort(([left], [right]) => Number(left) - Number(right)),
+  );
   const payload: DdrResponse = {
     _meta: {
       schemaVersion: 2,
@@ -178,8 +200,8 @@ function snapshot(computedAt: number, expiresAt: number, rows: DdrResponse["rows
       expiresAt,
       snapshotToken: "ddrpub_001",
       snapshotGeneration: DDR_PUBLIC_SNAPSHOT_CACHE_GENERATION,
-      publicPredictionIds: [7],
-      publicPredictionRowHashes: { "7": ROW_HASH },
+      publicPredictionIds,
+      publicPredictionRowHashes,
       basePayloadHash: null,
       readOverlay: {
         degradedLockDeferralIncidentKeys: [],
@@ -291,6 +313,7 @@ describe("handleDepegResolver", () => {
     vi.useFakeTimers();
     vi.setSystemTime(2_000_000 * 1000);
     const payload = snapshot(1_998_000, 2_001_000);
+    const rowHash = payload.rows[0].prediction.rowHash;
     const db = mockD1([
       ...cacheRows(payload),
       {
@@ -306,7 +329,7 @@ describe("handleDepegResolver", () => {
             operator_note: "source input corrected",
             replacement_assessment_id: null,
             replacement_row_hash: null,
-            row_hash_before: ROW_HASH,
+            row_hash_before: rowHash,
             created_at: 1_999_500,
             created_by: "operator",
           },

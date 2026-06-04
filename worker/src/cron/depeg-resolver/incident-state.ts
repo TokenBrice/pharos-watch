@@ -1,7 +1,7 @@
 import {
   DDR_LOCK_ON_TIME_GRACE_SEC,
+  DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
-  DDR_PUBLIC_PREDICTION_DELAY_SEC,
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/depeg-resolver-version";
 import type {
@@ -17,12 +17,16 @@ import {
 } from "./utils";
 import { queryRows } from "./context";
 
-export function computeLockTiming(incident: DdrCanonicalIncident, lockedAt: number): DdrLockTiming {
+export function computeLockTiming(
+  incident: DdrCanonicalIncident,
+  lockedAt: number,
+  eligibleAt = incident.eligibleAt,
+): DdrLockTiming {
   const lockState = incident.lockState;
   if (lockState && lockState.deferralCount > 0) return "deferred";
-  if (incident.confirmedAt != null && incident.confirmedAt > incident.eligibleAt) return "late_confirmation";
+  if (incident.confirmedAt != null && incident.confirmedAt > eligibleAt) return "late_confirmation";
   if (incident.rolloutActiveAtEnablement === true || incident.startedAt < DDR_V2_EFFECTIVE_AT) return "late_freeze";
-  if (lockedAt <= incident.eligibleAt + DDR_LOCK_ON_TIME_GRACE_SEC) return "on_time";
+  if (lockedAt <= eligibleAt + DDR_LOCK_ON_TIME_GRACE_SEC) return "on_time";
   return "late_freeze";
 }
 
@@ -114,7 +118,7 @@ export async function ensureCanonicalIncidentsForEvents(
       runId: options.ddrRunId,
       runAt: options.runAt,
       predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-      policyDelaySec: DDR_PUBLIC_PREDICTION_DELAY_SEC,
+      policyDelaySec: DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
       policyEffectiveAt: DDR_V2_EFFECTIVE_AT,
     },
   );
@@ -145,6 +149,7 @@ export async function recordSystemHealthDeferrals(input: {
   for (const row of input.activeRows) {
     const incident = input.incidentsByEventId.get(row.id) ?? fallbackIncidentForEvent(row);
     if (!incident.policyUniverseIncluded || input.nowSec < incident.eligibleAt) continue;
+    const backstopDelaySec = Math.max(0, incident.eligibleAt - incident.startedAt);
     await input.stores.recordLockDeferral(input.db, {
       incidentKey: incident.incidentKey,
       eventId: row.id,
@@ -156,6 +161,9 @@ export async function recordSystemHealthDeferrals(input: {
       action: "deferred",
       reason: input.reason,
       syncCapabilities: input.syncCapabilities,
+      lockTrigger: "readiness_backstop",
+      backstopAt: incident.eligibleAt,
+      backstopDelaySec,
     });
     count += 1;
   }
@@ -184,6 +192,7 @@ export async function recordConfirmedSeenOpportunities(input: {
     if (incident.lockState?.lastState && incident.lockState.lastState !== "pending_lock" && incident.lockState.lastState !== "lock_deferred") {
       continue;
     }
+    const backstopDelaySec = Math.max(0, incident.eligibleAt - incident.startedAt);
     await input.stores.recordLockDeferral(input.db, {
       incidentKey: incident.incidentKey,
       eventId: row.id,
@@ -197,6 +206,9 @@ export async function recordConfirmedSeenOpportunities(input: {
       confirmationAt: confirmedAt,
       outcomeAt: confirmedAt,
       syncCapabilities: input.syncCapabilities,
+      lockTrigger: "readiness_backstop",
+      backstopAt: incident.eligibleAt,
+      backstopDelaySec,
     });
     count += 1;
   }

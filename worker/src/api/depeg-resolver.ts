@@ -16,6 +16,7 @@ import {
 import { validateDdrPublicCacheContract } from "@shared/lib/depeg-resolver/public-contract";
 import {
   DDR_DURATION_MODEL_VERSION,
+  DDR_FORECAST_READINESS_VERSION,
   DDR_INCIDENT_GROUPING_VERSION,
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
@@ -80,11 +81,15 @@ interface DdrApiLockDeferralRow {
   direction: "above" | "below";
   current_started_at: number;
   current_event_id: number;
+  prediction_policy_version: string;
   eligible_at: number;
   deferral_count: number;
   last_deferral_reason: string | null;
   last_attempted_at: number | null;
   updated_at: number;
+  lock_trigger: "scheduled_24h" | "forecast_readiness" | "readiness_backstop" | null;
+  backstop_at: number | null;
+  backstop_delay_sec: number | null;
   symbol: string;
   peg_type: string;
   peak_deviation_bps: number;
@@ -232,11 +237,15 @@ async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralR
                 i.direction,
                 i.current_started_at,
                 i.current_event_id,
+                ls.prediction_policy_version,
                 ls.eligible_at,
                 ls.deferral_count,
                 ls.last_deferral_reason,
                 ls.last_attempted_at,
                 ls.updated_at,
+                ls.lock_trigger,
+                ls.backstop_at,
+                ls.backstop_delay_sec,
                 e.symbol,
                 e.peg_type,
                 e.peak_deviation_bps,
@@ -286,7 +295,7 @@ function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2
       state: "lock_deferred",
       publicPredictionId: null,
       incidentKey: row.incident_key,
-      predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+      predictionPolicyVersion: row.prediction_policy_version || DDR_PREDICTION_POLICY_VERSION,
       predictionMethodologyVersion: null,
       predictionMethodologyVersionLabel: null,
       resolutionRubricVersion: null,
@@ -301,6 +310,14 @@ function buildLockDeferralRow(row: DdrApiLockDeferralRow, nowSec: number): DdrV2
       snapshotGeneration: null,
       eventAgeAtLockSec: null,
       lockTiming: null,
+      lockTrigger: row.lock_trigger ?? "scheduled_24h",
+      readiness: null,
+      backstop: row.backstop_at == null ? null : {
+        version: DDR_FORECAST_READINESS_VERSION,
+        delaySec: row.backstop_delay_sec ?? Math.max(0, row.backstop_at - row.current_started_at),
+        backstopAt: row.backstop_at,
+        reached: nowSec >= row.backstop_at,
+      },
       source: "pending",
       deferralReason: row.last_deferral_reason,
       deferralCount: row.deferral_count,

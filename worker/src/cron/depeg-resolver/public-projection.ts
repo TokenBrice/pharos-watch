@@ -2,9 +2,16 @@ import {
   DDR_ERRATUM_REASON_VALUES,
   DDR_PUBLIC_WARNING,
   type DdrPredictionErratum,
+  type DdrForecastReadiness,
+  type DdrForecastReadinessBackstop,
+  type DdrLockTrigger,
   type DdrResponse,
   type DdrRow,
 } from "@shared/types/depeg-resolver";
+import {
+  buildForecastReadinessBackstop,
+  forecastReadinessScore,
+} from "@shared/lib/depeg-resolver/forecast-readiness";
 import {
   buildDdrManifestBasePayload,
 } from "@shared/lib/depeg-resolver/public-contract";
@@ -15,7 +22,6 @@ import {
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
-  DDR_PUBLIC_PREDICTION_DELAY_SEC,
   DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
   DDR_SUPPORT_RULES_VERSION,
@@ -65,6 +71,13 @@ export function buildSealPayload(
   incident: DdrCanonicalIncident,
   lockedAt: number,
   lockTiming: DdrLockTiming,
+  lock: {
+    eligibleAt: number;
+    policyDelaySec: number;
+    lockTrigger: DdrLockTrigger;
+    readiness: DdrForecastReadiness;
+    backstop: DdrForecastReadinessBackstop;
+  },
 ): Record<string, unknown> {
   const base = {
     eventId: row.eventId,
@@ -79,11 +92,14 @@ export function buildSealPayload(
     startedAt: row.startedAt,
     prediction: {
       incidentKey: incident.incidentKey,
-      eligibleAt: incident.eligibleAt,
+      eligibleAt: lock.eligibleAt,
       lockedAt,
       eventAgeAtLockSec: lockedAt - row.startedAt,
       lockTiming,
-      policyDelaySec: DDR_PUBLIC_PREDICTION_DELAY_SEC,
+      lockTrigger: lock.lockTrigger,
+      readiness: lock.readiness,
+      backstop: lock.backstop,
+      policyDelaySec: lock.policyDelaySec,
       predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
       predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
       predictionMethodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
@@ -117,6 +133,23 @@ export function buildSealPayload(
       relatedContext: row.relatedContext,
       sourceRow: row,
     },
+  };
+}
+
+function buildPendingReadinessMeta(row: DdrRow, nowSec: number): {
+  readiness: DdrForecastReadiness;
+  backstop: DdrForecastReadinessBackstop;
+  eligibleAt: number;
+  policyDelaySec: number;
+} {
+  const readiness = forecastReadinessScore(row);
+  const backstop = buildForecastReadinessBackstop({ startedAt: row.startedAt, nowSec });
+  const eligibleAt = backstop.backstopAt ?? row.startedAt;
+  return {
+    readiness,
+    backstop,
+    eligibleAt,
+    policyDelaySec: Math.max(0, eligibleAt - row.startedAt),
   };
 }
 
@@ -255,29 +288,60 @@ function buildPredictionMeta(input: {
   publication: DdrFirstPublicationMembership | null;
   deferralReason: string | null;
   modelAsOf: number;
+  readiness?: DdrForecastReadiness | null;
+  backstop?: DdrForecastReadinessBackstop | null;
+  eligibleAt?: number | null;
+  policyDelaySec?: number | null;
+  lockTrigger?: DdrLockTrigger | null;
   errataHistory?: DdrPredictionErratum[];
 }): Record<string, unknown> {
   const errataHistory = input.errataHistory ?? [];
-  const policyDelaySec = input.sealed?.policyDelaySec ?? Math.max(0, input.incident.eligibleAt - input.incident.startedAt);
+  const sealedPrediction = input.sealed ? recordValue(input.sealed.sealedPayload.prediction) : null;
+  const policyDelaySec =
+    input.policyDelaySec ??
+    nullableNumberValue(sealedPrediction?.policyDelaySec) ??
+    input.sealed?.policyDelaySec ??
+    Math.max(0, input.incident.eligibleAt - input.incident.startedAt);
+  const eligibleAt =
+    input.eligibleAt ??
+    nullableNumberValue(sealedPrediction?.eligibleAt) ??
+    input.sealed?.eligibleAt ??
+    input.incident.eligibleAt;
+  const lockTrigger =
+    input.lockTrigger ??
+    (sealedPrediction?.lockTrigger as DdrLockTrigger | null | undefined) ??
+    input.sealed?.lockTrigger ??
+    null;
+  const readiness =
+    input.readiness ??
+    recordValue(sealedPrediction?.readiness) ??
+    null;
+  const backstop =
+    input.backstop ??
+    recordValue(sealedPrediction?.backstop) ??
+    null;
   return {
     state: input.state,
     publicPredictionId: input.publicPredictionId,
     incidentKey: input.incident.incidentKey,
-    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-    predictionMethodologyVersion: input.sealed?.predictionMethodologyVersion ?? null,
-    predictionMethodologyVersionLabel: input.sealed ? DDR_METHODOLOGY_VERSION_LABEL : null,
-    resolutionRubricVersion: input.sealed ? DDR_RESOLUTION_RUBRIC_VERSION : null,
-    durationModelVersion: input.sealed ? DDR_DURATION_MODEL_VERSION : null,
-    incidentGroupingVersion: input.sealed ? DDR_INCIDENT_GROUPING_VERSION : null,
-    supportRulesVersion: input.sealed ? DDR_SUPPORT_RULES_VERSION : null,
-    eligibleAt: input.incident.eligibleAt,
+    predictionPolicyVersion: nullableStringValue(sealedPrediction?.predictionPolicyVersion, input.sealed?.predictionPolicyVersion ?? DDR_PREDICTION_POLICY_VERSION),
+    predictionMethodologyVersion: nullableStringValue(sealedPrediction?.predictionMethodologyVersion, input.sealed?.predictionMethodologyVersion ?? null),
+    predictionMethodologyVersionLabel: nullableStringValue(sealedPrediction?.predictionMethodologyVersionLabel, input.sealed ? DDR_METHODOLOGY_VERSION_LABEL : null),
+    resolutionRubricVersion: nullableStringValue(sealedPrediction?.resolutionRubricVersion, input.sealed ? DDR_RESOLUTION_RUBRIC_VERSION : null),
+    durationModelVersion: nullableStringValue(sealedPrediction?.durationModelVersion, input.sealed ? DDR_DURATION_MODEL_VERSION : null),
+    incidentGroupingVersion: nullableStringValue(sealedPrediction?.incidentGroupingVersion, input.sealed ? DDR_INCIDENT_GROUPING_VERSION : null),
+    supportRulesVersion: nullableStringValue(sealedPrediction?.supportRulesVersion, input.sealed ? DDR_SUPPORT_RULES_VERSION : null),
+    eligibleAt,
     policyDelaySec,
     lockedAt: input.sealed?.lockedAt ?? null,
     publishedAt: input.publication?.publishedAt ?? null,
     publicationSnapshotToken: input.publication?.snapshotToken ?? null,
     snapshotGeneration: input.publication?.snapshotGeneration ?? null,
     eventAgeAtLockSec: input.sealed?.eventAgeAtLockSec ?? null,
-    lockTiming: input.sealed?.lockTiming ?? null,
+    lockTiming: nullableStringValue(sealedPrediction?.lockTiming, input.sealed?.lockTiming ?? null),
+    lockTrigger: lockTrigger ?? "scheduled_24h",
+    readiness,
+    backstop,
     source: input.state === "invalidated" ? "erratum" : input.sealed ? "public_prediction" : "pending",
     deferralReason: input.deferralReason,
     deferralCount: input.incident.lockState?.deferralCount ?? null,
@@ -350,9 +414,10 @@ function buildPublicRows(input: {
     const publication = publicPredictionId == null ? null : publicationById.get(publicPredictionId) ?? null;
     const base = buildBasePublicRow(row, incident);
     const live = buildLiveOverlay(row, input.nowSec);
+    const pendingReadiness = sealed ? null : buildPendingReadinessMeta(row, input.nowSec);
 
     if (!sealed) {
-      const lockEligible = input.nowSec >= incident.eligibleAt;
+      const lockEligible = pendingReadiness?.backstop.reached === true || pendingReadiness?.readiness.strictEarlyLockReady === true;
       return {
         ...base,
         kind: "pending",
@@ -364,6 +429,11 @@ function buildPublicRows(input: {
           publication: null,
           deferralReason: lockEligible && !input.storageAvailable ? "storage-contract-unavailable" : incident.lockState?.lastDeferralReason ?? null,
           modelAsOf: input.nowSec,
+          readiness: pendingReadiness?.readiness ?? null,
+          backstop: pendingReadiness?.backstop ?? null,
+          eligibleAt: pendingReadiness?.eligibleAt ?? incident.eligibleAt,
+          policyDelaySec: pendingReadiness?.policyDelaySec ?? Math.max(0, incident.eligibleAt - incident.startedAt),
+          lockTrigger: incident.lockState?.lockTrigger ?? null,
         }),
         frozen: null,
         live,
@@ -424,7 +494,7 @@ function buildPublicRows(input: {
         };
       }
       return {
-        ...base,
+        ...buildBasePublicRowFromSealed(sealed, base),
         kind: "no_call",
         prediction: buildPredictionMeta({
           state: "no_call",
@@ -470,7 +540,7 @@ function buildPublicRows(input: {
       };
     }
     return {
-      ...base,
+      ...buildBasePublicRowFromSealed(sealed, base),
       kind: "prediction",
       prediction: buildPredictionMeta({
         state: "frozen",

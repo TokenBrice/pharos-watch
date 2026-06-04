@@ -291,19 +291,94 @@ describe("buildDepegResolverReviewSnapshot", () => {
         match: "FROM depeg_events",
         rows: [
           { id: 1, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT, recovery_price: 1 },
-          { id: 2, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT + 1, recovery_price: 1 },
+          {
+            id: 2,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT + 1,
+            recovery_price: 1,
+          },
           { id: 3, stablecoin_id: "usr-resolv", started_at: STARTED_AT, ended_at: null, recovery_price: null },
         ],
       },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores });
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
     const states = Object.fromEntries(snapshot.rows.map((row) => [row.incidentKey, row.predictionState]));
 
     expect(states["ddr2:eq-recovered"]).toBe("missed_lock_recovered");
     expect(states["ddr2:deferral-closed"]).toBe("missed_lock_recovered");
     expect(states["ddr2:terminal-unknown-time"]).toBe("missed_lock_terminal");
+  });
+
+  it("uses canonical dynamic eligibility when classifying DDRR coverage rows", async () => {
+    const dynamicEligibleAt = STARTED_AT + 72 * 3600;
+    const activeIncident = {
+      incidentKey: "ddr2:dynamic-active-pending",
+      eventId: 11,
+      currentEventId: 11,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: dynamicEligibleAt,
+      policyUniverseIncluded: true,
+    };
+    const recoveredIncident = {
+      incidentKey: "ddr2:dynamic-recovered-before-backstop",
+      eventId: 12,
+      currentEventId: 12,
+      stablecoinId: "lusd-liquity",
+      pegCurrency: "USD",
+      direction: "below" as const,
+      startedAt: STARTED_AT,
+      eligibleAt: dynamicEligibleAt,
+      policyUniverseIncluded: true,
+    };
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          { id: 11, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+          {
+            id: 12,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: STARTED_AT + 48 * 3600,
+            recovery_price: 1,
+          },
+        ],
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [activeIncident, recoveredIncident]),
+    });
+
+    const pendingSnapshot = await buildDepegResolverReviewSnapshot(db, STARTED_AT + 24 * 3600, undefined, {
+      storeContracts: stores,
+    });
+    const pendingRow = pendingSnapshot.rows.find((row) => row.incidentKey === activeIncident.incidentKey);
+    expect(pendingRow).toMatchObject({
+      kind: "coverage",
+      eligibleAt: dynamicEligibleAt,
+      predictionState: "pending_lock",
+      coverageCause: "active_pending_lock",
+    });
+
+    const recoveredSnapshot = await buildDepegResolverReviewSnapshot(db, dynamicEligibleAt + 1, undefined, {
+      storeContracts: stores,
+    });
+    const recoveredRow = recoveredSnapshot.rows.find((row) => row.incidentKey === recoveredIncident.incidentKey);
+    expect(recoveredRow).toMatchObject({
+      kind: "coverage",
+      eligibleAt: dynamicEligibleAt,
+      predictionState: "resolved_before_prediction",
+      coverageCause: "pre_lock_recovered",
+      actualEndedAt: STARTED_AT + 48 * 3600,
+    });
   });
 
   it("classifies terminal_before_prediction from tracked frozenAt evidence", async () => {
@@ -393,7 +468,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores });
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
 
     expect(snapshot.rows[0]).toMatchObject({
       kind: "coverage",
@@ -424,14 +501,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const db = mockD1([
       {
         match: "FROM depeg_events",
-        rows: [
-          { id: 93, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: null, recovery_price: null },
-        ],
+        rows: [{ id: 93, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: null, recovery_price: null }],
       },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, eligibleAt + 3600, undefined, { storeContracts: stores });
+    const snapshot = await buildDepegResolverReviewSnapshot(db, eligibleAt + 3600, undefined, {
+      storeContracts: stores,
+    });
 
     expect(snapshot.rows[0]).toMatchObject({
       kind: "coverage",
@@ -460,7 +537,15 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const db = mockD1([
       {
         match: "FROM depeg_events",
-        rows: [{ id: 42, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT + 10, recovery_price: 1 }],
+        rows: [
+          {
+            id: 42,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT + 10,
+            recovery_price: 1,
+          },
+        ],
       },
     ]);
     const stores = durableStores({
@@ -486,7 +571,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
       ]),
     });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores });
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
 
     expect(snapshot.rows[0]).toMatchObject({
       kind: "coverage",

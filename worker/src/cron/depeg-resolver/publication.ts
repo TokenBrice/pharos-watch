@@ -1,9 +1,20 @@
 import {
+  DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
-  DDR_PUBLIC_PREDICTION_DELAY_SEC,
   DDR_SNAPSHOT_CACHE_GENERATION,
 } from "@shared/lib/depeg-resolver-version";
-import type { DdrPredictionErratum, DdrRow } from "@shared/types/depeg-resolver";
+import {
+  buildForecastReadinessBackstop,
+  forecastReadinessScore,
+  meetsStrictEarlyLockReadiness,
+} from "@shared/lib/depeg-resolver/forecast-readiness";
+import type {
+  DdrForecastReadiness,
+  DdrForecastReadinessBackstop,
+  DdrLockTrigger,
+  DdrPredictionErratum,
+  DdrRow,
+} from "@shared/types/depeg-resolver";
 import {
   DDR_PUBLICATION_SNAPSHOT_KIND,
   type DdrCanonicalIncident,
@@ -44,14 +55,67 @@ export async function loadSealedAndPublicationState(input: {
   }
   const sealed = await input.stores.loadSealedPublicPredictions(input.db, {
     incidentKeys: input.incidentKeys,
-    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
     includeUnpublished: true,
   });
   const firstPublication = await input.stores.loadFirstPublicationMembership(input.db, {
     incidentKeys: input.incidentKeys,
-    predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
   });
   return { sealed, firstPublication };
+}
+
+type DdrReadinessLockDecision =
+  | {
+      eligible: true;
+      eligibleAt: number;
+      policyDelaySec: number;
+      lockTrigger: Exclude<DdrLockTrigger, "scheduled_24h">;
+      readiness: DdrForecastReadiness;
+      backstop: DdrForecastReadinessBackstop;
+    }
+  | {
+      eligible: false;
+      eligibleAt: number;
+      policyDelaySec: number;
+      lockTrigger: null;
+      readiness: DdrForecastReadiness;
+      backstop: DdrForecastReadinessBackstop;
+    };
+
+function evaluateReadinessLock(row: DdrRow, nowSec: number): DdrReadinessLockDecision {
+  const readiness = forecastReadinessScore(row);
+  const backstop = buildForecastReadinessBackstop({ startedAt: row.startedAt, nowSec });
+  const backstopAt = backstop.backstopAt ?? row.startedAt + DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
+
+  if (backstop.reached) {
+    return {
+      eligible: true,
+      eligibleAt: backstopAt,
+      policyDelaySec: backstop.delaySec,
+      lockTrigger: "readiness_backstop",
+      readiness,
+      backstop,
+    };
+  }
+
+  if (meetsStrictEarlyLockReadiness(readiness)) {
+    return {
+      eligible: true,
+      eligibleAt: nowSec,
+      policyDelaySec: Math.max(0, nowSec - row.startedAt),
+      lockTrigger: "forecast_readiness",
+      readiness,
+      backstop,
+    };
+  }
+
+  return {
+    eligible: false,
+    eligibleAt: backstopAt,
+    policyDelaySec: backstop.delaySec,
+    lockTrigger: null,
+    readiness,
+    backstop,
+  };
 }
 
 export async function sealEligibleLocks(input: {
@@ -80,37 +144,50 @@ export async function sealEligibleLocks(input: {
     const incident = input.incidentsByEventId.get(row.eventId) ?? fallbackIncidentForEvent(sourceEvent);
     if (!incident.policyUniverseIncluded) continue;
 
-    if (input.nowSec < incident.eligibleAt) {
+    if (sealedByKey.has(incident.incidentKey)) continue;
+
+    const lock = evaluateReadinessLock(row, input.nowSec);
+    if (!lock.eligible) {
       await input.stores.recordLockDeferral(input.db, {
         incidentKey: incident.incidentKey,
         eventId: row.eventId,
         runId: input.ddrRunId,
         runAt: input.runAt,
-        eligibleAt: incident.eligibleAt,
+        eligibleAt: lock.eligibleAt,
         predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
         healthStatus: "healthy",
         action: "pending",
         reason: null,
         syncCapabilities: input.syncCapabilities,
+        lockTrigger: null,
+        forecastReadinessScore: lock.readiness.score,
+        forecastReadinessVersion: lock.readiness.version,
+        readinessThreshold: lock.readiness.threshold,
+        backstopAt: lock.backstop.backstopAt ?? null,
+        backstopDelaySec: lock.backstop.delaySec,
       });
       pendingCount += 1;
       continue;
     }
 
-    if (sealedByKey.has(incident.incidentKey)) continue;
-
-    const lockTiming = computeLockTiming(incident, input.nowSec);
-    const sealedPayload = buildSealPayload(row, incident, input.nowSec, lockTiming);
+    const lockTiming = computeLockTiming(incident, input.nowSec, lock.eligibleAt);
+    const sealedPayload = buildSealPayload(row, incident, input.nowSec, lockTiming, lock);
     const sealInput: DdrSealInput = {
       incidentKey: incident.incidentKey,
       eventId: row.eventId,
       runId: input.ddrRunId,
       lockedAt: input.nowSec,
-      eligibleAt: incident.eligibleAt,
+      eligibleAt: lock.eligibleAt,
       eventAgeAtLockSec: input.nowSec - row.startedAt,
       lockTiming,
       predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
-      policyDelaySec: DDR_PUBLIC_PREDICTION_DELAY_SEC,
+      policyDelaySec: lock.policyDelaySec,
+      lockTrigger: lock.lockTrigger,
+      forecastReadinessScore: lock.readiness.score,
+      forecastReadinessVersion: lock.readiness.version,
+      readinessThreshold: lock.readiness.threshold,
+      backstopAt: lock.backstop.backstopAt ?? null,
+      backstopDelaySec: lock.backstop.delaySec,
       methodologyVersion: DDR_METHODOLOGY_VERSION,
       methodologyVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
       resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
@@ -227,6 +304,12 @@ export async function writePublicationBeforeCache(input: {
         action: "publication_retry_pending",
         reason: formatDdrrFailure(error),
         syncCapabilities: {},
+        lockTrigger: sealed.lockTrigger ?? null,
+        forecastReadinessScore: sealed.forecastReadinessScore ?? null,
+        forecastReadinessVersion: sealed.forecastReadinessVersion ?? null,
+        readinessThreshold: sealed.readinessThreshold ?? null,
+        backstopAt: sealed.backstopAt ?? null,
+        backstopDelaySec: sealed.backstopDelaySec ?? null,
       });
     }
     return { attempted: true, ok: false, manifest: null, firstPublication: input.firstPublication, error: formatDdrrFailure(error) };
