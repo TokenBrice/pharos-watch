@@ -183,14 +183,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
   },
-  "worker/src/lib/redemption-backstop-live-metadata.ts": {
-    "disposition": "queued-p4",
-    "notes": "Redemption backstop metadata combines live source parsing, fallback handling, row shaping, and status projection. Keep queued for a focused redemption metadata cleanup instead of expanding the current DDR/API remediation scope.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Extract source adapters and status projection helpers behind the current metadata API."
-  },
   "src/components/peg-deviation-chart.tsx": {
     "disposition": "queued-p4",
     "notes": "Peg deviation chart owns chart domain shaping, annotations, tooltip branches, and responsive rendering in one visualization module. Split data shaping from chart rendering in the next chart-component cleanup pass.",
