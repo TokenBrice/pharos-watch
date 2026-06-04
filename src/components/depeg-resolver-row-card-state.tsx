@@ -80,7 +80,7 @@ export function StateOnlyCard({
       <div className="space-y-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <CoinLockup row={row} logos={logos} />
+            <CoinLockup row={row} logos={logos} logoSize={52} />
           </div>
           <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
             {dirGlyph} {row.direction} {row.pegCurrency}

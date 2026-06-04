@@ -134,31 +134,28 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   return (
     <Card className="@container/ddr gap-0 overflow-hidden p-4 sm:p-5">
       <div className="space-y-3">
-        {/* Identity */}
+        {/* Identity + verdict — the answer sits inline with the coin */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <CoinLockup row={row} logos={logos} />
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <CoinLockup row={row} logos={logos} logoSize={52} />
             {priceLabel ? (
               <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
             ) : null}
+            <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
+              <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>
+                {meta.label}
+              </span>
+              {frozen ? (
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                  Prediction frozen
+                </span>
+              ) : null}
+            </span>
           </div>
           <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
             {dirGlyph} {row.direction} {row.pegCurrency}
           </span>
-        </div>
-
-        {/* Verdict — the answer, as a tone-keyed eyebrow rather than a banner */}
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
-            <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>{meta.label}</span>
-            {frozen ? (
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                Prediction frozen
-              </span>
-            ) : null}
-          </div>
-          {!terminal ? <p className="text-xs leading-snug text-muted-foreground">{meta.blurb}</p> : null}
         </div>
 
         {/* Hero: the drawn forecast */}
