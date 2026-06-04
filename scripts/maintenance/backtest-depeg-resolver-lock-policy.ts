@@ -1,0 +1,458 @@
+#!/usr/bin/env tsx
+
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+  DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
+  DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
+} from "../../shared/lib/depeg-resolver-version";
+
+export const DDR_LOCK_READINESS_THRESHOLD = DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD;
+export const DDR_LOCK_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
+
+export type DdrLockHealthStatus = "healthy" | "degraded";
+export type DdrBacktestOutcomeKind = "prediction" | "no_call";
+export type DdrBacktestDecisionAction =
+  | "lock_prediction"
+  | "lock_no_call"
+  | "pending_lock"
+  | "lock_deferred"
+  | "already_sealed";
+export type DdrBacktestEligibilityReason =
+  | "readiness_early_lock"
+  | "backstop_72h"
+  | "readiness_not_met"
+  | "existing_public_prediction";
+
+export interface DdrLockPolicyBacktestRow {
+  incidentKey: string;
+  eventId: number;
+  startedAt: number;
+  evaluatedAt: number;
+  readinessScore: number | null;
+  healthStatus?: DdrLockHealthStatus;
+  outcomeKind?: DdrBacktestOutcomeKind;
+  existingPublicPredictionId?: number | null;
+  expectedAction?: DdrBacktestDecisionAction;
+}
+
+export interface DdrLockPolicyDecision {
+  incidentKey: string;
+  eventId: number;
+  action: DdrBacktestDecisionAction;
+  eligibilityReason: DdrBacktestEligibilityReason;
+  shouldSeal: boolean;
+  outcomeKind: DdrBacktestOutcomeKind | null;
+  eligibleAt: number;
+  readiness: {
+    score: number | null;
+    threshold: number;
+    earlyLockSatisfied: boolean;
+    backstopAt: number;
+    evaluatedAt: number;
+  };
+  existingPublicPredictionId: number | null;
+  decisionHash: string;
+}
+
+export interface DdrLockPolicyBacktestResult {
+  generatedAt: string;
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    earlyLockCount: number;
+    backstopPredictionCount: number;
+    backstopNoCallCount: number;
+    pendingCount: number;
+    deferredCount: number;
+    alreadySealedCount: number;
+  };
+  rows: Array<{
+    input: DdrLockPolicyBacktestRow;
+    decision: DdrLockPolicyDecision;
+    passed: boolean;
+    failure: string | null;
+  }>;
+}
+
+interface CliOptions {
+  fixturePath: string | null;
+  reportPath: string | null;
+  format: "markdown" | "json";
+  generatedAt: string | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null) return "null";
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number" || typeof value === "boolean") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  if (isRecord(value)) {
+    return `{${Object.entries(value)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(String(value));
+}
+
+function decisionHash(input: Omit<DdrLockPolicyDecision, "decisionHash">): string {
+  return createHash("sha256").update(stableStringify(input)).digest("hex");
+}
+
+function validateRow(row: unknown, index: number): DdrLockPolicyBacktestRow {
+  if (!isRecord(row)) throw new Error(`fixture row ${index} must be an object`);
+  const incidentKeyValue = row.incidentKey;
+  const eventIdValue = row.eventId;
+  const startedAtValue = row.startedAt;
+  const evaluatedAtValue = row.evaluatedAt;
+  if (typeof incidentKeyValue !== "string" || incidentKeyValue.length === 0) {
+    throw new Error(`fixture row ${index} incidentKey must be a non-empty string`);
+  }
+  if (typeof eventIdValue !== "number" || !Number.isSafeInteger(eventIdValue) || eventIdValue <= 0) {
+    throw new Error(`fixture row ${index} eventId must be a positive integer`);
+  }
+  if (typeof startedAtValue !== "number" || !Number.isSafeInteger(startedAtValue) || startedAtValue < 0) {
+    throw new Error(`fixture row ${index} startedAt must be a non-negative integer`);
+  }
+  if (typeof evaluatedAtValue !== "number" || !Number.isSafeInteger(evaluatedAtValue) || evaluatedAtValue < 0) {
+    throw new Error(`fixture row ${index} evaluatedAt must be a non-negative integer`);
+  }
+  const readinessScoreValue = row.readinessScore;
+  if (
+    readinessScoreValue != null &&
+    (typeof readinessScoreValue !== "number" ||
+      !Number.isFinite(readinessScoreValue) ||
+      readinessScoreValue < 0 ||
+      readinessScoreValue > 1)
+  ) {
+    throw new Error(`fixture row ${index} readinessScore must be null or a number in [0, 1]`);
+  }
+  const healthStatusValue = row.healthStatus ?? "healthy";
+  if (healthStatusValue !== "healthy" && healthStatusValue !== "degraded") {
+    throw new Error(`fixture row ${index} healthStatus must be healthy or degraded`);
+  }
+  const outcomeKindValue = row.outcomeKind ?? "prediction";
+  if (outcomeKindValue !== "prediction" && outcomeKindValue !== "no_call") {
+    throw new Error(`fixture row ${index} outcomeKind must be prediction or no_call`);
+  }
+  const existingPublicPredictionIdValue = row.existingPublicPredictionId ?? null;
+  if (
+    existingPublicPredictionIdValue !== null &&
+    (typeof existingPublicPredictionIdValue !== "number" ||
+      !Number.isSafeInteger(existingPublicPredictionIdValue) ||
+      existingPublicPredictionIdValue <= 0)
+  ) {
+    throw new Error(`fixture row ${index} existingPublicPredictionId must be null or a positive integer`);
+  }
+  const expectedActionValue = row.expectedAction;
+  const allowedActions: DdrBacktestDecisionAction[] = [
+    "lock_prediction",
+    "lock_no_call",
+    "pending_lock",
+    "lock_deferred",
+    "already_sealed",
+  ];
+  if (expectedActionValue !== undefined && !allowedActions.includes(expectedActionValue as DdrBacktestDecisionAction)) {
+    throw new Error(`fixture row ${index} expectedAction is unsupported`);
+  }
+  return {
+    incidentKey: incidentKeyValue,
+    eventId: eventIdValue,
+    startedAt: startedAtValue,
+    evaluatedAt: evaluatedAtValue,
+    readinessScore: readinessScoreValue ?? null,
+    healthStatus: healthStatusValue,
+    outcomeKind: outcomeKindValue,
+    existingPublicPredictionId: existingPublicPredictionIdValue,
+    expectedAction: expectedActionValue as DdrBacktestDecisionAction | undefined,
+  };
+}
+
+export function evaluateDdrLockPolicy(row: DdrLockPolicyBacktestRow): DdrLockPolicyDecision {
+  const healthStatus = row.healthStatus ?? "healthy";
+  const outcomeKind = row.outcomeKind ?? "prediction";
+  const existingPublicPredictionId = row.existingPublicPredictionId ?? null;
+  const backstopAt = row.startedAt + DDR_LOCK_BACKSTOP_DELAY_SEC;
+  const earlyLockSatisfied = row.readinessScore != null && row.readinessScore > DDR_LOCK_READINESS_THRESHOLD;
+  const backstopSatisfied = row.evaluatedAt >= backstopAt;
+
+  let action: DdrBacktestDecisionAction;
+  let eligibilityReason: DdrBacktestEligibilityReason;
+  let shouldSeal = false;
+  let resolvedOutcomeKind: DdrBacktestOutcomeKind | null = null;
+  let eligibleAt = backstopAt;
+
+  if (existingPublicPredictionId != null) {
+    action = "already_sealed";
+    eligibilityReason = "existing_public_prediction";
+  } else if (earlyLockSatisfied || backstopSatisfied) {
+    eligibilityReason = earlyLockSatisfied ? "readiness_early_lock" : "backstop_72h";
+    eligibleAt = earlyLockSatisfied ? row.evaluatedAt : backstopAt;
+    if (healthStatus !== "healthy") {
+      action = "lock_deferred";
+    } else {
+      shouldSeal = true;
+      resolvedOutcomeKind = outcomeKind;
+      action = outcomeKind === "no_call" ? "lock_no_call" : "lock_prediction";
+    }
+  } else {
+    action = "pending_lock";
+    eligibilityReason = "readiness_not_met";
+  }
+
+  const withoutHash = {
+    incidentKey: row.incidentKey,
+    eventId: row.eventId,
+    action,
+    eligibilityReason,
+    shouldSeal,
+    outcomeKind: resolvedOutcomeKind,
+    eligibleAt,
+    readiness: {
+      score: row.readinessScore,
+      threshold: DDR_LOCK_READINESS_THRESHOLD,
+      earlyLockSatisfied,
+      backstopAt,
+      evaluatedAt: row.evaluatedAt,
+    },
+    existingPublicPredictionId,
+  };
+  return {
+    ...withoutHash,
+    decisionHash: decisionHash(withoutHash),
+  };
+}
+
+export function buildDdrLockPolicyBacktest(input: {
+  rows: DdrLockPolicyBacktestRow[];
+  generatedAt?: string;
+}): DdrLockPolicyBacktestResult {
+  const rows = input.rows.map((row) => {
+    const decision = evaluateDdrLockPolicy(row);
+    const passed = row.expectedAction == null || row.expectedAction === decision.action;
+    return {
+      input: row,
+      decision,
+      passed,
+      failure: passed ? null : `expected ${row.expectedAction}, got ${decision.action}`,
+    };
+  });
+  return {
+    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    summary: {
+      total: rows.length,
+      passed: rows.filter((row) => row.passed).length,
+      failed: rows.filter((row) => !row.passed).length,
+      earlyLockCount: rows.filter((row) => row.decision.eligibilityReason === "readiness_early_lock").length,
+      backstopPredictionCount: rows.filter(
+        (row) => row.decision.eligibilityReason === "backstop_72h" && row.decision.action === "lock_prediction",
+      ).length,
+      backstopNoCallCount: rows.filter(
+        (row) => row.decision.eligibilityReason === "backstop_72h" && row.decision.action === "lock_no_call",
+      ).length,
+      pendingCount: rows.filter((row) => row.decision.action === "pending_lock").length,
+      deferredCount: rows.filter((row) => row.decision.action === "lock_deferred").length,
+      alreadySealedCount: rows.filter((row) => row.decision.action === "already_sealed").length,
+    },
+    rows,
+  };
+}
+
+export function builtinAcceptanceRows(): DdrLockPolicyBacktestRow[] {
+  const startedAt = 1_800_000_000;
+  return [
+    {
+      incidentKey: "ddr2:early-ready",
+      eventId: 1,
+      startedAt,
+      evaluatedAt: startedAt + 12 * 3600,
+      readinessScore: 0.750001,
+      outcomeKind: "prediction",
+      expectedAction: "lock_prediction",
+    },
+    {
+      incidentKey: "ddr2:boundary-not-ready",
+      eventId: 2,
+      startedAt,
+      evaluatedAt: startedAt + 12 * 3600,
+      readinessScore: 0.75,
+      outcomeKind: "prediction",
+      expectedAction: "pending_lock",
+    },
+    {
+      incidentKey: "ddr2:below-threshold-pending",
+      eventId: 3,
+      startedAt,
+      evaluatedAt: startedAt + DDR_LOCK_BACKSTOP_DELAY_SEC - 1,
+      readinessScore: 0.61,
+      outcomeKind: "prediction",
+      expectedAction: "pending_lock",
+    },
+    {
+      incidentKey: "ddr2:backstop-prediction",
+      eventId: 4,
+      startedAt,
+      evaluatedAt: startedAt + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      readinessScore: 0.61,
+      outcomeKind: "prediction",
+      expectedAction: "lock_prediction",
+    },
+    {
+      incidentKey: "ddr2:backstop-no-call",
+      eventId: 5,
+      startedAt,
+      evaluatedAt: startedAt + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      readinessScore: null,
+      outcomeKind: "no_call",
+      expectedAction: "lock_no_call",
+    },
+    {
+      incidentKey: "ddr2:health-deferral",
+      eventId: 6,
+      startedAt,
+      evaluatedAt: startedAt + 12 * 3600,
+      readinessScore: 0.91,
+      healthStatus: "degraded",
+      outcomeKind: "prediction",
+      expectedAction: "lock_deferred",
+    },
+    {
+      incidentKey: "ddr2:old-policy-visible",
+      eventId: 7,
+      startedAt,
+      evaluatedAt: startedAt + DDR_LOCK_BACKSTOP_DELAY_SEC,
+      readinessScore: 0.92,
+      existingPublicPredictionId: 77,
+      outcomeKind: "prediction",
+      expectedAction: "already_sealed",
+    },
+  ];
+}
+
+function parseArgs(argv: string[]): CliOptions {
+  const options: CliOptions = {
+    fixturePath: null,
+    reportPath: null,
+    format: "markdown",
+    generatedAt: null,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--fixture") {
+      options.fixturePath = argv[++index] ?? null;
+    } else if (arg === "--report") {
+      options.reportPath = argv[++index] ?? null;
+    } else if (arg === "--json") {
+      options.format = "json";
+    } else if (arg === "--generated-at") {
+      options.generatedAt = argv[++index] ?? null;
+    } else if (arg === "--help" || arg === "-h") {
+      throw new Error("help");
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+  if (options.fixturePath === null && options.reportPath === null) {
+    return options;
+  }
+  if (options.fixturePath === "") throw new Error("--fixture requires a path");
+  if (options.reportPath === "") throw new Error("--report requires a path");
+  return options;
+}
+
+function loadRows(cwd: string, fixturePath: string | null): DdrLockPolicyBacktestRow[] {
+  if (!fixturePath) return builtinAcceptanceRows();
+  const path = resolve(cwd, fixturePath);
+  const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+  const rows = Array.isArray(parsed) ? parsed : isRecord(parsed) ? parsed.rows : null;
+  if (!Array.isArray(rows)) throw new Error("fixture must be an array or an object with rows");
+  return rows.map(validateRow);
+}
+
+export function renderDdrLockPolicyBacktestMarkdown(result: DdrLockPolicyBacktestResult): string {
+  const lines = [
+    "# DDR Lock Policy Backtest",
+    "",
+    `Generated: ${result.generatedAt}`,
+    "",
+    `- Rows: ${result.summary.total}`,
+    `- Passed: ${result.summary.passed}`,
+    `- Failed: ${result.summary.failed}`,
+    `- Early readiness locks: ${result.summary.earlyLockCount}`,
+    `- Backstop predictions: ${result.summary.backstopPredictionCount}`,
+    `- Backstop no-calls: ${result.summary.backstopNoCallCount}`,
+    `- Pending: ${result.summary.pendingCount}`,
+    `- Deferrals: ${result.summary.deferredCount}`,
+    `- Already sealed: ${result.summary.alreadySealedCount}`,
+    "",
+    "incidentKey | action | reason | readiness | hash | result",
+    "--- | --- | --- | ---: | --- | ---",
+  ];
+  for (const row of result.rows) {
+    lines.push(
+      [
+        row.input.incidentKey,
+        row.decision.action,
+        row.decision.eligibilityReason,
+        row.decision.readiness.score ?? "null",
+        row.decision.decisionHash.slice(0, 12),
+        row.passed ? "pass" : row.failure,
+      ].join(" | "),
+    );
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+export async function runCli(argv = process.argv.slice(2), cwd = process.cwd()): Promise<number> {
+  let options: CliOptions;
+  try {
+    options = parseArgs(argv);
+  } catch (error) {
+    if (error instanceof Error && error.message === "help") {
+      process.stdout.write(
+        "Usage: tsx scripts/maintenance/backtest-depeg-resolver-lock-policy.ts [--fixture rows.json] [--json] [--report out]\n",
+      );
+      return 0;
+    }
+    throw error;
+  }
+
+  const rows = loadRows(cwd, options.fixturePath);
+  const result = buildDdrLockPolicyBacktest({
+    rows,
+    generatedAt: options.generatedAt ?? undefined,
+  });
+  const rendered =
+    options.format === "json" ? `${JSON.stringify(result, null, 2)}\n` : renderDdrLockPolicyBacktestMarkdown(result);
+
+  if (options.reportPath) {
+    const reportPath = resolve(cwd, options.reportPath);
+    if (!existsSync(dirname(reportPath))) mkdirSync(dirname(reportPath), { recursive: true });
+    writeFileSync(reportPath, rendered);
+  } else {
+    process.stdout.write(rendered);
+  }
+
+  return result.summary.failed === 0 ? 0 : 1;
+}
+
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isDirectRun) {
+  runCli()
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    });
+}

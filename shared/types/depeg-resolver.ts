@@ -180,6 +180,44 @@ export type DdrPublicPredictionState = (typeof DDR_PUBLIC_PREDICTION_STATE_VALUE
 export const DDR_LOCK_TIMING_VALUES = ["on_time", "late_confirmation", "late_freeze", "deferred"] as const;
 export type DdrLockTiming = (typeof DDR_LOCK_TIMING_VALUES)[number];
 
+export const DDR_LOCK_TRIGGER_VALUES = ["scheduled_24h", "forecast_readiness", "readiness_backstop"] as const;
+export type DdrLockTrigger = (typeof DDR_LOCK_TRIGGER_VALUES)[number];
+
+export const DDR_FORECAST_READINESS_COMPONENT_VALUES = [
+  "input_coverage",
+  "resolution_signal",
+  "duration_support",
+  "observation_maturity",
+] as const;
+export type DdrForecastReadinessComponentKey = (typeof DDR_FORECAST_READINESS_COMPONENT_VALUES)[number];
+
+export const DdrForecastReadinessComponentSchema = z.object({
+  key: z.enum(DDR_FORECAST_READINESS_COMPONENT_VALUES),
+  label: z.string(),
+  score: z.number().min(0).max(1),
+  weight: z.number().positive(),
+  reason: z.string(),
+});
+export type DdrForecastReadinessComponent = z.infer<typeof DdrForecastReadinessComponentSchema>;
+
+export const DdrForecastReadinessSchema = z.object({
+  version: z.string(),
+  score: z.number().min(0).max(1),
+  threshold: z.number().min(0).max(1),
+  strictEarlyLockReady: z.boolean(),
+  reasons: z.array(z.string()),
+  components: z.array(DdrForecastReadinessComponentSchema),
+});
+export type DdrForecastReadiness = z.infer<typeof DdrForecastReadinessSchema>;
+
+export const DdrForecastReadinessBackstopSchema = z.object({
+  version: z.string(),
+  delaySec: z.number().int().nonnegative(),
+  backstopAt: z.number().int().nonnegative().nullable().optional().default(null),
+  reached: z.boolean().optional().default(false),
+});
+export type DdrForecastReadinessBackstop = z.infer<typeof DdrForecastReadinessBackstopSchema>;
+
 export const DDR_ERRATUM_REASON_VALUES = [
   "false_positive",
   "disputed",
@@ -237,6 +275,9 @@ export const DdrPredictionMetaSchema = z.object({
   snapshotGeneration: z.number().int().positive().nullable(),
   eventAgeAtLockSec: z.number().int().nonnegative().nullable(),
   lockTiming: z.enum(DDR_LOCK_TIMING_VALUES).nullable(),
+  lockTrigger: z.enum(DDR_LOCK_TRIGGER_VALUES).optional().default("scheduled_24h"),
+  readiness: DdrForecastReadinessSchema.nullable().optional().default(null),
+  backstop: DdrForecastReadinessBackstopSchema.nullable().optional().default(null),
   source: z.enum(["public_prediction", "pending", "erratum"]),
   deferralReason: z.string().nullable(),
   deferralCount: z.number().int().nonnegative().nullable(),

@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./base";
 
 const ddr = createMethodologyVersion({
-  currentVersion: "2.0",
+  currentVersion: "3.0",
   changelogPath: "/methodology/depeg-resolver-changelog/",
   changelog: [
+    {
+      version: "3.0",
+      title: "Forecast Readiness Contract",
+      date: "2026-06-04",
+      effectiveAt: 1780531200,
+      summary:
+        "Added the shared DDR forecast-readiness contract for readiness-gated locks with immutable public metadata.",
+      impact: [
+        "Introduces the readiness-72h-v1 forecast-readiness version and a strict early-lock threshold",
+        "Publishes row-level readiness components and reasons as forecast readiness, not a probability or confidence label",
+        "Adds optional/defaulted lock trigger, readiness, and 72h backstop metadata to the public contract while preserving legacy rows",
+        "Includes new immutable readiness metadata in public row hash payloads when present",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.0",
       title: "Sticky Public Prediction Contract",
@@ -77,6 +93,18 @@ export const DDR_SUPPORT_RULES_VERSION = "support-rules-v1";
 
 /** DDRv2 public prediction policy version. */
 export const DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1";
+
+/** DDRv3 forecast-readiness contract version. */
+export const DDR_FORECAST_READINESS_VERSION = "readiness-72h-v1";
+
+/** Strict early public locks require a forecast-readiness score greater than this threshold. */
+export const DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD = 0.75;
+
+/** DDRv3 readiness backstop: a public lock cannot wait beyond 72h under readiness-72h-v1. */
+export const DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC = 72 * 3600;
+
+/** Active public-lock backstop delay for pending canonical incidents under DDRv3. */
+export const DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC = DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC;
 
 /** May 27, 2026 00:00:00 UTC. */
 export const DDR_V2_EFFECTIVE_AT = 1779897600;

@@ -7,7 +7,17 @@ export type DdrPublicContractValidationResult =
 
 function stripLive(row: DdrV2ResponseRow): DdrV2Row {
   const { live: _live, ...baseRow } = row;
-  return baseRow as DdrV2Row;
+  const prediction = recordValue(baseRow.prediction);
+  if (!prediction) return baseRow as DdrV2Row;
+  const { lockTrigger: rawLockTrigger, readiness, backstop, ...stablePrediction } = prediction;
+  const lockTrigger = hashableLockTrigger(rawLockTrigger);
+  if (lockTrigger !== undefined) stablePrediction.lockTrigger = lockTrigger;
+  if (readiness != null) stablePrediction.readiness = readiness;
+  if (backstop != null) stablePrediction.backstop = backstop;
+  return {
+    ...baseRow,
+    prediction: stablePrediction,
+  } as DdrV2Row;
 }
 
 function sortedPredictionIds(rows: readonly DdrV2ResponseRow[]): number[] {
@@ -39,6 +49,10 @@ function predictionRecord(row: Record<string, unknown>): Record<string, unknown>
   return prediction;
 }
 
+function hashableLockTrigger(value: unknown): unknown {
+  return value === "scheduled_24h" ? undefined : value;
+}
+
 function canonicalPredictionForHash(row: Record<string, unknown>): Record<string, unknown> {
   const prediction = predictionRecord(row);
   return {
@@ -47,6 +61,9 @@ function canonicalPredictionForHash(row: Record<string, unknown>): Record<string
     lockedAt: prediction.lockedAt,
     eventAgeAtLockSec: prediction.eventAgeAtLockSec,
     lockTiming: prediction.lockTiming,
+    lockTrigger: hashableLockTrigger(prediction.lockTrigger),
+    readiness: prediction.readiness ?? undefined,
+    backstop: prediction.backstop ?? undefined,
     policyDelaySec: prediction.policyDelaySec,
     predictionPolicyVersion: prediction.predictionPolicyVersion,
     predictionMethodologyVersion: prediction.predictionMethodologyVersion,
