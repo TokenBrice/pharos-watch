@@ -16,6 +16,10 @@ export interface CronHealthSnapshot {
   cronProgressQueryFailed: boolean;
 }
 
+const CRON_HISTORY_ROWS_PER_JOB = 10;
+
+const CRON_HISTORY_SELECT_COLUMNS = "job, started_at, duration_ms, status, error, item_count, metadata";
+
 function parseMetadataObject(value: string | null | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
   try {
@@ -48,6 +52,28 @@ function hasBlacklistMaintenanceDegradation(metadata: Record<string, unknown> | 
   );
 }
 
+function buildCronHistoryQuery(jobCount: number): string {
+  if (jobCount <= 0) {
+    throw new Error("buildCronHistoryQuery: jobCount must be positive");
+  }
+  const perJobQueries = Array.from({ length: jobCount }, () => (
+    `SELECT ${CRON_HISTORY_SELECT_COLUMNS}
+       FROM (
+         SELECT ${CRON_HISTORY_SELECT_COLUMNS}
+           FROM cron_runs
+          WHERE job = ?
+          ORDER BY started_at DESC
+          LIMIT ${CRON_HISTORY_ROWS_PER_JOB}
+       )`
+  ));
+
+  return `SELECT ${CRON_HISTORY_SELECT_COLUMNS}
+          FROM (
+            ${perJobQueries.join("\n            UNION ALL\n            ")}
+          )
+          ORDER BY started_at DESC`;
+}
+
 export async function loadCronHealth(
   db: D1Database,
   now: number,
@@ -67,18 +93,8 @@ export async function loadCronHealth(
 
   try {
     cronRows = await db
-      .prepare(
-        `SELECT job, started_at, duration_ms, status, error, item_count, metadata
-         FROM (
-           SELECT job, started_at, duration_ms, status, error, item_count, metadata,
-                  ROW_NUMBER() OVER (PARTITION BY job ORDER BY started_at DESC) AS rn
-           FROM cron_runs
-           WHERE job IN (${cronJobInClause.sql})
-         )
-         WHERE rn <= 10
-         ORDER BY started_at DESC`,
-      )
-      .bind(...cronJobInClause.binds)
+      .prepare(buildCronHistoryQuery(cronJobs.length))
+      .bind(...cronJobs)
       .all<{
         job: string;
         started_at: number;

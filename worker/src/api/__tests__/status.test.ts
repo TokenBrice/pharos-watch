@@ -1013,7 +1013,7 @@ describe("handleStatus", () => {
       { match: "yield_data", rows: [], first: { age: 300 } },
       { match: "stress_signals", rows: [], first: { age: 300 } },
       {
-        match: "FROM cron_runs\n         WHERE job IN",
+        match: "UNION ALL",
         rows: [
           makeCronRow("sync-stablecoins", "ok", 12 * 60),
           makeCronRow("sync-blacklist", "ok", 15 * 60),
@@ -2362,7 +2362,7 @@ describe("handleStatus", () => {
       { match: "yield_data", rows: [], first: { age: 60 } },
       { match: "stress_signals", rows: [], first: { age: 60 } },
       { match: "GROUP BY job", rows: [{ job: "sync-dex-liquidity", started_at: now - 300 }] },
-      { match: "ROW_NUMBER() OVER", rows: [], throwError: new Error("cron history unavailable") },
+      { match: "UNION ALL", rows: [], throwError: new Error("cron history unavailable") },
       { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },

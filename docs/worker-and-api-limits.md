@@ -104,6 +104,17 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 Cron persistence helpers retry transient D1 queue pressure through `runWithOverloadRetry()` in `worker/src/lib/cron-lease.ts`. Retried errors include `D1 DB is overloaded`, `Requests queued for too long`, D1 storage-operation reset timeouts (`D1 DB storage operation exceeded timeout ...`), and Cloudflare D1 internal-reference errors (`D1_ERROR: internal error; reference = ...`). Live reserve, redemption-backstop, cache-sentinel, and DEWS persistence paths should route bursty run-manifest writes, cleanup, prune, and chunked batch work through this helper or `batchExecute()` so one transient D1 queue spike does not fail a whole scheduled run.
 
+### D1 query budgeting
+
+Public health/status diagnostics intentionally trade a few minutes of operator telemetry freshness for lower D1 pressure:
+
+- `queryBlacklistGapMetrics()` supports a core diagnostic mode that skips the amount-status and amount-source distribution scans when callers only need total/recoverable/recent gap counts for health scoring.
+- `/api/health` and `/api/status` use the core diagnostic path with a 5-minute D1 `cache` entry. The public quality signal stays tied to the same blacklist event table and thresholds, but high-frequency probes no longer rescan distribution buckets on every request.
+- `/api/blacklist-summary` keeps the full gap-distribution payload for the product surface, also behind the same short cache TTL so repeated origin misses do not fan out into identical `blacklist_events` aggregate scans.
+- Cron health reads the latest 10 runs per tracked job through the existing `(job, started_at DESC)` index instead of applying a window function across the retained `cron_runs` table.
+
+When adding a new health/status loader, prefer a producer-cadence cache or an indexed top-N read over table-wide aggregates. Table scans are acceptable for low-frequency admin-only diagnostics, but not for public health probes, status self-checks, or same-origin browser polling.
+
 ---
 
 ## Upstream Fetch Budgets

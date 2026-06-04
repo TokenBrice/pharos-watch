@@ -9,7 +9,11 @@ import {
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
 import type { CacheStatus, HealthResponse } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
-import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
+import {
+  BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+  queryBlacklistGapMetrics,
+  type BlacklistGapMetrics,
+} from "./blacklist-gaps";
 import {
   filterInactiveCircuitStates,
   getCircuitStates,
@@ -239,7 +243,10 @@ export async function assessPublicHealth(
     circuitResult,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
-    queryBlacklistGapMetrics(db, now)
+    queryBlacklistGapMetrics(db, now, {
+      includeDistributions: false,
+      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+    })
       .then((metrics) => ({ metrics, error: null as string | null }))
       .catch((err) => {
         console.error(`[${logPrefix}] Failed to query blacklist counts:`, err);

@@ -1,4 +1,7 @@
-import { queryBlacklistGapMetrics } from "../blacklist-gaps";
+import {
+  BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+  queryBlacklistGapMetrics,
+} from "../blacklist-gaps";
 import type { BlacklistGapMetrics } from "../blacklist-gaps";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
 import {
@@ -106,7 +109,11 @@ export async function getDataQuality(
   let blacklistRepeatedFailureCount = 0;
   let blacklistGapStatus: DataQuality["blacklistGapStatus"] = "ok";
   try {
-    const gaps = options?.blacklistMetrics ?? await queryBlacklistGapMetrics(db, now, BLACKLIST_RECENT_WINDOW_SEC);
+    const gaps = options?.blacklistMetrics ?? await queryBlacklistGapMetrics(db, now, {
+      recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
+      includeDistributions: false,
+      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+    });
     blacklistTotal = gaps.totalEvents;
     blacklistMissingAmounts = gaps.missingAmounts;
     blacklistRecentMissingAmounts = gaps.recentMissingAmounts;

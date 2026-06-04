@@ -16,7 +16,11 @@ import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "../lib/blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
-import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "../lib/blacklist-gaps";
+import {
+  BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+  queryBlacklistGapMetrics,
+  type BlacklistGapMetrics,
+} from "../lib/blacklist-gaps";
 import {
   BLACKLIST_STABLECOINS,
   type BlacklistEvent,
@@ -461,7 +465,9 @@ export const handleBlacklistSummary = withErrorHandler(
     const frozenAddresses = currentBalances.size === 0
       ? latestByAddr.filter((e) => e.eventType === "blacklist").length
       : [...currentBalances.values()].filter((snapshot) => !isDestroySnapshot(snapshot)).length;
-    const gapMetrics = await queryBlacklistGapMetrics(db, now);
+    const gapMetrics = await queryBlacklistGapMetrics(db, now, {
+      cacheTtlSec: BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
+    });
     const activeStats = currentBalances.size === 0
       ? computeBlacklistActiveSummaryStats(buildBlacklistActiveRecords(activeRecordEvents, currentBalances))
       : computeActiveSummaryStatsFromCurrentBalances(currentBalances);

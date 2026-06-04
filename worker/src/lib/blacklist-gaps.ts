@@ -15,21 +15,143 @@ export interface BlacklistGapMetrics {
   sourceDistribution: Record<string, number>;
 }
 
+export interface BlacklistGapMetricsOptions {
+  recentWindowSec?: number;
+  includeDistributions?: boolean;
+  cacheTtlSec?: number;
+}
+
+const BLACKLIST_GAP_METRICS_CACHE_VERSION = 1;
+const DEFAULT_BLACKLIST_GAP_METRICS_CACHE_TTL_SEC = 300;
+
+interface CachedBlacklistGapMetricsPayload {
+  version: typeof BLACKLIST_GAP_METRICS_CACHE_VERSION;
+  includeDistributions: boolean;
+  recentWindowSec: number;
+  metrics: BlacklistGapMetrics;
+}
+
+function normalizeOptions(input: number | BlacklistGapMetricsOptions | undefined): Required<BlacklistGapMetricsOptions> {
+  if (typeof input === "number") {
+    return {
+      recentWindowSec: input,
+      includeDistributions: true,
+      cacheTtlSec: 0,
+    };
+  }
+  return {
+    recentWindowSec: input?.recentWindowSec ?? BLACKLIST_RECENT_WINDOW_SEC,
+    includeDistributions: input?.includeDistributions ?? true,
+    cacheTtlSec: input?.cacheTtlSec ?? 0,
+  };
+}
+
+function getCacheKey(options: Required<BlacklistGapMetricsOptions>): string {
+  return `blacklist:gap-metrics:v${BLACKLIST_GAP_METRICS_CACHE_VERSION}:${options.recentWindowSec}:${options.includeDistributions ? "full" : "core"}`;
+}
+
+function isMetricsPayload(value: unknown): value is BlacklistGapMetrics {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) return false;
+  const candidate = value as Partial<BlacklistGapMetrics>;
+  return (
+    typeof candidate.totalEvents === "number"
+    && typeof candidate.missingAmounts === "number"
+    && typeof candidate.recentMissingAmounts === "number"
+    && typeof candidate.recentWindowSec === "number"
+    && typeof candidate.missingRatio === "number"
+    && typeof candidate.unrecoverableMissingAmounts === "number"
+    && (typeof candidate.oldestRecoverableAgeSec === "number" || candidate.oldestRecoverableAgeSec == null)
+    && typeof candidate.neverAttemptedCount === "number"
+    && typeof candidate.repeatedFailureCount === "number"
+    && typeof candidate.statusDistribution === "object"
+    && candidate.statusDistribution != null
+    && !Array.isArray(candidate.statusDistribution)
+    && typeof candidate.sourceDistribution === "object"
+    && candidate.sourceDistribution != null
+    && !Array.isArray(candidate.sourceDistribution)
+  );
+}
+
+function parseCachedMetrics(
+  value: string,
+  options: Required<BlacklistGapMetricsOptions>,
+): BlacklistGapMetrics | null {
+  try {
+    const payload = JSON.parse(value) as Partial<CachedBlacklistGapMetricsPayload>;
+    if (
+      payload.version !== BLACKLIST_GAP_METRICS_CACHE_VERSION
+      || payload.includeDistributions !== options.includeDistributions
+      || payload.recentWindowSec !== options.recentWindowSec
+      || !isMetricsPayload(payload.metrics)
+    ) {
+      return null;
+    }
+    return payload.metrics;
+  } catch {
+    return null;
+  }
+}
+
+function ageCachedMetrics(metrics: BlacklistGapMetrics, cachedAt: number, now: number): BlacklistGapMetrics {
+  if (metrics.oldestRecoverableAgeSec == null) return metrics;
+  return {
+    ...metrics,
+    oldestRecoverableAgeSec: metrics.oldestRecoverableAgeSec + Math.max(0, now - cachedAt),
+  };
+}
+
+async function readCachedMetrics(
+  db: D1Database,
+  now: number,
+  options: Required<BlacklistGapMetricsOptions>,
+): Promise<BlacklistGapMetrics | null> {
+  if (options.cacheTtlSec <= 0) return null;
+  const row = await db
+    .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+    .bind(getCacheKey(options))
+    .first<{ value: string; updated_at: number }>();
+  if (!row || now - row.updated_at > options.cacheTtlSec) return null;
+  const metrics = parseCachedMetrics(row.value, options);
+  return metrics ? ageCachedMetrics(metrics, row.updated_at, now) : null;
+}
+
+async function writeCachedMetrics(
+  db: D1Database,
+  now: number,
+  options: Required<BlacklistGapMetricsOptions>,
+  metrics: BlacklistGapMetrics,
+): Promise<void> {
+  if (options.cacheTtlSec <= 0) return;
+  const payload: CachedBlacklistGapMetricsPayload = {
+    version: BLACKLIST_GAP_METRICS_CACHE_VERSION,
+    includeDistributions: options.includeDistributions,
+    recentWindowSec: options.recentWindowSec,
+    metrics,
+  };
+  await db
+    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .bind(getCacheKey(options), JSON.stringify(payload), now)
+    .run();
+}
+
 export async function queryBlacklistGapMetrics(
   db: D1Database,
   now: number,
-  recentWindowSec = BLACKLIST_RECENT_WINDOW_SEC,
+  optionsInput?: number | BlacklistGapMetricsOptions,
 ): Promise<BlacklistGapMetrics> {
+  const options = normalizeOptions(optionsInput);
+  const cached = await readCachedMetrics(db, now, options);
+  if (cached) return cached;
+
   const gapStatuses = [
     "recoverable_pending",
     "provider_failed",
     "ambiguous",
   ].filter((status) => isBlacklistAmountGapStatus(status as Parameters<typeof isBlacklistAmountGapStatus>[0]));
   const gapStatusSql = gapStatuses.map((status) => `'${status}'`).join(", ");
-  const [row, statusRows, sourceRows] = await Promise.all([
-    db
-      .prepare(
-        `/* blacklist-gap-aggregate */
+  const rowPromise = db
+    .prepare(
+      `/* blacklist-gap-aggregate */
          SELECT
            COUNT(*) as total,
            SUM(
@@ -80,18 +202,20 @@ export async function queryBlacklistGapMetrics(
          FROM blacklist_events
          WHERE event_type IN ('blacklist', 'destroy')
            AND suppression_reason IS NULL`,
-      )
-      .bind(now - recentWindowSec, now)
-      .first<{
-        total: number;
-        missing: number | null;
-        missing_recent: number | null;
-        oldest_gap_age_sec: number | null;
-        never_attempted: number | null;
-        repeated_failures: number | null;
-        unrecoverable: number | null;
-      }>(),
-    db
+    )
+    .bind(now - options.recentWindowSec, now)
+    .first<{
+      total: number;
+      missing: number | null;
+      missing_recent: number | null;
+      oldest_gap_age_sec: number | null;
+      never_attempted: number | null;
+      repeated_failures: number | null;
+      unrecoverable: number | null;
+    }>();
+
+  const statusRowsPromise = options.includeDistributions
+    ? db
       .prepare(
         `/* blacklist-gap-status-distribution */
          SELECT amount_status, COUNT(*) AS n
@@ -100,8 +224,11 @@ export async function queryBlacklistGapMetrics(
            AND suppression_reason IS NULL
          GROUP BY amount_status`,
       )
-      .all<{ amount_status: string | null; n: number }>(),
-    db
+      .all<{ amount_status: string | null; n: number }>()
+    : Promise.resolve({ results: [] as Array<{ amount_status: string | null; n: number }> });
+
+  const sourceRowsPromise = options.includeDistributions
+    ? db
       .prepare(
         `/* blacklist-gap-source-distribution */
          SELECT amount_source, COUNT(*) AS n
@@ -110,7 +237,13 @@ export async function queryBlacklistGapMetrics(
            AND suppression_reason IS NULL
          GROUP BY amount_source`,
       )
-      .all<{ amount_source: string | null; n: number }>(),
+      .all<{ amount_source: string | null; n: number }>()
+    : Promise.resolve({ results: [] as Array<{ amount_source: string | null; n: number }> });
+
+  const [row, statusRows, sourceRows] = await Promise.all([
+    rowPromise,
+    statusRowsPromise,
+    sourceRowsPromise,
   ]);
 
   const totalEvents = row?.total ?? 0;
@@ -123,11 +256,11 @@ export async function queryBlacklistGapMetrics(
     (sourceRows.results ?? []).map((sourceRow) => [sourceRow.amount_source ?? "unknown", sourceRow.n]),
   );
 
-  return {
+  const metrics: BlacklistGapMetrics = {
     totalEvents,
     missingAmounts,
     recentMissingAmounts,
-    recentWindowSec,
+    recentWindowSec: options.recentWindowSec,
     missingRatio: totalEvents > 0 ? missingAmounts / totalEvents : 0,
     unrecoverableMissingAmounts: row?.unrecoverable ?? 0,
     oldestRecoverableAgeSec: row?.oldest_gap_age_sec ?? null,
@@ -136,4 +269,10 @@ export async function queryBlacklistGapMetrics(
     statusDistribution,
     sourceDistribution,
   };
+  await writeCachedMetrics(db, now, options, metrics).catch((error) => {
+    console.warn("[blacklist-gaps] Failed to write cached metrics:", error);
+  });
+  return metrics;
 }
+
+export const BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC = DEFAULT_BLACKLIST_GAP_METRICS_CACHE_TTL_SEC;

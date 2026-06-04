@@ -41,7 +41,7 @@ function seedWithOverrides(now: number, overrides: SeedRun[]): Record<string, un
 
 function makeDb(_now: number, rows: Record<string, unknown>[]) {
   return mockD1([
-    { match: "ROW_NUMBER() OVER", rows },
+    { match: "UNION ALL", rows },
     { match: "FROM cron_leases", rows: [] },
     { match: "FROM cron_run_progress", rows: [] },
   ]);
