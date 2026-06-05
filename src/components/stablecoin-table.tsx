@@ -90,6 +90,36 @@ function cursorCoinId(rows: readonly StablecoinData[], index: number): string | 
   return coin ? buildStablecoinUrl(coin.id) : null;
 }
 
+function findCursorTableRow(scrollEl: HTMLElement, cursorHref: string): HTMLTableRowElement | null {
+  const links = scrollEl.querySelectorAll<HTMLAnchorElement>('tbody tr [data-stablecoin-detail-link="true"]');
+  for (const link of links) {
+    if (link.getAttribute("href") === cursorHref) {
+      return link.closest("tr");
+    }
+  }
+  return null;
+}
+
+function paintCursorTableRow(row: HTMLTableRowElement): void {
+  row.setAttribute("data-cursor", "true");
+  if (!row.hasAttribute("tabindex")) {
+    row.tabIndex = -1;
+    row.setAttribute("data-cursor-tabindex", "true");
+  }
+  row.style.boxShadow = "inset 3px 0 0 0 var(--brand-accent)";
+  row.style.backgroundColor = "color-mix(in oklab, var(--muted) 40%, transparent)";
+}
+
+function clearCursorTableRow(row: HTMLTableRowElement): void {
+  row.removeAttribute("data-cursor");
+  if (row.getAttribute("data-cursor-tabindex") === "true") {
+    row.removeAttribute("tabindex");
+    row.removeAttribute("data-cursor-tabindex");
+  }
+  row.style.boxShadow = "";
+  row.style.backgroundColor = "";
+}
+
 function getMobileTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
   const selectedWidth = visibleColumns.reduce(
     (total, id) => total + MOBILE_COLUMN_MIN_WIDTH_PX[id],
@@ -346,6 +376,10 @@ export function StablecoinTable({
   const totalHeight = virtualizer.getTotalSize();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
+  const lastVirtualItem = virtualItems[virtualItems.length - 1];
+  const virtualRangeKey = virtualItems.length > 0
+    ? `${virtualItems[0].index}:${lastVirtualItem.index}:${virtualItems.length}`
+    : "empty";
   const measureVirtualRow = useCallback(
     (element: HTMLTableRowElement | null) => {
       if (!element || typeof virtualizer.measureElement !== "function") return;
@@ -360,12 +394,10 @@ export function StablecoinTable({
 
   // P6 — j/k row cursor over the visible (post-pin) rows, scoped to the table.
   // o/Enter opens the dossier, s toggles the watchlist, c adds to /compare.
-  // Cursor scroll-into-view is handled inside the hook via the virtualizer, and
-  // the moved cursor row is highlighted by painting a `data-cursor` marker plus
-  // an inline left-accent onto the matching <tr> after each commit. The
-  // virtualized rows are rendered by a shared component this file does not own
-  // (so we can't spread `getRowProps`); each row carries a detail link whose
-  // href encodes the coin id, which we use to locate and mark the active row.
+  // Cursor scroll-into-view is handled inside the hook via the virtualizer. The
+  // highlight is painted onto the matching <tr> only when the cursor target or
+  // virtual range changes; each row carries a detail link whose href encodes the
+  // coin id, which we use to locate and mark the active row.
   const watchlist = useWatchlist();
   // Only hand the virtualizer to the cursor when it exposes `scrollToIndex`
   // (the hook calls it to keep the cursor visible). Guards against virtualizer
@@ -386,29 +418,37 @@ export function StablecoinTable({
   });
 
   const cursorHref = cursorCoinId(displayed, cursorIndex);
+  const paintedCursorRowRef = useRef<HTMLTableRowElement | null>(null);
   useEffect(() => {
     const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    const rows = scrollEl.querySelectorAll<HTMLTableRowElement>("tbody tr");
-    for (const row of rows) {
-      const link = row.querySelector<HTMLAnchorElement>('[data-stablecoin-detail-link="true"]');
-      const isCursor = cursorHref !== null && link?.getAttribute("href") === cursorHref;
-      if (isCursor) {
-        row.setAttribute("data-cursor", "true");
-        if (!row.hasAttribute("tabindex")) row.tabIndex = -1;
-        // Left-accent + faint tint, matching the design-token highlight used
-        // elsewhere. Inline because this file does not own the row component
-        // and Tailwind classes can't be attached to the rendered <tr> here.
-        row.style.boxShadow = "inset 3px 0 0 0 var(--brand-accent)";
-        row.style.backgroundColor = "color-mix(in oklab, var(--muted) 40%, transparent)";
-      } else if (row.hasAttribute("data-cursor")) {
-        row.removeAttribute("data-cursor");
-        row.removeAttribute("tabindex");
-        row.style.boxShadow = "";
-        row.style.backgroundColor = "";
-      }
+    const previous = paintedCursorRowRef.current;
+    if (!scrollEl) {
+      if (previous) clearCursorTableRow(previous);
+      paintedCursorRowRef.current = null;
+      return;
     }
-  });
+
+    if (previous && (!scrollEl.contains(previous) || cursorHref === null)) {
+      if (scrollEl.contains(previous)) clearCursorTableRow(previous);
+      paintedCursorRowRef.current = null;
+    }
+    if (cursorHref === null) return;
+
+    const current = paintedCursorRowRef.current;
+    if (current) {
+      const link = current.querySelector<HTMLAnchorElement>('[data-stablecoin-detail-link="true"]');
+      if (scrollEl.contains(current) && link?.getAttribute("href") === cursorHref) {
+        return;
+      }
+      clearCursorTableRow(current);
+      paintedCursorRowRef.current = null;
+    }
+
+    const next = findCursorTableRow(scrollEl, cursorHref);
+    if (!next) return;
+    paintCursorTableRow(next);
+    paintedCursorRowRef.current = next;
+  }, [cursorHref, virtualRangeKey]);
 
   // P8 — numeric column sort: providers broadcast the Nth visible column on
   // keys 1-9; map it to the matching sortable header and toggle its sort.
