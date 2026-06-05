@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type FlashDirection = "up" | "down" | null;
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
 
 /**
  * Toggles the `pharos-data-fresh-up` / `pharos-data-fresh-down` class for 1.5s
@@ -19,6 +15,7 @@ export function useFlashOnChange(
   value: number | null | undefined,
   opts?: { durationMs?: number },
 ): string {
+  const isReduced = usePrefersReducedMotion({ ssrDefault: false });
   const durationMs = opts?.durationMs ?? 1500;
   const [previous, setPrevious] = useState<number | null | undefined>(value);
   const [direction, setDirection] = useState<FlashDirection>(null);
@@ -26,7 +23,7 @@ export function useFlashOnChange(
   // Detect change during render — React 19 idiom for previous-prop comparison.
   if (value !== previous) {
     setPrevious(value);
-    if (value != null && previous != null && !prefersReducedMotion()) {
+    if (value != null && previous != null && !isReduced) {
       setDirection(value > previous ? "up" : "down");
     }
   }

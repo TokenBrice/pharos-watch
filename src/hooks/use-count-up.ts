@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 interface CountUpOptions {
   duration?: number;
@@ -21,11 +22,6 @@ function formatNumber(value: number, decimals: number): string {
   });
 }
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return true;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 export function useCountUp(target: number, opts?: CountUpOptions): string {
   const {
     duration = 600,
@@ -34,7 +30,7 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
     suffix = "",
   } = opts ?? {};
 
-  const reducedMotion = prefersReducedMotion();
+  const reducedMotion = usePrefersReducedMotion({ ssrDefault: true });
   const [display, setDisplay] = useState(() =>
     reducedMotion ? target : 0,
   );

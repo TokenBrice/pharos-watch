@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePrefersReducedMotion } from "./use-prefers-reduced-motion";
 
 type Phase = "kpi" | "complete";
 
@@ -19,15 +20,10 @@ const GROUP_OFFSETS: Record<string, { base: number; stagger: number }> = {
   cards: { base: 200, stagger: 60 },
 };
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return true;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 export function useEntranceSequence(): EntranceSequence {
-  const [isReduced] = useState(() => prefersReducedMotion());
+  const isReduced = usePrefersReducedMotion({ ssrDefault: true });
   const [phase, setPhase] = useState<Phase>(
-    () => prefersReducedMotion() ? "complete" : "kpi",
+    () => isReduced ? "complete" : "kpi",
   );
 
   useEffect(() => {
