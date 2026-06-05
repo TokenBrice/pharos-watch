@@ -28,7 +28,7 @@ import { useYieldDetailSectionModel } from "@/components/yield-detail-section-mo
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
 import { PysBreakdown } from "@/components/pys-breakdown";
-import { YieldDetailSectionStatCard } from "@/components/yield-detail-section-stat-card";
+import { StatTile } from "@/components/stat-tile";
 import { classifyApyChange, type YieldChangeAttributionResult } from "@/lib/yield-change-attribution";
 
 interface YieldDetailSectionProps {
@@ -207,7 +207,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <YieldDetailSectionStatCard label="Yield">
+        <StatTile label="Yield" variant="yield">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="font-mono text-2xl tabular-nums text-foreground">
               {formatPercent(view.ranking.apy30d)}
@@ -229,8 +229,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             30d trailing · Current {formatPercent(view.ranking.currentApy)}
             {view.benchmarkSubtitle ? ` · ${view.benchmarkSubtitle}` : ""}
           </p>
-        </YieldDetailSectionStatCard>
-        <YieldDetailSectionStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
+        </StatTile>
+        <StatTile label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>} variant="yield">
           <PysBreakdown
             mode="inline"
             score={view.ranking.pharosYieldScore}
@@ -251,10 +251,11 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {view.ranking.provenance?.usedDefaultSafety ? (
             <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
           ) : null}
-        </YieldDetailSectionStatCard>
-        <YieldDetailSectionStatCard
+        </StatTile>
+        <StatTile
           label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>}
           value={view.stabilityValue}
+          variant="yield"
         />
       </div>
 

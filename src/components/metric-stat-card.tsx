@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatValueStack } from "@/components/stat-tile";
 import { cn } from "@/lib/utils";
 
 interface MetricStatCardProps {
@@ -22,8 +23,6 @@ interface MetricStatCardProps {
 }
 
 const TITLE_CLASS = "pharos-kicker";
-const VALUE_CLASS = "text-2xl font-extrabold font-mono tabular-nums";
-const SUBTEXT_CLASS = "text-xs text-muted-foreground";
 
 export function MetricStatCard({
   title,
@@ -86,10 +85,12 @@ export function MetricStatCard({
         {hasCustomContent ? (
           children
         ) : (
-          <>
-            {hasValue && <p className={cn(VALUE_CLASS, valueClassName)}>{value}</p>}
-            {hasSubtext && <p className={cn(SUBTEXT_CLASS, subtextClassName)}>{subtext}</p>}
-          </>
+          <StatValueStack
+            value={hasValue ? value : undefined}
+            subtext={hasSubtext ? subtext : undefined}
+            valueClassName={valueClassName}
+            subtextClassName={subtextClassName}
+          />
         )}
       </CardContent>
     </Card>
