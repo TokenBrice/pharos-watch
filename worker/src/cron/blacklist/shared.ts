@@ -1,5 +1,7 @@
 import type { BlacklistAmountSource, BlacklistAmountStatus, BlacklistEventType, BlacklistStablecoin } from "@shared/types/market";
+import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
+import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import type { ChainConfig } from "../../lib/blacklist-contracts";
 
 export function shouldSuppressAsMirrorZero(
@@ -49,6 +51,68 @@ export interface BlacklistScanResult {
   apiError: boolean;
   incomplete: boolean;
   usedRpcLogs: boolean;
+}
+
+interface BuildBlacklistRowOptions {
+  id: string;
+  stablecoin: BlacklistStablecoin;
+  chain: ChainConfig;
+  eventType: BlacklistEventType;
+  address: string;
+  amount: number | null;
+  txHash: string;
+  blockNumber: number;
+  timestamp: number;
+  contractAddress: string | null;
+  configKey: string | null;
+  eventSignature: string | null;
+  eventTopic0: string | null;
+}
+
+export function buildBlacklistRow({
+  id,
+  stablecoin,
+  chain,
+  eventType,
+  address,
+  amount,
+  txHash,
+  blockNumber,
+  timestamp,
+  contractAddress,
+  configKey,
+  eventSignature,
+  eventTopic0,
+}: BuildBlacklistRowOptions): BlacklistRow {
+  const amountResolved = amount != null;
+
+  return {
+    id,
+    stablecoin,
+    chain_id: chain.chainId,
+    chain_name: chain.chainName,
+    event_type: eventType,
+    address,
+    amount_native: amount,
+    amount_usd_at_event: computeBlacklistAmountUsdAtEvent(stablecoin, amount),
+    amount_source: amountResolved ? "event" : "unavailable",
+    amount_status: amountResolved ? "resolved" : "recoverable_pending",
+    tx_hash: txHash,
+    block_number: blockNumber,
+    timestamp,
+    methodology_version: getBlacklistTrackerMethodologyVersionAt(timestamp),
+    contract_address: contractAddress,
+    config_key: configKey,
+    event_signature: eventSignature,
+    event_topic0: eventTopic0,
+    suppression_reason: null,
+    amount_attempt_count: 0,
+    amount_last_attempted_at: null,
+    amount_last_error_class: null,
+    amount_last_provider: null,
+    explorer_tx_url: buildExplorerTxUrl(chain, txHash),
+    explorer_address_url: buildExplorerAddressUrl(chain, address),
+  };
 }
 
 export function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {

@@ -1,5 +1,3 @@
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
-import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
@@ -10,7 +8,7 @@ import {
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { bigIntToDecimal } from "../../lib/bigint";
 import { throwIfAborted } from "../../lib/abort";
-import { buildExplorerAddressUrl, buildExplorerTxUrl, type BlacklistRow } from "./shared";
+import { buildBlacklistRow, type BlacklistRow } from "./shared";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
@@ -49,35 +47,22 @@ export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult
       ? bigIntToDecimal(BigInt(rawAmountStr), config.decimals)
       : null;
   const timestamp = Math.floor(evt.block_timestamp / 1000);
-  const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
 
-  return {
+  return buildBlacklistRow({
     id: `${config.chain.chainId}-${evt.transaction_id}-${evt.event_index}`,
     stablecoin: config.stablecoin,
-    chain_id: config.chain.chainId,
-    chain_name: config.chain.chainName,
-    event_type: eventType,
+    chain: config.chain,
+    eventType,
     address: affectedAddress,
-    amount_native: amount,
-    amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
-    amount_source: amount != null ? "event" : "unavailable",
-    amount_status: amount != null ? "resolved" : "recoverable_pending",
-    tx_hash: evt.transaction_id,
-    block_number: evt.block_number,
+    amount,
+    txHash: evt.transaction_id,
+    blockNumber: evt.block_number,
     timestamp,
-    methodology_version: methodologyVersion,
-    contract_address: config.contractAddress,
-    config_key: config.configKey,
-    event_signature: eventDef.signature,
-    event_topic0: null,
-    suppression_reason: null,
-    amount_attempt_count: 0,
-    amount_last_attempted_at: null,
-    amount_last_error_class: null,
-    amount_last_provider: null,
-    explorer_tx_url: buildExplorerTxUrl(config.chain, evt.transaction_id),
-    explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
-  };
+    contractAddress: config.contractAddress,
+    configKey: config.configKey,
+    eventSignature: eventDef.signature,
+    eventTopic0: null,
+  });
 }
 
 /**
