@@ -4,7 +4,7 @@ import {
   resolveOrReject,
   buildMethodologyEnvelope,
   buildPaginatedEventResponse,
-  errorResponse,
+  parseBooleanParam,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "../lib/constants";
 import {
@@ -36,13 +36,6 @@ interface PoolAvailabilityRow {
   stablecoin_id: string;
   snapshot_at: number | null;
   has_rows: number | null;
-}
-
-function parseBooleanParam(value: string | null, name: string): boolean | Response {
-  if (value == null || value === "") return false;
-  if (value === "true" || value === "1") return true;
-  if (value === "false" || value === "0") return false;
-  return errorResponse(400, `Invalid ${name}: must be true or false`);
 }
 
 function isFreshTimestamp(timestamp: number | null | undefined, nowSec: number, maxAgeSec: number): boolean {
@@ -189,7 +182,7 @@ export const handleDepegEvents = withErrorHandler(
     const params = url.searchParams;
     const stablecoin = params.get("stablecoin");
     const active = params.get("active");
-    const includePending = parseBooleanParam(params.get("includePending"), "includePending");
+    const includePending = parseBooleanParam(params.get("includePending"), "includePending", false);
     if (includePending instanceof Response) {
       return includePending;
     }
