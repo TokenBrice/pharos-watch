@@ -29,6 +29,7 @@ vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: ReactNode }) => <>{children}</>,
   MethodologyCardActions: () => null,
   MethodologyHint: ({ children }: { children?: ReactNode }) => <>{children ?? null}</>,
+  MethodologyTriggerButton: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 function makeLiquidityData(overrides: Partial<DexLiquidityData> = {}): DexLiquidityData {

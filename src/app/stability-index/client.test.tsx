@@ -103,6 +103,7 @@ vi.mock("@/components/time-range-buttons", () => ({
 
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: ReactNode }) => <>{children}</>,
+  MethodologyTriggerButton: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/lib/analytics", () => ({

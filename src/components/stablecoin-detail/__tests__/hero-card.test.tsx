@@ -42,6 +42,7 @@ vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
 
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyHint: ({ topic }: { topic: string }) => <span data-testid={`methodology-hint-${topic}`} />,
+  MethodologyTriggerButton: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   MethodologyLabel: ({ children, topic }: { children: React.ReactNode; topic: string }) => (
     <span>
       <span>{children}</span>

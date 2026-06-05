@@ -29,6 +29,7 @@ vi.mock("@/hooks/use-mint-burn-flows", () => ({
 
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyHint: ({ topic }: { topic: string }) => <span data-testid={`methodology-hint-${topic}`} />,
+  MethodologyTriggerButton: ({ children }: { children?: ReactNode }) => <>{children}</>,
   MethodologyLabel: ({ children, topic }: { children: ReactNode; topic: string }) => (
     <span>
       <span>{children}</span>

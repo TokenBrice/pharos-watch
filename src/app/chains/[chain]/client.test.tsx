@@ -28,6 +28,7 @@ vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: ReactNode }) => <>{children}</>,
   MethodologyHint: () => null,
   MethodologyCardActions: () => null,
+  MethodologyTriggerButton: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/hooks/use-chain-profile-data", () => ({

@@ -38,6 +38,7 @@ vi.mock("@/components/contagion-graph", () => ({
 
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  MethodologyTriggerButton: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/components/stablecoin-detail/collateral-usage-section", () => ({
