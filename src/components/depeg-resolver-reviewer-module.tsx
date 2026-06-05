@@ -33,44 +33,14 @@ interface DepegResolverReviewerModuleProps {
 }
 
 type DdrrCoverageState =
-  | "pending_lock"
-  | "lock_deferred"
-  | "data_quality_gap"
-  | "orphan_closed"
-  | "publication_retry_pending"
-  | "resolved_before_prediction"
-  | "terminal_before_prediction"
-  | "missed_lock_recovered"
-  | "missed_lock_terminal"
-  | "publication_failed"
-  | "no_call"
-  | "invalidated";
-
-type DdrrCompatSummary = DdrrSummary & {
-  policyUniverseCount?: number | null;
-  scoreableCoveragePct?: number | null;
-  predictionCoveragePct?: number | null;
-  publicationSuccessPct?: number | null;
-  noCallSharePct?: number | null;
-  invalidationRatePct?: number | null;
-  coverage?: {
-    policyUniverseCount?: number | null;
-    scoreableCoveragePct?: number | null;
-    predictionCoveragePct?: number | null;
-    publicationSuccessPct?: number | null;
-    noCallSharePct?: number | null;
-    invalidationRatePct?: number | null;
-  } | null;
-};
-
-type DdrrCompatMeta = DdrrResponse["_meta"] & {
-  policyUniverseCount?: number | null;
-  scoreableCoveragePct?: number | null;
-  predictionCoveragePct?: number | null;
-  publicationSuccessPct?: number | null;
-  noCallSharePct?: number | null;
-  invalidationRatePct?: number | null;
-};
+  Exclude<DdrrRow["predictionState"], "frozen">;
+type DdrrHeadlineMetrics = DdrrSummary["headline"];
+type CoverageMetricKey =
+  | "scoreableCoveragePct"
+  | "predictionCoveragePct"
+  | "publicationSuccessPct"
+  | "noCallSharePct"
+  | "invalidationRatePct";
 
 /** Below this many scored verdicts, accuracy is presented as a raw fraction, not a percentage. */
 const CALIBRATION_THRESHOLD = 5;
@@ -171,11 +141,11 @@ const SCORED_VERDICTS = new Set<DdrrVerdictReview>([
 ]);
 
 function isScored(row: DdrrRow): boolean {
-  return SCORED_VERDICTS.has(getVerdictReview(row));
+  return row.kind === "prediction_review" && SCORED_VERDICTS.has(row.verdictReview);
 }
 
 function isTrackRecordRow(row: DdrrRow): boolean {
-  return getCoverageState(row) == null;
+  return row.kind === "prediction_review";
 }
 
 function formatPercent(value: number | null): string {
@@ -192,10 +162,7 @@ function formatSignedDuration(seconds: number | null): string {
 }
 
 function getCoverageState(row: DdrrRow): DdrrCoverageState | null {
-  const record = asRecord(row);
-  const coverage = asRecord(record.coverage);
-  const state = record.coverageState ?? record.predictionState ?? coverage.coverageState ?? coverage.predictionState;
-  return typeof state === "string" && state in COVERAGE_LABELS ? (state as DdrrCoverageState) : null;
+  return row.predictionState === "frozen" ? null : row.predictionState;
 }
 
 function formatMetricPercent(value: number | null | undefined): string {
@@ -203,68 +170,83 @@ function formatMetricPercent(value: number | null | undefined): string {
   return formatPercent(value);
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value != null && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
-function getHeadlineMetrics(summary: DdrrSummary): Record<string, unknown> {
-  const compat = asRecord(summary);
-  return asRecord(compat.headline).horizonHitRates != null || "headline" in compat ? asRecord(compat.headline) : compat;
-}
-
-function getNumberMetric(summary: DdrrSummary, key: string, fallback = 0): number {
-  const value = getHeadlineMetrics(summary)[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-function getNullableMetric(summary: DdrrSummary, key: string): number | null {
-  const value = getHeadlineMetrics(summary)[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function getVerdictReview(row: DdrrRow): DdrrVerdictReview {
-  const value = asRecord(row).verdictReview;
-  return typeof value === "string" && value in VERDICT_LABELS ? (value as DdrrVerdictReview) : "pending";
+  if (row.kind === "prediction_review" || row.kind === "no_call_review") return row.verdictReview;
+  return "pending";
 }
 
 function getDurationReview(row: DdrrRow): DdrrDurationReview {
-  const value = asRecord(row).durationReview;
-  return typeof value === "string" && value in DURATION_LABELS ? (value as DdrrDurationReview) : "duration_unscored";
+  if (row.kind === "prediction_review" || row.kind === "no_call_review") return row.durationReview;
+  return "duration_unscored";
+}
+
+function sourceEventStateToActualOutcome(sourceEventState: DdrrRow["sourceEventState"]): DdrrActualOutcome {
+  switch (sourceEventState) {
+    case "active":
+      return "still_open";
+    case "missing":
+      return "source_missing";
+    case "recovered":
+    case "terminal":
+    case "orphan_closed":
+    case "data_issue":
+    case "invalidated":
+      return sourceEventState;
+  }
+  const exhaustive: never = sourceEventState;
+  return exhaustive;
 }
 
 function getActualOutcome(row: DdrrRow): DdrrActualOutcome {
-  const record = asRecord(row);
-  const actual = asRecord(record.actual);
-  const direct = record.actualOutcome ?? actual.kind;
-  if (typeof direct === "string" && direct in OUTCOME_LABELS) return direct as DdrrActualOutcome;
-
-  const source = record.sourceEventState;
-  if (source === "active") return "still_open";
-  if (source === "missing") return "source_missing";
-  if (source === "terminal" || source === "recovered" || source === "orphan_closed" || source === "data_issue" || source === "invalidated") {
-    return source;
+  if (row.kind === "prediction_review" || row.kind === "no_call_review") {
+    return row.actual.kind;
   }
-  return "data_issue";
+  return sourceEventStateToActualOutcome(row.sourceEventState);
 }
 
-function getCheckpoint(row: DdrrRow): DdrrCheckpoint {
-  const value = asRecord(row).checkpoint;
-  return typeof value === "string" && value in CHECKPOINT_LABELS ? (value as DdrrCheckpoint) : "public_prediction";
+function getCheckpoint(): DdrrCheckpoint {
+  return "public_prediction";
 }
 
 function getRowTime(row: DdrrRow): number {
-  const record = asRecord(row);
-  for (const key of ["assessedAt", "lockedAt", "publishedAt", "eligibleAt", "startedAt"]) {
-    const value = record[key];
-    if (typeof value === "number" && Number.isFinite(value)) return value;
+  switch (row.kind) {
+    case "prediction_review":
+    case "no_call_review":
+      return row.publishedAt;
+    case "invalidated_prediction":
+      return row.publishedAt ?? row.lockedAt;
+    case "coverage":
+      return row.actualEndedAt ?? row.terminalEvidenceAt ?? row.eligibleAt ?? row.startedAt;
   }
-  return 0;
 }
 
 function getSignedDurationError(row: DdrrRow): number | null {
-  const record = asRecord(row);
-  const value = record.signedErrorSec ?? record.signedDurationErrorSec;
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  return row.kind === "prediction_review" ? row.signedDurationErrorSec : null;
+}
+
+function summarizePredictionRows(rows: readonly DdrrRow[]) {
+  return rows.reduce(
+    (breakdown, row) => {
+      if (row.kind !== "prediction_review") return breakdown;
+      if (row.verdictReview === "correct_recoverable") breakdown.correctRecoverable += 1;
+      if (row.verdictReview === "correct_terminal") breakdown.correctTerminal += 1;
+      if (row.verdictReview === "false_terminal") breakdown.falseTerminal += 1;
+      if (row.verdictReview === "false_recoverable") breakdown.falseRecoverable += 1;
+      if (row.withinIqr != null) {
+        breakdown.iqrScoredCount += 1;
+        if (row.withinIqr) breakdown.withinIqrCount += 1;
+      }
+      return breakdown;
+    },
+    {
+      correctRecoverable: 0,
+      correctTerminal: 0,
+      falseTerminal: 0,
+      falseRecoverable: 0,
+      withinIqrCount: 0,
+      iqrScoredCount: 0,
+    },
+  );
 }
 
 // --- track-record timeline -------------------------------------------------
@@ -333,7 +315,7 @@ function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
         const left = ordered.length === 1 ? 50 : (i / (ordered.length - 1)) * 96 + 2;
         return (
           <span
-            key={`${row.eventId}:${getCheckpoint(row)}:${getRowTime(row)}`}
+            key={`${row.eventId}:${row.kind}:${getRowTime(row)}`}
             className={cn("absolute h-2 w-2 -translate-x-1/2 rounded-full", tone.dot, tone.pos)}
             style={{ left: `${left}%` }}
             title={`${row.symbol} · ${
@@ -430,12 +412,14 @@ function BreakdownStat({
   );
 }
 
-function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
-  const correct = getNumberMetric(summary, "recoveryLikelihoodCorrectCount");
-  const scored = getNumberMetric(summary, "recoveryLikelihoodScoredCount");
-  const pct = getNullableMetric(summary, "recoveryLikelihoodAccuracyPct");
-  const durationScored = getNumberMetric(summary, "durationScoredCount");
-  const pending = getNumberMetric(summary, "pending", getNumberMetric(summary, "pendingLockCount"));
+function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: readonly DdrrRow[] }) {
+  const metrics = summary.headline;
+  const rowBreakdown = summarizePredictionRows(rows);
+  const correct = metrics.recoveryLikelihoodCorrectCount;
+  const scored = metrics.recoveryLikelihoodScoredCount;
+  const pct = metrics.recoveryLikelihoodAccuracyPct;
+  const durationScored = metrics.durationScoredCount;
+  const pending = metrics.pendingLockCount;
 
   const recoveryValue = scored > 0 ? `${correct} / ${scored}` : "—";
   const recoveryCaption =
@@ -465,15 +449,11 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
             {durationScored > 0 ? (
               <>
                 <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-                  {formatSignedDuration(getNullableMetric(summary, "averageSignedDurationErrorSec") ?? getNullableMetric(summary, "meanSignedDurationErrorSec"))}
+                  {formatSignedDuration(metrics.meanSignedDurationErrorSec)}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   mean miss · ±
-                  {formatElapsedSeconds(
-                    getNullableMetric(summary, "averageAbsoluteDurationErrorSec") ??
-                      getNullableMetric(summary, "meanAbsoluteDurationErrorSec") ??
-                      0,
-                  )}
+                  {formatElapsedSeconds(metrics.meanAbsoluteDurationErrorSec ?? 0)}
                 </span>
               </>
             ) : (
@@ -492,22 +472,22 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/50 pt-3">
         <BreakdownStat
           label="correct"
-          value={getNumberMetric(summary, "correctRecoverable") + getNumberMetric(summary, "correctTerminal")}
+          value={metrics.recoveryLikelihoodCorrectCount}
           tone="emerald"
         />
         <BreakdownStat
           label="false terminal"
-          value={getNumberMetric(summary, "falseTerminal")}
-          tone={getNumberMetric(summary, "falseTerminal") > 0 ? "red" : "muted"}
+          value={rowBreakdown.falseTerminal}
+          tone={rowBreakdown.falseTerminal > 0 ? "red" : "muted"}
         />
         <BreakdownStat
           label="false recoverable"
-          value={getNumberMetric(summary, "falseRecoverable")}
-          tone={getNumberMetric(summary, "falseRecoverable") > 0 ? "red" : "muted"}
+          value={rowBreakdown.falseRecoverable}
+          tone={rowBreakdown.falseRecoverable > 0 ? "red" : "muted"}
         />
         <BreakdownStat
           label="inside IQR"
-          value={`${getNumberMetric(summary, "withinIqrCount")}/${getNumberMetric(summary, "iqrScoredCount")}`}
+          value={`${rowBreakdown.withinIqrCount}/${rowBreakdown.iqrScoredCount}`}
         />
         <BreakdownStat label="pending" value={pending} />
       </div>
@@ -516,31 +496,18 @@ function CalibrationLedger({ summary }: { summary: DdrrSummary }) {
 }
 
 function getCoverageMetric(
-  summary: DdrrSummary,
-  meta: DdrrResponse["_meta"] | undefined,
-  key: keyof Pick<
-    DdrrCompatSummary,
-    | "scoreableCoveragePct"
-    | "predictionCoveragePct"
-    | "publicationSuccessPct"
-    | "noCallSharePct"
-    | "invalidationRatePct"
-  >,
+  metrics: DdrrHeadlineMetrics,
+  key: CoverageMetricKey,
 ): number | null {
-  const summaryCompat = summary as DdrrCompatSummary;
-  const metaCompat = meta as DdrrCompatMeta | undefined;
-  const direct = summaryCompat.coverage?.[key] ?? summaryCompat[key] ?? metaCompat?.[key] ?? null;
-  if (direct != null) return direct;
-
   if (key === "scoreableCoveragePct") {
-    const denominator = getNumberMetric(summary, "policyUniverseIncidentCount");
-    return denominator > 0 ? getNumberMetric(summary, "recoveryLikelihoodScoredCount") / denominator : null;
+    const denominator = metrics.policyUniverseIncidentCount;
+    return denominator > 0 ? metrics.recoveryLikelihoodScoredCount / denominator : null;
   }
 
   if (key === "publicationSuccessPct") {
-    const published = getNumberMetric(summary, "lockedPredictionCount");
-    const retryPending = getNumberMetric(summary, "publicationRetryPendingCount");
-    const failed = getNumberMetric(summary, "publicationFailedCount");
+    const published = metrics.lockedPredictionCount;
+    const retryPending = metrics.publicationRetryPendingCount;
+    const failed = metrics.publicationFailedCount;
     const denominator = published + retryPending + failed;
     return denominator > 0 ? published / denominator : null;
   }
@@ -553,48 +520,36 @@ function getCoverageMetric(
         : key === "invalidationRatePct"
           ? "invalidatedPct"
           : null;
-  return v2Key ? getNullableMetric(summary, v2Key) : null;
-}
-
-function getPolicyUniverseCount(summary: DdrrSummary, meta: DdrrResponse["_meta"] | undefined): number {
-  const summaryCompat = summary as DdrrCompatSummary;
-  const metaCompat = meta as DdrrCompatMeta | undefined;
-  return (
-    summaryCompat.coverage?.policyUniverseCount ??
-    summaryCompat.policyUniverseCount ??
-    metaCompat?.policyUniverseCount ??
-    getNumberMetric(summary, "policyUniverseIncidentCount", meta?.assessedEventCount ?? 0)
-  );
+  return v2Key ? metrics[v2Key] : null;
 }
 
 function CoverageAccountabilityLedger({
   summary,
-  meta,
 }: {
   summary: DdrrSummary;
-  meta: DdrrResponse["_meta"] | undefined;
 }) {
-  const policyUniverseCount = getPolicyUniverseCount(summary, meta);
-  const metrics = [
+  const metrics = summary.headline;
+  const policyUniverseCount = metrics.policyUniverseIncidentCount;
+  const metricCards = [
     {
       label: "Scoreable coverage",
-      value: formatMetricPercent(getCoverageMetric(summary, meta, "scoreableCoveragePct")),
+      value: formatMetricPercent(getCoverageMetric(metrics, "scoreableCoveragePct")),
     },
     {
       label: "Prediction coverage",
-      value: formatMetricPercent(getCoverageMetric(summary, meta, "predictionCoveragePct")),
+      value: formatMetricPercent(getCoverageMetric(metrics, "predictionCoveragePct")),
     },
     {
       label: "Publication success",
-      value: formatMetricPercent(getCoverageMetric(summary, meta, "publicationSuccessPct")),
+      value: formatMetricPercent(getCoverageMetric(metrics, "publicationSuccessPct")),
     },
     {
       label: "No-call share",
-      value: formatMetricPercent(getCoverageMetric(summary, meta, "noCallSharePct")),
+      value: formatMetricPercent(getCoverageMetric(metrics, "noCallSharePct")),
     },
     {
       label: "Invalidation rate",
-      value: formatMetricPercent(getCoverageMetric(summary, meta, "invalidationRatePct")),
+      value: formatMetricPercent(getCoverageMetric(metrics, "invalidationRatePct")),
     },
   ];
 
@@ -607,7 +562,7 @@ function CoverageAccountabilityLedger({
         </span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
-        {metrics.map((metric) => (
+        {metricCards.map((metric) => (
           <div key={metric.label} className="min-w-0 rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
             <p className="truncate text-[11px] text-muted-foreground">{metric.label}</p>
             <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground">{metric.value}</p>
@@ -658,7 +613,7 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
         {verdictLabel}
       </Badge>
       <span className="justify-self-start font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
-        {CHECKPOINT_LABELS[getCheckpoint(row)]} · {OUTCOME_LABELS[actualOutcome]}
+        {CHECKPOINT_LABELS[getCheckpoint()]} · {OUTCOME_LABELS[actualOutcome]}
       </span>
       <span className="justify-self-end font-mono text-[11px] tabular-nums text-muted-foreground sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
         {durationText}
@@ -689,7 +644,7 @@ function ReviewLegend() {
 
 function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: DdrrResponse | undefined }) {
   const meta = data?._meta;
-  const scored = data?.summary ? getNumberMetric(data.summary, "recoveryLikelihoodScoredCount") : 0;
+  const scored = data?.summary.headline.recoveryLikelihoodScoredCount ?? 0;
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
@@ -764,7 +719,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
 
   const summary = data?.summary;
   const rows = data?.rows ?? [];
-  const calibrating = (summary ? getNumberMetric(summary, "recoveryLikelihoodScoredCount") : 0) < CALIBRATION_THRESHOLD;
+  const calibrating = (summary?.headline.recoveryLikelihoodScoredCount ?? 0) < CALIBRATION_THRESHOLD;
 
   // Scored rows carry the signal; surface them first, then a capped run of maturing rows.
   const orderedRows = [...rows].sort((a, b) => Number(isScored(b)) - Number(isScored(a)));
@@ -790,8 +745,8 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
         </div>
       ) : (
         <>
-          <CalibrationLedger summary={summary} />
-          <CoverageAccountabilityLedger summary={summary} meta={data._meta} />
+          <CalibrationLedger summary={summary} rows={rows} />
+          <CoverageAccountabilityLedger summary={summary} />
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 
           {data._meta.degraded ? (
@@ -820,7 +775,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             <Kicker>Reviewed readouts</Kicker>
             <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-card/40">
               {shownRows.map((row) => (
-              <ReviewRow key={`${row.eventId}:${getCheckpoint(row)}:${getRowTime(row)}`} row={row} logos={logos} />
+                <ReviewRow key={`${row.eventId}:${row.kind}:${getRowTime(row)}`} row={row} logos={logos} />
               ))}
             </ul>
             {hiddenCount > 0 ? (

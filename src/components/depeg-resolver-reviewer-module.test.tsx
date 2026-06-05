@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewer-module";
+import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import type { DdrrResponse, DdrrRow, DdrrSummary } from "@shared/types";
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -17,37 +18,32 @@ afterEach(() => {
   cleanup();
 });
 
-const summary: DdrrSummary = {
+function makeSummary(headline: Partial<DdrrSummary["headline"]> = {}): DdrrSummary {
+  const base = summarizeDdrrRows([]);
+  return {
+    ...base,
+    headline: {
+      ...base.headline,
+      ...headline,
+    },
+  };
+}
+
+const summary: DdrrSummary = makeSummary({
   recoveryLikelihoodCorrectCount: 2,
   recoveryLikelihoodScoredCount: 4,
   recoveryLikelihoodAccuracyPct: 0.5,
   durationScoredCount: 2,
-  averageSignedDurationErrorSec: 3600,
-  averageAbsoluteDurationErrorSec: 5400,
-  correctRecoverable: 1,
-  correctTerminal: 1,
-  falseTerminal: 1,
-  falseRecoverable: 1,
-  riskNotedTerminal: 0,
-  unscoredInsufficientSignal: 0,
-  pending: 1,
-  dataIssue: 0,
-  verdictScoredCount: 4,
-  durationUnscoredCount: 1,
-  withinIqrCount: 1,
-  iqrScoredCount: 2,
-  withinIqrPct: 0.5,
-  medianAbsoluteErrorSec: 5400,
-  horizonHitRates: [
-    { horizon: "6h", scored: 1, hits: 1, misses: 0, hitRate: 1 },
-    { horizon: "24h", scored: 0, hits: 0, misses: 0, hitRate: null },
-    { horizon: "7d", scored: 0, hits: 0, misses: 0, hitRate: null },
-    { horizon: "30d", scored: 0, hits: 0, misses: 0, hitRate: null },
-  ],
-};
+  meanSignedDurationErrorSec: 3600,
+  meanAbsoluteDurationErrorSec: 5400,
+  pendingLockCount: 1,
+});
 
 const row: DdrrRow = {
+  kind: "prediction_review",
   eventId: 42,
+  currentEventId: 42,
+  incidentKey: "lusd-liquity:below:1",
   stablecoinId: "lusd-liquity",
   symbol: "LUSD",
   name: "Liquity USD",
@@ -55,28 +51,72 @@ const row: DdrrRow = {
   governance: "decentralized",
   direction: "below",
   startedAt: 1,
-  assessedAt: 2,
-  eventAgeSec: 1,
-  checkpoint: "first",
-  methodologyVersion: "1.0",
-  resolutionTier: "recovery_likely",
-  durationSuppressed: false,
-  durationSuppressedReason: null,
-  predictedRemainingSec: 3600,
-  iqrRemainingSec: [1800, 7200],
-  actualOutcome: "recovered",
-  actualEndedAt: 7202,
-  actualRemainingSec: 7200,
+  eligibleAt: 1,
+  sourceEventState: "recovered",
+  terminalEvidenceAt: null,
+  terminalEvidenceInterval: null,
+  terminalEvidencePrecision: null,
+  publicPredictionId: 7,
+  assessmentId: 9,
+  predictionState: "frozen",
+  predictionMethodologyVersion: "1.0",
+  predictionPolicyVersion: "sticky-24h-v1",
+  lockedAt: 2,
+  publishedAt: 3,
+  publicationSnapshotToken: "snapshot-1",
+  frozen: {
+    resolutionTier: "recovery_likely",
+    predictedRemainingSec: 3600,
+    iqrRemainingSec: [1800, 7200],
+    horizonCells: [],
+    stratum: "below - moderate - robust - USD",
+    factors: [],
+  },
+  actual: {
+    kind: "recovered",
+    actualEndedAt: 7202,
+    actualRemainingSec: 7200,
+    terminalEvidenceAt: null,
+    terminalEvidenceInterval: null,
+    terminalEvidencePrecision: null,
+    reviewedAt: 7202,
+  },
   verdictReview: "correct_recoverable",
   durationReview: "inside_band",
-  medianReview: "median_late_by",
-  signedErrorSec: 3600,
-  absoluteErrorSec: 3600,
-  withinIqr: true,
   horizonReviews: [],
-  stratum: "below - moderate - robust - USD",
-  factors: [],
+  predictedRemainingSec: 3600,
+  actualRemainingSec: 7200,
+  medianReview: "median_late_by",
+  signedDurationErrorSec: 3600,
+  absoluteDurationErrorSec: 3600,
+  withinIqr: true,
+};
+
+const coverageRow: DdrrRow = {
+  kind: "coverage",
+  eventId: 43,
+  currentEventId: 43,
+  incidentKey: "lusd-liquity:below:2",
+  stablecoinId: "lusd-liquity",
+  symbol: "LUSD",
+  name: "Liquity USD",
+  pegCurrency: "USD",
+  governance: "decentralized",
+  direction: "below",
+  startedAt: 1,
+  eligibleAt: 1,
   sourceEventState: "recovered",
+  terminalEvidenceAt: null,
+  terminalEvidenceInterval: null,
+  terminalEvidencePrecision: null,
+  predictionState: "missed_lock_recovered",
+  actualEndedAt: 7202,
+  terminalEvidenceSourceDate: null,
+  coverageCause: "lock_missed",
+  operationalCoverageCause: "lock_missed",
+  outcomeQualityState: "classified",
+  reason: null,
+  failedPublication: null,
 };
 
 function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
@@ -86,7 +126,7 @@ function response(overrides: Partial<DdrrResponse> = {}): DdrrResponse {
       expiresAt: 2,
       degraded: false,
       degradedReason: null,
-      reviewerVersion: "ddr-reviewer-v1",
+      reviewerVersion: "ddr-reviewer-v2",
       publicWarning: "review warning",
       assessedEventCount: 1,
       reviewedEventCount: 1,
@@ -142,9 +182,12 @@ describe("DepegResolverReviewerModule", () => {
         data={response({
           summary: {
             ...summary,
-            recoveryLikelihoodCorrectCount: 5,
-            recoveryLikelihoodScoredCount: 5,
-            recoveryLikelihoodAccuracyPct: 1,
+            headline: {
+              ...summary.headline,
+              recoveryLikelihoodCorrectCount: 5,
+              recoveryLikelihoodScoredCount: 5,
+              recoveryLikelihoodAccuracyPct: 1,
+            },
           },
         })}
       />,
@@ -162,24 +205,19 @@ describe("DepegResolverReviewerModule", () => {
         data={response({
           summary: {
             ...summary,
-            policyUniverseCount: 20,
-            scoreableCoveragePct: 0.4,
-            predictionCoveragePct: 0.65,
-            publicationSuccessPct: 0.9,
-            noCallSharePct: 0.1,
-            invalidationRatePct: 0.05,
-          } as DdrrSummary,
-          rows: [
-            row,
-            {
-              ...row,
-              eventId: 43,
-              coverageState: "missed_lock_recovered",
-              verdictReview: "pending",
-              durationReview: "duration_unscored",
-              signedErrorSec: null,
-            } as DdrrRow,
-          ],
+            headline: {
+              ...summary.headline,
+              policyUniverseIncidentCount: 20,
+              recoveryLikelihoodScoredCount: 8,
+              predictionRatePct: 0.65,
+              lockedPredictionCount: 9,
+              publicationRetryPendingCount: 1,
+              publicationFailedCount: 0,
+              noCallRatePct: 0.1,
+              invalidatedPct: 0.05,
+            },
+          },
+          rows: [row, coverageRow],
         })}
       />,
     );
