@@ -140,6 +140,11 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Owned files.**
 - `worker/src/cron/dispatch-telegram-alerts.ts` (entrypoint and orchestration)
 - `worker/src/cron/dispatch-telegram-alerts-fanout.ts` (parallel loading of subscriber inputs)
+- `worker/src/cron/dispatch-telegram-events.ts` (DEWS/depeg/safety/launch snapshot diffing into dispatch events; suppressed-safety-at-seed counting)
+- `worker/src/cron/dispatch-telegram-predicates.ts` (alertability/safety predicates: DEWS/depeg-step thresholds, escalation, per-subscriber safety inclusion)
+- `worker/src/cron/dispatch-telegram-result.ts` (dispatch result assembly: per-alert-type targets and `DispatchResult` shape)
+- `worker/src/cron/dispatch-telegram-subscribers.ts` (subscriber/preset/global row loading, per-coin snooze map, subscriber-map merge)
+- `worker/src/cron/dispatch-telegram-alerts-observability.ts` (systemic fresh-failure observability)
 - `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
