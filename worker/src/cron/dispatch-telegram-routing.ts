@@ -9,8 +9,7 @@ import { sendBatch, type BatchMessage, type BatchResult } from "../lib/telegram"
 import {
   SEND_BATCH_SIZE,
   buildDedupeKey,
-  disableBlockedSubscriber,
-  registerSubscriberBlockAndShouldDisable,
+  registerSubscriberBlockAndMaybeDisable,
   resetSubscriberBlockCount,
 } from "./telegram-pending-queue";
 import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
@@ -335,13 +334,11 @@ export async function deliverFreshAlerts(
       });
       if (!blockedChats.has(result.chatId)) {
         blockedChats.add(result.chatId);
-        const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
-        if (shouldDisable) {
-          if (await disableBlockedSubscriber(db, result.chatId)) {
-            blockedUsersCleanedUp++;
-          } else {
-            blockedUsersCleanupFailed++;
-          }
+        const blockedCascade = await registerSubscriberBlockAndMaybeDisable(db, result.chatId, nowSec);
+        if (blockedCascade.disabled) {
+          blockedUsersCleanedUp++;
+        } else if (blockedCascade.failed) {
+          blockedUsersCleanupFailed++;
         }
       }
       if (bucket) bucket.blocked++;
