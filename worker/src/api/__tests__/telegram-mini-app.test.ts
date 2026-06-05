@@ -928,9 +928,8 @@ describe("handleTelegramMiniAppMutation", () => {
   });
 
   it("routes clear-snooze through the seam-compliant clearAlertSnooze helper", async () => {
-    // T-19: previously routed via clearSnoozeViaSettings; now flows through the
-    // store helper. The discriminator is the literal `alert_snooze_until_ts = NULL`
-    // SET clause written by `clearAlertSnooze` (telegram-webhook-store.ts:933).
+    // The discriminator is the literal `alert_snooze_until_ts = NULL` SET
+    // clause written by the canonical store helper.
     const initData = await privateInitData();
     const db = mockD1(stateReadTables());
 
@@ -940,11 +939,8 @@ describe("handleTelegramMiniAppMutation", () => {
     }), BOT_TOKEN);
 
     expect(response.status).toBe(200);
-    // Both clearAlertSnooze and the prior settings helper use the same SQL
-    // shape; the discriminator here is that the call still goes through and
-    // writes the NULL clause. The seam compliance is enforced at the import
-    // level (telegram-mini-app-mutations.ts imports clearAlertSnooze, not
-    // clearSnoozeViaSettings).
+    // The seam compliance is enforced at the import level:
+    // telegram-mini-app-mutations.ts imports clearAlertSnooze.
     expect(historyHas(db, "alert_snooze_until_ts = NULL", ["42", "alice"])).toBe(true);
   });
 

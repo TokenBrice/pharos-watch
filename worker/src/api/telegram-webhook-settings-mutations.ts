@@ -56,32 +56,6 @@ export async function setQuietHours(
   });
 }
 
-export async function clearSnoozeViaSettings(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-): Promise<void> {
-  const now = unixNow();
-  await db
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, username,
-         alert_dews, alert_depeg, alert_safety, alert_launch,
-         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-         alert_snooze_until_ts,
-         created_at, last_active_at
-       )
-       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, ?, ?)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         username = COALESCE(excluded.username, telegram_subscribers.username),
-         alert_snooze_until_ts = NULL,
-         last_active_at = excluded.last_active_at`,
-    )
-    .bind(chatId, username, now, now)
-    .run();
-}
-
 /**
  * Apply a per-coin setting change. Returns a short user-facing description
  * string on success, or null if the setting/value pair is unrecognized.

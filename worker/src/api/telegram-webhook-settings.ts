@@ -6,8 +6,8 @@
  *   - per-coin (ticker arg): DEWS min band, safety mode, depeg step, launch.
  *
  * Callback namespace is `settings:*`. Render helpers live in
- * `telegram-webhook-settings-render.ts` and D1 mutations in
- * `telegram-webhook-settings-mutations.ts` so each surface stays narrow.
+ * `telegram-webhook-settings-render.ts` and D1 mutations in settings/store
+ * helpers so each surface stays narrow.
  *
  * Each callback updates D1 then edits the message in place via
  * `editMessageText`. If the edit fails (e.g. message too old, identical
@@ -22,6 +22,7 @@ import {
   buildStatusAmbiguousMessage,
 } from "./telegram-webhook-messages";
 import {
+  clearAlertSnooze,
   loadSubscriberByChat,
   loadSubscriptionsByIds,
 } from "./telegram-webhook-store";
@@ -33,7 +34,6 @@ import {
 } from "./telegram-webhook-settings-render";
 import {
   applyCoinSetting,
-  clearSnoozeViaSettings,
   setQuietHours,
   toggleGlobalAlert,
 } from "./telegram-webhook-settings-mutations";
@@ -164,7 +164,7 @@ export async function handleSettingsCallback(
       await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
       return;
     }
-    await clearSnoozeViaSettings(db, chatId, username);
+    await clearAlertSnooze(db, chatId, username);
     await recordTelegramUsageEvent(db, {
       eventType: "snooze_change",
       actionDetail: "settings",
