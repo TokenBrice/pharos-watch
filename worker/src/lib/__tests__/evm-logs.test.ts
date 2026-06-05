@@ -6,6 +6,7 @@ import {
   createBudget,
   budgetExhausted,
   createRateLimiter,
+  getEvmBlockNumber,
   fetchEvmLogsForTopics,
   readDataWord,
 } from "../evm-logs";
@@ -216,6 +217,38 @@ describe("createRateLimiter", () => {
     expect(callTimes).toHaveLength(2);
     // Second call should be at least 200ms after first
     expect(callTimes[1] - callTimes[0]).toBeGreaterThanOrEqual(200);
+  });
+});
+
+// --- getEvmBlockNumber ---
+
+describe("getEvmBlockNumber", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const noopLimiter = <T>(fn: () => Promise<T>) => fn();
+
+  it("returns null for malformed hex block numbers", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ result: "0x" }), { status: 200 }),
+    );
+
+    const budget = createBudget(10);
+    await expect(getEvmBlockNumber(1, null, noopLimiter, budget)).resolves.toBeNull();
+    expect(budget.count).toBe(1);
+  });
+
+  it("parses valid hex block numbers", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ result: "0x1312d00" }), { status: 200 }),
+    );
+
+    await expect(getEvmBlockNumber(1, null, noopLimiter, createBudget(10))).resolves.toBe(20_000_000);
   });
 });
 

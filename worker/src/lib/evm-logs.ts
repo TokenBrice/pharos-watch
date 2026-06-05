@@ -123,8 +123,9 @@ export async function getEvmBlockNumber(
       if (!res.ok) { await cancelResponseBodyQuietly(res); return null; }
       return res.json() as Promise<{ result?: string }>;
     });
-    if (!json?.result || !json.result.startsWith("0x")) return null;
-    return parseInt(json.result, 16);
+    if (!json?.result || !/^0x[0-9a-fA-F]+$/.test(json.result)) return null;
+    const parsed = Number.parseInt(json.result, 16);
+    return Number.isFinite(parsed) ? parsed : null;
   } catch {
     return null;
   }

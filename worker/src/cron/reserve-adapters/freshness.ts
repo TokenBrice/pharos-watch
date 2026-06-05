@@ -86,7 +86,29 @@ export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
   const shortDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
   if (shortDateMatch) {
     const [, day, month, year] = shortDateMatch;
-    const parsed = Date.UTC(2000 + Number(year), Number(month) - 1, Number(day));
+    const dayNumber = Number(day);
+    const monthNumber = Number(month);
+    if (
+      !Number.isInteger(dayNumber) ||
+      !Number.isInteger(monthNumber) ||
+      dayNumber < 1 ||
+      dayNumber > 31 ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      (dayNumber <= 12 && monthNumber <= 12)
+    ) {
+      return null;
+    }
+    const fullYear = 2000 + Number(year);
+    const parsed = Date.UTC(fullYear, monthNumber - 1, dayNumber);
+    const parsedDate = new Date(parsed);
+    if (
+      parsedDate.getUTCFullYear() !== fullYear ||
+      parsedDate.getUTCMonth() !== monthNumber - 1 ||
+      parsedDate.getUTCDate() !== dayNumber
+    ) {
+      return null;
+    }
     return normalizeUnixTimestampSeconds(parsed);
   }
 

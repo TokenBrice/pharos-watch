@@ -154,7 +154,8 @@ export function parseClampedIntegerParam(
   max: number,
   options?: ClampedIntegerParamOptions,
 ): number {
-  const parsed = value == null ? defaultVal : Number(value);
+  const trimmed = value?.trim();
+  const parsed = trimmed == null || !/^-?\d+$/.test(trimmed) ? defaultVal : Number.parseInt(trimmed, 10);
   const normalized =
     !Number.isFinite(parsed) || (options?.zeroAsDefault === true && parsed === 0) ? defaultVal : Math.floor(parsed);
   return Math.max(min, Math.min(max, normalized));

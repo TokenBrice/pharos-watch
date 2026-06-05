@@ -242,8 +242,12 @@ describe("parseIntParam", () => {
 describe("integer query helpers", () => {
   it("defaults malformed clamped integer params and clamps out-of-range values", () => {
     expect(parseClampedIntegerParam("abc", 50, 1, 200)).toBe(50);
+    expect(parseClampedIntegerParam("0x10", 50, 1, 200)).toBe(50);
+    expect(parseClampedIntegerParam("1e3", 50, 1, 200)).toBe(50);
+    expect(parseClampedIntegerParam("   ", 50, 1, 200)).toBe(50);
     expect(parseClampedIntegerParam("999", 50, 1, 200)).toBe(200);
     expect(parseClampedIntegerParam("0", 50, 1, 200)).toBe(1);
+    expect(parseClampedIntegerParam(" 25 ", 50, 1, 200)).toBe(25);
   });
 
   it("can preserve zero-as-default behavior for legacy clamped params", () => {
