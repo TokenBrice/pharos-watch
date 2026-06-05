@@ -36,6 +36,38 @@ function resolvePendingTtlSec(message: BatchMessage, options: PendingEnqueueOpti
   return message.alertType ? TELEGRAM_ALERT_TTL_SEC[message.alertType] : PENDING_TTL_SEC;
 }
 
+interface SqlFragment {
+  sql: string;
+  binds: readonly number[];
+}
+
+const SHOULD_REFRESH_EXISTING_ROW_SQL = [
+  "COALESCE(telegram_pending_alerts.expires_at, telegram_pending_alerts.created_at + ?) <= excluded.created_at",
+  "telegram_pending_alerts.created_at < excluded.created_at - ?",
+].join(" OR ");
+
+function refreshExistingRowPredicate(): SqlFragment {
+  return {
+    sql: SHOULD_REFRESH_EXISTING_ROW_SQL,
+    binds: [PENDING_TTL_SEC, PENDING_TTL_SEC] as const,
+  };
+}
+
+function refreshExistingRowCase(thenSql: string, elseSql: string): SqlFragment {
+  const predicate = refreshExistingRowPredicate();
+  return {
+    sql: `CASE
+             WHEN ${predicate.sql} THEN ${thenSql}
+             ELSE ${elseSql}
+           END`,
+    binds: predicate.binds,
+  };
+}
+
+function collectSqlBinds(...fragments: readonly SqlFragment[]): number[] {
+  return fragments.flatMap((fragment) => [...fragment.binds]);
+}
+
 export async function enqueuePendingAlerts(
   db: D1Database,
   messages: BatchMessage[],
@@ -44,14 +76,25 @@ export async function enqueuePendingAlerts(
 ): Promise<void> {
   if (messages.length === 0) return;
 
-  const shouldRefreshExistingRow = [
-    "COALESCE(telegram_pending_alerts.expires_at, telegram_pending_alerts.created_at + ?) <= excluded.created_at",
-    "telegram_pending_alerts.created_at < excluded.created_at - ?",
-  ].join(" OR ");
-  const refreshPredicateBinds = () => [PENDING_TTL_SEC, PENDING_TTL_SEC] as const;
   const sourceType = resolvePendingSourceType(options);
   const stmts = messages.map((msg) => {
     const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
+    const createdAtRefresh = refreshExistingRowCase("excluded.created_at", "telegram_pending_alerts.created_at");
+    const attemptsRefresh = refreshExistingRowCase("0", "telegram_pending_alerts.attempts");
+    const notBeforeRefresh = refreshExistingRowPredicate();
+    const expiresAtRefresh = refreshExistingRowCase("excluded.expires_at", "COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)");
+    const processingOwnerRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_owner");
+    const processingStartedRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_started_at");
+    const processingExpiresRefresh = refreshExistingRowCase("NULL", "telegram_pending_alerts.processing_expires_at");
+    const refreshBinds = collectSqlBinds(
+      createdAtRefresh,
+      attemptsRefresh,
+      notBeforeRefresh,
+      expiresAtRefresh,
+      processingOwnerRefresh,
+      processingStartedRefresh,
+      processingExpiresRefresh,
+    );
     return db
       .prepare(
         `INSERT INTO telegram_pending_alerts (
@@ -63,16 +106,10 @@ export async function enqueuePendingAlerts(
          ON CONFLICT(dedupe_key) DO UPDATE SET
            message_html = excluded.message_html,
            disable_notification = excluded.disable_notification,
-           created_at = CASE
-             WHEN ${shouldRefreshExistingRow} THEN excluded.created_at
-             ELSE telegram_pending_alerts.created_at
-           END,
-           attempts = CASE
-             WHEN ${shouldRefreshExistingRow} THEN 0
-             ELSE telegram_pending_alerts.attempts
-           END,
+           created_at = ${createdAtRefresh.sql},
+           attempts = ${attemptsRefresh.sql},
            not_before_at = CASE
-             WHEN ${shouldRefreshExistingRow} THEN excluded.not_before_at
+             WHEN ${notBeforeRefresh.sql} THEN excluded.not_before_at
              WHEN excluded.not_before_at IS NULL THEN telegram_pending_alerts.not_before_at
              WHEN telegram_pending_alerts.not_before_at IS NULL THEN excluded.not_before_at
              ELSE MAX(telegram_pending_alerts.not_before_at, excluded.not_before_at)
@@ -88,22 +125,10 @@ export async function enqueuePendingAlerts(
              ELSE telegram_pending_alerts.source_type
            END,
            alert_type = COALESCE(excluded.alert_type, telegram_pending_alerts.alert_type),
-           expires_at = CASE
-             WHEN ${shouldRefreshExistingRow} THEN excluded.expires_at
-             ELSE COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)
-           END,
-           processing_owner = CASE
-             WHEN ${shouldRefreshExistingRow} THEN NULL
-             ELSE telegram_pending_alerts.processing_owner
-           END,
-           processing_started_at = CASE
-             WHEN ${shouldRefreshExistingRow} THEN NULL
-             ELSE telegram_pending_alerts.processing_started_at
-           END,
-           processing_expires_at = CASE
-             WHEN ${shouldRefreshExistingRow} THEN NULL
-             ELSE telegram_pending_alerts.processing_expires_at
-           END`,
+           expires_at = ${expiresAtRefresh.sql},
+           processing_owner = ${processingOwnerRefresh.sql},
+           processing_started_at = ${processingStartedRefresh.sql},
+           processing_expires_at = ${processingExpiresRefresh.sql}`,
       )
       .bind(
         msg.chatId,
@@ -120,13 +145,7 @@ export async function enqueuePendingAlerts(
         sourceType,
         msg.alertType ?? null,
         expiresAt,
-        ...refreshPredicateBinds(),
-        ...refreshPredicateBinds(),
-        ...refreshPredicateBinds(),
-        ...refreshPredicateBinds(),
-        ...refreshPredicateBinds(),
-        ...refreshPredicateBinds(),
-        ...refreshPredicateBinds(),
+        ...refreshBinds,
       );
   });
   await batchExecute(db, stmts);
