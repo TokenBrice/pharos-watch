@@ -2,7 +2,7 @@ import {
   excessApyConcave,
   sourceRiskInverted,
 } from "./normalization";
-import { clamp } from "./math";
+import { clamp } from "../math";
 import type {
   MergedRow,
   RecommendedSource,

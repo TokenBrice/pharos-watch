@@ -491,10 +491,10 @@ export function useSelectorState(): UseSelectorStateResult {
     rehydratedRef.current = true;
     const valid = highestValidStep(state);
     const urlStep = state.step;
+    // Rehydrate down only; a URL step below an otherwise result-ready state is allowed.
     const urlClaimsBeyondValid =
       (urlStep === "result" && valid !== "result") ||
-      (typeof urlStep === "number" && typeof valid === "number" && urlStep > valid) ||
-      (typeof urlStep === "number" && valid === "result" && urlStep < 5 && false); // rehydrate-up not needed
+      (typeof urlStep === "number" && typeof valid === "number" && urlStep > valid);
     if (urlClaimsBeyondValid) {
       const next = { ...state, step: valid };
       replaceParams((params) => {

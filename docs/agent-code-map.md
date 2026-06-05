@@ -213,7 +213,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/api-key-self-serve.ts` - readVerificationTokenFromUrl, stripVerificationTokenFromUrl, submitApiKeyRequest, verifyApiKeyRequestToken
 - `src/lib/api-query-registry.ts` - FRONTEND_API_QUERY_REGISTRY, FrontendApiQueryDescriptor, FrontendStaticApiQueryDescriptor, MintBurnEventsDescriptorOptions, NonUsdSharePoint
 - `src/lib/api-reference-doc.ts` - ApiReferenceDocument, ApiReferenceEndpointSummary, ApiReferenceSection, MarkdownBlock, MarkdownCodeBlock, MarkdownListBlock
-- `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiRequestOptions, DEFAULT_API_REQUEST_TIMEOUT_MS
+- `src/lib/api.ts` - API_BASE, ApiContractMode, ApiFetchError, ApiFetchOptions, ApiMeta, ApiRequestOptions
 - `src/lib/blacklist-api.ts` - FetchBlacklistEventsParams, buildBlacklistEventsPath, fetchBlacklistEvents, fetchBlacklistSummary
 - `src/lib/blacklist-status-buckets.ts` - BLACKLIST_STATUS_BUCKET_COLORS, BLACKLIST_STATUS_BUCKET_DESCRIPTIONS, BLACKLIST_STATUS_BUCKET_LABELS, BLACKLIST_STATUS_BUCKET_ORDER, BlacklistStatusBucket, BlacklistStatusBucketKey
 - `src/lib/blacklist-status.ts` - getFreezableLabel, getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel
@@ -664,7 +664,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/authoritative-price-sources/protocol-par.ts` - protocolParProvider
 - `worker/src/lib/backfill-fx.ts` - COMMODITY_PEGS, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX, buildCommodityMedianSeriesFromCg
 - `worker/src/lib/backfill-query.ts` - noCoinsInBatchResponse, selectBackfillCoins
-- `worker/src/lib/backtest-anchors.ts` - BACKTEST_ANCHORS, BACKTEST_ANCHORS_VERIFIED, BACKTEST_NEGATIVE_CONTROLS, BacktestAnchor, BacktestNegativeControl
+- `worker/src/lib/backtest-anchors.ts` - BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS, BacktestAnchor, BacktestNegativeControl
 - `worker/src/lib/bigint.ts` - bigIntToDecimal, decimalNumberFromBigInt, decimalStringFromBigInt, finiteDecimalNumberFromBigInt
 - `worker/src/lib/binary-search.ts` - binarySearchNearest
 - `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow

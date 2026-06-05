@@ -83,14 +83,3 @@ export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
  * Tests reject placeholder entries so calibration does not invent calm windows.
  */
 export const BACKTEST_NEGATIVE_CONTROLS: readonly BacktestNegativeControl[] = Object.freeze([]);
-
-/**
- * Flip to `true` once every BACKTEST_ANCHORS entry has been verified against the live
- * /api/depeg-events response. Leaving this false causes the test below to fail, blocking a
- * merge of placeholder timestamps.
- *
- * Verified on 2026-04-18 via `api.pharos.watch/api/depeg-events?stablecoin=<id>&limit=100`
- * using PHAROS_API_KEY auth. All four onset/resolved pairs and peakAbsBps values match the
- * live stored rows within rounding.
- */
-export const BACKTEST_ANCHORS_VERIFIED = true;

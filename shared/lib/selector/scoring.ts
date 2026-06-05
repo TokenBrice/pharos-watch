@@ -9,6 +9,7 @@ import {
   supplyLog,
   yieldVariance,
 } from "./normalization";
+import { clamp } from "../math";
 import type {
   ExclusionReason,
   MergedRow,
@@ -20,7 +21,6 @@ import type {
   WeightKey,
 } from "./types";
 import { getWeightVectorForInput } from "./weights";
-import { clamp } from "./math";
 
 interface NormalizedSlot {
   key: WeightKey;
