@@ -279,20 +279,20 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/changelog-entry-card.tsx` - ChangelogEntryCard, formatDateRange
 - `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
 - `src/components/chart-primitives/annotations.tsx` - AnnotationDensityStrip, ChartAnnotationLegend, ChartAnnotationLines
-- `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis
+- `src/components/chart-primitives/axes.tsx` - CategoricalXAxis, ChartLegendChip, DateTooltip, MONO_Y_AXIS_WIDTH, MonoYAxis, TimeGrid
 - `src/components/chart-primitives/data-table.tsx` - ChartDataTable, ChartDataTableColumn, capDataForTable
 - `src/components/chart-primitives/market-data-x-tick.tsx` - MarketDataXTick
 - `src/components/chart-primitives/scale-toggle.tsx` - ChartScale, ChartScaleToggle
+- `src/components/chart-primitives/shell.tsx` - ChartCardShell
 - `src/components/chart-primitives/skeleton.tsx` - ChartShellSkeleton
-- `src/components/chart-primitives/sync.tsx` - BrushedRange, ChartBrush, ChartCrosshairOverlay, MarketDataChartSyncProvider, useMarketDataChartSync
+- `src/components/chart-primitives/sync.tsx` - BrushedRange, ChartBrush, ChartCrosshairOverlay, MarketDataChartSync, MarketDataChartSyncProvider, useChartSyncHandlers
 - `src/components/chart-skeleton.tsx` - ChartShellSkeleton, ChartSkeleton
 - `src/components/coin-cross-tracker-hatnote.tsx` - CoinCrossTrackerHatnote, CoinCrossTrackerHatnoteProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
-- `src/components/command-palette-model.ts` - COMMAND_PALETTE_EXTRA_PAGES, COMMAND_PALETTE_PAGES, CommandPaletteActionDefinition, CommandPaletteActionIcon, CommandPaletteActionId, CommandPaletteGroup
-- ... 344 more files omitted; use `rg --files src/components` for the full list.
+- ... 345 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 239 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 238 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -494,7 +494,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/api-key-requests/request.ts` - buildVerificationUrl, createRequestId, createVerificationToken, hashClientIp, hashForLookup, hashUserAgent
 - `worker/src/api/api-key-requests/responses.ts` - IssuedSelfServeKeySummary, SelfServeKeyNameSource, buildSelfServeKeyName, issuedPublicResponse, pendingPublicResponse, selfServeError
 - `worker/src/api/api-key-requests/serialization.ts` - parseJsonStringArray
-- `worker/src/api/api-key-requests/state.ts` - acquireEmailClaim, acquireIssuanceIpCap, compensateIssuedKeyFailure, finalizeRequestIssued, insertPendingRequest, linkRequestForIssuance
+- `worker/src/api/api-key-requests/state.ts` - IssuedKeyFailureCompensation, acquireEmailClaim, acquireIssuanceIpCap, compensateIssuedKeyFailure, finalizeRequestIssued, insertPendingRequest
 - `worker/src/api/api-key-requests/types.ts` - ApiKeyRequestAdminRow, ApiKeyRequestDb, ApiKeyRequestRow, ApiKeyRequestStatement, ApiKeySelfServeEnv, ApiKeySelfServeRequestSchema
 - `worker/src/api/api-keys.ts` - handleApiKeyDeactivate, handleApiKeyDeactivateRoute, handleApiKeyRotate, handleApiKeyRotateRoute, handleApiKeyUpdate, handleApiKeyUpdateRoute
 - `worker/src/api/audit-depeg-history.ts` - AuditEventsOptions, auditEvents, handleAuditDepegHistory, handleAuditDepegHistoryTrusted
@@ -562,7 +562,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/daily-digest/critical-lead-requirements.ts` - buildCriticalDailyLeadRequirements
 - `worker/src/cron/daily-digest/digest-calm-frame.ts` - buildCalmNarrativeFrame
 - `worker/src/cron/daily-digest/digest-change-summary.ts` - buildChangeSummary
-- `worker/src/cron/daily-digest/digest-intelligence-utils.ts` - CHANGE_LIMIT, DEWS_BAND_RANK, TRIGGER_LIMIT, candidateChange, formatScore, roundToStep
+- `worker/src/cron/daily-digest/digest-intelligence-utils.ts` - CHANGE_LIMIT, DEWS_BAND_RANK, TRIGGER_LIMIT, candidateChange, formatScoreTrimmed, roundToStep
 - `worker/src/cron/daily-digest/digest-intelligence.ts` - attachDigestEditorialAudit, buildDigestIntelligence, parseStoredDigestInput
 - `worker/src/cron/daily-digest/digest-next-triggers.ts` - buildForwardLookOutcomes, buildNextTriggers
 - `worker/src/cron/daily-digest/digest-risk-tape.ts` - buildRiskTape
