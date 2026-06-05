@@ -144,7 +144,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Frontend hooks
 
-- `src/hooks/api-hooks.ts` - QueryControlOverrides, createRegisteredApiPollingQueryOptions, createRegisteredApiPollingQueryOptionsWithMeta, createRegisteredStaticQueryOptions, dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions
+- `src/hooks/api-hooks.ts` - QueryControlOverrides, createRegisteredApiPollingQueryOptions, createRegisteredApiPollingQueryOptionsWithMeta, dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings
 - `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
 - `src/hooks/use-api-key-request-form-state.ts` - useApiKeyRequestFormState
 - `src/hooks/use-api-key-requests.ts` - useApiKeyRequests
@@ -247,7 +247,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/constants.ts` - CATEGORY_LINKS, DAY_HOURS, NINETY_DAYS_HOURS, NINETY_DAYS_MS, TABLE_PAGE_SIZE, THIRTY_DAYS_HOURS
 - `src/lib/contagion-layout.ts` - ALL_NODE_LIMIT, DEFAULT_NODE_LIMIT, GraphLink, GraphNode, GraphNodeLimit, HEIGHT
 - `src/lib/coverage-features.ts` - COVERAGE_FEATURES, COVERAGE_FEATURE_LEGEND_ITEMS, GENERAL_LEGEND_STATUS_KINDS
-- `src/lib/coverage-matrix-model.ts` - CoverageMatrixModel, CoverageMatrixModelInput, buildCoverageMatrixModel
+- `src/lib/coverage-matrix-model.ts` - COVERAGE_MATRIX_QUERY_KEYS, CoverageMatrixModel, CoverageMatrixModelInput, CoverageMatrixQueryKey, buildCoverageMatrixModel
 - ... 123 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
