@@ -26,6 +26,7 @@ import {
   parseTimestampSecondsParam,
   readBodyOrQueryParam,
   readBodyOrQueryStringParam,
+  cacheControlForDegradedPayload,
   respondWithFreshSnapshot,
   jsonResponse,
   jsonFreshResponse,
@@ -845,6 +846,13 @@ describe("jsonFreshResponse", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(res.headers.get("X-Test")).toBe("1");
     expect(res.headers.get("X-Data-Age")).toBeNull();
+  });
+});
+
+describe("cacheControlForDegradedPayload", () => {
+  it("switches degraded payloads to no-store", () => {
+    expect(cacheControlForDegradedPayload({ _meta: { degraded: false } })).toBe("public, s-maxage=300, max-age=60");
+    expect(cacheControlForDegradedPayload({ _meta: { degraded: true } })).toBe("no-store");
   });
 });
 

@@ -353,6 +353,32 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("continues when the FX-rate cache cannot be read", async () => {
+    mockFetch([]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        throwError: new Error("d1 unavailable"),
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      { id: "missing-usd", name: "Missing USD", symbol: "mUSD", price: 0, pegType: "peggedUSD", circulating: {} },
+    ];
+
+    const stats = await enrichMissingPrices(assets, undefined, db);
+
+    expect(stats.totalMissing).toBe(1);
+    expect(stats.finalMissing).toBe(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[enrich-prices] Failed to load FX rates for price bounds:",
+      expect.any(Error),
+    );
+    warnSpy.mockRestore();
+  });
+
   it("enriches via Pass 1 (contract address → DL coins API)", async () => {
     const assets: PeggedAsset[] = [
       {

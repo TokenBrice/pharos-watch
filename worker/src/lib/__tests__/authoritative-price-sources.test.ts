@@ -71,16 +71,77 @@ import {
   fetchAuthoritativeHistoricalPriceSeries,
   fetchAuthoritativeLivePriceOverrides,
 } from "../authoritative-price-sources";
+import {
+  encodeUint256,
+  fetchVaultAssetsPerShareViaSelector,
+  type Erc4626NavVaultConfig,
+} from "../authoritative-price-sources/helpers";
 
 const QUOTE_HEX =
   "0x000000000000000000000000000000000000000000000000000000e8d435370b0000000000000000000000000000000000000000000000000000000000000000";
 const IUSD_QUOTE_HEX = "0x00000000000000000000000000000000000000000000000000000000000f4240";
+const ZERO_WORD_HEX = `0x${"0".repeat(64)}` as `0x${string}`;
 
 describe("authoritative-price-sources", () => {
   beforeEach(() => {
     fetchEvmCallHexAtBlockMock.mockReset();
     resolveClosestBlockAtOrBeforeTimestampMock.mockReset();
     fetchMarketBackfillPriceSeriesMock.mockReset();
+  });
+
+  describe("fetchVaultAssetsPerShareViaSelector", () => {
+    const vaultConfig = {
+      id: "test-vault",
+      parentId: "usdc-circle",
+      chain: "ethereum",
+      vault: "0xvault",
+      vaultDecimals: 18,
+      assetDecimals: 6,
+      rpcUrls: ["https://rpc.example"],
+    } satisfies Erc4626NavVaultConfig;
+
+    it("returns an assets-per-share ratio from a selector quote", async () => {
+      const signal = new AbortController().signal;
+      fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
+
+      await expect(fetchVaultAssetsPerShareViaSelector(
+        vaultConfig,
+        "0x12345678",
+        "previewRedeem",
+        123,
+        signal,
+      )).resolves.toBe(1);
+
+      expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+        "ethereum",
+        "0xvault",
+        `0x12345678${encodeUint256(10n ** 18n)}`,
+        123,
+        {
+          signal,
+          extraRpcUrls: ["https://rpc.example"],
+        },
+      );
+    });
+
+    it("rejects null, zero, and out-of-bounds selector quotes", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(null);
+      await expect(fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest")).resolves.toBeNull();
+
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(ZERO_WORD_HEX);
+      await expect(fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest")).resolves.toBeNull();
+
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${encodeUint256(11_000_000)}`);
+      await expect(fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest")).resolves.toBeNull();
+
+      expect(warnSpy).toHaveBeenCalledWith("[authoritative-price-sources] test-vault: previewRedeem() returned null");
+      expect(warnSpy).toHaveBeenCalledWith("[authoritative-price-sources] test-vault: previewRedeem() returned zero or invalid output");
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[authoritative-price-sources] test-vault: previewRedeem() ratio 11 outside trusted bounds",
+      );
+    });
   });
 
   it("returns a live cUSD override from the authoritative redemption quote", async () => {

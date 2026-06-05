@@ -3,6 +3,7 @@ import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/dep
 import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
+import { normalizeErratumRecord } from "../depeg-resolver/public-projection";
 import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
@@ -13,6 +14,20 @@ afterEach(() => {
 
 describe("computeDepegResolver", () => {
   const NOW_SEC = 1_779_984_600;
+
+  it("drops malformed public prediction erratum rows", () => {
+    expect(normalizeErratumRecord({
+      id: 99,
+      public_prediction_id: 7,
+      incident_key: "usdc-circle:42:below",
+      event_id: 42,
+      assessment_id: 70,
+      reason: "unknown_reason",
+      created_at: NOW_SEC,
+      operator_note: "bad reason",
+      created_by: "operator",
+    })).toBeNull();
+  });
 
   function activeEvent(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow & Record<string, unknown> {
     return {

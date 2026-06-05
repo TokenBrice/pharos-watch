@@ -53,6 +53,8 @@ export interface ScoreRowResult {
   degenerate: boolean;
 }
 
+type MissingPolicy = "penalty" | "ignore";
+
 const CRITICAL_SIGNALS_BY_PROFILE: Readonly<Record<SelectorProfile, readonly WeightKey[]>> = {
   treasury: [
     "safetyOverall",
@@ -176,6 +178,29 @@ function normalizeRow(
   return slots;
 }
 
+function missingPolicy(
+  key: WeightKey,
+  profile: SelectorProfile,
+): MissingPolicy {
+  if (profile === "treasury") {
+    if (key === "decentralization") return "penalty";
+    if (key === "bluechip") return "penalty";
+    if (key === "pegScoreNow") return "penalty";
+    return "penalty";
+  }
+  if (profile === "yield") {
+    if (key === "yieldVariance") return "penalty";
+    if (key === "sourceRiskInverted") return "penalty";
+    if (key === "bluechip") return "ignore";
+    if (key === "excessApy") return "penalty";
+    return "penalty";
+  }
+  if (key === "bluechip") return "ignore";
+  if (key === "effectiveExit") return "penalty";
+  if (key === "liquidityDiversification") return "penalty";
+  return "penalty";
+}
+
 export function scoreRow(
   row: MergedRow,
   profile: SelectorProfile,
@@ -194,7 +219,10 @@ export function scoreRow(
       present.push(slot);
       continue;
     }
-    redistributedSlots += 1;
+    const policy = missingPolicy(slot.key, profile);
+    if (policy === "penalty") {
+      redistributedSlots += 1;
+    }
     if (criticalSignals.has(slot.key)) {
       confidenceReasons.add(`missing-critical-${slot.key}`);
       scoreCap = Math.min(scoreCap, 78);
@@ -247,7 +275,7 @@ export function scoreRow(
       rawValue: slot.rawValue,
       normalizedValue: slot.normalizedValue,
       contribution: 0,
-      redistributed: true,
+      redistributed: missingPolicy(slot.key, profile) === "penalty",
     });
   }
 

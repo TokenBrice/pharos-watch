@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ENGINE_VERSION, runSelector } from "../engine";
+import { scoreRow } from "../scoring";
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   SELECTOR_YIELD_PEG_CURRENCIES,
@@ -563,6 +564,21 @@ describe("runSelector — universal properties", () => {
     expect(rec?.confidenceReasons).toEqual(
       expect.arrayContaining(["source-risk-missing", "missing-critical-sourceRiskInverted"]),
     );
+  });
+
+  it("preserves reachable bluechip missing-data policy", () => {
+    const base = buildFixtureData().rows.get("usds-sky");
+    expect(base).toBeDefined();
+    const row: MergedRow = {
+      ...base!,
+      bluechipGrade: null,
+    };
+
+    const yieldScore = scoreRow(row, "yield", makeInput({ profile: "yield" }));
+    const treasuryScore = scoreRow(row, "treasury", makeInput({ profile: "treasury" }));
+
+    expect(yieldScore?.components.some((component) => component.key === "bluechip")).toBe(false);
+    expect(treasuryScore?.components.find((component) => component.key === "bluechip")?.redistributed).toBe(true);
   });
 
   it("uses a close substitute to reduce top-3 protocol concentration", () => {
