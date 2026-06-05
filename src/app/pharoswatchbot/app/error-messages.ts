@@ -9,21 +9,26 @@
  * fallback and expose mutation-specific codes only where they apply.
  */
 
-export type MiniAppErrorCode =
-  | "stale-auth"
-  | "replay-claimed"
-  | "not-private"
-  | "rate-limited"
-  | "validation-error"
-  | "body-too-large"
-  | "internal"
-  | "not-configured"
-  | "preset-unavailable"
-  | "unknown-coin"
-  | "unknown-preset"
-  | "invalid-coin-patch"
-  | "invalid-alert-types"
-  | "invalid-timezone";
+export const MINI_APP_ERROR_CODES = [
+  "stale-auth",
+  "replay-claimed",
+  "not-private",
+  "rate-limited",
+  "validation-error",
+  "body-too-large",
+  "internal",
+  "not-configured",
+  "preset-unavailable",
+  "unknown-coin",
+  "unknown-preset",
+  "invalid-coin-patch",
+  "invalid-alert-types",
+  "invalid-timezone",
+] as const;
+
+export type MiniAppErrorCode = (typeof MINI_APP_ERROR_CODES)[number];
+
+const MINI_APP_ERROR_CODE_SET: ReadonlySet<string> = new Set(MINI_APP_ERROR_CODES);
 
 export class MiniAppRequestError extends Error {
   readonly status: number;
@@ -38,20 +43,7 @@ export class MiniAppRequestError extends Error {
 }
 
 export function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
-  return value === "stale-auth"
-    || value === "replay-claimed"
-    || value === "not-private"
-    || value === "rate-limited"
-    || value === "validation-error"
-    || value === "body-too-large"
-    || value === "internal"
-    || value === "not-configured"
-    || value === "preset-unavailable"
-    || value === "unknown-coin"
-    || value === "unknown-preset"
-    || value === "invalid-coin-patch"
-    || value === "invalid-alert-types"
-    || value === "invalid-timezone";
+  return typeof value === "string" && MINI_APP_ERROR_CODE_SET.has(value);
 }
 
 export type MiniAppErrorContext = "session" | "mutation";

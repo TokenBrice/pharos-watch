@@ -2,6 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { isMiniAppErrorCode, MINI_APP_ERROR_CODES } from "./error-messages";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import type { TelegramMiniAppState } from "./types";
 
@@ -34,6 +35,16 @@ afterEach(() => {
 describe("PharosWatchBotMiniAppPage", () => {
   it("is noindexed", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
+
+  it("accepts only declared Mini App error codes", () => {
+    for (const code of MINI_APP_ERROR_CODES) {
+      expect(isMiniAppErrorCode(code)).toBe(true);
+    }
+
+    expect(isMiniAppErrorCode("empty-alert-types")).toBe(false);
+    expect(isMiniAppErrorCode("stale_auth")).toBe(false);
+    expect(isMiniAppErrorCode(null)).toBe(false);
   });
 
   it("renders browser preview without calling session APIs", async () => {
