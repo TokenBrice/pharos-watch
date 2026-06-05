@@ -2,7 +2,7 @@
 
 import { ArrowRight, LockKeyhole, Waves } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { PresetCard } from "@/components/preset-card";
+import { buildPresetPreview, PresetCard } from "@/components/preset-card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import type { ComparePreset } from "@/lib/compare-types";
@@ -115,31 +115,11 @@ function ComparePresetCard({
   featured?: boolean;
 }) {
   const coins = getPresetCoins(preset);
-  const previewItems = coins
-    .slice(0, featured ? 4 : 3)
-    .map((coinId) => {
-      const coin = TRACKED_META_BY_ID.get(coinId);
-      return coin
-        ? {
-            key: coinId,
-            logoName: coin.name,
-            logoSrc: logos?.[coinId],
-          }
-        : null;
-    })
-    .filter((item) => item != null);
-
-  const chips = coins
-    .map((coinId) => {
-      const coin = TRACKED_META_BY_ID.get(coinId);
-      return coin
-        ? {
-            key: coinId,
-            label: coin.symbol,
-          }
-        : null;
-    })
-    .filter((item) => item != null);
+  const { previewItems, chips } = buildPresetPreview(coins, logos, {
+    previewCount: featured ? 4 : 3,
+    getCoinId: (coinId) => coinId,
+    getChipLabel: (_coinId, coin) => coin.symbol,
+  });
 
   return (
     <PresetCard

@@ -1,9 +1,8 @@
 "use client";
 
 import { Lock, Radar, ShieldCheck } from "lucide-react";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
-import { PresetCard } from "@/components/preset-card";
+import { buildPresetPreview, PresetCard } from "@/components/preset-card";
 
 export interface PortfolioPreset {
   title: string;
@@ -125,31 +124,11 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
 
       <div className="grid gap-3 sm:grid-cols-2">
         {presets.map((preset) => {
-          const previewItems = preset.holdings
-            .slice(0, 4)
-            .map(({ coinId }) => {
-              const coin = TRACKED_META_BY_ID.get(coinId);
-              return coin
-                ? {
-                    key: coinId,
-                    logoName: coin.name,
-                    logoSrc: logos?.[coinId],
-                  }
-                : null;
-            })
-            .filter((item) => item != null);
-
-          const chips = preset.holdings
-            .map(({ coinId, amount }) => {
-              const coin = TRACKED_META_BY_ID.get(coinId);
-              return coin
-                ? {
-                    key: coinId,
-                    label: `${coin.symbol} ${amount}%`,
-                  }
-                : null;
-            })
-            .filter((item) => item != null);
+          const { previewItems, chips } = buildPresetPreview(preset.holdings, logos, {
+            previewCount: 4,
+            getCoinId: (holding) => holding.coinId,
+            getChipLabel: (holding, coin) => `${coin.symbol} ${holding.amount}%`,
+          });
 
           return (
             <PresetCard

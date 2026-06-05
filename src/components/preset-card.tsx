@@ -1,5 +1,6 @@
 "use client";
 
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -23,6 +24,46 @@ interface PresetCardProps {
   ariaLabel: string;
   onClick: () => void;
   featured?: boolean;
+}
+
+export function buildPresetPreview<T>(
+  items: readonly T[],
+  logos: Record<string, string> | undefined,
+  options: {
+    previewCount: number;
+    getCoinId: (item: T) => string;
+    getChipLabel: (item: T, coin: { symbol: string; name: string }) => string;
+  },
+): { previewItems: PresetCardPreviewItem[]; chips: PresetCardChip[] } {
+  const previewItems = items
+    .slice(0, options.previewCount)
+    .map((item) => {
+      const coinId = options.getCoinId(item);
+      const coin = TRACKED_META_BY_ID.get(coinId);
+      return coin
+        ? {
+            key: coinId,
+            logoName: coin.name,
+            logoSrc: logos?.[coinId],
+          }
+        : null;
+    })
+    .filter((item) => item != null);
+
+  const chips = items
+    .map((item) => {
+      const coinId = options.getCoinId(item);
+      const coin = TRACKED_META_BY_ID.get(coinId);
+      return coin
+        ? {
+            key: coinId,
+            label: options.getChipLabel(item, coin),
+          }
+        : null;
+    })
+    .filter((item) => item != null);
+
+  return { previewItems, chips };
 }
 
 export function PresetCard({
