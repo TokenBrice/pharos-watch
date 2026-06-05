@@ -377,7 +377,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/depeg-resolver/hash.ts` - DDR_HASH_DOMAINS, DdrHashDomain, stableJsonHashV1, stableJsonStringifyV1
 - `shared/lib/depeg-resolver/incident-groups.ts` - DdrIncident, DdrIncidentFragment, groupIncidents, quarantinedCoins
 - `shared/lib/depeg-resolver/index.ts` - DdrResolveInput, resolveDepeg
-- ... 238 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 240 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -617,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-publish.ts` - DexPriceChallengerPoolRow, DexPriceChallengerPublicationInput, DexPriceChallengerPublicationPlan, DexPriceChallengerSnapshotRow, DexPriceChallengerTableState, buildDexPriceChallengerPublicationPlan
-- ... 304 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 305 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
