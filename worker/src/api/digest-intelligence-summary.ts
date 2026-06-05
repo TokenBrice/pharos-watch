@@ -4,16 +4,13 @@ import type {
   DigestNextTrigger,
   DigestRiskTapeItem,
 } from "@shared/types/digest";
+import { isRecord } from "@shared/lib/type-guards";
 
 export interface DigestIntelligenceSummary {
   changeSummary: DigestChangeSummary | null;
   nextTriggers: DigestNextTrigger[] | null;
   forwardLookOutcomes: DigestForwardLookOutcome[] | null;
   riskTape: DigestRiskTapeItem[] | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 export function selectDigestIntelligence(input: unknown): DigestIntelligenceSummary {

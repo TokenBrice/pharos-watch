@@ -1,11 +1,8 @@
 import type { DigestInputData, DigestRiskSignal } from "@shared/types/digest";
 import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
+import { isRecord } from "@shared/lib/type-guards";
 
 type DailyDigestLike = Pick<DigestInputData, "activeDepegCount" | "topDepegs">;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 function isDailyDigestLike(value: unknown): value is DailyDigestLike {
   return isRecord(value) && Array.isArray(value.topDepegs);

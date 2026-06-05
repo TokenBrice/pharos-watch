@@ -13,6 +13,7 @@ import {
 } from "@shared/lib/blacklist-tracker-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
+import { isRecord } from "@shared/lib/type-guards";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "../lib/blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
@@ -409,10 +410,6 @@ function buildDataQuality(
       unsupportedDeferredConfigs: coverage.counts.unsupportedDeferredConfigs,
     },
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
 function isBlacklistSummaryPayload(value: unknown): value is BlacklistSummaryPayload {
