@@ -25,28 +25,7 @@ import type { ReportCardsInputFreshness } from "./report-cards-snapshot-inputs";
 export function buildDefunctReportCards(): ReportCard[] {
   const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
 
-  const fromDead = DEAD_STABLECOINS.map((dead) => ({
-    id: dead.id,
-    name: dead.name,
-    symbol: dead.symbol,
-    overallGrade: "F" as const,
-    overallScore: 0,
-    baseScore: null,
-    overallCapped: false,
-    uncappedOverallScore: null,
-    dimensions: {
-      pegStability: nrDim,
-      liquidity: nrDim,
-      resilience: nrDim,
-      decentralization: nrDim,
-      dependencyRisk: nrDim,
-    },
-    ratedDimensions: 5,
-    rawInputs: createReportCardRawInputs(),
-    isDefunct: true,
-  }));
-
-  const fromFrozen = FROZEN_STABLECOINS.map((coin) => ({
+  const toDefunctCard = (coin: { id: string; name: string; symbol: string }): ReportCard => ({
     id: coin.id,
     name: coin.name,
     symbol: coin.symbol,
@@ -65,9 +44,9 @@ export function buildDefunctReportCards(): ReportCard[] {
     ratedDimensions: 5,
     rawInputs: createReportCardRawInputs(),
     isDefunct: true,
-  }));
+  });
 
-  return [...fromDead, ...fromFrozen];
+  return [...DEAD_STABLECOINS, ...FROZEN_STABLECOINS].map(toDefunctCard);
 }
 
 export function sortReportCards(cards: ReportCard[]): ReportCard[] {
