@@ -70,6 +70,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveYieldCoverage = coverageFeature.resolve;
-export const formatYieldBreakdown = coverageFeature.formatBreakdown;
-export const YIELD_STATUS_KINDS = coverageFeature.statusKinds;
-export const YIELD_LEGEND_ITEMS = coverageFeature.legendItems;

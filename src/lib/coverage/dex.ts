@@ -122,6 +122,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveDexCoverage = coverageFeature.resolve;
-export const formatDexBreakdown = coverageFeature.formatBreakdown;
-export const DEX_STATUS_KINDS = coverageFeature.statusKinds;
-export const DEX_LEGEND_ITEMS = coverageFeature.legendItems;

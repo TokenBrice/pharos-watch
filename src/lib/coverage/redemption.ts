@@ -223,6 +223,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveRedemptionCoverage = coverageFeature.resolve;
-export const formatRedemptionBreakdown = coverageFeature.formatBreakdown;
-export const REDEMPTION_STATUS_KINDS = coverageFeature.statusKinds;
-export const REDEMPTION_LEGEND_ITEMS = coverageFeature.legendItems;

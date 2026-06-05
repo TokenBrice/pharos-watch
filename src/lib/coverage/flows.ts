@@ -128,6 +128,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveFlowCoverage = coverageFeature.resolve;
-export const formatFlowsBreakdown = coverageFeature.formatBreakdown;
-export const FLOWS_STATUS_KINDS = coverageFeature.statusKinds;
-export const FLOWS_LEGEND_ITEMS = coverageFeature.legendItems;

@@ -188,6 +188,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveReserveCoverage = coverageFeature.resolve;
-export const formatReservesBreakdown = coverageFeature.formatBreakdown;
-export const RESERVES_STATUS_KINDS = coverageFeature.statusKinds;
-export const RESERVES_LEGEND_ITEMS = coverageFeature.legendItems;

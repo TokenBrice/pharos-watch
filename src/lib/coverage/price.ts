@@ -130,6 +130,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolvePriceCoverage = coverageFeature.resolve;
-export const formatPriceBreakdown = coverageFeature.formatBreakdown;
-export const PRICE_STATUS_KINDS = coverageFeature.statusKinds;
-export const PRICE_LEGEND_ITEMS = coverageFeature.legendItems;

@@ -185,6 +185,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveDependencyCoverage = coverageFeature.resolve;
-export const formatDependencyBreakdown = coverageFeature.formatBreakdown;
-export const DEPENDENCY_STATUS_KINDS = coverageFeature.statusKinds;
-export const DEPENDENCY_LEGEND_ITEMS = coverageFeature.legendItems;

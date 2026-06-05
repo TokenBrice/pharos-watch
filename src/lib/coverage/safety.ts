@@ -79,6 +79,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveSafetyCoverage = coverageFeature.resolve;
-export const formatSafetyBreakdown = coverageFeature.formatBreakdown;
-export const SAFETY_STATUS_KINDS = coverageFeature.statusKinds;
-export const SAFETY_LEGEND_ITEMS = coverageFeature.legendItems;

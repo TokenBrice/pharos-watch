@@ -150,6 +150,3 @@ export const coverageFeature = defineCoverageFeature({
 });
 
 export const resolveBlacklistCoverage = coverageFeature.resolve;
-export const formatBlacklistBreakdown = coverageFeature.formatBreakdown;
-export const BLACKLIST_STATUS_KINDS = coverageFeature.statusKinds;
-export const BLACKLIST_LEGEND_ITEMS = coverageFeature.legendItems;
