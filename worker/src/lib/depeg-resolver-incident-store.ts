@@ -1,5 +1,15 @@
 import { buildInClause, chunkArray } from "./db";
-import { assertHash, assertLockMetadata, assertNonEmpty, assertPositiveInteger } from "./depeg-resolver-store-validators";
+import {
+  DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
+  DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
+  assertHash,
+  assertLockMetadata,
+  assertNonEmpty,
+  assertPositiveInteger,
+  bindLockMetadata,
+  lockAuditInsertValuesSql,
+  lockStateInsertValuesSql,
+} from "./depeg-resolver-store-validators";
 import { sha256Hex } from "./hash";
 
 export type DdrIncidentDirection = "above" | "below";
@@ -806,11 +816,8 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
     db
       .prepare(
         `INSERT INTO depeg_resolver_prediction_lock_state
-         (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
-          last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
-          lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
-          backstop_at, backstop_delay_sec)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?, 'lock_deferred', ?, ?, ?, ?, ?, ?, ?, ?)
+         (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
+         VALUES (${lockStateInsertValuesSql("1", "?", "'lock_deferred'")})
          ON CONFLICT(incident_key) DO UPDATE SET
            last_attempted_at = excluded.last_attempted_at,
            deferral_count = depeg_resolver_prediction_lock_state.deferral_count + 1,
@@ -834,20 +841,13 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         reason,
         createdAt,
         createdAt,
-        input.lockTrigger ?? null,
-        input.forecastReadinessScore ?? null,
-        input.forecastReadinessVersion ?? null,
-        input.readinessThreshold ?? null,
-        input.backstopAt ?? null,
-        input.backstopDelaySec ?? null,
+        ...bindLockMetadata(input),
       ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_lock_opportunity_audit
-         (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
-          confirmation_at, outcome_at, reason, created_at, lock_trigger, forecast_readiness_score,
-          forecast_readiness_version, readiness_threshold, backstop_at, backstop_delay_sec)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
+         VALUES (${lockAuditInsertValuesSql("NULL", "NULL", "?")})`,
       )
       .bind(
         input.incidentKey,
@@ -859,12 +859,7 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
         input.action ?? "deferred",
         reason,
         createdAt,
-        input.lockTrigger ?? null,
-        input.forecastReadinessScore ?? null,
-        input.forecastReadinessVersion ?? null,
-        input.readinessThreshold ?? null,
-        input.backstopAt ?? null,
-        input.backstopDelaySec ?? null,
+        ...bindLockMetadata(input),
       ),
   ]);
 }
@@ -895,11 +890,8 @@ export async function recordLockOpportunity(
       db
         .prepare(
           `INSERT INTO depeg_resolver_prediction_lock_state
-           (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
-            last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
-            lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
-            backstop_at, backstop_delay_sec)
-           VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
+           VALUES (${lockStateInsertValuesSql("0", "?", "?")})
            ON CONFLICT(incident_key) DO UPDATE SET
              last_attempted_at = excluded.last_attempted_at,
              last_deferral_reason = depeg_resolver_prediction_lock_state.last_deferral_reason,
@@ -923,12 +915,7 @@ export async function recordLockOpportunity(
           stateAction,
           createdAt,
           createdAt,
-          input.lockTrigger ?? null,
-          input.forecastReadinessScore ?? null,
-          input.forecastReadinessVersion ?? null,
-          input.readinessThreshold ?? null,
-          input.backstopAt ?? null,
-          input.backstopDelaySec ?? null,
+          ...bindLockMetadata(input),
         ),
     );
   }
@@ -936,10 +923,8 @@ export async function recordLockOpportunity(
     db
       .prepare(
         `INSERT INTO depeg_resolver_lock_opportunity_audit
-         (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
-          confirmation_at, outcome_at, reason, created_at, lock_trigger, forecast_readiness_score,
-          forecast_readiness_version, readiness_threshold, backstop_at, backstop_delay_sec)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
+         VALUES (${lockAuditInsertValuesSql("?", "?", "?")})`,
       )
       .bind(
         input.incidentKey,
@@ -953,12 +938,7 @@ export async function recordLockOpportunity(
         input.outcomeAt ?? null,
         input.reason ?? null,
         createdAt,
-        input.lockTrigger ?? null,
-        input.forecastReadinessScore ?? null,
-        input.forecastReadinessVersion ?? null,
-        input.readinessThreshold ?? null,
-        input.backstopAt ?? null,
-        input.backstopDelaySec ?? null,
+        ...bindLockMetadata(input),
       ),
   );
   await db.batch(statements);

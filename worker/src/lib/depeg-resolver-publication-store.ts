@@ -4,11 +4,18 @@ import { runChunkedInFilter } from "./db";
 import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
 import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
 import {
+  DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
+  DDR_LOCK_METADATA_COLUMNS_SQL,
+  DDR_LOCK_METADATA_PLACEHOLDERS_SQL,
+  DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
   assertHash,
   assertLockMetadata,
   assertNonEmpty,
   assertNonNegativeInteger,
   assertPositiveInteger,
+  bindLockMetadata,
+  lockAuditInsertValuesSql,
+  lockStateInsertValuesSql,
 } from "./depeg-resolver-store-validators";
 
 export type DdrPublicPredictionOutcomeKind = "prediction" | "no_call";
@@ -446,11 +453,8 @@ function lockStateStatement(
   return db
     .prepare(
       `INSERT INTO depeg_resolver_prediction_lock_state
-       (incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
-        last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
-        lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
-        backstop_at, backstop_delay_sec)
-       VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (${DDR_LOCK_STATE_INSERT_COLUMNS_SQL})
+       VALUES (${lockStateInsertValuesSql("0", "NULL", "?")})
        ON CONFLICT(incident_key) DO UPDATE SET
          last_attempted_at = excluded.last_attempted_at,
          last_state = excluded.last_state,
@@ -473,12 +477,7 @@ function lockStateStatement(
       state,
       input.createdAt,
       input.createdAt,
-      input.lockTrigger ?? null,
-      input.forecastReadinessScore ?? null,
-      input.forecastReadinessVersion ?? null,
-      input.readinessThreshold ?? null,
-      input.backstopAt ?? null,
-      input.backstopDelaySec ?? null,
+      ...bindLockMetadata(input),
     );
 }
 
@@ -496,9 +495,8 @@ function sealedPredictionStatement(
         resolution_rubric_version, duration_model_version, incident_grouping_version,
         support_rules_version, policy_delay_sec, eligible_at, locked_at,
         event_age_at_lock_sec, lock_timing, sealed_payload_json, row_hash, created_at,
-        lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
-        backstop_at, backstop_delay_sec)
-       SELECT ?, a.event_id, a.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ${DDR_LOCK_METADATA_COLUMNS_SQL})
+       SELECT ?, a.event_id, a.id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${DDR_LOCK_METADATA_PLACEHOLDERS_SQL}
        FROM depeg_resolver_assessments a
        WHERE a.event_id = ?
          AND a.checkpoint = 'public_prediction'
@@ -523,12 +521,7 @@ function sealedPredictionStatement(
       payloadJson,
       input.rowHash,
       input.createdAt,
-      input.lockTrigger ?? null,
-      input.forecastReadinessScore ?? null,
-      input.forecastReadinessVersion ?? null,
-      input.readinessThreshold ?? null,
-      input.backstopAt ?? null,
-      input.backstopDelaySec ?? null,
+      ...bindLockMetadata(input),
       input.eventId,
       input.methodologyVersion,
       input.assessedAt,
@@ -543,10 +536,8 @@ function lockAuditStatement(
   return db
     .prepare(
       `INSERT INTO depeg_resolver_lock_opportunity_audit
-       (incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
-        confirmation_at, outcome_at, reason, created_at, lock_trigger, forecast_readiness_score,
-        forecast_readiness_version, readiness_threshold, backstop_at, backstop_delay_sec)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+       (${DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL})
+       VALUES (${lockAuditInsertValuesSql("NULL", "NULL", "NULL")})`,
     )
     .bind(
       input.incidentKey,
@@ -557,12 +548,7 @@ function lockAuditStatement(
       input.healthStatus ?? "healthy",
       action,
       input.createdAt,
-      input.lockTrigger ?? null,
-      input.forecastReadinessScore ?? null,
-      input.forecastReadinessVersion ?? null,
-      input.readinessThreshold ?? null,
-      input.backstopAt ?? null,
-      input.backstopDelaySec ?? null,
+      ...bindLockMetadata(input),
     );
 }
 

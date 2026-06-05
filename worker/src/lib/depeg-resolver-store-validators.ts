@@ -11,6 +11,46 @@ export interface DdrStoreLockMetadataInput {
   backstopDelaySec?: number | null;
 }
 
+export const DDR_LOCK_METADATA_COLUMNS_SQL = `lock_trigger, forecast_readiness_score, forecast_readiness_version, readiness_threshold,
+          backstop_at, backstop_delay_sec`;
+export const DDR_LOCK_METADATA_PLACEHOLDERS_SQL = "?, ?, ?, ?, ?, ?";
+
+export const DDR_LOCK_STATE_INSERT_COLUMNS_SQL = `incident_key, event_id, prediction_policy_version, eligible_at, first_eligible_seen_at,
+          last_attempted_at, deferral_count, last_deferral_reason, last_state, created_at, updated_at,
+          ${DDR_LOCK_METADATA_COLUMNS_SQL}`;
+
+export const DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL = `incident_key, event_id, run_id, run_at, eligible_at, health_status, action,
+          confirmation_at, outcome_at, reason, created_at, ${DDR_LOCK_METADATA_COLUMNS_SQL}`;
+
+export function lockStateInsertValuesSql(
+  deferralCountSql: "0" | "1",
+  lastDeferralReasonSql: "?" | "NULL",
+  lastStateSql: "?" | "'lock_deferred'",
+): string {
+  return `?, ?, ?, ?, ?, ?, ${deferralCountSql}, ${lastDeferralReasonSql}, ${lastStateSql}, ?, ?, ${DDR_LOCK_METADATA_PLACEHOLDERS_SQL}`;
+}
+
+export function lockAuditInsertValuesSql(
+  confirmationAtSql: "?" | "NULL",
+  outcomeAtSql: "?" | "NULL",
+  reasonSql: "?" | "NULL",
+): string {
+  return `?, ?, ?, ?, ?, ?, ?, ${confirmationAtSql}, ${outcomeAtSql}, ${reasonSql}, ?, ${DDR_LOCK_METADATA_PLACEHOLDERS_SQL}`;
+}
+
+export function bindLockMetadata(
+  input: DdrStoreLockMetadataInput,
+): [DdrStoreLockTrigger | null, number | null, string | null, number | null, number | null, number | null] {
+  return [
+    input.lockTrigger ?? null,
+    input.forecastReadinessScore ?? null,
+    input.forecastReadinessVersion ?? null,
+    input.readinessThreshold ?? null,
+    input.backstopAt ?? null,
+    input.backstopDelaySec ?? null,
+  ];
+}
+
 export function assertPositiveInteger(value: number, name: string): void {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error(`${name} must be a positive safe integer`);
