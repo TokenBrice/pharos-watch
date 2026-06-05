@@ -1,4 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+
+const pricingStageMocks = vi.hoisted(() => ({
+  fetchAuthoritativeLivePriceOverrides: vi.fn(),
+  fetchPrimaryPrices: vi.fn(),
+  enrichMissingPrices: vi.fn(),
+  runGtProbePass: vi.fn(),
+}));
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
@@ -34,6 +42,26 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   };
 });
 
+vi.mock("../sync-stablecoins/enrich-prices", () => ({
+  fetchPrimaryPrices: pricingStageMocks.fetchPrimaryPrices,
+  enrichMissingPrices: pricingStageMocks.enrichMissingPrices,
+  runGtProbePass: pricingStageMocks.runGtProbePass,
+  hasMissingPrice: (asset: { price?: number | null }) =>
+    asset.price == null || typeof asset.price !== "number" || asset.price === 0,
+}));
+
+vi.mock("../sync-stablecoins/fallback", () => ({
+  syncViaCoingeckoFallback: vi.fn(),
+}));
+
+vi.mock("../sync-stablecoins/intake", () => ({
+  loadStablecoinsIntake: vi.fn(),
+}));
+
+vi.mock("../../lib/authoritative-price-sources", () => ({
+  fetchAuthoritativeLivePriceOverrides: pricingStageMocks.fetchAuthoritativeLivePriceOverrides,
+}));
+
 import {
   applyTrackedAssetOverrides,
   computePriceStalenessSummary,
@@ -41,8 +69,131 @@ import {
   filterStructurallyValidAssets,
   normalizeChainCirculating,
 } from "../sync-stablecoins/phase-helpers";
+import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
+import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+
+function emptyGtProbeStats() {
+  return {
+    probed: 0,
+    pricesObtained: 0,
+    divergences500bps: 0,
+    skippedLowTvl: 0,
+    lookupMisses: 0,
+    upstreamErrors: 0,
+    publicFallbacks: 0,
+    budgetExhausted: false,
+    budgetSkipped: false,
+    transports: {
+      coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+      geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
+    },
+  };
+}
+
+function makePricedAsset(): PeggedAsset {
+  return {
+    id: "usdt-tether",
+    name: "Tether",
+    symbol: "USDT",
+    pegType: "peggedUSD",
+    circulating: { peggedUSD: 1_000_000 },
+    chainCirculating: {},
+    chains: ["Ethereum"],
+  };
+}
+
+function makePrimaryPriceResult(syncStartSec: number): PrimaryPriceResult {
+  return {
+    price: 1,
+    source: "coingecko",
+    selectedSource: "coingecko",
+    confidence: "single-source",
+    dlPrice: null,
+    cgPrice: 1,
+    candidateSources: ["coingecko"],
+    agreeSources: ["coingecko"],
+    allPrices: { coingecko: 1 },
+    observedAt: syncStartSec - 30,
+    observedAtMode: "upstream",
+    observedAtBySource: { coingecko: syncStartSec - 30 },
+    observedAtModeBySource: { coingecko: "upstream" },
+  };
+}
 
 describe("sync-stablecoins stage helpers", () => {
+  beforeEach(() => {
+    pricingStageMocks.fetchPrimaryPrices.mockReset();
+    pricingStageMocks.enrichMissingPrices.mockReset();
+    pricingStageMocks.runGtProbePass.mockReset();
+    pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockReset();
+
+    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
+      results: new Map(),
+      stats: {},
+      providerDiagnostics: [],
+    });
+    pricingStageMocks.enrichMissingPrices.mockResolvedValue({
+      totalMissing: 0,
+      pass1: 0,
+      pass1b: 0,
+      passCmc: 0,
+      passJupiter: 0,
+      passDex: 0,
+      passCgLowVolume: 0,
+      finalMissing: 0,
+      failedPasses: [],
+      providerDiagnostics: [],
+    });
+    pricingStageMocks.runGtProbePass.mockResolvedValue({
+      updatedCount: 0,
+      stats: emptyGtProbeStats(),
+    });
+    pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockResolvedValue(new Map());
+  });
+
+  it("reuses primary-path authoritative overrides during shared price completion", async () => {
+    const syncStartSec = 1_800_000_000;
+    const assets = [makePricedAsset()];
+    const authoritativeOverrides = new Map([
+      [
+        "usdt-tether",
+        {
+          price: 0.998,
+          source: "protocol-redeem",
+          confidence: "high",
+          observedAt: syncStartSec - 15,
+          observedAtMode: "upstream",
+        },
+      ],
+    ]);
+    pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
+      results: new Map([["usdt-tether", makePrimaryPriceResult(syncStartSec)]]),
+      stats: {},
+      providerDiagnostics: [],
+    });
+    pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockResolvedValue(authoritativeOverrides);
+
+    const result = await runStablecoinsPricingStage({
+      db: mockD1([{ match: "price_cache", rows: [] }]),
+      assets,
+      previousAssetsById: new Map(),
+      syncStartSec,
+      fxFallbackRates: undefined,
+      validationReferences: undefined,
+    });
+
+    expect("authoritativeOverrideCount" in result ? result.authoritativeOverrideCount : null).toBe(1);
+    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides).toHaveBeenCalledTimes(1);
+    expect(assets[0]).toMatchObject({
+      price: 0.998,
+      priceSource: "protocol-redeem",
+      priceSelectedSource: "protocol-redeem",
+      priceConfidence: "high",
+      priceObservedAt: syncStartSec - 15,
+      priceObservedAtMode: "upstream",
+    });
+  });
+
   it("filters malformed assets while preserving structurally valid rows", () => {
     const assets = [
       { id: "usdt-tether", name: "USDT", symbol: "USDT", circulating: { peggedUSD: 1 } },

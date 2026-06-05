@@ -284,6 +284,7 @@ export async function runStablecoinsPricingStage(
     validationContexts,
     primaryPriceResults,
     previousTrustedPrices,
+    authoritativeOverrides,
     returnIfAborted,
     abortResult,
   }, "");
