@@ -185,6 +185,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-pinned-stablecoins.ts` - usePinnedStablecoins
 - `src/hooks/use-portfolio.ts` - categorizeCollateral, computeGroupedExposure, usePortfolio
 - `src/hooks/use-preferences.ts` - usePreference
+- `src/hooks/use-prefers-reduced-motion.ts` - usePrefersReducedMotion
 - `src/hooks/use-prefetch-stablecoin.ts` - usePrefetchStablecoin
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
@@ -193,8 +194,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-show-work-mode.ts` - ShowWorkMode, useShowWorkMode
 - `src/hooks/use-sidebar-nav-signal-data.ts` - useSidebarBlacklistSignal, useSidebarDailyDigestSignal, useSidebarHealthSignal, useSidebarPegSummarySignal, useSidebarStabilityIndexSignal
 - `src/hooks/use-sidebar-nav-signals.ts` - useSidebarNavSignals
-- `src/hooks/use-sort.ts` - SortDirection, SortState, getNextSortState, shouldToggleSortOnKeyDown, useSort
-- ... 22 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 23 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -648,7 +648,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/api-methodology.ts` - MethodologyEnvelopeInput, buildMethodologyEnvelope
 - `worker/src/lib/api-pagination.ts` - buildPaginatedEventResponse, fetchPaginatedEvents, parsePaginatedEventParams
 - `worker/src/lib/api-params.ts` - NumericParseOptions, NumericRangePolicy, ParamSpec, encodeJsonCursor, parseBooleanInput, parseBooleanParam
-- `worker/src/lib/api-response.ts` - JsonResponseOptions, errorResponse, jsonFreshResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse
+- `worker/src/lib/api-response.ts` - JsonResponseOptions, cacheControlForDegradedPayload, errorResponse, jsonFreshResponse, jsonResponse, methodNotAllowedResponse
 - `worker/src/lib/api-schema.ts` - validatePayloadWithSchema
 - `worker/src/lib/api-utils.ts` - buildMethodologyEnvelope, buildPaginatedEventResponse, fetchPaginatedEvents, parsePaginatedEventParams, validatePayloadWithSchema
 - `worker/src/lib/auth.ts` - AdminAuthEnv, SiteProxyAuthEnv, hasValidAdminCredential, hasValidSiteProxyCredential, isWorkerPreviewRequest, requireAdmin
