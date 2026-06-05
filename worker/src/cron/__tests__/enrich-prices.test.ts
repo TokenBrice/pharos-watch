@@ -3309,6 +3309,77 @@ describe("applyPoolChallenge", () => {
     expect(result.observedAt).toBe(1_780_641_624);
   });
 
+  it("replaces recovered soft consensus when multiple high-TVL DEX protocols directionally corroborate a depeg", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["apxusd-apyx", {
+        price: 0.9996,
+        source: "coingecko+defillama-list",
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        confidence: "high",
+        dlPrice: 0.9995,
+        cgPrice: 0.9996,
+        candidateSources: ["coingecko", "defillama-list", "curve-dex", "uniswap-v4-dex"],
+        agreeSources: ["coingecko", "defillama-list"],
+        disagreeSources: ["curve-dex", "uniswap-v4-dex"],
+        allPrices: {
+          coingecko: 0.9996,
+          "defillama-list": 0.9995,
+          "curve-dex": 0.9344,
+          "uniswap-v4-dex": 0.9551,
+        },
+      }],
+    ]);
+    const pools = new Map([
+      ["apxusd-apyx", [
+        { price: 0.9344, tvlUsd: 13_500_000, protocol: "curve", chain: "ethereum", observedAt: 1_780_700_000 },
+        { price: 0.9551, tvlUsd: 7_500_000, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_700_020 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["apxusd-apyx", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("apxusd-apyx")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("pool-tvl-weighted");
+    expect(result.price).toBeCloseTo(0.9344, 6);
+    expect(result.allPrices).toEqual({ "pool-tvl-weighted": result.price });
+    expect(result.observedAt).toBe(1_780_700_000);
+  });
+
+  it("does not replace with high-TVL DEX protocols that disagree directionally or incoherently", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0,
+        source: "coingecko+defillama-list",
+        confidence: "high",
+        dlPrice: 1.0,
+        cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.80, tvlUsd: 7_000_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.955, tvlUsd: 7_000_000, protocol: "uniswap-v4", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("dusd-test")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.price).toBe(1.0);
+    expect(result.source).not.toBe("pool-tvl-weighted");
+  });
+
   it("treats promoted DEX sources as pool-challenge eligible when no exempt hard source agrees", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["dusd-test", {

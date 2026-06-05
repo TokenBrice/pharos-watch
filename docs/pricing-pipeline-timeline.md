@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.11` (2026-02-01 -> 2026-06-05).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.12` (2026-02-01 -> 2026-06-05).
+
+---
+
+## v6.12 - High-TVL directional DEX pool challenge (June 5, 2026)
+
+- Pool challenge can replace a recovered soft consensus price when multiple high-TVL DEX protocol medians coherently show the same depeg direction
+- The standard replacement path still replaces when at least two protocol medians diverge beyond the peg-aware pool threshold
+- The high-TVL multi-protocol path requires at least two protocol medians with $5M+ TVL each, both crossing the peg depeg threshold in the same direction, both diverging from the soft result by at least the depeg threshold, and both agreeing with each other inside the existing pool-challenge bps band
+- The single-protocol exception remains limited to hard-corroborated cases, and incoherent cross-protocol prices still only downgrade confidence
 
 ---
 

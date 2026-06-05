@@ -140,6 +140,7 @@ export function applyPoolChallenge(
       protocolGroups,
       divergingProtocolGroups,
       pegType,
+      poolChallengeBps,
       references,
       validationContext,
     });
@@ -195,6 +196,7 @@ function selectReplacementProtocolGroups(params: {
   protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
   divergingProtocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
   pegType: string | undefined;
+  poolChallengeBps: number;
   references?: PriceValidationReferences;
   validationContext?: PriceValidationContext;
 }): Array<{ price: number; tvl: number; observedAt?: number | null }> {
@@ -214,12 +216,73 @@ function selectReplacementProtocolGroups(params: {
     return [];
   }
 
+  const directionalHighTvlGroups = selectHighTvlDirectionalReplacementGroups({
+    protocolGroups: params.protocolGroups,
+    pegRef,
+    depegThresholdBps,
+    poolChallengeBps: params.poolChallengeBps,
+    resultPrice: params.result.price,
+  });
+  if (directionalHighTvlGroups.length >= 2) {
+    return directionalHighTvlGroups;
+  }
+
   return params.protocolGroups.filter((group) => (
     group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
     Math.abs(priceDeviationBps(group.price, pegRef)) >= depegThresholdBps &&
     pricePairDivergenceBps(params.result.price, group.price) >= depegThresholdBps &&
     hasHardCandidateAgreement(params.result, group.price)
   ));
+}
+
+function selectHighTvlDirectionalReplacementGroups(params: {
+  protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
+  pegRef: number;
+  depegThresholdBps: number;
+  poolChallengeBps: number;
+  resultPrice: number;
+}): Array<{ price: number; tvl: number; observedAt?: number | null }> {
+  const eligibleGroups = params.protocolGroups.filter((group) => (
+    group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
+    Math.abs(priceDeviationBps(group.price, params.pegRef)) >= params.depegThresholdBps &&
+    pricePairDivergenceBps(params.resultPrice, group.price) >= params.depegThresholdBps
+  ));
+  if (eligibleGroups.length < 2) return [];
+
+  const byDirection = new Map<-1 | 1, Array<{ price: number; tvl: number; observedAt?: number | null }>>();
+  for (const group of eligibleGroups) {
+    const direction = priceDeviationBps(group.price, params.pegRef) < 0 ? -1 : 1;
+    const groups = byDirection.get(direction) ?? [];
+    groups.push(group);
+    byDirection.set(direction, groups);
+  }
+
+  let selected: Array<{ price: number; tvl: number; observedAt?: number | null }> = [];
+  for (const groups of byDirection.values()) {
+    if (groups.length < 2) continue;
+    if (!areProtocolGroupsCoherent(groups, params.poolChallengeBps)) continue;
+    const selectedTvl = selected.reduce((sum, group) => sum + group.tvl, 0);
+    const candidateTvl = groups.reduce((sum, group) => sum + group.tvl, 0);
+    if (groups.length > selected.length || (groups.length === selected.length && candidateTvl > selectedTvl)) {
+      selected = groups;
+    }
+  }
+
+  return selected;
+}
+
+function areProtocolGroupsCoherent(
+  groups: Array<{ price: number }>,
+  thresholdBps: number,
+): boolean {
+  for (let i = 0; i < groups.length; i++) {
+    for (let j = i + 1; j < groups.length; j++) {
+      if (pricePairDivergenceBps(groups[i]!.price, groups[j]!.price) > thresholdBps) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 function hasHardCandidateAgreement(result: PrimaryPriceResult, price: number): boolean {
