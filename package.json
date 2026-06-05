@@ -7,7 +7,6 @@
     "worker"
   ],
   "overrides": {
-    "postcss": "8.5.14",
     "miniflare": {
       "ws": "8.20.1"
     }
