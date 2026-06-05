@@ -525,7 +525,7 @@ describe("api contract validation policy", () => {
     expect(result.meta?.status).toBe("stale");
   });
 
-  it("creates degraded meta from a freshness warning even without age metadata", async () => {
+  it("keeps age metadata unknown for a freshness warning when no age source exists", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -538,11 +538,12 @@ describe("api contract validation policy", () => {
 
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
 
-    expect(result.meta).toMatchObject({
-      ageSeconds: 0,
+    expect(result.meta).toEqual({
       status: "degraded",
       warning: '110 - "Response is degraded"',
     });
+    expect(result.meta).not.toHaveProperty("updatedAt");
+    expect(result.meta).not.toHaveProperty("ageSeconds");
   });
 
   it("downgrades fresh _meta to degraded when a Warning header is present", async () => {

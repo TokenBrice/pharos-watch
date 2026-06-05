@@ -9,6 +9,7 @@ export interface JwtVerifyOptions {
   token: string;
   aud: string;
   teamDomain: string;
+  expectedType?: "app" | "org";
 }
 
 interface JwksKey {
@@ -179,6 +180,7 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
 
   const expectedIssuer = `https://${teamDomain}.cloudflareaccess.com`;
   if (payload.iss !== expectedIssuer) return false;
+  if (options.expectedType && payload.type !== options.expectedType) return false;
 
   let jwks = await fetchJwks(teamDomain);
   if (!jwks) return false;

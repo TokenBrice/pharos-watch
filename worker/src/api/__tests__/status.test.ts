@@ -607,6 +607,76 @@ describe("handleStatus", () => {
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
+  it("coerces malformed liquidity coverage-class metadata to zero", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
+        rows: [
+          makeRawStatusSnapshotRow(now, 60, {
+            crons: {
+              "sync-dex-liquidity": {
+                lastRun: {
+                  status: "ok",
+                  metadata: {
+                    sourceCoverage: {
+                      currentCoverage: 120,
+                      currentCoverageClasses: {
+                        primary: "12",
+                        mixed: "not-a-number",
+                        fallback: "NaN",
+                        legacy: [],
+                      },
+                      previousCoverageClasses: {
+                        primary: "Infinity",
+                        mixed: "-Infinity",
+                        fallback: {},
+                        legacy: "",
+                        unobserved: "7",
+                      },
+                    },
+                  },
+                },
+                recentRuns: [],
+                expectedIntervalSec: 1800,
+                healthy: true,
+              },
+            },
+          }),
+        ],
+      },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      liquidityHealth: {
+        currentCoverageClasses: Record<string, number>;
+        previousCoverageClasses: Record<string, number>;
+      } | null;
+    };
+
+    expect(body.liquidityHealth).not.toBeNull();
+    expect(body.liquidityHealth?.currentCoverageClasses).toEqual({
+      primary: 12,
+      mixed: 0,
+      fallback: 0,
+      legacy: 0,
+      unobserved: 0,
+    });
+    expect(body.liquidityHealth?.previousCoverageClasses).toEqual({
+      primary: 0,
+      mixed: 0,
+      fallback: 0,
+      legacy: 0,
+      unobserved: 7,
+    });
+  });
+
   it("surfaces providerDiagnostics and gtProbe from sync-stablecoins metadata", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

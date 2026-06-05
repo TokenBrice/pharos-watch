@@ -5,11 +5,19 @@ import { isSiteDataAllowedUiHostname, resolveSiteDataProxyPath } from "@shared/l
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
-import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
+import { ApiMetaSchema, type ApiMeta as ApiMetaWithAge } from "@shared/types/api-meta";
 import type { StablecoinReservesResponse } from "@shared/types";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 
-export type { ApiMeta } from "@shared/types/api-meta";
+export type ApiMeta =
+  | ApiMetaWithAge
+  | {
+      status: ApiMetaWithAge["status"];
+      warning: string;
+      updatedAt?: undefined;
+      ageSeconds?: undefined;
+      dependencies?: ApiMetaWithAge["dependencies"];
+    };
 
 export type ApiContractMode = "strict" | "warn";
 export const DEFAULT_API_REQUEST_TIMEOUT_MS = 10_000;
@@ -312,10 +320,8 @@ export async function apiFetchWithMeta<T>(
         warning: warningHeader,
       };
     } else if (isFreshnessWarning) {
-      // Preserve warning context even when age metadata is absent.
+      // Preserve warning context without inventing freshness timestamps.
       meta = {
-        updatedAt: Math.floor(Date.now() / 1000),
-        ageSeconds: 0,
         status: "degraded",
         warning: warningHeader,
       };

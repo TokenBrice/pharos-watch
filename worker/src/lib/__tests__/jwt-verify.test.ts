@@ -222,6 +222,24 @@ describe("verifyAccessJwt", () => {
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
+    it("rejects a token whose Access type does not match the expected type", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const { token } = makeJwtParts(validHeader(), validClaims({ type: "org" }));
+
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects a token with missing Access type when an expected type is configured", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const { token } = makeJwtParts(validHeader(), validClaims());
+
+      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("accepts token with audience as array containing correct aud", async () => {
       // Claims pass, but signature verification will fail — that's OK,
       // we're testing that the claim check for array audience works.
@@ -245,6 +263,16 @@ describe("verifyAccessJwt", () => {
       );
 
       await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).resolves.toBe(true);
+    });
+
+    it("accepts a valid signed Access JWT when the expected type matches", async () => {
+      const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
+      );
+
+      await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).resolves.toBe(true);
     });
   });
 

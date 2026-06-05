@@ -120,6 +120,7 @@ describe("ops admin proxy", () => {
       token: "valid-ui-jwt",
       aud: "ui-aud",
       teamDomain: "pharos-watch",
+      expectedType: "app",
     });
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://ops-api.pharos.watch/api/status",

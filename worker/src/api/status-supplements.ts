@@ -77,6 +77,32 @@ export interface StatusSupplements {
   sectionErrors: StatusSectionErrors;
 }
 
+type CoverageClassCounts = Record<"primary" | "mixed" | "fallback" | "legacy" | "unobserved", number>;
+
+function finiteOr0(raw: unknown): number {
+  try {
+    const value = Number(raw ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function objectValue(raw: unknown, key: string): unknown {
+  if (raw == null || typeof raw !== "object") return undefined;
+  return Reflect.get(raw, key);
+}
+
+function coverageClasses(raw: unknown): CoverageClassCounts {
+  return {
+    primary: finiteOr0(objectValue(raw, "primary")),
+    mixed: finiteOr0(objectValue(raw, "mixed")),
+    fallback: finiteOr0(objectValue(raw, "fallback")),
+    legacy: finiteOr0(objectValue(raw, "legacy")),
+    unobserved: finiteOr0(objectValue(raw, "unobserved")),
+  };
+}
+
 async function fetchCoinGeckoUsdPrices(
   geckoIds: string[],
   coingeckoApiKey: string,
@@ -227,20 +253,8 @@ export async function loadStatusSupplements(
         nearCoverageGuard: Boolean(sourceCoverage.nearCoverageGuard),
         nearValueGuard: Boolean(sourceCoverage.nearValueGuard),
         nearMajorCoverageGuard: Boolean(sourceCoverage.nearMajorCoverageGuard),
-        currentCoverageClasses: {
-          primary: Number((sourceCoverage.currentCoverageClasses as Record<string, unknown> | undefined)?.primary ?? 0),
-          mixed: Number((sourceCoverage.currentCoverageClasses as Record<string, unknown> | undefined)?.mixed ?? 0),
-          fallback: Number((sourceCoverage.currentCoverageClasses as Record<string, unknown> | undefined)?.fallback ?? 0),
-          legacy: Number((sourceCoverage.currentCoverageClasses as Record<string, unknown> | undefined)?.legacy ?? 0),
-          unobserved: Number((sourceCoverage.currentCoverageClasses as Record<string, unknown> | undefined)?.unobserved ?? 0),
-        },
-        previousCoverageClasses: {
-          primary: Number((sourceCoverage.previousCoverageClasses as Record<string, unknown> | undefined)?.primary ?? 0),
-          mixed: Number((sourceCoverage.previousCoverageClasses as Record<string, unknown> | undefined)?.mixed ?? 0),
-          fallback: Number((sourceCoverage.previousCoverageClasses as Record<string, unknown> | undefined)?.fallback ?? 0),
-          legacy: Number((sourceCoverage.previousCoverageClasses as Record<string, unknown> | undefined)?.legacy ?? 0),
-          unobserved: Number((sourceCoverage.previousCoverageClasses as Record<string, unknown> | undefined)?.unobserved ?? 0),
-        },
+        currentCoverageClasses: coverageClasses(sourceCoverage.currentCoverageClasses),
+        previousCoverageClasses: coverageClasses(sourceCoverage.previousCoverageClasses),
       };
     }
   } catch (err) {
