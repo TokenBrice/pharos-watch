@@ -1,4 +1,9 @@
-export function chunkArray<T>(values: readonly T[], chunkSize: number): T[][] {
+export const D1_SAFE_IN_CLAUSE_BIND_LIMIT = 90;
+
+export function chunkArray<T>(
+  values: readonly T[],
+  chunkSize: number = D1_SAFE_IN_CLAUSE_BIND_LIMIT,
+): T[][] {
   if (!Number.isInteger(chunkSize) || chunkSize <= 0) {
     throw new Error(`chunkArray requires a positive integer chunkSize (received ${chunkSize})`);
   }

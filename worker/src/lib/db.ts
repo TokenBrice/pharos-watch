@@ -1,13 +1,9 @@
 import { D1_BATCH_SIZE } from "./constants";
-import { chunkArray as chunkValues } from "./collections";
+import { chunkArray } from "./collections";
 import { runWithOverloadRetry } from "./cron-lease";
 
 export const D1_MAX_BOUND_PARAMETERS = 100;
-export const D1_SAFE_IN_CLAUSE_BIND_LIMIT = 90;
-
-export function chunkArray<T>(values: readonly T[], chunkSize: number = D1_SAFE_IN_CLAUSE_BIND_LIMIT): T[][] {
-  return chunkValues(values, chunkSize);
-}
+export { D1_SAFE_IN_CLAUSE_BIND_LIMIT, chunkArray } from "./collections";
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
 export async function batchExecute(
