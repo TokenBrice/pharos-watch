@@ -135,7 +135,7 @@ export function expandIds(
   return Object.fromEntries(ids.map((id) => [id, cloneRedemptionBackstopConfig(config)]));
 }
 
-function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
+export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
   return {
     ...config,
     capacityModel: { ...config.capacityModel },
@@ -145,7 +145,7 @@ function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): Redemp
   };
 }
 
-function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource {
+export function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDocSource {
   return {
     label: doc.label,
     url: doc.url,

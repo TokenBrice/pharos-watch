@@ -1,4 +1,4 @@
-import type { RedemptionBackstopConfig } from "./shared";
+import { cloneRedemptionBackstopConfig, cloneRedemptionDocSource, type RedemptionBackstopConfig } from "./shared";
 
 export interface RedemptionBackstopRegistryEntry {
   id: string;
@@ -85,22 +85,4 @@ export function getBackstopRegistrySourceFilePaths(
   configs: Record<string, RedemptionBackstopConfig>,
 ): ReadonlyMap<string, string> {
   return REGISTRY_SOURCE_FILE_PATHS.get(configs) ?? new Map();
-}
-
-function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig): RedemptionBackstopConfig {
-  return {
-    ...config,
-    capacityModel: { ...config.capacityModel },
-    costModel: { ...config.costModel },
-    ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
-    ...(config.notes ? { notes: [...config.notes] } : {}),
-  };
-}
-
-function cloneRedemptionDocSource(doc: NonNullable<RedemptionBackstopConfig["docs"]>[number]) {
-  return {
-    label: doc.label,
-    url: doc.url,
-    ...(doc.supports ? { supports: [...doc.supports] } : {}),
-  };
 }
