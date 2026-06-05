@@ -3,10 +3,15 @@ import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
+  CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,
+  collectCriticalCoverageCandidates,
+  findCriticalCoverageCandidatesMissingEnrollment,
   findCoverageFor,
+  findStaleCriticalCoverageWaivers,
   normalizePath,
   parseLcov,
+  validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
@@ -71,6 +76,53 @@ function loadCoverageBaseline(path, { fsImpl = fs, consoleImpl = console, exit =
   }
 }
 
+export function runCriticalCoverageCompletenessGuard({
+  candidateFiles = collectCriticalCoverageCandidates(),
+  criticalFiles = CRITICAL_FILES,
+  waivers = CRITICAL_COVERAGE_WAIVERS,
+  consoleImpl = console,
+  exit = process.exit,
+} = {}) {
+  const waiverErrors = validateCriticalCoverageWaiverMetadata(waivers, {
+    candidateFiles,
+    criticalFiles,
+  });
+  const staleWaivers = findStaleCriticalCoverageWaivers(candidateFiles, waivers);
+  const missingEnrollment = findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
+    criticalFiles,
+    waivers,
+  });
+
+  if (waiverErrors.length === 0 && staleWaivers.length === 0 && missingEnrollment.length === 0) {
+    return true;
+  }
+
+  consoleImpl.error("[coverage] Critical coverage candidate completeness failed.");
+  if (waiverErrors.length > 0) {
+    consoleImpl.error("[coverage] Invalid critical-coverage waivers:");
+    for (const error of waiverErrors) {
+      consoleImpl.error(`  ${error}`);
+    }
+  }
+  if (staleWaivers.length > 0) {
+    consoleImpl.error("[coverage] Stale critical-coverage waivers:");
+    for (const file of staleWaivers) {
+      consoleImpl.error(`  ${file}`);
+    }
+  }
+  if (missingEnrollment.length > 0) {
+    consoleImpl.error("[coverage] High-stakes candidates missing critical coverage enrollment or waiver:");
+    for (const file of missingEnrollment) {
+      consoleImpl.error(`  ${file}`);
+    }
+  }
+  consoleImpl.error(
+    "[coverage] Add the source file to CRITICAL_FILES with a baseline, or add a reviewed waiver in scripts/lib/critical-coverage.mjs.",
+  );
+  exit(1);
+  return false;
+}
+
 export function runCriticalCoverageCheck({
   env = process.env,
   fsImpl = fs,
@@ -84,6 +136,10 @@ export function runCriticalCoverageCheck({
   const compareRef = (env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();
   const ratchetAll = env.CRITICAL_COVERAGE_RATCHET_ALL === "1";
   const criticalThresholds = getCriticalThresholds(env);
+
+  if (!runCriticalCoverageCompletenessGuard({ consoleImpl, exit })) {
+    return;
+  }
 
   if (!fsImpl.existsSync(LCOV_PATH)) {
     consoleImpl.error(`[coverage] Missing ${LCOV_PATH}. Run vitest with --coverage first.`);

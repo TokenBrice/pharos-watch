@@ -216,6 +216,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - defined in `.github/workflows/critical-coverage-ratchet.yml`
 - runs on a weekly Monday schedule and on manual dispatch
 - runs `npm run coverage:critical` with `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked against the baseline, while pull request and merge-gate paths keep the faster touched-file ratchet
+- uses the same high-stakes pricing/depeg/reserve candidate completeness guard as pull request and merge-gate coverage; new candidates must be added to `CRITICAL_FILES` with a baseline or explicitly waived in `scripts/lib/critical-coverage.mjs`
 - uses the same Node 24 workspace setup as the deploy validate lane
 
 17. `Secret Scan`:

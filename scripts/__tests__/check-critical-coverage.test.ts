@@ -4,9 +4,16 @@ import {
   getChangedFilesFromGit,
   isAllZeroSha,
   parseChangedFilesFromEnv,
+  runCriticalCoverageCompletenessGuard,
   runCriticalCoverageCheck,
 } from "../ci/check-critical-coverage.mjs";
-import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
+import {
+  CRITICAL_COVERAGE_WAIVERS,
+  CRITICAL_FILES,
+  collectCriticalCoverageCandidates,
+  findCriticalCoverageCandidatesMissingEnrollment,
+  validateCriticalCoverageWaiverMetadata,
+} from "../lib/critical-coverage.mjs";
 
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {
@@ -53,6 +60,124 @@ describe("critical coverage changed-file detection", () => {
       }),
     ).toEqual([]);
     expect(warnings[0]).toContain('Could not diff against ref "bad-ref"');
+  });
+
+  it("derives high-stakes pricing, depeg, and reserve candidates from source prefixes", () => {
+    const candidates = collectCriticalCoverageCandidates({
+      sourceFiles: [
+        "worker/src/cron/sync-stablecoins/new-price-path.ts",
+        "worker/src/cron/depeg-detection/new-decision-helper.ts",
+        "worker/src/cron/sync-live-reserves-new-helper.ts",
+        "worker/src/lib/live-reserves-store-extra.ts",
+        "worker/src/lib/price-consensus.ts",
+        "worker/src/lib/pricing-types.ts",
+        "worker/src/cron/depeg-detection/types.ts",
+        "worker/src/cron/sync-stablecoins/__tests__/new-price-path.test.ts",
+        "worker/src/cron/daily-digest.ts",
+      ],
+    });
+
+    expect(candidates).toEqual([
+      "worker/src/cron/depeg-detection/new-decision-helper.ts",
+      "worker/src/cron/sync-live-reserves-new-helper.ts",
+      "worker/src/cron/sync-stablecoins/new-price-path.ts",
+      "worker/src/lib/live-reserves-store-extra.ts",
+      "worker/src/lib/price-consensus.ts",
+    ]);
+  });
+
+  it("flags high-stakes candidates without enrollment or explicit waiver", () => {
+    const candidateFiles = [
+      "worker/src/cron/sync-stablecoins/enrolled.ts",
+      "worker/src/cron/sync-stablecoins/waived.ts",
+      "worker/src/cron/sync-stablecoins/missing.ts",
+    ];
+
+    expect(
+      findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
+        criticalFiles: ["worker/src/cron/sync-stablecoins/enrolled.ts"],
+        waivers: {
+          "worker/src/cron/sync-stablecoins/waived.ts": {
+            disposition: "covered-by-enrolled-entrypoint",
+            owner: "platform",
+            createdAt: "2026-06-05",
+            reason: "covered elsewhere",
+          },
+        },
+      }),
+    ).toEqual(["worker/src/cron/sync-stablecoins/missing.ts"]);
+  });
+
+  it("validates waiver metadata and rejects waivers for enrolled files", () => {
+    expect(
+      validateCriticalCoverageWaiverMetadata(
+        {
+          "worker/src/lib/price-consensus.ts": {
+            disposition: "covered-by-enrolled-entrypoint",
+            owner: "platform",
+            createdAt: "2026-06-05",
+            reason: "covered elsewhere",
+          },
+        },
+        {
+          candidateFiles: ["worker/src/lib/price-consensus.ts"],
+          criticalFiles: ["worker/src/lib/price-consensus.ts"],
+        },
+      ),
+    ).toEqual(["worker/src/lib/price-consensus.ts: already enrolled in critical coverage; remove waiver"]);
+
+    expect(
+      validateCriticalCoverageWaiverMetadata(
+        {
+          "worker/src/lib/new-price-helper.ts": {
+            disposition: "unknown",
+            owner: "",
+            createdAt: "not-a-date",
+            reason: "",
+          },
+        },
+        {
+          candidateFiles: ["worker/src/lib/new-price-helper.ts"],
+          criticalFiles: [],
+        },
+      ),
+    ).toEqual([
+      'worker/src/lib/new-price-helper.ts: invalid waiver disposition "unknown"',
+      "worker/src/lib/new-price-helper.ts: missing waiver reason",
+      "worker/src/lib/new-price-helper.ts: missing waiver owner",
+      "worker/src/lib/new-price-helper.ts: missing or invalid waiver createdAt",
+    ]);
+  });
+
+  it("fails the checker when a high-stakes candidate lacks enrollment or waiver", () => {
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    expect(
+      runCriticalCoverageCompletenessGuard({
+        candidateFiles: ["worker/src/cron/sync-stablecoins/new-price-path.ts"],
+        criticalFiles: [],
+        waivers: {},
+        consoleImpl: {
+          error: (message: string) => errors.push(message),
+        },
+        exit: (code: number) => {
+          exits.push(code);
+        },
+      }),
+    ).toBe(false);
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] Critical coverage candidate completeness failed.");
+    expect(errors).toContain("[coverage] High-stakes candidates missing critical coverage enrollment or waiver:");
+    expect(errors).toContain("  worker/src/cron/sync-stablecoins/new-price-path.ts");
+  });
+
+  it("keeps the checked-in high-stakes candidate set enrolled or explicitly waived", () => {
+    const candidates = collectCriticalCoverageCandidates();
+
+    expect(validateCriticalCoverageWaiverMetadata(CRITICAL_COVERAGE_WAIVERS, { candidateFiles: candidates })).toEqual([]);
+    expect(findCriticalCoverageCandidatesMissingEnrollment(candidates)).toEqual([]);
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
