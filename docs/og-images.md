@@ -49,7 +49,7 @@ OG_BASE_URL=http://127.0.0.1:3000 npm run og:capture # captures local dev
 
 - After a meaningful UI change on any covered page.
 - After a methodology version bump that changes a page's headline or layout.
-- Automatically: a weekly GitHub Action (`.github/workflows/og-refresh.yml`) runs against production and opens a PR with the diff.
+- Automatically: a weekly GitHub Action (`.github/workflows/og-refresh.yml`) runs against production and opens a PR with the diff. The workflow requires the `OG_REFRESH_GITHUB_TOKEN` repository secret, using a bot or PAT token that can push `automated/og-refresh` and open PRs so normal `pull_request` checks run.
 
 ## 2. Editorial content cards (`public/og-editorial-*.png`)
 

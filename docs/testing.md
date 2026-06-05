@@ -145,7 +145,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - deploy-lane local artifact `smoke-ui` uses canary overflow routes with `SMOKE_UI_OVERFLOW_WORKERS=6` to reduce critical-path runtime; broader overflow route coverage remains in wider validation/smoke lanes
    - waits for the aggregate `validate / validate` job before publishing to Cloudflare Pages production; on combined Worker + Pages deploys, also waits for `deploy-worker` and reruns local artifact `smoke-ui` against the promoted Worker before publish
    - writes a Pages release summary with output file count, static export size, and depeg-event static page count, captures the current production Pages deployment id best-effort, publishes the verified local artifact with the Wrangler retry loop, and then runs live public UI, ops, and transport smokes in parallel inside the same job; the live UI smoke keeps broad overflow coverage on the exact local artifact and adds a narrow live `/depeg/` canary for the default-on DDR/DDRQ data contract
-   - rolls Pages production back to the captured previous deployment when the live public UI smoke fails and a previous deployment id was available
+   - rolls Pages production back to the captured previous deployment when any fatal post-publish smoke (live public UI, ops, or transport) fails and a previous deployment id was available
    - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step verifies the built homepage artifact contains the expected GA script and that the browser initializes `window.gtag` with the expected `page_view` payload; live smoke requires successful GA4 `page_view` collect delivery, while local artifact smoke also accepts an issued collect request for the configured measurement id that Chromium reports as `net::ERR_ABORTED`; once a successful live collect is observed, additional expected-measurement GA collect aborts are tolerated as browser beacon noise
 8. `smoke-ops`:
 
@@ -175,7 +175,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
 
 - defined in `.github/workflows/og-refresh.yml`
 - runs on a weekly Monday schedule (cron `23 4 * * 1`) and on manual dispatch
-- rebuilds checked-in OG editorial and learn image artifacts and opens or updates the automated/og-refresh branch when generated images change
+- captures checked-in static OG screenshots against production and opens or updates the `automated/og-refresh` branch when the images change
+- requires `OG_REFRESH_GITHUB_TOKEN`, a bot or PAT token that can push the refresh branch and open PRs so normal `pull_request` checks run
 
 12. `CodeQL`:
 
@@ -244,6 +245,10 @@ Optional dedicated GitHub repository secrets for the deploy path:
 Current GitHub repository secrets required by scheduled monitors:
 
 - `GOOGLE_SAFE_BROWSING_API_KEY` for `Safe Browsing Monitor`
+
+Current GitHub repository secrets required by scheduled artifact PRs:
+
+- `OG_REFRESH_GITHUB_TOKEN` for `OG Refresh`; use a bot or PAT token instead of `GITHUB_TOKEN` so the automated PR runs the normal pull-request validation workflows
 
 Current GitHub repository variables used by the deploy path:
 

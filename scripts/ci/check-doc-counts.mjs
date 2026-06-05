@@ -8,6 +8,7 @@
  *   - Tracked stablecoins (CANONICAL_ORDER)
  *   - Shadow stablecoins (SHADOW_STABLECOINS)
  *   - Reserve adapters (LIVE_RESERVE_ADAPTER_DEFINITIONS)
+ *   - Blacklist tracker contract configs, chains, and tracked symbols
  *   - Bluechip slugs (BLUECHIP_SLUG_MAP)
  *   - Live-enabled stablecoins (liveReservesConfig declarations)
  *   - Cemetery entries (DEAD_STABLECOINS)
@@ -18,6 +19,7 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import "tsx";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -31,6 +33,71 @@ function getModuleExport(module, name) {
     throw new Error(`FATAL: Could not import ${name}`);
   }
   return value;
+}
+
+function findVariableInitializer(sourceFile, variableName) {
+  let initializer = null;
+  function visit(node) {
+    if (initializer) return;
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === variableName) {
+      initializer = node.initializer;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return initializer;
+}
+
+function getObjectPropertyValue(objectLiteral, propertyName) {
+  for (const property of objectLiteral.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const name = property.name;
+    const key = ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : null;
+    if (key === propertyName) {
+      return property.initializer;
+    }
+  }
+  return null;
+}
+
+function extractBlacklistContractCounts() {
+  const sourcePath = resolve(root, "worker/src/lib/blacklist-contracts.ts");
+  const sourceText = readFileSync(sourcePath, "utf-8");
+  const sourceFile = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const initializer = findVariableInitializer(sourceFile, "CONTRACT_CONFIG_SPECS");
+  if (!initializer || !ts.isArrayLiteralExpression(initializer)) {
+    throw new Error("FATAL: Could not find CONTRACT_CONFIG_SPECS array");
+  }
+
+  const stablecoinIds = new Set();
+  const chainIdentifiers = new Set();
+  let configCount = 0;
+
+  for (const element of initializer.elements) {
+    if (!ts.isObjectLiteralExpression(element)) {
+      throw new Error("FATAL: CONTRACT_CONFIG_SPECS contains a non-object element");
+    }
+    configCount++;
+
+    const stablecoinId = getObjectPropertyValue(element, "stablecoinId");
+    if (!stablecoinId || !ts.isStringLiteral(stablecoinId)) {
+      throw new Error("FATAL: CONTRACT_CONFIG_SPECS entry missing string stablecoinId");
+    }
+    stablecoinIds.add(stablecoinId.text);
+
+    const chain = getObjectPropertyValue(element, "chain");
+    if (!chain || !ts.isIdentifier(chain)) {
+      throw new Error("FATAL: CONTRACT_CONFIG_SPECS entry missing identifier chain");
+    }
+    chainIdentifiers.add(chain.text);
+  }
+
+  return {
+    configCount,
+    stablecoinCount: stablecoinIds.size,
+    chainCount: chainIdentifiers.size,
+  };
 }
 
 const [
@@ -61,6 +128,7 @@ const LIVE_RESERVE_ADAPTER_DEFINITIONS = getModuleExport(
 const BLUECHIP_SLUG_MAP = getModuleExport(bluechipSlugsModule, "BLUECHIP_SLUG_MAP");
 const DEAD_STABLECOINS = getModuleExport(deadStablecoinsModule, "DEAD_STABLECOINS");
 const FROZEN_STABLECOINS = getModuleExport(stablecoinsModule, "FROZEN_STABLECOINS");
+const blacklistContractCounts = extractBlacklistContractCounts();
 
 // 1. Tracked stablecoins
 const trackedCount = TRACKED_STABLECOINS.length;
@@ -95,7 +163,7 @@ const cemeteryCount = DEAD_STABLECOINS.length;
 const reportCardSnapshotCount = activeCount + cemeteryCount + frozenCount;
 
 console.log(
-  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${psiActiveTrackedCount} active tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
+  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${psiActiveTrackedCount} active tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${blacklistContractCounts.configCount} blacklist contract configs / ${blacklistContractCounts.chainCount} chains / ${blacklistContractCounts.stablecoinCount} tracked symbols, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
 );
 
 // --- Check primary docs for stale counts ---
@@ -172,6 +240,30 @@ const CHECKS = [
     pattern: /(\d+) curated dead stablecoins/,
     expected: cemeteryCount,
     label: "cemetery",
+  },
+  {
+    file: "README.md",
+    pattern: /on-chain tracking of (\d+) stablecoins/,
+    expected: blacklistContractCounts.stablecoinCount,
+    label: "blacklist tracked symbols",
+  },
+  {
+    file: "docs/blacklist-tracker.md",
+    pattern: /across (\d+) contract configurations/,
+    expected: blacklistContractCounts.configCount,
+    label: "blacklist contract configs",
+  },
+  {
+    file: "docs/blacklist-tracker.md",
+    pattern: /contract configurations on (\d+) chains/,
+    expected: blacklistContractCounts.chainCount,
+    label: "blacklist chains",
+  },
+  {
+    file: "docs/blacklist-tracker.md",
+    pattern: /\((\d+) tracked symbols;/,
+    expected: blacklistContractCounts.stablecoinCount,
+    label: "blacklist tracked symbols",
   },
   {
     file: "docs/supply-snapshot.md",
@@ -266,7 +358,7 @@ if (failures > 0) {
   console.error(
     `\n${failures} check(s) failed. Update docs to match source:` +
     `\n  CANONICAL_ORDER=${trackedCount}, SHADOW=${shadowCount}, PSI=${psiCount}` +
-    `\n  ADAPTERS=${adapterCount}, BLUECHIP_SLUG_MAP=${bluechipCount}, ACTIVE_LIVE_ENABLED=${activeLiveEnabledCount}, TRACKED_LIVE_RESERVE_CONFIGS=${trackedLiveReserveConfigCount}`,
+    `\n  ADAPTERS=${adapterCount}, BLUECHIP_SLUG_MAP=${bluechipCount}, BLACKLIST_CONFIGS=${blacklistContractCounts.configCount}, BLACKLIST_CHAINS=${blacklistContractCounts.chainCount}, BLACKLIST_SYMBOLS=${blacklistContractCounts.stablecoinCount}, ACTIVE_LIVE_ENABLED=${activeLiveEnabledCount}, TRACKED_LIVE_RESERVE_CONFIGS=${trackedLiveReserveConfigCount}`,
   );
   process.exit(1);
 }

@@ -167,7 +167,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs `test:smoke-ui:mobile` only when `pages_ui_changed=true`, and uses a canary scope in production deploys (`SMOKE_MOBILE_UI_ROUTES` limited route list, two mobile viewports, desktop pass disabled, `SMOKE_MOBILE_UI_WORKERS=3`, `SMOKE_MOBILE_UI_WAIT_MS=1500`) to keep strict mobile coverage while reducing release critical-path runtime
    - waits for the aggregate `validate / validate` job before Cloudflare Pages production publish, and on combined Worker + Pages deploys also waits for `deploy-worker` to finish successfully before publishing Pages. When that worker-promotion gate is enabled, `pages-release` reruns local artifact `smoke-ui` against the same served `out/` export after the Worker has been promoted and before `deploy-pages`.
    - writes a Pages release summary after `check:build-size` with the total output file count, static export size, and depeg-event static page count, then captures the current Cloudflare Pages production deployment id as a best-effort rollback target, publishes the already verified local artifact through Wrangler with the existing retry loop, and runs live public UI, ops, and transport smokes concurrently in one post-publish step while still emitting per-smoke status outputs in the summary; the live public UI check keeps the broad overflow sweep on the exact local artifact before publish, then runs homepage data-state, the Live Tape `/_site-data/recent-events` contract, and a narrow live `/depeg/` canary for the default-on DDR/DDRQ data contract
-   - calls `scripts/maintenance/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but the live public UI smoke failed and a previous deployment id is available; the overall workflow still surfaces as failed so the incident is visible
+   - calls `scripts/maintenance/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but any fatal post-publish smoke (live public UI, ops, or transport) failed and a previous deployment id is available; the overall workflow still surfaces as failed so the incident is visible
 6. `smoke-ui-live`
    - worker-only deploy path runs inside `deploy-worker` after production API smoke
    - Pages-including deploy path runs inside `pages-release` after `deploy-pages`
@@ -209,6 +209,10 @@ Optional dedicated Pages data-sync secrets:
 Optional GitHub Actions checkout fallback:
 
 - `ACTIONS_CHECKOUT_TOKEN` — a repo-scoped read token used by production deploy checkout steps only when the default `github.token` fetch path is rejected by GitHub. The workflows fall back to `github.token` when this secret is absent.
+
+Scheduled artifact PR secret:
+
+- `OG_REFRESH_GITHUB_TOKEN` — a bot or PAT token used by `.github/workflows/og-refresh.yml` to push `automated/og-refresh` and open checked PRs. The workflow fails closed when this secret is absent because PRs created with the default `GITHUB_TOKEN` do not trigger the normal pull-request workflows.
 
 Repository variables:
 

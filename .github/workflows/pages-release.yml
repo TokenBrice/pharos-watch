@@ -311,8 +311,8 @@ jobs:
             echo "| Check | Status | Rollback trigger |"
             echo "| --- | --- | --- |"
             echo "| Live public UI | ${UI_STATUS} | yes |"
-            echo "| Ops canary | ${OPS_STATUS} | no |"
-            echo "| Transport redirects | ${TRANSPORT_STATUS} | no |"
+            echo "| Ops canary | ${OPS_STATUS} | yes |"
+            echo "| Transport redirects | ${TRANSPORT_STATUS} | yes |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
@@ -324,8 +324,12 @@ jobs:
           ${{
             steps.post-publish-smokes.outcome == 'failure'
             && steps.deploy-pages.outcome == 'success'
-            && steps.post-publish-smokes.outputs.ui_status != 'success'
             && steps.capture-pages.outputs.deployment_id != ''
+            && (
+              steps.post-publish-smokes.outputs.ui_status != 'success'
+              || steps.post-publish-smokes.outputs.ops_status != 'success'
+              || steps.post-publish-smokes.outputs.transport_status != 'success'
+            )
           }}
         env:
           CF_PAGES_PROJECT_NAME: stablecoin-dashboard
