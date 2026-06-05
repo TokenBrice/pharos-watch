@@ -30,6 +30,33 @@ function availableTimezones(): readonly string[] {
   return FALLBACK_TIMEZONES;
 }
 
+function QuietHourSelect({ id, label, value, disabled, onChange, optionKeyPrefix, hours }: {
+  id: string;
+  label: string;
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+  optionKeyPrefix: string;
+  hours: readonly number[];
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="pharos-kicker">{label}</label>
+      <select
+        id={id}
+        className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(Number(event.target.value))}
+      >
+        {hours.map((hour) => (
+          <option key={`${optionKeyPrefix}-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
@@ -45,6 +72,7 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
   const draftEnd = draftEndOverride ?? currentEnd ?? 7;
 
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
+  const selectDisabled = !canMutate || isMutating;
   const sameHours = draftStart === draftEnd;
   const summary = enabled && currentStart != null && currentEnd != null
     ? `Quiet hours: ${formatHour(currentStart)}–${formatHour(currentEnd)} UTC`
@@ -55,34 +83,24 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
       <h2 className="text-sm font-semibold text-foreground">Quiet hours</h2>
       <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor="mini-quiet-start" className="pharos-kicker">Start (UTC)</label>
-          <select
-            id="mini-quiet-start"
-            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            value={draftStart}
-            disabled={!canMutate || isMutating}
-            onChange={(event) => setDraftStart(Number(event.target.value))}
-          >
-            {hours.map((hour) => (
-              <option key={`start-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="mini-quiet-end" className="pharos-kicker">End (UTC)</label>
-          <select
-            id="mini-quiet-end"
-            className="pharos-focus-ring pharos-numeric mt-2 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            value={draftEnd}
-            disabled={!canMutate || isMutating}
-            onChange={(event) => setDraftEnd(Number(event.target.value))}
-          >
-            {hours.map((hour) => (
-              <option key={`end-${hour}`} value={hour}>{formatHour(hour)} UTC</option>
-            ))}
-          </select>
-        </div>
+        <QuietHourSelect
+          id="mini-quiet-start"
+          label="Start (UTC)"
+          value={draftStart}
+          disabled={selectDisabled}
+          onChange={(value) => setDraftStart(value)}
+          optionKeyPrefix="start"
+          hours={hours}
+        />
+        <QuietHourSelect
+          id="mini-quiet-end"
+          label="End (UTC)"
+          value={draftEnd}
+          disabled={selectDisabled}
+          onChange={(value) => setDraftEnd(value)}
+          optionKeyPrefix="end"
+          hours={hours}
+        />
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <MiniButton
