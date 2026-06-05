@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { getPegReference } from "@shared/lib/peg-rates";
@@ -104,8 +104,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       continue;
     }
 
-    const prevDay = getPrevDayRaw(asset);
-    const prevWeek = getPrevWeekRaw(asset);
+    const prevDay = getPrevDayRawOrNull(asset);
+    const prevWeek = getPrevWeekRawOrNull(asset);
 
     const dexLiq = sourceState.dexLiqMap.get(meta.id);
     const dexPrice = sourceState.dexPriceMap.get(meta.id);
@@ -148,8 +148,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       mcapUsd: current,
       pegType,
       circulatingCurrent: current,
-      circulatingPrevDay: prevDay || current,
-      circulatingPrevWeek: prevWeek || current,
+      circulatingPrevDay: prevDay ?? current,
+      circulatingPrevWeek: prevWeek ?? current,
       weightedBalanceRatio: dexLiq?.weighted_balance_ratio ?? null,
       avgPoolStress: dexLiq?.avg_pool_stress ?? null,
       topPools,

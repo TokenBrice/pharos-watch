@@ -12,10 +12,10 @@ export function sumPegBuckets(obj: PegBucketRecord): number {
   return Object.values(obj).reduce((s, v) => s + safeNum(v), 0);
 }
 
-/** Return true when at least one peg bucket has a non-zero finite numeric value. */
+/** Return true when at least one peg bucket has an explicit finite numeric value, including zero. */
 function hasAnyBucket(obj: PegBucketRecord): boolean {
   if (!obj) return false;
-  return Object.values(obj).some((v) => typeof v === "number" && Number.isFinite(v) && v !== 0);
+  return Object.values(obj).some((v) => typeof v === "number" && Number.isFinite(v));
 }
 
 /**

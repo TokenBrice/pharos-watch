@@ -1,6 +1,14 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v6.01` (2026-02-18 -> 2026-06-03).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.02` (2026-02-18 -> 2026-06-05).
+
+---
+
+## v6.02 — Explicit zero supply-history anchors (Jun 5, 2026)
+
+- DEWS supply-velocity input assembly now preserves explicit finite zero previous-day and previous-week supply anchors
+- Missing previous-day or previous-week supply history still defaults to current supply so absent history does not create false contraction
+- Zero baselines continue to produce zero velocity stress rather than a divide-by-zero, but the scorer now receives the true historical input instead of a current-supply fallback
 
 ---
 

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.02",
+    title: "Explicit zero supply-history anchors",
+    date: "2026-06-05",
+    effectiveAt: 1780617600,
+    summary:
+      "DEWS now preserves explicit zero previous-day and previous-week supply-history anchors instead of treating them as missing current-supply fallbacks.",
+    impact: [
+      "Absent previous-day or previous-week supply history still defaults to the current supply so new or incomplete rows do not create false contraction",
+      "Finite zero buckets in the stablecoins cache now remain zero when the supply-velocity input is assembled",
+      "The supply sub-signal continues to treat zero baselines as zero velocity stress, avoiding divide-by-zero while keeping the input provenance explicit",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.01",
     title: "Priced-observation PegScore anchors",
     date: "2026-06-03",

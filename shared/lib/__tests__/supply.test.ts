@@ -77,12 +77,20 @@ describe("getPrevDayRawOrNull", () => {
   it("returns null when all buckets are missing-equivalent", () => {
     const coin = mockCoin({
       circulatingPrevDay: {
-        peggedUSD: 0,
         peggedEUR: null as unknown as number,
         peggedGBP: undefined as unknown as number,
       },
     });
     expect(getPrevDayRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns zero when an explicit finite bucket is zero", () => {
+    const coin = mockCoin({
+      circulatingPrevDay: {
+        peggedUSD: 0,
+      },
+    });
+    expect(getPrevDayRawOrNull(coin)).toBe(0);
   });
 
   it("returns zero when real bucket data exists but sums to zero", () => {
@@ -114,6 +122,13 @@ describe("getPrevWeekRawOrNull", () => {
     expect(getPrevWeekRawOrNull(mockCoin())).toBeNull();
   });
 
+  it("returns zero when an explicit finite week bucket is zero", () => {
+    const coin = mockCoin({
+      circulatingPrevWeek: { peggedUSD: 0 },
+    });
+    expect(getPrevWeekRawOrNull(coin)).toBe(0);
+  });
+
   it("returns summed value when any bucket has data", () => {
     const coin = mockCoin({
       circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
@@ -126,6 +141,11 @@ describe("getPrevMonthRawOrNull", () => {
   it("returns null when no prev month data", () => {
     const coin = { circulatingPrevMonth: undefined } as never;
     expect(getPrevMonthRawOrNull(coin)).toBeNull();
+  });
+
+  it("returns zero when an explicit finite month bucket is zero", () => {
+    const coin = { circulatingPrevMonth: { usd: 0 } } as never;
+    expect(getPrevMonthRawOrNull(coin)).toBe(0);
   });
 
   it("returns sum when data exists", () => {

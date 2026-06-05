@@ -353,6 +353,42 @@ describe("computeAndStoreDEWS", () => {
     expect(derivePegRates).toHaveBeenCalledWith(expect.any(Array), expect.any(Map), { peggedEUR: 1.08 });
   });
 
+  it("preserves explicit zero supply-history anchors for DEWS scoring", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 0 },
+              circulatingPrevWeek: { peggedUSD: 0 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen);
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        circulatingCurrent: 100_000_000,
+        circulatingPrevDay: 0,
+        circulatingPrevWeek: 0,
+      }),
+    );
+  });
+
   it("keeps a mature mint/burn baseline when the latest 24h window is quiet", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen, {
