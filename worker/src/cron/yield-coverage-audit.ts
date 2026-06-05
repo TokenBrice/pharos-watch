@@ -23,6 +23,11 @@ import {
   YIELD_ADAPTER_LIFECYCLE,
   type YieldAdapterLifecycleEntry,
 } from "./yield-config-registry";
+import type {
+  YieldCoverageAuditQueueAction,
+  YieldCoverageAuditQueueItem,
+  YieldCoverageAuditQueueItemKind,
+} from "@shared/types/status";
 import type { YieldAdapterLifecycle } from "@shared/types/yield";
 import type { DlPool } from "./yield-sync/types";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
@@ -30,7 +35,12 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */
 const HIGH_TVL_THRESHOLD_USD = 5_000_000;
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
-const OPERATOR_QUEUE_ACTIONS = ["accept", "dismiss", "intentional-gap", "watch"] as const;
+const OPERATOR_QUEUE_ACTIONS = [
+  "accept",
+  "dismiss",
+  "intentional-gap",
+  "watch",
+] as const satisfies readonly YieldCoverageAuditQueueAction[];
 const LIFECYCLE_BUCKET_LIMIT = 100;
 
 export interface LifecycleAdapterBucketItem {
@@ -118,40 +128,11 @@ export function summarizeAdapterLifecycle(
   };
 }
 
-export type CoverageAuditQueueAction = typeof OPERATOR_QUEUE_ACTIONS[number];
-
-export type CoverageAuditQueueItemKind =
-  | "manifest-missing"
-  | "ranking-missing"
-  | "unmatched-high-tvl-pool"
-  | "missing-protocol"
-  | "native-exact-pool"
-  | "source-family-adapter"
-  | "lending-allowlist";
-
-export interface CoverageAuditQueueItem {
-  id: string;
-  kind: CoverageAuditQueueItemKind;
-  title: string;
-  detail: string;
-  actionHint: CoverageAuditQueueAction;
-  stablecoinIds?: string[];
-  project?: string;
-  pool?: string;
-  symbol?: string;
-  chain?: string;
-  tvlUsd?: number;
-  apy?: number;
-  poolCount?: number;
-  totalTvlUsd?: number;
-  recommendedTier?: ProtocolRecommendation["recommendedTier"];
-}
-
 export interface CoverageAuditOperatorQueue {
   persistence: "deferred";
-  allowedActions: CoverageAuditQueueAction[];
-  headlineGaps: CoverageAuditQueueItem[];
-  recommendationCandidates: CoverageAuditQueueItem[];
+  allowedActions: YieldCoverageAuditQueueAction[];
+  headlineGaps: YieldCoverageAuditQueueItem[];
+  recommendationCandidates: YieldCoverageAuditQueueItem[];
 }
 
 export interface CoverageGapPool {
@@ -248,7 +229,7 @@ function buildYieldBearingSymbolIndex(): Map<string, string[]> {
   return bySymbol;
 }
 
-function queueId(kind: CoverageAuditQueueItemKind, value: string): string {
+function queueId(kind: YieldCoverageAuditQueueItemKind, value: string): string {
   return `${kind}:${value.toLowerCase().replace(/[^a-z0-9_.:-]+/gu, "-")}`;
 }
 
@@ -257,10 +238,10 @@ function poolTitle(pool: CoverageGapPool): string {
 }
 
 function buildPoolQueueItem(
-  kind: Extract<CoverageAuditQueueItemKind, "unmatched-high-tvl-pool" | "missing-protocol">,
+  kind: Extract<YieldCoverageAuditQueueItemKind, "unmatched-high-tvl-pool" | "missing-protocol">,
   pool: CoverageGapPool,
-  actionHint: CoverageAuditQueueAction,
-): CoverageAuditQueueItem {
+  actionHint: YieldCoverageAuditQueueAction,
+): YieldCoverageAuditQueueItem {
   return {
     id: queueId(kind, pool.pool),
     kind,
@@ -277,9 +258,9 @@ function buildPoolQueueItem(
 }
 
 function buildProtocolQueueItem(
-  kind: Extract<CoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
+  kind: Extract<YieldCoverageAuditQueueItemKind, "source-family-adapter" | "lending-allowlist">,
   recommendation: ProtocolRecommendation,
-): CoverageAuditQueueItem {
+): YieldCoverageAuditQueueItem {
   return {
     id: queueId(kind, recommendation.project),
     kind,
@@ -302,7 +283,7 @@ export function buildCoverageAuditOperatorQueue({
   manifestMissingIds: string[];
   yieldBearingMissingFromRankings: string[];
 }): CoverageAuditOperatorQueue {
-  const headlineGaps: CoverageAuditQueueItem[] = [
+  const headlineGaps: YieldCoverageAuditQueueItem[] = [
     ...manifestMissingIds.map((stablecoinId) => ({
       id: queueId("manifest-missing", stablecoinId),
       kind: "manifest-missing" as const,
@@ -323,7 +304,7 @@ export function buildCoverageAuditOperatorQueue({
     ...gaps.missingProtocols.map((pool) => buildPoolQueueItem("missing-protocol", pool, "watch")),
   ];
 
-  const recommendationCandidates: CoverageAuditQueueItem[] = [
+  const recommendationCandidates: YieldCoverageAuditQueueItem[] = [
     ...gaps.nativeExactPoolRecommendations.map((pool) => ({
       id: queueId("native-exact-pool", pool.pool),
       kind: "native-exact-pool" as const,
