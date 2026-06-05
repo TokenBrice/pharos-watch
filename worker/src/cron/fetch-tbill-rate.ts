@@ -68,7 +68,7 @@ const BENCHMARK_METADATA_KEYS = Object.keys(BENCHMARK_METADATA_PREFIXES) as Meta
 
 function buildBenchmarkRunMetadata(params: {
   fallbackMode: string | null;
-  benchmarks: Record<MetadataBenchmarkKey, ParsedYieldBenchmarkMeta | null>;
+  benchmarks: ParsedYieldBenchmarkRegistry;
   includeDetails?: boolean;
 }): string {
   const fields: Record<string, unknown> = { fallbackMode: params.fallbackMode };
@@ -317,18 +317,15 @@ function buildResolvedBenchmark(params: {
 
 type BenchmarkFetchResult = { rate: number; recordDate: string };
 type BenchmarkProviderKey = Exclude<YieldBenchmarkKey, "USD" | "SGD">;
-type BenchmarkProviderEnvKey = keyof Pick<Env, "BANXICO_TOKEN">;
+type StandardBenchmarkProviderKey = Exclude<BenchmarkProviderKey, "MXN">;
 
 interface BenchmarkProvider {
-  key: BenchmarkProviderKey;
+  key: StandardBenchmarkProviderKey;
   fetch: (params: {
-    env?: Pick<Env, "BANXICO_TOKEN">;
     signal?: AbortSignal;
   }) => Promise<BenchmarkFetchResult | null>;
   source: string;
   fallbackMode: string;
-  requiredEnv?: BenchmarkProviderEnvKey;
-  missingEnvFallbackMode?: string;
 }
 
 interface ResolvedBenchmarkProvider {
@@ -596,57 +593,60 @@ async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; record
   }
 }
 
-const BENCHMARK_PROVIDERS: readonly BenchmarkProvider[] = [
-  {
+const BENCHMARK_PROVIDER_BY_KEY: Record<StandardBenchmarkProviderKey, BenchmarkProvider> = {
+  EUR: {
     key: "EUR",
     fetch: ({ signal }) => tryEcbCompoundedEstrCsv(signal),
     source: "ecb-estr-3m",
     fallbackMode: "ecb-failed",
   },
-  {
+  CHF: {
     key: "CHF",
     fetch: ({ signal }) => trySixSar3mcCsv(signal),
     source: "six-sar3mc",
     fallbackMode: "six-saron-failed",
   },
-  {
+  GBP: {
     key: "GBP",
     fetch: ({ signal }) => tryFredCsv(FRED_SONIA_CSV_URL, signal),
     source: "fred-iudsoia",
     fallbackMode: "fred-sonia-failed",
   },
-  {
+  JPY: {
     key: "JPY",
     fetch: ({ signal }) => tryFredCsv(FRED_TONA_CSV_URL, signal),
     source: "fred-jpy-overnight",
     fallbackMode: "fred-jpy-failed",
   },
-  {
+  AUD: {
     key: "AUD",
     fetch: ({ signal }) => tryFredCsv(FRED_AUD_CSV_URL, signal),
     source: "fred-aud-3m",
     fallbackMode: "fred-aud-failed",
   },
-  {
-    key: "MXN",
-    fetch: ({ env, signal }) => tryBanxicoCetes(env?.BANXICO_TOKEN?.trim() || null, signal),
-    source: "banxico-cetes-28d",
-    fallbackMode: "banxico-cetes-failed",
-    requiredEnv: "BANXICO_TOKEN",
-    missingEnvFallbackMode: "banxico-token-missing",
-  },
-  {
+  BRL: {
     key: "BRL",
     fetch: ({ signal }) => tryBcbSelic(signal),
     source: "bcb-selic",
     fallbackMode: "bcb-selic-failed",
   },
-  {
+  CAD: {
     key: "CAD",
     fetch: ({ signal }) => tryBocCorra(signal),
     source: "boc-valet-v122530",
     fallbackMode: "boc-corra-failed",
   },
+} as const;
+
+const BENCHMARK_PROVIDER_ORDER: readonly BenchmarkProviderKey[] = [
+  "EUR",
+  "CHF",
+  "GBP",
+  "JPY",
+  "AUD",
+  "MXN",
+  "BRL",
+  "CAD",
 ] as const;
 
 const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
@@ -664,19 +664,10 @@ async function resolveBenchmarkProvider(params: {
   provider: BenchmarkProvider;
   previous: ParsedYieldBenchmarkRegistry;
   fetchedAt: number;
-  env?: Pick<Env, "BANXICO_TOKEN">;
   signal?: AbortSignal;
 }): Promise<ResolvedBenchmarkProvider> {
-  const { provider, previous, fetchedAt, env, signal } = params;
-  if (provider.key === "MXN") {
-    return resolveMxnBenchmarkProvider({ previous, fetchedAt, env, signal });
-  }
-
-  const missingRequiredEnv = provider.requiredEnv ? !env?.[provider.requiredEnv]?.trim() : false;
-  const fallbackMode = missingRequiredEnv
-    ? (provider.missingEnvFallbackMode ?? provider.fallbackMode)
-    : provider.fallbackMode;
-  const parsed = missingRequiredEnv ? null : await provider.fetch({ env, signal });
+  const { provider, previous, fetchedAt, signal } = params;
+  const parsed = await provider.fetch({ signal });
   const meta = parsed
     ? buildResolvedBenchmark({
       key: provider.key,
@@ -685,13 +676,13 @@ async function resolveBenchmarkProvider(params: {
       fetchedAt,
       source: provider.source,
     })
-    : buildRetainedBenchmark(previous[provider.key], fallbackMode);
+    : buildRetainedBenchmark(previous[provider.key], provider.fallbackMode);
 
   return {
     key: provider.key,
     parsed,
     meta,
-    failureMode: parsed ? null : (meta?.fallbackMode ?? fallbackMode),
+    failureMode: parsed ? null : (meta?.fallbackMode ?? provider.fallbackMode),
   };
 }
 
@@ -770,7 +761,8 @@ export async function fetchTbillRate(
     throwIfAborted(signal);
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
     const usdBenchmark = usdRetained ?? buildHardcodedUsdBenchmark("circuit-open");
-    const retainedByKey: Record<Exclude<YieldBenchmarkKey, "USD">, ParsedYieldBenchmarkMeta | null> = {
+    const benchmarks: ParsedYieldBenchmarkRegistry = {
+      USD: usdBenchmark,
       EUR: buildRetainedBenchmark(previous.EUR, "circuit-open"),
       CHF: buildRetainedBenchmark(previous.CHF, "circuit-open"),
       GBP: buildRetainedBenchmark(previous.GBP, "circuit-open"),
@@ -781,25 +773,12 @@ export async function fetchTbillRate(
       CAD: buildRetainedBenchmark(previous.CAD, "circuit-open"),
       SGD: null,
     };
-    await writeStructuredBenchmarks(db, {
-      USD: usdBenchmark,
-      ...retainedByKey,
-    });
+    await writeStructuredBenchmarks(db, benchmarks);
     return {
       status: "degraded",
       metadata: buildBenchmarkRunMetadata({
         fallbackMode: "circuit-open",
-        benchmarks: {
-          USD: usdBenchmark,
-          EUR: retainedByKey.EUR,
-          CHF: retainedByKey.CHF,
-          GBP: retainedByKey.GBP,
-          JPY: retainedByKey.JPY,
-          MXN: retainedByKey.MXN,
-          BRL: retainedByKey.BRL,
-          AUD: retainedByKey.AUD,
-          CAD: retainedByKey.CAD,
-        },
+        benchmarks,
       }),
     };
   }
@@ -827,43 +806,37 @@ export async function fetchTbillRate(
   }
 
   const resolvedProviders: ResolvedBenchmarkProvider[] = [];
-  for (const provider of BENCHMARK_PROVIDERS) {
-    resolvedProviders.push(await resolveBenchmarkProvider({
-      provider,
-      previous,
-      fetchedAt,
-      env,
-      signal,
-    }));
+  for (const key of BENCHMARK_PROVIDER_ORDER) {
+    resolvedProviders.push(
+      key === "MXN"
+        ? await resolveMxnBenchmarkProvider({ previous, fetchedAt, env, signal })
+        : await resolveBenchmarkProvider({
+          provider: BENCHMARK_PROVIDER_BY_KEY[key],
+          previous,
+          fetchedAt,
+          signal,
+        }),
+    );
   }
   const resolvedByKey = Object.fromEntries(
     resolvedProviders.map((entry) => [entry.key, entry]),
   ) as Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>;
 
-  const eurMeta = resolvedByKey.EUR.meta;
-  const chfMeta = resolvedByKey.CHF.meta;
-  const gbpMeta = resolvedByKey.GBP.meta;
-  const jpyMeta = resolvedByKey.JPY.meta;
-  const mxnMeta = resolvedByKey.MXN.meta;
-  const brlMeta = resolvedByKey.BRL.meta;
-  const audMeta = resolvedByKey.AUD.meta;
-  const cadMeta = resolvedByKey.CAD.meta;
-
   // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
-  const sgdMeta: ParsedYieldBenchmarkMeta | null = null;
-
-  await writeStructuredBenchmarks(db, {
+  const benchmarks: ParsedYieldBenchmarkRegistry = {
     USD: usdMeta,
-    EUR: eurMeta,
-    CHF: chfMeta,
-    GBP: gbpMeta,
-    JPY: jpyMeta,
-    MXN: mxnMeta,
-    BRL: brlMeta,
-    AUD: audMeta,
-    CAD: cadMeta,
-    SGD: sgdMeta,
-  });
+    EUR: resolvedByKey.EUR.meta,
+    CHF: resolvedByKey.CHF.meta,
+    GBP: resolvedByKey.GBP.meta,
+    JPY: resolvedByKey.JPY.meta,
+    MXN: resolvedByKey.MXN.meta,
+    BRL: resolvedByKey.BRL.meta,
+    AUD: resolvedByKey.AUD.meta,
+    CAD: resolvedByKey.CAD.meta,
+    SGD: null,
+  };
+
+  await writeStructuredBenchmarks(db, benchmarks);
 
   const degradationReasons: string[] = [];
   if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
@@ -874,22 +847,10 @@ export async function fetchTbillRate(
 
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",
-    itemCount: [usdMeta, eurMeta, chfMeta, gbpMeta, jpyMeta, mxnMeta, brlMeta, audMeta, cadMeta]
-      .filter((entry) => entry != null)
-      .length,
+    itemCount: BENCHMARK_METADATA_KEYS.filter((key) => benchmarks[key] != null).length,
     metadata: buildBenchmarkRunMetadata({
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
-      benchmarks: {
-        USD: usdMeta,
-        EUR: eurMeta,
-        CHF: chfMeta,
-        GBP: gbpMeta,
-        JPY: jpyMeta,
-        MXN: mxnMeta,
-        BRL: brlMeta,
-        AUD: audMeta,
-        CAD: cadMeta,
-      },
+      benchmarks,
       includeDetails: true,
     }),
   };

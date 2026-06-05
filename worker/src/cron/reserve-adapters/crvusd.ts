@@ -296,14 +296,6 @@ function safeInt256ToNumber(value: bigint, label: string): number {
   return asNumber;
 }
 
-function decodeMulticallUint256(raw: `0x${string}`, functionName: "bands_x" | "bands_y"): bigint {
-  return decodeFunctionResult({
-    abi: CURVE_AMM_ABI,
-    functionName,
-    data: raw,
-  }) as bigint;
-}
-
 async function fetchLlammaMarketDescriptors(signal: AbortSignal, ctx?: AdapterContext): Promise<LlammaMarketDescriptor[]> {
   const countRaw = (await readEthereumContract(
     CURVE_CONTROLLER_FACTORY,
@@ -422,9 +414,17 @@ async function fetchLlammaMarketExposures(
     }
     const current = byMarket.get(marketId) ?? { y: 0n, x: 0n };
     if (axis === "y") {
-      current.y += decodeMulticallUint256(result.returnData, "bands_y");
+      current.y += decodeFunctionResult({
+        abi: CURVE_AMM_ABI,
+        functionName: "bands_y",
+        data: result.returnData,
+      }) as bigint;
     } else if (axis === "x") {
-      current.x += decodeMulticallUint256(result.returnData, "bands_x");
+      current.x += decodeFunctionResult({
+        abi: CURVE_AMM_ABI,
+        functionName: "bands_x",
+        data: result.returnData,
+      }) as bigint;
     } else {
       throw new Error(`crvUSD LLAMMA band call returned invalid axis: ${result.label}`);
     }

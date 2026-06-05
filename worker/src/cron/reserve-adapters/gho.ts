@@ -14,7 +14,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
-import { decodeBoolWord } from "./abi-decode";
+import { decodeAddressArrayWord, decodeBoolWord } from "./abi-decode";
 
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
 const GET_FACILITATORS_LIST_SELECTOR = "0x1ec90f2e";
@@ -62,7 +62,9 @@ interface GhoParams {
 }
 
 type OnchainGhoInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
-type GhoCallOpts = Pick<OnchainGhoInput, "rpcMode" | "chain"> & {
+type GhoCallBase = Pick<OnchainGhoInput, "rpcMode" | "chain"> & {
+  signal: AbortSignal;
+  ctx?: AdapterContext;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
 };
@@ -117,16 +119,6 @@ function hexWords(raw: string): string[] {
 
 function parseUintWord(word: string): bigint {
   return BigInt(`0x${word}`);
-}
-
-function decodeAddressArray(raw: string): string[] | null {
-  const words = hexWords(raw);
-  if (words.length < 2) return null;
-  const start = Number(parseUintWord(words[0]) / 32n);
-  if (!Number.isInteger(start) || start < 0 || start >= words.length) return null;
-  const length = Number(parseUintWord(words[start]));
-  if (!Number.isInteger(length) || length < 0 || start + 1 + length > words.length) return null;
-  return words.slice(start + 1, start + 1 + length).map((word) => `0x${word.slice(-40).toLowerCase()}`);
 }
 
 function decodeFacilitator(raw: string): { bucketCapacity: bigint; bucketLevel: bigint; label: string } | null {
@@ -204,20 +196,13 @@ async function mapWithConcurrency<T, TResult>(
 }
 
 async function loadFacilitators(
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-  callOpts: GhoCallOpts,
+  callBase: GhoCallBase,
 ): Promise<{ facilitators: GhoFacilitatorSnapshot[]; warnings: LiveReserveWarning[] }> {
   const warnings: LiveReserveWarning[] = [];
   const facilitatorListRaw = await fetchOnchainRawCall({
+    ...callBase,
     contract: GHO_TOKEN,
     data: GET_FACILITATORS_LIST_SELECTOR,
-    signal,
-    ctx,
-    rpcMode: callOpts.rpcMode,
-    chain: callOpts.chain,
-    rpcUrl: callOpts.rpcUrl,
-    fallbackRpcUrl: callOpts.fallbackRpcUrl,
   });
   if (!facilitatorListRaw) {
     return {
@@ -231,7 +216,7 @@ async function loadFacilitators(
     };
   }
 
-  const facilitatorAddresses = decodeAddressArray(facilitatorListRaw);
+  const facilitatorAddresses = decodeAddressArrayWord(facilitatorListRaw);
   if (!facilitatorAddresses) {
     return {
       facilitators: [],
@@ -249,45 +234,40 @@ async function loadFacilitators(
     facilitatorAddresses,
     FACILITATOR_READ_CONCURRENCY,
     async (address) => {
-    const facilitatorRaw = await fetchOnchainRawCall({
-      contract: GHO_TOKEN,
-      data: GET_FACILITATOR_SELECTOR + encodeAddressArg(address),
-      signal,
-      ctx,
-      rpcMode: callOpts.rpcMode,
-      chain: callOpts.chain,
-      rpcUrl: callOpts.rpcUrl,
-      fallbackRpcUrl: callOpts.fallbackRpcUrl,
+      const facilitatorRaw = await fetchOnchainRawCall({
+        ...callBase,
+        contract: GHO_TOKEN,
+        data: GET_FACILITATOR_SELECTOR + encodeAddressArg(address),
+      });
+      if (!facilitatorRaw) {
+        return {
+          facilitator: null,
+          warnings: [reserveDegradedWarning(
+            "facilitator-read-failed",
+            `GHO facilitator metadata could not be read for ${address}`,
+          )],
+        };
+      }
+      const decoded = decodeFacilitator(facilitatorRaw);
+      if (!decoded) {
+        return {
+          facilitator: null,
+          warnings: [reserveDegradedWarning(
+            "facilitator-read-unparseable",
+            `GHO facilitator metadata could not be decoded for ${address}`,
+          )],
+        };
+      }
+      return {
+        facilitator: {
+          address,
+          label: decoded.label,
+          bucketLevel: decoded.bucketLevel,
+          bucketCapacity: decoded.bucketCapacity,
+        } satisfies GhoFacilitatorSnapshot,
+        warnings: [] as LiveReserveWarning[],
+      };
     });
-    if (!facilitatorRaw) {
-      return {
-        facilitator: null,
-        warnings: [reserveDegradedWarning(
-          "facilitator-read-failed",
-          `GHO facilitator metadata could not be read for ${address}`,
-        )],
-      };
-    }
-    const decoded = decodeFacilitator(facilitatorRaw);
-    if (!decoded) {
-      return {
-        facilitator: null,
-        warnings: [reserveDegradedWarning(
-          "facilitator-read-unparseable",
-          `GHO facilitator metadata could not be decoded for ${address}`,
-        )],
-      };
-    }
-    return {
-      facilitator: {
-        address,
-        label: decoded.label,
-        bucketLevel: decoded.bucketLevel,
-        bucketCapacity: decoded.bucketCapacity,
-      } satisfies GhoFacilitatorSnapshot,
-      warnings: [] as LiveReserveWarning[],
-    };
-  });
 
   for (const result of facilitatorResults) {
     warnings.push(...result.warnings);
@@ -301,18 +281,11 @@ async function loadFacilitators(
 
 async function loadTrackedModule(
   trackedModule: GhoTrackedModuleConfig,
-  signal: AbortSignal,
-  ctx: AdapterContext | undefined,
-  callOpts: GhoCallOpts,
+  callBase: GhoCallBase,
 ): Promise<{ module: GhoTrackedModuleSnapshot | null; warnings: LiveReserveWarning[] }> {
   const warnings: LiveReserveWarning[] = [];
   const moduleCallOpts = {
-    signal,
-    ctx,
-    rpcMode: callOpts.rpcMode,
-    chain: callOpts.chain,
-    rpcUrl: callOpts.rpcUrl,
-    fallbackRpcUrl: callOpts.fallbackRpcUrl,
+    ...callBase,
     contract: trackedModule.address,
   };
 
@@ -363,14 +336,9 @@ async function loadTrackedModule(
     feeStrategyRaw && feeStrategyRaw !== "0x" ? parseEvmAddressResult(feeStrategyRaw as `0x${string}`) : null;
   if (feeStrategyAddress && feeStrategyAddress !== ZERO_ADDRESS) {
     const buyFee = await fetchOnchainUint256({
+      ...callBase,
       contract: feeStrategyAddress,
       data: GET_BUY_FEE_SELECTOR + encodeUint256Arg(ONE_GHO),
-      signal,
-      ctx,
-      rpcMode: callOpts.rpcMode,
-      chain: callOpts.chain,
-      rpcUrl: callOpts.rpcUrl,
-      fallbackRpcUrl: callOpts.fallbackRpcUrl,
     });
     if (buyFee != null) {
       buyFeeBps = Number((buyFee * 10_000n) / ONE_GHO);
@@ -627,7 +595,9 @@ export async function fetchGhoReserves(
   }
 
   const params = readParams(config);
-  const callOpts = {
+  const callBase = {
+    signal,
+    ctx,
     rpcMode: input.rpcMode,
     chain: input.chain,
     rpcUrl: params.rpcUrl,
@@ -635,19 +605,17 @@ export async function fetchGhoReserves(
   };
 
   const totalSupply = await fetchOnchainUint256({
+    ...callBase,
     contract: GHO_TOKEN,
     data: TOTAL_SUPPLY_SELECTOR,
-    signal,
-    ctx,
-    ...callOpts,
   });
   if (totalSupply == null) {
     throw new Error("gho: failed to read totalSupply()");
   }
 
   const [{ facilitators, warnings: facilitatorWarnings }, trackedResults] = await Promise.all([
-    loadFacilitators(signal, ctx, callOpts),
-    Promise.all(params.gsmModules.map((trackedModule) => loadTrackedModule(trackedModule, signal, ctx, callOpts))),
+    loadFacilitators(callBase),
+    Promise.all(params.gsmModules.map((trackedModule) => loadTrackedModule(trackedModule, callBase))),
   ]);
 
   const trackedModules = trackedResults.flatMap((result) => (result.module ? [result.module] : []));

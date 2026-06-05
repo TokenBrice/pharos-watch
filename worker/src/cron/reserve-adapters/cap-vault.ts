@@ -4,7 +4,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressArg } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
-import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
+import { resolveCoinContractAddress } from "./evm";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -17,7 +17,7 @@ import {
   slicesFromValues,
 } from "./helpers";
 import { validateDecimals } from "./slice-math";
-import { decodeBoolWord } from "./abi-decode";
+import { decodeAddressArrayWord, decodeBoolWord } from "./abi-decode";
 
 const ADAPTER_KEY = "cap-vault";
 const ASSETS_SELECTOR = "0x71a97305";
@@ -57,24 +57,6 @@ interface CapVaultAssetState {
    * When true, `paused` is conservatively set to true.
    */
   pausedStatusUnavailable: boolean;
-}
-
-function decodeAddressArray(raw: string | null): string[] {
-  if (!raw?.startsWith("0x")) return [];
-  const stripped = raw.slice(2);
-  if (stripped.length < 128 || stripped.length % 64 !== 0) return [];
-  const words: string[] = [];
-  for (let index = 0; index < stripped.length; index += 64) {
-    words.push(stripped.slice(index, index + 64));
-  }
-  const offset = Number(BigInt(`0x${words[0]}`) / 32n);
-  if (!Number.isInteger(offset) || offset < 0 || offset >= words.length) return [];
-  const length = Number(BigInt(`0x${words[offset]}`));
-  if (!Number.isInteger(length) || length < 0 || offset + 1 + length > words.length) return [];
-  return words.slice(offset + 1, offset + 1 + length).flatMap((word) => {
-    const address = parseEvmAddressResult(`0x${word}` as `0x${string}`);
-    return address ? [address] : [];
-  });
 }
 
 function normalizeAssetConfigs(config: LiveReservesConfig): Map<string, CapVaultAssetConfig> {
@@ -237,30 +219,28 @@ export async function fetchCapVaultReserves(
   }
 
   const assetConfigs = normalizeAssetConfigs(config);
-  const assetsRaw = await fetchOnchainRawCall({
-    contract: contractAddress,
-    data: ASSETS_SELECTOR,
+  const callBase = {
     signal,
     ctx,
     rpcMode: input.rpcMode,
     chain: input.chain,
     rpcUrl: params.rpcUrl,
     fallbackRpcUrl: params.fallbackRpcUrl,
+  };
+  const assetsRaw = await fetchOnchainRawCall({
+    ...callBase,
+    contract: contractAddress,
+    data: ASSETS_SELECTOR,
   });
-  const assetAddresses = decodeAddressArray(assetsRaw);
+  const assetAddresses = decodeAddressArrayWord(assetsRaw) ?? [];
   if (assetAddresses.length === 0) {
     throw new Error(`${ADAPTER_KEY} assets() returned no assets for ${coin.id}`);
   }
 
   const tokenSupplyRaw = await fetchOnchainUint256({
+    ...callBase,
     contract: contractAddress,
     data: TOTAL_SUPPLY_SELECTOR,
-    signal,
-    ctx,
-    rpcMode: input.rpcMode,
-    chain: input.chain,
-    rpcUrl: params.rpcUrl,
-    fallbackRpcUrl: params.fallbackRpcUrl,
   });
   const supplyUsd = tokenSupplyRaw != null ? decimalNumberFromBigInt(tokenSupplyRaw, 18) : null;
 
@@ -268,56 +248,31 @@ export async function fetchCapVaultReserves(
     const encodedAddress = encodeAddressArg(address);
     const assetMetadataReads = Promise.all([
       fetchOnchainUint256({
+        ...callBase,
         contract: address,
         data: DECIMALS_SELECTOR,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
       }),
     ]);
     const vaultPositionReads = Promise.all([
       fetchOnchainUint256({
+        ...callBase,
         contract: contractAddress,
         data: `${TOTAL_SUPPLIES_SELECTOR}${encodedAddress}`,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
       }),
       fetchOnchainUint256({
+        ...callBase,
         contract: contractAddress,
         data: `${TOTAL_BORROWS_SELECTOR}${encodedAddress}`,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
       }),
       fetchOnchainUint256({
+        ...callBase,
         contract: contractAddress,
         data: `${AVAILABLE_BALANCE_SELECTOR}${encodedAddress}`,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
       }),
       fetchOnchainRawCall({
+        ...callBase,
         contract: contractAddress,
         data: `${PAUSED_SELECTOR}${encodedAddress}`,
-        signal,
-        ctx,
-        rpcMode: input.rpcMode,
-        chain: input.chain,
-        rpcUrl: params.rpcUrl,
-        fallbackRpcUrl: params.fallbackRpcUrl,
       }),
     ]);
     const [[decimalsRaw], [totalSuppliesRaw, totalBorrowsRaw, availableRaw, pausedRaw]] = await Promise.all([

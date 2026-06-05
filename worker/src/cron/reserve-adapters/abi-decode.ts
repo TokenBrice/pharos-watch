@@ -1,3 +1,5 @@
+import { decodeAbiParameters } from "viem/utils";
+
 const ABI_WORD_HEX_PATTERN = /^0x[0-9a-fA-F]{64}$/;
 const ZERO_ADDRESS_PATTERN = /^0x0{40}$/;
 
@@ -25,4 +27,17 @@ export function decodeAddressWord(raw: string | null | undefined): `0x${string}`
   if (typeof raw !== "string" || !ABI_WORD_HEX_PATTERN.test(raw)) return null;
   const address = `0x${raw.slice(-40)}` as `0x${string}`;
   return ZERO_ADDRESS_PATTERN.test(address) ? null : address;
+}
+
+export function decodeAddressArrayWord(raw: string | null | undefined): `0x${string}`[] | null {
+  if (typeof raw !== "string" || !raw.startsWith("0x")) return null;
+  try {
+    const [addresses] = decodeAbiParameters(
+      [{ type: "address[]" }],
+      raw as `0x${string}`,
+    ) as readonly [`0x${string}`[]];
+    return addresses.map((address) => address.toLowerCase() as `0x${string}`);
+  } catch {
+    return null;
+  }
 }
