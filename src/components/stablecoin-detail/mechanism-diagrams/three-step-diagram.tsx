@@ -34,19 +34,23 @@ interface ThreeStepMechanismDiagramProps {
   defaultSteps: readonly [MechanismStepText, MechanismStepText, MechanismStepText];
   overrideSteps?: ReadonlyArray<MechanismStepOverride>;
   stressFootnote?: string;
-  returnArrow: ThreeStepReturnArrow;
+  returnArrow?: ThreeStepReturnArrow;
+  stepTone?: DiagramTone;
+  dashed?: boolean;
 }
 
 function buildSteps(
   defaults: readonly [MechanismStepText, MechanismStepText, MechanismStepText],
   overrides: ReadonlyArray<MechanismStepOverride> | undefined,
   accentColor: string,
+  dashed: boolean,
 ): MechanismDiagramStep[] {
   return defaults.map((step, index) => ({
     label: overrides?.[index]?.label ?? step.label,
     subtitle: overrides?.[index]?.subtitle ?? step.subtitle,
     accentColor,
     stepNumber: index + 1,
+    dashedBorder: dashed ? true : undefined,
   }));
 }
 
@@ -58,14 +62,16 @@ export function ThreeStepMechanismDiagram({
   overrideSteps,
   stressFootnote,
   returnArrow,
+  stepTone = "default",
+  dashed = false,
 }: ThreeStepMechanismDiagramProps) {
-  const steps = buildSteps(defaultSteps, overrideSteps, accentColor);
+  const steps = buildSteps(defaultSteps, overrideSteps, accentColor, dashed);
 
   return (
     <MechanismDiagramShell
       ariaLabel={ariaLabel}
       description={description}
-      desktopHeight={155}
+      desktopHeight={returnArrow ? 155 : undefined}
       steps={steps}
       stressFootnote={stressFootnote}
     >
@@ -75,16 +81,20 @@ export function ThreeStepMechanismDiagram({
         subtitle={steps[0].subtitle}
         stepNumber={1}
         accentColor={accentColor}
+        dashedBorder={dashed}
+        tone={stepTone}
       />
-      <DiagramArrow x={150} />
+      <DiagramArrow x={150} dashed={dashed} />
       <DiagramStep
         x={200}
         label={steps[1].label}
         subtitle={steps[1].subtitle}
         stepNumber={2}
         accentColor={accentColor}
+        dashedBorder={dashed}
+        tone={stepTone}
       />
-      <DiagramArrow x={350} />
+      <DiagramArrow x={350} dashed={dashed} />
       <DiagramStep
         x={400}
         label={steps[2].label}
@@ -92,8 +102,10 @@ export function ThreeStepMechanismDiagram({
         width={200}
         stepNumber={3}
         accentColor={accentColor}
+        dashedBorder={dashed}
+        tone={stepTone}
       />
-      <DiagramReturnArrow {...returnArrow} />
+      {returnArrow ? <DiagramReturnArrow {...returnArrow} /> : null}
     </MechanismDiagramShell>
   );
 }

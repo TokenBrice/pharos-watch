@@ -1,9 +1,4 @@
-import type { MechanismDiagramStep } from "./primitives";
-import {
-  DiagramArrow,
-  DiagramStep,
-  MechanismDiagramShell,
-} from "./primitives";
+import { ThreeStepMechanismDiagram } from "./three-step-diagram";
 
 const ACCENT = "var(--mechanism-tbill)";
 
@@ -21,55 +16,20 @@ export function TbillDiagram({
   steps: overrideSteps,
   stressFootnote = TBILL_STRESS_FOOTNOTE,
 }: TbillDiagramProps) {
-  const defaults = [
+  const defaultSteps = [
     { label: "Investor cash", subtitle: "subscribed via fund" },
     { label: "T-Bills + Repos", subtitle: "short-duration RWA" },
     { label: `${symbol} units`, subtitle: "NAV accrues daily" },
   ] as const;
 
-  const merged = defaults.map((d, i) => ({
-    label: overrideSteps?.[i]?.label ?? d.label,
-    subtitle: overrideSteps?.[i]?.subtitle ?? d.subtitle,
-  }));
-
-  const steps: MechanismDiagramStep[] = merged.map((s, i) => ({
-    label: s.label,
-    subtitle: s.subtitle,
-    accentColor: ACCENT,
-    stepNumber: i + 1,
-  }));
-
   return (
-    <MechanismDiagramShell
+    <ThreeStepMechanismDiagram
       ariaLabel={`Investor cash funds a short-duration Treasury portfolio; ${symbol} units accrue NAV daily.`}
       description={`Investors subscribe cash into a regulated fund; the fund deploys into short-duration T-Bills and repurchase agreements; ${symbol} units represent fund shares whose NAV accrues daily from the underlying yield.`}
-      steps={steps}
+      accentColor={ACCENT}
+      defaultSteps={defaultSteps}
+      overrideSteps={overrideSteps}
       stressFootnote={stressFootnote}
-    >
-      <DiagramStep
-        x={0}
-        label={steps[0].label}
-        subtitle={steps[0].subtitle}
-        stepNumber={1}
-        accentColor={ACCENT}
-      />
-      <DiagramArrow x={150} />
-      <DiagramStep
-        x={200}
-        label={steps[1].label}
-        subtitle={steps[1].subtitle}
-        stepNumber={2}
-        accentColor={ACCENT}
-      />
-      <DiagramArrow x={350} />
-      <DiagramStep
-        x={400}
-        label={steps[2].label}
-        subtitle={steps[2].subtitle}
-        width={200}
-        stepNumber={3}
-        accentColor={ACCENT}
-      />
-    </MechanismDiagramShell>
+    />
   );
 }
