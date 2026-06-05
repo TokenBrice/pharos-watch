@@ -5,108 +5,73 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 import { createApiPollingQueryOptionsWithMeta } from "@/hooks/use-api-query";
+import type { ZodType } from "zod";
 
 const PREFETCH_DEBOUNCE_MS = 100;
 
+interface RoutePrefetchDescriptor {
+  queryKey: readonly unknown[];
+  path: string;
+  producerIntervalMs: number;
+  schema?: ZodType<unknown>;
+  metaMaxAgeSec?: number;
+}
+
+type RoutePrefetchDescriptorFactory = () => RoutePrefetchDescriptor;
+
+const reg = FRONTEND_API_QUERY_REGISTRY;
+
+const ROUTE_PREFETCH_DESCRIPTORS = {
+  "/screener/": [
+    () => reg.stablecoins,
+    () => reg.pegSummary,
+  ],
+  "/safety-scores/": [
+    () => reg.stablecoins,
+    () => reg.reportCards,
+  ],
+  "/yield/": [
+    () => reg.yieldRankings,
+  ],
+  "/depeg/": [
+    () => reg.pegSummary,
+    () => reg.stressSignals,
+  ],
+  "/liquidity/": [
+    () => reg.dexLiquidity,
+  ],
+  "/flows/": [
+    () => reg.mintBurnFlows(),
+  ],
+} satisfies Record<string, readonly RoutePrefetchDescriptorFactory[]>;
+
+function prefetchRouteDescriptor(qc: QueryClient, descriptor: RoutePrefetchDescriptor) {
+  void qc.prefetchQuery(
+    createApiPollingQueryOptionsWithMeta(
+      descriptor.queryKey,
+      descriptor.path,
+      descriptor.producerIntervalMs,
+      { schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
+    ),
+  );
+}
+
 /**
  * Warms the TanStack cache for one of the top sidebar routes. Each route's
- * function knows which descriptors map to that route and which ones go through
- * the meta-envelope path. We dispatch `prefetchQuery` individually so the
- * differently-typed `UseQueryOptions` results from `*WithMeta` and the plain
- * factory never have to share a tuple type.
+ * descriptor list maps to the meta-envelope path. We dispatch `prefetchQuery`
+ * individually so differently-typed descriptor schemas never have to share a
+ * query-result tuple type.
  */
-const ROUTE_WARMERS: Record<string, (qc: QueryClient) => void> = {
-  "/screener/": (qc) => {
-    const reg = FRONTEND_API_QUERY_REGISTRY;
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.stablecoins.queryKey,
-        reg.stablecoins.path,
-        reg.stablecoins.producerIntervalMs,
-        { schema: reg.stablecoins.schema, metaMaxAgeSec: reg.stablecoins.metaMaxAgeSec },
-      ),
-    );
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.pegSummary.queryKey,
-        reg.pegSummary.path,
-        reg.pegSummary.producerIntervalMs,
-        { schema: reg.pegSummary.schema, metaMaxAgeSec: reg.pegSummary.metaMaxAgeSec },
-      ),
-    );
-  },
-  "/safety-scores/": (qc) => {
-    const reg = FRONTEND_API_QUERY_REGISTRY;
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.stablecoins.queryKey,
-        reg.stablecoins.path,
-        reg.stablecoins.producerIntervalMs,
-        { schema: reg.stablecoins.schema, metaMaxAgeSec: reg.stablecoins.metaMaxAgeSec },
-      ),
-    );
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.reportCards.queryKey,
-        reg.reportCards.path,
-        reg.reportCards.producerIntervalMs,
-        { schema: reg.reportCards.schema, metaMaxAgeSec: reg.reportCards.metaMaxAgeSec },
-      ),
-    );
-  },
-  "/yield/": (qc) => {
-    const reg = FRONTEND_API_QUERY_REGISTRY;
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.yieldRankings.queryKey,
-        reg.yieldRankings.path,
-        reg.yieldRankings.producerIntervalMs,
-        { schema: reg.yieldRankings.schema, metaMaxAgeSec: reg.yieldRankings.metaMaxAgeSec },
-      ),
-    );
-  },
-  "/depeg/": (qc) => {
-    const reg = FRONTEND_API_QUERY_REGISTRY;
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.pegSummary.queryKey,
-        reg.pegSummary.path,
-        reg.pegSummary.producerIntervalMs,
-        { schema: reg.pegSummary.schema, metaMaxAgeSec: reg.pegSummary.metaMaxAgeSec },
-      ),
-    );
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.stressSignals.queryKey,
-        reg.stressSignals.path,
-        reg.stressSignals.producerIntervalMs,
-        { schema: reg.stressSignals.schema, metaMaxAgeSec: reg.stressSignals.metaMaxAgeSec },
-      ),
-    );
-  },
-  "/liquidity/": (qc) => {
-    const reg = FRONTEND_API_QUERY_REGISTRY;
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        reg.dexLiquidity.queryKey,
-        reg.dexLiquidity.path,
-        reg.dexLiquidity.producerIntervalMs,
-        { schema: reg.dexLiquidity.schema, metaMaxAgeSec: reg.dexLiquidity.metaMaxAgeSec },
-      ),
-    );
-  },
-  "/flows/": (qc) => {
-    const flows = FRONTEND_API_QUERY_REGISTRY.mintBurnFlows();
-    void qc.prefetchQuery(
-      createApiPollingQueryOptionsWithMeta(
-        flows.queryKey,
-        flows.path,
-        flows.producerIntervalMs,
-        { schema: flows.schema, metaMaxAgeSec: flows.metaMaxAgeSec },
-      ),
-    );
-  },
-};
+const ROUTE_WARMERS = Object.fromEntries(
+  Object.entries(ROUTE_PREFETCH_DESCRIPTORS).map(([route, descriptors]) => [
+    route,
+    (qc: QueryClient) => {
+      for (const getDescriptor of descriptors) {
+        prefetchRouteDescriptor(qc, getDescriptor());
+      }
+    },
+  ]),
+) as Record<string, (qc: QueryClient) => void>;
 
 /**
  * Pre-warms the Next.js route bundle plus the TanStack Query cache for the
