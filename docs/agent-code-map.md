@@ -192,7 +192,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
 - `src/hooks/use-row-cursor.ts` - UseRowCursorOptions, UseRowCursorResult, useRowCursor
 - `src/hooks/use-show-work-mode.ts` - ShowWorkMode, useShowWorkMode
-- `src/hooks/use-sidebar-nav-signal-data.ts` - useSidebarBlacklistSignal, useSidebarDailyDigestSignal, useSidebarHealthSignal, useSidebarPegSummarySignal, useSidebarStabilityIndexSignal
+- `src/hooks/use-sidebar-nav-signal-data.ts` - LightApiQueryOptions, useLightApiQuery, useSidebarBlacklistSignal, useSidebarDailyDigestSignal, useSidebarHealthSignal, useSidebarPegSummarySignal
 - `src/hooks/use-sidebar-nav-signals.ts` - useSidebarNavSignals
 - ... 23 more files omitted; use `rg --files src/hooks` for the full list.
 
@@ -254,6 +254,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `src/components/about-reference-module.tsx` - AboutReferenceModule
 - `src/components/ai-disclosure-badge.tsx` - AiDisclosureBadge
+- `src/components/ai-disclosure.ts` - AiDisclosureFields, buildAiDisclosureLine, formatAiSummaryDate
 - `src/components/ai-summary.tsx` - AiSummary
 - `src/components/api-key-request-form.tsx` - ApiKeyRequestForm
 - `src/components/api-reference-layout.tsx` - ApiReferenceLayout
@@ -291,8 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
-- ... 344 more files omitted; use `rg --files src/components` for the full list.
+- ... 345 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
