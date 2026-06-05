@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.11",
+      title: "High-TVL hard-corroborated pool challenge",
+      date: "2026-06-05",
+      effectiveAt: 1780643100,
+      summary:
+        "Pool challenge can now replace a recovered soft consensus price when a high-TVL DEX protocol median is depeg-sized and agrees with a hard primary candidate.",
+      impact: [
+        "The standard replacement path still requires at least two independent diverging DEX protocols",
+        "A single-protocol replacement is now allowed only when the protocol median carries at least the existing $5M high-TVL threshold, the published price is still inside the peg depeg threshold, and a hard market/oracle/protocol candidate agrees with that DEX mark",
+        "This keeps same-protocol noisy-pool protection while allowing APXUSD-style Curve on-chain plus Curve DEX evidence to override a near-peg soft cluster",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.1",
       title: "DEX pricing source utilization expansion",
       date: "2026-05-24",

@@ -48,7 +48,9 @@ export function PricingPipelineMethodologySection() {
           A pool challenge guard downgrades confidence and replaces the price with a protocol-aware TVL-weighted median
           only when large DEX pools from at least two independent protocols diverge from soft consensus, with divergence
           evaluated from one TVL-weighted median per protocol so a single rogue pool cannot make an otherwise agreeing
-          protocol count as corroborating disagreement, including
+          protocol count as corroborating disagreement. A narrow high-TVL exception can replace a recovered soft price
+          from one protocol only when that protocol median is depeg-sized, carries at least $5M TVL, and agrees with a
+          hard primary candidate within the normal consensus threshold, including
           DEX-inclusive soft clusters unless an exempt hard source is present. NAV tokens are excluded because their
           wide clustering threshold makes pool-level divergence a poor signal for redeemable-at-NAV assets. When the guard
           replaces a price, the replacement is now also reflected in the per-source candidate list so downstream
@@ -246,7 +248,7 @@ export function PricingPipelineMethodologySection() {
               <li>If the winning cluster has 2+ members, publish its median price and separately keep the best cluster member for provenance</li>
               <li>Choose that internal selected source by weight, then trust tier, then peg proximity, then source key</li>
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
-              <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any protocol-level median diverges beyond the peg-type-aware threshold (500 bps for USD pegs, <code className="text-xs">min(2 &times; depeg threshold, 500)</code> for non-USD pegs), downgrade to <code className="text-xs">low</code>, and only replace the price when at least two independent protocol-level medians corroborate that divergence unless severe-downside preservation applies &mdash; on-chain liquidity is a more honest signal when aggregators share upstream data, but a single protocol or a single rogue pool can still be wrong</li>
+              <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any protocol-level median diverges beyond the peg-type-aware threshold (500 bps for USD pegs, <code className="text-xs">min(2 &times; depeg threshold, 500)</code> for non-USD pegs), downgrade to <code className="text-xs">low</code>, and replace the price when at least two independent protocol-level medians corroborate that divergence unless severe-downside preservation applies. A one-protocol replacement uses the peg depeg threshold instead of the wider pool threshold, and is allowed only when the protocol median has at least $5M TVL, the published price is inside that threshold, the DEX median crosses it, and a hard primary candidate agrees within the normal consensus threshold</li>
             </ol>
             <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
               agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps

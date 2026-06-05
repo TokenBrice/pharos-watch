@@ -1,11 +1,17 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import type { PriceValidationContext, PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
   isSevereFixedPegDownside,
 } from "../../lib/price-validation";
-import { DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
+import {
+  DEX_FRESHNESS_SEC,
+  POOL_CHALLENGE_HIGH_TVL_USD,
+  POOL_CHALLENGE_MIN_TVL,
+  getDepegThresholdBps,
+} from "../../lib/constants";
 import { loadDexPoolChallengers } from "../../lib/depeg-helpers";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import { isPoolChallengeEligibleConsensus } from "../../lib/pricing-source-policy";
@@ -114,24 +120,31 @@ export function applyPoolChallenge(
     const poolChallengeBps = pegType === "peggedUSD"
       ? 500
       : Math.min(getDepegThresholdBps(pegType) * 2, 500);
+    const validationContext = validationContexts?.get(assetId);
     const preserveCorroboratedSevereDownside = hasCorroboratedSevereDownsideCandidate(
       assetId,
       result,
       pegType,
       references,
-      validationContexts?.get(assetId),
+      validationContext,
     );
 
     // Evaluate divergence from one protocol-level price, not from any single pool.
     // A rogue pool inside an otherwise agreeing protocol should not count as
     // independent corroboration for replacing the published price.
     const divergingProtocolGroups = protocolGroups.filter((group) => {
-      const mid = (result.price + group.price) / 2;
-      if (mid <= 0) return false;
-      const bps = Math.abs(result.price - group.price) / mid * 10_000;
-      return bps >= poolChallengeBps;
+      return pricePairDivergenceBps(result.price, group.price) >= poolChallengeBps;
     });
-    if (divergingProtocolGroups.length > 0) {
+    const replacementProtocolGroups = selectReplacementProtocolGroups({
+      result,
+      protocolGroups,
+      divergingProtocolGroups,
+      pegType,
+      references,
+      validationContext,
+    });
+
+    if (divergingProtocolGroups.length > 0 || replacementProtocolGroups.length > 0) {
       if (result.confidence === "high") {
         result.confidence = "low";
         stats.high--;
@@ -143,9 +156,9 @@ export function applyPoolChallenge(
       }
       downgrades++;
 
-      if (divergingProtocolGroups.length >= 2 && !preserveCorroboratedSevereDownside) {
+      if (replacementProtocolGroups.length > 0 && !preserveCorroboratedSevereDownside) {
         const replacementPrice = computeWeightedMedianPrice(
-          divergingProtocolGroups.map((group) => ({
+          replacementProtocolGroups.map((group) => ({
             price: group.price,
             weight: group.tvl,
           })),
@@ -155,7 +168,7 @@ export function applyPoolChallenge(
           result.source = "pool-tvl-weighted";
           result.selectedSource = "pool-tvl-weighted";
           result.priceEstimator = "selected_source";
-          const poolObservedAts = divergingProtocolGroups
+          const poolObservedAts = replacementProtocolGroups
             .map((group) => group.observedAt)
             .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
           result.observedAt = poolObservedAts.length > 0
@@ -175,6 +188,80 @@ export function applyPoolChallenge(
     }
   }
   return downgrades;
+}
+
+function selectReplacementProtocolGroups(params: {
+  result: PrimaryPriceResult;
+  protocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
+  divergingProtocolGroups: Array<{ price: number; tvl: number; observedAt?: number | null }>;
+  pegType: string | undefined;
+  references?: PriceValidationReferences;
+  validationContext?: PriceValidationContext;
+}): Array<{ price: number; tvl: number; observedAt?: number | null }> {
+  if (params.divergingProtocolGroups.length >= 2) {
+    return params.divergingProtocolGroups;
+  }
+
+  const context =
+    params.validationContext ??
+    buildPriceValidationContext({ pegType: params.pegType });
+  const pegRef = getCurrentPegReference(context, params.references);
+  if (pegRef == null) return [];
+
+  const depegThresholdBps = getDepegThresholdBps(params.pegType);
+  const resultAbsBps = Math.abs(priceDeviationBps(params.result.price, pegRef));
+  if (resultAbsBps >= depegThresholdBps) {
+    return [];
+  }
+
+  return params.protocolGroups.filter((group) => (
+    group.tvl >= POOL_CHALLENGE_HIGH_TVL_USD &&
+    Math.abs(priceDeviationBps(group.price, pegRef)) >= depegThresholdBps &&
+    pricePairDivergenceBps(params.result.price, group.price) >= depegThresholdBps &&
+    hasHardCandidateAgreement(params.result, group.price)
+  ));
+}
+
+function hasHardCandidateAgreement(result: PrimaryPriceResult, price: number): boolean {
+  const candidatePrices = result.allPrices ?? {};
+  return Object.entries(candidatePrices).some(([source, candidatePrice]) => {
+    const trustTier = getPricingSourceRegistryEntry(source)?.trustTier;
+    const isHard =
+      trustTier === "hard_market" ||
+      trustTier === "hard_oracle" ||
+      trustTier === "hard_protocol";
+    return isHard && pricePairDivergenceBps(price, candidatePrice) <= DIVERGENCE_THRESHOLD_BPS;
+  });
+}
+
+function getCurrentPegReference(
+  context: PriceValidationContext,
+  references?: PriceValidationReferences,
+): number | null {
+  if (context.pegClass === "usd") return 1;
+  const pegType = context.pegType;
+  if (!pegType) return null;
+  const reference = references?.rates[pegType];
+  if (typeof reference !== "number" || !Number.isFinite(reference) || reference <= 0) {
+    return null;
+  }
+  const scale =
+    typeof context.commodityOunces === "number" &&
+    Number.isFinite(context.commodityOunces) &&
+    context.commodityOunces > 0
+      ? context.commodityOunces
+      : 1;
+  return reference * scale;
+}
+
+function priceDeviationBps(price: number, pegRef: number): number {
+  return ((price / pegRef) - 1) * 10_000;
+}
+
+function pricePairDivergenceBps(left: number, right: number): number {
+  const mid = (left + right) / 2;
+  if (mid <= 0) return Number.POSITIVE_INFINITY;
+  return (Math.abs(left - right) / mid) * 10_000;
 }
 
 function hasCorroboratedSevereDownsideCandidate(

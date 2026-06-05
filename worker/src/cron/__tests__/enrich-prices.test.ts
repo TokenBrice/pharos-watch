@@ -3298,6 +3298,48 @@ describe("applyPoolChallenge", () => {
     expect(results.get("xusd-test")!.source).not.toBe("pool-tvl-weighted");
   });
 
+  it("replaces recovered soft consensus when a high-TVL DEX protocol agrees with a hard depeg candidate", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["apxusd-apyx", {
+        price: 0.995975,
+        source: "coingecko+defillama-list+uniswap-v4-dex",
+        selectedSource: "coingecko",
+        priceEstimator: "cluster_median",
+        confidence: "high",
+        dlPrice: 0.9959,
+        cgPrice: 0.9958,
+        candidateSources: ["coingecko", "defillama-list", "curve-onchain", "curve-dex", "uniswap-v4-dex"],
+        agreeSources: ["coingecko", "defillama-list", "uniswap-v4-dex"],
+        disagreeSources: ["curve-onchain", "curve-dex"],
+        allPrices: {
+          coingecko: 0.9958,
+          "defillama-list": 0.9959,
+          "curve-onchain": 0.9577061374623745,
+          "curve-dex": 0.9577061374623745,
+          "uniswap-v4-dex": 1.0002443828,
+        },
+      }],
+    ]);
+    const pools = new Map([
+      ["apxusd-apyx", [
+        { price: 0.9577061374623745, tvlUsd: 50_206_292, protocol: "curve", chain: "ethereum", observedAt: 1_780_641_624 },
+        { price: 1.0002443828, tvlUsd: 1_936_131, protocol: "uniswap-v4", chain: "ethereum", observedAt: 1_780_641_624 },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["apxusd-apyx", "peggedUSD"]]);
+    const stats = makeStats();
+
+    const downgrades = applyPoolChallenge(results, pools, pegTypes, stats);
+    const result = results.get("apxusd-apyx")!;
+
+    expect(downgrades).toBe(1);
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("pool-tvl-weighted");
+    expect(result.price).toBeCloseTo(0.9577061374623745, 9);
+    expect(result.agreeSources).toEqual(["pool-tvl-weighted"]);
+    expect(result.observedAt).toBe(1_780_641_624);
+  });
+
   it("treats promoted DEX sources as pool-challenge eligible when no exempt hard source agrees", () => {
     const results = new Map<string, PrimaryPriceResult>([
       ["dusd-test", {
