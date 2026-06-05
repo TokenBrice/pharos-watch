@@ -1,5 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { clampScore } from "@shared/lib/math";
 
 interface YieldSourceRiskBarProps {
   score: number | null;
@@ -9,12 +10,6 @@ interface YieldSourceRiskBarProps {
 }
 
 const SEGMENTS = 5;
-
-function clampScore(score: number): number {
-  if (score < 0) return 0;
-  if (score > 100) return 100;
-  return score;
-}
 
 function getSegmentClass(index: number, score: number): string {
   // 5 thresholds at 20, 40, 60, 80, 100
