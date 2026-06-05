@@ -20,13 +20,9 @@ import type {
   DdrrV2InvalidatedPredictionInput,
 } from "./inputs";
 import { deriveActualOutcome, getAssessmentReviewAnchorSec, type DdrrDerivedOutcome } from "./outcomes";
+import { HORIZON_SECONDS } from "../depeg-resolver/duration";
 
-export const DDRR_HORIZON_SECONDS: Record<DdrHorizon, number> = {
-  "6h": 6 * 3600,
-  "24h": 24 * 3600,
-  "7d": 7 * 86400,
-  "30d": 30 * 86400,
-};
+export const DDRR_HORIZON_SECONDS: Record<DdrHorizon, number> = HORIZON_SECONDS;
 
 interface DdrrDurationReviewResult {
   durationReview: DdrrDurationReview;
