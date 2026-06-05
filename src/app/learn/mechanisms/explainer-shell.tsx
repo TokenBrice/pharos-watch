@@ -11,6 +11,12 @@ import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-di
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
+import {
+  CrossLinksFooter,
+  NumberedListSection,
+  SectionHeading,
+  SectionKicker,
+} from "../_shared/section-primitives";
 import type { ArchetypeContent, ArchetypeDecommissioned } from "./content";
 
 const DEAD_LOGO_BY_ID = new Map(
@@ -63,24 +69,6 @@ export function ArchetypeExplainerBody({
         kickerClass={content.visuals.kickerClass}
       />
     </>
-  );
-}
-
-function SectionKicker({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className: string;
-}) {
-  return <p className={cn("pharos-kicker", className)}>{children}</p>;
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
-      {children}
-    </h2>
   );
 }
 
@@ -176,29 +164,12 @@ function WhatToWatch({
   kickerClass: string;
 }) {
   return (
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <SectionKicker className={kickerClass}>
-          What to watch on Pharos
-        </SectionKicker>
-        <SectionHeading>Signals that matter most</SectionHeading>
-      </div>
-      <ol className="divide-y divide-border/40">
-        {bullets.map((bullet, i) => (
-          <li
-            key={i}
-            className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
-          >
-            <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <p className="text-[15px] leading-relaxed text-foreground">
-              {bullet}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </section>
+    <NumberedListSection
+      items={bullets}
+      kicker="What to watch on Pharos"
+      heading="Signals that matter most"
+      kickerClass={kickerClass}
+    />
   );
 }
 
@@ -442,36 +413,6 @@ function TrackedCoinList({
           </p>
         ) : null}
       </div>
-    </section>
-  );
-}
-
-function CrossLinksFooter({
-  links,
-  kickerClass,
-}: {
-  links: ArchetypeContent["crossLinks"];
-  kickerClass: string;
-}) {
-  return (
-    <section className="space-y-5 border-t border-border/60 pt-10">
-      <SectionKicker className={kickerClass}>Continue reading</SectionKicker>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {links.map((link, i) => (
-          <li key={i}>
-            <Link
-              href={link.href}
-              className="pharos-focus-ring group flex items-start justify-between gap-3 border-b border-border/40 py-3 text-[15px] leading-snug text-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
-            >
-              <span>{link.label}</span>
-              <ArrowUpRight
-                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue"
-                aria-hidden="true"
-              />
-            </Link>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }

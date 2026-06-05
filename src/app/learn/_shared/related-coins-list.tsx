@@ -3,7 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
-import { cn } from "@/lib/utils";
+import { SectionHeading, SectionKicker } from "./section-primitives";
 
 interface RelatedCoin {
   coinId: string;
@@ -15,24 +15,6 @@ interface RelatedCoinsListProps {
   kickerClass: string;
   kicker: string;
   heading: string;
-}
-
-function SectionKicker({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className: string;
-}) {
-  return <p className={cn("pharos-kicker", className)}>{children}</p>;
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
-      {children}
-    </h2>
-  );
 }
 
 export function RelatedCoinsList({

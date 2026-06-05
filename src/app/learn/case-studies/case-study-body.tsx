@@ -7,6 +7,12 @@ import {
 import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
+import {
+  CrossLinksFooter,
+  NumberedListSection,
+  SectionHeading,
+  SectionKicker,
+} from "../_shared/section-primitives";
 import { CaseStudyChart } from "./case-study-chart";
 import { CaseStudyTimeline } from "./case-study-timeline";
 import type { CaseStudy, CaseStudyOutcome } from "./content/types";
@@ -22,24 +28,6 @@ const OUTCOME_CHIP: Record<CaseStudyOutcome, string> = {
   wounded: "border-amber-500/40 text-amber-600 dark:text-amber-400",
   died: "border-rose-500/40 text-rose-600 dark:text-rose-400",
 };
-
-function SectionKicker({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className: string;
-}) {
-  return <p className={cn("pharos-kicker", className)}>{children}</p>;
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-[1.75rem]">
-      {children}
-    </h2>
-  );
-}
 
 function FactStrip({ study }: { study: CaseStudy }) {
   const peak = study.eventWindow.peakDeviationBps;
@@ -164,27 +152,12 @@ function Watchpoints({
   kickerClass: string;
 }) {
   return (
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <SectionKicker className={kickerClass}>
-          What to watch if this recurs
-        </SectionKicker>
-        <SectionHeading>Watchpoints</SectionHeading>
-      </div>
-      <ol className="divide-y divide-border/40">
-        {study.watchpoints.map((point, i) => (
-          <li
-            key={i}
-            className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
-          >
-            <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <p className="text-[15px] leading-relaxed text-foreground">{point}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
+    <NumberedListSection
+      items={study.watchpoints}
+      kicker="What to watch if this recurs"
+      heading="Watchpoints"
+      kickerClass={kickerClass}
+    />
   );
 }
 
@@ -239,36 +212,6 @@ function Sources({
   );
 }
 
-function CrossLinksFooter({
-  study,
-  kickerClass,
-}: {
-  study: CaseStudy;
-  kickerClass: string;
-}) {
-  return (
-    <section className="space-y-5 border-t border-border/60 pt-10">
-      <SectionKicker className={kickerClass}>Continue reading</SectionKicker>
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {study.crossLinks.map((link, i) => (
-          <li key={i}>
-            <Link
-              href={link.href}
-              className="pharos-focus-ring group flex items-start justify-between gap-3 border-b border-border/40 py-3 text-[15px] leading-snug text-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
-            >
-              <span>{link.label}</span>
-              <ArrowUpRight
-                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue"
-                aria-hidden="true"
-              />
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 export function CaseStudyBody({ study }: { study: CaseStudy }) {
   const kickerClass = ARCHETYPE_VISUALS[study.archetype].kickerClass;
   return (
@@ -280,7 +223,7 @@ export function CaseStudyBody({ study }: { study: CaseStudy }) {
       <Watchpoints study={study} kickerClass={kickerClass} />
       <RelatedCoins study={study} kickerClass={kickerClass} />
       <Sources study={study} kickerClass={kickerClass} />
-      <CrossLinksFooter study={study} kickerClass={kickerClass} />
+      <CrossLinksFooter links={study.crossLinks} kickerClass={kickerClass} />
     </>
   );
 }
