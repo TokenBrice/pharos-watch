@@ -159,10 +159,7 @@ export async function resolveReserveSyncCapacity(
       ...(liveMetadata.dailyLimitUsd != null ? { dailyLimitUsd: liveMetadata.dailyLimitUsd } : {}),
       ...(liveMetadata.minRedeemUsd != null ? { minRedeemUsd: liveMetadata.minRedeemUsd } : {}),
       ...(liveMetadata.liveHolderEligibility ? { liveHolderEligibility: liveMetadata.liveHolderEligibility } : {}),
-      ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
-      ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
-      ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
-      ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
+      ...pickRouteStatusFields(liveMetadata),
       notes: [
         ...liveMetadata.capacityNotes,
         ...(clampNote ? [clampNote] : []),
@@ -254,10 +251,7 @@ export async function resolveReserveSyncCapacity(
     capacityConfidence: liveCapacityConfidence,
     capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
     capacitySemantics,
-    ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
-    ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
-    ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
-    ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
+    ...pickRouteStatusFields(liveMetadata),
     notes: [...liveMetadata.capacityNotes, liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],
   };
 }
