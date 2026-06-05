@@ -182,22 +182,7 @@ function missingPolicy(
   key: WeightKey,
   profile: SelectorProfile,
 ): MissingPolicy {
-  if (profile === "treasury") {
-    if (key === "decentralization") return "penalty";
-    if (key === "bluechip") return "penalty";
-    if (key === "pegScoreNow") return "penalty";
-    return "penalty";
-  }
-  if (profile === "yield") {
-    if (key === "yieldVariance") return "penalty";
-    if (key === "sourceRiskInverted") return "penalty";
-    if (key === "bluechip") return "ignore";
-    if (key === "excessApy") return "penalty";
-    return "penalty";
-  }
-  if (key === "bluechip") return "ignore";
-  if (key === "effectiveExit") return "penalty";
-  if (key === "liquidityDiversification") return "penalty";
+  if (profile !== "treasury" && key === "bluechip") return "ignore";
   return "penalty";
 }
 
