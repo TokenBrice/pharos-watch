@@ -58,25 +58,12 @@ async function deleteOrphansForTable(
 
   if (orphanIds.length === 0) return 0;
 
-  let deleted = 0;
-  for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const inClause = buildInClause(idChunk);
-    let result: D1Result;
-    try {
-      result = await runWithOverloadRetry(() =>
-        db
-          // SAFETY: validated against DEWS_TABLES allowlist above.
-          .prepare(`/* pharos:dews:orphan-delete:${table} */ DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
-          .bind(...inClause.binds)
-          .run(),
-      );
-    } catch (error) {
-      if (options.ignoreMissingTable && isMissingStressLatestTableError(error)) return deleted;
-      throw error;
-    }
-    deleted += result.meta?.changes ?? 0;
-  }
-  return deleted;
+  return deleteStablecoinRowsByIdChunks(db, orphanIds, {
+    ignoreMissingTable: options.ignoreMissingTable,
+    buildSql: (inClauseSql) =>
+      // SAFETY: validated against DEWS_TABLES allowlist above.
+      `/* pharos:dews:orphan-delete:${table} */ DELETE FROM ${table} WHERE stablecoin_id IN (${inClauseSql})`,
+  });
 }
 
 function isMissingStressLatestTableError(error: unknown): boolean {
@@ -84,30 +71,13 @@ function isMissingStressLatestTableError(error: unknown): boolean {
   return message.includes("no such table: stress_signals_latest");
 }
 
-async function deleteCurrentStressSignalRowsForIds(
+async function deleteStablecoinRowsByIdChunks(
   db: D1Database,
   stablecoinIds: Iterable<string>,
-): Promise<number> {
-  const ids = [...new Set(stablecoinIds)];
-  if (ids.length === 0) return 0;
-
-  let deleted = 0;
-  for (const idChunk of chunkArray(ids, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const inClause = buildInClause(idChunk);
-    const result = await runWithOverloadRetry(() =>
-      db
-        .prepare(`/* pharos:dews:stress-current-delete */ DELETE FROM stress_signals WHERE stablecoin_id IN (${inClause.sql})`)
-        .bind(...inClause.binds)
-        .run(),
-    );
-    deleted += result.meta?.changes ?? 0;
-  }
-  return deleted;
-}
-
-async function deleteLatestStressSignalRowsForIds(
-  db: D1Database,
-  stablecoinIds: Iterable<string>,
+  options: {
+    buildSql: (inClauseSql: string) => string;
+    ignoreMissingTable?: boolean;
+  },
 ): Promise<number> {
   const ids = [...new Set(stablecoinIds)];
   if (ids.length === 0) return 0;
@@ -118,17 +88,38 @@ async function deleteLatestStressSignalRowsForIds(
     try {
       const result = await runWithOverloadRetry(() =>
         db
-          .prepare(`/* pharos:dews:stress-latest-delete */ DELETE FROM stress_signals_latest WHERE stablecoin_id IN (${inClause.sql})`)
+          .prepare(options.buildSql(inClause.sql))
           .bind(...inClause.binds)
           .run(),
       );
       deleted += result.meta?.changes ?? 0;
     } catch (error) {
-      if (isMissingStressLatestTableError(error)) return deleted;
+      if (options.ignoreMissingTable && isMissingStressLatestTableError(error)) return deleted;
       throw error;
     }
   }
   return deleted;
+}
+
+async function deleteCurrentStressSignalRowsForIds(
+  db: D1Database,
+  stablecoinIds: Iterable<string>,
+): Promise<number> {
+  return deleteStablecoinRowsByIdChunks(db, stablecoinIds, {
+    buildSql: (inClauseSql) =>
+      `/* pharos:dews:stress-current-delete */ DELETE FROM stress_signals WHERE stablecoin_id IN (${inClauseSql})`,
+  });
+}
+
+async function deleteLatestStressSignalRowsForIds(
+  db: D1Database,
+  stablecoinIds: Iterable<string>,
+): Promise<number> {
+  return deleteStablecoinRowsByIdChunks(db, stablecoinIds, {
+    ignoreMissingTable: true,
+    buildSql: (inClauseSql) =>
+      `/* pharos:dews:stress-latest-delete */ DELETE FROM stress_signals_latest WHERE stablecoin_id IN (${inClauseSql})`,
+  });
 }
 
 function getTodayMidnightUtcSec(now = new Date()): number {
