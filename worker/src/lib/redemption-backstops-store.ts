@@ -122,6 +122,34 @@ export interface RedemptionBackstopRunMetadata {
   [key: string]: unknown;
 }
 
+const REDEMPTION_BACKSTOP_ROW_COLUMNS = [
+  "stablecoin_id",
+  "score",
+  "effective_exit_score",
+  "dex_liquidity_score",
+  "access_score",
+  "settlement_score",
+  "execution_certainty_score",
+  "capacity_score",
+  "output_asset_quality_score",
+  "cost_score",
+  "route_family",
+  "access_model",
+  "settlement_model",
+  "execution_model",
+  "output_asset_type",
+  "provider",
+  "source_mode",
+  "immediate_capacity_usd",
+  "immediate_capacity_ratio",
+  "fee_bps",
+  "queue_enabled",
+  "updated_at",
+  "methodology_version",
+  "details_json",
+  "snapshot_run_id",
+].join(", ");
+
 export class RedemptionBackstopSnapshotUnavailableError extends Error {
   cause?: unknown;
 
@@ -431,25 +459,13 @@ async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null)
     const statement = runId
       ? db
           .prepare(
-            `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
-                  access_score, settlement_score, execution_certainty_score,
-                  capacity_score, output_asset_quality_score, cost_score,
-                  route_family, access_model, settlement_model, execution_model,
-                  output_asset_type, provider, source_mode, immediate_capacity_usd,
-                  immediate_capacity_ratio, fee_bps, queue_enabled, updated_at,
-                  methodology_version, details_json, snapshot_run_id
+            `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
              FROM redemption_backstop
             WHERE snapshot_run_id = ?`,
           )
           .bind(runId)
       : db.prepare(
-          `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
-                access_score, settlement_score, execution_certainty_score,
-                capacity_score, output_asset_quality_score, cost_score,
-                route_family, access_model, settlement_model, execution_model,
-                output_asset_type, provider, source_mode, immediate_capacity_usd,
-                immediate_capacity_ratio, fee_bps, queue_enabled, updated_at,
-                methodology_version, details_json, snapshot_run_id
+          `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
            FROM redemption_backstop`,
         );
     rows = await statement.all<RedemptionBackstopRow>();
@@ -473,13 +489,7 @@ async function queryRedemptionBackstopMapFromRunRows(db: D1Database, runId: stri
   try {
     rows = await db
       .prepare(
-        `SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score,
-                access_score, settlement_score, execution_certainty_score,
-                capacity_score, output_asset_quality_score, cost_score,
-                route_family, access_model, settlement_model, execution_model,
-                output_asset_type, provider, source_mode, immediate_capacity_usd,
-                immediate_capacity_ratio, fee_bps, queue_enabled, updated_at,
-                methodology_version, details_json, snapshot_run_id
+        `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
            FROM redemption_backstop_run_rows
           WHERE snapshot_run_id = ?`,
       )
