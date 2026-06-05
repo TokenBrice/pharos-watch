@@ -10,7 +10,45 @@ import {
 } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
+import { buildCoverageMatrixModel, type CoverageMatrixModelInput } from "@/lib/coverage-matrix-model";
+
+type CoverageMatrixQueryKey = Exclude<keyof CoverageMatrixModelInput, "activeStablecoins">;
+
+const COVERAGE_QUERY_RESOURCE_FIELDS = ["data", "dataUpdatedAt", "error", "meta"] as const;
+
+type CoverageMatrixQueryResourceField = (typeof COVERAGE_QUERY_RESOURCE_FIELDS)[number];
+type CoverageMatrixQueryResource<Key extends CoverageMatrixQueryKey> = Pick<
+  CoverageMatrixModelInput[Key],
+  CoverageMatrixQueryResourceField
+>;
+
+function pickCoverageMatrixQueryResource<Key extends CoverageMatrixQueryKey>(
+  resource: CoverageMatrixQueryResource<Key>,
+): CoverageMatrixQueryResource<Key> {
+  return Object.fromEntries(
+    COVERAGE_QUERY_RESOURCE_FIELDS.map((field) => [field, resource[field]]),
+  ) as CoverageMatrixQueryResource<Key>;
+}
+
+function useCoverageMatrixQueryResource<Key extends CoverageMatrixQueryKey>(
+  query: CoverageMatrixQueryResource<Key>,
+): CoverageMatrixQueryResource<Key> {
+  const data = query.data;
+  const dataUpdatedAt = query.dataUpdatedAt;
+  const error = query.error;
+  const meta = query.meta;
+
+  return useMemo(
+    () =>
+      pickCoverageMatrixQueryResource<Key>({
+        data,
+        dataUpdatedAt,
+        error,
+        meta,
+      } as CoverageMatrixQueryResource<Key>),
+    [data, dataUpdatedAt, error, meta],
+  );
+}
 
 export function useCoverageMatrixModel() {
   const stablecoinsQuery = useStablecoins();
@@ -21,110 +59,25 @@ export function useCoverageMatrixModel() {
   const flowQuery = useMintBurnFlows();
   const reportCardsQuery = useReportCards();
 
-  const stablecoinsData = stablecoinsQuery.data;
-  const stablecoinsUpdatedAt = stablecoinsQuery.dataUpdatedAt;
-  const stablecoinsError = stablecoinsQuery.error;
-  const stablecoinsMeta = stablecoinsQuery.meta;
-  const pegData = pegQuery.data;
-  const pegUpdatedAt = pegQuery.dataUpdatedAt;
-  const pegError = pegQuery.error;
-  const pegMeta = pegQuery.meta;
-  const dexData = dexQuery.data;
-  const dexUpdatedAt = dexQuery.dataUpdatedAt;
-  const dexError = dexQuery.error;
-  const dexMeta = dexQuery.meta;
-  const redemptionData = redemptionQuery.data;
-  const redemptionUpdatedAt = redemptionQuery.dataUpdatedAt;
-  const redemptionError = redemptionQuery.error;
-  const redemptionMeta = redemptionQuery.meta;
-  const yieldData = yieldQuery.data;
-  const yieldUpdatedAt = yieldQuery.dataUpdatedAt;
-  const yieldError = yieldQuery.error;
-  const yieldMeta = yieldQuery.meta;
-  const flowData = flowQuery.data;
-  const flowUpdatedAt = flowQuery.dataUpdatedAt;
-  const flowError = flowQuery.error;
-  const flowMeta = flowQuery.meta;
-  const reportCardsData = reportCardsQuery.data;
-  const reportCardsUpdatedAt = reportCardsQuery.dataUpdatedAt;
-  const reportCardsError = reportCardsQuery.error;
-  const reportCardsMeta = reportCardsQuery.meta;
+  const stablecoins = useCoverageMatrixQueryResource<"stablecoins">(stablecoinsQuery);
+  const pegSummary = useCoverageMatrixQueryResource<"pegSummary">(pegQuery);
+  const dexLiquidity = useCoverageMatrixQueryResource<"dexLiquidity">(dexQuery);
+  const redemptionBackstops = useCoverageMatrixQueryResource<"redemptionBackstops">(redemptionQuery);
+  const yieldRankings = useCoverageMatrixQueryResource<"yieldRankings">(yieldQuery);
+  const mintBurnFlows = useCoverageMatrixQueryResource<"mintBurnFlows">(flowQuery);
+  const reportCards = useCoverageMatrixQueryResource<"reportCards">(reportCardsQuery);
 
   return useMemo(
     () =>
       buildCoverageMatrixModel({
-        stablecoins: {
-          data: stablecoinsData,
-          dataUpdatedAt: stablecoinsUpdatedAt,
-          error: stablecoinsError,
-          meta: stablecoinsMeta,
-        },
-        pegSummary: {
-          data: pegData,
-          dataUpdatedAt: pegUpdatedAt,
-          error: pegError,
-          meta: pegMeta,
-        },
-        dexLiquidity: {
-          data: dexData,
-          dataUpdatedAt: dexUpdatedAt,
-          error: dexError,
-          meta: dexMeta,
-        },
-        redemptionBackstops: {
-          data: redemptionData,
-          dataUpdatedAt: redemptionUpdatedAt,
-          error: redemptionError,
-          meta: redemptionMeta,
-        },
-        yieldRankings: {
-          data: yieldData,
-          dataUpdatedAt: yieldUpdatedAt,
-          error: yieldError,
-          meta: yieldMeta,
-        },
-        mintBurnFlows: {
-          data: flowData,
-          dataUpdatedAt: flowUpdatedAt,
-          error: flowError,
-          meta: flowMeta,
-        },
-        reportCards: {
-          data: reportCardsData,
-          dataUpdatedAt: reportCardsUpdatedAt,
-          error: reportCardsError,
-          meta: reportCardsMeta,
-        },
+        stablecoins,
+        pegSummary,
+        dexLiquidity,
+        redemptionBackstops,
+        yieldRankings,
+        mintBurnFlows,
+        reportCards,
       }),
-    [
-      stablecoinsData,
-      stablecoinsUpdatedAt,
-      stablecoinsError,
-      stablecoinsMeta,
-      pegData,
-      pegUpdatedAt,
-      pegError,
-      pegMeta,
-      dexData,
-      dexUpdatedAt,
-      dexError,
-      dexMeta,
-      redemptionData,
-      redemptionUpdatedAt,
-      redemptionError,
-      redemptionMeta,
-      yieldData,
-      yieldUpdatedAt,
-      yieldError,
-      yieldMeta,
-      flowData,
-      flowUpdatedAt,
-      flowError,
-      flowMeta,
-      reportCardsData,
-      reportCardsUpdatedAt,
-      reportCardsError,
-      reportCardsMeta,
-    ],
+    [stablecoins, pegSummary, dexLiquidity, redemptionBackstops, yieldRankings, mintBurnFlows, reportCards],
   );
 }
