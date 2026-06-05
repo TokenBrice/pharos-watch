@@ -173,6 +173,8 @@ export function validateDdrPublicCacheContract(response: DdrResponse): DdrPublic
   }
 
   const actualRowHashes = rowHashMap(response.rows);
+  // Prediction ids are canonical numeric object keys, so JSON.stringify emits
+  // them in numeric property order; rowHashMap sorts first to make row order irrelevant.
   if (JSON.stringify(actualRowHashes) !== JSON.stringify(response._meta.publicPredictionRowHashes)) {
     return { ok: false, reason: "public-prediction-row-hash-map-mismatch" };
   }

@@ -150,6 +150,7 @@ function interpolateScore(
   breakpoints: readonly { value: number; score: number }[],
 ): number | null {
   if (value == null || !Number.isFinite(value) || value < 0) return null;
+  if (breakpoints.length === 0) return null;
   if (value <= breakpoints[0].value) return breakpoints[0].score;
 
   for (let index = 1; index < breakpoints.length; index++) {
