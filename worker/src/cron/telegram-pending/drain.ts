@@ -335,6 +335,7 @@ export async function drainPendingQueue(
   const deliveryDiagnostics: PendingDeliveryDiagnostic[] = [];
   const targetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [];
   const pendingById = new Map(pending.map((row) => [row.id, row] as const));
+  const blockedChatsThisLoop = new Set<string>();
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
     if (signal?.aborted || globalRateLimited) break;
@@ -391,12 +392,15 @@ export async function drainPendingQueue(
           });
         }
         completedIds.add(result.id);
-        const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
-        if (shouldDisable) {
-          if (await disableBlockedSubscriber(db, result.chatId)) {
-            blockedCleanedUp++;
-          } else {
-            blockedCleanupFailed++;
+        if (!blockedChatsThisLoop.has(result.chatId)) {
+          blockedChatsThisLoop.add(result.chatId);
+          const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
+          if (shouldDisable) {
+            if (await disableBlockedSubscriber(db, result.chatId)) {
+              blockedCleanedUp++;
+            } else {
+              blockedCleanupFailed++;
+            }
           }
         }
       } else if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {

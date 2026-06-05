@@ -875,6 +875,83 @@ describe("drainPendingQueue", () => {
     expect(subscriptionsCascade).toBeDefined();
   });
 
+  it("counts a blocked chat once while preserving per-row pending diagnostics", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false, blocked: true, retryable: false, permanentFailure: true,
+      statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+    });
+
+    const blockedRows = Array.from({ length: SEND_BATCH_SIZE + 1 }, (_, index) => ({
+      id: 1200 + index,
+      chat_id: "same-blocked-chat",
+      message_html: `<b>Blocked ${index}</b>`,
+      disable_notification: 0,
+      created_at: now - 60,
+      attempts: 0,
+      not_before_at: null,
+      priority: TELEGRAM_PENDING_PRIORITY.depeg,
+      source_type: "risk_alert",
+      alert_type: "depeg",
+      dedupe_key: `same-blocked-chat:${index}`,
+      chunk_index: index,
+      last_error_class: null,
+      alert_snooze_until_ts: null,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      timezone: null,
+    }));
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: blockedRows },
+      {
+        match: "SELECT consecutive_block_count",
+        rows: [{ consecutive_block_count: 1, consecutive_block_first_at: now - 300 }],
+      },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+      { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", blockedRows.length);
+
+    expect(result.attempted).toBe(blockedRows.length);
+    expect(result.blocked).toBe(blockedRows.length);
+    expect(result.blockedCleanedUp).toBe(1);
+    expect(result.blockedCleanupFailed).toBe(0);
+    expect(mockSendToChat).toHaveBeenCalledTimes(blockedRows.length);
+
+    const history = db.getHistory();
+    expect(history.filter((entry) => entry.sql.includes("SELECT consecutive_block_count"))).toHaveLength(1);
+    expect(
+      history.filter(
+        (entry) =>
+          entry.sql.includes("UPDATE telegram_subscribers") &&
+          entry.sql.includes("consecutive_block_count = ?"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      history.filter(
+        (entry) =>
+          entry.sql.includes("UPDATE telegram_subscribers") &&
+          entry.sql.includes("alert_launch=0"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      history.filter((entry) => entry.sql.includes("UPDATE telegram_subscriptions") && entry.sql.includes("alert_launch=0")),
+    ).toHaveLength(1);
+    expect(history.filter((entry) => entry.sql.includes("DELETE FROM telegram_preset_subscriptions"))).toHaveLength(1);
+    expect(history.filter((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"))).toHaveLength(blockedRows.length);
+    expect(history.filter((entry) => entry.sql.includes("UPDATE telegram_alert_job_targets"))).toHaveLength(blockedRows.length);
+    const deadLetters = history.filter((entry) => entry.sql.includes("INSERT INTO telegram_alert_dead_letters"));
+    expect(deadLetters).toHaveLength(blockedRows.length);
+    expect(deadLetters.map((entry) => entry.binds[10])).toEqual(blockedRows.map(() => "blocked_disabled"));
+  });
+
   it("treats a stale first strike (older than 24h) as a fresh first strike", async () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue({
