@@ -144,7 +144,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Frontend hooks
 
-- `src/hooks/api-hooks.ts` - dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions, useBluechipRatings, useDailyDigest, useDepegResolver, useDepegResolverReview
+- `src/hooks/api-hooks.ts` - QueryControlOverrides, createRegisteredApiPollingQueryOptions, createRegisteredApiPollingQueryOptionsWithMeta, createRegisteredStaticQueryOptions, dexLiquidityHistoryQueryOptions, safetyScoreHistoryQueryOptions
 - `src/hooks/use-admin-polling-query.ts` - useAdminPollingQuery
 - `src/hooks/use-api-key-request-form-state.ts` - useApiKeyRequestFormState
 - `src/hooks/use-api-key-requests.ts` - useApiKeyRequests
@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
-- ... 346 more files omitted; use `rg --files src/components` for the full list.
+- ... 347 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
