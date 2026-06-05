@@ -1,6 +1,7 @@
 import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { runWithOverloadRetry } from "./cron-lease";
+import { batchExecute } from "./db";
 
 export type RedemptionBackstopSnapshotRecord = RedemptionBackstopEntry;
 
@@ -469,21 +470,6 @@ export async function pruneRedemptionBackstopRunRetention(
   };
 }
 
-async function executeStatementChunks(
-  db: D1Database,
-  statements: D1PreparedStatement[],
-  chunkSize: number,
-): Promise<number> {
-  let changes = 0;
-  for (let index = 0; index < statements.length; index += chunkSize) {
-    const result = await runWithOverloadRetry(() => db.batch(statements.slice(index, index + chunkSize)));
-    for (const row of result) {
-      changes += Number(row?.meta?.changes ?? 0);
-    }
-  }
-  return changes;
-}
-
 async function countRunRows(
   db: D1Database,
   runId: string,
@@ -581,7 +567,7 @@ export async function upsertRedemptionBackstopSnapshots(
     }
     // Run rows are the immutable snapshot source. They must be complete before
     // the run can become readable or any legacy current rows are touched.
-    runRowsWrittenCount = await executeStatementChunks(db, runRowStatements, 30);
+    runRowsWrittenCount = await batchExecute(db, runRowStatements, 30);
 
     const rowCount = await countRunRows(db, runId);
     runRowsWrittenCount = rowCount.rowCount;
@@ -591,7 +577,7 @@ export async function upsertRedemptionBackstopSnapshots(
 
     writePhase = "history";
     const historyStatements = records.map((record) => buildHistoryUpsert(db, record, snapshotDate, runId));
-    historyWrittenCount = await executeStatementChunks(db, historyStatements, 80);
+    historyWrittenCount = await batchExecute(db, historyStatements, 80);
 
     const recordBounds = resolveRunBounds(records);
     const minUpdatedAt = rowCount.minUpdatedAt ?? recordBounds.minUpdatedAt;
@@ -626,7 +612,7 @@ export async function upsertRedemptionBackstopSnapshots(
     const currentStatements = records.map((record) => buildCurrentUpsert(db, record, runId));
     const warnings: string[] = [];
     try {
-      currentMirroredCount = await executeStatementChunks(db, currentStatements, 30);
+      currentMirroredCount = await batchExecute(db, currentStatements, 30);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       warnings.push(`Current mirror update failed after completed run rows were written: ${message}`);
