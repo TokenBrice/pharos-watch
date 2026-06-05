@@ -5,22 +5,22 @@ import {
   DECIMALS_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
   encodeBalanceOfCallData,
-  encodeUint256Arg,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   decimalNumberFromBigInt,
-  fetchOnchainRawCall,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
-  reserveDegradedWarning,
 } from "./helpers";
+import {
+  ERC4626_ASSET_SELECTOR,
+  ERC4626_TOTAL_ASSETS_SELECTOR,
+  computeErc4626CollateralizationRatio,
+  makeContractRawCaller,
+} from "./erc4626";
 
-const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
-const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
-const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
 const MAX_ERC20_DECIMALS = 36;
 const RATIO_SCALE = 1_000_000_000_000n;
 
@@ -103,18 +103,16 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   const timeout = 12_000;
-  const call = (data: string) =>
-    fetchOnchainRawCall({
-      contract: contractAddress,
-      data,
-      signal,
-      ctx: _ctx,
-      rpcMode: primaryInput.rpcMode,
-      chain: primaryInput.chain,
-      rpcUrl: sliceConfig.rpcUrl,
-      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-      timeoutMs: timeout,
-    });
+  const call = makeContractRawCaller({
+    contractAddress,
+    signal,
+    ctx: _ctx,
+    rpcMode: primaryInput.rpcMode,
+    chain: primaryInput.chain,
+    rpcUrl: sliceConfig.rpcUrl,
+    fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+    timeoutMs: timeout,
+  });
   const [assetResult, totalAssetsResult] = await Promise.all([
     call(ERC4626_ASSET_SELECTOR),
     call(ERC4626_TOTAL_ASSETS_SELECTOR),
@@ -148,32 +146,18 @@ export async function fetchErc4626SingleAssetReserves(
   // NAV cross-check: totalSupply() shares valued through convertToAssets() vs totalAssets()
   const totalSupplyResult = await call(TOTAL_SUPPLY_SELECTOR);
 
-  let collateralizationRatio: number | undefined;
-  let convertToAssetsRaw: bigint | undefined;
   let totalSupplyRaw: bigint | undefined;
   if (totalSupplyResult) {
     totalSupplyRaw = BigInt(totalSupplyResult);
-    if (totalSupplyRaw > 0n) {
-      const convertResult = await call(
-        `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
-      );
-      if (convertResult) {
-        convertToAssetsRaw = BigInt(convertResult);
-        if (totalAssetsRaw > 0n) {
-          collateralizationRatio = Number(convertToAssetsRaw) / Number(totalAssetsRaw);
-          if (
-            Number.isFinite(collateralizationRatio)
-            && Math.abs(collateralizationRatio - 1) > 0.01
-          ) {
-            warnings.push(reserveDegradedWarning(
-              "erc4626-nav-divergence",
-              `convertToAssets(totalSupply) diverges from totalAssets by ${((collateralizationRatio - 1) * 100).toFixed(2)}%`,
-            ));
-          }
-        }
-      }
-    }
   }
+  const navCheck = await computeErc4626CollateralizationRatio({
+    call,
+    totalAssetsRaw,
+    totalSupplyRaw,
+    warningCode: "erc4626-nav-divergence",
+  });
+  const { collateralizationRatio, convertToAssetsRaw } = navCheck;
+  warnings.push(...navCheck.warnings);
 
   let redemptionCapacity: RedemptionCapacityTelemetry | null = null;
   if (assetAddress) {

@@ -1,21 +1,20 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR, encodeUint256Arg } from "../../lib/evm-selectors";
+import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
-  fetchOnchainRawCall,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
-  reserveDegradedWarning,
   reserveInfoWarning,
 } from "./helpers";
-
-// ERC-4626 selectors (also supported by ERC-7540, which is a superset).
-const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
-const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
-const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+import {
+  ERC4626_ASSET_SELECTOR,
+  ERC4626_TOTAL_ASSETS_SELECTOR,
+  computeErc4626CollateralizationRatio,
+  makeContractRawCaller,
+} from "./erc4626";
 
 /**
  * Centrifuge V3 / ERC-7540 vault adapter.
@@ -43,18 +42,16 @@ export async function fetchCentrifugeVaultReserves(
   }
 
   const timeout = 12_000;
-  const call = (data: string) =>
-    fetchOnchainRawCall({
-      contract: contractAddress,
-      data,
-      signal,
-      ctx: _ctx,
-      rpcMode: primaryInput.rpcMode,
-      chain: primaryInput.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs: timeout,
-    });
+  const call = makeContractRawCaller({
+    contractAddress,
+    signal,
+    ctx: _ctx,
+    rpcMode: primaryInput.rpcMode,
+    chain: primaryInput.chain,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs: timeout,
+  });
 
   const [assetResult, totalAssetsResult, totalSupplyResult] = await Promise.all([
     call(ERC4626_ASSET_SELECTOR),
@@ -172,30 +169,14 @@ export async function fetchCentrifugeVaultReserves(
   const warnings: LiveReserveWarning[] = [];
 
   // NAV cross-check: convertToAssets(totalSupply) vs totalAssets().
-  let collateralizationRatio: number | undefined;
-  let convertToAssetsRaw: bigint | undefined;
-  if (totalSupplyRaw != null) {
-    if (totalSupplyRaw > 0n) {
-      const convertResult = await call(
-        `${ERC4626_CONVERT_TO_ASSETS_SELECTOR}${encodeUint256Arg(totalSupplyRaw)}`,
-      );
-      if (convertResult) {
-        convertToAssetsRaw = BigInt(convertResult);
-        if (totalAssetsRaw > 0n) {
-          collateralizationRatio = Number(convertToAssetsRaw) / Number(totalAssetsRaw);
-          if (
-            Number.isFinite(collateralizationRatio)
-            && Math.abs(collateralizationRatio - 1) > 0.01
-          ) {
-            warnings.push(reserveDegradedWarning(
-              "centrifuge-vault-nav-divergence",
-              `convertToAssets(totalSupply) diverges from totalAssets by ${((collateralizationRatio - 1) * 100).toFixed(2)}%`,
-            ));
-          }
-        }
-      }
-    }
-  }
+  const navCheck = await computeErc4626CollateralizationRatio({
+    call,
+    totalAssetsRaw,
+    totalSupplyRaw,
+    warningCode: "centrifuge-vault-nav-divergence",
+  });
+  const { collateralizationRatio, convertToAssetsRaw } = navCheck;
+  warnings.push(...navCheck.warnings);
 
   return {
     slices: [
