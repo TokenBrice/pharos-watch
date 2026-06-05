@@ -292,7 +292,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
 - `src/components/command-palette-actions.ts` - CommandPaletteVerbExecutor, CommandPaletteVerbPreview, buildVerbPreview, clampCommandPaletteSelectedIndex, executeParsedVerb
-- ... 345 more files omitted; use `rg --files src/components` for the full list.
+- ... 344 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -617,7 +617,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/challenger-load.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-persistence.ts` - loadPublishedDexPoolChallengers
 - `worker/src/cron/dex-liquidity/challenger-publish.ts` - DexPriceChallengerPoolRow, DexPriceChallengerPublicationInput, DexPriceChallengerPublicationPlan, DexPriceChallengerSnapshotRow, DexPriceChallengerTableState, buildDexPriceChallengerPublicationPlan
-- ... 305 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 306 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
