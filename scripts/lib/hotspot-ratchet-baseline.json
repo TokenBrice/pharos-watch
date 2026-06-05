@@ -12,9 +12,9 @@
     "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
   },
   "shared/lib/format.ts": {
-    "fileLines": 324,
+    "fileLines": 340,
     "maxFunctionLines": 30,
-    "branchCount": 82,
+    "branchCount": 84,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 306,

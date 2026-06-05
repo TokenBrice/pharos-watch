@@ -159,14 +159,6 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
-  "src/components/depeg-resolver-reviewer-module.tsx": {
-    "disposition": "queued-p4",
-    "notes": "DDR reviewer UI remains a large operator surface that combines filters, review state, table projection, and row rendering. It surfaced after the row-card extraction reduced a neighboring hotspot.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Extract reviewer filter state, row projection, and review-action panels in a focused DDR reviewer cleanup."
-  },
   "src/app/stablecoin/[id]/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Stablecoin detail client still owns route orchestration, tab state, detail view-model wiring, and page section rendering. It is outside this audit remediation tranche and should be handled as a dedicated detail-route split.",
@@ -182,13 +174,5 @@
     "createdAt": "2026-05-30",
     "reviewAfter": "2026-08-30",
     "nextAction": "Separate URL/storage adapters from pure selector-state transitions in the next picker maintenance pass."
-  },
-  "src/components/peg-deviation-chart.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Peg deviation chart owns chart domain shaping, annotations, tooltip branches, and responsive rendering in one visualization module. Split data shaping from chart rendering in the next chart-component cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
   }
 }
