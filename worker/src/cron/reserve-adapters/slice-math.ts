@@ -24,7 +24,7 @@ interface UnknownExposureWarningOptions {
   thresholdPct?: number;
 }
 
-function parseBoundedDecimals(value: unknown): number | null {
+export function parseBoundedDecimals(value: unknown): number | null {
   if (typeof value === "bigint") {
     return value >= 0n && value <= BigInt(MAX_DECIMALS) ? Number(value) : null;
   }

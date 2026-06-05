@@ -23,6 +23,7 @@ import {
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 import { decodeAddressWord } from "./abi-decode";
+import { validateDecimals } from "./slice-math";
 
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
@@ -30,10 +31,6 @@ const GET_ASSET_PRICE_SELECTOR = "0xb3596f07";
 const TOKEN_TO_RWA_ORACLE_SELECTOR = "0xeca6f018";
 const GET_PRICE_DATA_SELECTOR = "0xa4a28168";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
-/** Max decimals we accept for ERC-20 or oracle reads. ERC-20 spec is uint8 (≤255);
- *  we cap at 36 to allow high-precision oracles while rejecting overflow values
- *  that would corrupt downstream `10n ** BigInt(decimals)` math. */
-const MAX_DECIMALS = 36;
 
 export interface ChainlinkNavParams {
   oracleAddress: string;
@@ -69,11 +66,11 @@ function decodeDecimalsResult(raw: bigint | null, source: string): number {
   if (raw == null) {
     throw new Error(`chainlink-nav: ${source} decimals() call failed`);
   }
-  const decimals = Number(raw);
-  if (!Number.isSafeInteger(decimals) || decimals < 0 || decimals > MAX_DECIMALS) {
+  try {
+    return validateDecimals(raw, `chainlink-nav: ${source} decimals`);
+  } catch {
     throw new Error(`chainlink-nav: ${source} decimals out of range (${raw})`);
   }
-  return decimals;
 }
 
 export function parseOndoPriceData(raw: string): { price: bigint; updatedAt: number } {

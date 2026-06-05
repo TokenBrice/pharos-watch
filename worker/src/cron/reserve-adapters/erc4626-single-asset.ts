@@ -20,8 +20,8 @@ import {
   computeErc4626CollateralizationRatio,
   makeContractRawCaller,
 } from "./erc4626";
+import { parseBoundedDecimals } from "./slice-math";
 
-const MAX_ERC20_DECIMALS = 36;
 const RATIO_SCALE = 1_000_000_000_000n;
 
 interface SingleAssetSliceConfig {
@@ -57,8 +57,7 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
 }
 
 function decodeErc20Decimals(raw: bigint | null): number | null {
-  if (raw == null || raw > BigInt(MAX_ERC20_DECIMALS)) return null;
-  return Number(raw);
+  return raw == null ? null : parseBoundedDecimals(raw);
 }
 
 function ratioFromRaw(numerator: bigint, denominator: bigint): number | undefined {

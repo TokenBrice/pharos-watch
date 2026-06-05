@@ -23,6 +23,7 @@ import {
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { decodeAddressWord, decodeBoolWord } from "./abi-decode";
+import { validateDecimals } from "./slice-math";
 
 interface ReserveProtocolDtfBasketEntry {
   address?: string;
@@ -70,7 +71,6 @@ const FULLY_COLLATERALIZED_SELECTOR = "0xe45a5b2d";
 const FLOOR_ROUNDING = 0n;
 const APPLY_ISSUANCE_PREMIUM = 0n;
 const PRICE_DECIMALS = 18;
-const MAX_DECIMALS = 36;
 
 function normalizeAddress(value: string | undefined): string | null {
   const trimmed = value?.trim().toLowerCase();
@@ -124,11 +124,11 @@ function decodeDecimals(raw: bigint | null, context: string): number {
   if (raw == null) {
     throw new Error(`reserve-protocol-dtf ${context} decimals() call failed`);
   }
-  const decimals = Number(raw);
-  if (!Number.isSafeInteger(decimals) || decimals < 0 || decimals > MAX_DECIMALS) {
+  try {
+    return validateDecimals(raw, `reserve-protocol-dtf ${context} decimals`);
+  } catch {
     throw new Error(`reserve-protocol-dtf ${context} decimals out of range (${raw})`);
   }
-  return decimals;
 }
 
 function decodeBoolResult(raw: string | null): boolean | null {
