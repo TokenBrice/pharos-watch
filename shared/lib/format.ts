@@ -135,6 +135,14 @@ export function formatAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+export function slugifyId(value: string, options: { stripPunctuation?: boolean } = {}): string {
+  const source = options.stripPunctuation ? value.replace(/[`"'()[\]{}]/g, "") : value;
+  return source
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export function formatTrackingSpanDays(days: number): string {
   if (!Number.isFinite(days)) return "N/A";
   if (days < 30) return `${days}d`;
@@ -284,8 +292,16 @@ export function formatChartPercent(value: number, decimals = 1): string {
 }
 
 /** Format a 0-100 score to one decimal. Returns "-" for nullish values. */
-export function formatScore(value: number | null | undefined): string {
-  return isFiniteNumber(value) ? value.toFixed(1) : "-";
+export function formatScore(
+  value: number | null | undefined,
+  options: { trimInteger?: boolean } = {},
+): string {
+  if (!isFiniteNumber(value)) return "-";
+  return options.trimInteger && Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+export function formatScoreTrimmed(value: number | null | undefined): string {
+  return formatScore(value, { trimInteger: true });
 }
 
 type ChartDateFormat = "short" | "month-year" | "compact" | "with-time" | "long" | "full";

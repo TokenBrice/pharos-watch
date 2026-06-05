@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ShieldOff } from "lucide-react";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
-import { formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
+import { formatAddress, formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -45,16 +45,6 @@ function eventBadge(eventType: BlacklistEvent["eventType"]) {
     label: "Destroy",
     className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 text-xs",
   };
-}
-
-function shortHash(hash: string): string {
-  if (hash.length <= 12) return hash;
-  return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
-}
-
-function shortAddress(addr: string): string {
-  if (addr.length <= 12) return addr;
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
 const AMOUNT_SOURCE_LABELS: Record<string, string> = {
@@ -166,7 +156,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                   rel="noopener noreferrer"
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {shortAddress(evt.address)}
+                  {formatAddress(evt.address)}
                 </a>
               </TableCell>
               <TableCell className="text-right font-mono tabular-nums text-sm">
@@ -184,7 +174,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                   className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
                   aria-label="View transaction on block explorer"
                 >
-                  <span className="hidden md:inline">{shortHash(evt.txHash)}</span>
+                  <span className="hidden md:inline">{formatAddress(evt.txHash)}</span>
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               </TableCell>

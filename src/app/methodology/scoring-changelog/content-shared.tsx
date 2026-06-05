@@ -3,6 +3,7 @@ import {
   SAFETY_SCORE_CHANGELOG,
 } from "@shared/lib/safety-score-version";
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
+import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SCORING_CHANGELOG_BY_VERSION = new Map(
@@ -10,7 +11,7 @@ const SCORING_CHANGELOG_BY_VERSION = new Map(
 );
 
 export function scoringAnchorId(version: string) {
-  return `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+  return `scoring-${slugifyId(version)}`;
 }
 
 function formatScoringDate(date: string) {

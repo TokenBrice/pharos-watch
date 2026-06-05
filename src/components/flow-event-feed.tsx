@@ -13,6 +13,7 @@ import { ExternalLink, ArrowDownUp } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
 import {
   formatCurrency,
+  formatAddress,
   formatTokenAmount,
   timeAgo,
   formatEventDate,
@@ -46,11 +47,6 @@ const FLOW_EVENT_COLUMNS: readonly DataTableColumn[] = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatTxHash(hash: string): string {
-  if (hash.length <= 12) return hash;
-  return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
-}
 
 function chainName(chainId: string): string {
   return CHAIN_META[chainId]?.name ?? chainId;
@@ -235,7 +231,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
                   className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
                   aria-label="View transaction on block explorer"
                 >
-                  <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
+                  <span className="hidden md:inline">{formatAddress(evt.txHash)}</span>
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
               </TableCell>
@@ -303,7 +299,7 @@ function FlowEventCard({ event }: { event: MintBurnEvent }) {
         className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
         aria-label="View transaction on block explorer"
       >
-        {formatTxHash(event.txHash)}
+        {formatAddress(event.txHash)}
         <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
       </a>
     </li>

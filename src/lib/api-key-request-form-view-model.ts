@@ -7,6 +7,7 @@ import {
   SELF_SERVE_API_KEY_EXPIRY_DAYS,
   buildPublicApiCurlCommand,
 } from "@shared/lib/public-api-contract";
+import { slugifyId } from "@shared/lib/format";
 import type {
   ApiKeySelfServeCadence,
   ApiKeySelfServeIssueResponse,
@@ -161,7 +162,7 @@ export function apiKeyRequestWorkflowReducer(
 }
 
 export function endpointId(path: string): string {
-  return `endpoint-${path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase()}`;
+  return `endpoint-${slugifyId(path)}`;
 }
 
 export function formatSelfServeExpiry(epochSeconds: number | null): string {

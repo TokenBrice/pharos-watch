@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
+import { slugifyId } from "@shared/lib/format";
 
 export interface MarkdownParagraphBlock {
   type: "paragraph";
@@ -71,14 +72,6 @@ const CONCISE_API_REFERENCE_SECTION_IDS = new Set([
   "polling-guidance",
   "rate-limits",
 ]);
-
-function slugifyHeading(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[`"'()[\]{}]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
 
 function isTableSeparatorLine(line: string) {
   const trimmed = line.trim();
@@ -356,7 +349,7 @@ function parseApiReferenceDocument(markdown: string): ApiReferenceDocument {
       flushBuffer();
       currentSubsection = null;
       currentSection = {
-        id: slugifyHeading(line.slice(3).trim()),
+        id: slugifyId(line.slice(3).trim(), { stripPunctuation: true }),
         title: line.slice(3).trim(),
         blocks: [],
         subsections: [],
@@ -371,7 +364,7 @@ function parseApiReferenceDocument(markdown: string): ApiReferenceDocument {
       const rawTitle = line.slice(4).trim();
       const methodMatch = rawTitle.replace(/`/g, "").match(/^(GET|POST)\s+/);
       currentSubsection = {
-        id: slugifyHeading(rawTitle),
+        id: slugifyId(rawTitle, { stripPunctuation: true }),
         title: rawTitle,
         method: methodMatch ? (methodMatch[1] as "GET" | "POST") : null,
         blocks: [],

@@ -2,6 +2,8 @@ import type { DigestEditorialCandidate, DigestInputData, DigestSignalChange } fr
 import { formatCurrency } from "@shared/lib/format";
 import { THREAT_BAND_ORDER } from "@shared/lib/classification";
 
+export { formatScoreTrimmed as formatScore } from "@shared/lib/format";
+
 export const CHANGE_LIMIT = 3;
 export const TRIGGER_LIMIT = 3;
 
@@ -33,10 +35,6 @@ export function candidateChange(candidate: DigestEditorialCandidate, detail?: st
 
 export function signedCurrency(value: number): string {
   return `${value >= 0 ? "+" : ""}${formatCurrency(value, 0)}`;
-}
-
-export function formatScore(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export function roundToStep(value: number, step: number, direction: "up" | "down"): number {

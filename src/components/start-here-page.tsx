@@ -5,6 +5,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import { slugifyId } from "@shared/lib/format";
 import {
   START_HERE_ATLAS,
   START_HERE_GLOSSARY,
@@ -12,13 +13,6 @@ import {
   START_HERE_SCORES,
   START_HERE_SHORTCUTS,
 } from "@/lib/start-here-content";
-
-function toDomId(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
 
 const GOAL_TONE_MAP = {
   amber: {
@@ -56,7 +50,7 @@ function GoalCard({
   tone: toneName,
   icon: Icon,
 }: (typeof START_HERE_GOALS)[number] & { order: number }) {
-  const goalId = toDomId(title);
+  const goalId = slugifyId(title);
   const titleId = `start-goal-${goalId}-title`;
   const tone = GOAL_TONE_MAP[toneName];
 

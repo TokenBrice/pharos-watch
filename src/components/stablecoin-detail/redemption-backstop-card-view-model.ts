@@ -233,7 +233,7 @@ function formatTelemetryKind(value: string): string {
   return value.replaceAll("-", " ");
 }
 
-function formatScoreValue(value: number): string {
+function formatScoreOutOf100(value: number): string {
   return `${Math.round(value)}/100`;
 }
 
@@ -265,7 +265,7 @@ function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContext
     }
   }
   if (entry.eventualRedeemabilityScore != null) {
-    items.push({ label: "Eventual score", value: formatScoreValue(entry.eventualRedeemabilityScore) });
+    items.push({ label: "Eventual score", value: formatScoreOutOf100(entry.eventualRedeemabilityScore) });
   }
   if (entry.capacityKind) {
     items.push({ label: "Capacity evidence", value: formatTelemetryKind(entry.capacityKind) });
@@ -295,10 +295,10 @@ function buildCostScenarioContext(entry: RedemptionBackstopEntry): OptionalMetri
   const scenarios = entry.costScenarioScores;
   if (!scenarios) return [];
   return [
-    scenarios.retail != null ? { label: "Retail cost", value: formatScoreValue(scenarios.retail) } : null,
-    scenarios.activeUser != null ? { label: "Active-user cost", value: formatScoreValue(scenarios.activeUser) } : null,
+    scenarios.retail != null ? { label: "Retail cost", value: formatScoreOutOf100(scenarios.retail) } : null,
+    scenarios.activeUser != null ? { label: "Active-user cost", value: formatScoreOutOf100(scenarios.activeUser) } : null,
     scenarios.institutional != null
-      ? { label: "Institutional cost", value: formatScoreValue(scenarios.institutional) }
+      ? { label: "Institutional cost", value: formatScoreOutOf100(scenarios.institutional) }
       : null,
   ].filter((item): item is OptionalMetricItem => item != null);
 }
@@ -307,11 +307,11 @@ function buildConfidenceContext(entry: RedemptionBackstopEntry): OptionalMetricI
   const details = entry.confidenceDetails;
   if (!details) return [];
   const items: OptionalMetricItem[] = [
-    { label: "Capacity evidence", value: formatScoreValue(details.capacityEvidenceQuality) },
-    { label: "Fee evidence", value: formatScoreValue(details.feeEvidenceQuality) },
-    { label: "Route freshness", value: formatScoreValue(details.routeStatusFreshness) },
-    { label: "Holder breadth", value: formatScoreValue(details.holderCohortBreadth) },
-    { label: "Source quality", value: formatScoreValue(details.sourceQuality) },
+    { label: "Capacity evidence", value: formatScoreOutOf100(details.capacityEvidenceQuality) },
+    { label: "Fee evidence", value: formatScoreOutOf100(details.feeEvidenceQuality) },
+    { label: "Route freshness", value: formatScoreOutOf100(details.routeStatusFreshness) },
+    { label: "Holder breadth", value: formatScoreOutOf100(details.holderCohortBreadth) },
+    { label: "Source quality", value: formatScoreOutOf100(details.sourceQuality) },
   ];
   if (details.reviewedDocAgeDays != null) {
     items.push({ label: "Reviewed docs age", value: `${Math.round(details.reviewedDocAgeDays)}d` });

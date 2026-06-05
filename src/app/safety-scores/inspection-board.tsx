@@ -58,7 +58,7 @@ function scoreTone(row: SafetyInspectionRow): {
   };
 }
 
-function formatScoreValue(score: number | null): string {
+function formatScoreOrNotRated(score: number | null): string {
   return score == null ? "NR" : String(score);
 }
 
@@ -95,7 +95,7 @@ export function SafetyInspectionBoard({
               <span className="text-xs text-muted-foreground">Weakest load</span>
             </div>
             <p className={cn("mt-1 font-mono text-lg font-bold tabular-nums", leadTone.text)}>
-              {model.leadFinding.shortLabel} {formatScoreValue(model.leadFinding.weightedScore ?? model.leadFinding.averageScore)}
+              {model.leadFinding.shortLabel} {formatScoreOrNotRated(model.leadFinding.weightedScore ?? model.leadFinding.averageScore)}
             </p>
           </div>
         </div>
@@ -144,7 +144,7 @@ export function SafetyInspectionBoard({
                     <p className="text-[11px] text-muted-foreground">{tone.label}</p>
                   </div>
                   <span className={cn("font-mono text-lg font-bold tabular-nums", tone.text)}>
-                    {formatScoreValue(score)}
+                    {formatScoreOrNotRated(score)}
                   </span>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted/45" aria-hidden="true">

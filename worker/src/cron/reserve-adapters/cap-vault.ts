@@ -1,4 +1,5 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { formatAddress } from "@shared/lib/format";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressArg } from "../../lib/evm-selectors";
@@ -101,7 +102,7 @@ function resolveAssetConfig(address: string, configs: Map<string, CapVaultAssetC
   const configured = configs.get(address.toLowerCase());
   return configured ?? {
     address: address.toLowerCase(),
-    name: `Cap asset ${address.slice(0, 6)}...${address.slice(-4)}`,
+    name: `Cap asset ${formatAddress(address)}`,
     risk: "high",
   };
 }

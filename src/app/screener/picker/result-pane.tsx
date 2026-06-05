@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getTemplate, type SelectorInput, type SelectorOutput, type SelectorRecommendation } from "@shared/lib/selector";
+import { formatScoreTrimmed as formatScore } from "@shared/lib/format";
 import { Bot, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CopyButton } from "@/components/copy-button";
@@ -519,10 +520,6 @@ function buildRelaxableConstraintsFromOutput(output: SelectorOutput): SelectorRe
 
 function summarizeMethodologyVersions(versions: SelectorOutput["methodologyVersions"]): string {
   return `safety ${versions.safetyScore}, peg/DEWS ${versions.pegScoreAndDews}, yield ${versions.yieldIntelligence}, bluechip ${versions.bluechipAlignment}, exclusions ${versions.exclusionFilters}`;
-}
-
-function formatScore(score: number): string {
-  return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
 
 function buildWhyText(rec: SelectorRecommendation): string {

@@ -27,6 +27,8 @@ import {
   formatDuration,
   timeAgo,
   formatAddress,
+  formatScoreTrimmed,
+  slugifyId,
 } from "../format";
 import { formatRelativeTimeMs } from "../relative-time";
 
@@ -34,6 +36,11 @@ describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));
   it("handles zero", () => expect(formatScore(0)).toBe("0.0"));
   it("handles 100", () => expect(formatScore(100)).toBe("100.0"));
+  it("can trim integer scores", () => {
+    expect(formatScore(100, { trimInteger: true })).toBe("100");
+    expect(formatScore(72.456, { trimInteger: true })).toBe("72.5");
+    expect(formatScoreTrimmed(80)).toBe("80");
+  });
   it("returns dash for null", () => expect(formatScore(null)).toBe("-"));
   it("returns dash for undefined", () => expect(formatScore(undefined)).toBe("-"));
   it("returns dash for non-finite values", () => {
@@ -389,6 +396,17 @@ describe("formatAddress", () => {
   });
   it("truncates 13-char addresses", () => {
     expect(formatAddress("1234567890123")).toBe("123456...0123");
+  });
+});
+
+describe("slugifyId", () => {
+  it("normalizes text into DOM-safe ids", () => {
+    expect(slugifyId("Safety Score v6.92")).toBe("safety-score-v6-92");
+  });
+
+  it("can strip punctuation before separator normalization", () => {
+    expect(slugifyId("foo(bar)", { stripPunctuation: true })).toBe("foobar");
+    expect(slugifyId("foo(bar)")).toBe("foo-bar");
   });
 });
 
