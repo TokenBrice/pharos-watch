@@ -3,8 +3,8 @@ import {
   buildContentSecurityPolicy,
   createCspNonce,
   isTelegramMiniAppPath,
-} from "../shared/lib/site-csp";
-import { SITE_ORIGIN } from "../shared/lib/runtime-origins";
+} from "@shared/lib/site-csp";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };
@@ -33,7 +33,7 @@ function parseQ(params: string[]): number {
   const qParam = params.find((param) => /^q\s*=/i.test(param));
   if (!qParam) return 1;
   const q = Number.parseFloat(qParam.split("=")[1]?.trim() ?? "");
-  if (!Number.isFinite(q)) return 0;
+  if (!Number.isFinite(q)) return 1;
   return Math.min(1, Math.max(0, q));
 }
 

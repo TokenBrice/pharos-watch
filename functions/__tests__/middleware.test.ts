@@ -53,7 +53,7 @@ describe("prefersMarkdown", () => {
     ["text/markdown;q=0", false],
     ["text/html;q=0,text/markdown;q=0", false],
     ["*/*", false],
-    ["text/markdown;q=not-a-number", false],
+    ["text/markdown;q=not-a-number", true],
   ])("parses %s", (accept, expected) => {
     expect(prefersMarkdown(accept)).toBe(expected);
   });
