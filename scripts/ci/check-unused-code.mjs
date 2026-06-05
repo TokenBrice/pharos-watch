@@ -98,10 +98,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
   "shared/lib/report-cards.ts::chainInfraLabel",
   "shared/lib/report-cards.ts::inferResilienceDefaults",
-  // Explicit no-op yield-risk scaffold kept public for the staged report-card integration.
-  "shared/lib/report-cards.ts::resolveReportCardYieldRiskAdjustment",
-  "shared/lib/report-cards.ts::ReportCardYieldRiskAdjustment",
-  "shared/lib/report-cards.ts::ReportCardYieldRiskNoOpReason",
   // Consumed by scripts/ci/check-site-csp-sync.ts and static-export tooling
   // outside the runtime source graph scanned by this checker.
   "shared/lib/site-csp.ts::buildStaticContentSecurityPolicy",
