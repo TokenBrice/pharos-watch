@@ -92,6 +92,8 @@ interface WeeklyDepegSignal {
   suppressReason?: string;
 }
 
+type SpikeDepeg = Pick<WeeklyDepegSignal, "id" | "date" | "symbol" | "bps" | "mcapUsd" | "impactScore" | "kind" | "critical">;
+
 interface WeeklyRiskLeaderboardSignal {
   id: string;
   kind: WeeklyRiskKind;
@@ -107,8 +109,8 @@ interface WeeklyRiskLeaderboardSignal {
 interface WeeklySpikeMetrics {
   minPsi: { date: string; score: number; band: string } | null;
   minGauge: { date: string; score: number } | null;
-  maxDepeg: { id: string; date: string; symbol: string; bps: number; mcapUsd: number; impactScore: number; kind: "active" | "resolved"; critical: boolean } | null;
-  maxDepegImpact: { id: string; date: string; symbol: string; bps: number; mcapUsd: number; impactScore: number; kind: "active" | "resolved"; critical: boolean } | null;
+  maxDepeg: SpikeDepeg | null;
+  maxDepegImpact: SpikeDepeg | null;
 }
 
 interface WeeklyInputData {
@@ -192,6 +194,20 @@ function weeklySignalId(kind: WeeklyRiskKind, parts: readonly string[]): string 
     .toLowerCase()
     .replace(/[^a-z0-9:.-]+/g, "-")
     .replace(/-+/g, "-");
+}
+
+function toSpikeDepeg(signal: WeeklyDepegSignal | undefined): SpikeDepeg | null {
+  if (!signal) return null;
+  return {
+    id: signal.id,
+    date: signal.date,
+    symbol: signal.symbol,
+    bps: signal.bps,
+    mcapUsd: signal.mcapUsd,
+    impactScore: signal.impactScore,
+    kind: signal.kind,
+    critical: signal.critical,
+  };
 }
 
 function parseWeeklyDigestMeta(
@@ -584,12 +600,7 @@ function buildWeeklyInputData(
         mcapUsd: transition.mcapUsd,
         date: d.date,
       }))
-      .filter((transition): transition is { symbol: string; fromGrade: string; toGrade: string; mcapUsd: number; date: string } =>
-        typeof transition.symbol === "string"
-        && typeof transition.fromGrade === "string"
-        && typeof transition.toGrade === "string"
-        && typeof transition.mcapUsd === "number",
-      ),
+      .filter((transition) => transition.mcapUsd != null),
     (row) => row.mcapUsd,
   );
   const topYieldAnomalies = topSignals(
@@ -625,30 +636,8 @@ function buildWeeklyInputData(
   const spikeMetrics: WeeklySpikeMetrics = {
     minPsi: psiObservations.length > 0 ? [...psiObservations].sort((a, b) => a.score - b.score)[0] : null,
     minGauge: gaugeObservations.length > 0 ? [...gaugeObservations].sort((a, b) => a.score - b.score)[0] : null,
-    maxDepeg: maxDepegByBps
-      ? {
-        id: maxDepegByBps.id,
-        date: maxDepegByBps.date,
-        symbol: maxDepegByBps.symbol,
-        bps: maxDepegByBps.bps,
-        mcapUsd: maxDepegByBps.mcapUsd,
-        impactScore: maxDepegByBps.impactScore,
-        kind: maxDepegByBps.kind,
-        critical: maxDepegByBps.critical,
-      }
-      : null,
-    maxDepegImpact: maxDepegByImpact
-      ? {
-        id: maxDepegByImpact.id,
-        date: maxDepegByImpact.date,
-        symbol: maxDepegByImpact.symbol,
-        bps: maxDepegByImpact.bps,
-        mcapUsd: maxDepegByImpact.mcapUsd,
-        impactScore: maxDepegByImpact.impactScore,
-        kind: maxDepegByImpact.kind,
-        critical: maxDepegByImpact.critical,
-      }
-      : null,
+    maxDepeg: toSpikeDepeg(maxDepegByBps),
+    maxDepegImpact: toSpikeDepeg(maxDepegByImpact),
   };
 
   const riskLeaderboard = buildWeeklyRiskLeaderboard({
