@@ -697,6 +697,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-archetype-explainer-coverage.test.ts`
 - `scripts/__tests__/check-attestor-tier-coverage.test.ts`
 - `scripts/__tests__/check-critical-coverage.test.ts`
+- `scripts/__tests__/check-env-contract.test.ts` - After, Env
 - `scripts/__tests__/check-glossary-coverage.test.ts`
 - `scripts/__tests__/check-redemption-backstops.test.ts`
 - `scripts/__tests__/check-reserve-fixture-freshness.test.ts`
@@ -744,5 +745,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
 - `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectBlacklistStatus, projectCoin, projectGeniusProfile, projectMintAuthoritySummary, readCanonicalClientFields
-- `scripts/ci/check-agent-doc-sync.mjs`
-- ... 152 more files omitted; use `rg --files scripts` for the full list.
+- ... 153 more files omitted; use `rg --files scripts` for the full list.
