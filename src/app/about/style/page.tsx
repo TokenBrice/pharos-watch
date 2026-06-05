@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -14,6 +13,7 @@ import {
   STYLE_TONE,
   STYLE_TONE_NOTE,
 } from "./content";
+import { createAboutEditorialSection } from "../editorial-helpers";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Style Guide — Pharos",
@@ -23,31 +23,10 @@ export const metadata: Metadata = buildPageMetadata({
   ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
 
-function StyleSection({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-labelledby={`style-${eyebrow.replace(/\s+/g, "-").toLowerCase()}`} className="space-y-5">
-      <header className="space-y-2">
-        <p className="pharos-kicker">{eyebrow}</p>
-        <h2
-          id={`style-${eyebrow.replace(/\s+/g, "-").toLowerCase()}`}
-          className={`${digestDisplay.className} text-[1.55rem] font-semibold leading-tight tracking-[-0.01em] text-foreground sm:text-[1.7rem]`}
-        >
-          {title}
-        </h2>
-        <div className="h-px bg-border/60" aria-hidden="true" />
-      </header>
-      {children}
-    </section>
-  );
-}
+const StyleSection = createAboutEditorialSection(
+  "style",
+  `${digestDisplay.className} text-[1.55rem] font-semibold leading-tight tracking-[-0.01em] text-foreground sm:text-[1.7rem]`,
+);
 
 export default function AboutStylePage() {
   return (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { INLINE_LINK_CLASS } from "../editorial-helpers";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Editorial Policy: AI-Authored Content on Pharos",
@@ -11,9 +12,6 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/about/editorial/",
   ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
-
-const INLINE_LINK_CLASS =
-  "pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue";
 
 export default function AboutEditorialPage() {
   return (

@@ -11,6 +11,7 @@ import {
   PRINCIPLES_CORRECTIONS,
   PRINCIPLES_LEAD,
 } from "./content";
+import { INLINE_LINK_CLASS } from "../editorial-helpers";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Principles: Independence, Methodology, and Disclosure",
@@ -19,9 +20,6 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/about/principles/",
   ogImage: `${SITE_ORIGIN}/og-editorial-about.png`,
 });
-
-const INLINE_LINK_CLASS =
-  "pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-frost-blue";
 
 export default function AboutPrinciplesPage() {
   return (
