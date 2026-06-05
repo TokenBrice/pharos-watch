@@ -1,7 +1,7 @@
 "use client";
 
-import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import { MethodologyHint } from "@/components/methodology-hint";
+import { type ReactNode } from "react";
+import { MethodologyHint, MethodologyTriggerButton } from "@/components/methodology-hint";
 import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
 import { cn } from "@/lib/utils";
 
@@ -34,36 +34,6 @@ interface ScoreBadgeWrapperProps {
 const SUFFIX_CLASS =
   "ml-1 pharos-numeric text-[10px] text-muted-foreground select-none";
 
-const ScoreBadgeTrigger = forwardRef<
-  HTMLButtonElement,
-  ComponentPropsWithoutRef<"button"> & { topic: MethodologyContextKey }
->(function ScoreBadgeTrigger({ topic, children, className, onClick, onKeyDown, type = "button", ...props }, ref) {
-  const item = METHODOLOGY_CONTEXT[topic];
-
-  return (
-    <button
-      {...props}
-      ref={ref}
-      type={type}
-      aria-label={`Explain ${item.title}`}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick?.(event);
-      }}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        onKeyDown?.(event);
-      }}
-      className={cn(
-        "pharos-focus-ring inline-flex min-h-6 appearance-none items-center rounded-full border-0 bg-transparent p-0 text-inherit",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
-});
-
 /**
  * Wraps a score badge with a methodology-aware tooltip (W1-C `<Term>` dispatch
  * via `MethodologyHint`) and, optionally, an inline `vX.Y` version suffix.
@@ -84,7 +54,12 @@ export function ScoreBadgeWrapper({
   const showSuffix = variant === "suffix" && !!versionLabel;
   const trigger = interactive ? (
     <MethodologyHint topic={topic} asChild>
-      <ScoreBadgeTrigger topic={topic}>{children}</ScoreBadgeTrigger>
+      <MethodologyTriggerButton
+        topic={topic}
+        className="pharos-focus-ring inline-flex min-h-6 appearance-none items-center rounded-full border-0 bg-transparent p-0 text-inherit"
+      >
+        {children}
+      </MethodologyTriggerButton>
     </MethodologyHint>
   ) : (
     children

@@ -17,7 +17,7 @@ interface MethodologyHintProps {
   children?: ReactNode;
   /**
    * When true, pass `children` directly to Sheet/Tooltip triggers via `asChild`
-   * without wrapping them in the dotted-underline `InlineHintTrigger`. Use this
+   * without wrapping them in the dotted-underline default trigger. Use this
    * for non-text triggers such as score badges where adding an extra `<button>`
    * around an already-styled element would cause visual conflicts or nested
    * interactive elements.
@@ -28,6 +28,65 @@ interface MethodologyHintProps {
 function stopPropagation(event: SyntheticEvent) {
   event.stopPropagation();
 }
+
+type MethodologyContextItem = (typeof METHODOLOGY_CONTEXT)[MethodologyContextKey];
+type MethodologyTriggerButtonProps = ComponentPropsWithoutRef<"button"> & {
+  topic: MethodologyContextKey;
+};
+
+function MethodologyLinks({
+  item,
+  showVersion = true,
+}: {
+  item: MethodologyContextItem;
+  showVersion?: boolean;
+}) {
+  return (
+    <>
+      {showVersion && item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}
+      <Link
+        href={item.methodologyPath}
+        className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
+      >
+        View methodology
+      </Link>
+      {item.changelogPath ? (
+        <Link
+          href={item.changelogPath}
+          className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
+        >
+          Version history &rarr;
+        </Link>
+      ) : null}
+    </>
+  );
+}
+
+export const MethodologyTriggerButton = forwardRef<HTMLButtonElement, MethodologyTriggerButtonProps>(
+  function MethodologyTriggerButton({ topic, className, onClick, onKeyDown, type = "button", children, ...props }, ref) {
+    const item = METHODOLOGY_CONTEXT[topic];
+
+    return (
+      <button
+        {...props}
+        ref={ref}
+        type={type}
+        aria-label={`Explain ${item.title}`}
+        onClick={(event) => {
+          stopPropagation(event);
+          onClick?.(event);
+        }}
+        onKeyDown={(event) => {
+          stopPropagation(event);
+          onKeyDown?.(event);
+        }}
+        className={className}
+      >
+        {children}
+      </button>
+    );
+  },
+);
 
 function HintBody({
   topic,
@@ -46,85 +105,11 @@ function HintBody({
         {item.detail ? <p className="text-[11px] leading-relaxed text-muted-foreground">{item.detail}</p> : null}
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-        {item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}
-        <Link
-          href={item.methodologyPath}
-          className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
-        >
-          View methodology
-        </Link>
-        {item.changelogPath ? (
-          <Link
-            href={item.changelogPath}
-            className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
-          >
-            Version history &rarr;
-          </Link>
-        ) : null}
+        <MethodologyLinks item={item} />
       </div>
     </div>
   );
 }
-
-const HintButton = forwardRef<
-  HTMLButtonElement,
-  ComponentPropsWithoutRef<"button"> & { topic: MethodologyContextKey }
->(function HintButton({ topic, className, onClick, onKeyDown, type = "button", ...props }, ref) {
-  const item = METHODOLOGY_CONTEXT[topic];
-
-  return (
-    <button
-      {...props}
-      ref={ref}
-      type={type}
-      aria-label={`Explain ${item.title}`}
-      onClick={(event) => {
-        stopPropagation(event);
-        onClick?.(event);
-      }}
-      onKeyDown={(event) => {
-        stopPropagation(event);
-        onKeyDown?.(event);
-      }}
-      className={cn(
-        "pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:h-6 md:w-6 dark:text-frost-blue",
-        className,
-      )}
-    >
-      <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
-    </button>
-  );
-});
-
-const InlineHintTrigger = forwardRef<
-  HTMLButtonElement,
-  ComponentPropsWithoutRef<"button"> & { topic: MethodologyContextKey }
->(function InlineHintTrigger({ topic, className, onClick, onKeyDown, type = "button", children, ...props }, ref) {
-  const item = METHODOLOGY_CONTEXT[topic];
-
-  return (
-    <button
-      {...props}
-      ref={ref}
-      type={type}
-      aria-label={`Explain ${item.title}`}
-      onClick={(event) => {
-        stopPropagation(event);
-        onClick?.(event);
-      }}
-      onKeyDown={(event) => {
-        stopPropagation(event);
-        onKeyDown?.(event);
-      }}
-      className={cn(
-        "pharos-focus-ring inline leading-6 underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground data-[state=open]:decoration-foreground",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
-});
 
 export function MethodologyHint({
   topic,
@@ -141,15 +126,31 @@ export function MethodologyHint({
   // Radix Slot — caller must supply a single ReactElement.
   const renderTrigger = (): ReactNode => {
     if (!hasInlineTrigger) {
-      return <HintButton topic={topic} className={buttonClassName} />;
+      return (
+        <MethodologyTriggerButton
+          topic={topic}
+          className={cn(
+            "pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:h-6 md:w-6 dark:text-frost-blue",
+            buttonClassName,
+          )}
+        >
+          <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
+        </MethodologyTriggerButton>
+      );
     }
     if (asChild) {
       return children;
     }
     return (
-      <InlineHintTrigger topic={topic} className={buttonClassName}>
+      <MethodologyTriggerButton
+        topic={topic}
+        className={cn(
+          "pharos-focus-ring inline leading-6 underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground data-[state=open]:decoration-foreground",
+          buttonClassName,
+        )}
+      >
         {children}
-      </InlineHintTrigger>
+      </MethodologyTriggerButton>
     );
   };
 
@@ -232,21 +233,7 @@ export function MethodologyCardActions({
 
   return (
     <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 pt-3 text-xs text-muted-foreground", className)}>
-      {showVersion && item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}
-      <Link
-        href={item.methodologyPath}
-        className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
-      >
-        View methodology
-      </Link>
-      {item.changelogPath ? (
-        <Link
-          href={item.changelogPath}
-          className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
-        >
-          Version history &rarr;
-        </Link>
-      ) : null}
+      <MethodologyLinks item={item} showVersion={showVersion} />
       {showWorkToggle ? <ShowYourWorkToggle /> : null}
       {trailing ? <span className="ml-auto">{trailing}</span> : null}
     </div>
