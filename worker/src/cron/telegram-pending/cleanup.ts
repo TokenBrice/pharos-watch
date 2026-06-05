@@ -11,6 +11,11 @@ import type { DeadLetterPendingRow } from "./types";
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
 type ExpiredPendingReasonClass = "explicit-ttl" | "default-ttl" | "corrupt-expiry";
 type PriorFailureReasonClass = "none" | "terminal" | "retryable" | "unknown";
+type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
+type PendingAlertFilterClause = {
+  whereSql: "chat_id = ?" | "created_at < ?";
+  binds: readonly [string] | readonly [number];
+};
 
 const TERMINAL_PENDING_ERROR_CLASSES = new Set(["blocked", "bad_request", "auth_error"]);
 const RETRYABLE_PENDING_ERROR_CLASSES = new Set([
@@ -20,6 +25,27 @@ const RETRYABLE_PENDING_ERROR_CLASSES = new Set([
   "network",
   "unknown",
 ]);
+const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
+  "id",
+  "chat_id",
+  "message_html",
+  "created_at",
+  "attempts",
+  "last_error_class",
+  "dedupe_key",
+  "chunk_index",
+  "priority",
+  "source_type",
+  "alert_type",
+] as const;
+const PENDING_ALERT_DEAD_LETTER_COLUMN_SQL = PENDING_ALERT_DEAD_LETTER_COLUMNS.join(", ");
+
+function pendingAlertFilterClause(filter: PendingAlertAdminFilter): PendingAlertFilterClause {
+  if ("chatId" in filter) {
+    return { whereSql: "chat_id = ?", binds: [filter.chatId] };
+  }
+  return { whereSql: "created_at < ?", binds: [filter.olderThanCutoffSec] };
+}
 
 function normalizeFiniteNumber(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : null;
@@ -83,19 +109,11 @@ function logExpiredPendingDeadLetterBypass(rows: readonly ExpiredPendingRow[]): 
 
 export async function countPendingAlertsForAdmin(
   db: D1Database,
-  filter: { chatId: string } | { olderThanCutoffSec: number },
+  filter: PendingAlertAdminFilter,
 ): Promise<number> {
-  const query = "chatId" in filter
-    ? {
-        sql: "SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?",
-        binds: [filter.chatId] as const,
-      }
-    : {
-        sql: "SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE created_at < ?",
-        binds: [filter.olderThanCutoffSec] as const,
-      };
+  const query = pendingAlertFilterClause(filter);
   const row = await db
-    .prepare(query.sql)
+    .prepare(`SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE ${query.whereSql}`)
     .bind(...query.binds)
     .first<{ count: number | string | null }>();
   const count = Number(row?.count ?? 0);
@@ -104,35 +122,23 @@ export async function countPendingAlertsForAdmin(
 
 export async function clearPendingAlertsForAdmin(
   db: D1Database,
-  filter: { chatId: string } | { olderThanCutoffSec: number },
+  filter: PendingAlertAdminFilter,
   nowSec: number,
 ): Promise<number> {
   let deleted = 0;
 
   for (;;) {
-    const query = "chatId" in filter
-      ? {
-          sql: `SELECT id, chat_id, message_html, created_at, attempts, last_error_class,
-                       dedupe_key, chunk_index, priority, source_type, alert_type
-                  FROM telegram_pending_alerts
-                 WHERE chat_id = ?
-                 ORDER BY id ASC
-                 LIMIT ?`,
-          binds: [filter.chatId, PENDING_DELETE_CHUNK_SIZE] as const,
-        }
-      : {
-          sql: `SELECT id, chat_id, message_html, created_at, attempts, last_error_class,
-                       dedupe_key, chunk_index, priority, source_type, alert_type
-                  FROM telegram_pending_alerts
-                 WHERE created_at < ?
-                 ORDER BY id ASC
-                 LIMIT ?`,
-          binds: [filter.olderThanCutoffSec, PENDING_DELETE_CHUNK_SIZE] as const,
-        };
+    const query = pendingAlertFilterClause(filter);
 
     const selected = await db
-      .prepare(query.sql)
-      .bind(...query.binds)
+      .prepare(
+        `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+           FROM telegram_pending_alerts
+          WHERE ${query.whereSql}
+          ORDER BY id ASC
+          LIMIT ?`,
+      )
+      .bind(...query.binds, PENDING_DELETE_CHUNK_SIZE)
       .all<DeadLetterPendingRow>();
     const rows = selected.results ?? [];
     if (rows.length === 0) break;
@@ -174,8 +180,7 @@ export async function cleanupExpiredPendingAlerts(
   const cutoff = nowSec - PENDING_TTL_SEC;
   const expiredRows = await db
     .prepare(
-      `SELECT id, chat_id, message_html, created_at, attempts, last_error_class,
-              dedupe_key, chunk_index, priority, source_type, alert_type, expires_at
+      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}, expires_at
          FROM telegram_pending_alerts
         WHERE created_at < ?
            OR (expires_at IS NOT NULL AND expires_at <= ?)`,
