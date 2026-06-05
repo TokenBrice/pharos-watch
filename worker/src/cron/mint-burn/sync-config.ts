@@ -84,6 +84,45 @@ export interface SyncMintBurnConfigResult {
   newLastBlock: number | null;
 }
 
+export function createMintBurnConfigSummary(
+  config: MintBurnContractConfig,
+  key: string,
+  tier: MintBurnTier,
+  options: {
+    attempted?: boolean;
+    scanFrom?: number | null;
+    scanTo?: number | null;
+    requestBudgetLimit?: number;
+  } = {},
+): MintBurnConfigSummary {
+  return {
+    key,
+    symbol: config.symbol,
+    chainId: config.chain.chainId,
+    tier,
+    attempted: options.attempted ?? false,
+    skippedReason: null,
+    scanFrom: options.scanFrom ?? null,
+    scanTo: options.scanTo ?? null,
+    advancedTo: null,
+    maxBlockSeen: 0,
+    rowsRead: 0,
+    rowsParsed: 0,
+    rowsInserted: 0,
+    rowsIgnored: 0,
+    rowsDropped: 0,
+    errors: 0,
+    failedEventDefs: [],
+    eventCoverage: [],
+    coverageFrontier: null,
+    advanceReason: null,
+    missingTimestampCount: 0,
+    earliestMissingTimestampBlock: null,
+    requestBudgetLimit: options.requestBudgetLimit ?? 0,
+    requestBudgetUsed: 0,
+  };
+}
+
 function eventDefLabel(eventDef: MintBurnEventDef): string {
   return `${eventDef.signature}:${eventDef.direction}`;
 }
@@ -113,32 +152,12 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     safetyMarginBlocks,
   } = input;
   const configBudget = createBudget(configBudgetLimit);
-  const summary: MintBurnConfigSummary = {
-    key,
-    symbol: config.symbol,
-    chainId: config.chain.chainId,
-    tier,
+  const summary = createMintBurnConfigSummary(config, key, tier, {
     attempted: true,
-    skippedReason: null,
     scanFrom: fromBlock,
     scanTo,
-    advancedTo: null,
-    maxBlockSeen: 0,
-    rowsRead: 0,
-    rowsParsed: 0,
-    rowsInserted: 0,
-    rowsIgnored: 0,
-    rowsDropped: 0,
-    errors: 0,
-    failedEventDefs: [],
-    eventCoverage: [],
-    coverageFrontier: null,
-    advanceReason: null,
-    missingTimestampCount: 0,
-    earliestMissingTimestampBlock: null,
     requestBudgetLimit: configBudget.limit,
-    requestBudgetUsed: 0,
-  };
+  });
 
   let apiErrors = 0;
   let effectiveBurns = 0;

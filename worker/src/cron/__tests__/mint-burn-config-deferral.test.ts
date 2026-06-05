@@ -8,9 +8,13 @@ import {
   shouldDeferConfig,
 } from "../mint-burn/run-state";
 
-vi.mock("../mint-burn/sync-config", () => ({
-  syncMintBurnConfig: vi.fn(),
-}));
+vi.mock("../mint-burn/sync-config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../mint-burn/sync-config")>();
+  return {
+    ...actual,
+    syncMintBurnConfig: vi.fn(),
+  };
+});
 
 vi.mock("../../lib/mint-burn-pipeline/sync-state", () => ({
   mintBurnConfigKey: (c: MintBurnContractConfig) => `${c.chain.chainId}-${c.contractAddress}`,

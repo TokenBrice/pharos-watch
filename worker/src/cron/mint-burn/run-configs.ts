@@ -6,7 +6,7 @@ import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadDeferredConfigs, shouldDeferConfig } from "./run-state";
-import { syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
+import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
 function configCoverageRatio(summary: MintBurnConfigSummary): number | null {
   if (summary.eventCoverage.length === 0) return null;
@@ -94,32 +94,7 @@ export async function runMintBurnConfigPhase(input: {
     const config = input.configs[i]!;
     const key = configKey(config);
     const tier = configTier(config);
-    const summary: MintBurnConfigSummary = {
-      key,
-      symbol: config.symbol,
-      chainId: config.chain.chainId,
-      tier,
-      attempted: false,
-      skippedReason: null,
-      scanFrom: null,
-      scanTo: null,
-      advancedTo: null,
-      maxBlockSeen: 0,
-      rowsRead: 0,
-      rowsParsed: 0,
-      rowsInserted: 0,
-      rowsIgnored: 0,
-      rowsDropped: 0,
-      errors: 0,
-      failedEventDefs: [],
-      eventCoverage: [],
-      coverageFrontier: null,
-      advanceReason: null,
-      missingTimestampCount: 0,
-      earliestMissingTimestampBlock: null,
-      requestBudgetLimit: 0,
-      requestBudgetUsed: 0,
-    };
+    const summary = createMintBurnConfigSummary(config, key, tier);
 
     await reportCronProgress(input.reportProgress, {
       stage: "scan-config",
