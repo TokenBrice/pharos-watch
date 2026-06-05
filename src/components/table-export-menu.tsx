@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ClipboardCopy, Download, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,9 +56,15 @@ export function TableExportMenu<T>({
   disabled = false,
 }: TableExportMenuProps<T>): React.ReactElement {
   const [status, setStatus] = useState<Status>("idle");
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  useEffect(() => () => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+  }, []);
 
   const resetStatusAfterDelay = useCallback(() => {
-    setTimeout(() => setStatus("idle"), 2000);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setStatus("idle"), 2000);
   }, []);
 
   const handleCsv = useCallback(() => {

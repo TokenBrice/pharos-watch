@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act } from "react";
 import type { SelectorInput } from "@shared/lib/selector";
 
 import { SelectorResultSummary } from "@/components/selector/selector-result-summary";
@@ -20,6 +21,7 @@ vi.mock("next/link", async () => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 const input: SelectorInput = {
@@ -100,6 +102,33 @@ describe("SelectorResultSummary", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("Clipboard denied");
     expect(screen.getByDisplayValue("https://pharos.watch/screener/picker/?sid=abc")).toBeTruthy();
+  });
+
+  it("clears the copied share-link feedback timer on unmount", async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+
+    const { unmount } = render(
+      <SelectorResultSummary
+        profile="treasury"
+        input={input}
+        universe={{ active: 12, surviving: 3 }}
+        shortlistCount={2}
+        screenerHandoffHref="/screener/"
+        onAdjust={vi.fn()}
+        onCopyShareLink={vi.fn().mockResolvedValue(undefined)}
+        copyShareDisabled={false}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Copy share link/i }));
+      await Promise.resolve();
+    });
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
   });
 });
 

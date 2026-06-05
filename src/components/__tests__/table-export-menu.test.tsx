@@ -160,6 +160,30 @@ describe("TableExportMenu", () => {
     expect(screen.getByText("Copied!")).toBeTruthy();
   });
 
+  it("clears the markdown feedback timer on unmount", async () => {
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+
+    const { unmount } = render(
+      <TableExportMenu
+        data={ROWS}
+        columns={COLUMNS}
+        filename="stablecoins"
+        endpoint="stablecoins"
+        methodologyLabel="safety-score v7.25"
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy as Markdown" }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
   it("shows a failure label when markdown copy is rejected", async () => {
     copyMarkdownWithPreambleMock.mockResolvedValueOnce(false);
 

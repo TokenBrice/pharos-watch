@@ -80,6 +80,23 @@ describe("KeyInfoCard contract interactions", () => {
     });
   });
 
+  it("clears the contract-copy feedback timer on unmount", () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn() },
+    });
+
+    const { unmount } = render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy Ethereum contract address" }));
+
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
   it("hides overflow mobile contracts again and clears a hidden selected chain", () => {
     const { container } = render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
     const mobileGrid = container.querySelector(".grid.grid-cols-5");

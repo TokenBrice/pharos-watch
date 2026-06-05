@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Check, Copy, ExternalLink, Globe } from "lucide-react";
@@ -54,6 +54,7 @@ export function KeyInfoCard({
   const [openChain, setOpenChain] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
   const [copiedChain, setCopiedChain] = useState<string | null>(null);
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const contracts = meta.contracts ?? [];
 
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
@@ -98,11 +99,16 @@ export function KeyInfoCard({
   const openContract = hasContracts ? (contracts.find((c) => c.chain === openChain) ?? null) : null;
   const quickCopyContract = openContract ?? contracts[0] ?? null;
 
+  useEffect(() => () => {
+    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+  }, []);
+
   function copyContractAddress(chain: string, address: string) {
     void navigator.clipboard?.writeText(address);
     trackEvent("contract_copied", { coin_id: meta.id, chain });
     setCopiedChain(chain);
-    setTimeout(() => setCopiedChain(null), 2000);
+    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = setTimeout(() => setCopiedChain(null), 2000);
   }
 
   return (

@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { EventCard } from "@/components/tape/event-card";
 import type { TapeEvent } from "@shared/types/tape-event";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 function makeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
   return {
@@ -39,6 +43,26 @@ function makeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
 }
 
 describe("EventCard enrichment", () => {
+  it("clears the permalink-copy feedback timer on unmount", async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+
+    const { unmount } = render(<EventCard event={makeEvent()} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy permalink to this event" }));
+      await Promise.resolve();
+    });
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
   it("depeg.opened renders signed bps text and an SR-only directional description", () => {
     render(<EventCard event={makeEvent()} />);
     expect(screen.getByText(/^−300 bps$/)).toBeTruthy();

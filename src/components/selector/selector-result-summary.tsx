@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -106,6 +106,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
 
   const [shareState, setShareState] = useState<"idle" | "pending" | "copied" | "error">("idle");
   const [shareError, setShareError] = useState<string | null>(null);
+  const shareResetTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const shareDescriptionId = useId();
   const shareStatusId = useId();
   const shareErrorId = useId();
@@ -124,14 +125,19 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
     shareError ? shareErrorId : null,
   ].filter(Boolean).join(" ");
 
+  useEffect(() => () => {
+    if (shareResetTimer.current) clearTimeout(shareResetTimer.current);
+  }, []);
+
   const handleCopy = async () => {
     if (copyShareDisabled || shareState === "pending") return;
+    if (shareResetTimer.current) clearTimeout(shareResetTimer.current);
     setShareState("pending");
     setShareError(null);
     try {
       await onCopyShareLink();
       setShareState("copied");
-      window.setTimeout(() => setShareState("idle"), 2500);
+      shareResetTimer.current = setTimeout(() => setShareState("idle"), 2500);
     } catch (err) {
       setShareError(err instanceof Error ? err.message : "Failed to create share link");
       setShareState("error");
