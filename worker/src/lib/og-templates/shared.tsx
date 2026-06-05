@@ -37,6 +37,27 @@ export interface CardFrameProps {
   lastUpdated?: string;
 }
 
+export function MetricLabel({
+  children,
+  fontSize = 14,
+}: {
+  children: ReactNode;
+  fontSize?: number;
+}) {
+  return (
+    <span
+      style={{
+        fontSize,
+        color: TEXT_SECONDARY,
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function CardFrame({
   title,
   subtitle,

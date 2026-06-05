@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CardFrame, Sparkline, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
+import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
 import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
 
 export interface StabilityIndexCardData {
@@ -109,16 +109,7 @@ export function StabilityIndexCard({
 
       {/* Thermometer-style band visualization */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span
-          style={{
-            fontSize: 12,
-            color: TEXT_SECONDARY,
-            letterSpacing: "0.06em",
-            fontFamily: "Geist Sans",
-          }}
-        >
-          MARKET CONDITION
-        </span>
+        <MetricLabel fontSize={12}>MARKET CONDITION</MetricLabel>
         
         {/* Thermometer bar */}
         <div style={{ display: "flex", position: "relative", height: 32, width: "100%" }}>

@@ -15,6 +15,10 @@ import { MiniButton } from "./MiniButton";
 import { TogglePill } from "./TogglePill";
 
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
+const QUIET_HOUR_FIELDS = [
+  { kind: "start", id: "mini-quiet-start", label: "Start (UTC)" },
+  { kind: "end", id: "mini-quiet-end", label: "End (UTC)" },
+] as const;
 
 function availableTimezones(): readonly string[] {
   // `Intl.supportedValuesOf` is ES2022 and not yet in the lib.dom types we target, so probe via an unknown cast.
@@ -83,24 +87,18 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
       <h2 className="text-sm font-semibold text-foreground">Quiet hours</h2>
       <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <QuietHourSelect
-          id="mini-quiet-start"
-          label="Start (UTC)"
-          value={draftStart}
-          disabled={selectDisabled}
-          onChange={(value) => setDraftStart(value)}
-          optionKeyPrefix="start"
-          hours={hours}
-        />
-        <QuietHourSelect
-          id="mini-quiet-end"
-          label="End (UTC)"
-          value={draftEnd}
-          disabled={selectDisabled}
-          onChange={(value) => setDraftEnd(value)}
-          optionKeyPrefix="end"
-          hours={hours}
-        />
+        {QUIET_HOUR_FIELDS.map((field) => (
+          <QuietHourSelect
+            key={field.kind}
+            id={field.id}
+            label={field.label}
+            value={field.kind === "start" ? draftStart : draftEnd}
+            disabled={selectDisabled}
+            onChange={field.kind === "start" ? setDraftStart : setDraftEnd}
+            optionKeyPrefix={field.kind}
+            hours={hours}
+          />
+        ))}
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <MiniButton

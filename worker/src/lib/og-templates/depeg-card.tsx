@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CardFrame, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
+import { CardFrame, MetricLabel, TEXT_SECONDARY, SEMANTIC_COLORS } from "./shared";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
 
 export interface DepegCardData {
@@ -57,15 +57,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 14,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            ACTIVE DEPEGS
-          </span>
+          <MetricLabel>ACTIVE DEPEGS</MetricLabel>
           <span style={{ fontSize: 64, fontWeight: 700, color: depegColor }}>
             {data.activeDepegCount}
           </span>
@@ -80,15 +72,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 14,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            PSI SCORE
-          </span>
+          <MetricLabel>PSI SCORE</MetricLabel>
           <span style={{ fontSize: 64, fontWeight: 700 }}>
             {data.psiScore.toFixed(1)}
           </span>
@@ -97,15 +81,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 14,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            AT PEG
-          </span>
+          <MetricLabel>AT PEG</MetricLabel>
           <span style={{ fontSize: 64, fontWeight: 700 }}>
             {data.coinsAtPeg}
             <span style={{ fontSize: 24, color: TEXT_SECONDARY }}>
@@ -118,15 +94,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
       {/* Active depegs list - show top 5 */}
       {data.activeDepegs.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <span
-            style={{
-              fontSize: 14,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            CURRENTLY DEPEGGED (TOP {Math.min(data.activeDepegs.length, 5)})
-          </span>
+          <MetricLabel>CURRENTLY DEPEGGED (TOP {Math.min(data.activeDepegs.length, 5)})</MetricLabel>
           <div
             style={{
               display: "flex",
@@ -166,15 +134,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
 
       {/* DEWS distribution */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <span
-          style={{
-            fontSize: 14,
-            color: TEXT_SECONDARY,
-            letterSpacing: "0.06em",
-          }}
-        >
-          DEWS DISTRIBUTION
-        </span>
+        <MetricLabel>DEWS DISTRIBUTION</MetricLabel>
         <div
           style={{
             display: "flex",

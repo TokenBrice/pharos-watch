@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CardFrame, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS } from "./shared";
+import { CardFrame, MetricLabel, Sparkline, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS } from "./shared";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
 import { getBackingLabelShort, getGovernanceLabelShort, THREAT_BAND_HEX } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
@@ -61,13 +61,59 @@ function getChangeColor(value: number | null): string {
   return TEXT_SECONDARY;
 }
 
+interface Metric {
+  label: string;
+  value: React.ReactNode;
+  color?: string;
+  size?: "large";
+}
+
+function MetricRow({
+  metrics,
+  valueFontSize,
+  marginBottom,
+}: {
+  metrics: readonly Metric[];
+  valueFontSize: number;
+  marginBottom?: number;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 40,
+        marginBottom,
+        fontFamily: "Geist Mono",
+      }}
+    >
+      {metrics.map((metric) => (
+        <div
+          key={metric.label}
+          style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 80 }}
+        >
+          <MetricLabel fontSize={13}>{metric.label}</MetricLabel>
+          <span
+            style={{
+              fontSize: metric.size === "large" ? 44 : valueFontSize,
+              fontWeight: 700,
+              color: metric.color || TEXT_SECONDARY,
+            }}
+          >
+            {metric.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   const treatment = getAdaptiveTreatment(data);
   const gradeColor = GRADE_RADAR_COLORS[gradeRange(data.grade as Parameters<typeof gradeRange>[0])] ?? TEXT_SECONDARY;
   const dewsColor = THREAT_BAND_HEX[data.dewsBand as keyof typeof THREAT_BAND_HEX] ?? TEXT_SECONDARY;
   
   // Build primary metrics row (5 items - PSI removed as it's market-wide)
-  const primaryMetrics = [
+  const primaryMetrics: Metric[] = [
     { label: "GRADE", value: data.grade, color: gradeColor, size: "large" as const },
     { label: "PEG", value: `$${data.pegPrice.toFixed(4)}`, color: TEXT_SECONDARY },
     { label: "PEG SCORE", value: data.pegScore != null ? data.pegScore.toFixed(1) : "—", color: TEXT_SECONDARY },
@@ -76,7 +122,7 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   ];
 
   // Build secondary metrics row (6 items)
-  const secondaryMetrics = [
+  const secondaryMetrics: Metric[] = [
     { 
       label: "MARKET CAP", 
       value: formatCurrency(data.mcap, 1),
@@ -150,76 +196,11 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
             {data.variantLabel} of {data.variantParentSymbol}
           </div>
         ) : null}
-        {/* Primary metrics row - 6 items */}
-        <div
-          style={{
-            display: "flex",
-            gap: 40,
-            marginBottom: 32,
-            fontFamily: "Geist Mono",
-          }}
-        >
-          {primaryMetrics.map((metric) => (
-            <div
-              key={metric.label}
-              style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 80 }}
-            >
-              <span
-                style={{
-                  fontSize: 13,
-                  color: TEXT_SECONDARY,
-                  letterSpacing: "0.06em",
-                }}
-              >
-                {metric.label}
-              </span>
-              <span
-                style={{
-                  fontSize: metric.size === "large" ? 44 : 32,
-                  fontWeight: 700,
-                  color: metric.color || TEXT_SECONDARY,
-                }}
-              >
-                {metric.value}
-              </span>
-            </div>
-          ))}
-        </div>
+        {/* Primary metrics row - 5 items */}
+        <MetricRow metrics={primaryMetrics} valueFontSize={32} marginBottom={32} />
 
         {/* Secondary metrics row - 6 items */}
-        <div
-          style={{
-            display: "flex",
-            gap: 40,
-            fontFamily: "Geist Mono",
-          }}
-        >
-          {secondaryMetrics.map((metric) => (
-            <div
-              key={metric.label}
-              style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 80 }}
-            >
-              <span
-                style={{
-                  fontSize: 13,
-                  color: TEXT_SECONDARY,
-                  letterSpacing: "0.06em",
-                }}
-              >
-                {metric.label}
-              </span>
-              <span
-                style={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: metric.color || TEXT_SECONDARY,
-                }}
-              >
-                {metric.value}
-              </span>
-            </div>
-          ))}
-        </div>
+        <MetricRow metrics={secondaryMetrics} valueFontSize={24} />
       </div>
 
       {/* Sparkline — pushed to bottom by space-between */}

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CardFrame, TEXT_SECONDARY, FROST_BLUE, GRADE_COLORS, SEMANTIC_COLORS } from "./shared";
+import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, GRADE_COLORS, SEMANTIC_COLORS } from "./shared";
 
 export interface SafetyScoresCardData {
   gradeDistribution: Record<string, number>;
@@ -93,16 +93,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
     >
       {/* Grade distribution - horizontal layout */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <span
-          style={{
-            fontSize: 14,
-            color: TEXT_SECONDARY,
-            letterSpacing: "0.06em",
-            fontFamily: "Geist Sans",
-          }}
-        >
-          GRADE DISTRIBUTION
-        </span>
+        <MetricLabel>GRADE DISTRIBUTION</MetricLabel>
         <div
           style={{
             display: "flex",
@@ -139,15 +130,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
       {/* Middle section: Pulse + Coverage + Trend */}
       <div style={{ display: "flex", gap: 60, fontFamily: "Geist Mono" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 14,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            MARKET PULSE
-          </span>
+          <MetricLabel>MARKET PULSE</MetricLabel>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 56, fontWeight: 700, color: FROST_BLUE }}>
               {data.pulseGrade}
@@ -172,15 +155,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
           )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span
-            style={{
-              fontSize: 14,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            COVERAGE
-          </span>
+          <MetricLabel>COVERAGE</MetricLabel>
           <span style={{ fontSize: 56, fontWeight: 700 }}>
             {(data.coverageRatio * 100).toFixed(0)}%
           </span>

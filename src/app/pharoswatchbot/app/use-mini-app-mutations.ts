@@ -81,6 +81,20 @@ function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts
   return { dews: false, depeg: false, safety: false, launch: false, depegStepBps: null };
 }
 
+function confirmThenFire(
+  confirmFn: TelegramWebAppSdk["showConfirm"] | undefined,
+  message: string,
+  fire: () => void,
+) {
+  if (!confirmFn) {
+    fire();
+    return;
+  }
+  confirmFn(message, (confirmed) => {
+    if (confirmed) fire();
+  });
+}
+
 export interface UseMiniAppMutationsArgs {
   /** Signed Telegram launch payload. The hook is a no-op until this is non-empty. */
   initData: string;
@@ -322,13 +336,7 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       }, UNDO_WINDOW_MS);
     })();
     const confirmFn = webApp?.showConfirm;
-    if (confirmFn) {
-      confirmFn(`Remove ${coin.symbol} from your watchlist?`, (ok) => {
-        if (ok) fire();
-      });
-      return;
-    }
-    fire();
+    confirmThenFire(confirmFn, `Remove ${coin.symbol} from your watchlist?`, fire);
   }, [performMutation, webApp?.showConfirm]);
 
   const undoRemove = useCallback(() => {
@@ -349,13 +357,9 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     // Presets aren't joined to subscribed coins in the current state payload, so we
     // always show the confirm sheet when the Telegram bridge exposes one (T-48).
     const confirmFn = webApp?.showConfirm;
-    if (confirmFn) {
-      confirmFn(`Unfollow ${preset.label}?`, (ok) => {
-        if (ok) void performMutation({ kind: "unfollow-preset", presetId: preset.id });
-      });
-      return;
-    }
-    void performMutation({ kind: "unfollow-preset", presetId: preset.id });
+    confirmThenFire(confirmFn, `Unfollow ${preset.label}?`, () => {
+      void performMutation({ kind: "unfollow-preset", presetId: preset.id });
+    });
   }, [performMutation, webApp?.showConfirm]);
 
   const unsubscribeAll = useCallback(() => {
@@ -366,28 +370,15 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
       clearPendingUndo();
       mutate({ kind: "unsubscribe-all" });
     };
-    if (confirmFn) {
-      confirmFn("Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", (ok) => {
-        if (ok) fire();
-      });
-      return;
-    }
-    fire();
+    confirmThenFire(confirmFn, "Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", fire);
   }, [clearPendingUndo, mutate, webApp?.showConfirm]);
 
   const forgetMe = useCallback(() => {
     const confirmFn = webApp?.showConfirm;
     const fire = () => mutate({ kind: "forget-me" });
-    if (confirmFn) {
-      confirmFn("Delete all your Pharos alert data? This cannot be undone.", (ok) => {
-        if (!ok) return;
-        confirmFn("Are you absolutely sure? Your subscriber row will be deleted.", (confirmed) => {
-          if (confirmed) fire();
-        });
-      });
-      return;
-    }
-    fire();
+    confirmThenFire(confirmFn, "Delete all your Pharos alert data? This cannot be undone.", () => {
+      confirmThenFire(confirmFn, "Are you absolutely sure? Your subscriber row will be deleted.", fire);
+    });
   }, [mutate, webApp?.showConfirm]);
 
   const addToHomeScreen = useCallback(() => {
