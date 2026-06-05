@@ -111,8 +111,8 @@ function parseEnvExampleKeys(filePath) {
   return { duplicates, keys };
 }
 
-function extractExportedInterfaceBody(source, interfaceName) {
-  const match = new RegExp(`export\\s+interface\\s+${interfaceName}\\s*\\{`, "g").exec(source);
+function extractExportedEnvInterfaceBody(source) {
+  const match = /\bexport\s+interface\s+Env\s*\{/u.exec(source);
   if (!match) {
     return null;
   }
@@ -139,7 +139,7 @@ function extractExportedInterfaceBody(source, interfaceName) {
 
 function parseWorkerEnvInterfaceKeys(filePath) {
   const source = readFileSync(filePath, "utf8");
-  const body = extractExportedInterfaceBody(source, "Env");
+  const body = extractExportedEnvInterfaceBody(source);
   if (!body) {
     throw new Error(`${relative(repoRoot, filePath)} is missing export interface Env`);
   }
