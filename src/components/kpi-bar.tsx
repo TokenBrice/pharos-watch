@@ -276,6 +276,17 @@ export function KpiBar() {
         ) : null,
     },
   ];
+  const primarySnapshotCardProps = {
+    value: psiScoreDisplay,
+    flashValue: hasPsiData ? psiScoreNum : null,
+    band: hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : "",
+    delta24h: psiDelta24hValue,
+    delta7d: psiDelta7dValue,
+    delta30d: psiDelta30dValue,
+    valueClassName: hasPsiData ? psiColorClass : "text-muted-foreground",
+    scoreSeries: psiScoreSeries,
+    bandSeries: psiBandSeries,
+  };
 
   return (
     <>
@@ -304,17 +315,7 @@ export function KpiBar() {
             animationDelay: `${delayFor("kpi", 0)}ms`,
           }}
         >
-          <PrimarySnapshotCard
-            value={psiScoreDisplay}
-            flashValue={hasPsiData ? psiScoreNum : null}
-            band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
-            delta24h={psiDelta24hValue}
-            delta7d={psiDelta7dValue}
-            delta30d={psiDelta30dValue}
-            valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
-            scoreSeries={psiScoreSeries}
-            bandSeries={psiBandSeries}
-          />
+          <PrimarySnapshotCard {...primarySnapshotCardProps} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           {metricDefinitions.map((metric, i) => (
@@ -346,17 +347,7 @@ export function KpiBar() {
             animationDelay: `${delayFor("kpi", 0)}ms`,
           }}
         >
-          <PrimarySnapshotCard
-            value={psiScoreDisplay}
-            flashValue={hasPsiData ? psiScoreNum : null}
-            band={hasPsiData ? `${psiBandDisplay} · ${psiDaysInBand}d in band` : ""}
-            delta24h={psiDelta24hValue}
-            delta7d={psiDelta7dValue}
-            delta30d={psiDelta30dValue}
-            valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
-            scoreSeries={psiScoreSeries}
-            bandSeries={psiBandSeries}
-          />
+          <PrimarySnapshotCard {...primarySnapshotCardProps} />
         </div>
 
         {metricDefinitions.map((metric, i) => (
