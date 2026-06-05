@@ -17,6 +17,7 @@ export const CRITICAL_FILES = [
   "worker/src/handlers/http/gates.ts",
   "worker/src/api/health.ts",
   "worker/src/cron/sync-stablecoins.ts",
+  "worker/src/cron/sync-stablecoins/enrich-prices.ts",
   "worker/src/cron/daily-digest.ts",
   "worker/src/cron/sync-yield-data.ts",
   "worker/src/api/discovery.ts",

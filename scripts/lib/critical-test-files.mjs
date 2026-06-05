@@ -36,6 +36,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/status.test.ts",
   "worker/src/cron/__tests__/daily-digest.test.ts",
   "worker/src/cron/__tests__/sync-stablecoins.test.ts",
+  "worker/src/cron/__tests__/enrich-prices.test.ts",
   "worker/src/cron/__tests__/sync-yield-data.test.ts",
   "worker/src/cron/__tests__/sync-dex-liquidity.test.ts",
   "functions/__tests__/ops-admin-proxy.test.ts",

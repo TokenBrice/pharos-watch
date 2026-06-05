@@ -22,7 +22,7 @@ import {
   rotateApiKey,
   updateApiKey,
 } from "../api-keys";
-import { getApiKeyRuntimeState, lookupApiKeyByPrefix } from "../api-key-core";
+import { getApiKeyRuntimeState, lookupApiKeyByPrefix, normalizeCreateInput } from "../api-key-core";
 
 describe("api key helpers", () => {
   beforeEach(() => {
@@ -191,6 +191,34 @@ describe("api key helpers", () => {
     expect((created as Response).status).toBe(400);
     await expect((created as Response).json()).resolves.toEqual({
       error: "rateLimitPerMinute must be an integer between 1 and 10000",
+    });
+  });
+
+  it("normalizes create input string fields and rejects invalid traffic class", async () => {
+    expect(normalizeCreateInput({
+      name: "  Ops token  ",
+      ownerEmail: " Ops@Pharos.Watch ",
+      tier: "  CI  ",
+      trafficClass: " SITE ",
+      rateLimitPerMinute: "120",
+      expiresAt: "1800",
+    })).toEqual({
+      name: "Ops token",
+      ownerEmail: "ops@pharos.watch",
+      tier: "CI",
+      trafficClass: "site",
+      rateLimitPerMinute: 120,
+      expiresAt: 1800,
+    });
+
+    const invalidTrafficClass = normalizeCreateInput({
+      name: "Ops token",
+      trafficClass: "internal",
+    });
+    expect(invalidTrafficClass).toBeInstanceOf(Response);
+    expect((invalidTrafficClass as Response).status).toBe(400);
+    await expect((invalidTrafficClass as Response).json()).resolves.toEqual({
+      error: "trafficClass must be either site or external",
     });
   });
 

@@ -20,6 +20,7 @@
     "worker/src/handlers/http/gates.ts": 73.8,
     "worker/src/api/health.ts": 100,
     "worker/src/cron/sync-stablecoins.ts": 100,
+    "worker/src/cron/sync-stablecoins/enrich-prices.ts": 94.1,
     "worker/src/cron/daily-digest.ts": 80.3,
     "worker/src/cron/sync-yield-data.ts": 100,
     "worker/src/api/discovery.ts": 86.2,
