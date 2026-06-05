@@ -89,20 +89,25 @@ export function PoolSourceLabel({
   );
 }
 
-export function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
-  const { entries, total } = buildBreakdownEntries(protocolTvl, {
-    labelForKey: prettifyProtocol,
-    colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
-    logoForKey: (protocol) => {
-      const path = PROTOCOL_LOGOS[protocol];
-      return path ? { path } : null;
-    },
-  });
-  if (total === 0) return null;
+type BreakdownSectionEntries = ReturnType<typeof buildBreakdownEntries>["entries"];
+type BreakdownLegendValueFormatter = Parameters<typeof BreakdownLegend>[0]["valueFormatter"];
 
+function BreakdownSection({
+  title,
+  entries,
+  total,
+  legendLogoClassName,
+  legendValueFormatter,
+}: {
+  title: string;
+  entries: BreakdownSectionEntries;
+  total: number;
+  legendLogoClassName?: string;
+  legendValueFormatter: BreakdownLegendValueFormatter;
+}) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Protocol Breakdown</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">{title}</p>
       <BreakdownBar
         entries={entries}
         total={total}
@@ -118,12 +123,34 @@ export function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, numbe
         className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
         itemClassName="flex items-center gap-1.5"
         markerClassName="h-2.5 w-2.5"
+        logoClassName={legendLogoClassName}
         logoSize={14}
-        valueFormatter={(_, percent) => `${percent.toFixed(0)}%`}
+        valueFormatter={legendValueFormatter}
         nameClassName="text-xs text-muted-foreground"
         valueClassName="text-xs text-muted-foreground"
       />
     </div>
+  );
+}
+
+export function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
+  const { entries, total } = buildBreakdownEntries(protocolTvl, {
+    labelForKey: prettifyProtocol,
+    colorForKey: (protocol, index) => PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[index % EXTRA_COLORS.length],
+    logoForKey: (protocol) => {
+      const path = PROTOCOL_LOGOS[protocol];
+      return path ? { path } : null;
+    },
+  });
+  if (total === 0) return null;
+
+  return (
+    <BreakdownSection
+      title="Protocol Breakdown"
+      entries={entries}
+      total={total}
+      legendValueFormatter={(_, percent) => `${percent.toFixed(0)}%`}
+    />
   );
 }
 
@@ -139,30 +166,13 @@ export function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   if (total === 0 || entries.length <= 1) return null;
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Chain Breakdown</p>
-      <BreakdownBar
-        entries={entries}
-        total={total}
-        minPercent={1}
-        className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted"
-        titleFormatter={(entry, percent) => `${entry.label}: ${formatCurrency(entry.value)} (${percent.toFixed(0)}%)`}
-      />
-      <BreakdownLegend
-        entries={entries}
-        total={total}
-        minPercent={1}
-        variant="inline"
-        className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
-        itemClassName="flex items-center gap-1.5"
-        markerClassName="h-2.5 w-2.5"
-        logoClassName="h-3.5 w-3.5 rounded-full object-contain shrink-0"
-        logoSize={14}
-        valueFormatter={(entry) => formatCurrency(entry.value)}
-        nameClassName="text-xs text-muted-foreground"
-        valueClassName="text-xs text-muted-foreground"
-      />
-    </div>
+    <BreakdownSection
+      title="Chain Breakdown"
+      entries={entries}
+      total={total}
+      legendLogoClassName="h-3.5 w-3.5 rounded-full object-contain shrink-0"
+      legendValueFormatter={(entry) => formatCurrency(entry.value)}
+    />
   );
 }
 

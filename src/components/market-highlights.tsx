@@ -66,6 +66,17 @@ interface MoverItem {
   pctChange: number;
 }
 
+interface HighlightEntryProps {
+  id: string;
+  symbol: string;
+  name: string;
+  ariaLabel: string;
+  logos?: Record<string, string>;
+  visClass: string;
+  staggerIndex?: number;
+  children: ReactNode;
+}
+
 /* ─── Data hooks ────────────────────────────────────────────────── */
 
 function useDepegs(data: StablecoinData[] | undefined, pegScores: Map<string, PegSummaryCoin> | undefined) {
@@ -143,6 +154,32 @@ function DepegIcon({ bps }: { bps: number }) {
 
 /* ─── Sub-components ────────────────────────────────────────────── */
 
+function HighlightEntry({
+  id,
+  symbol,
+  name,
+  ariaLabel,
+  logos,
+  visClass,
+  staggerIndex,
+  children,
+}: HighlightEntryProps) {
+  return (
+    <Link
+      href={buildStablecoinUrl(id)}
+      aria-label={ariaLabel}
+      style={staggerIndex != null ? ({ "--stagger-index": staggerIndex } as CSSProperties) : undefined}
+      className={`${visClass} ${ENTRY_LINK_CLASS} min-h-11 sm:min-h-8`}
+    >
+      <StablecoinLogo src={logos?.[id]} name={name} size={18} />
+      <span className="min-w-0 truncate text-[13px] font-medium group-hover:underline group-focus-visible:underline sm:text-xs">
+        {symbol}
+      </span>
+      {children}
+    </Link>
+  );
+}
+
 function DepegEntry({
   entry,
   logos,
@@ -157,23 +194,22 @@ function DepegEntry({
   const deviation = formatPegDeviation(entry.bps / 10000 + 1, 1);
 
   return (
-    <Link
-      href={buildStablecoinUrl(entry.id)}
-      aria-label={`${entry.name} (${entry.symbol}) price deviation: ${deviation} from peg`}
-      style={staggerIndex != null ? ({ "--stagger-index": staggerIndex } as CSSProperties) : undefined}
-      className={`${visClass} ${ENTRY_LINK_CLASS} min-h-11 sm:min-h-8`}
+    <HighlightEntry
+      id={entry.id}
+      symbol={entry.symbol}
+      name={entry.name}
+      ariaLabel={`${entry.name} (${entry.symbol}) price deviation: ${deviation} from peg`}
+      logos={logos}
+      visClass={visClass}
+      staggerIndex={staggerIndex}
     >
-      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={18} />
-      <span className="min-w-0 truncate text-[13px] font-medium group-hover:underline group-focus-visible:underline sm:text-xs">
-        {entry.symbol}
-      </span>
       <span
         className={`ml-auto inline-flex shrink-0 items-center gap-0.5 pharos-numeric text-xs font-semibold ${depegColorClass(entry.bps)}`}
       >
         <DepegIcon bps={entry.bps} />
         {deviation}
       </span>
-    </Link>
+    </HighlightEntry>
   );
 }
 
@@ -192,22 +228,21 @@ function MoverEntry({
   const change = `${isGrower ? "+" : ""}${entry.pctChange.toFixed(1)}%`;
 
   return (
-    <Link
-      href={buildStablecoinUrl(entry.id)}
-      aria-label={`${entry.name} (${entry.symbol}) 7-day supply change: ${change}`}
-      style={staggerIndex != null ? ({ "--stagger-index": staggerIndex } as CSSProperties) : undefined}
-      className={`${visClass} ${ENTRY_LINK_CLASS} min-h-11 sm:min-h-8`}
+    <HighlightEntry
+      id={entry.id}
+      symbol={entry.symbol}
+      name={entry.name}
+      ariaLabel={`${entry.name} (${entry.symbol}) 7-day supply change: ${change}`}
+      logos={logos}
+      visClass={visClass}
+      staggerIndex={staggerIndex}
     >
-      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={18} />
-      <span className="min-w-0 truncate text-[13px] font-medium group-hover:underline group-focus-visible:underline sm:text-xs">
-        {entry.symbol}
-      </span>
       <span
         className={`ml-auto shrink-0 pharos-numeric text-xs font-semibold ${getNetColor(entry.pctChange, { positiveInclusiveZero: true })}`}
       >
         {change}
       </span>
-    </Link>
+    </HighlightEntry>
   );
 }
 
