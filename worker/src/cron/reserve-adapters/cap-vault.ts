@@ -270,7 +270,7 @@ export async function fetchCapVaultReserves(
 
   const assetStates = await Promise.all(assetAddresses.map(async (address) => {
     const encodedAddress = encodeAddressArg(address);
-    const [decimalsRaw, totalSuppliesRaw, totalBorrowsRaw, availableRaw, pausedRaw] = await Promise.all([
+    const assetMetadataReads = Promise.all([
       fetchOnchainUint256({
         contract: address,
         data: DECIMALS_SELECTOR,
@@ -281,6 +281,8 @@ export async function fetchCapVaultReserves(
         rpcUrl: params.rpcUrl,
         fallbackRpcUrl: params.fallbackRpcUrl,
       }),
+    ]);
+    const vaultPositionReads = Promise.all([
       fetchOnchainUint256({
         contract: contractAddress,
         data: `${TOTAL_SUPPLIES_SELECTOR}${encodedAddress}`,
@@ -321,6 +323,10 @@ export async function fetchCapVaultReserves(
         rpcUrl: params.rpcUrl,
         fallbackRpcUrl: params.fallbackRpcUrl,
       }),
+    ]);
+    const [[decimalsRaw], [totalSuppliesRaw, totalBorrowsRaw, availableRaw, pausedRaw]] = await Promise.all([
+      assetMetadataReads,
+      vaultPositionReads,
     ]);
 
     // Fail closed: required reads must not be null. A partial RPC failure

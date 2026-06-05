@@ -1282,8 +1282,11 @@ describe("syncStablecoins", () => {
 
     // Should still return a valid result
     expect(result.itemCount).toBe(60);
+    expect(result.status).toBe("degraded");
     // Metadata should contain depeg error info
     const metadata = JSON.parse(result.metadata!);
+    expect(metadata.depegPipelineSucceeded).toBe(false);
+    expect(metadata.depegErrorCount).toBe(1);
     expect(metadata.depegErrors).toBeDefined();
     expect(metadata.depegErrors.length).toBeGreaterThan(0);
   });
