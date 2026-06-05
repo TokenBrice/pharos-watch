@@ -34,6 +34,18 @@ const FEATURE_QUERY_AVAILABLE_KEYS = [
   "dependency",
 ] as const satisfies readonly CoverageFeatureKey[];
 
+export const COVERAGE_MATRIX_QUERY_KEYS = [
+  "stablecoins",
+  "pegSummary",
+  "dexLiquidity",
+  "redemptionBackstops",
+  "yieldRankings",
+  "mintBurnFlows",
+  "reportCards",
+] as const;
+
+export type CoverageMatrixQueryKey = (typeof COVERAGE_MATRIX_QUERY_KEYS)[number];
+
 interface CoverageMatrixQueryResource<TData> {
   data?: TData;
   dataUpdatedAt: number;
@@ -52,28 +64,30 @@ export interface CoverageMatrixModelInput {
   activeStablecoins?: readonly StablecoinClientMeta[];
 }
 
-function buildQueryAvailability(
-  input: CoverageMatrixModelInput,
-): Record<CoverageFeatureKey, boolean> {
-  const hasPegData = input.pegSummary.data !== undefined;
-  const hasDexData = input.dexLiquidity.data !== undefined;
-  const hasRedemptionData = input.redemptionBackstops.data !== undefined;
-  const hasYieldData = input.yieldRankings.data !== undefined;
-  const hasFlowData = input.mintBurnFlows.data !== undefined;
-  const hasReportCardData = input.reportCards.data !== undefined;
+const COVERAGE_FEATURE_QUERY_KEYS = {
+  price: "pegSummary",
+  safety: "reportCards",
+  dex: "dexLiquidity",
+  reserves: "reportCards",
+  redemption: "redemptionBackstops",
+  yield: "yieldRankings",
+  flows: "mintBurnFlows",
+  blacklist: null,
+  dependency: "reportCards",
+  mintAuthority: null,
+} as const satisfies Record<CoverageFeatureKey, CoverageMatrixQueryKey | null>;
 
-  return {
-    price: hasPegData,
-    safety: hasReportCardData,
-    dex: hasDexData,
-    reserves: hasReportCardData,
-    redemption: hasRedemptionData,
-    yield: hasYieldData,
-    flows: hasFlowData,
-    blacklist: true,
-    dependency: hasReportCardData,
-    mintAuthority: true,
-  };
+function getCoverageMatrixQueries(input: CoverageMatrixModelInput) {
+  return COVERAGE_MATRIX_QUERY_KEYS.map((key) => input[key]);
+}
+
+function buildQueryAvailability(input: CoverageMatrixModelInput): Record<CoverageFeatureKey, boolean> {
+  return Object.fromEntries(
+    COVERAGE_FEATURES.map((feature) => {
+      const queryKey = COVERAGE_FEATURE_QUERY_KEYS[feature.key];
+      return [feature.key, queryKey === null || input[queryKey].data !== undefined];
+    }),
+  ) as Record<CoverageFeatureKey, boolean>;
 }
 
 function buildPricingSourceCounts(pegSummaryData: PegSummaryResponse | undefined) {
@@ -98,6 +112,7 @@ function buildPricingSourceCounts(pegSummaryData: PegSummaryResponse | undefined
 
 export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const activeStablecoins = input.activeStablecoins ?? ACTIVE_STABLECOINS;
+  const coverageQueries = getCoverageMatrixQueries(input);
   const queryAvailability = buildQueryAvailability(input);
   const assetById = new Map((input.stablecoins.data?.peggedAssets ?? []).map((asset) => [asset.id, asset]));
   const pegIds = new Set((input.pegSummary.data?.coins ?? []).map((coin) => coin.id));
@@ -167,43 +182,30 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   };
 
   const { pricingSources, authoritativeSources } = buildPricingSourceCounts(input.pegSummary.data);
-  const widestFeature = [...featureSummaries].sort((left, right) => {
-    if (right.coveragePct !== left.coveragePct) {
-      return right.coveragePct - left.coveragePct;
-    }
-    return (right.mcapSharePct ?? 0) - (left.mcapSharePct ?? 0);
-  })[0] ?? null;
-  const narrowestFeature = [...featureSummaries].sort((left, right) => {
-    if (left.coveragePct !== right.coveragePct) {
-      return left.coveragePct - right.coveragePct;
-    }
-    return (left.mcapSharePct ?? 0) - (right.mcapSharePct ?? 0);
-  })[0] ?? null;
-  const mostConcentratedFeature = [...featureSummaries].sort(
-    (left, right) => (right.mcapSharePct ?? 0) - right.coveragePct - ((left.mcapSharePct ?? 0) - left.coveragePct),
-  )[0] ?? null;
+  const widestFeature =
+    [...featureSummaries].sort((left, right) => {
+      if (right.coveragePct !== left.coveragePct) {
+        return right.coveragePct - left.coveragePct;
+      }
+      return (right.mcapSharePct ?? 0) - (left.mcapSharePct ?? 0);
+    })[0] ?? null;
+  const narrowestFeature =
+    [...featureSummaries].sort((left, right) => {
+      if (left.coveragePct !== right.coveragePct) {
+        return left.coveragePct - right.coveragePct;
+      }
+      return (left.mcapSharePct ?? 0) - (right.mcapSharePct ?? 0);
+    })[0] ?? null;
+  const mostConcentratedFeature =
+    [...featureSummaries].sort(
+      (left, right) => (right.mcapSharePct ?? 0) - right.coveragePct - ((left.mcapSharePct ?? 0) - left.coveragePct),
+    )[0] ?? null;
 
   const isStablecoinDataUnavailable = input.stablecoins.data === undefined && !!input.stablecoins.error;
-  const isInitialDataLoading = [
-    input.stablecoins,
-    input.pegSummary,
-    input.dexLiquidity,
-    input.redemptionBackstops,
-    input.yieldRankings,
-    input.mintBurnFlows,
-    input.reportCards,
-  ].some((query) => query.data === undefined && !query.error);
+  const isInitialDataLoading = coverageQueries.some((query) => query.data === undefined && !query.error);
   const unavailableFeatures = FEATURE_QUERY_AVAILABLE_KEYS.filter((key) => !queryAvailability[key]);
 
-  const dataUpdatedAt = Math.max(
-    input.stablecoins.dataUpdatedAt ?? 0,
-    input.pegSummary.dataUpdatedAt ?? 0,
-    input.dexLiquidity.dataUpdatedAt ?? 0,
-    input.redemptionBackstops.dataUpdatedAt ?? 0,
-    input.yieldRankings.dataUpdatedAt ?? 0,
-    input.mintBurnFlows.dataUpdatedAt ?? 0,
-    input.reportCards.dataUpdatedAt ?? 0,
-  );
+  const dataUpdatedAt = Math.max(...coverageQueries.map((query) => query.dataUpdatedAt ?? 0));
 
   return {
     rows,
@@ -218,57 +220,16 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     isStablecoinDataUnavailable,
     unavailableFeatures,
     dataUpdatedAt: dataUpdatedAt > 0 ? dataUpdatedAt : undefined,
-    staleQueries: [
-      {
-        preset: "stablecoins" as const,
-        dataUpdatedAt: input.stablecoins.dataUpdatedAt,
-        error: input.stablecoins.error,
-        hasData: input.stablecoins.data !== undefined,
-        meta: input.stablecoins.meta,
-      },
-      {
-        preset: "pegSummary" as const,
-        dataUpdatedAt: input.pegSummary.dataUpdatedAt,
-        error: input.pegSummary.error,
-        hasData: input.pegSummary.data !== undefined,
-        meta: input.pegSummary.meta,
-      },
-      {
-        preset: "dexLiquidity" as const,
-        dataUpdatedAt: input.dexLiquidity.dataUpdatedAt,
-        error: input.dexLiquidity.error,
-        hasData: input.dexLiquidity.data !== undefined,
-        meta: input.dexLiquidity.meta,
-      },
-      {
-        preset: "redemptionBackstops" as const,
-        dataUpdatedAt: input.redemptionBackstops.dataUpdatedAt,
-        error: input.redemptionBackstops.error,
-        hasData: input.redemptionBackstops.data !== undefined,
-        meta: input.redemptionBackstops.meta,
-      },
-      {
-        preset: "yieldRankings" as const,
-        dataUpdatedAt: input.yieldRankings.dataUpdatedAt,
-        error: input.yieldRankings.error,
-        hasData: input.yieldRankings.data !== undefined,
-        meta: input.yieldRankings.meta,
-      },
-      {
-        preset: "mintBurnFlows" as const,
-        dataUpdatedAt: input.mintBurnFlows.dataUpdatedAt,
-        error: input.mintBurnFlows.error,
-        hasData: input.mintBurnFlows.data !== undefined,
-        meta: input.mintBurnFlows.meta,
-      },
-      {
-        preset: "reportCards" as const,
-        dataUpdatedAt: input.reportCards.dataUpdatedAt,
-        error: input.reportCards.error,
-        hasData: input.reportCards.data !== undefined,
-        meta: input.reportCards.meta,
-      },
-    ],
+    staleQueries: COVERAGE_MATRIX_QUERY_KEYS.map((preset) => {
+      const query = input[preset];
+      return {
+        preset,
+        dataUpdatedAt: query.dataUpdatedAt,
+        error: query.error,
+        hasData: query.data !== undefined,
+        meta: query.meta,
+      };
+    }),
   };
 }
 

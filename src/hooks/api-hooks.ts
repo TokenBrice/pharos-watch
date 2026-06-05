@@ -97,7 +97,7 @@ export function createRegisteredApiPollingQueryOptionsWithMeta<T>(
   );
 }
 
-export function createRegisteredStaticQueryOptions<T>(
+function createRegisteredStaticQueryOptions<T>(
   descriptor: FrontendStaticApiQueryDescriptor<T>,
   opts?: {
     enabled?: boolean;

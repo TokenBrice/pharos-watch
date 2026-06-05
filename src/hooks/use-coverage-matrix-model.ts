@@ -10,9 +10,12 @@ import {
 } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { buildCoverageMatrixModel, type CoverageMatrixModelInput } from "@/lib/coverage-matrix-model";
-
-type CoverageMatrixQueryKey = Exclude<keyof CoverageMatrixModelInput, "activeStablecoins">;
+import {
+  buildCoverageMatrixModel,
+  COVERAGE_MATRIX_QUERY_KEYS,
+  type CoverageMatrixModelInput,
+  type CoverageMatrixQueryKey,
+} from "@/lib/coverage-matrix-model";
 
 const COVERAGE_QUERY_RESOURCE_FIELDS = ["data", "dataUpdatedAt", "error", "meta"] as const;
 
@@ -21,6 +24,9 @@ type CoverageMatrixQueryResource<Key extends CoverageMatrixQueryKey> = Pick<
   CoverageMatrixModelInput[Key],
   CoverageMatrixQueryResourceField
 >;
+type CoverageMatrixQueryResources = {
+  [Key in CoverageMatrixQueryKey]: CoverageMatrixQueryResource<Key>;
+};
 
 function pickCoverageMatrixQueryResource<Key extends CoverageMatrixQueryKey>(
   resource: CoverageMatrixQueryResource<Key>,
@@ -50,6 +56,15 @@ function useCoverageMatrixQueryResource<Key extends CoverageMatrixQueryKey>(
   );
 }
 
+function buildCoverageMatrixInput(
+  resources: CoverageMatrixQueryResources,
+): Pick<CoverageMatrixModelInput, CoverageMatrixQueryKey> {
+  return Object.fromEntries(COVERAGE_MATRIX_QUERY_KEYS.map((key) => [key, resources[key]])) as Pick<
+    CoverageMatrixModelInput,
+    CoverageMatrixQueryKey
+  >;
+}
+
 export function useCoverageMatrixModel() {
   const stablecoinsQuery = useStablecoins();
   const pegQuery = usePegSummary();
@@ -59,25 +74,14 @@ export function useCoverageMatrixModel() {
   const flowQuery = useMintBurnFlows();
   const reportCardsQuery = useReportCards();
 
-  const stablecoins = useCoverageMatrixQueryResource<"stablecoins">(stablecoinsQuery);
-  const pegSummary = useCoverageMatrixQueryResource<"pegSummary">(pegQuery);
-  const dexLiquidity = useCoverageMatrixQueryResource<"dexLiquidity">(dexQuery);
-  const redemptionBackstops = useCoverageMatrixQueryResource<"redemptionBackstops">(redemptionQuery);
-  const yieldRankings = useCoverageMatrixQueryResource<"yieldRankings">(yieldQuery);
-  const mintBurnFlows = useCoverageMatrixQueryResource<"mintBurnFlows">(flowQuery);
-  const reportCards = useCoverageMatrixQueryResource<"reportCards">(reportCardsQuery);
-
-  return useMemo(
-    () =>
-      buildCoverageMatrixModel({
-        stablecoins,
-        pegSummary,
-        dexLiquidity,
-        redemptionBackstops,
-        yieldRankings,
-        mintBurnFlows,
-        reportCards,
-      }),
-    [stablecoins, pegSummary, dexLiquidity, redemptionBackstops, yieldRankings, mintBurnFlows, reportCards],
-  );
+  const resources = {
+    stablecoins: useCoverageMatrixQueryResource<"stablecoins">(stablecoinsQuery),
+    pegSummary: useCoverageMatrixQueryResource<"pegSummary">(pegQuery),
+    dexLiquidity: useCoverageMatrixQueryResource<"dexLiquidity">(dexQuery),
+    redemptionBackstops: useCoverageMatrixQueryResource<"redemptionBackstops">(redemptionQuery),
+    yieldRankings: useCoverageMatrixQueryResource<"yieldRankings">(yieldQuery),
+    mintBurnFlows: useCoverageMatrixQueryResource<"mintBurnFlows">(flowQuery),
+    reportCards: useCoverageMatrixQueryResource<"reportCards">(reportCardsQuery),
+  } satisfies CoverageMatrixQueryResources;
+  return buildCoverageMatrixModel(buildCoverageMatrixInput(resources));
 }
