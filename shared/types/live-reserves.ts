@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-keys";
 import { RESERVE_RISK_VALUES, ReserveSliceSchema, type ReserveRisk, type ReserveSlice } from "./reserves";
+import { HttpUrlSchema } from "./validators";
 import {
   RedemptionHolderEligibilitySchema,
   type RedemptionHolderEligibility,
@@ -188,18 +189,6 @@ export interface StablecoinReservesResponse {
 }
 
 const UnknownRecordSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
-
-const HttpUrlSchema = z
-  .string()
-  .url()
-  .refine((value) => {
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }, "Expected an http(s) URL");
 
 export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedemptionTelemetry> = z
   .object({

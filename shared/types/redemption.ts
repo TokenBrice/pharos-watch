@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
+import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
 
 export const RedemptionRouteFamilySchema = z.enum([
   "stablecoin-redeem",
@@ -160,22 +161,8 @@ export const RedemptionLiveFreshnessKindValues = [
 export const RedemptionLiveFreshnessKindSchema = z.enum(RedemptionLiveFreshnessKindValues);
 export type RedemptionLiveFreshnessKind = z.infer<typeof RedemptionLiveFreshnessKindSchema>;
 
-const HttpUrlSchema = z
-  .string()
-  .url()
-  .refine((value) => {
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }, "Expected an http(s) URL");
-
 const ScoreSchema = z.number().finite().min(0).max(100);
 const RatioSchema = z.number().finite().min(0).max(1);
-const NonNegativeNumberSchema = z.number().finite().nonnegative();
-const PositiveNumberSchema = z.number().finite().positive();
 
 export const RedemptionDocSourceSchema = z.object({
   label: z.string(),
