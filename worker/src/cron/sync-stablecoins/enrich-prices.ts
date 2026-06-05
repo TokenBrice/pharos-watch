@@ -81,16 +81,14 @@ export async function enrichMissingPrices(
 
   const finalMissing = assets.filter(hasMissingPrice).length;
   const totalEnriched = Object.values(counts).reduce((sum, count) => sum + count, 0);
-  if (totalMissing > 0) {
-    console.log(
-      `[enrich] ${totalMissing} assets missing prices → ` +
-      `Pass 1: +${counts.pass1}, Pass 1b (multi-chain): +${counts.pass1b}, ` +
-      `Pass 2 (CMC): +${counts.passCmc}, ` +
-      `Pass 3 (Jupiter): +${counts.passJupiter}, ` +
-      `Pass 4 (DexScreener): +${counts.passDex}, ` +
-      `Pass 5 (CG low-volume): +${counts.passCgLowVolume}, still missing: ${finalMissing}`
-    );
-  }
+  console.log(
+    `[enrich] ${totalMissing} assets missing prices → ` +
+    `Pass 1: +${counts.pass1}, Pass 1b (multi-chain): +${counts.pass1b}, ` +
+    `Pass 2 (CMC): +${counts.passCmc}, ` +
+    `Pass 3 (Jupiter): +${counts.passJupiter}, ` +
+    `Pass 4 (DexScreener): +${counts.passDex}, ` +
+    `Pass 5 (CG low-volume): +${counts.passCgLowVolume}, still missing: ${finalMissing}`
+  );
   if (totalEnriched > 0) {
     console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
   }

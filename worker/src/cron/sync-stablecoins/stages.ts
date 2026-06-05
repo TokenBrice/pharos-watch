@@ -77,7 +77,6 @@ export async function runStablecoinsIntakeStage(
 ): Promise<StablecoinsIntakeStageResult | CronResult> {
   const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(
     options.db,
-    options.syncStartSec,
   );
 
   const preFetchAbort = returnIfAborted(options.signal, "fetch-stablecoins-and-supplementals");

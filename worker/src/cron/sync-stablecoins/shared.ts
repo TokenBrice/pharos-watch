@@ -320,7 +320,6 @@ export function mergeSupplementalLastKnownGood(
 
 export async function loadFreshFxRates(
   db: D1Database,
-  _syncStartSec: number,
   logPrefix = "[sync-stablecoins]",
 ): Promise<{
   fxFallbackRates?: Record<string, number>;

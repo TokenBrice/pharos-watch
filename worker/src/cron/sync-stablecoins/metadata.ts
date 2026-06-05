@@ -13,10 +13,7 @@ import {
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 
-function mapSourceToBucket(
-  source: string,
-  _dist: PriceSourceHealth["sourceDistribution"],
-) {
+function mapSourceToBucket(source: string) {
   return isPriceSourceHealthBucketKey(source) ? source : null;
 }
 
@@ -41,7 +38,7 @@ export function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth
         sourceDistribution["coingecko+defillama-list"]++;
       }
       for (const src of asset.agreeSources) {
-        const bucket = mapSourceToBucket(src, sourceDistribution);
+        const bucket = mapSourceToBucket(src);
         if (bucket) {
           sourceDistribution[bucket]++;
         }
@@ -49,12 +46,12 @@ export function buildPriceSourceHealth(assets: PeggedAsset[]): PriceSourceHealth
     } else {
       const source = asset.priceSource;
       if (source) {
-        const exactBucket = mapSourceToBucket(source, sourceDistribution);
+        const exactBucket = mapSourceToBucket(source);
         if (exactBucket) {
           sourceDistribution[exactBucket]++;
         } else {
           for (const part of splitCompositePriceSource(source)) {
-            const partBucket = mapSourceToBucket(part, sourceDistribution);
+            const partBucket = mapSourceToBucket(part);
             if (partBucket) {
               sourceDistribution[partBucket]++;
             }

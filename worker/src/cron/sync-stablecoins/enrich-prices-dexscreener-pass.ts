@@ -193,20 +193,18 @@ export async function runDexScreenerPass(
     return diagnostics.length > 0 ? { resolved, failures: [], diagnostics } : { resolved, failures: [] };
   }
 
-  const dexscreenerAllowed = exactCandidateCount > 0
-    ? await isProviderCircuitAllowed({
-        db,
-        circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
-        diagnostic: {
-          source: "dexscreener-exact",
-          stage: "fallback",
-          endpoint: "api.dexscreener.com/tokens/v1",
-          candidateCount: exactCandidateCount,
-        },
-        diagnostics,
-        errorMessage: "DexScreener exact circuit open",
-      })
-    : false;
+  const dexscreenerAllowed = await isProviderCircuitAllowed({
+    db,
+    circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+    diagnostic: {
+      source: "dexscreener-exact",
+      stage: "fallback",
+      endpoint: "api.dexscreener.com/tokens/v1",
+      candidateCount: exactCandidateCount,
+    },
+    diagnostics,
+    errorMessage: "DexScreener exact circuit open",
+  });
   let dexExactAttempts = 0;
   let dexExactSuccessfulCalls = 0;
 

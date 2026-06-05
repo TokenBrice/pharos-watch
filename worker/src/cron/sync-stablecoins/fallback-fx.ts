@@ -13,7 +13,6 @@ export async function hydrateFallbackFxPhase(
 ): Promise<FallbackFxOutput> {
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     input.db,
-    input.syncStartSec,
     "[sync-stablecoins:fallback]",
   );
   const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(input.db);
