@@ -1,11 +1,14 @@
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { sumPegBuckets } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
+
+export { sumPegBuckets };
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
@@ -223,14 +226,6 @@ export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.consensusSources = [];
   asset.agreeSources = [];
   asset.priceSourceConfidenceProfile = null;
-}
-
-export function sumPegBuckets(buckets: Record<string, number> | undefined | null): number {
-  if (!buckets) return 0;
-  return Object.values(buckets).reduce(
-    (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
-    0,
-  );
 }
 
 function cloneCachedAsset(asset: PeggedAsset): PeggedAsset {
