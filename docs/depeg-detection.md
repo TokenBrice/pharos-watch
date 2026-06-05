@@ -227,7 +227,7 @@ Age checks:
 
 **CEX ticker check:**
 
-- Fetches the configured Binance USD-pair batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
+- Fetches the configured Binance market batch (currently `USDTUSD`, `USDCUSD`, `BFUSDUSDT`, and `BFUSDUSDC`) as an additional secondary confirmation source, then looks up the pending coin by symbol
 - Only attempted for symbols present in the configured Binance market set
 - Counts as confirmation only when deviation >= `secondaryBar` and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
@@ -440,7 +440,7 @@ Used in report cards. Formula:
 pegPct = (1 - totalDepegSec / spanSec) * 100
 severityScore = 100 - sum of per-event penalties
   per-event penalty = max(durationPenalty, magnitudeFloor)
-    durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight
+    durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight   (durationDays capped at 90)
     magnitudeFloor  = (peakBps/2000) * recencyWeight
 spreadPenalty = min(15, (stddev of peaks / 1000) * 15)
 activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))

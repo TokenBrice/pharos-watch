@@ -217,7 +217,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "6.0", "versionLabel": "...", "currentVersion": "6.0", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.01", "versionLabel": "...", "currentVersion": "6.01", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -235,7 +235,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "6.0", "versionLabel": "...", "currentVersion": "6.0", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.01", "versionLabel": "...", "currentVersion": "6.01", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

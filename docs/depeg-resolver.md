@@ -81,10 +81,10 @@ Each kill signal is rated `none`, `elevated`, or `severe`.
 | # | Kill signal | Fires when |
 |---|---|---|
 | **K1** | Supply weaponization | Mint authority concentrated or unbounded/compromised **and** abnormal supply or mint expansion into the depeg (the USR archetype) |
-| **K2** | Backing impairment | Reserves skew high / very-high and falling, or a dependency is frozen or dead above the weight threshold — collateral no longer covers liabilities |
+| **K2** | Backing impairment | Reserves concentrated in very-high-risk assets, exotic collateral, or a dependency frozen or dead above the weight threshold — collateral no longer covers liabilities |
 | **K3** | Freeze / seizure | Concurrent blacklist surge with a freezable token, sanctioned or frozen custody, or a regulatory shutdown — recovery administratively blocked |
 | **K4** | Reflexive death-spiral | Algorithmic (or synthetic with a broken hedge) **and** a price-down-while-supply-chases signature (the UST / IRON archetype) |
-| **K5** | Exit collapse | Liquidity erosion plus an unavailable redemption route plus sustained one-sided outflow — no path for arbitrage to restore the peg |
+| **K5** | Exit collapse | Liquidity erosion, exhausted redemption capacity, **or** a sustained one-sided outflow (bank-run) signal — any one removes the arbitrage path that restores the peg |
 
 ### Recovery anchors
 
@@ -172,7 +172,7 @@ The cache-backed `GET /api/depeg-resolver-review` endpoint exposes the same revi
 ## Honest Limitations & Failure Modes
 
 - **Stage 1 is calibrated, not learned.** There are roughly 90 terminal labels, mostly month-precision and not event-linked. Verdicts are domain-prior judgments validated on a small set. We state this plainly; forecast readiness is a publication trigger, not a stronger/weaker verdict label.
-- **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage exists for only about 141 of 401 tracked coins (the configured issuance chains). A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing.
+- **Supply resolution is coarse.** Supply history is daily, so it can miss intra-day spikes; mint/burn coverage exists for only about 140 of 401 tracked coins (141 contract configs across the configured issuance chains). A coin with neither usable source degrades to `insufficient_signal` on the supply-dependent kill signals rather than guessing.
 - **Empty provenance, so no verdict gating.** The depeg-event provenance side-table is unpopulated in production (0 rows). Audit-verdict filtering would discard the entire corpus, so DDR treats a null verdict as included and relies on incident grouping, quarantine, and the severity floor for quality. Provenance is a future enrichment, not a v1 dependency.
 - **Terminal ≠ event-recovery.** A backfilled dead coin (for example IRON) shows "recovered" events because replay closed them on a transient in-band print. Stage 1 terminal truth derives from cemetery / frozen `status` and the live deep-and-sustained-open or orphan pattern (the USR signature), never from the presence of a `recovery_price` on a historical row.
 - **Survivorship / selection.** The event corpus spans only the tracking window plus backfill (roughly 2026 onward plus replays). Pre-tracking deaths are not event-linked, so the recovery corpus skews toward the modern, surviving set. Stage 2 bands describe *recovered* incidents — a coin that ultimately dies will look "overdue" before it is reclassified.
