@@ -90,7 +90,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` first verifies that
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/pharos-change-contract.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/og-refresh.yml`, `.github/workflows/critical-coverage-ratchet.yml`, `.github/workflows/codeql.yml`, `.github/workflows/zizmor.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/pharos-change-contract.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/og-refresh.yml`, `.github/workflows/critical-coverage-ratchet.yml`, `.github/workflows/codeql.yml`, `.github/workflows/zizmor.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/telegram-load.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
 
@@ -106,7 +106,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - renders the deploy-surface and validation-contract summary from `scripts/ci/pharos-change-contract.mjs`
    - is advisory and does not deploy or publish artifacts
 3. `validate` (runs before any deployment):
-   - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs` with bounded parallelism: dependency/pricing audits, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, registry-derived generated-artifact checks, env checks, duplicate/export/registry guards, CSP/header sync, unused-code/hotspot/sql/stablecoin-data checks
+   - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs` with bounded parallelism: dependency/pricing audits, dependency-coverage audit, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, registry-derived generated-artifact checks, env checks, duplicate/export/registry guards, CSP/header sync, unused-code/hotspot/sql/stablecoin-data checks
    - starts `validate:prebuild` and the non-mutating leaf checks on separate runners at the same time: four non-critical Vitest shards, critical coverage, optional Worker runtime typecheck, and optional Pages build/SEO
    - runs all four `npm run test:noncritical -- --shard=N/4` shards and requires every shard before the aggregate `validate` job succeeds
    - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
@@ -204,14 +204,21 @@ For deployment/worktree operating procedure (including the local merge gate befo
   - scheduled dependency-audit findings must get a tracked triage note or remediation issue the same business day
   - do not leave a new high/critical finding unowned between audit detection and the next production deploy
 
-15. `Critical Coverage Ratchet`:
+15. `Telegram Load Guard`:
+
+- defined in `.github/workflows/telegram-load.yml`
+- runs on a weekly Monday schedule and on manual dispatch
+- runs `npm run check:telegram-load`, including the 5,000-watcher target SLO, without touching production D1 or Telegram
+- complements the deploy validate lane without adding the synthetic load harness to every push path
+
+16. `Critical Coverage Ratchet`:
 
 - defined in `.github/workflows/critical-coverage-ratchet.yml`
 - runs on a weekly Monday schedule and on manual dispatch
 - runs `npm run coverage:critical` with `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked against the baseline, while pull request and merge-gate paths keep the faster touched-file ratchet
 - uses the same Node 24 workspace setup as the deploy validate lane
 
-16. `Secret Scan`:
+17. `Secret Scan`:
 
 - defined in `.github/workflows/secret-scan.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -219,7 +226,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
 - scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
 
-17. `Safe Browsing Monitor`:
+18. `Safe Browsing Monitor`:
 
 - defined in `.github/workflows/safe-browsing-monitor.yml`
 - runs on a daily schedule (`17 7 * * *`) and on manual dispatch
@@ -227,7 +234,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - requires the `GOOGLE_SAFE_BROWSING_API_KEY` repository secret
 - fails the run on any flagged URL; complements the deploy-gating `check:phishing-signatures` static scan
 
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, a11y route smoke, feature-flag inlining, SEO gate, build-size/build-attribution guards, and Safe Browsing classifier guardrails before merge and in the consolidated Pages release path, fetches digest/depeg/public-dataset data once inside the Pages release job so the build itself is network-independent with respect to those static inputs, forwards the configured GA measurement ID and `NEXT_PUBLIC_PHAROS_*` flag values into CI builds so the static artifact matches production analytics and flag posture, forces the local static-export artifact smoke through the production `/_site-data/*` browser lane instead of the protected direct `/api/*` lane, uploads the Worker candidate early when Workers Versions are available, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted when possible, reruns local artifact `smoke-ui` after Worker promotion on combined deploys, falls back to a validation-gated `wrangler deploy` when Cloudflare rejects Workers Versions with an entitlement error, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, records a compact Pages release summary before publish, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, data-state, and `/depeg/` canary checks, keeps the scheduled Pages rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, surfaces Pages post-publish UI/ops/transport outcomes via per-smoke statuses from one parallel post-publish step, and adds separate weekly/daily/manual lanes for CodeQL, GitHub Actions security scanning, dependency auditing, all-critical coverage ratcheting, history-aware secret scanning, and Safe Browsing verdict monitoring.
+This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, a11y route smoke, feature-flag inlining, SEO gate, build-size/build-attribution guards, dependency-coverage drift, and Safe Browsing classifier guardrails before merge and in the consolidated Pages release path, fetches digest/depeg/public-dataset data once inside the Pages release job so the build itself is network-independent with respect to those static inputs, forwards the configured GA measurement ID and `NEXT_PUBLIC_PHAROS_*` flag values into CI builds so the static artifact matches production analytics and flag posture, forces the local static-export artifact smoke through the production `/_site-data/*` browser lane instead of the protected direct `/api/*` lane, uploads the Worker candidate early when Workers Versions are available, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted when possible, reruns local artifact `smoke-ui` after Worker promotion on combined deploys, falls back to a validation-gated `wrangler deploy` when Cloudflare rejects Workers Versions with an entitlement error, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, records a compact Pages release summary before publish, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, data-state, and `/depeg/` canary checks, keeps the scheduled Pages rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, surfaces Pages post-publish UI/ops/transport outcomes via per-smoke statuses from one parallel post-publish step, and adds separate weekly/daily/manual lanes for CodeQL, GitHub Actions security scanning, dependency auditing, Telegram load simulation, all-critical coverage ratcheting, history-aware secret scanning, and Safe Browsing verdict monitoring.
 
 Current GitHub repository secrets required by the deploy path:
 

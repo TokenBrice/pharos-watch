@@ -192,6 +192,7 @@ describe("validate-ci parity", () => {
       "npm run check:cron-console-usage",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
+      "npm run check:dependency-coverage",
       "npm run check:doc-counts",
       "npm run check:doc-source-paths",
       "npm run check:doc-sync",

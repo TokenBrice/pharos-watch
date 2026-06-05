@@ -60,6 +60,14 @@ export const VALIDATION_COMMAND_DEPLOY_IMPACT_REGISTRY = [
     paths: ["scripts/ci/check-cron-connection-budget.ts"],
   },
   { command: "npm run check:cron-sync", deployImpact: "full", paths: ["scripts/ci/check-cron-schedule-sync.ts"] },
+  {
+    command: "npm run check:dependency-coverage",
+    deployImpact: "full",
+    paths: [
+      "scripts/maintenance/generate-dependency-coverage-audit.ts",
+      "scripts/lib/dependency-coverage-baseline.json",
+    ],
+  },
   { command: "npm run check:doc-counts", deployImpact: "validation-only", paths: ["scripts/ci/check-doc-counts.mjs"] },
   {
     command: "npm run check:doc-source-paths",
