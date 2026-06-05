@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo } from "react";
+import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { useLogos } from "@/hooks/use-logos";
@@ -216,18 +216,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                     key={ev.id}
                     className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-2 py-1.5 tabular-nums"
                   >
-                    {logoSrc ? (
-                      <Image
-                        src={logoSrc}
-                        alt=""
-                        width={14}
-                        height={14}
-                        className="h-3.5 w-3.5 rounded-full"
-                        aria-hidden
-                      />
-                    ) : (
-                      <span aria-hidden="true" />
-                    )}
+                    <CoinCell logoSrc={logoSrc} />
                     <span className="truncate uppercase tracking-tight text-foreground">
                       {ev.symbol}
                     </span>

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
+import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -169,18 +170,7 @@ function MoverList({
                 href={buildStablecoinUrl(row.id)}
                 className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
               >
-                {logoSrc ? (
-                  <Image
-                    src={logoSrc}
-                    alt=""
-                    width={14}
-                    height={14}
-                    className="h-3.5 w-3.5 rounded-full"
-                    aria-hidden
-                  />
-                ) : (
-                  <span aria-hidden="true" />
-                )}
+                <CoinCell logoSrc={logoSrc} />
                 <span className="truncate uppercase tracking-tight text-foreground">
                   {row.symbol}
                 </span>

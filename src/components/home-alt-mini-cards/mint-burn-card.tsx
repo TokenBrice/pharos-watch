@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
+import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -90,18 +90,7 @@ export function MintBurnCard(): React.JSX.Element {
                   href={buildStablecoinUrl(row.id)}
                   className="pharos-focus-ring -mx-1 grid grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-0.5 font-mono tabular-nums transition-colors hover:bg-muted/50"
                 >
-                  {logoSrc ? (
-                    <Image
-                      src={logoSrc}
-                      alt=""
-                      width={12}
-                      height={12}
-                      className="h-3 w-3 rounded-full"
-                      aria-hidden
-                    />
-                  ) : (
-                    <span aria-hidden="true" />
-                  )}
+                  <CoinCell logoSrc={logoSrc} size="compact" />
                   <span className="truncate uppercase tracking-tight text-foreground">
                     {row.symbol}
                   </span>
