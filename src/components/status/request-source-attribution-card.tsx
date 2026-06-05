@@ -1,7 +1,7 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
+import { StatTile } from "@/components/stat-tile";
 import { PublicSignalCard } from "./public-signal-card";
-import { StatusMetricCard } from "./status-metric-card";
 
 function formatBucketLabel(bucketStart: number): string {
   return new Date(bucketStart * 1000).toLocaleTimeString("en-US", {
@@ -84,9 +84,9 @@ export function RequestSourceAttributionCard({
       ) : (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatusMetricCard variant="tile" label="Total demand" value={formatCompactCount(totals.totalRequests)} />
-            <StatusMetricCard variant="tile" label="Site" value={formatCompactCount(totals.siteRequests)} />
-            <StatusMetricCard variant="tile" label="External" value={formatCompactCount(totals.externalRequests)} />
+            <StatTile variant="tile" label="Total demand" value={formatCompactCount(totals.totalRequests)} />
+            <StatTile variant="tile" label="Site" value={formatCompactCount(totals.siteRequests)} />
+            <StatTile variant="tile" label="External" value={formatCompactCount(totals.externalRequests)} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">

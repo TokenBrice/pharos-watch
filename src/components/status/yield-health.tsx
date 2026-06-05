@@ -9,8 +9,8 @@ import type {
   YieldSourceRiskCoverageField,
   YieldSourceRiskFieldCoverage,
 } from "@shared/types";
+import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusMetricCard } from "./status-metric-card";
 
 const SOURCE_RISK_COVERAGE_FIELDS = [
   ["sourceRiskPenalty", "Penalty"],
@@ -155,12 +155,12 @@ export function YieldHealthCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-          <StatusMetricCard
+          <StatTile
             label="Rankings"
             value={<span className={statusClassName(health.rankingStatus)}>{health.rankingCount ?? "-"}</span>}
             subtext={ageLabel(health.rankingAgeSec)}
           />
-          <StatusMetricCard
+          <StatTile
             label="Safety Coverage"
             value={
               <span className={statusClassName(health.safetyCoverage.status)}>
@@ -173,12 +173,12 @@ export function YieldHealthCard({
                 : `${health.safetyCoverage.coveredCount}/${health.safetyCoverage.trackedCount}`
             }
           />
-          <StatusMetricCard
+          <StatTile
             label="Supplemental"
             value={<span className={statusClassName(health.supplemental.status)}>{health.supplemental.status}</span>}
             subtext={supplementalSubtext(health.supplemental)}
           />
-          <StatusMetricCard
+          <StatTile
             label="Benchmark"
             value={<span className={statusClassName(health.benchmark.status)}>{health.benchmark.status}</span>}
             subtext={
@@ -187,7 +187,7 @@ export function YieldHealthCard({
                 : `${health.benchmark.source ?? "source"} · ${ageLabel(health.benchmark.ageSec)}`
             }
           />
-          <StatusMetricCard
+          <StatTile
             label="Source Risk"
             value={
               <span className={statusClassName(health.sourceRiskCoverage.status)}>

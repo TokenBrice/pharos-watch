@@ -1,8 +1,8 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
+import { StatTile } from "@/components/stat-tile";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { PublicSignalCard } from "./public-signal-card";
-import { StatusMetricCard } from "./status-metric-card";
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
   return trafficClass === "site"
@@ -74,9 +74,9 @@ export function ApiKeyLoadTable({
       ) : (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatusMetricCard variant="tile" label="Keyed Requests" value={formatCompactCount(summary.keyedRequests)} />
-            <StatusMetricCard variant="tile" label="Unkeyed Public API" value={formatCompactCount(summary.unkeyedRequests)} />
-            <StatusMetricCard variant="tile" label="Keys In Window" value={formatCompactCount(summary.totalKeys)} />
+            <StatTile variant="tile" label="Keyed Requests" value={formatCompactCount(summary.keyedRequests)} />
+            <StatTile variant="tile" label="Unkeyed Public API" value={formatCompactCount(summary.unkeyedRequests)} />
+            <StatTile variant="tile" label="Keys In Window" value={formatCompactCount(summary.totalKeys)} />
           </div>
 
           {summary.truncated ? (

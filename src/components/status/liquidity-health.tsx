@@ -1,9 +1,9 @@
 "use client";
 
+import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LiquidityHealth, StatusSectionError } from "@shared/types";
 import { formatCurrency } from "@shared/lib/format";
-import { StatusMetricCard } from "./status-metric-card";
 
 function guardTone(active: boolean): string {
   return active ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
@@ -46,7 +46,7 @@ export function LiquidityHealthCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatusMetricCard
+          <StatTile
             label="Covered Coins"
             value={String(health.currentCoverage)}
             subtext={
@@ -55,7 +55,7 @@ export function LiquidityHealthCard({
                 : undefined
             }
           />
-          <StatusMetricCard
+          <StatTile
             label="Global DEX TVL"
             value={health.currentGlobalTvl != null ? formatCurrency(health.currentGlobalTvl) : "—"}
             subtext={
@@ -64,7 +64,7 @@ export function LiquidityHealthCard({
                 : undefined
             }
           />
-          <StatusMetricCard
+          <StatTile
             label="Top 10 Covered TVL"
             value={health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "—"}
             subtext={
@@ -73,7 +73,7 @@ export function LiquidityHealthCard({
                 : undefined
             }
           />
-          <StatusMetricCard
+          <StatTile
             label="Failed Sources"
             value={String(health.failedSources.length)}
             subtext={health.failedSources.length > 0 ? health.failedSources.join(", ") : "none"}

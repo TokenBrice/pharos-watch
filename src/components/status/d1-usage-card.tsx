@@ -1,7 +1,7 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { D1UsageSummary, StatusSectionError } from "@shared/types";
+import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusMetricCard } from "./status-metric-card";
 
 function formatBytes(value: number | null): string {
   if (value == null || !Number.isFinite(value) || value < 0) return "—";
@@ -61,22 +61,22 @@ export function D1UsageCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-3">
-          <StatusMetricCard
+          <StatTile
             label="Database Size"
             value={formatBytes(summary.databaseSizeBytes)}
             subtext={summary.numTables != null ? `${formatCount(summary.numTables)} tables` : undefined}
           />
-          <StatusMetricCard
+          <StatTile
             label="Rows Read (24h)"
             value={formatCount(summary.rowsRead24h)}
             subtext={`${formatCount(summary.readQueries24h)} read queries`}
           />
-          <StatusMetricCard
+          <StatTile
             label="Rows Written (24h)"
             value={formatCount(summary.rowsWritten24h)}
             subtext={`${formatCount(summary.writeQueries24h)} write queries`}
           />
-          <StatusMetricCard
+          <StatTile
             label="Replication"
             value={summary.readReplicationMode ?? "—"}
             subtext={summary.region ?? undefined}
