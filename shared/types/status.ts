@@ -229,14 +229,6 @@ interface TelegramBotTopStablecoin {
   presetImpliedSubscribers?: number;
 }
 
-export interface TelegramAlertTypeChats {
-  dews: number;
-  depeg: number;
-  safety: number;
-  launch: number;
-  allTypes: number;
-}
-
 export interface TelegramPendingDeliveryBacklog {
   due: number;
   deferred: number;
@@ -257,13 +249,6 @@ export interface TelegramWatcherLifecycleSnapshot {
   alertTypeOptIns: TelegramAlertTypeChats;
   quietHoursEnabledChats: number;
   pendingDeliveries: number;
-}
-
-export interface TelegramTelemetryQuality {
-  status: "complete" | "partial";
-  unavailableFields: string[];
-  /** Exact diagnostic strings are for Access-gated operator surfaces only. */
-  errors?: Record<string, string>;
 }
 
 export interface TelegramBotStats {
@@ -301,80 +286,30 @@ export interface TelegramBotStats {
   quality?: TelegramTelemetryQuality;
 }
 
-/** Slim public-facing stats for the PharosWatchBot landing page. */
-export interface TelegramWatcherHistoryPoint {
-  /** YYYY-MM-DD UTC day bucket. Snapshot-backed once lifecycle rows exist. */
-  date: string;
-  /** UTC day timestamp in milliseconds, for frontend time-axis charts. */
-  timestamp: number;
-  /** UTC snapshot timestamp in seconds for snapshot-backed rows. */
-  snapshotAt?: number | null;
-  /** New active watchers captured in this daily bucket; null when suppressed for low-cardinality privacy. */
-  newWatchers?: number | null;
-  /** Active watcher count at the daily snapshot, or cumulative fallback for pre-snapshot data. */
-  activeWatchers: number;
-  /** Aggregate churn estimate for snapshot-backed points; null when suppressed for low-cardinality privacy. */
-  churnedWatchers?: number | null;
-  /** Aggregate reactivation estimate for snapshot-backed points; null when suppressed for low-cardinality privacy. */
-  reactivatedWatchers?: number | null;
-}
-
-export interface TelegramPulsePrivacy {
-  exactActiveWatchers: boolean;
-  lowCardinalityThreshold: number;
-  suppressedFields: string[];
-}
-
-export interface TelegramPulse {
-  activeWatchers: number;
-  coinSubscriptions: number;
-  explicitCoinSubscriptions?: number;
-  presetImpliedCoinSubscriptions?: number;
-  activePresetFollowers?: number;
-  newWatchersToday?: number | null;
-  churnedWatchersToday?: number | null;
-  reactivatedWatchersToday?: number | null;
-  historySource?: "snapshot" | "live-fallback";
-  topCoins: string[];
-  watcherHistory: TelegramWatcherHistoryPoint[];
-  alertTypeChats: TelegramAlertTypeChats;
-  quietHoursEnabledChats: number | null;
-  pendingDeliveries: number | null;
-  miniAppSessionsToday?: number | null;
-  miniAppMutationsToday?: number | null;
-  miniAppDeniedToday?: number | null;
-  miniAppReplayClaimsToday?: number | null;
-  miniAppOpenToFirstMutationP50Sec?: number | null;
-  currentSnapshotAt: number;
-  lifecycleHistoryUpdatedAt: number | null;
-  lifecycleHistoryEverySeconds: number;
-  quality: TelegramTelemetryQuality;
-  privacy: TelegramPulsePrivacy;
-  updatedAt: number;
-  updatedEverySeconds: number;
-}
-
-const TelegramAlertTypeChatsSchema: z.ZodType<TelegramAlertTypeChats> = z.object({
+const TelegramAlertTypeChatsSchema = z.object({
   dews: z.number(),
   depeg: z.number(),
   safety: z.number(),
   launch: z.number(),
   allTypes: z.number(),
 });
+export type TelegramAlertTypeChats = z.infer<typeof TelegramAlertTypeChatsSchema>;
 
-const TelegramTelemetryQualitySchema: z.ZodType<TelegramTelemetryQuality> = z.object({
+const TelegramTelemetryQualitySchema = z.object({
   status: z.enum(["complete", "partial"]),
   unavailableFields: z.array(z.string()),
   errors: z.record(z.string(), z.string()).optional(),
 });
+export type TelegramTelemetryQuality = z.infer<typeof TelegramTelemetryQualitySchema>;
 
-const TelegramPulsePrivacySchema: z.ZodType<TelegramPulsePrivacy> = z.object({
+const TelegramPulsePrivacySchema = z.object({
   exactActiveWatchers: z.boolean(),
   lowCardinalityThreshold: z.number(),
   suppressedFields: z.array(z.string()),
 });
+export type TelegramPulsePrivacy = z.infer<typeof TelegramPulsePrivacySchema>;
 
-const TelegramWatcherHistoryPointSchema: z.ZodType<TelegramWatcherHistoryPoint> = z.object({
+const TelegramWatcherHistoryPointSchema = z.object({
   date: z.string(),
   timestamp: z.number(),
   snapshotAt: z.number().nullable().optional(),
@@ -383,6 +318,22 @@ const TelegramWatcherHistoryPointSchema: z.ZodType<TelegramWatcherHistoryPoint> 
   churnedWatchers: z.number().nullable().optional(),
   reactivatedWatchers: z.number().nullable().optional(),
 });
+export type TelegramWatcherHistoryPoint = z.infer<typeof TelegramWatcherHistoryPointSchema>;
+
+function defaultTelegramTelemetryQuality(): TelegramTelemetryQuality {
+  return {
+    status: "complete",
+    unavailableFields: [],
+  };
+}
+
+function defaultTelegramPulsePrivacy(): TelegramPulsePrivacy {
+  return {
+    exactActiveWatchers: true,
+    lowCardinalityThreshold: 5,
+    suppressedFields: [],
+  };
+}
 
 const TelegramPulseBaseSchema = z.object({
   activeWatchers: z.number(),
@@ -413,18 +364,15 @@ const TelegramPulseBaseSchema = z.object({
   updatedEverySeconds: z.number(),
 });
 
-export const TelegramPulseSchema: z.ZodType<TelegramPulse> = TelegramPulseBaseSchema.transform((pulse) => ({
+export const TelegramPulseSchema = TelegramPulseBaseSchema.transform((pulse) => ({
   ...pulse,
   currentSnapshotAt: pulse.currentSnapshotAt ?? pulse.updatedAt,
   lifecycleHistoryUpdatedAt: pulse.lifecycleHistoryUpdatedAt ?? null,
   lifecycleHistoryEverySeconds: pulse.lifecycleHistoryEverySeconds ?? 900,
-  quality: pulse.quality ?? { status: "complete", unavailableFields: [] },
-  privacy: pulse.privacy ?? {
-    exactActiveWatchers: true,
-    lowCardinalityThreshold: 5,
-    suppressedFields: [],
-  },
+  quality: pulse.quality ?? defaultTelegramTelemetryQuality(),
+  privacy: pulse.privacy ?? defaultTelegramPulsePrivacy(),
 }));
+export type TelegramPulse = z.infer<typeof TelegramPulseSchema>;
 
 export interface TelegramDispatchEventsDetected {
   dews: number;

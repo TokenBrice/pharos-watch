@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
-import type { MethodologyEnvelope, YieldType } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
-import type { ReportCardGrade } from "./report-cards";
 
 export type YieldAdapterLifecycle =
   | "active"
@@ -97,204 +95,7 @@ export const YIELD_DECISION_REJECTION_REASON_CODES = [
 ] as const;
 export type YieldDecisionRejectionReasonCode = (typeof YIELD_DECISION_REJECTION_REASON_CODES)[number];
 
-export interface YieldPublicDecisionAlternative {
-  sourceKey: string;
-  yieldSource: string;
-  /** alt.apy30d - selected.apy30d (signed). */
-  apy30dDelta: number;
-  rejectionReasonCode: YieldDecisionRejectionReasonCode;
-}
-
-export interface YieldPublicDecisionLedger {
-  selectedReasonCode: YieldDecisionReasonCode;
-  previousBestSourceKey?: string | null;
-  sourceSwitch: boolean;
-  /** Signed delta of selected.apy30d vs prior cycle's selected.apy30d; null if no prior. */
-  apy30dDeltaFromPrevious?: number | null;
-  rejectedCount: number;
-  /** Capped at 2 entries by absolute APY delta (largest first). */
-  alternatives: YieldPublicDecisionAlternative[];
-}
-
-export interface YieldResponseWarning {
-  code: string;
-  message: string;
-  reasons?: string[];
-}
-
-export interface AltYieldSource {
-  sourceKey: string;
-  yieldSource: string;
-  yieldSourceUrl?: string | null;
-  yieldType: YieldType;
-  currentApy: number;
-  apy30d: number;
-  sourceTvlUsd: number | null;
-  dataSource: string;
-  sourceRisk?: YieldSourceRisk | null;
-}
-
-export interface YieldPublicationMetadata {
-  generationId?: string | null;
-  updatedAt?: number | null;
-  cutoffAt?: number | null;
-  schemaVersion?: number | null;
-  status?: YieldPublicationStatus | null;
-}
-
-export interface YieldSourceRisk {
-  sourceRiskScore?: number | null;
-  sourceRiskPenalty?: number | null;
-  sourceDepthRatio?: number | null;
-  rewardShare?: number | null;
-  sourceAgeSeconds?: number | null;
-  observationCount30d?: number | null;
-  sourceSwitchCount30d?: number | null;
-  deploymentPlace?: YieldDeploymentPlace | null;
-  venueProtocol?: string | null;
-  venueChain?: string | null;
-  venueRiskTier?: YieldVenueRiskTier | null;
-  trancheSide?: YieldTrancheSide | null;
-  trancheSafetyScore?: number | null;
-  trancheSafetyPenalty?: number | null;
-  underlyingSafetyScore?: number | null;
-  marketCoverageRatio?: number | null;
-  marketMinCoverageRatio?: number | null;
-  marketUtilizationRatio?: number | null;
-  marketUtilizationLimitRatio?: number | null;
-  marketDrawdownRatio?: number | null;
-  marketTotalDrawdowns?: number | null;
-  marketStatus?: YieldMarketStatus | null;
-  marketTvlUsd?: number | null;
-  trancheTvlUsd?: number | null;
-  trancheShareTokenAddress?: string | null;
-  trancheDepositTokenAddress?: string | null;
-  withdrawalDelaySeconds?: number | null;
-  kycRequired?: boolean | null;
-  accessRestricted?: boolean | null;
-  investabilityFlags?: string[];
-}
-
-export interface YieldRankChangeAttribution {
-  previousRank?: number | null;
-  rankDelta?: number | null;
-  previousPys?: number | null;
-  pysDelta?: number | null;
-  primaryDriver?: YieldRankChangeDriver | null;
-  driverContributions?: {
-    apy?: number | null;
-    benchmark?: number | null;
-    stablecoinSafety?: number | null;
-    sourceRisk?: number | null;
-    sourceSwitch?: number | null;
-    freshness?: number | null;
-    volatility?: number | null;
-    tvlDepth?: number | null;
-  } | null;
-}
-
-export interface YieldBenchmarkMeta {
-  key?: YieldBenchmarkKey;
-  label?: string;
-  currency?: string;
-  rate: number;
-  recordDate: string | null;
-  fetchedAt: number | null;
-  ageSeconds: number | null;
-  source: string;
-  isFallback: boolean;
-  fallbackMode: string | null;
-  isProxy?: boolean;
-}
-
-export interface YieldBenchmarkRegistry {
-  USD: YieldBenchmarkMeta;
-  EUR?: YieldBenchmarkMeta | null;
-  CHF?: YieldBenchmarkMeta | null;
-  GBP?: YieldBenchmarkMeta | null;
-  JPY?: YieldBenchmarkMeta | null;
-  MXN?: YieldBenchmarkMeta | null;
-  BRL?: YieldBenchmarkMeta | null;
-  AUD?: YieldBenchmarkMeta | null;
-  CAD?: YieldBenchmarkMeta | null;
-  SGD?: YieldBenchmarkMeta | null;
-}
-
-export interface YieldSourceInputMeta {
-  mode: "dex-cache" | "direct-fetch" | "unavailable";
-  updatedAt: number | null;
-  ageSeconds: number | null;
-  poolCount: number;
-  fallbackMode: string | null;
-}
-
-export interface YieldSafetySnapshotMeta {
-  kind: "ok" | "degraded";
-  coverageRatio: number;
-  coveredCount: number;
-  trackedCount: number;
-  reason: string | null;
-}
-
-export interface YieldRankingProvenance {
-  sourceKey: string;
-  sourceObservedAt: number;
-  sourceAgeSeconds: number;
-  comparisonAnchorObservedAt?: number | null;
-  comparisonAnchorAgeSeconds?: number | null;
-  confidenceTier: "deterministic" | "curated" | "discovered" | "fallback";
-  selectionMethod: "confidence-weighted";
-  selectionReason: string;
-  sourceSwitch: boolean;
-  previousBestSourceKey: string | null;
-  usedLegacyHistory: boolean;
-  usedDefaultSafety: boolean;
-  safetyProvenance?: YieldSafetyProvenance;
-  benchmarkKey?: YieldBenchmarkKey;
-  benchmarkLabel?: string;
-  benchmarkCurrency?: string;
-  benchmarkRate?: number;
-  benchmarkRecordDate: string | null;
-  benchmarkIsFallback: boolean;
-  benchmarkFallbackMode: string | null;
-  benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
-  benchmarkIsProxy?: boolean;
-  anomalies: string[];
-}
-
-export interface YieldRankingsProvenance {
-  selectionMethod: "confidence-weighted";
-  benchmark: YieldBenchmarkMeta;
-  benchmarks?: YieldBenchmarkRegistry;
-  dlPools: YieldSourceInputMeta;
-  safetySnapshot: YieldSafetySnapshotMeta;
-}
-
-export interface YieldHistoryPoint {
-  date: number | string;
-  apy: number;
-  apyBase: number | null;
-  apyReward: number | null;
-  exchangeRate: number | null;
-  sourceTvlUsd: number | null;
-  warningSignals: string[];
-  sourceKey?: string | null;
-  yieldSource?: string | null;
-  yieldSourceUrl?: string | null;
-  yieldType?: YieldType | null;
-  dataSource?: string | null;
-  isBest?: boolean;
-  sourceSwitch?: boolean;
-  publicationGenerationId?: string | null;
-  sourceRisk?: YieldSourceRisk | null;
-  /* Optional historical PYS snapshots captured at the row's publish time.
-     Nullable + optional so older rows (before BE persistence shipped) parse cleanly. */
-  pysAtPublish?: number | null;
-  safetyAtPublish?: number | null;
-  varianceAtPublish?: number | null;
-}
-
-const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
+const YieldHistoryPointSchema = z.object({
   date: z.union([z.number(), z.string()]),
   apy: z.number(),
   apyBase: z.number().nullable(),
@@ -316,7 +117,7 @@ const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
   varianceAtPublish: z.number().nullable().optional(),
 });
 
-const YieldPublicationMetadataSchema: z.ZodType<YieldPublicationMetadata> = z.object({
+const YieldPublicationMetadataSchema = z.object({
   generationId: z.string().nullable().optional(),
   updatedAt: z.number().nullable().optional(),
   cutoffAt: z.number().nullable().optional(),
@@ -324,7 +125,7 @@ const YieldPublicationMetadataSchema: z.ZodType<YieldPublicationMetadata> = z.ob
   status: z.enum(["staged", "published", "failed"]).nullable().optional(),
 });
 
-const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
+const YieldSourceRiskSchema = z.object({
   sourceRiskScore: z.number().min(0).max(100).nullable().optional(),
   sourceRiskPenalty: z.number().min(1).nullable().optional(),
   sourceDepthRatio: z.number().min(0).nullable().optional(),
@@ -357,14 +158,14 @@ const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
   investabilityFlags: z.array(z.string()).optional(),
 });
 
-const YieldPublicDecisionAlternativeSchema: z.ZodType<YieldPublicDecisionAlternative> = z.object({
+const YieldPublicDecisionAlternativeSchema = z.object({
   sourceKey: z.string(),
   yieldSource: z.string(),
   apy30dDelta: z.number(),
   rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES),
 });
 
-const YieldPublicDecisionLedgerSchema: z.ZodType<YieldPublicDecisionLedger> = z.object({
+const YieldPublicDecisionLedgerSchema = z.object({
   selectedReasonCode: z.enum(YIELD_DECISION_REASON_CODES),
   previousBestSourceKey: z.string().nullable().optional(),
   sourceSwitch: z.boolean(),
@@ -373,7 +174,7 @@ const YieldPublicDecisionLedgerSchema: z.ZodType<YieldPublicDecisionLedger> = z.
   alternatives: z.array(YieldPublicDecisionAlternativeSchema).max(2),
 });
 
-const YieldRankChangeAttributionSchema: z.ZodType<YieldRankChangeAttribution> = z.object({
+const YieldRankChangeAttributionSchema = z.object({
   previousRank: z.number().int().positive().nullable().optional(),
   rankDelta: z.number().int().nullable().optional(),
   previousPys: z.number().nullable().optional(),
@@ -483,49 +284,19 @@ const YieldRankingsProvenanceSchema = z.object({
   safetySnapshot: YieldSafetySnapshotMetaSchema,
 });
 
-export interface YieldRanking {
-  id: string;
-  symbol: string;
-  name: string;
-  currentApy: number;
-  apy7d: number;
-  apy30d: number;
-  apyBase: number | null;
-  apyReward: number | null;
-  yieldSource: string;
-  yieldSourceUrl?: string | null;
-  yieldType: YieldType;
-  dataSource: string;
-  sourceTvlUsd: number | null;
-  pharosYieldScore: number | null;
-  pysNullReason?: YieldPysNullReason | null;
-  safetyScore: number | null;
-  safetyGrade: ReportCardGrade | null;
-  yieldToRisk: number | null;
-  excessYield: number | null;
-  benchmarkKey?: YieldBenchmarkKey;
-  benchmarkLabel?: string;
-  benchmarkCurrency?: string;
-  benchmarkRate?: number;
-  benchmarkRecordDate?: string | null;
-  benchmarkIsFallback?: boolean;
-  benchmarkFallbackMode?: string | null;
-  benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
-  benchmarkIsProxy?: boolean;
-  yieldStability: number | null;
-  apyVariance30d: number | null;
-  apyMin30d: number | null;
-  apyMax30d: number | null;
-  warningSignals: string[];
-  altSources: AltYieldSource[];
-  provenance?: YieldRankingProvenance | null;
-  publicationGenerationId?: string | null;
-  publishedRank?: number | null;
-  liveRank?: number | null;
-  sourceRisk?: YieldSourceRisk | null;
-  rankChangeAttribution?: YieldRankChangeAttribution | null;
-  decisionLedger?: YieldPublicDecisionLedger | null;
-}
+export type YieldHistoryPoint = z.infer<typeof YieldHistoryPointSchema>;
+export type YieldPublicationMetadata = z.infer<typeof YieldPublicationMetadataSchema>;
+export type YieldSourceRisk = z.infer<typeof YieldSourceRiskSchema>;
+export type YieldPublicDecisionAlternative = z.infer<typeof YieldPublicDecisionAlternativeSchema>;
+export type YieldPublicDecisionLedger = z.infer<typeof YieldPublicDecisionLedgerSchema>;
+export type YieldRankChangeAttribution = z.infer<typeof YieldRankChangeAttributionSchema>;
+export type AltYieldSource = z.infer<typeof AltYieldSourceSchema>;
+export type YieldBenchmarkMeta = z.infer<typeof YieldBenchmarkMetaSchema>;
+export type YieldBenchmarkRegistry = z.infer<typeof YieldBenchmarkRegistrySchema>;
+export type YieldSourceInputMeta = z.infer<typeof YieldSourceInputMetaSchema>;
+export type YieldSafetySnapshotMeta = z.infer<typeof YieldSafetySnapshotMetaSchema>;
+export type YieldRankingProvenance = z.infer<typeof YieldRankingProvenanceSchema>;
+export type YieldRankingsProvenance = z.infer<typeof YieldRankingsProvenanceSchema>;
 
 const YieldRankingSchema = z.object({
   id: z.string(),
@@ -570,21 +341,16 @@ const YieldRankingSchema = z.object({
   rankChangeAttribution: YieldRankChangeAttributionSchema.nullable().optional(),
   decisionLedger: YieldPublicDecisionLedgerSchema.nullable().optional(),
 });
+export type YieldRanking = z.infer<typeof YieldRankingSchema>;
 
-export interface YieldRankingsResponse {
-  rankings: YieldRanking[];
-  riskFreeRate: number;
-  benchmarks?: YieldBenchmarkRegistry;
-  scalingFactor: number;
-  medianApy: number;
-  updatedAt: number;
-  provenance?: YieldRankingsProvenance | null;
-  warnings?: YieldResponseWarning[];
-  publication?: YieldPublicationMetadata | null;
-  methodology?: MethodologyEnvelope;
-}
+const YieldResponseWarningSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  reasons: z.array(z.string()).optional(),
+});
+export type YieldResponseWarning = z.infer<typeof YieldResponseWarningSchema>;
 
-export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.object({
+export const YieldRankingsResponseSchema = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
   benchmarks: YieldBenchmarkRegistrySchema.optional(),
@@ -592,34 +358,20 @@ export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.o
   medianApy: z.number(),
   updatedAt: z.number(),
   provenance: YieldRankingsProvenanceSchema.nullable().optional(),
-  warnings: z
-    .array(
-      z.object({
-        code: z.string(),
-        message: z.string(),
-        reasons: z.array(z.string()).optional(),
-      }),
-    )
-    .optional(),
+  warnings: z.array(YieldResponseWarningSchema).optional(),
   publication: YieldPublicationMetadataSchema.nullable().optional(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });
+export type YieldRankingsResponse = z.infer<typeof YieldRankingsResponseSchema>;
 
-export interface YieldHistoryResponse {
-  current: YieldHistoryPoint | null;
-  history: YieldHistoryPoint[];
-  warning?: string;
-  methodology: MethodologyEnvelope;
-  publication?: YieldPublicationMetadata | null;
-}
-
-export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.object({
+export const YieldHistoryResponseSchema = z.object({
   current: YieldHistoryPointSchema.nullable(),
   history: z.array(YieldHistoryPointSchema),
   warning: z.string().optional(),
   methodology: MethodologyEnvelopeSchema,
   publication: YieldPublicationMetadataSchema.nullable().optional(),
 });
+export type YieldHistoryResponse = z.infer<typeof YieldHistoryResponseSchema>;
 
 export const YIELD_ADAPTER_MANIFEST_FAMILY_VALUES = [
   "onchain",

@@ -57,31 +57,6 @@ export interface DigestDataQuality {
 
 export type DigestRiskTapeTone = "critical" | "warning" | "neutral" | "positive";
 
-export interface DigestRiskTapeItem {
-  id: string;
-  label: string;
-  value: string;
-  tone: DigestRiskTapeTone;
-  detail?: string;
-}
-
-export interface DigestSignalChange {
-  id: string;
-  label: string;
-  kind: DigestEditorialCandidateKind | "psi" | "gauge";
-  symbols: string[];
-  detail: string;
-}
-
-export interface DigestChangeSummary {
-  previousDate?: string | null;
-  newSignals: DigestSignalChange[];
-  worsenedSignals: DigestSignalChange[];
-  improvedSignals: DigestSignalChange[];
-  resolvedSignals: DigestSignalChange[];
-  repeatedSignals: DigestSignalChange[];
-}
-
 export type DigestNextTriggerMetric =
   | "depeg-bps"
   | "supply-1d-usd"
@@ -91,28 +66,6 @@ export type DigestNextTriggerMetric =
   | "psi-score";
 
 export type DigestNextTriggerComparator = "abs-gte" | "gte" | "lte" | "band-gte";
-
-export interface DigestNextTrigger {
-  id: string;
-  label: string;
-  metric: DigestNextTriggerMetric;
-  comparator: DigestNextTriggerComparator;
-  thresholdLabel: string;
-  thresholdValue?: number;
-  symbol?: string;
-  candidateId?: string;
-  rationale: string;
-  detail: string;
-}
-
-export interface DigestForwardLookOutcome {
-  id: string;
-  triggerId: string;
-  label: string;
-  status: "hit" | "missed" | "pending";
-  detail: string;
-  sourceDate?: string | null;
-}
 
 export interface DigestCalmNarrativeFrame {
   label: string;
@@ -312,19 +265,6 @@ export interface DigestInputData {
   };
 }
 
-export interface DailyDigestResponse {
-  digest: string | null;
-  digestTitle: string | null;
-  digestExtended: string | null;
-  generatedAt: number | null;
-  editionNumber: number | null;
-  riskSignal?: DigestRiskSignal | null;
-  changeSummary?: DigestChangeSummary | null;
-  nextTriggers?: DigestNextTrigger[] | null;
-  forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
-  riskTape?: DigestRiskTapeItem[] | null;
-}
-
 const DigestRiskTapeToneSchema = z.enum(["critical", "warning", "neutral", "positive"]);
 
 const DigestRiskTapeItemSchema = z.object({
@@ -334,6 +274,7 @@ const DigestRiskTapeItemSchema = z.object({
   tone: DigestRiskTapeToneSchema,
   detail: z.string().optional(),
 });
+export type DigestRiskTapeItem = z.infer<typeof DigestRiskTapeItemSchema>;
 
 const DigestSignalChangeSchema = z.object({
   id: z.string(),
@@ -355,6 +296,7 @@ const DigestSignalChangeSchema = z.object({
   symbols: z.array(z.string()),
   detail: z.string(),
 });
+export type DigestSignalChange = z.infer<typeof DigestSignalChangeSchema>;
 
 const DigestChangeSummarySchema = z.object({
   previousDate: z.string().nullable().optional(),
@@ -364,6 +306,7 @@ const DigestChangeSummarySchema = z.object({
   resolvedSignals: z.array(DigestSignalChangeSchema),
   repeatedSignals: z.array(DigestSignalChangeSchema),
 });
+export type DigestChangeSummary = z.infer<typeof DigestChangeSummarySchema>;
 
 const DigestNextTriggerSchema = z.object({
   id: z.string(),
@@ -377,6 +320,7 @@ const DigestNextTriggerSchema = z.object({
   rationale: z.string(),
   detail: z.string(),
 });
+export type DigestNextTrigger = z.infer<typeof DigestNextTriggerSchema>;
 
 const DigestForwardLookOutcomeSchema = z.object({
   id: z.string(),
@@ -386,16 +330,7 @@ const DigestForwardLookOutcomeSchema = z.object({
   detail: z.string(),
   sourceDate: z.string().nullable().optional(),
 });
-
-export interface DigestRiskSignal {
-  kind: "depeg";
-  symbol: string;
-  bps: number;
-  mcapUsd: number | null;
-  severity: "critical" | "watch";
-  activeCount?: number;
-  date?: string | null;
-}
+export type DigestForwardLookOutcome = z.infer<typeof DigestForwardLookOutcomeSchema>;
 
 const DigestRiskSignalSchema = z.object({
   kind: z.literal("depeg"),
@@ -406,6 +341,7 @@ const DigestRiskSignalSchema = z.object({
   activeCount: z.number().optional(),
   date: z.string().nullable().optional(),
 });
+export type DigestRiskSignal = z.infer<typeof DigestRiskSignalSchema>;
 
 export const DailyDigestResponseSchema = z.object({
   digest: z.string().nullable(),
@@ -418,7 +354,7 @@ export const DailyDigestResponseSchema = z.object({
   nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
   forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
   riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
-}).transform((value): DailyDigestResponse => ({
+}).transform((value) => ({
   digest: value.digest,
   digestTitle: value.digestTitle ?? null,
   digestExtended: value.digestExtended ?? null,
@@ -430,26 +366,7 @@ export const DailyDigestResponseSchema = z.object({
   forwardLookOutcomes: value.forwardLookOutcomes ?? null,
   riskTape: value.riskTape ?? null,
 }));
-
-export interface DigestArchiveEntry {
-  digestText: string;
-  digestTitle: string | null;
-  digestExtended: string | null;
-  generatedAt: number;
-  psiScore: number | null;
-  psiBand: string | null;
-  totalMcapUsd: number | null;
-  riskSignal?: DigestRiskSignal | null;
-  nextTriggers?: DigestNextTrigger[] | null;
-  forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
-  riskTape?: DigestRiskTapeItem[] | null;
-  digestType?: "daily" | "weekly";
-  editionNumber?: number;
-}
-
-export interface DigestArchiveResponse {
-  digests: DigestArchiveEntry[];
-}
+export type DailyDigestResponse = z.infer<typeof DailyDigestResponseSchema>;
 
 const DigestArchiveEntrySchema = z.object({
   digestText: z.string(),
@@ -466,28 +383,18 @@ const DigestArchiveEntrySchema = z.object({
   digestType: z.enum(["daily", "weekly"]).optional(),
   editionNumber: z.number().optional(),
 });
+export type DigestArchiveEntry = z.infer<typeof DigestArchiveEntrySchema>;
 
 export const DigestArchiveResponseSchema = z.object({
   digests: z.array(DigestArchiveEntrySchema),
 });
-
-export interface StablecoinChartPoint {
-  date: number;
-  totalCirculatingUSD: Record<string, number>;
-}
+export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
 
 export const StablecoinChartResponseSchema = z.array(z.object({
   date: z.number(),
   totalCirculatingUSD: z.record(z.string(), z.number()),
 }));
-
-export interface UsdsStatusResponse {
-  freezeCapabilityPresent: boolean;
-  /** Backward-compatible alias for `freezeCapabilityPresent`. */
-  freezeActive: boolean;
-  implementationAddress: string;
-  lastChecked: number;
-}
+export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];
 
 const UsdsImplementationAddressSchema = z
   .string()
@@ -500,7 +407,7 @@ export const UsdsStatusResponseSchema = z.object({
   freezeCapabilityPresent: z.unknown().optional(),
   freezeActive: z.unknown().optional(),
   lastChecked: z.unknown().optional(),
-}).transform((value): UsdsStatusResponse => {
+}).transform((value) => {
   const freezeCapabilityPresent = typeof value.freezeCapabilityPresent === "boolean"
     ? value.freezeCapabilityPresent
     : typeof value.freezeActive === "boolean"
@@ -516,30 +423,7 @@ export const UsdsStatusResponseSchema = z.object({
         : 0,
   };
 });
-
-export interface DigestSnapshotResponse {
-  date: string;
-  inputData: DigestInputData | null;
-  prevInputData: DigestInputData | null;
-  depegEvents: Array<{
-    stablecoinId: string;
-    symbol: string;
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }>;
-  blacklistEvents: Array<{
-    stablecoin: string;
-    chainName: string;
-    eventType: string;
-    address: string;
-    amountNative: number | null;
-    amountUsdAtEvent: number | null;
-    amountStatus: string;
-    timestamp: number;
-  }>;
-}
+export type UsdsStatusResponse = z.infer<typeof UsdsStatusResponseSchema>;
 
 const DigestSnapshotInputDataSchema = z
   .object({})
@@ -566,10 +450,11 @@ const DigestSnapshotBlacklistEventSchema = z.object({
   timestamp: z.number(),
 });
 
-export const DigestSnapshotResponseSchema: z.ZodType<DigestSnapshotResponse> = z.object({
+export const DigestSnapshotResponseSchema = z.object({
   date: z.string(),
   inputData: DigestSnapshotInputDataSchema.nullable(),
   prevInputData: DigestSnapshotInputDataSchema.nullable(),
   depegEvents: z.array(DigestSnapshotDepegEventSchema),
   blacklistEvents: z.array(DigestSnapshotBlacklistEventSchema),
 });
+export type DigestSnapshotResponse = z.infer<typeof DigestSnapshotResponseSchema>;
