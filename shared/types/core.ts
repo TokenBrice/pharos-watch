@@ -494,16 +494,6 @@ export interface CoinNotice {
   message: string;
 }
 
-export type YieldType =
-  | "lending-vault"
-  | "rebase"
-  | "fee-sharing"
-  | "lp-receipt"
-  | "nav-appreciation"
-  | "governance-set"
-  | "lending-opportunity"
-  | "structured-tranche";
-
 export const YIELD_TYPE_VALUES = [
   "lending-vault",
   "rebase",
@@ -514,6 +504,8 @@ export const YIELD_TYPE_VALUES = [
   "lending-opportunity",
   "structured-tranche",
 ] as const;
+
+export type YieldType = (typeof YIELD_TYPE_VALUES)[number];
 
 export const YieldTypeSchema = z.enum(YIELD_TYPE_VALUES);
 
@@ -694,9 +686,8 @@ export interface PegAssetBase {
   circulating?: Record<string, number>;
 }
 
-export type BluechipGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F";
-
 const BLUECHIP_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
+export type BluechipGrade = (typeof BLUECHIP_GRADE_VALUES)[number];
 export const BluechipGradeSchema = z.enum(BLUECHIP_GRADE_VALUES);
 
 export { MethodologyEnvelopeSchema, type MethodologyEnvelope } from "./methodology-envelope";
