@@ -74,14 +74,33 @@ export function useCoverageMatrixModel() {
   const flowQuery = useMintBurnFlows();
   const reportCardsQuery = useReportCards();
 
-  const resources = {
-    stablecoins: useCoverageMatrixQueryResource<"stablecoins">(stablecoinsQuery),
-    pegSummary: useCoverageMatrixQueryResource<"pegSummary">(pegQuery),
-    dexLiquidity: useCoverageMatrixQueryResource<"dexLiquidity">(dexQuery),
-    redemptionBackstops: useCoverageMatrixQueryResource<"redemptionBackstops">(redemptionQuery),
-    yieldRankings: useCoverageMatrixQueryResource<"yieldRankings">(yieldQuery),
-    mintBurnFlows: useCoverageMatrixQueryResource<"mintBurnFlows">(flowQuery),
-    reportCards: useCoverageMatrixQueryResource<"reportCards">(reportCardsQuery),
-  } satisfies CoverageMatrixQueryResources;
-  return buildCoverageMatrixModel(buildCoverageMatrixInput(resources));
+  const stablecoinsResource = useCoverageMatrixQueryResource<"stablecoins">(stablecoinsQuery);
+  const pegSummaryResource = useCoverageMatrixQueryResource<"pegSummary">(pegQuery);
+  const dexLiquidityResource = useCoverageMatrixQueryResource<"dexLiquidity">(dexQuery);
+  const redemptionBackstopsResource =
+    useCoverageMatrixQueryResource<"redemptionBackstops">(redemptionQuery);
+  const yieldRankingsResource = useCoverageMatrixQueryResource<"yieldRankings">(yieldQuery);
+  const mintBurnFlowsResource = useCoverageMatrixQueryResource<"mintBurnFlows">(flowQuery);
+  const reportCardsResource = useCoverageMatrixQueryResource<"reportCards">(reportCardsQuery);
+
+  return useMemo(() => {
+    const resources = {
+      stablecoins: stablecoinsResource,
+      pegSummary: pegSummaryResource,
+      dexLiquidity: dexLiquidityResource,
+      redemptionBackstops: redemptionBackstopsResource,
+      yieldRankings: yieldRankingsResource,
+      mintBurnFlows: mintBurnFlowsResource,
+      reportCards: reportCardsResource,
+    } satisfies CoverageMatrixQueryResources;
+    return buildCoverageMatrixModel(buildCoverageMatrixInput(resources));
+  }, [
+    stablecoinsResource,
+    pegSummaryResource,
+    dexLiquidityResource,
+    redemptionBackstopsResource,
+    yieldRankingsResource,
+    mintBurnFlowsResource,
+    reportCardsResource,
+  ]);
 }
