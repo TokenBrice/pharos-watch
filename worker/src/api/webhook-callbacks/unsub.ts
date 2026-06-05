@@ -1,15 +1,9 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { answerCallbackQuery, editMessage } from "../../lib/telegram";
+import { answerCallbackQuery } from "../../lib/telegram";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import { removeSubscriptions } from "../telegram-webhook-store";
-import {
-  MANAGE_PAGE_SIZE,
-  buildManageWatchlistKeyboard,
-  buildManageWatchlistMessage,
-} from "../telegram-webhook-messages";
-import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
-import { loadChatSubscriptions } from "./manage";
+import { loadChatSubscriptions, renderManageWatchlistPage } from "./manage";
 import {
   callbackChatType,
   hasExactParts,
@@ -108,37 +102,14 @@ async function handleManageUnsub(
   }
 
   const subscriptions = await loadChatSubscriptions(db, chatId);
-  const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
-  // If the page we were viewing is now empty (the last row on a tail page was
-  // removed), shift one page up so the user sees the remaining items.
-  const nextPage = Math.min(currentPage, totalPages - 1);
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   const ackText = `Removed ${meta?.symbol ?? stablecoinId}.`;
-
-  const messageId = cb.message?.message_id;
-  const text = buildManageWatchlistMessage(subscriptions, Math.max(0, nextPage));
-  const replyMarkup =
-    subscriptions.length === 0
-      ? undefined
-      : buildManageWatchlistKeyboard(subscriptions, Math.max(0, nextPage));
-
-  if (messageId != null) {
-    const edited = await editMessage(chatId, messageId, text, botToken, {
-      disableWebPagePreview: true,
-      replyMarkup,
-    });
-    if (edited) {
-      await answerCallbackQuery(cb.id, botToken, { text: ackText });
-      return;
-    }
-  }
-  {
-    await sendAuditedTelegramReply(db, chatId, text, botToken, {
-      replyMarkup,
-      actionDetail: "callback_manage",
-    });
-  }
-  await answerCallbackQuery(cb.id, botToken, { text: ackText });
+  await renderManageWatchlistPage(db, botToken, cb, {
+    chatId,
+    subscriptions,
+    requestedPage: currentPage,
+    ackText,
+  });
 }
 
 export const handleUnsubCallback: CallbackHandler = async ({ db, botToken, cb, parsed }) => {

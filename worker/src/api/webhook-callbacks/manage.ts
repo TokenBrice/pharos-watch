@@ -29,15 +29,18 @@ export async function loadChatSubscriptions(
   return result.results ?? [];
 }
 
-async function renderManagePage(
+export async function renderManageWatchlistPage(
   db: D1Database,
   botToken: string,
   cb: TelegramCallbackQuery,
-  chatId: string,
-  requestedPage: number,
-  ackText: string,
+  params: {
+    chatId: string;
+    subscriptions: SubscriptionRow[];
+    requestedPage: number;
+    ackText: string;
+  },
 ): Promise<void> {
-  const subscriptions = await loadChatSubscriptions(db, chatId);
+  const { chatId, subscriptions, requestedPage, ackText } = params;
   const totalPages = Math.max(1, Math.ceil(subscriptions.length / MANAGE_PAGE_SIZE));
   const page = Math.max(0, Math.min(requestedPage, totalPages - 1));
   const messageId = cb.message?.message_id;
@@ -62,6 +65,23 @@ async function renderManagePage(
     });
   }
   await answerCallbackQuery(cb.id, botToken, { text: ackText });
+}
+
+async function renderManagePage(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  requestedPage: number,
+  ackText: string,
+): Promise<void> {
+  const subscriptions = await loadChatSubscriptions(db, chatId);
+  await renderManageWatchlistPage(db, botToken, cb, {
+    chatId,
+    subscriptions,
+    requestedPage,
+    ackText,
+  });
 }
 
 async function handleManagePage(
