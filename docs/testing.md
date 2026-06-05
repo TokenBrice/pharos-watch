@@ -27,6 +27,10 @@ npm run check:site-csp-sync # Verify managed `public/_headers` CSP lines match `
 npm run check:cron-abort-contract # Verify leased cron jobs accept/pass AbortSignal or carry explicit waivers
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts`, and `worker/wrangler.toml` stay aligned
 npm run check:cron-connections # Enforce the documented per-trigger outbound connection budget across cron slots
+npm run check:cron-console-usage # Ratchet `console.*` usage in worker cron/scheduled code against the checked-in baseline
+npm run check:client-registry-imports # Block client `src/` code from importing the full stablecoin registry (use the client registry)
+npm run check:selector-banned-phrases # Banned-phrase lint for the Stablecoin Picker/Selector editorial surface
+npm run check:script-entrypoints # Verify script entrypoints referenced in scripts/docs/package.json exist under allowed prefixes
 npm run check:doc-counts # Verify tracked/shadow/adapter/bluechip/live-enabled counts in docs match code
 npm run check:verified-doc-links # Verify all markdown links in verified docs resolve
 npm run check:doc-source-paths # Verify backtick source-path references in README.md and docs/** resolve to files/directories
@@ -170,7 +174,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 11. `OG Refresh`:
 
 - defined in `.github/workflows/og-refresh.yml`
-- runs on manual dispatch
+- runs on a weekly Monday schedule (cron `23 4 * * 1`) and on manual dispatch
 - rebuilds checked-in OG editorial and learn image artifacts and opens or updates the automated/og-refresh branch when generated images change
 
 12. `CodeQL`:

@@ -122,7 +122,7 @@ Defined across:
 - `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
 - `.github/workflows/pages-release.yml` for the consolidated Pages build/local-smoke/publish/live-smoke path
 - `.github/workflows/rebuild-pages.yml` for the scheduled/manual Pages-only rebuild path
-- `.github/workflows/og-refresh.yml` for manually refreshing checked-in OG image artifacts
+- `.github/workflows/og-refresh.yml` for scheduled (weekly Monday, cron `23 4 * * 1`) and manual refresh of checked-in OG image artifacts
 - `.github/workflows/zizmor.yml` for GitHub Actions workflow security scanning into Code Scanning
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
