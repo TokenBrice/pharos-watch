@@ -4,6 +4,10 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { SelectorInput, SelectorProfile } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
+import {
+  selectorExclusionReasonLabel,
+  selectorProfileLabel,
+} from "@shared/lib/selector/selector-labels";
 
 export interface SelectorClosestSurvivor {
   id: string;
@@ -29,12 +33,6 @@ interface SelectorEmptyStateProps {
   screenerHandoffHref: string;
 }
 
-const PROFILE_LABEL: Record<SelectorProfile, string> = {
-  treasury: "Treasury",
-  yield: "Yield",
-  trading: "Active Trading",
-};
-
 export function SelectorEmptyState({
   profile,
   pegCurrency,
@@ -46,8 +44,8 @@ export function SelectorEmptyState({
 }: SelectorEmptyStateProps) {
   const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
   const heading = coverageSparse
-    ? `Not enough eligible ${pegLabel} coverage currently passes live-data checks for ${PROFILE_LABEL[profile]}.`
-    : `No tracked ${pegLabel} stablecoin currently passes all exclusion filters for ${PROFILE_LABEL[profile]}.`;
+    ? `Not enough eligible ${pegLabel} coverage currently passes live-data checks for ${selectorProfileLabel(profile)}.`
+    : `No tracked ${pegLabel} stablecoin currently passes all exclusion filters for ${selectorProfileLabel(profile)}.`;
 
   return (
     <section
@@ -119,35 +117,5 @@ export function SelectorEmptyState({
 }
 
 export function readableFailingDimension(value: string): string {
-  const labels: Record<string, string> = {
-    "below-supply-floor": "supply floor",
-    "active-depeg": "active depeg",
-    "safety-grade-floor": "safety grade",
-    "safety-resilience-floor": "resilience",
-    "safety-dependency-risk-floor": "dependency risk",
-    "dews-ceiling": "DEWS stress",
-    "depeg-event-count": "depeg history",
-    "bluechip-d-or-f": "blue-chip alignment",
-    "peg-score-floor": "PegScore",
-    "peg-stability-floor": "peg stability",
-    "pys-null": "yield coverage",
-    "apy-below-floor": "yield floor",
-    "yield-warning-unstable": "yield stability",
-    "yield-warning-thin-tvl": "yield depth",
-    "high-venue-on-c-tier": "venue risk",
-    "liquidity-floor": "liquidity",
-    "liquidity-diversification-floor": "liquidity diversification",
-    "effective-exit-floor": "effective exit",
-    "supply-tvl-floor-1h": "one-hour exit depth",
-    "lifecycle-non-active": "lifecycle",
-    "peg-currency-mismatch": "peg currency",
-    "yield-native-only-violation": "native yield",
-    "decentralization-required-violation": "decentralization",
-    "custody-regulated-only-violation": "custody model",
-    "custody-onchain-only-violation": "custody model",
-    "howey-uncertain": "regulatory uncertainty",
-    "template-coverage-gap": "template coverage",
-    "coverage-too-thin": "coverage",
-  };
-  return labels[value] ?? "profile fit";
+  return selectorExclusionReasonLabel(value) ?? "profile fit";
 }

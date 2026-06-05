@@ -11,6 +11,10 @@ import {
 import Link from "next/link";
 import type { SelectorInput, SelectorProfile } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
+import {
+  selectorExclusionReasonLabel,
+  selectorProfileLabel,
+} from "@shared/lib/selector/selector-labels";
 import { SelectorEmblem } from "@/components/home-alt-callouts/selector-emblem";
 import { cn } from "@/lib/utils";
 
@@ -64,12 +68,6 @@ interface SelectorResultSummaryProps {
   compareActionsSlot?: ReactNode;
   // Mobile-only: order-aware reorder happens via Tailwind on the parent.
 }
-
-const PROFILE_LABEL: Record<SelectorProfile, string> = {
-  treasury: "Treasury",
-  yield: "Yield",
-  trading: "Active Trading",
-};
 
 const HORIZON_LABEL: Record<SelectorInput["horizon"], string> = {
   lt24h: "under 24h",
@@ -185,7 +183,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
-                {PROFILE_LABEL[profile]}
+                {selectorProfileLabel(profile)}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
                 {pegLabel} peg
@@ -411,35 +409,5 @@ function buildResultBanners({
 }
 
 function readableRelaxedReason(reason: string): string {
-  const labels: Record<string, string> = {
-    "below-supply-floor": "supply floor",
-    "active-depeg": "active depeg",
-    "safety-grade-floor": "safety grade",
-    "safety-resilience-floor": "resilience",
-    "safety-dependency-risk-floor": "dependency risk",
-    "dews-ceiling": "DEWS stress",
-    "depeg-event-count": "depeg history",
-    "bluechip-d-or-f": "blue-chip alignment",
-    "peg-score-floor": "PegScore",
-    "peg-stability-floor": "peg stability",
-    "pys-null": "yield coverage",
-    "apy-below-floor": "yield floor",
-    "yield-warning-unstable": "yield stability",
-    "yield-warning-thin-tvl": "yield depth",
-    "high-venue-on-c-tier": "venue risk",
-    "liquidity-floor": "liquidity",
-    "liquidity-diversification-floor": "liquidity diversification",
-    "effective-exit-floor": "effective exit",
-    "supply-tvl-floor-1h": "one-hour exit depth",
-    "lifecycle-non-active": "lifecycle",
-    "peg-currency-mismatch": "peg currency",
-    "yield-native-only-violation": "native yield",
-    "decentralization-required-violation": "decentralization",
-    "custody-regulated-only-violation": "custody model",
-    "custody-onchain-only-violation": "custody model",
-    "howey-uncertain": "regulatory uncertainty",
-    "template-coverage-gap": "template coverage",
-    "coverage-too-thin": "coverage",
-  };
-  return labels[reason] ?? reason.replace(/-/g, " ");
+  return selectorExclusionReasonLabel(reason) ?? reason.replace(/-/g, " ");
 }

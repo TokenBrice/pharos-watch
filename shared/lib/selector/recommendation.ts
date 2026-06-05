@@ -2,6 +2,7 @@ import type { BluechipGrade, ReportCardGrade } from "../../types";
 import { selectLowestSubDimension } from "./lowest-sub-dimension";
 import { round1 } from "../math";
 import type { ScoredEntry } from "./scoring";
+import { SELECTOR_COMPONENT_PROSE_LABELS } from "./selector-labels";
 import type {
   ContextKey,
   MergedRow,
@@ -10,32 +11,11 @@ import type {
   SelectorProfile,
   SelectorRankRobustness,
   SelectorRecommendation,
-  WeightKey,
   WhyKey,
   YieldRecommendation,
 } from "./types";
 import { renderWatchText } from "./what-to-watch-templates";
 import { whyKeysByProfile, WHY_KEYS_SET } from "./why-keys";
-
-const COMPONENT_LABELS: Readonly<Record<WeightKey, string>> = {
-  safetyOverall: "safety",
-  resilience: "resilience",
-  dependencyRisk: "dependency risk",
-  pegStabilityHistory: "peg history",
-  pegStabilityLive: "live peg stability",
-  pegScoreNow: "current PegScore",
-  decentralization: "decentralization",
-  dewsInverted: "stress",
-  bluechip: "bluechip alignment",
-  supplyLog: "supply depth",
-  pharosYieldScore: "Pharos Yield Score",
-  excessApy: "excess APY",
-  yieldVariance: "APY variance",
-  liquidity: "liquidity",
-  sourceRiskInverted: "source risk",
-  effectiveExit: "effective exit",
-  liquidityDiversification: "liquidity diversification",
-};
 
 function pickWhyKeys(
   row: MergedRow,
@@ -170,7 +150,9 @@ function buildWhyText(entry: ScoredEntry, profile: SelectorProfile): string {
     .filter((component) => component.normalizedValue != null && component.weight > 0)
     .sort((a, b) => b.contribution - a.contribution)
     .slice(0, 2)
-    .map((component) => `${COMPONENT_LABELS[component.key]} ${Math.round(component.normalizedValue ?? 0)}`);
+    .map(
+      (component) => `${SELECTOR_COMPONENT_PROSE_LABELS[component.key]} ${Math.round(component.normalizedValue ?? 0)}`,
+    );
   if (anchors.length === 0) {
     return `Score ${round1(entry.score)} under the ${profile} weight set; live coverage is limited.`;
   }

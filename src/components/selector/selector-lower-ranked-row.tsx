@@ -2,6 +2,7 @@
 
 import type { SelectorInput, SelectorLowerRanked } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
+import { selectorComponentReadingLabel } from "@shared/lib/selector/selector-labels";
 
 interface SelectorLowerRankedRowProps {
   entry: SelectorLowerRanked;
@@ -44,24 +45,5 @@ export function SelectorLowerRankedRow({
 }
 
 function readableComponent(key: string): string {
-  const labels: Record<string, string> = {
-    safetyOverall: "Safety Score",
-    resilience: "resilience",
-    dependencyRisk: "dependency risk",
-    pegStabilityHistory: "peg history",
-    pegStabilityLive: "live peg stability",
-    pegScoreNow: "current peg score",
-    decentralization: "decentralization",
-    dewsInverted: "DEWS stress",
-    bluechip: "blue-chip alignment",
-    supplyLog: "market depth",
-    pharosYieldScore: "Pharos Yield Score",
-    excessApy: "net yield",
-    yieldVariance: "yield variance",
-    sourceRiskInverted: "source risk",
-    effectiveExit: "effective exit",
-    liquidity: "liquidity",
-    liquidityDiversification: "liquidity diversification",
-  };
-  return labels[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  return selectorComponentReadingLabel(key) ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }

@@ -15,6 +15,11 @@ import type {
   SelectorProfile,
   SelectorRecommendation,
 } from "@shared/lib/selector";
+import {
+  selectorComponentLowestSubDimensionLabel,
+  selectorComponentScoreLabel,
+  selectorProfileLabel,
+} from "@shared/lib/selector/selector-labels";
 
 interface SelectorShortlistCardProps {
   rank: 1 | 2 | 3;
@@ -35,12 +40,6 @@ interface SelectorShortlistCardProps {
   /** External URL for the recommended yield source, when available. */
   yieldSourceUrl?: string | null;
 }
-
-const PROFILE_LABEL: Record<SelectorProfile, string> = {
-  treasury: "Treasury",
-  yield: "Yield",
-  trading: "Active Trading",
-};
 
 /** Discrete staleness label used on mobile (R2 Mobile concern #4). */
 function discreteStalenessLabel(seconds: number): string {
@@ -184,7 +183,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
   const resolvedWatchText = watchText ?? recWithProse.watchText;
 
   const detailHref = `/stablecoin/${rec.id}/`;
-  const profileLabel = PROFILE_LABEL[profile];
+  const profileLabel = selectorProfileLabel(profile);
   const headlineId = `selector-shortlist-${rec.id}`;
 
   return (
@@ -494,47 +493,9 @@ function formatContribution(value: number): string {
 }
 
 function readableComponentKey(key: string): string {
-  const labels: Record<string, string> = {
-    safetyOverall: "Safety Score",
-    resilience: "Resilience",
-    dependencyRisk: "Dependency risk",
-    pegStabilityHistory: "Peg history",
-    pegStabilityLive: "Live peg stability",
-    pegScoreNow: "Current peg score",
-    decentralization: "Decentralization",
-    dewsInverted: "DEWS stress",
-    bluechip: "Blue-chip alignment",
-    supplyLog: "Market depth",
-    pharosYieldScore: "Pharos Yield Score",
-    excessApy: "Net yield",
-    yieldVariance: "Yield variance",
-    sourceRiskInverted: "Source risk",
-    effectiveExit: "Effective exit",
-    liquidity: "Liquidity",
-    liquidityDiversification: "Liquidity diversification",
-  };
-  return labels[key] ?? "Profile score input";
+  return selectorComponentScoreLabel(key) ?? "Profile score input";
 }
 
 function readableLowestSubDimension(key: string): string {
-  const labels: Record<string, string> = {
-    safetyOverall: "Safety",
-    resilience: "resilience",
-    dependencyRisk: "dependency risk",
-    pegStabilityHistory: "peg history",
-    pegStabilityLive: "live peg stability",
-    pegScoreNow: "current peg score",
-    decentralization: "decentralization",
-    dewsInverted: "DEWS stress",
-    bluechip: "blue-chip alignment",
-    supplyLog: "market depth",
-    pharosYieldScore: "Pharos Yield Score",
-    excessApy: "net yield",
-    yieldVariance: "yield variance",
-    sourceRiskInverted: "source risk",
-    effectiveExit: "effective exit",
-    liquidity: "liquidity",
-    liquidityDiversification: "liquidity diversification",
-  };
-  return labels[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  return selectorComponentLowestSubDimensionLabel(key) ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }
