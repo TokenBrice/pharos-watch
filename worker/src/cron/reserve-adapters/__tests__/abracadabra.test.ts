@@ -18,6 +18,9 @@ import { fetchDefiLlamaPrices, fetchOnchainUint256 } from "../helpers";
 const signal = AbortSignal.timeout(5_000);
 const coin = { id: "mim-abracadabra" } as StablecoinMeta;
 const BENTOBOX = "0xd96f48665a1410c0cd669a88898eca36b9fc2cce";
+const YVDAI_ADDRESS = "0x1111111111111111111111111111111111111111";
+const WSTETH_ADDRESS = "0x2222222222222222222222222222222222222222";
+const YVUSDC_ADDRESS = "0x3333333333333333333333333333333333333333";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -30,7 +33,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xAAA",
           collateralSymbol: "yvDAI",
-          collateralAddress: "0x1111",
+          collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
           risk: "high",
         },
@@ -40,7 +43,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xBBB",
           collateralSymbol: "wstETH",
-          collateralAddress: "0x2222",
+          collateralAddress: WSTETH_ADDRESS,
           collateralDecimals: 18,
           risk: "low",
         },
@@ -49,8 +52,8 @@ describe("adaptAbracadabraReserves", () => {
     ];
 
     const priceMap = new Map([
-      ["0x1111", 1.0],
-      ["0x2222", 2500],
+      [YVDAI_ADDRESS, 1.0],
+      [WSTETH_ADDRESS, 2500],
     ]);
 
     const result = adaptAbracadabraReserves(readings, priceMap);
@@ -84,7 +87,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xAAA",
           collateralSymbol: "yvDAI",
-          collateralAddress: "0x1111",
+          collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
           risk: "high",
         },
@@ -94,7 +97,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xBBB",
           collateralSymbol: "wstETH",
-          collateralAddress: "0x2222",
+          collateralAddress: WSTETH_ADDRESS,
           collateralDecimals: 18,
           risk: "low",
         },
@@ -102,7 +105,7 @@ describe("adaptAbracadabraReserves", () => {
       },
     ];
 
-    const priceMap = new Map([["0x2222", 2000]]);
+    const priceMap = new Map([[WSTETH_ADDRESS, 2000]]);
     const result = adaptAbracadabraReserves(readings, priceMap);
 
     expect(result.slices).toHaveLength(1);
@@ -120,7 +123,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xAAA",
           collateralSymbol: "yvDAI",
-          collateralAddress: "0x1111",
+          collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
           risk: "high",
         },
@@ -142,7 +145,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xAAA",
           collateralSymbol: "yvDAI",
-          collateralAddress: "0x1111",
+          collateralAddress: YVDAI_ADDRESS,
           collateralDecimals: 18,
           risk: "high",
         },
@@ -161,7 +164,7 @@ describe("adaptAbracadabraReserves", () => {
         cauldron: {
           address: "0xAAA",
           collateralSymbol: "yvUSDC",
-          collateralAddress: "0x3333",
+          collateralAddress: YVUSDC_ADDRESS,
           collateralDecimals: 6,
           risk: "high",
           coinId: "usdc-circle",
@@ -171,7 +174,7 @@ describe("adaptAbracadabraReserves", () => {
       },
     ];
 
-    const priceMap = new Map([["0x3333", 1.0]]);
+    const priceMap = new Map([[YVUSDC_ADDRESS, 1.0]]);
     const result = adaptAbracadabraReserves(readings, priceMap);
 
     expect(result.slices).toHaveLength(1);
@@ -190,8 +193,8 @@ describe("fetchAbracadabraReserves", () => {
 
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(
       new Map([
-        ["0x1111", 1.0],
-        ["0x2222", 2500],
+        [YVDAI_ADDRESS, 1.0],
+        [WSTETH_ADDRESS, 2500],
       ]),
     );
 
@@ -203,8 +206,8 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
-          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: "0x2222", collateralDecimals: 18, risk: "low" },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: WSTETH_ADDRESS, collateralDecimals: 18, risk: "low" },
         ],
       },
     };
@@ -222,7 +225,7 @@ describe("fetchAbracadabraReserves", () => {
       .mockResolvedValueOnce(2_000_000_000_000_000_000n)
       .mockResolvedValueOnce(2_100_000_000_000_000_000n);
 
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["0x2222", 2500]]));
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[WSTETH_ADDRESS, 2500]]));
 
     const config: LiveReservesConfig = {
       adapter: "abracadabra",
@@ -232,8 +235,8 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
-          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: "0x2222", collateralDecimals: 18, risk: "low" },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron2", collateralSymbol: "wstETH", collateralAddress: WSTETH_ADDRESS, collateralDecimals: 18, risk: "low" },
         ],
       },
     };
@@ -254,7 +257,7 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       },
     };
@@ -275,7 +278,7 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       },
     };
@@ -291,7 +294,7 @@ describe("fetchAbracadabraReserves", () => {
       .mockResolvedValueOnce(share)
       .mockResolvedValueOnce(110_000_000_000_000_000_000n);
 
-    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["0x1111", 1.0]]));
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[YVDAI_ADDRESS, 1.0]]));
 
     const config: LiveReservesConfig = {
       adapter: "abracadabra",
@@ -301,8 +304,8 @@ describe("fetchAbracadabraReserves", () => {
       params: {
         bentoBoxAddress: BENTOBOX,
         cauldrons: [
-          { address: "0xCauldronA", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
-          { address: "0xCauldronB", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldronA", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldronB", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       },
     };
@@ -333,7 +336,7 @@ describe("fetchAbracadabraReserves", () => {
       inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
       params: {
         cauldrons: [
-          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: "0x1111", collateralDecimals: 18, risk: "high" },
+          { address: "0xCauldron1", collateralSymbol: "yvDAI", collateralAddress: YVDAI_ADDRESS, collateralDecimals: 18, risk: "high" },
         ],
       } as never,
     };

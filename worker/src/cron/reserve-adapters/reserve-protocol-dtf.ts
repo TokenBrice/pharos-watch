@@ -2,7 +2,7 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
-import { DECIMALS_SELECTOR, encodeUint256Arg } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeAddress, encodeUint256Arg } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
@@ -141,7 +141,7 @@ function encodeQuoteCall(amount: bigint): `0x${string}` {
 }
 
 function encodeAddressCall(selector: string, address: string): `0x${string}` {
-  return `${selector}${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}` as `0x${string}`;
+  return `${selector}${encodeAddress(address)}` as `0x${string}`;
 }
 
 function decodeQuoteResult(raw: string): Array<{ address: `0x${string}`; quantity: bigint }> {

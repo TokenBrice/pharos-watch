@@ -1,5 +1,6 @@
 import { getChainRpc, type ChainRpcConfig } from "./chain-registry";
 import { ETHERSCAN_V2_BASE } from "./constants";
+import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchWithRetry } from "./fetch-retry";
 import { rethrowIfAborted } from "./abort";
 
@@ -82,28 +83,14 @@ function requireEvenHex(value: string, fieldName: string): string {
   return body;
 }
 
-function encodeAbiUint(value: bigint | number): string {
-  const uint = typeof value === "bigint" ? value : BigInt(value);
-  if (uint < 0n) throw new Error("ABI uint values must be non-negative");
-  return uint.toString(16).padStart(64, "0");
-}
-
 function encodeAbiBool(value: boolean): string {
-  return encodeAbiUint(value ? 1 : 0);
-}
-
-function encodeAbiAddress(address: string): string {
-  const body = stripHexPrefix(address);
-  if (!/^[0-9a-fA-F]{40}$/.test(body)) {
-    throw new Error("Invalid Multicall3 target: expected 20-byte hex address");
-  }
-  return body.toLowerCase().padStart(64, "0");
+  return encodeUint256(value ? 1 : 0);
 }
 
 function encodeAbiBytes(hexValue: string): string {
   const body = requireEvenHex(hexValue, "Multicall3 callData");
   const paddedByteLength = Math.ceil(body.length / 2 / 32) * 32;
-  return `${encodeAbiUint(body.length / 2)}${body.padEnd(paddedByteLength * 2, "0")}`;
+  return `${encodeUint256(body.length / 2)}${body.padEnd(paddedByteLength * 2, "0")}`;
 }
 
 function readAbiWord(hexBody: string, byteOffset: number): string | null {
@@ -140,17 +127,17 @@ function readAbiBytes(hexBody: string, byteOffset: number): `0x${string}` | null
 export function encodeMulticall3Aggregate3CallData(calls: readonly EvmMulticall3Call[]): `0x${string}` {
   const encodedCalls = calls.map((call) => {
     const encodedCallData = encodeAbiBytes(call.callData);
-    return `${encodeAbiAddress(call.target)}${encodeAbiBool(call.allowFailure ?? true)}${encodeAbiUint(96)}${encodedCallData}`;
+    return `${encodeAddress(call.target)}${encodeAbiBool(call.allowFailure ?? true)}${encodeUint256(96)}${encodedCallData}`;
   });
 
   let nextOffset = calls.length * 32;
   const offsets = encodedCalls.map((encodedCall) => {
-    const offset = encodeAbiUint(nextOffset);
+    const offset = encodeUint256(nextOffset);
     nextOffset += encodedCall.length / 2;
     return offset;
   });
 
-  return `${MULTICALL3_AGGREGATE3_SELECTOR}${encodeAbiUint(32)}${encodeAbiUint(calls.length)}${offsets.join("")}${encodedCalls.join("")}` as `0x${string}`;
+  return `${MULTICALL3_AGGREGATE3_SELECTOR}${encodeUint256(32)}${encodeUint256(calls.length)}${offsets.join("")}${encodedCalls.join("")}` as `0x${string}`;
 }
 
 export function decodeMulticall3Aggregate3Result(

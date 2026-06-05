@@ -1,7 +1,7 @@
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DECIMALS_SELECTOR } from "../../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -46,11 +46,11 @@ const ONE = 1_000_000_000_000_000_000n;
 const signal = AbortSignal.timeout(5_000);
 
 function encodeAddressResult(address: string): `0x${string}` {
-  return `0x${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
+  return `0x${encodeAddress(address)}`;
 }
 
 function encodeBoolResult(value: boolean): `0x${string}` {
-  return `0x${(value ? "1" : "0").padStart(64, "0")}`;
+  return `0x${encodeUint256(value ? 1n : 0n)}`;
 }
 
 function normalizeAddress(address: string): string {
@@ -179,10 +179,10 @@ describe("reserve-protocol-dtf adapter", () => {
           [[SUSDS, WCUSDCV3], [50n * ONE, 50_000_000n]],
         );
       }
-      if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${SUSDS.slice(2).padStart(64, "0")}`) {
+      if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(SUSDS)}`) {
         return encodeAddressResult(SUSDS_ASSET);
       }
-      if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${WCUSDCV3.slice(2).padStart(64, "0")}`) {
+      if (normalizedContract === ASSET_REGISTRY && data === `${TO_ASSET_SELECTOR}${encodeAddress(WCUSDCV3)}`) {
         return encodeAddressResult(WCUSDCV3_ASSET);
       }
       if ((normalizedContract === SUSDS_ASSET || normalizedContract === WCUSDCV3_ASSET) && data === PRICE_SELECTOR) {

@@ -2,7 +2,7 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { encodeAddressArg, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -40,14 +40,6 @@ interface OriginVaultAssetState {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
-}
-
-function encodeAddressArg(address: string): string {
-  const normalized = address.toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(normalized)) {
-    throw new Error(`origin-vault-balances invalid asset address: ${address}`);
-  }
-  return normalized.slice(2).padStart(64, "0");
 }
 
 function readParams(config: LiveReservesConfig): OriginVaultBalancesParams {

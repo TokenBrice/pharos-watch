@@ -4,6 +4,7 @@ import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shar
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "../binary-search";
 import { resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
+export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import { isReplaySafePriceSource } from "../pricing-source-policy";
@@ -94,14 +95,6 @@ export type HistoricalBlockPriceResolver = (
   timestamp: number,
   signal?: AbortSignal,
 ) => Promise<number | null>;
-
-export function encodeAddress(address: string): string {
-  return address.replace(/^0x/i, "").toLowerCase().padStart(64, "0");
-}
-
-export function encodeUint256(value: bigint): string {
-  return value.toString(16).padStart(64, "0");
-}
 
 export function decodeUint256WordBigInt(result: `0x${string}`, wordIndex = 0): bigint | null {
   const start = 2 + wordIndex * 64;

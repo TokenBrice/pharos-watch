@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchDefiLlamaPrices,
@@ -39,10 +40,7 @@ const TOTAL_COLLATERAL_SHARE_SELECTOR = "0x473e3ce7";
 const TO_AMOUNT_SELECTOR = "0x56623118";
 
 function encodeToAmountCall(token: string, share: bigint): string {
-  const tokenClean = token.toLowerCase().replace(/^0x/, "").padStart(64, "0");
-  const shareHex = share.toString(16).padStart(64, "0");
-  const roundUpWord = "0".repeat(64);
-  return `${TO_AMOUNT_SELECTOR}${tokenClean}${shareHex}${roundUpWord}`;
+  return `${TO_AMOUNT_SELECTOR}${encodeAddress(token)}${encodeUint256(share)}${encodeUint256(0n)}`;
 }
 
 /** Parsed result from reading a single cauldron on-chain. */

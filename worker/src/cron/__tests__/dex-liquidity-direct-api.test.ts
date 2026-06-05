@@ -37,6 +37,8 @@ function encodeRpcWords(words: Array<number | bigint>): string {
 // Fluid
 // ---------------------------------------------------------------------------
 describe("fetchFluidPools", () => {
+  const FLUID_POOL_ADDRESS = "0x1111111111111111111111111111111111111111";
+
   afterEach(() => { mockFetch.mockReset(); });
 
   it("fetches all chains and normalizes to DexApiPool[]", async () => {
@@ -48,7 +50,7 @@ describe("fetchFluidPools", () => {
         last_price: "0.9999",
         base_volume: "100000",
         target_volume: "100000",
-        pool_id: "0xPoolAddr",
+        pool_id: FLUID_POOL_ADDRESS,
         liquidity_in_usd: "500000",
       },
     ]);
@@ -77,7 +79,7 @@ describe("fetchFluidPools", () => {
             last_price: "0.9999",
             base_volume: "100000",
             target_volume: "100000",
-            pool_id: "0xPoolAddr",
+            pool_id: FLUID_POOL_ADDRESS,
             liquidity_in_usd: "500000",
           },
         ]));
@@ -117,7 +119,7 @@ describe("fetchFluidPools", () => {
             last_price: "0.9999",
             base_volume: "100000",
             target_volume: "100000",
-            pool_id: "0xPoolAddr",
+            pool_id: FLUID_POOL_ADDRESS,
             liquidity_in_usd: "500000",
           },
         ]));

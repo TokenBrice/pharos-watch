@@ -15,6 +15,7 @@ import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock, fe
 import type { ChainRpcConfig } from "./chain-registry";
 import type { FetcherOutcome } from "./fetcher-result";
 import { CURVE_ORACLE_MAX_STALENESS_SEC } from "./constants";
+import { encodeUint256 } from "./evm-selectors";
 
 export type CurveRouteType = "direct" | "one-hop" | "trusted-wrapper" | "chained-hop";
 
@@ -179,10 +180,7 @@ export async function fetchCurveOnchainPrices(
 }
 
 function encodeGetDy(selector: string, i: number, j: number, dx: bigint): string {
-  const iHex = BigInt(i).toString(16).padStart(64, "0");
-  const jHex = BigInt(j).toString(16).padStart(64, "0");
-  const dxHex = dx.toString(16).padStart(64, "0");
-  return `${selector}${iHex}${jHex}${dxHex}`;
+  return `${selector}${encodeUint256(i)}${encodeUint256(j)}${encodeUint256(dx)}`;
 }
 
 interface CurveResolvedPrice {

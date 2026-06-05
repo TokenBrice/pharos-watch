@@ -6,6 +6,7 @@ import {
   fetchEvmCallHexAtBlock,
   fetchEvmUint256AtBlock,
 } from "../../lib/evm-rpc";
+import { encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import { createOptionalSourceBudget } from "./sources-helpers";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import type { ResolvedYield } from "./types";
@@ -154,7 +155,7 @@ async function fetchSingleOnChainRate(
   etherscanApiKey?: string | null,
   signal?: AbortSignal,
 ): Promise<OnChainRateFetchResult> {
-  const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
+  const callData = config.selector + encodeUint256(BigInt(config.inputAmount));
   const rpcUrls = buildOnChainRateRpcUrls(rpc);
   const rpcStatus: "no-rpc" | "rpc-empty" = rpcUrls.length === 0 ? "no-rpc" : "rpc-empty";
 
@@ -335,7 +336,7 @@ export async function fetchCompoundV3SupplyRates(
           continue;
         }
 
-        const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + utilization.toString(16).padStart(64, "0");
+        const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + encodeUint256(utilization);
         const perSecondRate = await fetchEvmUint256AtBlock(target.chain, target.comet, supplyRateData, "latest", opts);
         if (perSecondRate == null || perSecondRate === 0n) {
           recordOptionalRpcMiss(
@@ -539,7 +540,7 @@ export async function fetchAaveV3SupplyRates(
 
           const callData =
             AAVE_GET_RESERVE_DATA_SELECTOR +
-            target.assetAddress.replace("0x", "").toLowerCase().padStart(64, "0");
+            encodeAddress(target.assetAddress);
 
           try {
             telemetry.attemptedCount += 1;

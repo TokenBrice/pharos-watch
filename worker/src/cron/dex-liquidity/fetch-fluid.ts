@@ -7,6 +7,7 @@ import {
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
+import { encodeAddress } from "../../lib/evm-selectors";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 
@@ -58,7 +59,7 @@ function bigintToDecimalNumber(value: bigint, decimals: number): number {
 }
 
 function encodeFluidAddressCall(selector: string, address: string): string {
-  return `${selector}${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
+  return `${selector}${encodeAddress(address)}`;
 }
 
 function decodeUint256Words(resultHex: `0x${string}` | null, expectedWords: number): bigint[] | null {
