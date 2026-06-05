@@ -527,6 +527,8 @@ describe("relative duration helpers", () => {
   it("supports max-day buckets and suffix-free durations", () => {
     expect(formatRelativeAgeSeconds(31 * 86_400, { maxDays: 30 })).toBe(">30d ago");
     expect(formatRelativeDurationSeconds(45, { nowLabel: "less than 1 min" })).toBe("less than 1 min");
+    expect(formatRelativeDurationSeconds(60 * 60, { unitStyle: "short", rounding: "round", dayThresholdSec: 48 * 3600 })).toBe("1 h");
+    expect(formatRelativeDurationSeconds(89 * 60, { unitStyle: "short", rounding: "round", dayThresholdSec: 48 * 3600 })).toBe("1 h");
     expect(formatRelativeDurationSeconds(90 * 60, { unitStyle: "short", rounding: "round", dayThresholdSec: 48 * 3600 })).toBe("2 h");
   });
 
