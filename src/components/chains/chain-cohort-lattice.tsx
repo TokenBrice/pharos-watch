@@ -75,6 +75,17 @@ function trendStroke(deltaPct: number): string {
   return CHART_SLATE;
 }
 
+function toNoSeriesTile(chain: ChainSummary, stroke: string, change7dPct: number): PreparedTile {
+  return {
+    chain,
+    polyline: null,
+    sevenDayTickX: null,
+    lastY: null,
+    stroke,
+    change7dPct,
+  };
+}
+
 /**
  * Compute the shared log y-domain across all tiles' series. Returns
  * `[log10(min), log10(max)]`. When no series data is available, falls back to
@@ -122,42 +133,21 @@ function prepareTile(
   const stroke = trendStroke(change7dPct);
 
   if (!series || series.length < 2) {
-    return {
-      chain,
-      polyline: null,
-      sevenDayTickX: null,
-      lastY: null,
-      stroke,
-      change7dPct,
-    };
+    return toNoSeriesTile(chain, stroke, change7dPct);
   }
 
   const sorted = [...series]
     .filter((p) => Number.isFinite(p.ts) && Number.isFinite(p.totalUsd) && p.totalUsd > 0)
     .sort((a, b) => a.ts - b.ts);
   if (sorted.length < 2) {
-    return {
-      chain,
-      polyline: null,
-      sevenDayTickX: null,
-      lastY: null,
-      stroke,
-      change7dPct,
-    };
+    return toNoSeriesTile(chain, stroke, change7dPct);
   }
 
   const last = sorted[sorted.length - 1];
   const start = last.ts - NINETY_DAYS_MS;
   const inWindow = sorted.filter((p) => p.ts >= start);
   if (inWindow.length < 2) {
-    return {
-      chain,
-      polyline: null,
-      sevenDayTickX: null,
-      lastY: null,
-      stroke,
-      change7dPct,
-    };
+    return toNoSeriesTile(chain, stroke, change7dPct);
   }
 
   const tsSpan = Math.max(last.ts - inWindow[0].ts, 1);
