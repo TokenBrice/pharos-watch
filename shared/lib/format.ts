@@ -34,7 +34,6 @@ export function abbreviateNumberParts(value: number): { short: number; suffix: s
 
 export function formatCompactUsd(value: number): string {
   if (!Number.isFinite(value)) return "N/A";
-  if (Math.abs(value) >= 1e12) return abbreviateNumber(value, 2, "$");
   if (Math.abs(value) >= 1e9) return abbreviateNumber(value, 2, "$");
   if (Math.abs(value) >= 1e6) return abbreviateNumber(value, 1, "$");
   if (Math.abs(value) >= 1e3) return abbreviateNumber(value, 0, "$");
@@ -61,6 +60,8 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 
+const USD_PRICED_PEG_CURRENCIES = new Set(["USD", "GOLD", "SILVER", "VAR", "OTHER"]);
+
 export function pegCurrencySymbol(pegCurrency: string): string {
   return PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
 }
@@ -78,7 +79,7 @@ export function formatNativePrice(
 ): string {
   if (!isFiniteNumber(usdPrice)) return "N/A";
   const symbol = PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
-  if (pegCurrency === "USD" || pegCurrency === "GOLD" || pegCurrency === "SILVER" || pegCurrency === "VAR" || pegCurrency === "OTHER") {
+  if (USD_PRICED_PEG_CURRENCIES.has(pegCurrency)) {
     return formatPrice(usdPrice, "$", decimals);
   }
   if (!Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
