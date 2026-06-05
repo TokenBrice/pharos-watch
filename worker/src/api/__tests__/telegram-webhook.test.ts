@@ -295,11 +295,20 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("welcomes a group when my_chat_member reports the bot was added", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
         rows: [],
         first: null,
+      },
+      {
+        match: "FROM telegram_chat_delivery_diagnostics",
+        rows: [{
+          last_successful_delivery_at: null,
+          last_successful_reply_at: nowSec + 1,
+          recent_failure_class: null,
+        }],
       },
     ]);
 
@@ -320,6 +329,36 @@ describe("handleTelegramWebhook", () => {
     const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
     expect(cacheWrite).toBeDefined();
     expect(cacheWrite!.binds[0]).toBe("telegram:group-welcome:-123");
+  });
+
+  it("does not cache group welcome idempotency when Telegram send fails", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "FROM telegram_chat_delivery_diagnostics",
+        rows: [{
+          last_successful_delivery_at: null,
+          last_successful_reply_at: null,
+          recent_failure_class: "blocked",
+        }],
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({ from: { id: 999, username: "alice" } }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 
   it("suppresses duplicate group welcomes while the idempotency cache is fresh", async () => {

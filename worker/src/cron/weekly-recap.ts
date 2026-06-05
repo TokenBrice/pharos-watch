@@ -11,6 +11,7 @@ import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import {
+  didDigestChannelDeliver,
   insertDigestRecord,
   requestDigestCopy,
   runDigestChannelDelivery,
@@ -157,6 +158,16 @@ interface WeeklyParsedRow {
   text: string;
 }
 
+interface ExistingWeeklyDigestRow {
+  generated_at: number;
+  digest_title: string | null;
+  digest_text: string;
+  digest_extended: string | null;
+  digest_meta: string | null;
+}
+
+type WeeklyDigestMeta = Record<string, unknown>;
+
 /**
  * File-local helper: collapse the `flatMap → sort desc → slice` shape used
  * for every weekly signal leaderboard. The `project` callback receives the
@@ -181,6 +192,115 @@ function weeklySignalId(kind: WeeklyRiskKind, parts: readonly string[]): string 
     .toLowerCase()
     .replace(/[^a-z0-9:.-]+/g, "-")
     .replace(/-+/g, "-");
+}
+
+function parseWeeklyDigestMeta(
+  rawMeta: string | null,
+  updatedAt: number | null,
+): WeeklyDigestMeta {
+  if (!rawMeta) return {};
+  try {
+    const parsed = JSON.parse(rawMeta) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return { ...(parsed as WeeklyDigestMeta) };
+    }
+  } catch (error) {
+    logMalformedJsonPath({
+      scope: "cron",
+      owner: "weekly-recap",
+      context: "daily_digest.digest_meta",
+      reason: "json-parse-failed",
+      source: "daily_digest",
+      ...(updatedAt != null ? { updatedAt } : {}),
+    }, error);
+  }
+  return {};
+}
+
+function encodeWeeklyDigestMeta(
+  rawMeta: string | null,
+  params: {
+    generatedAt: number;
+    nowSec: number;
+    telegramDelivered: boolean;
+    telegramDeliveryStatus: string;
+    weeklyDefaults?: WeeklyDigestMeta;
+  },
+): string {
+  const meta = parseWeeklyDigestMeta(rawMeta, params.generatedAt);
+  if (!params.telegramDelivered) {
+    delete meta.telegramDeliveredAt;
+  }
+  return JSON.stringify({
+    ...(params.weeklyDefaults ?? {}),
+    ...meta,
+    telegramDelivered: params.telegramDelivered,
+    telegramDeliveryStatus: params.telegramDeliveryStatus,
+    telegramDeliveryUpdatedAt: params.nowSec,
+    ...(params.telegramDelivered ? { telegramDeliveredAt: params.nowSec } : {}),
+  });
+}
+
+function shouldRetryExistingWeeklyTelegram(meta: WeeklyDigestMeta): boolean {
+  if (meta.telegramDelivered !== false) return false;
+  return meta.telegramDeliveryStatus !== "skipped: quality-gate";
+}
+
+function weeklyMetaString(meta: WeeklyDigestMeta, key: string): string | null {
+  const value = meta[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+async function updateWeeklyTelegramDeliveryMeta(
+  db: D1Database,
+  row: { generated_at: number; digest_meta: string | null },
+  params: { nowSec: number; telegramStatus: string },
+): Promise<void> {
+  const digestMeta = encodeWeeklyDigestMeta(row.digest_meta, {
+    generatedAt: row.generated_at,
+    nowSec: params.nowSec,
+    telegramDelivered: didDigestChannelDeliver(params.telegramStatus),
+    telegramDeliveryStatus: params.telegramStatus,
+  });
+  await db
+    .prepare(
+      `UPDATE daily_digest
+          SET digest_meta = ?
+        WHERE generated_at = ?
+          AND json_extract(digest_meta, '$.type') = 'weekly'`,
+    )
+    .bind(digestMeta, row.generated_at)
+    .run();
+}
+
+async function deliverWeeklyDigestToTelegram(params: {
+  db: D1Database;
+  telegramCreds: TelegramCreds | null;
+  digestTitle: string | null;
+  digestExtended: string | null;
+  digestText: string;
+  generatedAt: number;
+  weekStartLabel: string;
+}): Promise<string> {
+  return runDigestChannelDelivery({
+    db: params.db,
+    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
+    creds: params.telegramCreds,
+    logPrefix: "weekly-recap",
+    channelLabel: "Telegram",
+    deliver: async (creds) => {
+      const weekLabel = `Week of ${params.weekStartLabel}`;
+      const tgTitle = `Weekly Recap: ${params.digestTitle || weekLabel}`;
+      const date = new Date(params.generatedAt * 1000).toISOString().slice(0, 10);
+      await postDigestToTelegram(
+        tgTitle,
+        params.digestExtended ?? params.digestText,
+        `${date}-weekly`,
+        creds,
+      );
+      return "ok";
+    },
+  });
 }
 
 function gradeRiskRank(grade: string): number {
@@ -774,14 +894,43 @@ export async function generateWeeklyRecap(
     return { metadata: "skipped: not Monday" };
   }
 
-  // Check if weekly recap already exists for this week
+  // Check if weekly recap already exists for this week. Rows that were
+  // generated but not delivered to Telegram stay eligible for a delivery retry.
   const weekStart = Math.floor(Date.now() / 1000) - 2 * SECONDS.ONE_DAY;
   const existing = await db
-    .prepare("SELECT id FROM daily_digest WHERE generated_at >= ? AND json_extract(digest_meta, '$.type') = 'weekly'")
+    .prepare(
+      `SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta
+         FROM daily_digest
+        WHERE generated_at >= ?
+          AND json_extract(digest_meta, '$.type') = 'weekly'
+        ORDER BY generated_at DESC
+        LIMIT 1`,
+    )
     .bind(weekStart)
-    .first();
+    .first<ExistingWeeklyDigestRow>();
   if (existing) {
-    return { metadata: "skipped: weekly recap already exists" };
+    const existingMeta = parseWeeklyDigestMeta(existing.digest_meta, existing.generated_at);
+    if (!shouldRetryExistingWeeklyTelegram(existingMeta)) {
+      return { metadata: "skipped: weekly recap already exists" };
+    }
+    const retryStatus = await deliverWeeklyDigestToTelegram({
+      db,
+      telegramCreds,
+      digestTitle: existing.digest_title,
+      digestExtended: existing.digest_extended,
+      digestText: existing.digest_text,
+      generatedAt: existing.generated_at,
+      weekStartLabel: weeklyMetaString(existingMeta, "weekStart")
+        ?? new Date(existing.generated_at * 1000).toISOString().slice(0, 10),
+    });
+    await updateWeeklyTelegramDeliveryMeta(db, existing, {
+      nowSec: Math.floor(Date.now() / 1000),
+      telegramStatus: retryStatus,
+    });
+    return {
+      itemCount: 0,
+      metadata: `weekly: existing recap delivery retry, telegram: ${retryStatus}`,
+    };
   }
 
   const recentWeeklyRows = await db
@@ -874,6 +1023,19 @@ export async function generateWeeklyRecap(
     return { metadata: "skipped: anthropic circuit open" };
   }
 
+  const initialDigestMeta = encodeWeeklyDigestMeta(digestCopy.digestMeta, {
+    generatedAt: nowSec,
+    nowSec,
+    telegramDelivered: false,
+    telegramDeliveryStatus: "pending",
+    weeklyDefaults: {
+      type: "weekly",
+      periodType: weeklyData.periodType,
+      weekStart: weeklyData.weekStartDate,
+      weekEnd: weeklyData.weekEndDate,
+    },
+  });
+
   // Store
   await insertDigestRecord({
     db,
@@ -882,24 +1044,26 @@ export async function generateWeeklyRecap(
     digestTitle: digestCopy.digestTitle || null,
     inputData: weeklyData,
     digestExtended: digestCopy.digestExtended || null,
-    digestMeta: digestCopy.digestMeta,
+    digestMeta: initialDigestMeta,
   });
 
   // Post to Telegram
   const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
-  const telegramStatus = qualityGateStatus ?? await runDigestChannelDelivery({
+  const telegramStatus = qualityGateStatus ?? await deliverWeeklyDigestToTelegram({
     db,
-    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
-    creds: telegramCreds,
-    logPrefix: "weekly-recap",
-    channelLabel: "Telegram",
-    deliver: async (creds) => {
-      const weekLabel = `Week of ${weeklyData.weekStartDate}`;
-      const tgTitle = `Weekly Recap: ${digestCopy.digestTitle || weekLabel}`;
-      const date = new Date(nowSec * 1000).toISOString().slice(0, 10);
-      await postDigestToTelegram(tgTitle, digestCopy.digestExtended, `${date}-weekly`, creds);
-      return "ok";
-    },
+    telegramCreds,
+    digestTitle: digestCopy.digestTitle || null,
+    digestExtended: digestCopy.digestExtended || null,
+    digestText: digestCopy.digestText,
+    generatedAt: nowSec,
+    weekStartLabel: weeklyData.weekStartDate,
+  });
+  await updateWeeklyTelegramDeliveryMeta(db, {
+    generated_at: nowSec,
+    digest_meta: initialDigestMeta,
+  }, {
+    nowSec,
+    telegramStatus,
   });
 
   const qualityMetadata = digestCopy.qualityIssues.length > 0

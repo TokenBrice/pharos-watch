@@ -227,6 +227,10 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
     .run();
 }
 
+export function didDigestChannelDeliver(status: string): boolean {
+  return status === "ok" || status.startsWith("ok+");
+}
+
 export async function runDigestChannelDelivery<TCreds>(
   options: RunDigestChannelDeliveryOptions<TCreds>,
 ): Promise<string> {

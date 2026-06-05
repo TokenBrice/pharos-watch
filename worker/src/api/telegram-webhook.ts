@@ -38,6 +38,7 @@ import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands
 import { executePendingDisambiguationSelection } from "./telegram-webhook-disambiguation-selection";
 import { isGroupAdminActor, isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {
+  loadTelegramChatHealthDiagnostics,
   recordTelegramUsageEvent,
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
@@ -986,6 +987,7 @@ async function handleMyChatMember(
   }
 
   const adderMention = formatAdderMention(payload.from);
+  const sendStartedAt = unixNow();
   await sendAuditedTelegramReply(
     db,
     chatIdStr,
@@ -996,5 +998,12 @@ async function handleMyChatMember(
       replyMarkup: buildGroupWelcomeReplyMarkup(),
     },
   );
-  await setCache(db, cacheKey, "1");
+  const diagnostics = await loadTelegramChatHealthDiagnostics(db, chatIdStr);
+  if (
+    diagnostics?.lastSuccessfulReplyAt != null &&
+    diagnostics.lastSuccessfulReplyAt >= sendStartedAt &&
+    diagnostics.recentFailureClass == null
+  ) {
+    await setCache(db, cacheKey, "1");
+  }
 }

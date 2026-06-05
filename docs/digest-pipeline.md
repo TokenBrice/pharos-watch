@@ -247,7 +247,7 @@ Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error
 
 **File:** `worker/src/cron/weekly-recap.ts`
 **Schedule:** Mondays only, chained after `daily-digest` on the same `"5 8 * * *"` trigger
-**Dedup guard:** skips if a `digest_meta.type = "weekly"` row exists within the last 2 days
+**Dedup guard:** skips if a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` unless its delivery status is `skipped: quality-gate`
 **Period semantics:** trailing daily editions ending with the Monday daily digest, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection
@@ -286,11 +286,11 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 
 ### Storage
 
-Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, plus `weekStart` and `weekEnd` date strings. The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`).
+Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, and Telegram delivery fields (`telegramDelivered`, `telegramDeliveryStatus`, `telegramDeliveryUpdatedAt`, and `telegramDeliveredAt` after success). The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`).
 
 ### Distribution
 
-Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`.
+Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "Weekly Recap:" and the link uses the weekly route slug `/digest/YYYY-MM-DD-weekly/`. If generation succeeded but the Telegram post failed, was circuit-open, or had no credentials, the stored row remains eligible for a delivery retry instead of being regenerated.
 
 ---
 
