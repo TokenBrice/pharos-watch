@@ -98,15 +98,7 @@ export function renderEnvExample(): string {
       .slice()
       .sort((left, right) => left.key.localeCompare(right.key));
 
-    if (section.key === "workerOptional") {
-      const ordered = bindings.slice().sort((left, right) => compareRuntimeOrder(left, right, "worker"));
-      for (const binding of ordered) {
-        lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
-      }
-      continue;
-    }
-
-    if (section.key === "workerReserved") {
+    if (section.key === "workerOptional" || section.key === "workerReserved") {
       const ordered = bindings.slice().sort((left, right) => compareRuntimeOrder(left, right, "worker"));
       for (const binding of ordered) {
         lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
