@@ -900,7 +900,7 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
-  it("recovers an open DexScreener search breaker without probing retired search", async () => {
+  it("does not probe or recover the retired DexScreener search breaker", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
     const db = mockD1([
       {
@@ -940,17 +940,12 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
-    const searchWrite = db
+    const searchHistory = db
       .getHistory()
-      .find((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`
+      .filter((entry) =>
+        entry.binds.includes(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`)
       );
-    expect(searchWrite).toBeDefined();
-    expect(JSON.parse(String(searchWrite?.binds[1]))).toMatchObject({
-      state: "closed",
-      consecutiveFailures: 0,
-    });
+    expect(searchHistory).toHaveLength(0);
   });
 
   it("can still run exact DexScreener lookups when the search breaker is open", async () => {
@@ -1603,7 +1598,7 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("closes stale DexScreener circuits when no exact or search candidates remain", async () => {
+  it("closes the stale DexScreener exact circuit when no exact candidates remain", async () => {
     const openedAt = Math.floor(Date.now() / 1000) - 3600;
     const db = mockD1([
       {
@@ -1611,17 +1606,6 @@ describe("enrichMissingPrices", () => {
         rows: [
           {
             key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
-            value: JSON.stringify({
-              state: "open",
-              consecutiveFailures: 3,
-              lastFailureAt: openedAt,
-              lastSuccessAt: null,
-              openedAt,
-            }),
-            updated_at: openedAt,
-          },
-          {
-            key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`,
             value: JSON.stringify({
               state: "open",
               consecutiveFailures: 3,
@@ -1658,14 +1642,6 @@ describe("enrichMissingPrices", () => {
         success: true,
         candidateCount: 0,
       }),
-      expect.objectContaining({
-        source: "dexscreener-search",
-        stage: "no-candidates",
-        status: null,
-        ok: true,
-        success: true,
-        candidateCount: 0,
-      }),
     ]));
     expect(fetchSpy).not.toHaveBeenCalled();
 
@@ -1675,20 +1651,13 @@ describe("enrichMissingPrices", () => {
         entry.sql.includes("INSERT OR REPLACE INTO cache") &&
         entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`
       );
-    const searchWrite = db
-      .getHistory()
-      .find((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`
-      );
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 0,
     });
-    expect(JSON.parse(String(searchWrite?.binds[1]))).toMatchObject({
-      state: "closed",
-      consecutiveFailures: 0,
-    });
+    expect(db.getHistory().some((entry) =>
+      entry.binds.includes(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`)
+    )).toBe(false);
   });
 
   it("skips the CMC breaker check when no assets are missing", async () => {
