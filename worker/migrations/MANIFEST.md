@@ -91,6 +91,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0145     | `0145_apxusd_depeg_reopen_repair.sql`                    | Reopen the APXUSD live depeg row closed by a bad near-peg soft consensus while high-TVL DEX evidence still showed the depeg                      |
 | 0146     | `0146_apxusd_ddrr_snapshot_repair.sql`                   | Reapply the guarded APXUSD reopen repair and invalidate the stale DDRR cache row that scored the still-open incident as recovered                 |
 | 0147     | `0147_apxusd_ddr_sealed_reopen_link.sql`                 | Link the APXUSD sealed DDR reopen event to the canonical incident through authorized append-only repair records                                  |
+| 0148     | `0148_usda_ddr_sealed_reopen_link.sql`                   | Link the USDA sealed DDR reopen event to the canonical incident through authorized append-only repair records                                    |
 
 ## Retired Individual Migrations
 
