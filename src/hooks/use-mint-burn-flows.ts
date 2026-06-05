@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { ApiMeta } from "@/lib/api";
 import {
-  createApiPollingQueryOptionsWithMeta,
   unwrapApiQueryWithMetaResult,
-  useApiQueryWithMeta,
 } from "./use-api-query";
+import {
+  createRegisteredApiPollingQueryOptionsWithMeta,
+  useRegisteredApiQueryWithMeta,
+} from "./api-hooks";
 import type { MintBurnFlowsResponse, MintBurnPerCoinResponse, MintBurnEventsResponse } from "@shared/types";
 import { normalizeToSignedFlowIntensity, type FlowIntensitySemantics } from "@/lib/flow-intensity";
 import { inferHas24hActivity } from "@/lib/mint-burn-coin-helpers";
@@ -64,12 +66,8 @@ function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBu
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
 export function useMintBurnFlows(hours = 24) {
-  const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnFlows(hours);
-  const query = useApiQueryWithMeta<MintBurnFlowsResponse>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    { schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
+  const query = useRegisteredApiQueryWithMeta<MintBurnFlowsResponse>(
+    FRONTEND_API_QUERY_REGISTRY.mintBurnFlows(hours),
   );
   const normalizedData = useMemo(
     () => (query.data ? normalizeMintBurnFlowsResponse(query.data) : undefined),
@@ -82,16 +80,9 @@ export function useMintBurnFlows(hours = 24) {
 }
 
 export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
-  const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnFlowsCoin(stablecoinId, hours);
-  return createApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    {
-      enabled: !!stablecoinId && (opts?.enabled ?? true),
-      schema: descriptor.schema,
-      metaMaxAgeSec: descriptor.metaMaxAgeSec,
-    },
+  return createRegisteredApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
+    FRONTEND_API_QUERY_REGISTRY.mintBurnFlowsCoin(stablecoinId, hours),
+    { enabled: !!stablecoinId && (opts?.enabled ?? true) },
   );
 }
 
@@ -108,14 +99,7 @@ export function useMintBurnEvents(
   stablecoinId: string,
   opts?: MintBurnEventsDescriptorOptions,
 ) {
-  const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnEvents(stablecoinId, opts);
-  return useApiQueryWithMeta<MintBurnEventsResponse>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    {
-      schema: descriptor.schema,
-      metaMaxAgeSec: descriptor.metaMaxAgeSec,
-    },
+  return useRegisteredApiQueryWithMeta<MintBurnEventsResponse>(
+    FRONTEND_API_QUERY_REGISTRY.mintBurnEvents(stablecoinId, opts),
   );
 }

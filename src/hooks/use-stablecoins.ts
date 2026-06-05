@@ -2,20 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
-import { createApiPollingQueryOptions, useApiQueryWithMeta } from "./use-api-query";
+import { createRegisteredApiPollingQueryOptions, useRegisteredApiQueryWithMeta } from "./api-hooks";
 import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 
 export type { SupplyHistoryPoint } from "@shared/types";
 
 export function useStablecoins() {
-  const descriptor = FRONTEND_API_QUERY_REGISTRY.stablecoins;
-  return useApiQueryWithMeta<StablecoinListResponse>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
+  return useRegisteredApiQueryWithMeta<StablecoinListResponse>(
+    FRONTEND_API_QUERY_REGISTRY.stablecoins,
     {
-      schema: descriptor.schema,
-      metaMaxAgeSec: descriptor.metaMaxAgeSec,
       // M1: home + screener filter/sort the cached list client-side, so keep the
       // prior payload visible during the 15-min background refetch instead of
       // wiping to a skeleton. The RefreshingBar signals the in-flight refresh.
@@ -25,15 +20,9 @@ export function useStablecoins() {
 }
 
 export function supplyHistoryQueryOptions(id: string, days = 1825) {
-  const descriptor = FRONTEND_API_QUERY_REGISTRY.supplyHistory(id, days);
-  return createApiPollingQueryOptions<SupplyHistoryPoint[]>(
-    descriptor.queryKey,
-    descriptor.path,
-    descriptor.producerIntervalMs,
-    {
-      enabled: !!id,
-      schema: descriptor.schema,
-    },
+  return createRegisteredApiPollingQueryOptions<SupplyHistoryPoint[]>(
+    FRONTEND_API_QUERY_REGISTRY.supplyHistory(id, days),
+    { enabled: !!id },
   );
 }
 

@@ -42,14 +42,14 @@ import {
 export type { StabilityContributor };
 export type { NonUsdSharePoint } from "@/lib/api-query-registry";
 
-interface QueryControlOverrides {
+export interface QueryControlOverrides {
   enabled?: boolean;
   retry?: number | boolean;
   retryDelay?: (attempt: number) => number;
   keepPreviousData?: boolean;
 }
 
-function useRegisteredApiQuery<T>(
+export function useRegisteredApiQuery<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
 ) {
@@ -61,7 +61,7 @@ function useRegisteredApiQuery<T>(
   );
 }
 
-function useRegisteredApiQueryWithMeta<T>(
+export function useRegisteredApiQueryWithMeta<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
 ) {
@@ -73,7 +73,7 @@ function useRegisteredApiQueryWithMeta<T>(
   );
 }
 
-function createRegisteredApiPollingQueryOptions<T>(
+export function createRegisteredApiPollingQueryOptions<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
 ) {
@@ -85,7 +85,7 @@ function createRegisteredApiPollingQueryOptions<T>(
   );
 }
 
-function createRegisteredApiPollingQueryOptionsWithMeta<T>(
+export function createRegisteredApiPollingQueryOptionsWithMeta<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
 ) {
@@ -97,7 +97,7 @@ function createRegisteredApiPollingQueryOptionsWithMeta<T>(
   );
 }
 
-function createRegisteredStaticQueryOptions<T>(
+export function createRegisteredStaticQueryOptions<T>(
   descriptor: FrontendStaticApiQueryDescriptor<T>,
   opts?: {
     enabled?: boolean;
