@@ -132,11 +132,12 @@ export function selectorExclusionReasonLabel(reason: string): string | undefined
   return lookupSelectorLabel(SELECTOR_EXCLUSION_REASON_LABELS, reason);
 }
 
-export function selectorComponentProseLabel(key: WeightKey): string;
-export function selectorComponentProseLabel(key: string): string | undefined;
-export function selectorComponentProseLabel(key: string): string | undefined {
+export const selectorComponentProseLabel = ((key: string): string | undefined => {
   return lookupSelectorLabel(SELECTOR_COMPONENT_PROSE_LABELS, key);
-}
+}) as {
+  (key: WeightKey): string;
+  (key: string): string | undefined;
+};
 
 export function selectorComponentScoreLabel(key: string): string | undefined {
   return lookupSelectorLabel(SELECTOR_COMPONENT_SCORE_LABELS, key);
