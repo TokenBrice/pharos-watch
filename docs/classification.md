@@ -46,6 +46,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
 - `mechanismArchetype?: MechanismArchetype` — one of `"fiat-cash" | "tbill" | "cdp" | "synthetic-delta-neutral" | "algorithmic" | "rwa-credit-fund"` (defined in `shared/types/core.ts`). When set, the coin detail page renders an SVG mechanism diagram in `KeyInfoCard` plus a "Learn how X stablecoins work" link to the matching `/learn/mechanisms/<slug>/` explainer. Slug helpers live in `shared/lib/classification/mechanism-archetypes.ts`; the dedicated explainer route contract is [learn-mechanisms-page.md](./learn-mechanisms-page.md).
+- `archetypeOverride?: boolean` — when `true`, this coin's `mechanismArchetype` is an intentional departure from its parent variant's archetype (schema-validated)
 - `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)
 - `geckoId?: string` — CoinGecko coin ID for price/mcap lookups (commodity and non-DefiLlama tokens)
 - `cmcSlug?: string` — CoinMarketCap slug for fallback price lookups
@@ -58,11 +59,11 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `contracts?: ContractDeployment[]` — on-chain contract addresses per chain
 - `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
 - `canBeBlacklisted?: boolean | "possible"` — direct freeze/blacklist capability override (reported descriptively); upstream exposure is computed
-- `blacklistabilityReview?: BlacklistabilityReview` — required for every explicit `canBeBlacklisted` value and used for reviewed inherited/No rationale
-- `blacklistabilityReview?: BlacklistabilityReview` — required for every explicit `canBeBlacklisted` value; `reviewedStatus` must match the authored status
+- `blacklistabilityReview?: BlacklistabilityReview` — required for every explicit `canBeBlacklisted` value and used for reviewed inherited/No rationale; `reviewedStatus` must match the authored status
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
 - `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.
 - `variantOf?: string` / `variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption" | "bond-maturity"` — active-only parent-variant metadata for tracked wrapper, strategy-vault, or bond-leg products whose user expectation is still direct exposure to another tracked stablecoin
+- `pegReferenceId?: string` — id of the tracked stablecoin used as this coin's peg-deviation reference (drives severe active-depeg cap inheritance from a parent). For tracked variants it is invariant-bound to equal `variantOf` (enforced in `shared/lib/stablecoins/schema.ts` and `validate-variants.ts`)
 - `reserves?: ReserveSlice[]` — reserve composition data
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 - `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)

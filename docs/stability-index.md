@@ -38,7 +38,7 @@ Severity and breadth iterate over **active depegs only** (unique coins currently
 
 ### Breadth scaling
 
-- Uses `sqrt(mcap / $1B)` so 12 micro-coin depegs ≈ 3.8 points, but USDT alone ≈ 15 points (cap)
+- Uses `sqrt(mcap / $1B)` so 12 micro-coin depegs ≈ 3.8 points, but USDT alone ≈ 17 points (cap)
 
 ### Deviation source
 

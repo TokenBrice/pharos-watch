@@ -713,7 +713,7 @@ Weights and grade thresholds are unchanged from v6.0.
 | v4.0           | multiplier     | 25%            | —       | 25%        | 10%              | 30%      |
 | v4.1           | multiplier     | 30%            | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8       | multiplier     | 30%            | —       | 20%        | 15%              | 25%      |
-| **v6.0-v7.07** | **multiplier** | **30%**        | **—**   | **20%**    | **15%**          | **25%**  |
+| **v6.0–current** | **multiplier** | **30%**        | **—**   | **20%**    | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

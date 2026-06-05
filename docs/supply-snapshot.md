@@ -248,7 +248,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 | 0 prepared rows with a non-empty expected PSI set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the 80% guard |
 | 0 prepared rows after passing the 80% guard | Return degraded (`reason: "all_coins_zero_supply"`); not normally reachable while the expected PSI set is non-empty |
 | < 80% of tracked coins have valid data | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) |
-| `batchExecute()` exception | Propagate to `logCronRun` error handler |
+| `batchExecute()` exception (non-abort) | `recordCronFailure()` then return degraded (`reason: "db_write_failed"`); abort errors are re-thrown via `rethrowIfAborted` |
 
 All cron runs are logged to the `cron_runs` table (7-day retention).
 

@@ -401,7 +401,7 @@ Implementation notes:
 Key types:
 
 - **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`, `dependencyFromLive`) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `activeDepegBps`, `depegEventCount`, `lastEventAt`, `liquidityScore`, `effectiveExitScore`, `redemptionBackstopScore`, `redemptionRouteFamily`, `redemptionModelConfidence`, `redemptionUsedForLiquidity`, `redemptionImmediateCapacityUsd`, `redemptionImmediateCapacityRatio`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `variantParentId`, `variantKind`, `navToken`, `collateralFromLive`, `dependencyFromLive`) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 
