@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
 import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
-import { getApiKeyAuthCacheTtlMs, resetApiKeyStateForTests } from "../lib/api-keys";
+import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
@@ -716,7 +716,7 @@ describe("worker.fetch", () => {
     expect(warmRes.status).toBe(200);
     await expect(warmRes.json()).resolves.toEqual({ cached: true, warm: 1 });
 
-    vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
 
     const degradedEnv = makeEnv({
       REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true",

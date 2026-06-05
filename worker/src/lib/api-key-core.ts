@@ -21,14 +21,18 @@ export const API_KEY_TOKEN_PATTERN = /^ph_live_([0-9a-f]{16})_([A-Za-z0-9_-]{32}
 const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 const API_KEY_TIER_MAX_LENGTH = 40;
-const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
-const API_KEY_AUTH_CACHE_TTL_MS = 300_000;
-const API_KEY_AUTH_CACHE_STALE_TTL_MS = 900_000;
-const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
-const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
-const API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES = 4_096;
-const API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES = 4_096;
-const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
+export const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
+export const API_KEY_AUTH_CACHE_TTL_MS = 300_000;
+export const API_KEY_AUTH_CACHE_STALE_TTL_MS = 900_000;
+export const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
+export const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
+export const API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES = 4_096;
+export const API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES = 4_096;
+export const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
+export {
+  API_KEY_DEFAULT_EXPIRY_SEC,
+  API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+};
 
 interface StatementRunResult {
   meta?: { changes?: number };
@@ -563,44 +567,4 @@ export async function selectPublicApiKeyById(db: ApiKeyDb, id: number): Promise<
 export function requireApiKeyPepper(pepper: string | undefined): string | Response {
   const effectivePepper = pepper?.trim();
   return effectivePepper ? effectivePepper : errorResponse(500, "API key hashing is not configured");
-}
-
-export function getApiKeyDefaultExpirySec(): number {
-  return API_KEY_DEFAULT_EXPIRY_SEC;
-}
-
-export function getApiKeyDefaultRateLimitPerMinute(): number {
-  return API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE;
-}
-
-export function getApiKeyTrafficClassDefault(): ApiKeyTrafficClass {
-  return API_KEY_TRAFFIC_CLASS_DEFAULT;
-}
-
-export function getApiKeyUsageUpdateWindowSec(): number {
-  return API_KEY_USAGE_UPDATE_WINDOW_SEC;
-}
-
-export function getApiKeyRateLimitPruneWindowMultiplier(): number {
-  return API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER;
-}
-
-export function getApiKeyAuthCacheTtlMs(): number {
-  return API_KEY_AUTH_CACHE_TTL_MS;
-}
-
-export function getApiKeyAuthCacheStaleTtlMs(): number {
-  return API_KEY_AUTH_CACHE_STALE_TTL_MS;
-}
-
-export function getApiKeyAuthCacheMaxEntries(): number {
-  return API_KEY_AUTH_CACHE_MAX_ENTRIES;
-}
-
-export function getApiKeyUsageUpdateCacheMaxEntries(): number {
-  return API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES;
-}
-
-export function getApiKeyLocalRateLimitMaxEntries(): number {
-  return API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES;
 }

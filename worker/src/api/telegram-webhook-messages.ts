@@ -9,6 +9,7 @@ import type {
   TelegramPresetId,
 } from "../lib/telegram-presets";
 import { isQuietHoursActive } from "../cron/telegram-quiet-hours";
+import { formatTelegramCompactUsd } from "./telegram-format";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
@@ -375,15 +376,6 @@ function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.n
   });
 }
 
-function formatUsdCompact(value: number | null | undefined): string | null {
-  if (value == null || !Number.isFinite(value)) return null;
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(0)}`;
-}
-
 export function buildStatusDiscoveryKeyboard(
   stablecoinId: string,
   options: { includeMiniAppButton?: boolean; miniAppPayload?: string } = {},
@@ -490,9 +482,9 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     s.depeg.status === "active"
       ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
       : "Depeg: stable";
-  const supply = formatUsdCompact(s.supplyUsd);
+  const supply = formatTelegramCompactUsd(s.supplyUsd);
   const supplyLine = supply ? `Supply: ${supply}${s.stablecoinsUpdatedAt ? ` (${formatAge(s.stablecoinsUpdatedAt, nowSec)})` : ""}` : null;
-  const liquidityTvl = formatUsdCompact(s.liquidity?.totalTvlUsd);
+  const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
     ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)})`
     : null;

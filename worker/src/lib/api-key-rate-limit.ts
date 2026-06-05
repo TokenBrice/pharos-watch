@@ -5,12 +5,12 @@ import {
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import {
+  API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
+  API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER,
+  API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
+  API_KEY_USAGE_UPDATE_WINDOW_SEC,
   capApiKeyMapEntries,
-  getApiKeyLocalRateLimitMaxEntries,
-  getApiKeyRateLimitPruneWindowMultiplier,
   getApiKeyRuntimeState,
-  getApiKeyUsageUpdateCacheMaxEntries,
-  getApiKeyUsageUpdateWindowSec,
   getNowSec,
   type ApiKeyDb,
   type AuthenticatedApiKey,
@@ -87,7 +87,7 @@ export async function checkApiKeyRateLimit(
   if (state.lastApiKeyRateLimitPruneBucket !== bucketStart) {
     state.lastApiKeyRateLimitPruneBucket = bucketStart;
     state.pendingApiKeyPrune = db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
-      .bind(bucketStart - (60 * getApiKeyRateLimitPruneWindowMultiplier()))
+      .bind(bucketStart - (60 * API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER))
       .run()
       .then(() => {})
       .catch((error) => {
@@ -130,7 +130,7 @@ export function checkIsolateLocalApiKeyRateLimit(
       bucketStart,
       count: 1,
     });
-    capApiKeyMapEntries(state.apiKeyFallbackRateLimitById, getApiKeyLocalRateLimitMaxEntries());
+    capApiKeyMapEntries(state.apiKeyFallbackRateLimitById, API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
     return null;
   }
 
@@ -160,7 +160,7 @@ export async function recordApiKeyUsage(
 ): Promise<void> {
   const state = getApiKeyRuntimeState();
   const lastUpdatedAt = state.apiKeyLastUsageUpdateById.get(key.id) ?? 0;
-  if (nowSec - lastUpdatedAt < getApiKeyUsageUpdateWindowSec()) {
+  if (nowSec - lastUpdatedAt < API_KEY_USAGE_UPDATE_WINDOW_SEC) {
     return;
   }
 
@@ -171,5 +171,5 @@ export async function recordApiKeyUsage(
     .run();
   state.apiKeyLastUsageUpdateById.delete(key.id);
   state.apiKeyLastUsageUpdateById.set(key.id, nowSec);
-  capApiKeyMapEntries(state.apiKeyLastUsageUpdateById, getApiKeyUsageUpdateCacheMaxEntries());
+  capApiKeyMapEntries(state.apiKeyLastUsageUpdateById, API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
 }

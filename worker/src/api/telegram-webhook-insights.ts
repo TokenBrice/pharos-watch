@@ -10,19 +10,11 @@ import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { suggestClosestToken } from "../lib/telegram-alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
+import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
-
-function formatUsdCompact(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "n/a";
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(0)}`;
-}
 
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
   if (ts == null || !Number.isFinite(ts)) return "unknown age";
@@ -184,7 +176,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           source_tvl_usd: number | null;
         }>();
       return formatTopRows("Top risk-adjusted yields", result.results ?? [], (row, i) =>
-        `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${row.pharos_yield_score != null ? Math.round(row.pharos_yield_score) : "NR"}, TVL ${formatUsdCompact(row.source_tvl_usd)} (${row.yield_source})`,
+        `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${row.pharos_yield_score != null ? Math.round(row.pharos_yield_score) : "NR"}, TVL ${formatTelegramCompactUsd(row.source_tvl_usd) ?? "n/a"} (${row.yield_source})`,
       );
     }
     case "liquidity": {
@@ -204,7 +196,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           pool_count: number;
         }>();
       return formatTopRows("Top DEX liquidity", result.results ?? [], (row, i) =>
-        `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatUsdCompact(row.total_tvl_usd)}, ${row.pool_count} pools`,
+        `${i}. ${row.symbol} — score ${row.liquidity_score ?? "NR"}, TVL ${formatTelegramCompactUsd(row.total_tvl_usd) ?? "n/a"}, ${row.pool_count} pools`,
       );
     }
     case "chains": {
@@ -228,7 +220,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         pegRates,
       }).chains.slice(0, TOP_LIMIT);
       return formatTopRows("Top chains by stablecoin supply", chains, (row, i) =>
-        `${i}. ${row.name} — ${formatUsdCompact(row.totalUsd)}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
+        `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
       );
     }
     case "safety": {
@@ -303,11 +295,11 @@ export function buildCoverageMessage(symbol: string, status: StatusForCoin): str
   const lines = [
     `<b>${escapeHtml(symbol)} coverage</b>`,
     `Price: ${status.priceUsd != null ? "yes" : "missing"}`,
-    `Supply: ${status.supplyUsd != null ? formatUsdCompact(status.supplyUsd) : "missing"}`,
+    `Supply: ${formatTelegramCompactUsd(status.supplyUsd) ?? "missing"}`,
     `DEWS: ${status.dews ? `${status.dews.band} (${formatAge(status.dews.computedAt)})` : "missing"}`,
     `Safety: ${status.safety ? `${status.safety.grade}${status.safety.score != null ? ` (${status.safety.score})` : ""}` : "missing"}`,
     `Active depeg: ${status.depeg.status === "active" ? "yes" : "no"}`,
-    `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatUsdCompact(status.liquidity.totalTvlUsd)}` : "missing"}`,
+    `DEX liquidity: ${status.liquidity ? `score ${status.liquidity.score ?? "NR"}, TVL ${formatTelegramCompactUsd(status.liquidity.totalTvlUsd) ?? "n/a"}` : "missing"}`,
     `Yield: ${status.yield ? `${status.yield.apy30d.toFixed(2)}% 30d at ${status.yield.source}` : "missing"}`,
     `<a href="https://pharos.watch/stablecoin/${status.stablecoinId}">Open coin page</a>`,
   ];

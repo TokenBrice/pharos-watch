@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import {
+  API_KEY_AUTH_CACHE_MAX_ENTRIES,
+  API_KEY_AUTH_CACHE_STALE_TTL_MS,
+  API_KEY_AUTH_CACHE_TTL_MS,
+  API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
+  API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
   authenticateApiKey,
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
   createApiKey,
-  getApiKeyAuthCacheMaxEntries,
-  getApiKeyAuthCacheStaleTtlMs,
-  getApiKeyAuthCacheTtlMs,
-  getApiKeyLocalRateLimitMaxEntries,
-  getApiKeyUsageUpdateCacheMaxEntries,
   isApiKeyRateLimitDependencyCircuitOpen,
   listApiKeys,
   parseApiKeyToken,
@@ -601,14 +601,14 @@ describe("api key helpers", () => {
       authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
     ).resolves.toMatchObject({ kind: "valid" });
 
-    vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
 
     await expect(
       authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),
     ).resolves.toMatchObject({ kind: "valid" });
     expect(dbUnavailable.getHistory().filter((entry) => entry.sql.includes("FROM api_keys"))).toHaveLength(1);
 
-    vi.advanceTimersByTime(getApiKeyAuthCacheStaleTtlMs() - getApiKeyAuthCacheTtlMs());
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_STALE_TTL_MS - API_KEY_AUTH_CACHE_TTL_MS);
 
     await expect(
       authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),
@@ -665,7 +665,7 @@ describe("api key helpers", () => {
       authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
     ).resolves.toMatchObject({ kind: "valid" });
 
-    vi.advanceTimersByTime(getApiKeyAuthCacheTtlMs() + 1);
+    vi.advanceTimersByTime(API_KEY_AUTH_CACHE_TTL_MS + 1);
 
     await expect(
       authenticateApiKey(dbUnavailable, `ph_live_${prefix}_${secret}`, pepper),
@@ -843,19 +843,19 @@ describe("api key helpers", () => {
       },
     ]);
 
-    for (let i = 0; i < getApiKeyAuthCacheMaxEntries() + 5; i++) {
+    for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES + 5; i++) {
       await lookupApiKeyByPrefix(db, i.toString(16).padStart(16, "0"));
     }
 
-    expect(getApiKeyRuntimeState().apiKeyCache.size).toBe(getApiKeyAuthCacheMaxEntries());
+    expect(getApiKeyRuntimeState().apiKeyCache.size).toBe(API_KEY_AUTH_CACHE_MAX_ENTRIES);
   });
 
   it("caps isolate-local fallback rate-limit buckets", () => {
-    for (let i = 0; i < getApiKeyLocalRateLimitMaxEntries() + 5; i++) {
+    for (let i = 0; i < API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES + 5; i++) {
       expect(checkIsolateLocalApiKeyRateLimit(i + 1, 120, 600)).toBeNull();
     }
 
-    expect(getApiKeyRuntimeState().apiKeyFallbackRateLimitById.size).toBe(getApiKeyLocalRateLimitMaxEntries());
+    expect(getApiKeyRuntimeState().apiKeyFallbackRateLimitById.size).toBe(API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES);
   });
 
   it("caps isolate-local last-used throttling state", async () => {
@@ -867,7 +867,7 @@ describe("api key helpers", () => {
       },
     ]);
 
-    for (let i = 0; i < getApiKeyUsageUpdateCacheMaxEntries() + 5; i++) {
+    for (let i = 0; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 5; i++) {
       await recordApiKeyUsage(db, {
         id: i + 1,
         keyPrefix: i.toString(16).padStart(16, "0"),
@@ -881,7 +881,7 @@ describe("api key helpers", () => {
       }, "/api/stablecoins", 1_000);
     }
 
-    expect(getApiKeyRuntimeState().apiKeyLastUsageUpdateById.size).toBe(getApiKeyUsageUpdateCacheMaxEntries());
+    expect(getApiKeyRuntimeState().apiKeyLastUsageUpdateById.size).toBe(API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES);
   });
 
   it("records an audit log entry when creating a key", async () => {

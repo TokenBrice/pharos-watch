@@ -6,14 +6,14 @@ import type {
   ApiKeyTrafficClass,
 } from "@shared/types";
 import {
+  API_KEY_DEFAULT_EXPIRY_SEC,
+  API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+  API_KEY_TRAFFIC_CLASS_DEFAULT,
   buildApiKeyMaterial,
   buildPublicApiKeyReturningClause,
   buildPublicApiKeySelectQuery,
   clearApiKeyCache,
-  getApiKeyDefaultExpirySec,
-  getApiKeyDefaultRateLimitPerMinute,
   getApiKeyRuntimeState,
-  getApiKeyTrafficClassDefault,
   getNowSec,
   mapRowToSummary,
   normalizeCreateInput,
@@ -56,14 +56,14 @@ export async function createApiKey(
   }
 
   const expiresAt = parsed.expiresAt === undefined
-    ? nowSec + getApiKeyDefaultExpirySec()
+    ? nowSec + API_KEY_DEFAULT_EXPIRY_SEC
     : parsed.expiresAt;
   const created = await createTrustedApiKey(db, effectivePepper, {
     name: parsed.name,
     ownerEmail: parsed.ownerEmail ?? null,
     tier: parsed.tier ?? "standard",
-    trafficClass: parsed.trafficClass ?? getApiKeyTrafficClassDefault(),
-    rateLimitPerMinute: parsed.rateLimitPerMinute ?? getApiKeyDefaultRateLimitPerMinute(),
+    trafficClass: parsed.trafficClass ?? API_KEY_TRAFFIC_CLASS_DEFAULT,
+    rateLimitPerMinute: parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
     expiresAt: expiresAt ?? null,
   }, nowSec, {
     actor: "admin",
