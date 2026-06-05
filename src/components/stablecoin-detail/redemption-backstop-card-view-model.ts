@@ -4,6 +4,7 @@ import {
   REDEMPTION_SETTLEMENT_LABELS,
 } from "@shared/lib/redemption-backstop-scoring";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import {
   formatRedemptionDocsProvenance,
@@ -237,12 +238,6 @@ function formatScoreOutOf100(value: number): string {
   return `${Math.round(value)}/100`;
 }
 
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 48 * 60 * 60) return `${Math.round(seconds / 60 / 60)}h`;
-  return `${Math.round(seconds / 60 / 60 / 24)}d`;
-}
-
 function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContextItem[] {
   const items: TelemetryContextItem[] = [];
   if (entry.capacityProfile) {
@@ -274,7 +269,13 @@ function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContext
     items.push({ label: "Freshness", value: formatTelemetryKind(entry.freshnessKind) });
   }
   if (entry.settlementDelaySec != null) {
-    items.push({ label: "Live delay", value: formatDuration(entry.settlementDelaySec) });
+    items.push({
+      label: "Live delay",
+      value: formatRelativeDurationSeconds(entry.settlementDelaySec, {
+        rounding: "round",
+        dayThresholdSec: 48 * 3600,
+      }),
+    });
   }
   if (entry.queueDepthUsd != null) {
     items.push({ label: "Queue depth", value: formatCurrency(entry.queueDepthUsd, 1) });

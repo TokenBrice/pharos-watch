@@ -3,6 +3,7 @@ import {
   type CacheFreshnessLaneKey,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
+import { formatStalenessDurationSeconds } from "@shared/lib/relative-time";
 import type { CacheStatus } from "@shared/types/status";
 import { sendAlert } from "../lib/alerts";
 import type { CronResult } from "../lib/cron-logger";
@@ -36,16 +37,6 @@ interface AlertMarker {
 
 function alertCacheKey(cacheKey: string): string {
   return `${ALERT_CACHE_PREFIX}${cacheKey}`;
-}
-
-function formatDuration(seconds: number | null): string {
-  if (seconds == null) {
-    return "missing";
-  }
-  if (seconds >= 3600) {
-    return `${(seconds / 3600).toFixed(1)}h`;
-  }
-  return `${Math.max(1, Math.round(seconds / 60))}m`;
 }
 
 function readMarker(value: string | null | undefined): AlertMarker | null {
@@ -102,7 +93,7 @@ export function evaluateCronStaleness(
 
 function buildAlertMessage(stale: readonly CronStalenessObservation[], nowSec: number): string {
   const lines = stale.map((observation) =>
-    `- ${observation.cacheKey} (${observation.producerJob}): age ${formatDuration(observation.ageSeconds)}, threshold ${formatDuration(observation.thresholdSec)}`,
+    `- ${observation.cacheKey} (${observation.producerJob}): age ${formatStalenessDurationSeconds(observation.ageSeconds)}, threshold ${formatStalenessDurationSeconds(observation.thresholdSec)}`,
   );
   return [
     `Detected stale Tier-1 cron-backed caches at ${new Date(nowSec * 1000).toISOString()}.`,
@@ -112,7 +103,7 @@ function buildAlertMessage(stale: readonly CronStalenessObservation[], nowSec: n
 
 function buildRecoveryMessage(recovered: readonly CronStalenessObservation[], nowSec: number): string {
   const lines = recovered.map((observation) =>
-    `- ${observation.cacheKey} (${observation.producerJob}) recovered below ${formatDuration(observation.thresholdSec)}`,
+    `- ${observation.cacheKey} (${observation.producerJob}) recovered below ${formatStalenessDurationSeconds(observation.thresholdSec)}`,
   );
   return [
     `Cron-backed cache freshness recovered at ${new Date(nowSec * 1000).toISOString()}.`,

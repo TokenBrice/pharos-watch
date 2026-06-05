@@ -8,6 +8,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -80,16 +81,6 @@ function formatLongDate(seconds: number): string {
 function formatDeviation(bps: number): string {
   const pct = Math.abs(bps) / 100;
   return `${pct.toFixed(2)}%`;
-}
-
-function formatDurationSec(seconds: number): string {
-  if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min`;
-  const hours = minutes / 60;
-  if (hours < 24) return `${hours.toFixed(1)} hr`;
-  const days = hours / 24;
-  return `${days.toFixed(1)} days`;
 }
 
 function formatPrice(value: number | null): string | null {
@@ -175,7 +166,7 @@ function RecoveryPanel({ event }: { event: DepegEventEntry }) {
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Duration</dt>
         <dd className="font-medium text-foreground">
-          {durationSec != null ? formatDurationSec(durationSec) : "—"}
+          {durationSec != null ? formatApproxDurationSeconds(durationSec, { style: "long" }) : "—"}
         </dd>
       </div>
       <div>

@@ -4,6 +4,7 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
+import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import type { StressSignalEntry } from "@shared/types";
 
 export interface DewsContributor {
@@ -85,18 +86,13 @@ export function getDewsFreshness(
   }
 
   const ageSeconds = Math.max(0, Math.floor(nowSeconds - computedAt));
-  if (ageSeconds < 60) return { ageSeconds, stale: ageSeconds > staleAfterSeconds, label: "fresh" };
-  if (ageSeconds < 3600) {
-    return {
-      ageSeconds,
-      stale: ageSeconds > staleAfterSeconds,
-      label: `${Math.floor(ageSeconds / 60)}m old`,
-    };
-  }
-  const hours = Math.floor(ageSeconds / 3600);
   return {
     ageSeconds,
     stale: ageSeconds > staleAfterSeconds,
-    label: `${hours}h old`,
+    label: formatRelativeAgeSeconds(ageSeconds, {
+      suffix: "old",
+      nowLabel: "fresh",
+      dayThresholdSec: Number.POSITIVE_INFINITY,
+    }),
   };
 }

@@ -1,3 +1,127 @@
+import { DAY_SECONDS } from "./time-constants";
+
+const MINUTE_SECONDS = 60;
+const HOUR_SECONDS = 3600;
+
+type RelativeUnitStyle = "compact" | "short" | "long";
+type RelativeRounding = "floor" | "round";
+
+export interface RelativeAgeFormatOptions {
+  suffix?: "ago" | "old" | "";
+  unitStyle?: RelativeUnitStyle;
+  rounding?: RelativeRounding;
+  nowLabel?: string;
+  nowThresholdSec?: number;
+  dayThresholdSec?: number;
+  maxDays?: number;
+  invalidFallback?: string;
+  secondsMin?: number;
+}
+
+function roundValue(value: number, rounding: RelativeRounding): number {
+  return rounding === "round" ? Math.round(value) : Math.floor(value);
+}
+
+function unitLabel(unit: "second" | "minute" | "hour" | "day", value: number, style: RelativeUnitStyle): string {
+  if (style === "compact") {
+    if (unit === "second") return "s";
+    if (unit === "minute") return "m";
+    if (unit === "hour") return "h";
+    return "d";
+  }
+  if (style === "short") {
+    if (unit === "second") return "sec";
+    if (unit === "minute") return "min";
+    if (unit === "hour") return "h";
+    return "d";
+  }
+  if (unit === "second") return value === 1 ? "second" : "seconds";
+  if (unit === "minute") return value === 1 ? "minute" : "minutes";
+  if (unit === "hour") return value === 1 ? "hour" : "hours";
+  return value === 1 ? "day" : "days";
+}
+
+function joinValueUnit(value: number | string, unit: "second" | "minute" | "hour" | "day", style: RelativeUnitStyle): string {
+  const numericValue = typeof value === "number" ? value : Number(value);
+  const separator = style === "compact" ? "" : " ";
+  return `${value}${separator}${unitLabel(unit, numericValue, style)}`;
+}
+
+function appendSuffix(label: string, suffix: "ago" | "old" | ""): string {
+  return suffix ? `${label} ${suffix}` : label;
+}
+
+export function formatRelativeAgeSeconds(ageSeconds: number, options: RelativeAgeFormatOptions = {}): string {
+  const {
+    suffix = "ago",
+    unitStyle = "compact",
+    rounding = "floor",
+    nowLabel,
+    nowThresholdSec = MINUTE_SECONDS,
+    dayThresholdSec = DAY_SECONDS,
+    maxDays,
+    invalidFallback = "N/A",
+    secondsMin = 0,
+  } = options;
+  if (!Number.isFinite(ageSeconds)) return invalidFallback;
+  const safeSeconds = Math.max(0, ageSeconds);
+  if (nowLabel != null && safeSeconds < nowThresholdSec) return nowLabel;
+
+  if (safeSeconds < MINUTE_SECONDS) {
+    return appendSuffix(joinValueUnit(Math.max(secondsMin, Math.floor(safeSeconds)), "second", unitStyle), suffix);
+  }
+  if (safeSeconds < HOUR_SECONDS) {
+    return appendSuffix(joinValueUnit(Math.max(1, roundValue(safeSeconds / MINUTE_SECONDS, rounding)), "minute", unitStyle), suffix);
+  }
+  if (safeSeconds < dayThresholdSec) {
+    return appendSuffix(joinValueUnit(Math.max(1, roundValue(safeSeconds / HOUR_SECONDS, rounding)), "hour", unitStyle), suffix);
+  }
+
+  const days = Math.max(1, roundValue(safeSeconds / DAY_SECONDS, rounding));
+  if (maxDays != null && days > maxDays) {
+    return appendSuffix(`>${joinValueUnit(maxDays, "day", unitStyle)}`, suffix);
+  }
+  return appendSuffix(joinValueUnit(days, "day", unitStyle), suffix);
+}
+
+export function formatRelativeDurationSeconds(
+  seconds: number,
+  options: Omit<RelativeAgeFormatOptions, "suffix"> & { suffix?: RelativeAgeFormatOptions["suffix"] } = {},
+): string {
+  return formatRelativeAgeSeconds(seconds, { suffix: "", ...options });
+}
+
+export function formatApproxDurationSeconds(
+  seconds: number,
+  options: { style?: "compact" | "long"; invalidFallback?: string } = {},
+): string {
+  const { style = "compact", invalidFallback = "N/A" } = options;
+  if (!Number.isFinite(seconds) || seconds < 0) return invalidFallback;
+
+  if (style === "long") {
+    if (seconds < MINUTE_SECONDS) return `${Math.max(1, Math.round(seconds))}s`;
+    const minutes = Math.round(seconds / MINUTE_SECONDS);
+    if (minutes < 60) return `${minutes} min`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${hours.toFixed(1)} hr`;
+    return `${(hours / 24).toFixed(1)} days`;
+  }
+
+  if (seconds < HOUR_SECONDS) return `${Math.max(1, Math.round(seconds / MINUTE_SECONDS))}m`;
+  if (seconds < DAY_SECONDS) {
+    const hours = seconds / HOUR_SECONDS;
+    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
+  }
+  const days = seconds / DAY_SECONDS;
+  return `${Number.isInteger(days) ? days : days.toFixed(1)}d`;
+}
+
+export function formatStalenessDurationSeconds(seconds: number | null): string {
+  if (seconds == null) return "missing";
+  if (seconds >= HOUR_SECONDS) return `${(seconds / HOUR_SECONDS).toFixed(1)}h`;
+  return `${Math.max(1, Math.round(seconds / MINUTE_SECONDS))}m`;
+}
+
 /**
  * Format a millisecond timestamp as a relative time string ("1s ago", "5m ago", "2h ago", "3d ago").
  * Accepts an optional `now` override (ms) for deterministic testing.
@@ -5,9 +129,9 @@
  */
 export function formatRelativeTimeMs(tsMs: number, opts?: { now?: number; withSuffix?: boolean }): string {
   const ageSec = Math.max(1, Math.floor(((opts?.now ?? Date.now()) - tsMs) / 1000));
-  const suffix = opts?.withSuffix === false ? "" : " ago";
-  if (ageSec < 60) return `${ageSec}s${suffix}`;
-  if (ageSec < 3600) return `${Math.round(ageSec / 60)}m${suffix}`;
-  if (ageSec < 86_400) return `${Math.round(ageSec / 3600)}h${suffix}`;
-  return `${Math.round(ageSec / 86_400)}d${suffix}`;
+  return formatRelativeAgeSeconds(ageSec, {
+    suffix: opts?.withSuffix === false ? "" : "ago",
+    rounding: "round",
+    secondsMin: 1,
+  });
 }

@@ -6,9 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { useLogos } from "@/hooks/use-logos";
 import { formatCurrency } from "@shared/lib/format";
-
-const SECONDS_PER_DAY = 86_400;
-const SECONDS_PER_HOUR = 3_600;
+import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 interface FreezeAggregate {
   count24h: number;
@@ -40,8 +39,8 @@ function aggregate(
   nowSeconds: number,
   resolveId: (symbol: string) => string,
 ): FreezeAggregate {
-  const cutoff24h = nowSeconds - SECONDS_PER_DAY;
-  const cutoff7d = nowSeconds - 7 * SECONDS_PER_DAY;
+  const cutoff24h = nowSeconds - DAY_SECONDS;
+  const cutoff7d = nowSeconds - 7 * DAY_SECONDS;
   let count24h = 0;
   let count7d = 0;
   let amount24hUsd = 0;
@@ -57,7 +56,7 @@ function aggregate(
     }
     const dayIndex = Math.min(
       6,
-      Math.max(0, Math.floor((nowSeconds - ev.timestamp) / SECONDS_PER_DAY)),
+      Math.max(0, Math.floor((nowSeconds - ev.timestamp) / DAY_SECONDS)),
     );
     dayBuckets[6 - dayIndex] += 1;
     if (ev.timestamp >= cutoff24h) {
@@ -111,16 +110,6 @@ function FreezeBars({ values }: { values: number[] }): React.JSX.Element | null 
       })}
     </div>
   );
-}
-
-function formatAge(ageSec: number): string {
-  if (ageSec < 60) return "now";
-  const minutes = Math.floor(ageSec / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(ageSec / SECONDS_PER_HOUR);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(ageSec / SECONDS_PER_DAY);
-  return `${days}d`;
 }
 
 // Heuristic: the events endpoint returns events keyed by symbol enum
@@ -248,7 +237,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                         : "—"}
                     </span>
                     <span className="tabular-nums text-muted-foreground/80">
-                      {formatAge(ev.ageSec)}
+                      {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
                     </span>
                   </li>
                 );

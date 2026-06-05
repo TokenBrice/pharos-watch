@@ -7,6 +7,7 @@ import type {
   DdrResolutionTier,
   DdrRow,
 } from "@shared/types/depeg-resolver";
+import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 
 export type DdrDisplayRow = DdrResponse["rows"][number] | DdrRow;
 
@@ -276,14 +277,7 @@ export function getCurrentDeviationBps(row: DdrDisplayRow): number | null {
 }
 
 export function formatDurationSec(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return "—";
-  if (seconds < HOUR_SECONDS) return `${Math.round(seconds / 60)}m`;
-  if (seconds < DAY_SECONDS) {
-    const hours = seconds / HOUR_SECONDS;
-    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
-  }
-  const days = seconds / DAY_SECONDS;
-  return `${Number.isInteger(days) ? days : days.toFixed(1)}d`;
+  return formatApproxDurationSeconds(seconds, { invalidFallback: "—" });
 }
 
 export function formatUtcTimestamp(seconds: number | null | undefined): string | null {

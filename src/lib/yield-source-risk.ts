@@ -1,3 +1,4 @@
+import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import type { YieldRanking, YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
@@ -191,15 +192,6 @@ const YIELD_SOURCE_FRESHNESS_STYLES: Record<YieldSourceFreshnessTier, string> = 
   stale: "text-muted-foreground",
 };
 
-function formatRelativeAge(ageSeconds: number): string {
-  if (ageSeconds < 60) return `${Math.max(0, Math.floor(ageSeconds))}s ago`;
-  if (ageSeconds < 60 * 60) return `${Math.floor(ageSeconds / 60)}m ago`;
-  if (ageSeconds < 24 * 60 * 60) return `${Math.floor(ageSeconds / (60 * 60))}h ago`;
-  const days = Math.floor(ageSeconds / (24 * 60 * 60));
-  if (days > 30) return ">30d ago";
-  return `${days}d ago`;
-}
-
 /** Tiers: <=6h fresh, <=12h recent, <=24h aging, >24h stale. Null sourceAgeSeconds -> null. */
 export function classifyYieldSourceFreshness(
   sourceAgeSeconds: number | null | undefined,
@@ -215,7 +207,7 @@ export function classifyYieldSourceFreshness(
   else tier = "stale";
   return {
     tier,
-    relativeText: formatRelativeAge(sourceAgeSeconds),
+    relativeText: formatRelativeAgeSeconds(sourceAgeSeconds, { maxDays: 30 }),
     textClassName: YIELD_SOURCE_FRESHNESS_STYLES[tier],
   };
 }

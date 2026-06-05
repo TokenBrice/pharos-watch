@@ -30,7 +30,13 @@ import {
   formatScoreTrimmed,
   slugifyId,
 } from "../format";
-import { formatRelativeTimeMs } from "../relative-time";
+import {
+  formatApproxDurationSeconds,
+  formatRelativeAgeSeconds,
+  formatRelativeDurationSeconds,
+  formatRelativeTimeMs,
+  formatStalenessDurationSeconds,
+} from "../relative-time";
 
 describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));
@@ -508,6 +514,33 @@ describe("formatRelativeTimeMs", () => {
   });
   it("returns days ago for multi-day age", () => {
     expect(formatRelativeTimeMs(now - 3 * 86_400_000, { now })).toBe("3d ago");
+  });
+});
+
+describe("relative duration helpers", () => {
+  it("formats relative age with configurable floor and suffix labels", () => {
+    expect(formatRelativeAgeSeconds(45, { nowLabel: "fresh", suffix: "old" })).toBe("fresh");
+    expect(formatRelativeAgeSeconds(90, { nowLabel: "fresh", nowThresholdSec: 90, suffix: "old", rounding: "round" })).toBe("2m old");
+    expect(formatRelativeAgeSeconds(3 * 3600, { suffix: "old" })).toBe("3h old");
+  });
+
+  it("supports max-day buckets and suffix-free durations", () => {
+    expect(formatRelativeAgeSeconds(31 * 86_400, { maxDays: 30 })).toBe(">30d ago");
+    expect(formatRelativeDurationSeconds(45, { nowLabel: "less than 1 min" })).toBe("less than 1 min");
+    expect(formatRelativeDurationSeconds(90 * 60, { unitStyle: "short", rounding: "round", dayThresholdSec: 48 * 3600 })).toBe("2 h");
+  });
+
+  it("formats approximate depeg durations in compact and long styles", () => {
+    expect(formatApproxDurationSeconds(90 * 60)).toBe("1.5h");
+    expect(formatApproxDurationSeconds(90 * 60, { style: "long" })).toBe("1.5 hr");
+    expect(formatApproxDurationSeconds(3 * 86_400, { style: "long" })).toBe("3.0 days");
+    expect(formatApproxDurationSeconds(Number.NaN, { invalidFallback: "—" })).toBe("—");
+  });
+
+  it("formats watchdog staleness durations", () => {
+    expect(formatStalenessDurationSeconds(null)).toBe("missing");
+    expect(formatStalenessDurationSeconds(1800)).toBe("30m");
+    expect(formatStalenessDurationSeconds(5400)).toBe("1.5h");
   });
 });
 

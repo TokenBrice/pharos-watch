@@ -1,4 +1,5 @@
 import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { formatRelativeAgeSeconds, formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import { escapeHtml } from "../lib/telegram";
 import { MANAGE_PAGE_SIZE } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
@@ -271,7 +272,7 @@ export function describeSubscriptionSettings(
   // open the settings keyboard.
   const snoozeUntil = row.alert_snooze_until_ts;
   if (snoozeUntil != null && snoozeUntil > nowSec) {
-    return `${base} — snoozed for ${formatRelativeDuration(snoozeUntil - nowSec)}`;
+    return `${base} — snoozed for ${formatSnoozeDuration(snoozeUntil - nowSec)}`;
   }
   return base;
 }
@@ -338,28 +339,40 @@ function formatQuietHoursStatus(subscriber: SubscriberRow | null, nowSec: number
 
 function formatSnoozeLine(snoozeUntilSec: number | null, nowSec: number): string {
   if (snoozeUntilSec == null || snoozeUntilSec <= nowSec) return "Snooze: Off";
-  return `Snoozed for ${formatRelativeDuration(snoozeUntilSec - nowSec)}`;
+  return `Snoozed for ${formatSnoozeDuration(snoozeUntilSec - nowSec)}`;
 }
 
-function formatRelativeDuration(seconds: number): string {
-  if (seconds < 60) return "less than 1 min";
-  if (seconds < 90 * 60) return `${Math.round(seconds / 60)} min`;
-  if (seconds < 48 * 3600) return `${Math.round(seconds / 3600)} h`;
-  return `${Math.round(seconds / 86400)} d`;
+function formatSnoozeDuration(seconds: number): string {
+  return formatRelativeDurationSeconds(seconds, {
+    nowLabel: "less than 1 min",
+    unitStyle: "short",
+    rounding: "round",
+    dayThresholdSec: 48 * 3600,
+  });
 }
 
 function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
   if (ts == null || !Number.isFinite(ts)) return "";
   const ageSec = Math.max(0, nowSec - ts);
-  if (ageSec < 90) return "fresh";
-  if (ageSec < 3600) return `${Math.round(ageSec / 60)}m old`;
-  if (ageSec < 172800) return `${Math.round(ageSec / 3600)}h old`;
-  return `${Math.round(ageSec / 86400)}d old`;
+  return formatRelativeAgeSeconds(ageSec, {
+    suffix: "old",
+    nowLabel: "fresh",
+    nowThresholdSec: 90,
+    rounding: "round",
+    dayThresholdSec: 172800,
+  });
 }
 
 function formatElapsed(ts: number | null | undefined, nowSec = Math.floor(Date.now() / 1000)): string {
-  const age = formatAge(ts, nowSec);
-  return age === "fresh" ? "just now" : age.replace(/ old$/, " ago");
+  if (ts == null || !Number.isFinite(ts)) return "";
+  const ageSec = Math.max(0, nowSec - ts);
+  return formatRelativeAgeSeconds(ageSec, {
+    suffix: "ago",
+    nowLabel: "just now",
+    nowThresholdSec: 90,
+    rounding: "round",
+    dayThresholdSec: 172800,
+  });
 }
 
 function formatUsdCompact(value: number | null | undefined): string | null {

@@ -9,22 +9,9 @@ import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { useFlashOnChange } from "@/hooks/use-flash-on-change";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
 import type { DepegEvent, PegSummaryCoin } from "@shared/types";
-
-function formatDuration(ageSec: number): string {
-  if (ageSec < 60) return `${Math.max(1, Math.round(ageSec))}s`;
-  const minutes = Math.floor(ageSec / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    const m = minutes % 60;
-    return m > 0 ? `${hours}h ${m}m` : `${hours}h`;
-  }
-  const days = Math.floor(hours / 24);
-  const h = hours % 24;
-  return h > 0 ? `${days}d ${h}h` : `${days}d`;
-}
 
 interface ActiveRow {
   id: string;
@@ -161,7 +148,7 @@ function DepegRow({ row, logoSrc }: { row: ActiveRow; logoSrc: string | undefine
           </span>
         </span>
         <span className="tabular-nums text-muted-foreground">
-          {formatDuration(row.ageSec)}
+          {formatElapsedSeconds(row.ageSec)}
         </span>
       </Link>
     </li>
