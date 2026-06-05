@@ -44,7 +44,9 @@ export function buildPaginatedQuery(opts: { conditions: string[]; limit: number;
 export function buildInClause(values: readonly unknown[]): { sql: string; binds: unknown[] } {
   if (values.length === 0) throw new Error("buildInClause: empty array");
   if (values.length > D1_MAX_BOUND_PARAMETERS) {
-    throw new Error(`buildInClause: ${values.length} values exceeds D1 bound-parameter limit ${D1_MAX_BOUND_PARAMETERS}`);
+    throw new Error(
+      `buildInClause: ${values.length} values exceeds D1 bound-parameter limit ${D1_MAX_BOUND_PARAMETERS}`,
+    );
   }
   return {
     sql: new Array(values.length).fill("?").join(","),
@@ -61,6 +63,33 @@ export async function runChunkedInFilter<T>(
     const clause = buildInClause(chunk);
     await runQuery(buildSql(clause.sql), clause.binds);
   }
+}
+
+export async function runChunkedInRead<T, Row>(
+  values: readonly T[],
+  buildSql: (inClauseSql: string) => string,
+  readRows: (whereSql: string, binds: unknown[]) => Promise<Row[]>,
+): Promise<Row[]> {
+  const rows: Row[] = [];
+  await runChunkedInFilter(values, buildSql, async (whereSql, binds) => {
+    rows.push(...(await readRows(whereSql, binds)));
+  });
+  return rows;
+}
+
+export async function insertReturningMapped<Row, Mapped>(
+  db: D1Database,
+  sql: string,
+  binds: readonly unknown[],
+  map: (row: Row) => Mapped,
+  label: string,
+): Promise<Mapped> {
+  const row = await db
+    .prepare(sql)
+    .bind(...binds)
+    .first<Row>();
+  if (!row) throw new Error(`${label} insert could not be reloaded`);
+  return map(row);
 }
 
 export function normalizeBlacklistSyncStateKey(configKey: string): string {

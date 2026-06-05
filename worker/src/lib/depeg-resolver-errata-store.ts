@@ -1,4 +1,4 @@
-import { runChunkedInFilter } from "./db";
+import { insertReturningMapped, runChunkedInRead } from "./db";
 import { assertNonEmpty, assertOptionalHash, assertPositiveInteger } from "./depeg-resolver-store-validators";
 
 export type DdrPredictionErratumReason =
@@ -89,19 +89,19 @@ export async function appendPredictionErratum(
   assertNonEmpty(input.incidentKey, "incidentKey");
   assertNonEmpty(input.operatorNote, "operatorNote");
   assertNonEmpty(input.createdBy, "createdBy");
-  if (input.replacementAssessmentId != null) assertPositiveInteger(input.replacementAssessmentId, "replacementAssessmentId");
+  if (input.replacementAssessmentId != null)
+    assertPositiveInteger(input.replacementAssessmentId, "replacementAssessmentId");
   assertOptionalHash(input.replacementRowHash, "replacementRowHash");
   assertOptionalHash(input.rowHashBefore, "rowHashBefore");
 
-  const row = await db
-    .prepare(
-      `INSERT INTO depeg_resolver_prediction_errata
-       (public_prediction_id, incident_key, event_id, assessment_id, reason, operator_note,
-        replacement_assessment_id, replacement_row_hash, row_hash_before, created_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       RETURNING *`,
-    )
-    .bind(
+  return insertReturningMapped(
+    db,
+    `INSERT INTO depeg_resolver_prediction_errata
+     (public_prediction_id, incident_key, event_id, assessment_id, reason, operator_note,
+      replacement_assessment_id, replacement_row_hash, row_hash_before, created_at, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     RETURNING *`,
+    [
       input.publicPredictionId,
       input.incidentKey,
       input.eventId,
@@ -113,18 +113,17 @@ export async function appendPredictionErratum(
       input.rowHashBefore ?? null,
       input.createdAt,
       input.createdBy,
-    )
-    .first<ErratumRow>();
-  if (!row) throw new Error("prediction erratum insert could not be reloaded");
-  return mapErratum(row);
+    ],
+    mapErratum,
+    "prediction erratum",
+  );
 }
 
 export async function loadPredictionErrata(
   db: D1Database,
   filters: LoadPredictionErrataFilters = {},
 ): Promise<DdrPredictionErratum[]> {
-  const byId = new Map<number, DdrPredictionErratum>();
-  const query = async (whereSql: string, binds: unknown[]) => {
+  const readRows = async (whereSql: string, binds: unknown[]) => {
     const result = await db
       .prepare(
         `SELECT *
@@ -134,39 +133,35 @@ export async function loadPredictionErrata(
       )
       .bind(...binds)
       .all<ErratumRow>();
-    for (const row of result.results ?? []) byId.set(row.id, mapErratum(row));
+    return (result.results ?? []).map(mapErratum);
   };
 
   if (filters.publicPredictionIds) {
     if (filters.publicPredictionIds.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       [...new Set(filters.publicPredictionIds)],
       (inClauseSql) => `WHERE public_prediction_id IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return [...byId.values()];
   }
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       [...new Set(filters.incidentKeys)],
       (inClauseSql) => `WHERE incident_key IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return [...byId.values()];
   }
 
   if (filters.eventIds) {
     if (filters.eventIds.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       [...new Set(filters.eventIds)],
       (inClauseSql) => `WHERE event_id IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return [...byId.values()];
   }
 
-  await query("", []);
-  return [...byId.values()];
+  return readRows("", []);
 }

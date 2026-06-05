@@ -1,3 +1,4 @@
+import { insertReturningMapped } from "./db";
 import { assertNonEmpty, assertPositiveInteger } from "./depeg-resolver-store-validators";
 
 export type DdrRepairOperation =
@@ -98,15 +99,14 @@ export async function authorizeEventRepair(
   if (input.requiredErratumId != null) assertPositiveInteger(input.requiredErratumId, "requiredErratumId");
 
   const columnsJson = JSON.stringify([...new Set(input.columns)].sort());
-  const row = await db
-    .prepare(
-      `INSERT INTO depeg_resolver_event_repair_authorizations
-       (event_id, incident_key, operation, columns_json, required_revision_id,
-        required_erratum_id, reason, created_at, expires_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       RETURNING *`,
-    )
-    .bind(
+  return insertReturningMapped(
+    db,
+    `INSERT INTO depeg_resolver_event_repair_authorizations
+     (event_id, incident_key, operation, columns_json, required_revision_id,
+      required_erratum_id, reason, created_at, expires_at, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     RETURNING *`,
+    [
       input.eventId,
       input.incidentKey,
       input.operation,
@@ -117,10 +117,10 @@ export async function authorizeEventRepair(
       input.createdAt,
       input.expiresAt,
       input.createdBy,
-    )
-    .first<AuthorizationRow>();
-  if (!row) throw new Error("repair authorization insert could not be reloaded");
-  return mapAuthorization(row);
+    ],
+    mapAuthorization,
+    "repair authorization",
+  );
 }
 
 export async function consumeEventRepairAuthorization(

@@ -14,9 +14,7 @@ import {
   forecastReadinessLockTrigger,
   forecastReadinessScore,
 } from "@shared/lib/depeg-resolver/forecast-readiness";
-import {
-  buildDdrManifestBasePayload,
-} from "@shared/lib/depeg-resolver/public-contract";
+import { buildDdrManifestBasePayload } from "@shared/lib/depeg-resolver/public-contract";
 import {
   DDR_DURATION_MODEL_VERSION,
   DDR_INCIDENT_GROUPING_VERSION,
@@ -38,19 +36,8 @@ import type {
 } from "../depeg-resolver-v2-contracts";
 import { DAY } from "./constants";
 import type { DdrDiagnosticResponse, DdrLineage } from "./types";
-import {
-  eligibleAt,
-  nullableNumberValue,
-  nullableStringValue,
-  numberValue,
-  recordValue,
-  stringValue,
-} from "./utils";
-import {
-  firstPublicationByPredictionId,
-  publicPredictionIdOf,
-  sealedByIncident,
-} from "./storage-adapters";
+import { eligibleAt, nullableNumberValue, nullableStringValue, numberValue, recordValue, stringValue } from "./utils";
+import { firstPublicationByPredictionId, publicPredictionIdOf, sealedByIncident } from "./storage-adapters";
 
 function buildFrozenDuration(row: DdrRow, lockedAt: number): Record<string, unknown> {
   const medianSec = row.duration.medianSec ?? null;
@@ -62,7 +49,8 @@ function buildFrozenDuration(row: DdrRow, lockedAt: number): Record<string, unkn
     iqrResolveAt: iqrSec == null ? null : [lockedAt + Math.round(iqrSec[0]), lockedAt + Math.round(iqrSec[1])],
     horizons: row.duration.horizons.map((cell) => ({
       ...cell,
-      horizonEndAt: lockedAt + ({ "6h": 6 * 3600, "24h": 24 * 3600, "7d": 7 * DAY, "30d": 30 * DAY } as const)[cell.horizon],
+      horizonEndAt:
+        lockedAt + ({ "6h": 6 * 3600, "24h": 24 * 3600, "7d": 7 * DAY, "30d": 30 * DAY } as const)[cell.horizon],
       anchoredLabel: `within ${cell.horizon} of lock`,
     })),
   };
@@ -138,7 +126,10 @@ export function buildSealPayload(
   };
 }
 
-function buildPendingReadinessMeta(row: DdrRow, nowSec: number): {
+function buildPendingReadinessMeta(
+  row: DdrRow,
+  nowSec: number,
+): {
   readiness: DdrForecastReadiness;
   backstop: DdrForecastReadinessBackstop;
   eligibleAt: number;
@@ -247,6 +238,17 @@ function buildDdrMeta(input: {
   };
 }
 
+function buildDdrMethodologyEnvelope(asOf: number) {
+  return buildMethodologyEnvelope({
+    version: DDR_METHODOLOGY_VERSION,
+    versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+    currentVersion: DDR_METHODOLOGY_VERSION,
+    currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
+    changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
+    asOf,
+  });
+}
+
 export function normalizeErratumRecord(row: Record<string, unknown>): DdrPredictionErratum | null {
   const id = nullableNumberValue(row.id);
   const publicPredictionId = nullableNumberValue(row.publicPredictionId ?? row.public_prediction_id);
@@ -305,7 +307,10 @@ function groupErrata(input: readonly DdrPredictionErratum[]): {
   const byPublicPredictionId = new Map<number, DdrPredictionErratum[]>();
   const byIncidentKey = new Map<string, DdrPredictionErratum[]>();
   for (const erratum of input) {
-    byPublicPredictionId.set(erratum.publicPredictionId, sortErrata([...(byPublicPredictionId.get(erratum.publicPredictionId) ?? []), erratum]));
+    byPublicPredictionId.set(
+      erratum.publicPredictionId,
+      sortErrata([...(byPublicPredictionId.get(erratum.publicPredictionId) ?? []), erratum]),
+    );
     byIncidentKey.set(erratum.incidentKey, sortErrata([...(byIncidentKey.get(erratum.incidentKey) ?? []), erratum]));
   }
   return { byPublicPredictionId, byIncidentKey };
@@ -329,7 +334,8 @@ function buildBasePublicRowFromSealed(
   fallback: Record<string, unknown>,
 ): Record<string, unknown> {
   const payload = sealed.sealedPayload;
-  const fallbackDirection = fallback.direction === "above" || fallback.direction === "below" ? fallback.direction : "below";
+  const fallbackDirection =
+    fallback.direction === "above" || fallback.direction === "below" ? fallback.direction : "below";
   return {
     stablecoinId: stringValue(payload.stablecoinId, stringValue(fallback.stablecoinId, "")),
     symbol: stringValue(payload.symbol, stringValue(fallback.symbol, "")),
@@ -376,25 +382,40 @@ function buildPredictionMeta(input: {
     (sealedPrediction?.lockTrigger as DdrLockTrigger | null | undefined) ??
     input.sealed?.lockTrigger ??
     null;
-  const readiness =
-    input.readiness ??
-    recordValue(sealedPrediction?.readiness) ??
-    null;
-  const backstop =
-    input.backstop ??
-    recordValue(sealedPrediction?.backstop) ??
-    null;
+  const readiness = input.readiness ?? recordValue(sealedPrediction?.readiness) ?? null;
+  const backstop = input.backstop ?? recordValue(sealedPrediction?.backstop) ?? null;
   return {
     state: input.state,
     publicPredictionId: input.publicPredictionId,
     incidentKey: input.incident.incidentKey,
-    predictionPolicyVersion: nullableStringValue(sealedPrediction?.predictionPolicyVersion, input.sealed?.predictionPolicyVersion ?? DDR_PREDICTION_POLICY_VERSION),
-    predictionMethodologyVersion: nullableStringValue(sealedPrediction?.predictionMethodologyVersion, input.sealed?.predictionMethodologyVersion ?? null),
-    predictionMethodologyVersionLabel: nullableStringValue(sealedPrediction?.predictionMethodologyVersionLabel, input.sealed ? DDR_METHODOLOGY_VERSION_LABEL : null),
-    resolutionRubricVersion: nullableStringValue(sealedPrediction?.resolutionRubricVersion, input.sealed ? DDR_RESOLUTION_RUBRIC_VERSION : null),
-    durationModelVersion: nullableStringValue(sealedPrediction?.durationModelVersion, input.sealed ? DDR_DURATION_MODEL_VERSION : null),
-    incidentGroupingVersion: nullableStringValue(sealedPrediction?.incidentGroupingVersion, input.sealed ? DDR_INCIDENT_GROUPING_VERSION : null),
-    supportRulesVersion: nullableStringValue(sealedPrediction?.supportRulesVersion, input.sealed ? DDR_SUPPORT_RULES_VERSION : null),
+    predictionPolicyVersion: nullableStringValue(
+      sealedPrediction?.predictionPolicyVersion,
+      input.sealed?.predictionPolicyVersion ?? DDR_PREDICTION_POLICY_VERSION,
+    ),
+    predictionMethodologyVersion: nullableStringValue(
+      sealedPrediction?.predictionMethodologyVersion,
+      input.sealed?.predictionMethodologyVersion ?? null,
+    ),
+    predictionMethodologyVersionLabel: nullableStringValue(
+      sealedPrediction?.predictionMethodologyVersionLabel,
+      input.sealed ? DDR_METHODOLOGY_VERSION_LABEL : null,
+    ),
+    resolutionRubricVersion: nullableStringValue(
+      sealedPrediction?.resolutionRubricVersion,
+      input.sealed ? DDR_RESOLUTION_RUBRIC_VERSION : null,
+    ),
+    durationModelVersion: nullableStringValue(
+      sealedPrediction?.durationModelVersion,
+      input.sealed ? DDR_DURATION_MODEL_VERSION : null,
+    ),
+    incidentGroupingVersion: nullableStringValue(
+      sealedPrediction?.incidentGroupingVersion,
+      input.sealed ? DDR_INCIDENT_GROUPING_VERSION : null,
+    ),
+    supportRulesVersion: nullableStringValue(
+      sealedPrediction?.supportRulesVersion,
+      input.sealed ? DDR_SUPPORT_RULES_VERSION : null,
+    ),
     eligibleAt,
     policyDelaySec,
     lockedAt: input.sealed?.lockedAt ?? null,
@@ -475,13 +496,14 @@ function buildPublicRows(input: {
     };
     const sealed = sealedByKey.get(incident.incidentKey) ?? null;
     const publicPredictionId = sealed ? publicPredictionIdOf(sealed) : null;
-    const publication = publicPredictionId == null ? null : publicationById.get(publicPredictionId) ?? null;
+    const publication = publicPredictionId == null ? null : (publicationById.get(publicPredictionId) ?? null);
     const base = buildBasePublicRow(row, incident);
     const live = buildLiveOverlay(row, input.nowSec);
     const pendingReadiness = sealed ? null : buildPendingReadinessMeta(row, input.nowSec);
 
     if (!sealed) {
-      const lockEligible = pendingReadiness?.backstop.reached === true || pendingReadiness?.readiness.strictEarlyLockReady === true;
+      const lockEligible =
+        pendingReadiness?.backstop.reached === true || pendingReadiness?.readiness.strictEarlyLockReady === true;
       return {
         ...base,
         kind: "pending",
@@ -491,7 +513,10 @@ function buildPublicRows(input: {
           publicPredictionId: null,
           sealed: null,
           publication: null,
-          deferralReason: lockEligible && !input.storageAvailable ? "storage-contract-unavailable" : incident.lockState?.lastDeferralReason ?? null,
+          deferralReason:
+            lockEligible && !input.storageAvailable
+              ? "storage-contract-unavailable"
+              : (incident.lockState?.lastDeferralReason ?? null),
           modelAsOf: input.nowSec,
           readiness: pendingReadiness?.readiness ?? null,
           backstop: pendingReadiness?.backstop ?? null,
@@ -639,14 +664,7 @@ export function buildDiagnosticSnapshot(input: {
       lineage: input.lineage,
     }),
     rows: input.rows,
-    methodology: buildMethodologyEnvelope({
-      version: DDR_METHODOLOGY_VERSION,
-      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-      asOf: input.nowSec,
-    }),
+    methodology: buildDdrMethodologyEnvelope(input.nowSec),
   };
 }
 
@@ -677,14 +695,7 @@ export function buildDdrResponse(input: {
       lineage: input.lineage,
     }),
     rows: buildPublicRows(input),
-    methodology: buildMethodologyEnvelope({
-      version: DDR_METHODOLOGY_VERSION,
-      versionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      currentVersion: DDR_METHODOLOGY_VERSION,
-      currentVersionLabel: DDR_METHODOLOGY_VERSION_LABEL,
-      changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-      asOf: input.nowSec,
-    }),
+    methodology: buildDdrMethodologyEnvelope(input.nowSec),
   };
 }
 

@@ -1,6 +1,6 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
-import { runChunkedInFilter } from "./db";
+import { runChunkedInRead } from "./db";
 import {
   bindDdrAssessmentInsert,
   ddrAssessmentInsertSql,
@@ -306,7 +306,10 @@ function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationMani
     publicPredictionIdsHash: row.public_prediction_ids_hash,
     publicPredictionIds: parsePositiveIntegerArrayJson(row.public_prediction_ids_json, "publicPredictionIdsJson"),
     firstPublishedPublicPredictionIds: [],
-    publicPredictionRowHashes: parseStringRecordJson(row.public_prediction_row_hashes_json, "publicPredictionRowHashesJson"),
+    publicPredictionRowHashes: parseStringRecordJson(
+      row.public_prediction_row_hashes_json,
+      "publicPredictionRowHashesJson",
+    ),
     basePayloadJson: row.base_payload_json,
     baseRowCount: row.base_row_count,
     publicPredictionCount: row.public_prediction_count,
@@ -330,7 +333,8 @@ function publicPredictionIdsFromPayload(payload: Record<string, unknown>): numbe
   const ids = (meta as Record<string, unknown>).publicPredictionIds;
   if (!Array.isArray(ids)) return [];
   return ids.map((id) => {
-    if (!Number.isSafeInteger(id) || id <= 0) throw new Error("basePayload _meta.publicPredictionIds must be positive integers");
+    if (!Number.isSafeInteger(id) || id <= 0)
+      throw new Error("basePayload _meta.publicPredictionIds must be positive integers");
     return id;
   });
 }
@@ -342,7 +346,8 @@ function rowHashesFromPayload(payload: Record<string, unknown>): Record<string, 
   if (!hashes || typeof hashes !== "object" || Array.isArray(hashes)) return {};
   return Object.fromEntries(
     Object.entries(hashes as Record<string, unknown>).map(([id, hash]) => {
-      if (typeof hash !== "string") throw new Error("basePayload _meta.publicPredictionRowHashes values must be hashes");
+      if (typeof hash !== "string")
+        throw new Error("basePayload _meta.publicPredictionRowHashes values must be hashes");
       assertHash(hash, `publicPredictionRowHashes[${id}]`);
       return [id, hash];
     }),
@@ -368,14 +373,16 @@ function normalizeRowHashes(rowHashes: Record<string, string> | Record<number, s
 }
 
 function assertMatchingIdAndHashSets(ids: number[], rowHashes: Record<string, string>): void {
-  const hashIds = Object.keys(rowHashes).map(Number).sort((left, right) => left - right);
+  const hashIds = Object.keys(rowHashes)
+    .map(Number)
+    .sort((left, right) => left - right);
   if (JSON.stringify(ids) !== JSON.stringify(hashIds)) {
     throw new Error("public prediction id set and row-hash map keys must match");
   }
 }
 
 function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
 function publicPredictionIdFromPayloadRow(row: unknown): number | null {
@@ -384,7 +391,8 @@ function publicPredictionIdFromPayloadRow(row: unknown): number | null {
   const id = prediction?.publicPredictionId;
   if (id == null) return null;
   if (typeof id !== "number") throw new Error("basePayload row prediction.publicPredictionId must be a number");
-  if (!Number.isSafeInteger(id) || id <= 0) throw new Error("basePayload row prediction.publicPredictionId must be positive integer");
+  if (!Number.isSafeInteger(id) || id <= 0)
+    throw new Error("basePayload row prediction.publicPredictionId must be positive integer");
   return id;
 }
 
@@ -569,7 +577,10 @@ async function sealPublicOutcome(
   if (canonicalRowHash !== input.rowHash) {
     throw new Error("rowHash does not match canonical sealed public row payload");
   }
-  const payloadJson = jsonString(attachDdrPublicRowHash(input.sealedPayload as Record<string, unknown>, input.rowHash), "sealedPayload");
+  const payloadJson = jsonString(
+    attachDdrPublicRowHash(input.sealedPayload as Record<string, unknown>, input.rowHash),
+    "sealedPayload",
+  );
   const results = await db.batch([
     await insertPublicPredictionAssessment(db, input, payloadJson),
     lockStateStatement(db, input, outcomeKind === "prediction" ? "frozen" : "no_call"),
@@ -630,9 +641,10 @@ export async function loadSealedPublicPredictions(
   db: D1Database,
   filters: LoadSealedPublicPredictionsFilters = {},
 ): Promise<DdrSealedPublicPrediction[]> {
-  const rows: DdrSealedPublicPrediction[] = [];
-  const query = async (whereSql: string, binds: unknown[]) => {
-    const policySql = filters.predictionPolicyVersion ? `${whereSql ? " AND" : "WHERE"} prediction_policy_version = ?` : "";
+  const readRows = async (whereSql: string, binds: unknown[]) => {
+    const policySql = filters.predictionPolicyVersion
+      ? `${whereSql ? " AND" : "WHERE"} prediction_policy_version = ?`
+      : "";
     const policyBinds = filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : [];
     const result = await db
       .prepare(
@@ -643,44 +655,43 @@ export async function loadSealedPublicPredictions(
       )
       .bind(...binds, ...policyBinds)
       .all<SealedPublicPredictionRow>();
-    rows.push(...(result.results ?? []).map(mapSealedPublicPrediction));
+    return (result.results ?? []).map(mapSealedPublicPrediction);
   };
 
   if (filters.publicPredictionIds) {
     if (filters.publicPredictionIds.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       normalizeIdSet(filters.publicPredictionIds),
       (inClauseSql) => `WHERE id IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return rows;
   }
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       [...new Set(filters.incidentKeys)],
       (inClauseSql) => `WHERE incident_key IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return rows;
   }
 
   if (filters.eventIds) {
     if (filters.eventIds.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       normalizeIdSet(filters.eventIds),
       (inClauseSql) => `WHERE event_id IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return rows;
   }
 
-  await query("", []);
-  return rows;
+  return readRows("", []);
 }
 
-async function loadPublicationManifestByToken(db: D1Database, snapshotToken: string): Promise<DdrPublicationManifest | null> {
+async function loadPublicationManifestByToken(
+  db: D1Database,
+  snapshotToken: string,
+): Promise<DdrPublicationManifest | null> {
   const row = await db
     .prepare(
       `SELECT s.*, f.finalized_at, f.validator_version
@@ -751,7 +762,8 @@ export async function writePublicationManifest(
   const publicPredictionIdsJson = JSON.stringify(ids);
   const publicPredictionRowHashesJson = JSON.stringify(rowHashes);
   const snapshotToken =
-    input.snapshotToken ?? `ddrpub:${input.publishedAt}:${basePayloadHash.slice(0, 16)}:${publicPredictionIdsHash.slice(0, 8)}`;
+    input.snapshotToken ??
+    `ddrpub:${input.publishedAt}:${basePayloadHash.slice(0, 16)}:${publicPredictionIdsHash.slice(0, 8)}`;
   const createdAt = input.createdAt ?? input.publishedAt;
 
   await db.batch([
@@ -857,8 +869,7 @@ export async function loadFirstPublicationMembership(
   db: D1Database,
   filters: LoadSealedPublicPredictionsFilters = {},
 ): Promise<DdrFirstPublicationMembership[]> {
-  const rows: DdrFirstPublicationMembership[] = [];
-  const query = async (whereSql: string, binds: unknown[]) => {
+  const readRows = async (whereSql: string, binds: unknown[]) => {
     const result = await db
       .prepare(
         `SELECT r.public_prediction_id,
@@ -878,50 +889,44 @@ export async function loadFirstPublicationMembership(
       )
       .bind(...binds)
       .all<FirstPublicationMembershipRow>();
-    rows.push(
-      ...(result.results ?? []).map((row) => ({
-        publicPredictionId: row.public_prediction_id,
-        incidentKey: row.incident_key,
-        snapshotToken: row.snapshot_token,
-        snapshotSequence: row.snapshot_sequence,
-        snapshotGeneration: row.snapshot_generation,
-        publishedAt: row.published_at,
-        finalizedAt: row.finalized_at,
-        firstPublished: true,
-      })),
-    );
+    return (result.results ?? []).map((row) => ({
+      publicPredictionId: row.public_prediction_id,
+      incidentKey: row.incident_key,
+      snapshotToken: row.snapshot_token,
+      snapshotSequence: row.snapshot_sequence,
+      snapshotGeneration: row.snapshot_generation,
+      publishedAt: row.published_at,
+      finalizedAt: row.finalized_at,
+      firstPublished: true,
+    }));
   };
 
   if (filters.publicPredictionIds) {
     if (filters.publicPredictionIds.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       normalizeIdSet(filters.publicPredictionIds),
       (inClauseSql) => `AND r.public_prediction_id IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return rows;
   }
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       [...new Set(filters.incidentKeys)],
       (inClauseSql) => `AND r.incident_key IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return rows;
   }
 
   if (filters.eventIds) {
     if (filters.eventIds.length === 0) return [];
-    await runChunkedInFilter(
+    return runChunkedInRead(
       normalizeIdSet(filters.eventIds),
       (inClauseSql) => `AND p.event_id IN (${inClauseSql})`,
-      query,
+      readRows,
     );
-    return rows;
   }
 
-  await query("", []);
-  return rows;
+  return readRows("", []);
 }

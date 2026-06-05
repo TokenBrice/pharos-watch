@@ -1,4 +1,4 @@
-import { buildInClause, chunkArray } from "./db";
+import { runChunkedInRead } from "./db";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
   DDR_LOCK_STATE_INSERT_COLUMNS_SQL,
@@ -367,12 +367,13 @@ async function loadIncidentsByEventIds(
   policyDelaySec = DEFAULT_DDR_PUBLIC_PREDICTION_DELAY_SEC,
 ): Promise<Map<number, DdrCanonicalIncident>> {
   const linked = new Map<number, DdrCanonicalIncident>();
-  for (const eventIdChunk of chunkArray([...new Set(eventIds)])) {
-    if (eventIdChunk.length === 0) continue;
-    const clause = buildInClause(eventIdChunk);
-    const result = await db
-      .prepare(
-        `SELECT i.*,
+  const rows = await runChunkedInRead(
+    [...new Set(eventIds)],
+    (inClauseSql) => `WHERE l.event_id IN (${inClauseSql})`,
+    async (whereSql, binds) => {
+      const result = await db
+        .prepare(
+          `SELECT i.*,
                 l.event_id,
                 l.relation,
                 m.incident_key AS membership_incident_key,
@@ -399,14 +400,17 @@ async function loadIncidentsByEventIds(
          JOIN depeg_resolver_incidents i ON i.incident_key = l.incident_key
          LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
          LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
-         WHERE l.event_id IN (${clause.sql})`,
-      )
-      .bind(...clause.binds)
-      .all<IncidentRow>();
+         ${whereSql}`,
+        )
+        .bind(...binds)
+        .all<IncidentRow>();
 
-    for (const row of result.results ?? []) {
-      if (row.event_id != null) linked.set(row.event_id, mapIncidentRow(row, policyDelaySec));
-    }
+      return result.results ?? [];
+    },
+  );
+
+  for (const row of rows) {
+    if (row.event_id != null) linked.set(row.event_id, mapIncidentRow(row, policyDelaySec));
   }
   return linked;
 }
@@ -515,7 +519,9 @@ async function assertNoAmbiguousNearbyIncident(
     )
     .first<{ incident_key: string }>();
   if (row) {
-    throw new Error(`Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`);
+    throw new Error(
+      `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
+    );
   }
 }
 
@@ -588,7 +594,9 @@ async function linkUnsealedNearbyIncident(
     .bind(row.incident_key)
     .first<{ sealed: number }>();
   if (sealed) {
-    throw new Error(`Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`);
+    throw new Error(
+      `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
+    );
   }
 
   await db.batch([
@@ -605,7 +613,14 @@ async function linkUnsealedNearbyIncident(
          (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
          VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)`,
       )
-      .bind(row.incident_key, row.current_event_id, event.eventId, "pre-lock nearby event adopted as current incident source", nowSec, createdBy),
+      .bind(
+        row.incident_key,
+        row.current_event_id,
+        event.eventId,
+        "pre-lock nearby event adopted as current incident source",
+        nowSec,
+        createdBy,
+      ),
     db
       .prepare(
         `UPDATE depeg_resolver_incidents
@@ -700,7 +715,9 @@ export async function ensureCanonicalIncidents(
     });
   }
 
-  return events.map((event) => ensured.get(event.eventId)).filter((incident): incident is DdrCanonicalIncident => !!incident);
+  return events
+    .map((event) => ensured.get(event.eventId))
+    .filter((incident): incident is DdrCanonicalIncident => !!incident);
 }
 
 export async function loadCanonicalIncidents(
@@ -712,8 +729,7 @@ export async function loadCanonicalIncidents(
     return [...(await loadIncidentsByEventIds(db, filters.eventIds, policyDelaySec)).values()];
   }
 
-  const rows: DdrCanonicalIncident[] = [];
-  const pushRows = async (whereSql: string, binds: unknown[]) => {
+  const readRows = async (whereSql: string, binds: unknown[]) => {
     const result = await db
       .prepare(
         `SELECT i.*,
@@ -745,61 +761,42 @@ export async function loadCanonicalIncidents(
       )
       .bind(...binds)
       .all<IncidentRow>();
-    rows.push(...(result.results ?? []).map((row) => mapIncidentRow(row, policyDelaySec)));
+    return (result.results ?? []).map((row) => mapIncidentRow(row, policyDelaySec));
   };
+  const scopedConditions = (filterCondition?: string) => {
+    const conditions = filterCondition ? [filterCondition] : [];
+    if (filters.policyUniverseIncluded != null) conditions.push("m.policy_universe_included = ?");
+    if (filters.predictionPolicyVersion) conditions.push("m.prediction_policy_version = ?");
+    if (!filters.includeSuperseded) conditions.push("i.incident_state = 'active'");
+    return conditions;
+  };
+  const scopedBinds = () => [
+    ...(filters.policyUniverseIncluded == null ? [] : [filters.policyUniverseIncluded ? 1 : 0]),
+    ...(filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : []),
+  ];
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    for (const incidentKeyChunk of chunkArray([...new Set(filters.incidentKeys)])) {
-      const clause = buildInClause(incidentKeyChunk);
-      const conditions = [`i.incident_key IN (${clause.sql})`];
-      if (filters.policyUniverseIncluded != null) conditions.push("m.policy_universe_included = ?");
-      if (filters.predictionPolicyVersion) conditions.push("m.prediction_policy_version = ?");
-      if (!filters.includeSuperseded) conditions.push("i.incident_state = 'active'");
-      const extraBinds = [
-        ...(filters.policyUniverseIncluded == null ? [] : [filters.policyUniverseIncluded ? 1 : 0]),
-        ...(filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : []),
-      ];
-      await pushRows(
-        `WHERE ${conditions.join(" AND ")}`,
-        [...clause.binds, ...extraBinds],
-      );
-    }
-    return rows;
+    const extraBinds = scopedBinds();
+    return runChunkedInRead(
+      [...new Set(filters.incidentKeys)],
+      (inClauseSql) => `WHERE ${scopedConditions(`i.incident_key IN (${inClauseSql})`).join(" AND ")}`,
+      (whereSql, binds) => readRows(whereSql, [...binds, ...extraBinds]),
+    );
   }
 
   if (filters.stablecoinIds) {
     if (filters.stablecoinIds.length === 0) return [];
-    for (const stablecoinIdChunk of chunkArray([...new Set(filters.stablecoinIds)])) {
-      const clause = buildInClause(stablecoinIdChunk);
-      const conditions = [`i.stablecoin_id IN (${clause.sql})`];
-      if (filters.policyUniverseIncluded != null) conditions.push("m.policy_universe_included = ?");
-      if (filters.predictionPolicyVersion) conditions.push("m.prediction_policy_version = ?");
-      if (!filters.includeSuperseded) conditions.push("i.incident_state = 'active'");
-      const extraBinds = [
-        ...(filters.policyUniverseIncluded == null ? [] : [filters.policyUniverseIncluded ? 1 : 0]),
-        ...(filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : []),
-      ];
-      await pushRows(
-        `WHERE ${conditions.join(" AND ")}`,
-        [...clause.binds, ...extraBinds],
-      );
-    }
-    return rows;
+    const extraBinds = scopedBinds();
+    return runChunkedInRead(
+      [...new Set(filters.stablecoinIds)],
+      (inClauseSql) => `WHERE ${scopedConditions(`i.stablecoin_id IN (${inClauseSql})`).join(" AND ")}`,
+      (whereSql, binds) => readRows(whereSql, [...binds, ...extraBinds]),
+    );
   }
 
-  const conditions = filters.policyUniverseIncluded == null ? [] : ["m.policy_universe_included = ?"];
-  if (filters.predictionPolicyVersion) conditions.push("m.prediction_policy_version = ?");
-  if (!filters.includeSuperseded) conditions.push("i.incident_state = 'active'");
-  const binds = [
-    ...(filters.policyUniverseIncluded == null ? [] : [filters.policyUniverseIncluded ? 1 : 0]),
-    ...(filters.predictionPolicyVersion ? [filters.predictionPolicyVersion] : []),
-  ];
-  await pushRows(
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
-    binds,
-  );
-  return rows;
+  const conditions = scopedConditions();
+  return readRows(conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "", scopedBinds());
 }
 
 export async function recordLockDeferral(db: D1Database, input: RecordLockDeferralInput): Promise<void> {
@@ -881,9 +878,12 @@ export async function recordLockOpportunity(
   assertLockMetadata(input);
 
   const createdAt = input.createdAt ?? input.runAt;
-  const stateAction = input.action === "publication_retry_pending" || input.action === "publication_failed" || input.action === "published"
-    ? input.action
-    : null;
+  const stateAction =
+    input.action === "publication_retry_pending" ||
+    input.action === "publication_failed" ||
+    input.action === "published"
+      ? input.action
+      : null;
   const statements: D1PreparedStatement[] = [];
   if (stateAction) {
     statements.push(
