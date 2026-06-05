@@ -57,6 +57,7 @@ export interface ChainlinkReferenceQuoteSnapshot {
 }
 
 const FAILING_RUNS_WARN_THRESHOLD = 3;
+const ABI_UINT256_WORD_HEX = /^[0-9a-fA-F]{64}$/;
 
 // Verified against official Chainlink feed pages on 2026-03-19.
 export const CHAINLINK_REFERENCE_FEEDS: readonly ChainlinkReferenceFeed[] = [
@@ -101,7 +102,11 @@ async function fetchFeedDecimals(
 ): Promise<number | null> {
   const hex = await fetchChainlinkFeedCallHex(feed, DECIMALS_SELECTOR, signal, chainRpcs, drpcApiKey, etherscanApiKey);
   if (!hex) return null;
-  return Number(BigInt(hex));
+  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (!ABI_UINT256_WORD_HEX.test(stripped)) {
+    return null;
+  }
+  return Number(BigInt(`0x${stripped}`));
 }
 
 function getEvmChainId(chainId: string): number | null {

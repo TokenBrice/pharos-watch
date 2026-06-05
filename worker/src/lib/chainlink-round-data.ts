@@ -1,3 +1,5 @@
+const LATEST_ROUND_DATA_REQUIRED_HEX_CHARS = 256;
+
 export interface ChainlinkLatestRoundData {
   roundId: bigint;
   answer: bigint;
@@ -19,8 +21,11 @@ export function parseChainlinkLatestRoundData(
   sourceLabel = "chainlink",
 ): ChainlinkLatestRoundData {
   const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length < 320) {
+  if (stripped.length < LATEST_ROUND_DATA_REQUIRED_HEX_CHARS) {
     throw new Error(`${sourceLabel}: latestRoundData response too short (${stripped.length} hex chars)`);
+  }
+  if (!/^[0-9a-fA-F]+$/.test(stripped)) {
+    throw new Error(`${sourceLabel}: latestRoundData response contains malformed hex`);
   }
 
   const roundId = parseHexWord(stripped.slice(0, 64));

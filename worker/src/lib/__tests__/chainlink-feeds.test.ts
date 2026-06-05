@@ -62,6 +62,19 @@ describe("parseChainlinkLatestRoundData", () => {
     expect(parsed.answer).toBe(115_820_000n);
     expect(parsed.updatedAt).toBe(updatedAt);
   });
+
+  it("accepts the four latestRoundData() words that the parser reads", () => {
+    const updatedAt = 1_763_888_000;
+    const fourWordHex = `0x${buildLatestRoundDataHex(115_820_000n, updatedAt).slice(2, 2 + (64 * 4))}`;
+    const parsed = parseChainlinkLatestRoundData(fourWordHex);
+    expect(parsed.answer).toBe(115_820_000n);
+    expect(parsed.updatedAt).toBe(updatedAt);
+  });
+
+  it("rejects malformed latestRoundData() hex", () => {
+    const malformedHex = `${buildLatestRoundDataHex(115_820_000n, 1_763_888_000).slice(0, -1)}g`;
+    expect(() => parseChainlinkLatestRoundData(malformedHex)).toThrow("malformed hex");
+  });
 });
 
 describe("fetchChainlinkReferenceQuotes", () => {
@@ -182,6 +195,20 @@ describe("fetchChainlinkReferenceQuotes", () => {
     expect(snapshot.summary.usableQuotes).toBe(0);
     expect(snapshot.summary.staleQuotes).toBe(1);
     expect(snapshot.summary.roundDataUnavailable).toBeGreaterThanOrEqual(1);
+  });
+
+  it("counts malformed decimals words as unavailable", async () => {
+    mockFetchEvmCallHexAtBlock.mockImplementation(async (_chainId, _address, data) => {
+      if (data === "0x313ce567") {
+        return `0x${"g".repeat(64)}` as `0x${string}`;
+      }
+      return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
+    });
+
+    const snapshot = await fetchChainlinkReferenceQuoteSnapshot(undefined, undefined, 1_763_888_000);
+    expect(snapshot.quotes.size).toBe(0);
+    expect(snapshot.summary.decimalsUnavailable).toBe(CHAINLINK_REFERENCE_FEEDS.length);
+    expect(snapshot.summary.fetchErrors).toBe(0);
   });
 
   it("skips the legacy dRPC endpoint after premium and public failures", async () => {
