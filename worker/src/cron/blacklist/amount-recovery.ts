@@ -135,9 +135,6 @@ export async function enrichRowBalances(opts: {
     }
     if (row.amount_status === "permanently_unavailable") continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
-
-    const blockForBalance = getHistoricalBalanceBlock(row.block_number);
-
     if (config.chain.type === "tron") {
       // Tron blacklist/unblacklist rows are resolved by backfillTronFromLedger
       // (pure-SQL mirror from blacklist_current_balances). Destroy events keep
@@ -146,45 +143,22 @@ export async function enrichRowBalances(opts: {
     } else if (config.chain.evmChainId != null) {
       counters.attempted++;
       try {
-        let amount: number | null = null;
-        let source: "event" | "historical_balance" = "historical_balance";
-
-        if (row.event_type === "destroy") {
-          markRecoveryAttempt(row, "event_receipt", null);
-          amount = await fetchDestroyAmountFromLog(
-            config.chain.evmChainId,
-            config.contractAddress,
-            row.tx_hash,
-            row.address,
-            config,
-            etherscanApiKey,
-            etherscanLimiter,
-            runBudget.subrequestBudget,
-            signal,
-          );
-          throwIfAborted(signal);
-          if (amount != null) source = "event";
-        }
-
-        if (amount == null) {
-          markRecoveryAttempt(row, inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs), null);
-          amount = await fetchEvmTokenBalance(
-            config,
-            row.address,
-            blockForBalance,
-            etherscanApiKey,
-            drpcApiKey,
-            etherscanLimiter,
-            runBudget.subrequestBudget,
-            signal,
-            chainRpcs,
-          );
-          throwIfAborted(signal);
-        }
+        const { amount, amountSource } = await recoverEvmAmountFromEventOrHistory({
+          row,
+          config,
+          etherscanApiKey,
+          drpcApiKey,
+          etherscanLimiter,
+          runBudget,
+          unresolvedAmountSource: "historical_balance",
+          signal,
+          chainRpcs,
+          onProviderAttempt: (provider) => markRecoveryAttempt(row, provider, null),
+        });
 
         row.amount_native = amount;
         row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd);
-        row.amount_source = source;
+        row.amount_source = amountSource;
         row.amount_status = amount != null ? "resolved" : "provider_failed";
         row.amount_last_error_class = amount != null ? null : "provider_null";
         if (amount != null) {
@@ -403,6 +377,94 @@ function inferHistoricalBalanceProvider(
   return "chain_rpc";
 }
 
+type EvmAmountRecoveryResult = {
+  amount: number | null;
+  amountSource: "event" | "historical_balance" | "unavailable";
+  lastErrorClass: BlacklistRecoveryErrorClass | null;
+  lastProvider: BlacklistRecoveryProvider;
+};
+
+async function recoverEvmAmountFromEventOrHistory(opts: {
+  row: RecoverableAmountRow;
+  config: ContractEventConfig;
+  etherscanApiKey: string | null;
+  drpcApiKey: string | null;
+  etherscanLimiter: RateLimitedFetch;
+  runBudget: BlacklistRunBudget;
+  unresolvedAmountSource: EvmAmountRecoveryResult["amountSource"];
+  signal?: AbortSignal;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  onProviderAttempt?: (provider: BlacklistRecoveryProvider) => void;
+}): Promise<EvmAmountRecoveryResult> {
+  const {
+    row,
+    config,
+    etherscanApiKey,
+    drpcApiKey,
+    etherscanLimiter,
+    runBudget,
+    unresolvedAmountSource,
+    signal,
+    chainRpcs,
+    onProviderAttempt,
+  } = opts;
+  let amount: number | null = null;
+  let amountSource = unresolvedAmountSource;
+  let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
+  let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
+
+  if (row.event_type === "destroy") {
+    lastProvider = "event_receipt";
+    onProviderAttempt?.(lastProvider);
+    amount = await fetchDestroyAmountFromLog(
+      config.chain.evmChainId!,
+      config.contractAddress,
+      row.tx_hash,
+      row.address,
+      config,
+      etherscanApiKey,
+      etherscanLimiter,
+      runBudget.subrequestBudget,
+      signal,
+    );
+    throwIfAborted(signal);
+    if (amount != null) {
+      return {
+        amount,
+        amountSource: "event",
+        lastErrorClass: null,
+        lastProvider,
+      };
+    }
+  }
+
+  lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
+  onProviderAttempt?.(lastProvider);
+  amount = await fetchEvmTokenBalance(
+    config,
+    row.address,
+    getHistoricalBalanceBlock(row.block_number),
+    etherscanApiKey,
+    drpcApiKey,
+    etherscanLimiter,
+    runBudget.subrequestBudget,
+    signal,
+    chainRpcs,
+  );
+  throwIfAborted(signal);
+  if (amount != null) {
+    amountSource = "historical_balance";
+    lastErrorClass = null;
+  }
+
+  return {
+    amount,
+    amountSource,
+    lastErrorClass,
+    lastProvider,
+  };
+}
+
 export async function recoverBlacklistAmountForRow(
   row: RecoverableAmountRow,
   config: ContractEventConfig,
@@ -419,58 +481,17 @@ export async function recoverBlacklistAmountForRow(
     };
   }
 
-  let amount: number | null = null;
-  let amountSource: RecoverBlacklistAmountForRowResult["amountSource"] = "unavailable";
-  let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
-  let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(
-    options.drpcApiKey,
-    options.etherscanApiKey,
-    options.chainRpcs,
-  );
-
-  if (row.event_type === "destroy") {
-    lastProvider = "event_receipt";
-    amount = await fetchDestroyAmountFromLog(
-      config.chain.evmChainId,
-      config.contractAddress,
-      row.tx_hash,
-      row.address,
-      config,
-      options.etherscanApiKey,
-      options.etherscanLimiter,
-      options.runBudget.subrequestBudget,
-      options.signal,
-    );
-    throwIfAborted(options.signal);
-    if (amount != null) {
-      amountSource = "event";
-      lastErrorClass = null;
-    }
-  }
-
-  if (amount == null) {
-    lastProvider = inferHistoricalBalanceProvider(
-      options.drpcApiKey,
-      options.etherscanApiKey,
-      options.chainRpcs,
-    );
-    amount = await fetchEvmTokenBalance(
-      config,
-      row.address,
-      getHistoricalBalanceBlock(row.block_number),
-      options.etherscanApiKey,
-      options.drpcApiKey,
-      options.etherscanLimiter,
-      options.runBudget.subrequestBudget,
-      options.signal,
-      options.chainRpcs,
-    );
-    throwIfAborted(options.signal);
-    if (amount != null) {
-      amountSource = "historical_balance";
-      lastErrorClass = null;
-    }
-  }
+  const { amount, amountSource, lastErrorClass, lastProvider } = await recoverEvmAmountFromEventOrHistory({
+    row,
+    config,
+    etherscanApiKey: options.etherscanApiKey,
+    drpcApiKey: options.drpcApiKey,
+    etherscanLimiter: options.etherscanLimiter,
+    runBudget: options.runBudget,
+    unresolvedAmountSource: "unavailable",
+    signal: options.signal,
+    chainRpcs: options.chainRpcs,
+  });
 
   return {
     amount,
@@ -587,64 +608,25 @@ export async function backfillAmounts(
     let lastProvider: BlacklistRecoveryProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
     const attemptAt = Math.floor(Date.now() / 1000);
 
-    if (row.event_type === "destroy" && config.chain.type === "evm" && config.chain.evmChainId != null) {
-      lastProvider = "event_receipt";
-      amount = await fetchDestroyAmountFromLog(
-        config.chain.evmChainId,
-        config.contractAddress,
-        row.tx_hash,
-        row.address,
-        config,
-        etherscanApiKey,
-        etherscanLimiter,
-        runBudget.subrequestBudget,
-        signal,
-      );
-      throwIfAborted(signal);
-      if (amount != null) {
-        amountSource = "event";
-        lastErrorClass = null;
-      }
-      if (amount == null) {
-        lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
-        amount = await fetchEvmTokenBalance(
-          config,
-          row.address,
-          getHistoricalBalanceBlock(row.block_number),
-          etherscanApiKey,
-          drpcApiKey,
-          etherscanLimiter,
-          runBudget.subrequestBudget,
-          signal,
-          chainRpcs,
-        );
-        throwIfAborted(signal);
-        if (amount != null) {
-          amountSource = "historical_balance";
-          lastErrorClass = null;
-        }
-      }
-    } else if (config.chain.type === "tron") {
+    if (config.chain.type === "tron") {
       // Tron rows are resolved by backfillTronFromLedger; skip in per-row backfill.
       continue;
     } else if (config.chain.evmChainId != null) {
-      lastProvider = inferHistoricalBalanceProvider(drpcApiKey, etherscanApiKey, chainRpcs);
-      amount = await fetchEvmTokenBalance(
+      const recovered = await recoverEvmAmountFromEventOrHistory({
+        row,
         config,
-        row.address,
-        getHistoricalBalanceBlock(row.block_number),
         etherscanApiKey,
         drpcApiKey,
         etherscanLimiter,
-        runBudget.subrequestBudget,
+        runBudget,
+        unresolvedAmountSource: "unavailable",
         signal,
         chainRpcs,
-      );
-      throwIfAborted(signal);
-      if (amount != null) {
-        amountSource = "historical_balance";
-        lastErrorClass = null;
-      }
+      });
+      amount = recovered.amount;
+      amountSource = recovered.amountSource;
+      lastErrorClass = recovered.lastErrorClass;
+      lastProvider = recovered.lastProvider;
     }
 
     amountStatus = amount != null ? "resolved" : "provider_failed";
