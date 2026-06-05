@@ -1,5 +1,9 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type {
+  LiveReserveSnapshotMetadata,
+  LiveReserveWarning,
+  LiveReservesConfig,
+} from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { Abi } from "abitype";
@@ -92,6 +96,11 @@ interface CrvUsdCollateralBucketSummary {
   yieldBasisCollateralUsd: number;
   yieldBasisCollateralPct: number;
   unknownExposurePct: number;
+}
+
+interface CrvUsdMarketCounts {
+  directMarketCount: number;
+  yieldBasisMarketCount: number;
 }
 
 const ETHEREUM_CHAIN = "ethereum";
@@ -218,6 +227,32 @@ function summarizeCrvUsdCollateralBuckets(
     yieldBasisCollateralUsd,
     yieldBasisCollateralPct: (yieldBasisCollateralUsd / totalWithUnknown) * 100,
     unknownExposurePct: (unknownUsd / totalWithUnknown) * 100,
+  };
+}
+
+function buildCrvUsdResult(
+  summary: CrvUsdCollateralBucketSummary,
+  counts: CrvUsdMarketCounts,
+  extraWarnings: readonly LiveReserveWarning[],
+  metadata: LiveReserveSnapshotMetadata,
+): AdapterResult {
+  return {
+    slices: summary.slices,
+    warnings: [...summary.warnings, ...extraWarnings],
+    metadata: {
+      marketCount: counts.directMarketCount + counts.yieldBasisMarketCount,
+      directMarketCount: counts.directMarketCount,
+      yieldBasisMarketCount: counts.yieldBasisMarketCount,
+      activeMarketCount: summary.directActiveMarkets + summary.yieldBasisActiveMarkets,
+      directActiveMarketCount: summary.directActiveMarkets,
+      yieldBasisActiveMarketCount: summary.yieldBasisActiveMarkets,
+      bucketCount: summary.bucketCount,
+      directCollateralUsd: summary.directCollateralUsd,
+      yieldBasisCollateralUsd: summary.yieldBasisCollateralUsd,
+      yieldBasisCollateralPct: summary.yieldBasisCollateralPct,
+      unknownExposurePct: summary.unknownExposurePct,
+      ...metadata,
+    },
   };
 }
 
@@ -572,27 +607,18 @@ export function adaptCrvUsd(
   ]);
   if (!summary) return { slices: [], warnings: [] };
 
-  return {
-    slices: summary.slices,
-    warnings: [...summary.warnings, ...extraWarnings],
-    metadata: {
-      marketCount: markets.length + yieldBasisMarkets.length,
+  return buildCrvUsdResult(
+    summary,
+    {
       directMarketCount: markets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
-      activeMarketCount: summary.directActiveMarkets + summary.yieldBasisActiveMarkets,
-      directActiveMarketCount: summary.directActiveMarkets,
-      yieldBasisActiveMarketCount: summary.yieldBasisActiveMarkets,
-      bucketCount: summary.bucketCount,
-      directCollateralUsd: summary.directCollateralUsd,
-      yieldBasisCollateralUsd: summary.yieldBasisCollateralUsd,
-      yieldBasisCollateralPct: summary.yieldBasisCollateralPct,
-      unknownExposurePct: summary.unknownExposurePct,
-      ...unverifiedFreshnessMetadata(
-        "curve-market-api + yield-basis-onchain",
-        "Curve market payload does not expose a trustworthy source timestamp even though the Yield Basis leg is current-state on-chain",
-      ),
     },
-  };
+    extraWarnings,
+    unverifiedFreshnessMetadata(
+      "curve-market-api + yield-basis-onchain",
+      "Curve market payload does not expose a trustworthy source timestamp even though the Yield Basis leg is current-state on-chain",
+    ),
+  );
 }
 
 export function adaptCrvUsdOnchain(
@@ -623,21 +649,14 @@ export function adaptCrvUsdOnchain(
   ]);
   if (!summary) return { slices: [], warnings: [] };
 
-  return {
-    slices: summary.slices,
-    warnings: [...summary.warnings, ...extraWarnings],
-    metadata: {
-      marketCount: llammaMarkets.length + yieldBasisMarkets.length,
+  return buildCrvUsdResult(
+    summary,
+    {
       directMarketCount: llammaMarkets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
-      activeMarketCount: summary.directActiveMarkets + summary.yieldBasisActiveMarkets,
-      directActiveMarketCount: summary.directActiveMarkets,
-      yieldBasisActiveMarketCount: summary.yieldBasisActiveMarkets,
-      bucketCount: summary.bucketCount,
-      directCollateralUsd: summary.directCollateralUsd,
-      yieldBasisCollateralUsd: summary.yieldBasisCollateralUsd,
-      yieldBasisCollateralPct: summary.yieldBasisCollateralPct,
-      unknownExposurePct: summary.unknownExposurePct,
+    },
+    extraWarnings,
+    {
       softLiquidatedCrvUsdUsd,
       bandReadCount,
       ...notApplicableFreshnessMetadata({
@@ -646,7 +665,7 @@ export function adaptCrvUsdOnchain(
         yieldBasisSource: "Yield Basis factory + LT preview emergency withdrawal",
       }),
     },
-  };
+  );
 }
 
 export async function fetchCrvUsdReserves(
