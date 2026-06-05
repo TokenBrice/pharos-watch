@@ -213,22 +213,8 @@ export function validateAllowedEndpointMethods(
 }
 
 export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {
-  if (method !== "GET" && method !== "HEAD" && method !== "POST") {
-    return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
-  }
-
   const allowedMethods = getAllowedEndpointMethods(url);
-  if (!allowedMethods) {
-    if (method === "POST") {
-      return { message: "Method not allowed", allowedMethods: GET_ONLY_METHODS };
-    }
-    if (method === "HEAD") {
-      return { message: "Method not allowed", allowedMethods: GET_ONLY_METHODS };
-    }
-    return null;
-  }
-
-  return validateAllowedEndpointMethods(method, allowedMethods);
+  return validateAllowedEndpointMethods(method, allowedMethods ?? GET_ONLY_METHODS);
 }
 
 export function getProbePaths(group: EndpointProbeGroup): string[] {
