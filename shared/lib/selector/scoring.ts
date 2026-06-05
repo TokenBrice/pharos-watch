@@ -53,8 +53,6 @@ export interface ScoreRowResult {
   degenerate: boolean;
 }
 
-type MissingPolicy = "penalty" | "ignore";
-
 const CRITICAL_SIGNALS_BY_PROFILE: Readonly<Record<SelectorProfile, readonly WeightKey[]>> = {
   treasury: [
     "safetyOverall",
@@ -178,14 +176,6 @@ function normalizeRow(
   return slots;
 }
 
-function missingPolicy(
-  key: WeightKey,
-  profile: SelectorProfile,
-): MissingPolicy {
-  if (profile !== "treasury" && key === "bluechip") return "ignore";
-  return "penalty";
-}
-
 export function scoreRow(
   row: MergedRow,
   profile: SelectorProfile,
@@ -204,10 +194,7 @@ export function scoreRow(
       present.push(slot);
       continue;
     }
-    const policy = missingPolicy(slot.key, profile);
-    if (policy === "penalty") {
-      redistributedSlots += 1;
-    }
+    redistributedSlots += 1;
     if (criticalSignals.has(slot.key)) {
       confidenceReasons.add(`missing-critical-${slot.key}`);
       scoreCap = Math.min(scoreCap, 78);
@@ -260,7 +247,7 @@ export function scoreRow(
       rawValue: slot.rawValue,
       normalizedValue: slot.normalizedValue,
       contribution: 0,
-      redistributed: missingPolicy(slot.key, profile) === "penalty",
+      redistributed: true,
     });
   }
 
