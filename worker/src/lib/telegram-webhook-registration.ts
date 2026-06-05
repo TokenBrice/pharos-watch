@@ -152,32 +152,52 @@ function buildExpectedMenuCacheValue(miniAppUrl = TELEGRAM_MINI_APP_URL): string
   });
 }
 
-async function shouldSkipFreshMatchingWebhookCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  const cached = await getCache(db, TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY);
+async function shouldSkipFreshMatchingCache(
+  db: D1Database,
+  key: string,
+  ttlSec: number,
+  expectedValue: string,
+): Promise<boolean> {
+  const cached = await getCache(db, key);
   if (!cached) return false;
-  if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC) return false;
+  if (Date.now() / 1000 - cached.updatedAt >= ttlSec) return false;
   return cached.value === expectedValue;
+}
+
+async function shouldSkipFreshMatchingWebhookCache(db: D1Database, expectedValue: string): Promise<boolean> {
+  return shouldSkipFreshMatchingCache(
+    db,
+    TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY,
+    TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC,
+    expectedValue,
+  );
 }
 
 async function shouldSkipFreshMatchingCommandCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  const cached = await getCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY);
-  if (!cached) return false;
-  if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_COMMANDS_RECONCILE_TTL_SEC) return false;
-  return cached.value === expectedValue;
+  return shouldSkipFreshMatchingCache(
+    db,
+    TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY,
+    TELEGRAM_COMMANDS_RECONCILE_TTL_SEC,
+    expectedValue,
+  );
 }
 
 async function shouldSkipFreshMatchingProfileCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  const cached = await getCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY);
-  if (!cached) return false;
-  if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_PROFILE_RECONCILE_TTL_SEC) return false;
-  return cached.value === expectedValue;
+  return shouldSkipFreshMatchingCache(
+    db,
+    TELEGRAM_PROFILE_RECONCILED_CACHE_KEY,
+    TELEGRAM_PROFILE_RECONCILE_TTL_SEC,
+    expectedValue,
+  );
 }
 
 async function shouldSkipFreshMatchingMenuCache(db: D1Database, expectedValue: string): Promise<boolean> {
-  const cached = await getCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY);
-  if (!cached) return false;
-  if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_MENU_RECONCILE_TTL_SEC) return false;
-  return cached.value === expectedValue;
+  return shouldSkipFreshMatchingCache(
+    db,
+    TELEGRAM_MENU_RECONCILED_CACHE_KEY,
+    TELEGRAM_MENU_RECONCILE_TTL_SEC,
+    expectedValue,
+  );
 }
 
 function rateLimitCacheKey(endpoint: string): string {
