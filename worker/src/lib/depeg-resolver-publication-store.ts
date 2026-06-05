@@ -1,9 +1,15 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
-import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
 import { buildInClause, chunkArray } from "./db";
 import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
 import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
+import {
+  assertHash,
+  assertLockMetadata,
+  assertNonEmpty,
+  assertNonNegativeInteger,
+  assertPositiveInteger,
+} from "./depeg-resolver-store-validators";
 
 export type DdrPublicPredictionOutcomeKind = "prediction" | "no_call";
 export type DdrPublicPredictionLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
@@ -194,69 +200,6 @@ interface FirstPublicationMembershipRow {
   snapshot_generation: number;
   published_at: number;
   finalized_at: number;
-}
-
-function assertPositiveInteger(value: number, name: string): void {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`${name} must be a positive safe integer`);
-  }
-}
-
-function assertNonNegativeInteger(value: number, name: string): void {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`${name} must be a non-negative safe integer`);
-  }
-}
-
-function assertUnitIntervalNumber(value: number, name: string): void {
-  if (!Number.isFinite(value) || value < 0 || value > 1) {
-    throw new Error(`${name} must be a finite number in [0, 1]`);
-  }
-}
-
-function assertNonEmpty(value: string, name: string): void {
-  if (value.trim().length === 0) throw new Error(`${name} must be non-empty`);
-}
-
-function assertLockMetadata(input: {
-  lockTrigger?: DdrLockTrigger | null;
-  forecastReadinessScore?: number | null;
-  forecastReadinessVersion?: string | null;
-  readinessThreshold?: number | null;
-  backstopAt?: number | null;
-  backstopDelaySec?: number | null;
-}): void {
-  if (input.forecastReadinessScore != null) {
-    assertUnitIntervalNumber(input.forecastReadinessScore, "forecastReadinessScore");
-  }
-  if (input.forecastReadinessVersion != null) {
-    assertNonEmpty(input.forecastReadinessVersion, "forecastReadinessVersion");
-  }
-  if (input.readinessThreshold != null) {
-    assertUnitIntervalNumber(input.readinessThreshold, "readinessThreshold");
-  }
-  if (input.backstopAt != null) {
-    assertPositiveInteger(input.backstopAt, "backstopAt");
-  }
-  if (input.backstopDelaySec != null) {
-    assertNonNegativeInteger(input.backstopDelaySec, "backstopDelaySec");
-    if (input.backstopDelaySec !== DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC) {
-      throw new Error("backstop metadata requires the readiness-72h backstop delay");
-    }
-  }
-  if (input.lockTrigger === "forecast_readiness") {
-    if (input.forecastReadinessScore == null) throw new Error("readiness lock requires forecastReadinessScore");
-    if (input.forecastReadinessVersion == null) throw new Error("readiness lock requires forecastReadinessVersion");
-    if (input.readinessThreshold == null) throw new Error("readiness lock requires readinessThreshold");
-  }
-  if (input.lockTrigger === "readiness_backstop") {
-    if (input.backstopAt == null) throw new Error("backstop lock requires backstopAt");
-    if (input.backstopDelaySec == null) throw new Error("backstop lock requires backstopDelaySec");
-  }
-}
-
-function assertHash(value: string, name: string): void {
-  if (!/^[0-9a-f]{64}$/.test(value)) throw new Error(`${name} must be a 64-character lowercase hex hash`);
 }
 
 function jsonString(value: unknown, name: string): string {

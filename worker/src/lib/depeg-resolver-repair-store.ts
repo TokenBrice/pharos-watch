@@ -1,3 +1,5 @@
+import { assertNonEmpty, assertPositiveInteger } from "./depeg-resolver-store-validators";
+
 export type DdrRepairOperation =
   | "identity_update"
   | "delete"
@@ -62,16 +64,6 @@ interface AuthorizationRow {
   created_at: number;
   expires_at: number;
   created_by: string;
-}
-
-function assertPositiveInteger(value: number, name: string): void {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`${name} must be a positive safe integer`);
-  }
-}
-
-function assertNonEmpty(value: string, name: string): void {
-  if (value.trim().length === 0) throw new Error(`${name} must be non-empty`);
 }
 
 function mapAuthorization(row: AuthorizationRow): DdrEventRepairAuthorization {

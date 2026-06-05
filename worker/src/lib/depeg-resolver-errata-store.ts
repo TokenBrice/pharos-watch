@@ -1,4 +1,5 @@
 import { buildInClause, chunkArray } from "./db";
+import { assertNonEmpty, assertOptionalHash, assertPositiveInteger } from "./depeg-resolver-store-validators";
 
 export type DdrPredictionErratumReason =
   | "false_positive"
@@ -60,21 +61,6 @@ interface ErratumRow {
   created_by: string;
 }
 
-function assertPositiveInteger(value: number, name: string): void {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`${name} must be a positive safe integer`);
-  }
-}
-
-function assertNonEmpty(value: string, name: string): void {
-  if (value.trim().length === 0) throw new Error(`${name} must be non-empty`);
-}
-
-function assertHash(value: string | null | undefined, name: string): void {
-  if (value == null) return;
-  if (!/^[0-9a-f]{64}$/.test(value)) throw new Error(`${name} must be a 64-character lowercase hex hash`);
-}
-
 function mapErratum(row: ErratumRow): DdrPredictionErratum {
   return {
     id: row.id,
@@ -104,8 +90,8 @@ export async function appendPredictionErratum(
   assertNonEmpty(input.operatorNote, "operatorNote");
   assertNonEmpty(input.createdBy, "createdBy");
   if (input.replacementAssessmentId != null) assertPositiveInteger(input.replacementAssessmentId, "replacementAssessmentId");
-  assertHash(input.replacementRowHash, "replacementRowHash");
-  assertHash(input.rowHashBefore, "rowHashBefore");
+  assertOptionalHash(input.replacementRowHash, "replacementRowHash");
+  assertOptionalHash(input.rowHashBefore, "rowHashBefore");
 
   await db
     .prepare(

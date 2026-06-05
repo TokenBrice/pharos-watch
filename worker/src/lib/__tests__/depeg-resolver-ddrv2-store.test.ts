@@ -309,6 +309,32 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("rejects malformed canonical incident source fingerprints", async () => {
+    const db = makeSqliteD1();
+    try {
+      await expect(
+        ensureCanonicalIncidents(
+          db,
+          [
+            {
+              eventId: 1,
+              stablecoinId: "lusd-liquity",
+              pegCurrency: "USD",
+              direction: "below",
+              startedAt: 100000,
+              peakDeviationBps: -300,
+              source: "live",
+              sourceFingerprint: "not-a-hash",
+            },
+          ],
+          { nowSec: 200000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000 },
+        ),
+      ).rejects.toThrow(/sourceFingerprint for event 1 must be a 64-character lowercase hex hash/);
+    } finally {
+      db.close();
+    }
+  });
+
   it("adopts nearby pre-lock events into an unsealed canonical incident", async () => {
     const db = makeSqliteD1();
     try {
@@ -950,6 +976,28 @@ describe("DDRv2 storage migrations and stores", () => {
           consumer: "vitest",
         }),
       ).rejects.toThrow();
+    } finally {
+      db.close();
+    }
+  });
+
+  it("rejects malformed optional erratum hashes", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { incident, prediction } = await sealPredictionFixture(db);
+      await expect(
+        appendPredictionErratum(db, {
+          publicPredictionId: prediction.id,
+          incidentKey: incident.incidentKey,
+          eventId: 1,
+          assessmentId: prediction.assessmentId,
+          reason: "hash_mismatch",
+          operatorNote: "bad replacement hash",
+          replacementRowHash: "not-a-hash",
+          createdAt: 190000,
+          createdBy: "vitest",
+        }),
+      ).rejects.toThrow(/replacementRowHash must be a 64-character lowercase hex hash/);
     } finally {
       db.close();
     }
