@@ -5,6 +5,7 @@ import {
   type DdrForecastReadiness,
   type DdrForecastReadinessBackstop,
   type DdrLockTrigger,
+  type DdrMeta,
   type DdrResponse,
   type DdrRow,
 } from "@shared/types/depeg-resolver";
@@ -205,6 +206,46 @@ function buildLiveOverlay(row: DdrRow, nowSec: number): Record<string, unknown> 
 }
 
 const DDR_ERRATUM_REASONS = new Set<string>(DDR_ERRATUM_REASON_VALUES);
+
+type DdrPublicPredictionRowHash = readonly [number, string];
+
+function buildDdrMeta(input: {
+  dataAsOf: number;
+  modelAsOf: number;
+  computedAt: number;
+  expiresAt: number;
+  snapshotToken: string | null;
+  snapshotGeneration: number | null;
+  publicPredictionRows: readonly DdrPublicPredictionRowHash[];
+  basePayloadHash: string | null;
+  lineage: DdrMeta["lineage"];
+}): DdrMeta {
+  return {
+    schemaVersion: 2,
+    dataAsOf: input.dataAsOf,
+    modelAsOf: input.modelAsOf,
+    computedAt: input.computedAt,
+    expiresAt: input.expiresAt,
+    snapshotToken: input.snapshotToken,
+    snapshotGeneration: input.snapshotGeneration,
+    publicPredictionIds: input.publicPredictionRows.map(([id]) => id),
+    publicPredictionRowHashes: Object.fromEntries(input.publicPredictionRows.map(([id, hash]) => [String(id), hash])),
+    basePayloadHash: input.basePayloadHash,
+    readOverlay: {
+      degradedLockDeferralIncidentKeys: [],
+      closedPendingReviewIncidentKeys: [],
+      suppressedIncidentKeys: [],
+    },
+    degraded: false,
+    degradedReason: null,
+    publicWarning: DDR_PUBLIC_WARNING,
+    resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
+    durationModelVersion: DDR_DURATION_MODEL_VERSION,
+    incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
+    supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
+    lineage: input.lineage,
+  };
+}
 
 export function normalizeErratumRecord(row: Record<string, unknown>): DdrPredictionErratum | null {
   const id = nullableNumberValue(row.id);
@@ -586,31 +627,17 @@ export function buildDiagnosticSnapshot(input: {
   nowSec: number;
 }): DdrDiagnosticResponse {
   return {
-    _meta: {
-      schemaVersion: 2,
+    _meta: buildDdrMeta({
       dataAsOf: input.nowSec,
       modelAsOf: input.nowSec,
       computedAt: input.nowSec,
       expiresAt: input.nowSec + 1800,
       snapshotToken: null,
       snapshotGeneration: null,
-      publicPredictionIds: [],
-      publicPredictionRowHashes: {},
+      publicPredictionRows: [],
       basePayloadHash: null,
-      readOverlay: {
-        degradedLockDeferralIncidentKeys: [],
-        closedPendingReviewIncidentKeys: [],
-        suppressedIncidentKeys: [],
-      },
-      degraded: false,
-      degradedReason: null,
-      publicWarning: DDR_PUBLIC_WARNING,
-      resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
-      durationModelVersion: DDR_DURATION_MODEL_VERSION,
-      incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
-      supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
       lineage: input.lineage,
-    },
+    }),
     rows: input.rows,
     methodology: buildMethodologyEnvelope({
       version: DDR_METHODOLOGY_VERSION,
@@ -638,31 +665,17 @@ export function buildDdrResponse(input: {
     .map((sealed) => [publicPredictionIdOf(sealed), sealed.rowHash] as const)
     .sort(([a], [b]) => a - b);
   return {
-    _meta: {
-      schemaVersion: 2,
+    _meta: buildDdrMeta({
       dataAsOf: input.nowSec,
       modelAsOf: input.nowSec,
       computedAt: input.nowSec,
       expiresAt: input.nowSec + 1800,
       snapshotToken: input.manifest?.snapshotToken ?? null,
       snapshotGeneration: input.manifest?.snapshotGeneration ?? null,
-      publicPredictionIds: publicPredictionRows.map(([id]) => id),
-      publicPredictionRowHashes: Object.fromEntries(publicPredictionRows.map(([id, hash]) => [String(id), hash])),
+      publicPredictionRows,
       basePayloadHash: input.manifest?.basePayloadHash ?? null,
-      readOverlay: {
-        degradedLockDeferralIncidentKeys: [],
-        closedPendingReviewIncidentKeys: [],
-        suppressedIncidentKeys: [],
-      },
-      degraded: false,
-      degradedReason: null,
-      publicWarning: DDR_PUBLIC_WARNING,
-      resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
-      durationModelVersion: DDR_DURATION_MODEL_VERSION,
-      incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
-      supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
       lineage: input.lineage,
-    },
+    }),
     rows: buildPublicRows(input),
     methodology: buildMethodologyEnvelope({
       version: DDR_METHODOLOGY_VERSION,
@@ -688,31 +701,17 @@ export function buildV2PublicationBasePayload(input: {
     .map((sealed) => [publicPredictionIdOf(sealed), sealed.rowHash] as const)
     .sort(([a], [b]) => a - b);
   const response: DdrResponse = {
-    _meta: {
-      schemaVersion: 2,
+    _meta: buildDdrMeta({
       dataAsOf: input.snapshot._meta.dataAsOf,
       modelAsOf: input.snapshot._meta.modelAsOf,
       computedAt: input.snapshot._meta.computedAt,
       expiresAt: input.snapshot._meta.expiresAt,
       snapshotToken: input.snapshotToken,
       snapshotGeneration: DDR_SNAPSHOT_CACHE_GENERATION,
-      publicPredictionIds: publicPredictionRows.map(([id]) => id),
-      publicPredictionRowHashes: Object.fromEntries(publicPredictionRows.map(([id, hash]) => [String(id), hash])),
+      publicPredictionRows,
       basePayloadHash: null,
-      readOverlay: {
-        degradedLockDeferralIncidentKeys: [],
-        closedPendingReviewIncidentKeys: [],
-        suppressedIncidentKeys: [],
-      },
-      degraded: false,
-      degradedReason: null,
-      publicWarning: DDR_PUBLIC_WARNING,
-      resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
-      durationModelVersion: DDR_DURATION_MODEL_VERSION,
-      incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
-      supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
       lineage: input.snapshot._meta.lineage,
-    },
+    }),
     rows: buildPublicRows({
       candidateRows: input.snapshot.rows,
       incidentsByEventId: input.incidentsByEventId,
