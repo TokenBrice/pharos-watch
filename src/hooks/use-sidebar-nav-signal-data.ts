@@ -15,15 +15,27 @@ import type {
   StabilityIndexResponse,
 } from "@shared/types";
 
-function useLightApiQuery<T>(descriptor: FrontendApiQueryDescriptor<T>, enabled = true) {
+export interface LightApiQueryOptions {
+  enabled?: boolean;
+  retry?: number | boolean;
+}
+
+export function useLightApiQuery<T>(
+  descriptor: FrontendApiQueryDescriptor<T>,
+  options: LightApiQueryOptions = { retry: 1 },
+) {
   const { staleTime, refetchInterval } = getPollingWindow(descriptor.producerIntervalMs);
+  const retryOption = Object.prototype.hasOwnProperty.call(options, "retry")
+    ? { retry: options.retry }
+    : {};
+
   return useQuery({
     queryKey: ["api", ...descriptor.queryKey],
     queryFn: () => fetchLightApiJson(descriptor),
-    enabled,
+    enabled: options.enabled ?? true,
     staleTime,
     refetchInterval,
-    retry: 1,
+    ...retryOption,
   });
 }
 
@@ -38,7 +50,7 @@ export function useSidebarStabilityIndexSignal() {
 export function useSidebarBlacklistSignal(enabled: boolean) {
   return useLightApiQuery<BlacklistSummaryResponse>(
     FRONTEND_API_QUERY_REGISTRY.blacklistSummary,
-    enabled,
+    { enabled, retry: 1 },
   );
 }
 
