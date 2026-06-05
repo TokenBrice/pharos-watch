@@ -2,7 +2,7 @@ import type { BluechipGrade, ReportCardGrade } from "../../types";
 import { selectLowestSubDimension } from "./lowest-sub-dimension";
 import { round1 } from "../math";
 import type { ScoredEntry } from "./scoring";
-import { SELECTOR_COMPONENT_PROSE_LABELS } from "./selector-labels";
+import { selectorComponentProseLabel } from "./selector-labels";
 import type {
   ContextKey,
   MergedRow,
@@ -151,7 +151,8 @@ function buildWhyText(entry: ScoredEntry, profile: SelectorProfile): string {
     .sort((a, b) => b.contribution - a.contribution)
     .slice(0, 2)
     .map(
-      (component) => `${SELECTOR_COMPONENT_PROSE_LABELS[component.key]} ${Math.round(component.normalizedValue ?? 0)}`,
+      (component) =>
+        `${selectorComponentProseLabel(component.key)} ${Math.round(component.normalizedValue ?? 0)}`,
     );
   if (anchors.length === 0) {
     return `Score ${round1(entry.score)} under the ${profile} weight set; live coverage is limited.`;

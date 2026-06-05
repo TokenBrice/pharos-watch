@@ -37,7 +37,7 @@ const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>
   "coverage-too-thin": "coverage",
 };
 
-export const SELECTOR_COMPONENT_PROSE_LABELS: Readonly<Record<WeightKey, string>> = {
+const SELECTOR_COMPONENT_PROSE_LABELS: Readonly<Record<WeightKey, string>> = {
   safetyOverall: "safety",
   resilience: "resilience",
   dependencyRisk: "dependency risk",
@@ -132,6 +132,8 @@ export function selectorExclusionReasonLabel(reason: string): string | undefined
   return lookupSelectorLabel(SELECTOR_EXCLUSION_REASON_LABELS, reason);
 }
 
+export function selectorComponentProseLabel(key: WeightKey): string;
+export function selectorComponentProseLabel(key: string): string | undefined;
 export function selectorComponentProseLabel(key: string): string | undefined {
   return lookupSelectorLabel(SELECTOR_COMPONENT_PROSE_LABELS, key);
 }
