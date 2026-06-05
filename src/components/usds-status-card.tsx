@@ -72,22 +72,23 @@ export function UsdsStatusCard() {
   if (!status) return null;
 
   const lastCheckedLabel = formatLastChecked(status.lastChecked);
+  const freezeCapabilityPresent = status.freezeCapabilityPresent;
 
   return (
     <MetricStatCard
-      title="USDS Blacklist Status"
+      title="USDS Freeze Capability"
       headerRight={
-        status.freezeActive ? (
-          <Badge variant="destructive" className="text-xs">Active</Badge>
+        freezeCapabilityPresent ? (
+          <Badge variant="destructive" className="text-xs">Detected</Badge>
         ) : (
-          <Badge variant="secondary" className="text-xs">Not Active</Badge>
+          <Badge variant="secondary" className="text-xs">Not Detected</Badge>
         )
       }
     >
       <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left sm:gap-4">
         <UsdsLogo
-          active={status.freezeActive}
-          className={`size-10 sm:size-12 shrink-0 ${status.freezeActive ? "" : "opacity-60 saturate-50"}`}
+          active={freezeCapabilityPresent}
+          className={`size-10 sm:size-12 shrink-0 ${freezeCapabilityPresent ? "" : "opacity-60 saturate-50"}`}
         />
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">

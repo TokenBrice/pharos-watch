@@ -482,6 +482,8 @@ export const StablecoinChartResponseSchema = z.array(z.object({
 }));
 
 export interface UsdsStatusResponse {
+  freezeCapabilityPresent: boolean;
+  /** Backward-compatible alias for `freezeCapabilityPresent`. */
   freezeActive: boolean;
   implementationAddress: string;
   lastChecked: number;
@@ -495,16 +497,25 @@ const UsdsImplementationAddressSchema = z
 
 export const UsdsStatusResponseSchema = z.object({
   implementationAddress: UsdsImplementationAddressSchema,
+  freezeCapabilityPresent: z.unknown().optional(),
   freezeActive: z.unknown().optional(),
   lastChecked: z.unknown().optional(),
-}).transform((value): UsdsStatusResponse => ({
-  freezeActive: typeof value.freezeActive === "boolean" ? value.freezeActive : false,
-  implementationAddress: value.implementationAddress,
-  lastChecked:
-    typeof value.lastChecked === "number" && Number.isFinite(value.lastChecked) && value.lastChecked >= 0
-      ? Math.floor(value.lastChecked)
-      : 0,
-}));
+}).transform((value): UsdsStatusResponse => {
+  const freezeCapabilityPresent = typeof value.freezeCapabilityPresent === "boolean"
+    ? value.freezeCapabilityPresent
+    : typeof value.freezeActive === "boolean"
+      ? value.freezeActive
+      : false;
+  return {
+    freezeCapabilityPresent,
+    freezeActive: freezeCapabilityPresent,
+    implementationAddress: value.implementationAddress,
+    lastChecked:
+      typeof value.lastChecked === "number" && Number.isFinite(value.lastChecked) && value.lastChecked >= 0
+        ? Math.floor(value.lastChecked)
+        : 0,
+  };
+});
 
 export interface DigestSnapshotResponse {
   date: string;

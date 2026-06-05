@@ -44,9 +44,10 @@ async function readImplementationSlot(apiKey: string | null, signal?: AbortSigna
   }
 }
 
-async function probeFreeze(apiKey: string | null, signal?: AbortSignal): Promise<boolean | null> {
-  // Call isBlocked(address(0)) on the proxy — if the implementation has the function
-  // it will return data; otherwise it will revert (empty result or error)
+async function probeFreezeCapability(apiKey: string | null, signal?: AbortSignal): Promise<boolean | null> {
+  // Call isBlocked(address(0)) on the proxy. A 32-byte response proves the
+  // implementation exposes blacklist/freeze capability; it does not mean any
+  // specific account is currently frozen.
   const data = IS_BLOCKED_SELECTOR + "0".repeat(64);
   try {
     const result = await fetchEtherscanProxyHex({
@@ -62,7 +63,7 @@ async function probeFreeze(apiKey: string | null, signal?: AbortSignal): Promise
     if (!THIRTY_TWO_BYTE_HEX_RE.test(result)) return null;
     return true;
   } catch (e) {
-    console.warn("[sync-usds] probeFreeze failed:", e);
+    console.warn("[sync-usds] probeFreezeCapability failed:", e);
     return null;
   }
 }
@@ -94,10 +95,10 @@ export async function syncUsdsStatus(
     };
   }
 
-  let freezeActive = false;
+  let freezeCapabilityPresent = false;
   if (implementationAddress !== NO_FREEZE_IMPL) {
     // Implementation changed — probe for freeze function
-    const probeResult = await probeFreeze(etherscanApiKey, signal);
+    const probeResult = await probeFreezeCapability(etherscanApiKey, signal);
     if (probeResult === null) {
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
       console.warn("[usds-status] Probe failed, preserving cached status");
@@ -107,14 +108,15 @@ export async function syncUsdsStatus(
         metadata: JSON.stringify({ reason: "freeze-probe-failed", implementationAddress }),
       };
     }
-    freezeActive = probeResult;
-    console.log(`[usds-status] Implementation changed to ${implementationAddress}, freeze active: ${freezeActive}`);
+    freezeCapabilityPresent = probeResult;
+    console.log(`[usds-status] Implementation changed to ${implementationAddress}, freeze capability present: ${freezeCapabilityPresent}`);
   } else {
-    console.log("[usds-status] Implementation unchanged, no freeze");
+    console.log("[usds-status] Implementation unchanged, no freeze capability");
   }
 
   const statusResult = UsdsStatusResponseSchema.safeParse({
-    freezeActive,
+    freezeCapabilityPresent,
+    freezeActive: freezeCapabilityPresent,
     implementationAddress,
     lastChecked: syncStartSec,
   });
@@ -124,7 +126,12 @@ export async function syncUsdsStatus(
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "status-payload-invalid", implementationAddress, freezeActive }),
+      metadata: JSON.stringify({
+        reason: "status-payload-invalid",
+        implementationAddress,
+        freezeCapabilityPresent,
+        freezeActive: freezeCapabilityPresent,
+      }),
     };
   }
   const status: UsdsStatusResponse = statusResult.data;
@@ -138,7 +145,12 @@ export async function syncUsdsStatus(
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "cache-write-failed", implementationAddress, freezeActive }),
+      metadata: JSON.stringify({
+        reason: "cache-write-failed",
+        implementationAddress,
+        freezeCapabilityPresent,
+        freezeActive: freezeCapabilityPresent,
+      }),
     };
   }
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
@@ -149,7 +161,8 @@ export async function syncUsdsStatus(
     itemCount: cacheResult.written ? 1 : 0,
     metadata: JSON.stringify({
       implementationAddress,
-      freezeActive,
+      freezeCapabilityPresent,
+      freezeActive: freezeCapabilityPresent,
       cacheKey: CACHE_KEY,
       syncStartSec,
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",

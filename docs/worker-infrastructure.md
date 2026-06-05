@@ -1053,12 +1053,12 @@ The three crons below were previously only listed by filename in [Architecture](
 
 1. Check cache freshness: if `usds-status` cache is <20 hours old, skip
 2. Read implementation address from ERC-1967 storage slot via `eth_getStorageAt`
-3. If implementation matches `NO_FREEZE_IMPL`: `freezeActive = false` (known safe impl)
+3. If implementation matches `NO_FREEZE_IMPL`: `freezeCapabilityPresent = false` (known safe impl)
 4. Otherwise: probe the proxy with `eth_call` using `isBlocked(address(0))` selector
-   - If call returns ≥32 bytes: freeze function exists (`freezeActive = true`)
-   - If call reverts: no freeze function (`freezeActive = false`)
+   - If call returns ≥32 bytes: freeze function exists (`freezeCapabilityPresent = true`)
+   - If call reverts: no freeze function (`freezeCapabilityPresent = false`)
    - If probe fails entirely: preserve cached status, don't update
-5. Store `{ freezeActive, implementationAddress, lastChecked }` via `setCacheIfNewer()`
+5. Store `{ freezeCapabilityPresent, freezeActive, implementationAddress, lastChecked }` via `setCacheIfNewer()` (`freezeActive` is a backward-compatible alias)
 6. If the cache write fails after provider checks succeeded, return `status: "degraded"` with `reason: "cache-write-failed"` instead of recording a clean success
 
 ### sync-live-reserves

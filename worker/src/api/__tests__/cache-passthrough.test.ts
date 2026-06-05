@@ -272,11 +272,13 @@ describe("cache-passthrough: handleUsdsStatus", () => {
     const res = await handleUsdsStatus(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
+      freezeCapabilityPresent: boolean;
       freezeActive: boolean;
       implementationAddress: string;
       lastChecked: number;
       _meta: { status: string; ageSeconds: number };
     };
+    expect(body.freezeCapabilityPresent).toBe(false);
     expect(body.freezeActive).toBe(false);
     expect(body.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
     expect(body.lastChecked).toBe(1_762_000_000);
@@ -296,11 +298,13 @@ describe("cache-passthrough: handleUsdsStatus", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
+      freezeCapabilityPresent: boolean;
       freezeActive: boolean;
       implementationAddress: string;
       lastChecked: number;
       _meta: { ageSeconds: number };
     };
+    expect(body.freezeCapabilityPresent).toBe(false);
     expect(body.freezeActive).toBe(false);
     expect(body.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
     expect(body.lastChecked).toBe(nowSec - 42);

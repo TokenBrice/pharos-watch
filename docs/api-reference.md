@@ -1258,7 +1258,7 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 
 ### `GET /api/usds-status`
 
-Sky/USDS protocol status — whether the freeze module is currently active.
+Sky/USDS protocol status — whether the current implementation exposes freeze/blacklist capability.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
@@ -1266,6 +1266,7 @@ Sky/USDS protocol status — whether the freeze module is currently active.
 
 ```json
 {
+  "freezeCapabilityPresent": false,
   "freezeActive": false,
   "implementationAddress": "0x1923dfee706a8e78157416c29cbccfde7cdf4102",
   "lastChecked": 1771809338,
@@ -1273,11 +1274,12 @@ Sky/USDS protocol status — whether the freeze module is currently active.
 }
 ```
 
-| Field                   | Type      | Description                                         |
-| ----------------------- | --------- | --------------------------------------------------- |
-| `freezeActive`          | `boolean` | Whether the USDS freeze module is currently enabled |
-| `implementationAddress` | `string`  | Address of the current USDS implementation contract |
-| `lastChecked`           | `number`  | Unix seconds when this was last fetched on-chain    |
+| Field                     | Type      | Description                                                                 |
+| ------------------------- | --------- | --------------------------------------------------------------------------- |
+| `freezeCapabilityPresent` | `boolean` | Whether the current USDS implementation exposes freeze/blacklist capability |
+| `freezeActive`            | `boolean` | Backward-compatible alias for `freezeCapabilityPresent`                     |
+| `implementationAddress`   | `string`  | Address of the current USDS implementation contract                         |
+| `lastChecked`             | `number`  | Unix seconds when this was last fetched on-chain                            |
 
 ---
 
