@@ -22,6 +22,8 @@ import {
 } from "./enrich-prices-pass-common";
 import {
   endpointLabel,
+  errorClassFor,
+  errorMessageFor,
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 
@@ -232,13 +234,32 @@ export async function runDexScreenerPass(
           }
 
           dexExactAttempts += 1;
-          const { ok, pairs } = await fetchDsTokenPoolsWithStatus(
-            target.chain,
-            target.address,
-            signal,
-            Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
-            DEXSCREENER_MAX_RETRIES,
-          );
+          let lookupResult: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
+          try {
+            lookupResult = await fetchDsTokenPoolsWithStatus(
+              target.chain,
+              target.address,
+              signal,
+              Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+              DEXSCREENER_MAX_RETRIES,
+            );
+          } catch (error) {
+            if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+            console.warn(`[enrich] DexScreener exact lookup threw for ${entry.asset.symbol} (${target.chain}:${target.address}):`, error);
+            diagnostics.push({
+              source: "dexscreener-exact",
+              stage: "fallback",
+              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
+              status: null,
+              ok: false,
+              success: false,
+              candidateCount: 1,
+              errorClass: errorClassFor(error),
+              errorMessage: errorMessageFor(error),
+            });
+            break;
+          }
+          const { ok, pairs } = lookupResult;
           if (ok) {
             dexExactSuccessfulCalls += 1;
           } else {

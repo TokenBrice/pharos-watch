@@ -69,7 +69,20 @@ describe("runDexScreenerPass", () => {
       }),
     ], undefined, db);
 
-    expect(result).toMatchObject({ resolved: 0, failures: [] });
+    expect(result).toMatchObject({
+      resolved: 0,
+      failures: [],
+      diagnostics: [
+        expect.objectContaining({
+          source: "dexscreener-exact",
+          endpoint: "api.dexscreener.com/tokens/v1/base/0xabc",
+          ok: false,
+          success: false,
+          errorClass: "Error",
+          errorMessage: "dns failed",
+        }),
+      ],
+    });
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
       "base",
       "0xabc",
