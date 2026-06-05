@@ -14,20 +14,12 @@ import {
   SectionKicker,
 } from "../_shared/section-primitives";
 import { CaseStudyChart } from "./case-study-chart";
+import {
+  CASE_STUDY_OUTCOME_CHIPS,
+  CASE_STUDY_OUTCOME_LABELS,
+} from "./case-study-outcomes";
 import { CaseStudyTimeline } from "./case-study-timeline";
-import type { CaseStudy, CaseStudyOutcome } from "./content/types";
-
-const OUTCOME_LABEL: Record<CaseStudyOutcome, string> = {
-  survived: "Survived",
-  wounded: "Wounded",
-  died: "Died",
-};
-
-const OUTCOME_CHIP: Record<CaseStudyOutcome, string> = {
-  survived: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  wounded: "border-amber-500/40 text-amber-600 dark:text-amber-400",
-  died: "border-rose-500/40 text-rose-600 dark:text-rose-400",
-};
+import type { CaseStudy } from "./content/types";
 
 function FactStrip({ study }: { study: CaseStudy }) {
   const peak = study.eventWindow.peakDeviationBps;
@@ -40,10 +32,10 @@ function FactStrip({ study }: { study: CaseStudy }) {
           <span
             className={cn(
               "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
-              OUTCOME_CHIP[study.outcome],
+              CASE_STUDY_OUTCOME_CHIPS[study.outcome],
             )}
           >
-            {OUTCOME_LABEL[study.outcome]}
+            {CASE_STUDY_OUTCOME_LABELS[study.outcome]}
           </span>
         </dd>
       </div>

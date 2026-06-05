@@ -7,8 +7,11 @@ import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import { CASE_STUDY_LIST } from "./content";
 import { CaseStudyListJsonLd } from "./case-study-json-ld";
+import {
+  CASE_STUDY_OUTCOME_CHIPS,
+  CASE_STUDY_OUTCOME_LABELS,
+} from "./case-study-outcomes";
 import { CaseStudyPageShell } from "./case-study-page-shell";
-import type { CaseStudyOutcome } from "./content/types";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Depeg Case Studies",
@@ -17,18 +20,6 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/learn/case-studies/",
   ogImage: `${SITE_ORIGIN}/og-editorial-learn.png`,
 });
-
-const OUTCOME_LABEL: Record<CaseStudyOutcome, string> = {
-  survived: "Survived",
-  wounded: "Wounded",
-  died: "Died",
-};
-
-const OUTCOME_CHIP: Record<CaseStudyOutcome, string> = {
-  survived: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  wounded: "border-amber-500/40 text-amber-600 dark:text-amber-400",
-  died: "border-rose-500/40 text-rose-600 dark:text-rose-400",
-};
 
 export default function CaseStudiesHub() {
   return (
@@ -72,10 +63,10 @@ export default function CaseStudiesHub() {
                   <span
                     className={cn(
                       "inline-flex rounded-full border px-2 py-0.5 tracking-wide",
-                      OUTCOME_CHIP[study.outcome],
+                      CASE_STUDY_OUTCOME_CHIPS[study.outcome],
                     )}
                   >
-                    {OUTCOME_LABEL[study.outcome]}
+                    {CASE_STUDY_OUTCOME_LABELS[study.outcome]}
                   </span>
                 </div>
               </div>
