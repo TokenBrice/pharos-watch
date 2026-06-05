@@ -21,7 +21,7 @@ import {
 
 const ZERO_SHA = /^0+$/;
 const LOCAL_PAGES_CANARY_ROUTES =
-  "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
+  "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/";
 const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES;
 const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 const PRODUCTION_PAGES_ENV_MODE = "MERGE_GATE_PRODUCTION_ENV";
@@ -363,15 +363,6 @@ export async function runMergeGate({
   const workerSmoke = env.MERGE_GATE_WORKER_SMOKE === "1";
   const skipFetch = env.MERGE_GATE_NO_FETCH === "1";
 
-  const nodeModulesResult = await runCommandImpl("node scripts/ci/check-node-modules-fresh.mjs --strict", {}, {});
-  const nodeModulesStatus =
-    typeof nodeModulesResult === "number" ? nodeModulesResult : (nodeModulesResult?.status ?? 1);
-  if (nodeModulesStatus !== 0) {
-    console.error("[merge-gate] FAILED: node_modules drift check is fatal (node_modules/ missing).");
-    process.exit(nodeModulesStatus);
-    return;
-  }
-
   if (!stagedMode && !forceFullDeploy && !baseRefOverridden && !skipFetch) {
     fetchBaseRef({ baseRef, execFile });
   }
@@ -412,6 +403,15 @@ export async function runMergeGate({
 
   if (dryRun) {
     console.log("[merge-gate] Dry run enabled; commands not executed.");
+    return;
+  }
+
+  const nodeModulesResult = await runCommandImpl("node scripts/ci/check-node-modules-fresh.mjs --strict", {}, {});
+  const nodeModulesStatus =
+    typeof nodeModulesResult === "number" ? nodeModulesResult : (nodeModulesResult?.status ?? 1);
+  if (nodeModulesStatus !== 0) {
+    console.error("[merge-gate] FAILED: node_modules drift check is fatal (node_modules/ missing).");
+    process.exit(nodeModulesStatus);
     return;
   }
 

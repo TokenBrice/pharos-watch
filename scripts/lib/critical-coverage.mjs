@@ -121,6 +121,7 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES = [
   "worker/src/cron/dews/",
   "worker/src/lib/address-price-providers/",
   "worker/src/lib/authoritative-price-sources/",
+  "worker/src/lib/depeg-resolver-",
 ];
 const HIGH_STAKES_COVERAGE_CANDIDATE_FILES = new Set([
   "worker/src/cron/sync-stablecoins.ts",
@@ -199,6 +200,14 @@ export const CRITICAL_COVERAGE_WAIVED_FILES = [
   "worker/src/lib/address-price-providers/moralis.ts",
   "worker/src/lib/authoritative-price-sources.ts",
   "worker/src/lib/coingecko-simple-price.ts",
+  "worker/src/lib/depeg-resolver-assessment-store.ts",
+  "worker/src/lib/depeg-resolver-errata-store.ts",
+  "worker/src/lib/depeg-resolver-incident-store.ts",
+  "worker/src/lib/depeg-resolver-publication-store.ts",
+  "worker/src/lib/depeg-resolver-repair-store.ts",
+  "worker/src/lib/depeg-resolver-review-snapshot-cache.ts",
+  "worker/src/lib/depeg-resolver-snapshot-cache.ts",
+  "worker/src/lib/depeg-resolver-store-validators.ts",
   "worker/src/lib/dex-api-token-pricing.ts",
   "worker/src/lib/live-reserves-store.ts",
   "worker/src/lib/native-peg-implied-prices.ts",
@@ -390,6 +399,9 @@ function waiverReasonForFile(file) {
   }
   if (file.includes("/depeg-resolver/")) {
     return "DDR helper is covered by enrolled depeg-resolver cron tests, but is not a standalone critical-coverage target yet.";
+  }
+  if (file.includes("/depeg-resolver-")) {
+    return "DDR durable store or validator module is covered by depeg-resolver store/cron tests, but is tracked as a reviewed support surface until promoted to a standalone critical-coverage target.";
   }
   if (file.includes("/dews/")) {
     return "DEWS support helper is covered by the enrolled compute-dews suite; promote it if it becomes a scoring decision boundary.";

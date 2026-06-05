@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { localBin } from "../lib/local-bin.mjs";
 
-const MADGE_ARGS = ["--no-install", "madge", "--circular", "--extensions", "ts,tsx", "--ts-config", "tsconfig.json"];
+const MADGE_BIN = localBin("madge");
+const MADGE_ARGS = ["--circular", "--extensions", "ts,tsx", "--ts-config", "tsconfig.json"];
 const CYCLE_TARGETS = [
   { label: "shared", path: "shared", mode: "blocking" },
   { label: "worker/src", path: "worker/src", mode: "blocking" },
@@ -17,7 +19,7 @@ let hasBlockingCycles = false;
 
 for (const target of CYCLE_TARGETS) {
   console.log(`[cycles] ${target.label} (${target.mode})`);
-  const result = spawnSync("npx", [...MADGE_ARGS, target.path], {
+  const result = spawnSync(MADGE_BIN, [...MADGE_ARGS, target.path], {
     cwd: process.cwd(),
     encoding: "utf8",
   });
@@ -37,6 +39,10 @@ for (const target of CYCLE_TARGETS) {
   if (isCycleExit(result, output)) {
     hasBlockingCycles = true;
     continue;
+  }
+
+  if (result.error) {
+    console.error(`[cycles] Failed to run Madge for ${target.label}: ${result.error.message}`);
   }
 
   process.exit(result.status ?? 1);

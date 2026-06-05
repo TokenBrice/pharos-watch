@@ -519,6 +519,8 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).not.toContain("--mode live --skip-overflow");
     expect(consolidatedPagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
     expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
+    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ops_status != 'success'");
+    expect(consolidatedPagesReleaseJob).toContain("steps.post-publish-smokes.outputs.transport_status != 'success'");
     expectTextInOrder(consolidatedPagesReleaseJob, [
       "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",

@@ -2,6 +2,7 @@
 
 import { readFileSync, readdirSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 const {
   getAllEnvBindingKeys,
   renderEnvExample,
@@ -111,7 +112,7 @@ function parseEnvExampleKeys(filePath) {
   return { duplicates, keys };
 }
 
-function extractExportedEnvInterfaceBody(source) {
+export function extractExportedEnvInterfaceBody(source) {
   const match = /\bexport\s+interface\s+Env\s*\{/u.exec(source);
   if (!match) {
     return null;
@@ -137,7 +138,7 @@ function extractExportedEnvInterfaceBody(source) {
   return null;
 }
 
-function parseWorkerEnvInterfaceKeys(filePath) {
+export function parseWorkerEnvInterfaceKeys(filePath) {
   const source = readFileSync(filePath, "utf8");
   const body = extractExportedEnvInterfaceBody(source);
   if (!body) {
@@ -145,11 +146,19 @@ function parseWorkerEnvInterfaceKeys(filePath) {
   }
 
   const keys = new Set();
+  let typeLiteralDepth = 0;
   for (const rawLine of splitLines(body)) {
     const line = rawLine.replace(/\/\/.*$/u, "").trim();
-    const match = /^([A-Z][A-Z0-9_]*|DB)\??\s*:/u.exec(line);
+    const match = typeLiteralDepth === 0 ? /^([A-Z][A-Z0-9_]*|DB)\??\s*:/u.exec(line) : null;
     if (match) {
       keys.add(match[1]);
+    }
+    for (const char of line) {
+      if (char === "{") {
+        typeLiteralDepth += 1;
+      } else if (char === "}") {
+        typeLiteralDepth = Math.max(0, typeLiteralDepth - 1);
+      }
     }
   }
 
@@ -358,50 +367,59 @@ function assertGeneratedBlockMatches(filePath, marker, expectedContent, errors) 
   );
 }
 
-const envExample = parseEnvExampleKeys(envExamplePath);
-const manifestEnvKeys = new Set(getAllEnvBindingKeys());
-const workerEnvInterfaceKeys = parseWorkerEnvInterfaceKeys(workerEnvPath);
-const sourceEnvKeys = collectSourceEnvKeys(SOURCE_SCAN_ROOTS.flatMap(collectFiles));
-const documentedEnvKeys = collectDocumentedEnvKeys(DOC_SCAN_FILES);
-const knownEnvKeys = new Set([
-  ...manifestEnvKeys,
-  ...sourceEnvKeys,
-]);
+export function runEnvContractCheck({ consoleImpl = console, exit = process.exit } = {}) {
+  const envExample = parseEnvExampleKeys(envExamplePath);
+  const manifestEnvKeys = new Set(getAllEnvBindingKeys());
+  const workerEnvInterfaceKeys = parseWorkerEnvInterfaceKeys(workerEnvPath);
+  const sourceEnvKeys = collectSourceEnvKeys(SOURCE_SCAN_ROOTS.flatMap(collectFiles));
+  const documentedEnvKeys = collectDocumentedEnvKeys(DOC_SCAN_FILES);
+  const knownEnvKeys = new Set([
+    ...manifestEnvKeys,
+    ...sourceEnvKeys,
+  ]);
 
-const errors = [];
+  const errors = [];
 
-if (envExample.duplicates.size > 0) {
-  errors.push(`.env.example defines duplicate keys: ${[...envExample.duplicates].sort().join(", ")}`);
-}
-
-assertFileMatchesExpected(envExamplePath, renderEnvExample(), errors);
-
-for (const block of GENERATED_DOC_BLOCKS) {
-  assertGeneratedBlockMatches(block.filePath, block.marker, block.render(), errors);
-}
-
-const workerEnvKeysMissingFromManifest = [...workerEnvInterfaceKeys]
-  .filter((key) => !manifestEnvKeys.has(key))
-  .sort();
-if (workerEnvKeysMissingFromManifest.length > 0) {
-  errors.push(
-    `worker/src/lib/env.ts Env declares keys missing from the shared env manifest: ${workerEnvKeysMissingFromManifest.join(", ")}`,
-  );
-}
-
-for (const [key, filePaths] of documentedEnvKeys) {
-  if (knownEnvKeys.has(key)) continue;
-  errors.push(`Verified env docs reference unknown env key ${key} in ${formatFileList(filePaths)}`);
-}
-
-if (errors.length > 0) {
-  console.error("Environment contract check failed:");
-  for (const error of errors) {
-    console.error(`  ${error}`);
+  if (envExample.duplicates.size > 0) {
+    errors.push(`.env.example defines duplicate keys: ${[...envExample.duplicates].sort().join(", ")}`);
   }
-  process.exit(1);
+
+  assertFileMatchesExpected(envExamplePath, renderEnvExample(), errors);
+
+  for (const block of GENERATED_DOC_BLOCKS) {
+    assertGeneratedBlockMatches(block.filePath, block.marker, block.render(), errors);
+  }
+
+  const workerEnvKeysMissingFromManifest = [...workerEnvInterfaceKeys]
+    .filter((key) => !manifestEnvKeys.has(key))
+    .sort();
+  if (workerEnvKeysMissingFromManifest.length > 0) {
+    errors.push(
+      `worker/src/lib/env.ts Env declares keys missing from the shared env manifest: ${workerEnvKeysMissingFromManifest.join(", ")}`,
+    );
+  }
+
+  for (const [key, filePaths] of documentedEnvKeys) {
+    if (knownEnvKeys.has(key)) continue;
+    errors.push(`Verified env docs reference unknown env key ${key} in ${formatFileList(filePaths)}`);
+  }
+
+  if (errors.length > 0) {
+    consoleImpl.error("Environment contract check failed:");
+    for (const error of errors) {
+      consoleImpl.error(`  ${error}`);
+    }
+    exit(1);
+    return false;
+  }
+
+  consoleImpl.log(
+    "Environment contract is in sync with the shared manifest, generated docs blocks, and referenced env names.",
+  );
+  return true;
 }
 
-console.log(
-  "Environment contract is in sync with the shared manifest, generated docs blocks, and referenced env names.",
-);
+const isCliEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCliEntrypoint) {
+  runEnvContractCheck();
+}

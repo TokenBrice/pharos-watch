@@ -69,6 +69,7 @@ describe("critical coverage changed-file detection", () => {
         "worker/src/cron/depeg-detection/new-decision-helper.ts",
         "worker/src/cron/sync-live-reserves-new-helper.ts",
         "worker/src/lib/live-reserves-store-extra.ts",
+        "worker/src/lib/depeg-resolver-store-validators.ts",
         "worker/src/lib/price-consensus.ts",
         "worker/src/lib/pricing-types.ts",
         "worker/src/cron/depeg-detection/types.ts",
@@ -81,6 +82,7 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/depeg-detection/new-decision-helper.ts",
       "worker/src/cron/sync-live-reserves-new-helper.ts",
       "worker/src/cron/sync-stablecoins/new-price-path.ts",
+      "worker/src/lib/depeg-resolver-store-validators.ts",
       "worker/src/lib/live-reserves-store-extra.ts",
       "worker/src/lib/price-consensus.ts",
     ]);

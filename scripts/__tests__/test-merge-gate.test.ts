@@ -238,7 +238,7 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
-      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "0",
     });
@@ -251,10 +251,10 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
-      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
-      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/,/depeg/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
       SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
       SMOKE_MOBILE_UI_WORKERS: "3",
@@ -741,10 +741,40 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     expect(fetchCalls).toEqual([]);
   });
 
-  it("invokes the node_modules drift check before any other work", async () => {
-    const { execFile, runCommandImpl, runCommandCalls } = makeStubs();
+  it("invokes the node_modules drift check before executing validation commands", async () => {
+    const { execFile: baseExecFile, runCommandImpl, runCommandCalls } = makeStubs();
+    const execFile = (cmd: string, args: string[], options?: { encoding?: string }) => {
+      if (args[0] === "diff" && options?.encoding === "utf8") {
+        return "src/app/page.tsx\n";
+      }
+      return baseExecFile(cmd, args, options);
+    };
     await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
     expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs --strict");
+    expect(runCommandCalls[1]).toBe("npm run validate:prebuild");
+  });
+
+  it("prints the dry-run plan without requiring a node_modules freshness check", async () => {
+    const execFile = (_cmd: string, args: string[], options?: { encoding?: string }) => {
+      if (args[0] === "diff" && options?.encoding === "utf8") {
+        return "src/app/page.tsx\n";
+      }
+      return "";
+    };
+    const runCommandCalls: string[] = [];
+    const runCommandImpl = (cmd: string) => {
+      runCommandCalls.push(cmd);
+      return Promise.resolve({ status: 0, aborted: false });
+    };
+
+    await runMergeGate({
+      argv: [],
+      env: { MERGE_GATE_DRY_RUN: "1", MERGE_GATE_NO_FETCH: "1" },
+      runCommandImpl,
+      execFile,
+    });
+
+    expect(runCommandCalls).toEqual([]);
   });
 
   it("defaults Pages smoke on for the normal local merge gate", async () => {
