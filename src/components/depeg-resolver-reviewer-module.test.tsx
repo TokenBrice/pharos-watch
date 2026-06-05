@@ -230,6 +230,7 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.getByText("No-call share")).toBeTruthy();
     expect(screen.getByText("Invalidation rate")).toBeTruthy();
     expect(screen.getByText("missed recovered")).toBeTruthy();
+    expect(screen.getByText("Coverage · recovered")).toBeTruthy();
     expect(screen.getByText(/frozen outcomes only after first public publication/)).toBeTruthy();
     expect(screen.getByRole("img", { name: /Track record across 1 graded DDR outcomes/ })).toBeTruthy();
   });

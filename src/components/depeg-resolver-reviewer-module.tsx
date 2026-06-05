@@ -18,7 +18,6 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrActualOutcome,
-  type DdrrCheckpoint,
   type DdrrDurationReview,
   type DdrrResponse,
   type DdrrRow,
@@ -78,16 +77,6 @@ const OUTCOME_LABELS: Record<DdrrActualOutcome, string> = {
   source_missing: "source missing",
   data_issue: "data issue",
   invalidated: "invalidated",
-};
-
-const CHECKPOINT_LABELS: Record<DdrrCheckpoint, string> = {
-  first: "First",
-  age_1h: "1h",
-  age_6h: "6h",
-  age_24h: "24h",
-  age_7d: "7d",
-  latest: "Latest",
-  public_prediction: "Public prediction",
 };
 
 const DURATION_LABELS: Record<DdrrDurationReview, string> = {
@@ -204,8 +193,17 @@ function getActualOutcome(row: DdrrRow): DdrrActualOutcome {
   return sourceEventStateToActualOutcome(row.sourceEventState);
 }
 
-function getCheckpoint(): DdrrCheckpoint {
-  return "public_prediction";
+function getRowContextLabel(row: DdrrRow): string {
+  switch (row.kind) {
+    case "prediction_review":
+      return "Public prediction";
+    case "no_call_review":
+      return "No-call";
+    case "invalidated_prediction":
+      return row.originalKind === "no_call" ? "Invalidated no-call" : "Invalidated prediction";
+    case "coverage":
+      return "Coverage";
+  }
 }
 
 function getRowTime(row: DdrrRow): number {
@@ -613,7 +611,7 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
         {verdictLabel}
       </Badge>
       <span className="justify-self-start font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
-        {CHECKPOINT_LABELS[getCheckpoint()]} · {OUTCOME_LABELS[actualOutcome]}
+        {getRowContextLabel(row)} · {OUTCOME_LABELS[actualOutcome]}
       </span>
       <span className="justify-self-end font-mono text-[11px] tabular-nums text-muted-foreground sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
         {durationText}
