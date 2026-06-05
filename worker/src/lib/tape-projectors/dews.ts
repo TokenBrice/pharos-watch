@@ -51,13 +51,6 @@ const BAND_SEVERITY: Record<ThreatBand, TapeEventSeverity> = {
   DANGER: "critical",
 };
 
-function coinSourceUrl(_coinId: string): string {
-  // The depeg page hosts both the DEWS alert feed and per-coin DEWS table.
-  // No stable per-coin anchor exists on either /depeg or /stability-index, so
-  // we link to the section root and rely on the alert-feed for context.
-  return "/depeg/";
-}
-
 async function fetchSamplesSince(
   db: D1Database,
   since: number,
@@ -195,7 +188,9 @@ function buildEvent(t: BandTransition): TapeEventInsert {
     sourceTable: "stress_signals",
     sourceRowId,
     transition,
-    sourceUrl: coinSourceUrl(t.coinId),
+    // The depeg page hosts both the DEWS alert feed and per-coin DEWS table.
+    // No stable per-coin anchor exists, so link to the section root.
+    sourceUrl: "/depeg/",
     methodologyVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
   };
 }
