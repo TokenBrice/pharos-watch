@@ -149,47 +149,6 @@
       "risk": "high"
     }
   ],
-  "liveReservesConfig": {
-    "adapter": "accountable",
-    "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "hbusdt-hyperbeat",
-    "display": {
-      "url": "https://accountable.hyperbeat.org/",
-      "label": "Hyperbeat Accountable"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://apiacc.hyperbeat.org/dashboard/HBUSDT"
-      }
-    },
-    "params": {
-      "bucket": "protocol_split",
-      "riskMap": {
-        "hoUSDT": "high",
-        "USDT0": "low",
-        "USDC": "medium",
-        "masterUSD": "high"
-      },
-      "coinIdMap": {
-        "hoUSDT": "usdt-tether",
-        "USDT0": "usdt-tether",
-        "USDC": "usdc-circle"
-      },
-      "depTypeMap": {
-        "hoUSDT": "wrapper",
-        "USDT0": "wrapper",
-        "USDC": "collateral"
-      },
-      "renameMap": {
-        "hoUSDT": "hoUSDT strategy exposure",
-        "USDT0": "USDT0 reserves",
-        "USDC": "Morpho USDC lending exposure",
-        "masterUSD": "masterUSD strategy exposure"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Hyperbeat USDT vault",
     "yieldType": "lending-vault"
