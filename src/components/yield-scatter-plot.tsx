@@ -47,6 +47,73 @@ interface YieldScatterPlotProps {
 }
 
 const SCATTER_Y_VISUAL_PADDING = 0.4;
+const QUADRANT_LABEL_STYLE = {
+  fontSize: 13,
+  opacity: 0.9,
+  fontWeight: 700,
+} as const;
+const YIELD_SCATTER_QUADRANTS = [
+  {
+    key: "sweet-spot",
+    safetySide: "above-threshold",
+    yieldSide: "above-benchmark",
+    label: "Sweet Spot",
+    labelPosition: "insideTopRight",
+    fill: CHART_GREEN,
+    fillOpacity: 0.12,
+  },
+  {
+    key: "danger-zone",
+    safetySide: "below-threshold",
+    yieldSide: "above-benchmark",
+    label: "Danger Zone",
+    labelPosition: "insideTopLeft",
+    fill: CHART_RED,
+    fillOpacity: 0.12,
+  },
+  {
+    key: "play-it-safe",
+    safetySide: "above-threshold",
+    yieldSide: "below-benchmark",
+    label: "Play It Safe",
+    labelPosition: "insideBottomRight",
+    fill: CHART_BLUE,
+    fillOpacity: 0.12,
+  },
+  {
+    key: "why-bother",
+    safetySide: "below-threshold",
+    yieldSide: "below-benchmark",
+    label: "Why Bother?",
+    labelPosition: "insideBottomLeft",
+    fill: CHART_SLATE,
+    fillOpacity: 0.07,
+  },
+] as const;
+
+type YieldScatterQuadrant = (typeof YIELD_SCATTER_QUADRANTS)[number];
+
+function shouldRenderYieldScatterQuadrant(quadrant: YieldScatterQuadrant, safetyDomain: [number, number]) {
+  return quadrant.safetySide === "above-threshold"
+    ? safetyDomain[1] > SAFETY_SCORE_THRESHOLD
+    : safetyDomain[0] < SAFETY_SCORE_THRESHOLD;
+}
+
+function getYieldScatterQuadrantBounds(
+  quadrant: YieldScatterQuadrant,
+  safetyDomain: [number, number],
+  plotYDomain: [number, number],
+  benchmarkRate: number,
+) {
+  const isAboveSafetyThreshold = quadrant.safetySide === "above-threshold";
+  const isAboveBenchmark = quadrant.yieldSide === "above-benchmark";
+  return {
+    x1: isAboveSafetyThreshold ? Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0]) : safetyDomain[0],
+    x2: isAboveSafetyThreshold ? safetyDomain[1] : Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1]),
+    y1: isAboveBenchmark ? benchmarkRate : plotYDomain[0],
+    y2: isAboveBenchmark ? plotYDomain[1] : benchmarkRate,
+  };
+}
 
 // Mirrors YIELD_RISK_BUDGET_SPECS thresholds so the risk-tolerance slider
 // acts as the legend for the scatter: each dot's ring tier matches the band
@@ -312,94 +379,28 @@ export function YieldScatterPlot({
               }
             >
               {/* Quadrant shading */}
-              {showBenchmarkReference && safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
-                <ReferenceArea
-                  x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
-                  x2={safetyDomain[1]}
-                  y1={benchmarkRate}
-                  y2={plotYDomain[1]}
-                  fill={CHART_GREEN}
-                  fillOpacity={0.12}
-                  label={
-                    hideQuadrantLabels
-                      ? undefined
-                      : {
-                          value: "Sweet Spot",
-                          position: "insideTopRight",
-                          fill: CHART_GREEN,
-                          fontSize: 13,
-                          opacity: 0.9,
-                          fontWeight: 700,
+              {showBenchmarkReference
+                ? YIELD_SCATTER_QUADRANTS.map((quadrant) =>
+                    shouldRenderYieldScatterQuadrant(quadrant, safetyDomain) ? (
+                      <ReferenceArea
+                        key={quadrant.key}
+                        {...getYieldScatterQuadrantBounds(quadrant, safetyDomain, plotYDomain, benchmarkRate)}
+                        fill={quadrant.fill}
+                        fillOpacity={quadrant.fillOpacity}
+                        label={
+                          hideQuadrantLabels
+                            ? undefined
+                            : {
+                                value: quadrant.label,
+                                position: quadrant.labelPosition,
+                                fill: quadrant.fill,
+                                ...QUADRANT_LABEL_STYLE,
+                              }
                         }
-                  }
-                />
-              ) : null}
-              {showBenchmarkReference && safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
-                <ReferenceArea
-                  x1={safetyDomain[0]}
-                  x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
-                  y1={benchmarkRate}
-                  y2={plotYDomain[1]}
-                  fill={CHART_RED}
-                  fillOpacity={0.12}
-                  label={
-                    hideQuadrantLabels
-                      ? undefined
-                      : {
-                          value: "Danger Zone",
-                          position: "insideTopLeft",
-                          fill: CHART_RED,
-                          fontSize: 13,
-                          opacity: 0.9,
-                          fontWeight: 700,
-                        }
-                  }
-                />
-              ) : null}
-              {showBenchmarkReference && safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
-                <ReferenceArea
-                  x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
-                  x2={safetyDomain[1]}
-                  y1={plotYDomain[0]}
-                  y2={benchmarkRate}
-                  fill={CHART_BLUE}
-                  fillOpacity={0.12}
-                  label={
-                    hideQuadrantLabels
-                      ? undefined
-                      : {
-                          value: "Play It Safe",
-                          position: "insideBottomRight",
-                          fill: CHART_BLUE,
-                          fontSize: 13,
-                          opacity: 0.9,
-                          fontWeight: 700,
-                        }
-                  }
-                />
-              ) : null}
-              {showBenchmarkReference && safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
-                <ReferenceArea
-                  x1={safetyDomain[0]}
-                  x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
-                  y1={plotYDomain[0]}
-                  y2={benchmarkRate}
-                  fill={CHART_SLATE}
-                  fillOpacity={0.07}
-                  label={
-                    hideQuadrantLabels
-                      ? undefined
-                      : {
-                          value: "Why Bother?",
-                          position: "insideBottomLeft",
-                          fill: CHART_SLATE,
-                          fontSize: 13,
-                          opacity: 0.9,
-                          fontWeight: 700,
-                        }
-                  }
-                />
-              ) : null}
+                      />
+                    ) : null,
+                  )
+                : null}
 
               <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke={CHART_SLATE} strokeOpacity={0.35} strokeDasharray="3 4" />
 
