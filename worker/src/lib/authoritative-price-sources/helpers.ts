@@ -3,7 +3,12 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "../binary-search";
-import { resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
+import {
+  fetchEvmCallHexAtBlock,
+  resolveClosestBlockAtOrBeforeTimestamp,
+  type EvmBlockSearchCache,
+} from "../evm-rpc";
+import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
@@ -28,6 +33,42 @@ export interface Erc4626NavVaultConfig {
   assetDecimals: number;
   rpcUrls?: readonly string[];
   allowFreshNonReplaySafeParent?: boolean;
+}
+
+export async function fetchVaultAssetsPerShareViaSelector(
+  config: Erc4626NavVaultConfig,
+  selector: string,
+  label: string,
+  blockNumberOrTag: number | "latest",
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const oneShareRaw = 10n ** BigInt(config.vaultDecimals);
+  const calldata = `${selector}${encodeUint256(oneShareRaw)}`;
+  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.vault, calldata, blockNumberOrTag, {
+    signal,
+    extraRpcUrls: [...(config.rpcUrls ?? getArchiveFallbackRpcUrls(config.chain))],
+  });
+  if (!quoteHex) {
+    console.warn(`[authoritative-price-sources] ${config.id}: ${label}() returned null`);
+    return null;
+  }
+
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
+  if (outputAmount == null || outputAmount <= 0n) {
+    console.warn(`[authoritative-price-sources] ${config.id}: ${label}() returned zero or invalid output`);
+    return null;
+  }
+
+  const assetsPerShare = ratioToNumber(outputAmount, config.assetDecimals, oneShareRaw, config.vaultDecimals);
+  if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
+  if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
+    console.warn(
+      `[authoritative-price-sources] ${config.id}: ${label}() ratio ${assetsPerShare} outside trusted bounds`,
+    );
+    return null;
+  }
+
+  return assetsPerShare;
 }
 
 const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;

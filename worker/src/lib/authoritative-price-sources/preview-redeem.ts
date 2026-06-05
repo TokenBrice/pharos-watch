@@ -1,15 +1,9 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import { fetchEvmCallHexAtBlock } from "../evm-rpc";
-import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
 import {
   buildParentDerivedLiveOverride,
-  decodeUint256WordBigInt,
-  encodeUint256,
-  ERC4626_NAV_MAX_RATIO,
-  ERC4626_NAV_MIN_RATIO,
   ETHEREUM_CHAIN,
+  fetchVaultAssetsPerShareViaSelector,
   PROTOCOL_REDEEM_SOURCE,
-  ratioToNumber,
   resolveTrustedOverrideParent,
   type CurrentPriceOverride,
   type Erc4626NavVaultConfig,
@@ -41,30 +35,13 @@ async function fetchPreviewRedeemAssetsPerShare(
   blockNumberOrTag: number | "latest",
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const oneShareRaw = 10n ** BigInt(config.vaultDecimals);
-  const calldata = `${PREVIEW_REDEEM_SELECTOR}${encodeUint256(oneShareRaw)}`;
-  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.vault, calldata, blockNumberOrTag, {
+  return fetchVaultAssetsPerShareViaSelector(
+    config,
+    PREVIEW_REDEEM_SELECTOR,
+    "previewRedeem",
+    blockNumberOrTag,
     signal,
-    extraRpcUrls: [...(config.rpcUrls ?? getArchiveFallbackRpcUrls(config.chain))],
-  });
-  if (!quoteHex) {
-    console.warn(`[authoritative-price-sources] ${config.id}: previewRedeem() returned null`);
-    return null;
-  }
-  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
-  if (outputAmount == null || outputAmount <= 0n) {
-    console.warn(`[authoritative-price-sources] ${config.id}: previewRedeem() returned zero or invalid output`);
-    return null;
-  }
-  const assetsPerShare = ratioToNumber(outputAmount, config.assetDecimals, oneShareRaw, config.vaultDecimals);
-  if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
-  if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
-    console.warn(
-      `[authoritative-price-sources] ${config.id}: previewRedeem() ratio ${assetsPerShare} outside trusted bounds`,
-    );
-    return null;
-  }
-  return assetsPerShare;
+  );
 }
 
 export const previewRedeemProvider: PriceSourceProvider = {
