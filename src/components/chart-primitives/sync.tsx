@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
  */
 export type BrushedRange = readonly [number, number] | null;
 
-interface MarketDataChartSync {
+export interface MarketDataChartSync {
   /** Currently hovered timestamp on either chart, or null. */
   hoveredTs: number | null;
   setHoveredTs: (ts: number | null) => void;
@@ -60,6 +60,23 @@ export function MarketDataChartSyncProvider({ children }: { children: ReactNode 
  */
 export function useMarketDataChartSync(): MarketDataChartSync | null {
   return useContext(MarketDataChartSyncContext);
+}
+
+export function useChartSyncHandlers(sync: MarketDataChartSync | null) {
+  const handleMouseMove = useCallback(
+    (e: { activeLabel?: string | number } | null) => {
+      if (!sync) return;
+      const next = e?.activeLabel != null ? Number(e.activeLabel) : null;
+      if (next == null || !Number.isFinite(next)) return;
+      sync.setHoveredTs(next);
+    },
+    [sync],
+  );
+  const handleMouseLeave = useCallback(() => {
+    sync?.setHoveredTs(null);
+  }, [sync]);
+
+  return useMemo(() => ({ handleMouseMove, handleMouseLeave }), [handleMouseMove, handleMouseLeave]);
 }
 
 // ---------------------------------------------------------------------------

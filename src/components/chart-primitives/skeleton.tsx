@@ -1,5 +1,6 @@
 "use client";
 
+import { MONO_Y_AXIS_WIDTH } from "@/components/chart-primitives/axes";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +18,6 @@ import { cn } from "@/lib/utils";
  * ~30px regardless of `tickMargin`, so we match that.
  */
 const STATIC_X_AXIS_HEIGHT = 30;
-const STATIC_Y_AXIS_WIDTH = 68;
 const STATIC_TICK_FONT_SIZE = 12;
 const STATIC_TICK_FILL = "var(--color-muted-foreground)";
 const STATIC_GRID_STROKE = "var(--color-border)";
@@ -47,7 +47,7 @@ function computePlotRect({
   width,
   height,
   margin,
-  yAxisWidth = STATIC_Y_AXIS_WIDTH,
+  yAxisWidth = MONO_Y_AXIS_WIDTH,
   xAxisHeight = STATIC_X_AXIS_HEIGHT,
 }: StaticChartGeometry): PlotRect {
   const top = margin?.top ?? 0;
@@ -135,7 +135,7 @@ function StaticMonoYAxis({
   width,
   height,
   margin,
-  yAxisWidth = STATIC_Y_AXIS_WIDTH,
+  yAxisWidth = MONO_Y_AXIS_WIDTH,
   xAxisHeight,
   tickCount = 5,
   domain,

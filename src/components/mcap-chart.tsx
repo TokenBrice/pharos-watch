@@ -1,22 +1,25 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { AreaChart, Area, ReferenceDot } from "recharts";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { usePreference } from "@/hooks/use-preferences";
-import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
-import { ChartCrosshairOverlay, useMarketDataChartSync } from "@/components/chart-primitives/sync";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import {
+  ChartCrosshairOverlay,
+  useChartSyncHandlers,
+  useMarketDataChartSync,
+} from "@/components/chart-primitives/sync";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, usePlotInsets } from "@/components/chart-primitives/axes";
+import { ChartCardShell } from "@/components/chart-primitives/shell";
 import {
   ChartDataTable,
   capDataForTable,
@@ -157,24 +160,8 @@ export function McapChart({
     () => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }),
     [range],
   );
-  // `MonoYAxis` defaults to width=68; the YAxis pixel inset = margin.left + axis-width.
-  const plotInsetLeft = margin.left + 68;
-  const plotInsetRight = margin.right;
-  const plotInsetTop = margin.top;
-  const plotInsetBottom = margin.bottom;
-
-  const handleMouseMove = useCallback(
-    (e: { activeLabel?: string | number } | null) => {
-      if (!sync) return;
-      const next = e?.activeLabel != null ? Number(e.activeLabel) : null;
-      if (next == null || !Number.isFinite(next)) return;
-      sync.setHoveredTs(next);
-    },
-    [sync],
-  );
-  const handleMouseLeave = useCallback(() => {
-    sync?.setHoveredTs(null);
-  }, [sync]);
+  const { plotInsetLeft, plotInsetRight, plotInsetTop, plotInsetBottom } = usePlotInsets(margin);
+  const { handleMouseMove, handleMouseLeave } = useChartSyncHandlers(sync);
 
   const deltaColor = readout?.deltaPct == null
     ? "var(--color-muted-foreground)"
@@ -314,29 +301,18 @@ export function McapChart({
     </div>
   );
 
-  if (embedded) {
-    return (
-      <div className={cn("animate-in fade-in duration-300", cardClassName)}>
-        <div className="px-4 pt-4 sm:px-6 sm:pt-6">{header}</div>
-        <div className="px-2 pb-4 pt-3 sm:px-4 sm:pb-6">{chartBody}</div>
-        {!hideAnnotationLegend && annotations.length > 0 ? (
-          <div className="px-4 pb-4 sm:px-6 sm:pb-6">
-            <ChartAnnotationLegend annotations={annotations} numbered />
-          </div>
-        ) : null}
-      </div>
-    );
-  }
+  const legend =
+    !hideAnnotationLegend && annotations.length > 0 ? (
+      <ChartAnnotationLegend annotations={annotations} numbered />
+    ) : null;
 
   return (
-    <Card className={cn("rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300", cardClassName)}>
-      <CardHeader>{header}</CardHeader>
-      <CardContent>{chartBody}</CardContent>
-      {!hideAnnotationLegend && annotations.length > 0 ? (
-        <CardContent className="pt-0">
-          <ChartAnnotationLegend annotations={annotations} numbered />
-        </CardContent>
-      ) : null}
-    </Card>
+    <ChartCardShell
+      embedded={embedded}
+      className={cardClassName}
+      header={header}
+      body={chartBody}
+      legend={legend}
+    />
   );
 }

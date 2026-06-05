@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentProps, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type ComponentProps, type CSSProperties, type ReactNode } from "react";
 import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,26 @@ const MONO_AXIS_TICK = {
   fontFamily: "var(--font-mono, monospace)",
   fill: "var(--color-muted-foreground)",
 } as const;
+export const MONO_Y_AXIS_WIDTH = 68;
+
+interface ChartMargin {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export function usePlotInsets(margin: ChartMargin, yAxisWidth = MONO_Y_AXIS_WIDTH) {
+  return useMemo(
+    () => ({
+      plotInsetLeft: margin.left + yAxisWidth,
+      plotInsetRight: margin.right,
+      plotInsetTop: margin.top,
+      plotInsetBottom: margin.bottom,
+    }),
+    [margin, yAxisWidth],
+  );
+}
 
 function formatDateLabel(value: unknown, locale: string, options: Intl.DateTimeFormatOptions): string {
   if (value == null) return "";
@@ -54,7 +74,7 @@ export function MonoYAxis({
   tick = MONO_AXIS_TICK,
   tickLine = false,
   axisLine = false,
-  width = 68,
+  width = MONO_Y_AXIS_WIDTH,
   tickMargin = 8,
   ...props
 }: MonoYAxisProps) {
