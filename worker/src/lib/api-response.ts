@@ -1,4 +1,5 @@
 import { addFreshnessHeaders } from "./api-freshness";
+import { CACHE_PROFILES } from "./constants";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
 
@@ -105,6 +106,10 @@ export function jsonFreshResponse(body: unknown, options: JsonFreshResponseOptio
   }
 
   return jsonResponse(body, headers);
+}
+
+export function cacheControlForDegradedPayload(payload: { _meta: { degraded: boolean } }): string {
+  return payload._meta.degraded ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard;
 }
 
 export async function respondWithFreshSnapshot<T extends { updatedAt: number }>(args: {

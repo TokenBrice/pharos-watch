@@ -15,6 +15,7 @@ export {
   methodNotAllowedResponse,
   noStoreResponse,
   errorResponse,
+  cacheControlForDegradedPayload,
   jsonFreshResponse,
   jsonResponse,
   respondWithFreshSnapshot,

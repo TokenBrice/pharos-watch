@@ -9,8 +9,12 @@ import {
   DDRR_PUBLIC_WARNING,
   type DdrrResponse,
 } from "@shared/types/depeg-resolver-review";
-import { buildMethodologyEnvelope, jsonFreshResponse, withErrorHandler } from "../lib/api-utils";
-import { CACHE_PROFILES } from "../lib/constants";
+import {
+  buildMethodologyEnvelope,
+  cacheControlForDegradedPayload,
+  jsonFreshResponse,
+  withErrorHandler,
+} from "../lib/api-utils";
 import { buildEmptyDdrrSummary } from "../cron/compute-depeg-resolver-review";
 import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 
@@ -48,10 +52,6 @@ function degradedResponse(reason: string): DdrrResponse {
   };
 }
 
-function ddrrCacheControl(payload: DdrrResponse): string {
-  return payload._meta.degraded ? CACHE_PROFILES.noStore : CACHE_PROFILES.standard;
-}
-
 function staleSnapshotResponse(snapshot: DdrrResponse): DdrrResponse {
   return {
     ...snapshot,
@@ -73,7 +73,7 @@ export const handleDepegResolverReview = withErrorHandler(
         ? staleSnapshotResponse(cached.payload)
         : cached.payload;
       return jsonFreshResponse(payload, {
-        cacheControl: ddrrCacheControl(payload),
+        cacheControl: cacheControlForDegradedPayload(payload),
         updatedAt: cached.payload._meta.computedAt,
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
       });
@@ -83,7 +83,7 @@ export const handleDepegResolverReview = withErrorHandler(
     const nowSec = Math.floor(Date.now() / 1000);
     const payload = degradedResponse(cached.reason);
     return jsonFreshResponse(payload, {
-      cacheControl: ddrrCacheControl(payload),
+      cacheControl: cacheControlForDegradedPayload(payload),
       updatedAt: nowSec,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
     });
