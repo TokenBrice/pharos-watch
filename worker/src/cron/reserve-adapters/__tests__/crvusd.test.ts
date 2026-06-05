@@ -346,6 +346,85 @@ describe("fetchCrvUsdReserves", () => {
     });
   });
 
+  it("drops the optional Yield Basis leg when token decimals are out of bounds", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      chains: {
+        ethereum: {
+          data: [
+            { collateral_amount_usd: 100, collateral_token: { symbol: "WBTC" } },
+          ],
+        },
+      },
+    });
+    vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
+      const normalizedAddress = address.toLowerCase();
+      const callData = data as `0x${string}`;
+
+      if (normalizedAddress === YIELD_BASIS_FACTORY) {
+        const decoded = decodeFunctionData({ abi: FACTORY_ABI, data: callData });
+        if (decoded.functionName === "market_count") {
+          return encodeFunctionResult({
+            abi: FACTORY_ABI,
+            functionName: "market_count",
+            result: 1n,
+          });
+        }
+        if (decoded.functionName === "markets") {
+          return encodeFunctionResult({
+            abi: FACTORY_ABI,
+            functionName: "markets",
+            result: [BTC_ASSET, BTC_ASSET, BTC_ASSET, BTC_LT, BTC_ASSET, BTC_ASSET, BTC_ASSET] as const,
+          });
+        }
+      }
+
+      if (normalizedAddress === BTC_ASSET) {
+        const decoded = decodeFunctionData({ abi: ERC20_ABI, data: callData });
+        if (decoded.functionName === "symbol") {
+          return encodeFunctionResult({ abi: ERC20_ABI, functionName: "symbol", result: "WBTC" });
+        }
+        if (decoded.functionName === "decimals") {
+          return encodeFunctionResult({ abi: ERC20_ABI, functionName: "decimals", result: 37 });
+        }
+      }
+
+      if (normalizedAddress === BTC_LT) {
+        const decoded = decodeFunctionData({ abi: LT_ABI, data: callData });
+        if (decoded.functionName === "totalSupply") {
+          return encodeFunctionResult({ abi: LT_ABI, functionName: "totalSupply", result: 1n });
+        }
+      }
+
+      return null;
+    });
+
+    const config: LiveReservesConfig = {
+      adapter: "crvusd",
+      version: 2,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://prices.curve.finance/v1/crvusd/markets",
+        },
+      },
+    };
+
+    const result = await fetchCrvUsdReserves({} as never, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 100, risk: "medium" },
+    ]);
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "yield-basis-read-failed",
+        effect: "degraded",
+        message: expect.stringContaining("expected safe integer 0-36"),
+      }),
+    ]));
+    expect(fetchDefiLlamaPrices).not.toHaveBeenCalled();
+  });
+
   it("loads direct LLAMMA bands onchain when configured for onchain input", async () => {
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[BTC_ASSET, 10]]));
     vi.mocked(fetchOnchainMulticall3).mockResolvedValue([

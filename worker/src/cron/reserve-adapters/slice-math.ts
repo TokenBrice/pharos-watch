@@ -11,6 +11,8 @@ const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
   "very-high": 4,
 };
 
+const MAX_DECIMALS = 36;
+
 export function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {
   return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
 }
@@ -20,6 +22,22 @@ interface UnknownExposureWarningOptions {
   message: string;
   unknownExposurePct: number;
   thresholdPct?: number;
+}
+
+function parseBoundedDecimals(value: unknown): number | null {
+  if (typeof value === "bigint") {
+    return value >= 0n && value <= BigInt(MAX_DECIMALS) ? Number(value) : null;
+  }
+  if (typeof value !== "number") return null;
+  return Number.isSafeInteger(value) && value >= 0 && value <= MAX_DECIMALS ? value : null;
+}
+
+export function validateDecimals(value: unknown, context = "token decimals"): number {
+  const decimals = parseBoundedDecimals(value);
+  if (decimals == null) {
+    throw new Error(`${context} invalid: ${String(value)} (expected safe integer 0-${MAX_DECIMALS})`);
+  }
+  return decimals;
 }
 
 /**
@@ -80,12 +98,17 @@ export function valueUsdFromBigIntPrice(value: bigint, decimals: number, priceUs
     return Number.NaN;
   }
 
+  const safeDecimals = parseBoundedDecimals(decimals);
+  if (safeDecimals == null) {
+    return Number.NaN;
+  }
+
   const priceMicros = BigInt(Math.round(priceUsd * 1_000_000));
   if (priceMicros <= 0n) {
     return Number.NaN;
   }
 
-  const scale = 10n ** BigInt(decimals);
+  const scale = 10n ** BigInt(safeDecimals);
   const usdMicros = (value * priceMicros + scale / 2n) / scale;
   // Above ~$9.007B the micros bigint exceeds Number.MAX_SAFE_INTEGER, so a
   // direct Number() cast loses precision in the integer-dollar part. Split into

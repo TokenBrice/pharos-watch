@@ -20,7 +20,7 @@ import {
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
-import { worseRisk } from "./slice-math";
+import { validateDecimals, worseRisk } from "./slice-math";
 
 interface CurveMarketEntry {
   collateral_amount_usd?: number;
@@ -450,10 +450,7 @@ async function fetchYieldBasisMarketPositions(
       throw new Error(`crvUSD Yield Basis symbol unreadable for market ${marketId}`);
     }
 
-    const assetDecimals = Number(decimalsRaw);
-    if (!Number.isInteger(assetDecimals) || assetDecimals < 0) {
-      throw new Error(`crvUSD Yield Basis decimals invalid for market ${marketId}`);
-    }
+    const assetDecimals = validateDecimals(decimalsRaw, `crvUSD Yield Basis decimals for market ${marketId}`);
 
     const supply = totalSupply as bigint;
     if (supply <= 0n) continue;

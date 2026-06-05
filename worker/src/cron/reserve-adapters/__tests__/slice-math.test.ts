@@ -48,6 +48,13 @@ describe("valueUsdFromBigIntPrice", () => {
     expect(valueUsdFromBigIntPrice(5n, 0, 1)).toBe(5);
   });
 
+  it("returns NaN for invalid or out-of-bound decimals", () => {
+    expect(valueUsdFromBigIntPrice(1n, -1, 1)).toBeNaN();
+    expect(valueUsdFromBigIntPrice(1n, 1.5, 1)).toBeNaN();
+    expect(valueUsdFromBigIntPrice(1n, 37, 1)).toBeNaN();
+    expect(valueUsdFromBigIntPrice(1n, Number.MAX_SAFE_INTEGER + 1, 1)).toBeNaN();
+  });
+
   it("returns price exactly when 1 whole token × price stays representable", () => {
     // 1_000_000n raw at 6 decimals = 1 token. At a Number.MAX_SAFE_INTEGER
     // price, USD = MAX_SAFE_INTEGER which is itself exactly representable.

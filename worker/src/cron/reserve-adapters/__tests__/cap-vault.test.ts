@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -271,11 +272,9 @@ describe("fetchCapVaultReserves", () => {
   };
 
   function encodeAddressArray(addresses: string[]): string {
-    const offset = "0000000000000000000000000000000000000000000000000000000000000020"; // 32
-    const length = addresses.length.toString(16).padStart(64, "0");
-    const encodedAddresses = addresses
-      .map((address) => address.toLowerCase().replace(/^0x/, "").padStart(64, "0"))
-      .join("");
+    const offset = encodeUint256(32);
+    const length = encodeUint256(addresses.length);
+    const encodedAddresses = addresses.map((address) => encodeAddress(address)).join("");
     return `0x${offset}${length}${encodedAddresses}`;
   }
 
@@ -306,7 +305,7 @@ describe("fetchCapVaultReserves", () => {
       .mockResolvedValueOnce(options.available); // available(asset)
   }
 
-  const encodedFalse = `0x${"0".padStart(64, "0")}`;
+  const encodedFalse = `0x${encodeUint256(0n)}`;
 
   it("fails closed when totalSupplies() returns null", async () => {
     primeMocks({
@@ -332,6 +331,19 @@ describe("fetchCapVaultReserves", () => {
 
     await expect(fetchCapVaultReserves(coin, config, signal))
       .rejects.toThrow(/decimals/);
+  });
+
+  it("fails closed when decimals() returns an out-of-bound value", async () => {
+    primeMocks({
+      decimals: 37n,
+      totalSupplies: 50_000000n,
+      totalBorrows: 0n,
+      available: 50_000000n,
+      paused: encodedFalse,
+    });
+
+    await expect(fetchCapVaultReserves(coin, config, signal))
+      .rejects.toThrow(/expected safe integer 0-36/);
   });
 
   it("fails closed when totalBorrows() returns null", async () => {

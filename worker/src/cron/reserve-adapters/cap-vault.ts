@@ -1,7 +1,7 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddressArg } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
@@ -15,6 +15,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
+import { validateDecimals } from "./slice-math";
 
 const ADAPTER_KEY = "cap-vault";
 const ASSETS_SELECTOR = "0x71a97305";
@@ -54,10 +55,6 @@ interface CapVaultAssetState {
    * When true, `paused` is conservatively set to true.
    */
   pausedStatusUnavailable: boolean;
-}
-
-function encodeAddressArg(address: string): string {
-  return address.toLowerCase().replace(/^0x/, "").padStart(64, "0");
 }
 
 function decodeBool(raw: string | null): boolean | null {
@@ -340,7 +337,7 @@ export async function fetchCapVaultReserves(
       throw new Error(`${ADAPTER_KEY}: failed to read available() for asset ${address}`);
     }
 
-    const decimals = Number(decimalsRaw);
+    const decimals = validateDecimals(decimalsRaw, `${ADAPTER_KEY}: decimals() for asset ${address}`);
     // Conservative: treat a missing/undecodable paused() response as paused.
     const pausedDecoded = decodeBool(pausedRaw);
     const pausedStatusUnavailable = pausedDecoded == null;
