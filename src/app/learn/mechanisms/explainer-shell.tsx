@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   getActiveByArchetype,
   getCoinsByLifecycleStatus,
@@ -9,9 +8,9 @@ import {
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
-import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
+import { RelatedCoinsList } from "../_shared/related-coins-list";
 import type { ArchetypeContent, ArchetypeDecommissioned } from "./content";
 
 const DEAD_LOGO_BY_ID = new Map(
@@ -211,56 +210,12 @@ function RepresentativeCoins({
   kickerClass: string;
 }) {
   return (
-    <section className="space-y-6">
-      <div className="space-y-2">
-        <SectionKicker className={kickerClass}>Tracked examples</SectionKicker>
-        <SectionHeading>Live coins using this design</SectionHeading>
-      </div>
-      <ul className="divide-y divide-border/40">
-        {coins.map((coin) => {
-          const meta = TRACKED_META_BY_ID.get(coin.coinId);
-          if (!meta) return null;
-          const logoSrc = logosById[coin.coinId];
-          return (
-            <li key={coin.coinId}>
-              <Link
-                href={buildStablecoinUrl(coin.coinId)}
-                className="pharos-focus-ring group grid gap-3 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,16ch)_minmax(0,1fr)_auto] sm:items-baseline sm:gap-8"
-              >
-                <div className="flex items-start gap-2.5">
-                  {logoSrc ? (
-                    <img
-                      src={logoSrc}
-                      alt=""
-                      aria-hidden="true"
-                      width={20}
-                      height={20}
-                      className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
-                      loading="lazy"
-                    />
-                  ) : null}
-                  <div className="min-w-0 flex flex-col gap-0.5">
-                    <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
-                      {meta.symbol}
-                    </span>
-                    <span className="text-xs leading-snug text-muted-foreground">
-                      {meta.name}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-[15px] leading-relaxed text-muted-foreground">
-                  {coin.note}
-                </p>
-                <ArrowUpRight
-                  className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue sm:block"
-                  aria-hidden="true"
-                />
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <RelatedCoinsList
+      coins={coins}
+      kickerClass={kickerClass}
+      kicker="Tracked examples"
+      heading="Live coins using this design"
+    />
   );
 }
 
