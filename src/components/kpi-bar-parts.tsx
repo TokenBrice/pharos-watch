@@ -287,6 +287,14 @@ export interface KpiMetricDefinition {
   sparkline?: ReactNode;
 }
 
+function SnapshotDeltaPill({ label, value }: { label: string; value: string | null }) {
+  return (
+    <span className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}>
+      {label} {value ?? "—"}
+    </span>
+  );
+}
+
 export function PrimarySnapshotCard({
   value,
   flashValue,
@@ -366,21 +374,9 @@ export function PrimarySnapshotCard({
         </div>
         <div className="flex shrink-0 flex-col items-start justify-center gap-2 sm:items-end">
           <div className="flex flex-wrap items-center gap-1.5 sm:flex-col sm:items-end sm:gap-2">
-            <span
-              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
-            >
-              24h {delta24h ?? "—"}
-            </span>
-            <span
-              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
-            >
-              7d {delta7d ?? "—"}
-            </span>
-            <span
-              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
-            >
-              30d {delta30d ?? "—"}
-            </span>
+            <SnapshotDeltaPill label="24h" value={delta24h} />
+            <SnapshotDeltaPill label="7d" value={delta7d} />
+            <SnapshotDeltaPill label="30d" value={delta30d} />
           </div>
         </div>
       </div>
