@@ -1,6 +1,6 @@
 # Feature Flags
 
-Feature flags gate the riskiest of the May 2026 detail-page changes. Most default to off. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is default-on after the W3 launch and rolls back only when explicitly set to `false`.
+Feature flags gate the riskiest of the May 2026 detail-page changes. Most default to off. Three flags are default-on and roll back only when explicitly set to `false`: `NEXT_PUBLIC_PHAROS_HERO_VERDICT` (after the W3 launch), `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`, and `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER`.
 
 To enable a default-off flag locally: `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev`.
 
@@ -22,7 +22,7 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER` | Depeg Duration Resolver module on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-09-01 |
 
-`expiresAt` is advisory — each default-off gate in code carries the same date in a comment (the default-on `HERO_VERDICT` has no expiry). Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check (`scripts/ci/check-stale-flags.mjs`) runs in `validate:prebuild` and fails the build when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
+`expiresAt` is advisory — each gated flag in code carries the same date in a comment, including the two default-on resolver flags (`DEPEG_RESOLVER` / `DEPEG_RESOLVER_REVIEWER`, both `2026-09-01`); only the default-on `HERO_VERDICT` has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check (`scripts/ci/check-stale-flags.mjs`) runs in `validate:prebuild` and fails the build when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
 
 ## Flip readiness gates
 

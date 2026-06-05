@@ -479,7 +479,7 @@ From production rendered charts:
 
 - Tick text: `font-size: 12`, `font-family: var(--font-mono, monospace)`, `fill: var(--color-muted-foreground)`
 - X axis keeps extra breathing room through `tickMargin={10}`
-- The shared `MonoYAxis` primitive defaults to `width={56}` and `tickMargin={8}` for cleaner number alignment
+- The shared `MonoYAxis` primitive defaults to `width={68}` and `tickMargin={8}` for cleaner number alignment
 - Grid lines: `stroke="var(--color-border)"`, `strokeDasharray="2 6"`, verticals off by default
 
 ### Area Chart Styling (Observed)

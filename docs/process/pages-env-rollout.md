@@ -8,7 +8,7 @@ The Cloudflare Pages project `stablecoin-dashboard` does **not** use Cloudflare'
 
 Consequence: **build-time env vars must live in GitHub Actions, not in the Cloudflare Pages dashboard.** The dashboard's "Environment variables" panel is only readable by Pages Functions at runtime, never inlined into the static bundle. Setting flags there has zero effect on the React app.
 
-`src/lib/feature-flags.ts` reads most flags via `process.env.NEXT_PUBLIC_PHAROS_X === "true"`. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is the exception: it is default-on and reads as enabled unless the build env sets it to the literal string `"false"`. Next.js inlines those expressions at build time. `scripts/ci/check-feature-flag-inlining.mjs` verifies the inlining happened.
+`src/lib/feature-flags.ts` reads most flags via `process.env.NEXT_PUBLIC_PHAROS_X === "true"`. Three flags are the exception — `NEXT_PUBLIC_PHAROS_HERO_VERDICT`, `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`, and `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` are default-on (read via `!== "false"`) and read as enabled unless the build env sets them to the literal string `"false"`. Next.js inlines those expressions at build time. `scripts/ci/check-feature-flag-inlining.mjs` verifies the inlining happened.
 
 ## Source of truth: GitHub repo Variables
 
