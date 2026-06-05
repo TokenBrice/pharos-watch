@@ -11,6 +11,8 @@ import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
+const SCORE_BREAKDOWN_KEYS = ["access", "settlement", "execution", "capacity", "outputQuality", "cost"] as const;
+
 export function RedemptionBackstopCard({
   entry,
 }: {
@@ -170,25 +172,15 @@ export function RedemptionBackstopCard({
             <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
           </summary>
           <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              Access score <span className={cn("pharos-numeric", viewModel.scoreBreakdown.access.textClass)}>{viewModel.scoreBreakdown.access.score ?? "—"}</span>
-            </div>
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              Settlement <span className={cn("pharos-numeric", viewModel.scoreBreakdown.settlement.textClass)}>{viewModel.scoreBreakdown.settlement.score ?? "—"}</span>
-            </div>
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              Execution <span className={cn("pharos-numeric", viewModel.scoreBreakdown.execution.textClass)}>{viewModel.scoreBreakdown.execution.score ?? "—"}</span>
-            </div>
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              Capacity <span className={cn("pharos-numeric", viewModel.scoreBreakdown.capacity.textClass)}>{viewModel.scoreBreakdown.capacity.score ?? "—"}</span>
-            </div>
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              Output quality <span className={cn("pharos-numeric", viewModel.scoreBreakdown.outputQuality.textClass)}>{viewModel.scoreBreakdown.outputQuality.score ?? "—"}</span>
-            </div>
-            <div className="rounded-lg border border-border/60 px-3 py-2">
-              Cost <span className={cn("pharos-numeric", viewModel.scoreBreakdown.cost.textClass)}>{viewModel.scoreBreakdown.cost.score ?? "—"}</span>
-              {viewModel.scoreBreakdown.cost.suffix ?? ""}
-            </div>
+            {SCORE_BREAKDOWN_KEYS.map((key) => {
+              const item = viewModel.scoreBreakdown[key];
+              return (
+                <div key={key} className="rounded-lg border border-border/60 px-3 py-2">
+                  {item.label} <span className={cn("pharos-numeric", item.textClass)}>{item.score ?? "—"}</span>
+                  {"suffix" in item ? item.suffix : ""}
+                </div>
+              );
+            })}
           </div>
         </details>
 
