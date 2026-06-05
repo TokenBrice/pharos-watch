@@ -6,7 +6,10 @@ import {
 import type { RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { getLatestSuccessfulReserveSnapshotMetadata } from "../live-reserves-store";
-import { readRedemptionBackstopLiveMetadata } from "../redemption-backstop-live-metadata";
+import {
+  readRedemptionBackstopLiveMetadata,
+  type RedemptionBackstopLiveMetadata,
+} from "../redemption-backstop-live-metadata";
 import {
   resolveCapacityBasis,
   resolveReserveSyncCapacityConfidence,
@@ -15,6 +18,52 @@ import {
 } from "./profile";
 
 type ReserveSyncModel = Extract<RedemptionCapacityModel, { kind: "reserve-sync-metadata" }>;
+
+function pickRouteStatusFields(
+  liveMetadata: RedemptionBackstopLiveMetadata,
+): Partial<
+  Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt">
+> {
+  return {
+    ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
+    ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
+    ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
+    ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
+  };
+}
+
+function buildReserveSyncFallbackFields(
+  model: ReserveSyncModel,
+  liveMetadata: RedemptionBackstopLiveMetadata,
+  params: {
+    capacityConfidence: RedemptionBackstopEntry["capacityConfidence"];
+    capacitySemantics: RedemptionBackstopEntry["capacitySemantics"];
+  },
+): Pick<
+  CapacityResolution,
+  | "provider"
+  | "sourceMode"
+  | "resolutionState"
+  | "capacityConfidence"
+  | "capacityBasis"
+  | "capacitySemantics"
+> &
+  Partial<
+    Pick<CapacityResolution, "routeStatus" | "routeStatusSource" | "routeStatusReason" | "routeStatusReviewedAt">
+  > {
+  const { capacityConfidence, capacitySemantics } = params;
+  return {
+    provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK,
+    sourceMode:
+      REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK]
+        .defaultSourceMode,
+    resolutionState: "resolved",
+    capacityConfidence,
+    capacityBasis: resolveCapacityBasis(null, model, capacityConfidence),
+    capacitySemantics,
+    ...pickRouteStatusFields(liveMetadata),
+  };
+}
 
 export async function resolveReserveSyncCapacity(
   model: ReserveSyncModel,
@@ -136,18 +185,10 @@ export async function resolveReserveSyncCapacity(
         scoringHorizon: "immediate",
         capacityProfileConfidence: fallbackCapacityConfidence,
       },
-      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK,
-      sourceMode:
-        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK]
-          .defaultSourceMode,
-      resolutionState: "resolved",
-      capacityConfidence: fallbackCapacityConfidence,
-      capacityBasis: resolveCapacityBasis(null, model, fallbackCapacityConfidence),
-      capacitySemantics,
-      ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
-      ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
-      ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
-      ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
+      ...buildReserveSyncFallbackFields(model, liveMetadata, {
+        capacityConfidence: fallbackCapacityConfidence,
+        capacitySemantics,
+      }),
       notes: [
         ...liveMetadata.capacityNotes,
         liveMetadata.capacityReason
@@ -189,18 +230,10 @@ export async function resolveReserveSyncCapacity(
         scoringHorizon: dailyLimitCapsCapacity ? "daily" : "immediate",
         capacityProfileConfidence: fallbackCapacityConfidence,
       },
-      provider: REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK,
-      sourceMode:
-        REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_FALLBACK]
-          .defaultSourceMode,
-      resolutionState: "resolved",
-      capacityConfidence: fallbackCapacityConfidence,
-      capacityBasis: resolveCapacityBasis(null, model, fallbackCapacityConfidence),
-      capacitySemantics,
-      ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
-      ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
-      ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
-      ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
+      ...buildReserveSyncFallbackFields(model, liveMetadata, {
+        capacityConfidence: fallbackCapacityConfidence,
+        capacitySemantics,
+      }),
       notes: [
         ...liveMetadata.capacityNotes,
         liveMetadata.capacityReason
