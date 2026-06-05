@@ -4,6 +4,7 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES }
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
+import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -42,45 +43,6 @@ function summarizeText(text: string, maxLength = 280): string {
   const wordBoundary = lastSpace > Math.floor(maxLength * 0.7) ? lastSpace : truncated.length;
 
   return `${truncated.slice(0, wordBoundary).replace(/[,.!?;:]+$/, "")}...`;
-}
-
-function formatDateLabel(rawDate: string): string {
-  const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (!match) {
-    return rawDate;
-  }
-
-  const [, year, month, day] = match;
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-function buildDisclosureLine(summary: StablecoinAiSummary): string | null {
-  const { authoredBy, model, reviewedBy, reviewedAt, factsAsOf } = summary;
-  if (!authoredBy && !model && !reviewedBy && !reviewedAt && !factsAsOf) {
-    return null;
-  }
-  const authorLabel = authoredBy === "human" ? "Human summary" : "AI summary";
-  const segments: string[] = [authorLabel];
-  if (authoredBy === "ai" && model) {
-    segments.push(`drafted by ${model}`);
-  }
-  if (reviewedBy && reviewedAt) {
-    segments.push(`reviewed by ${reviewedBy} on ${formatDateLabel(reviewedAt)}`);
-  } else if (reviewedBy) {
-    segments.push(`reviewed by ${reviewedBy}`);
-  }
-  if (factsAsOf) {
-    segments.push(`facts as of ${formatDateLabel(factsAsOf)}`);
-  }
-  return segments.join(" · ");
 }
 
 function formatList(items: readonly string[]): string {
@@ -209,7 +171,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const summaryUpdatedAt = summary?.updatedAt ? formatDateLabel(summary.updatedAt) : null;
+  const summaryUpdatedAt = summary?.updatedAt ? formatAiSummaryDate(summary.updatedAt) : null;
   const compareHref = getPrimaryStaticComparisonLinkForCoin(coin.id)?.href ?? buildLiveCompareUrl([coin.id]);
   const alertCommand = buildAlertCommand(coin);
 
@@ -279,7 +241,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text)}</p>
                 {(() => {
-                  const disclosure = buildDisclosureLine(summary);
+                  const disclosure = buildAiDisclosureLine(summary);
                   return disclosure ? (
                     <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{disclosure}</p>
                   ) : null;
