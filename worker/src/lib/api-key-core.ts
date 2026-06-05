@@ -11,6 +11,7 @@ import {
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import { errorResponse } from "./api-utils";
+import { bytesToHex } from "./hash";
 import { IsolateLocalState } from "./isolate-local-state";
 
 const API_KEY_PREFIX_BYTES = 8;
@@ -308,10 +309,6 @@ function normalizeOptionalExpiresAt(
     return Number.parseInt(trimmed, 10);
   }
   return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
 }
 
 function bytesToBase64Url(bytes: Uint8Array): string {

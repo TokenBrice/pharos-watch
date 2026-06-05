@@ -1,3 +1,5 @@
+import { bytesToHex } from "./hash";
+
 const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const BASE58_INDEX = new Map(BASE58_ALPHABET.split("").map((char, index) => [char, index]));
 const BIGINT_ZERO = BigInt(0);
@@ -18,10 +20,6 @@ async function doubleSha256(bytes: Uint8Array): Promise<Uint8Array> {
 function hexToBytes(hex: string): Uint8Array {
   const normalized = hex.length % 2 === 0 ? hex : `0${hex}`;
   return Uint8Array.from(normalized.match(/.{1,2}/g)?.map((pair) => Number.parseInt(pair, 16)) ?? []);
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function encodeBase58(bytes: Uint8Array): string {

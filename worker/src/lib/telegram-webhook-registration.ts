@@ -8,6 +8,7 @@ import {
   TELEGRAM_BOT_SHORT_DESCRIPTION,
 } from "@shared/lib/telegram-bot-registration";
 import { getCache, setCache } from "./db-cache";
+import { sha256Hex } from "./hash";
 import { postTelegramBotApi } from "./telegram";
 
 export {
@@ -98,11 +99,7 @@ export function buildTelegramWebhookUrl(selfUrl?: string | null): string {
 }
 
 async function buildSecretTokenMarker(webhookSecret: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(webhookSecret));
-  return Array.from(new Uint8Array(digest))
-    .slice(0, 16)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+  return (await sha256Hex(webhookSecret)).slice(0, 32);
 }
 
 async function buildExpectedWebhookCacheValue(expectedUrl: string, webhookSecret: string): Promise<string> {

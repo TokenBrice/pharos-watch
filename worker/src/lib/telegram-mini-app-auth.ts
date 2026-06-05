@@ -1,3 +1,5 @@
+import { bytesToHex } from "./hash";
+
 export type TelegramMiniAppAuthErrorCode =
   | "invalid-auth"
   | "invalid-signature"
@@ -42,10 +44,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function hmacSha256(keyBytes: Uint8Array, value: string): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value)));
-}
-
-function hex(bytes: Uint8Array): string {
-  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -117,7 +115,7 @@ export async function validateTelegramMiniAppInitData(
   let signatureValid = false;
   for (const token of candidateTokens) {
     const secret = await hmacSha256(encoder.encode("WebAppData"), token);
-    const expectedHash = hex(await hmacSha256(secret, dataCheckString));
+    const expectedHash = bytesToHex(await hmacSha256(secret, dataCheckString));
     if (constantTimeEqual(expectedHash, providedHash)) {
       signatureValid = true;
       break;

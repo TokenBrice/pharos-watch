@@ -1,4 +1,5 @@
 import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
+import { bytesToHex } from "../../lib/hash";
 import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
@@ -62,7 +63,7 @@ function randomHex(bytes: number): string {
       data[index] = Math.floor(Math.random() * 256);
     }
   }
-  return Array.from(data, (value) => value.toString(16).padStart(2, "0")).join("");
+  return bytesToHex(data);
 }
 
 export function allocateDdrRunId(slot: string, runAt: number): string {

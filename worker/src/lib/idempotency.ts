@@ -1,5 +1,6 @@
 import { errorResponse, withResponseHeaders } from "./api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { sha256Hex } from "./hash";
 
 interface IdempotencyRecord {
   request_hash: string;
@@ -13,14 +14,6 @@ const FAILED_RESPONSE_STATUS = -2;
 const FAILED_RESPONSE_HTTP_STATUS = 500;
 const FAILED_RESPONSE_MESSAGE =
   "Previous idempotent attempt failed before cleanup could be confirmed. Retry with a new Idempotency-Key.";
-
-async function sha256Hex(input: string): Promise<string> {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 function getIdempotencyKey(request: Request | undefined): string | null {
   const raw = request?.headers.get("Idempotency-Key");
