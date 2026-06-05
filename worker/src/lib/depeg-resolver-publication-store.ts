@@ -1,7 +1,11 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import { runChunkedInFilter } from "./db";
-import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
+import {
+  bindDdrAssessmentInsert,
+  ddrAssessmentInsertSql,
+  type DdrAssessmentCheckpoint,
+} from "./depeg-resolver-assessment-store";
 import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
@@ -400,49 +404,37 @@ async function insertPublicPredictionAssessment(
   payloadJson: string,
 ): Promise<D1PreparedStatement> {
   const checkpoint: DdrAssessmentCheckpoint = "public_prediction";
-  return db
-    .prepare(
-      `INSERT INTO depeg_resolver_assessments
-       (event_id, stablecoin_id, symbol, name, peg_currency, governance, direction,
-        started_at, assessed_at, event_age_sec, checkpoint, methodology_version,
-        methodology_version_label, resolution_rubric_version, duration_model_version,
-        incident_grouping_version, support_rules_version, resolution_tier,
-        duration_suppressed, duration_suppressed_reason, median_remaining_sec,
-        iqr_low_remaining_sec, iqr_high_remaining_sec, stratum, horizons_json,
-        factors_json, row_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      input.eventId,
-      input.stablecoinId,
-      input.symbol,
-      input.name,
-      input.pegCurrency,
-      input.governance,
-      input.direction,
-      input.startedAt,
-      input.assessedAt,
-      input.eventAgeSec,
-      checkpoint,
-      input.methodologyVersion,
-      input.methodologyVersionLabel,
-      input.resolutionRubricVersion,
-      input.durationModelVersion,
-      input.incidentGroupingVersion,
-      input.supportRulesVersion,
-      input.resolutionTier,
-      input.durationSuppressed ? 1 : 0,
-      input.durationSuppressedReason ?? null,
-      input.medianRemainingSec ?? null,
-      input.iqrLowRemainingSec ?? null,
-      input.iqrHighRemainingSec ?? null,
-      input.stratum ?? null,
-      JSON.stringify(input.horizons ?? []),
-      JSON.stringify(input.factors ?? []),
-      payloadJson,
-      input.createdAt,
-      input.createdAt,
-    );
+  return bindDdrAssessmentInsert(db.prepare(ddrAssessmentInsertSql("INSERT INTO")), {
+    eventId: input.eventId,
+    stablecoinId: input.stablecoinId,
+    symbol: input.symbol,
+    name: input.name,
+    pegCurrency: input.pegCurrency,
+    governance: input.governance,
+    direction: input.direction,
+    startedAt: input.startedAt,
+    assessedAt: input.assessedAt,
+    eventAgeSec: input.eventAgeSec,
+    checkpoint,
+    methodologyVersion: input.methodologyVersion,
+    methodologyVersionLabel: input.methodologyVersionLabel,
+    resolutionRubricVersion: input.resolutionRubricVersion,
+    durationModelVersion: input.durationModelVersion,
+    incidentGroupingVersion: input.incidentGroupingVersion,
+    supportRulesVersion: input.supportRulesVersion,
+    resolutionTier: input.resolutionTier,
+    durationSuppressed: input.durationSuppressed ? 1 : 0,
+    durationSuppressedReason: input.durationSuppressedReason ?? null,
+    medianRemainingSec: input.medianRemainingSec ?? null,
+    iqrLowRemainingSec: input.iqrLowRemainingSec ?? null,
+    iqrHighRemainingSec: input.iqrHighRemainingSec ?? null,
+    stratum: input.stratum ?? null,
+    horizonsJson: JSON.stringify(input.horizons ?? []),
+    factorsJson: JSON.stringify(input.factors ?? []),
+    rowJson: payloadJson,
+    createdAt: input.createdAt,
+    updatedAt: input.createdAt,
+  });
 }
 
 function lockStateStatement(
