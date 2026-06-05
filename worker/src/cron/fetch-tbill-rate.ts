@@ -50,6 +50,40 @@ function buildMetadata(fields: Record<string, unknown>): string {
   return JSON.stringify(fields);
 }
 
+type MetadataBenchmarkKey = Exclude<YieldBenchmarkKey, "SGD">;
+
+const BENCHMARK_METADATA_PREFIXES: Record<MetadataBenchmarkKey, string> = {
+  USD: "usd",
+  EUR: "eur",
+  CHF: "chf",
+  GBP: "gbp",
+  JPY: "jpy",
+  MXN: "mxn",
+  BRL: "brl",
+  AUD: "aud",
+  CAD: "cad",
+};
+
+const BENCHMARK_METADATA_KEYS = Object.keys(BENCHMARK_METADATA_PREFIXES) as MetadataBenchmarkKey[];
+
+function buildBenchmarkRunMetadata(params: {
+  fallbackMode: string | null;
+  benchmarks: Record<MetadataBenchmarkKey, ParsedYieldBenchmarkMeta | null>;
+  includeDetails?: boolean;
+}): string {
+  const fields: Record<string, unknown> = { fallbackMode: params.fallbackMode };
+  for (const key of BENCHMARK_METADATA_KEYS) {
+    const prefix = BENCHMARK_METADATA_PREFIXES[key];
+    const benchmark = params.benchmarks[key];
+    fields[`${prefix}Source`] = benchmark?.source ?? null;
+    if (params.includeDetails) {
+      fields[`${prefix}Rate`] = benchmark?.rate ?? null;
+      fields[`${prefix}RecordDate`] = benchmark?.recordDate ?? null;
+    }
+  }
+  return buildMetadata(fields);
+}
+
 function parseRate(rateRaw: string | number | null | undefined): number {
   if (typeof rateRaw === "number") return rateRaw;
   if (typeof rateRaw !== "string") return Number.NaN;
@@ -735,6 +769,7 @@ export async function fetchTbillRate(
   if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
     throwIfAborted(signal);
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
+    const usdBenchmark = usdRetained ?? buildHardcodedUsdBenchmark("circuit-open");
     const retainedByKey: Record<Exclude<YieldBenchmarkKey, "USD">, ParsedYieldBenchmarkMeta | null> = {
       EUR: buildRetainedBenchmark(previous.EUR, "circuit-open"),
       CHF: buildRetainedBenchmark(previous.CHF, "circuit-open"),
@@ -747,22 +782,24 @@ export async function fetchTbillRate(
       SGD: null,
     };
     await writeStructuredBenchmarks(db, {
-      USD: usdRetained ?? buildHardcodedUsdBenchmark("circuit-open"),
+      USD: usdBenchmark,
       ...retainedByKey,
     });
     return {
       status: "degraded",
-      metadata: buildMetadata({
+      metadata: buildBenchmarkRunMetadata({
         fallbackMode: "circuit-open",
-        usdSource: usdRetained?.source ?? "hardcoded-fallback",
-        eurSource: retainedByKey.EUR?.source ?? null,
-        chfSource: retainedByKey.CHF?.source ?? null,
-        gbpSource: retainedByKey.GBP?.source ?? null,
-        jpySource: retainedByKey.JPY?.source ?? null,
-        mxnSource: retainedByKey.MXN?.source ?? null,
-        brlSource: retainedByKey.BRL?.source ?? null,
-        audSource: retainedByKey.AUD?.source ?? null,
-        cadSource: retainedByKey.CAD?.source ?? null,
+        benchmarks: {
+          USD: usdBenchmark,
+          EUR: retainedByKey.EUR,
+          CHF: retainedByKey.CHF,
+          GBP: retainedByKey.GBP,
+          JPY: retainedByKey.JPY,
+          MXN: retainedByKey.MXN,
+          BRL: retainedByKey.BRL,
+          AUD: retainedByKey.AUD,
+          CAD: retainedByKey.CAD,
+        },
       }),
     };
   }
@@ -840,35 +877,20 @@ export async function fetchTbillRate(
     itemCount: [usdMeta, eurMeta, chfMeta, gbpMeta, jpyMeta, mxnMeta, brlMeta, audMeta, cadMeta]
       .filter((entry) => entry != null)
       .length,
-    metadata: buildMetadata({
+    metadata: buildBenchmarkRunMetadata({
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
-      usdSource: usdMeta.source,
-      usdRate: usdMeta.rate,
-      usdRecordDate: usdMeta.recordDate,
-      eurSource: eurMeta?.source ?? null,
-      eurRate: eurMeta?.rate ?? null,
-      eurRecordDate: eurMeta?.recordDate ?? null,
-      chfSource: chfMeta?.source ?? null,
-      chfRate: chfMeta?.rate ?? null,
-      chfRecordDate: chfMeta?.recordDate ?? null,
-      gbpSource: gbpMeta?.source ?? null,
-      gbpRate: gbpMeta?.rate ?? null,
-      gbpRecordDate: gbpMeta?.recordDate ?? null,
-      jpySource: jpyMeta?.source ?? null,
-      jpyRate: jpyMeta?.rate ?? null,
-      jpyRecordDate: jpyMeta?.recordDate ?? null,
-      mxnSource: mxnMeta?.source ?? null,
-      mxnRate: mxnMeta?.rate ?? null,
-      mxnRecordDate: mxnMeta?.recordDate ?? null,
-      brlSource: brlMeta?.source ?? null,
-      brlRate: brlMeta?.rate ?? null,
-      brlRecordDate: brlMeta?.recordDate ?? null,
-      audSource: audMeta?.source ?? null,
-      audRate: audMeta?.rate ?? null,
-      audRecordDate: audMeta?.recordDate ?? null,
-      cadSource: cadMeta?.source ?? null,
-      cadRate: cadMeta?.rate ?? null,
-      cadRecordDate: cadMeta?.recordDate ?? null,
+      benchmarks: {
+        USD: usdMeta,
+        EUR: eurMeta,
+        CHF: chfMeta,
+        GBP: gbpMeta,
+        JPY: jpyMeta,
+        MXN: mxnMeta,
+        BRL: brlMeta,
+        AUD: audMeta,
+        CAD: cadMeta,
+      },
+      includeDetails: true,
     }),
   };
 }
