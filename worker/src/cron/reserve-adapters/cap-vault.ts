@@ -17,6 +17,7 @@ import {
   slicesFromValues,
 } from "./helpers";
 import { validateDecimals } from "./slice-math";
+import { decodeBoolWord } from "./abi-decode";
 
 const ADAPTER_KEY = "cap-vault";
 const ASSETS_SELECTOR = "0x71a97305";
@@ -56,11 +57,6 @@ interface CapVaultAssetState {
    * When true, `paused` is conservatively set to true.
    */
   pausedStatusUnavailable: boolean;
-}
-
-function decodeBool(raw: string | null): boolean | null {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  return BigInt(raw) !== 0n;
 }
 
 function decodeAddressArray(raw: string | null): string[] {
@@ -346,7 +342,7 @@ export async function fetchCapVaultReserves(
 
     const decimals = validateDecimals(decimalsRaw, `${ADAPTER_KEY}: decimals() for asset ${address}`);
     // Conservative: treat a missing/undecodable paused() response as paused.
-    const pausedDecoded = decodeBool(pausedRaw);
+    const pausedDecoded = decodeBoolWord(pausedRaw);
     const pausedStatusUnavailable = pausedDecoded == null;
     const paused = pausedDecoded ?? true;
 

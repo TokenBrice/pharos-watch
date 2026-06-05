@@ -22,7 +22,7 @@ import {
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
-import { parseEvmAddressResult } from "./evm";
+import { decodeAddressWord, decodeBoolWord } from "./abi-decode";
 
 interface ReserveProtocolDtfBasketEntry {
   address?: string;
@@ -113,11 +113,11 @@ function parseDtfRows(payload: unknown): ReserveProtocolDtfRow[] {
 }
 
 function parseAddressResult(raw: string | null, context: string): `0x${string}` {
-  const address = parseEvmAddressResult(raw as `0x${string}`);
-  if (!address || /^0x0{40}$/.test(address)) {
+  const address = decodeAddressWord(raw);
+  if (!address) {
     throw new Error(`reserve-protocol-dtf ${context} returned an invalid address`);
   }
-  return address as `0x${string}`;
+  return address.toLowerCase() as `0x${string}`;
 }
 
 function decodeDecimals(raw: bigint | null, context: string): number {
@@ -132,8 +132,7 @@ function decodeDecimals(raw: bigint | null, context: string): number {
 }
 
 function decodeBoolResult(raw: string | null): boolean | null {
-  if (typeof raw !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  return BigInt(raw) !== 0n;
+  return decodeBoolWord(raw);
 }
 
 function encodeQuoteCall(amount: bigint): `0x${string}` {

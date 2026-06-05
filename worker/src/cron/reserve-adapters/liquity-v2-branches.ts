@@ -23,6 +23,12 @@ import {
   type BranchBalanceEntry,
   type BranchBalanceParams,
 } from "./branch-balances";
+import {
+  decodeAddressWord,
+  decodeBoolWord,
+  decodeUint256Word,
+  decodeUint8Word,
+} from "./abi-decode";
 
 const ADAPTER_KEY = "liquity-v2-branches";
 const DEFAULT_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
@@ -56,32 +62,6 @@ interface LiquityV2BranchParams extends BranchBalanceParams {
 
 function readParams(config: LiveReservesConfig): LiquityV2BranchParams {
   return readBranchBalanceParams(config, ADAPTER_KEY) as LiquityV2BranchParams;
-}
-
-function parseBoolResult(raw: string | null): boolean | null {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  return BigInt(raw) !== 0n;
-}
-
-function parseAddressResult(raw: string | null): string | null {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  const address = `0x${raw.slice(-40)}`;
-  return /^0x0{40}$/.test(address) ? null : address;
-}
-
-function parseUint8Result(raw: string | null): number | null {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  const value = Number(BigInt(raw));
-  return Number.isInteger(value) && value >= 0 && value <= 255 ? value : null;
-}
-
-function parseUint256Result(raw: string | null): bigint | null {
-  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
-  try {
-    return BigInt(raw);
-  } catch {
-    return null;
-  }
 }
 
 function sumBranchDebtUsd(
@@ -125,7 +105,7 @@ async function tryAdaptErc4626ShareEntry(
     chain: input.chain,
     timeoutMs,
   });
-  const assetAddress = parseAddressResult(assetRaw);
+  const assetAddress = decodeAddressWord(assetRaw);
   if (!assetAddress) return entry;
 
   const [totalAssetsRaw, totalSupplyRaw, decimalsRaw] = await Promise.all([
@@ -168,7 +148,7 @@ async function tryAdaptErc4626ShareEntry(
   }
 
   const assetBalanceRaw = computeErc4626AssetsFromShares(entry.balanceRaw, totalAssetsRaw, totalSupplyRaw);
-  const assetDecimals = parseUint8Result(decimalsRaw) ?? entry.branch.token.decimals;
+  const assetDecimals = decodeUint8Word(decimalsRaw) ?? entry.branch.token.decimals;
   return {
     ...entry,
     balanceRaw: assetBalanceRaw,
@@ -210,7 +190,7 @@ async function fetchLiquityV2BranchBalances(
   if (multicallResults && multicallResults.length === balanceCalls.length) {
     const balances = multicallResults.map((result, index) => {
       const branch = params.branches[index]!;
-      const balanceRaw = result.success ? parseUint256Result(result.returnData) : null;
+      const balanceRaw = result.success ? decodeUint256Word(result.returnData) : null;
       return { branch, balanceRaw };
     });
     const unreadable = balances.some((entry) => entry.balanceRaw == null);
@@ -450,8 +430,8 @@ export async function fetchLiquityV2BranchReserves(
           : await probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params);
         return {
           entry,
-          debtRaw: debtResult?.success ? parseUint256Result(debtResult.returnData) : null,
-          shutDown: shutdownResult?.success ? parseBoolResult(shutdownResult.returnData) : null,
+          debtRaw: debtResult?.success ? decodeUint256Word(debtResult.returnData) : null,
+          shutDown: shutdownResult?.success ? decodeBoolWord(shutdownResult.returnData) : null,
           redemptionFeeBps: branchRedemptionFeeBps,
         };
       }),
@@ -492,7 +472,7 @@ export async function fetchLiquityV2BranchReserves(
         return {
           entry,
           debtRaw,
-          shutDown: parseBoolResult(shutDownRaw),
+          shutDown: decodeBoolWord(shutDownRaw),
           redemptionFeeBps: branchRedemptionFeeBps,
         };
       }),

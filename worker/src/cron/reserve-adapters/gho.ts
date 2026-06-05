@@ -14,6 +14,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
+import { decodeBoolWord } from "./abi-decode";
 
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
 const GET_FACILITATORS_LIST_SELECTOR = "0x1ec90f2e";
@@ -116,12 +117,6 @@ function hexWords(raw: string): string[] {
 
 function parseUintWord(word: string): bigint {
   return BigInt(`0x${word}`);
-}
-
-function decodeBool(raw: string): boolean | null {
-  const words = hexWords(raw);
-  if (words.length < 1) return null;
-  return parseUintWord(words[0]) !== 0n;
 }
 
 function decodeAddressArray(raw: string): string[] | null {
@@ -346,8 +341,8 @@ async function loadTrackedModule(
     return { module: null, warnings };
   }
 
-  const isFrozen = decodeBool(isFrozenRaw ?? "");
-  const isSeized = decodeBool(isSeizedRaw ?? "");
+  const isFrozen = decodeBoolWord(isFrozenRaw);
+  const isSeized = decodeBoolWord(isSeizedRaw);
   if (isFrozen == null || isSeized == null) {
     warnings.push(reserveDegradedWarning(
       "tracked-gsm-status-unavailable",

@@ -10,7 +10,6 @@ import {
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
-import { parseEvmAddressResult } from "./evm";
 import {
   decimalStringFromBigInt,
   fetchOnchainRawCall,
@@ -23,6 +22,7 @@ import {
 } from "./helpers";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
+import { decodeAddressWord } from "./abi-decode";
 
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
@@ -61,10 +61,8 @@ export interface ChainlinkNavData {
 }
 
 function parseAddressResult(raw: string | null): `0x${string}` | null {
-  if (typeof raw !== "string") return null;
-  const address = parseEvmAddressResult(raw as `0x${string}`);
-  if (!address || /^0x0{40}$/.test(address)) return null;
-  return address as `0x${string}`;
+  const address = decodeAddressWord(raw);
+  return address ? address.toLowerCase() as `0x${string}` : null;
 }
 
 function decodeDecimalsResult(raw: bigint | null, source: string): number {

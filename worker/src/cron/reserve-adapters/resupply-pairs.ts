@@ -11,7 +11,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
-import { parseEvmAddressResult } from "./evm";
+import { decodeAddressWord, decodeUint256Word } from "./abi-decode";
 
 interface ResupplyUnderlyingDescriptor {
   address: string;
@@ -56,11 +56,11 @@ function normalizeAddress(value: string | undefined): string | null {
 }
 
 function parseAddressResult(raw: string | null, context: string): `0x${string}` {
-  const address = parseEvmAddressResult(raw as `0x${string}`);
-  if (!address || /^0x0{40}$/.test(address)) {
+  const address = decodeAddressWord(raw);
+  if (!address) {
     throw new Error(`resupply-pairs ${context} returned an invalid address`);
   }
-  return address as `0x${string}`;
+  return address.toLowerCase() as `0x${string}`;
 }
 
 function parseConfiguredAddress(value: string, context: string): `0x${string}` {
@@ -98,10 +98,11 @@ function decodePairAccounting(raw: string | null, pairAddress: string): {
 }
 
 function decodeUint256Result(raw: string | null, context: string): bigint {
-  if (typeof raw !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(raw)) {
+  const decoded = decodeUint256Word(raw);
+  if (decoded == null) {
     throw new Error(`resupply-pairs ${context} call failed`);
   }
-  return BigInt(raw);
+  return decoded;
 }
 
 function encodeConvertToAssetsCall(shares: bigint): `0x${string}` {
