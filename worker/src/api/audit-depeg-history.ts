@@ -350,6 +350,31 @@ function toDeletedEventSummary(event: DepegRow): { id: number; symbol: string; s
   };
 }
 
+function toAuditedEvent(
+  event: DepegRow,
+  verdict: Verdict,
+  cgDeviation: {
+    cgMaxBps: number | null;
+    cgMaxSameDirectionBps?: number | null;
+    cgMaxOppositeDirectionBps?: number | null;
+  },
+): AuditedEvent {
+  const auditedEvent: Omit<AuditedEvent, "verdict"> = {
+    id: event.id,
+    symbol: event.symbol,
+    startedAt: event.started_at,
+    peakBps: event.peak_deviation_bps,
+    cgMaxBps: cgDeviation.cgMaxBps,
+  };
+  if ("cgMaxSameDirectionBps" in cgDeviation) {
+    auditedEvent.cgMaxSameDirectionBps = cgDeviation.cgMaxSameDirectionBps;
+  }
+  if ("cgMaxOppositeDirectionBps" in cgDeviation) {
+    auditedEvent.cgMaxOppositeDirectionBps = cgDeviation.cgMaxOppositeDirectionBps;
+  }
+  return { ...auditedEvent, verdict };
+}
+
 function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: number): void {
   const startDay = Math.floor(startedAt / DAY_SECONDS) * DAY_SECONDS;
   const endDay = Math.floor(endedAt / DAY_SECONDS) * DAY_SECONDS;
@@ -992,14 +1017,7 @@ export async function auditEvents(
     const geckoId = meta?.geckoId;
 
     if (!geckoId) {
-      result.auditedEvents.push({
-        id: event.id,
-        symbol: event.symbol,
-        startedAt: event.started_at,
-        peakBps: event.peak_deviation_bps,
-        cgMaxBps: null,
-        verdict: "skipped",
-      });
+      result.auditedEvents.push(toAuditedEvent(event, "skipped", { cgMaxBps: null }));
       continue;
     }
 
@@ -1027,14 +1045,7 @@ export async function auditEvents(
 
       if (!cgRes?.ok) {
         console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
-        result.auditedEvents.push({
-          id: event.id,
-          symbol: event.symbol,
-          startedAt: event.started_at,
-          peakBps: event.peak_deviation_bps,
-          cgMaxBps: null,
-          verdict: "error",
-        });
+        result.auditedEvents.push(toAuditedEvent(event, "error", { cgMaxBps: null }));
         continue;
       }
 
@@ -1063,14 +1074,7 @@ export async function auditEvents(
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", Math.floor(Date.now() / 1000)));
           invalidatingProvenanceEventIds.push(event.id);
         }
-        result.auditedEvents.push({
-          id: event.id,
-          symbol: event.symbol,
-          startedAt: event.started_at,
-          peakBps: event.peak_deviation_bps,
-          cgMaxBps: null,
-          verdict: "no_data",
-        });
+        result.auditedEvents.push(toAuditedEvent(event, "no_data", { cgMaxBps: null }));
         continue;
       }
 
@@ -1094,31 +1098,21 @@ export async function auditEvents(
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "confirmed", Math.floor(Date.now() / 1000)));
         }
-        result.auditedEvents.push({
-          id: event.id,
-          symbol: event.symbol,
-          startedAt: event.started_at,
-          peakBps: event.peak_deviation_bps,
+        result.auditedEvents.push(toAuditedEvent(event, "confirmed", {
           cgMaxBps: maxCgBps,
           cgMaxSameDirectionBps: maxSameDirectionBps,
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-          verdict: "confirmed",
-        });
+        }));
       } else if (maxOppositeDirectionBps >= falsePositiveBar) {
         if (!dryRun) {
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", Math.floor(Date.now() / 1000)));
           invalidatingProvenanceEventIds.push(event.id);
         }
-        result.auditedEvents.push({
-          id: event.id,
-          symbol: event.symbol,
-          startedAt: event.started_at,
-          peakBps: event.peak_deviation_bps,
+        result.auditedEvents.push(toAuditedEvent(event, "disputed", {
           cgMaxBps: maxCgBps,
           cgMaxSameDirectionBps: maxSameDirectionBps,
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-          verdict: "disputed",
-        });
+        }));
       } else {
         // CoinGecko data was available but did not confirm this direction.
         result.falsePositivesFound++;
@@ -1126,27 +1120,15 @@ export async function auditEvents(
           provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", Math.floor(Date.now() / 1000)));
           invalidatingProvenanceEventIds.push(event.id);
         }
-        result.auditedEvents.push({
-          id: event.id,
-          symbol: event.symbol,
-          startedAt: event.started_at,
-          peakBps: event.peak_deviation_bps,
+        result.auditedEvents.push(toAuditedEvent(event, "false_positive", {
           cgMaxBps: maxCgBps,
           cgMaxSameDirectionBps: maxSameDirectionBps,
           cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
-          verdict: "false_positive",
-        });
+        }));
       }
     } catch (err) {
       console.warn(`[audit] Error auditing ${event.symbol}:`, err);
-      result.auditedEvents.push({
-        id: event.id,
-        symbol: event.symbol,
-        startedAt: event.started_at,
-        peakBps: event.peak_deviation_bps,
-        cgMaxBps: null,
-        verdict: "error",
-      });
+      result.auditedEvents.push(toAuditedEvent(event, "error", { cgMaxBps: null }));
     }
   }
 
