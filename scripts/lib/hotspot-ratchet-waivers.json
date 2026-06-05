@@ -159,6 +159,14 @@
     "reviewAfter": "2026-08-30",
     "nextAction": "Split publication row mapping, payload validation, and projection helpers behind the existing store API."
   },
+  "worker/src/lib/redemption-backstop-live-metadata.ts": {
+    "disposition": "queued-p4",
+    "notes": "Live redemption backstop metadata surfaced as a repo-wide hotspot candidate during the final merge-gate pass. It owns adapter row interpretation and live metadata projection for multiple backstop families; keep it queued for a dedicated redemption-backstop cleanup rather than widening this release verification pass.",
+    "owner": "repo-maintenance",
+    "createdAt": "2026-06-06",
+    "reviewAfter": "2026-09-06",
+    "nextAction": "Split adapter row parsing and projection helpers behind the existing live metadata API."
+  },
   "src/app/stablecoin/[id]/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Stablecoin detail client still owns route orchestration, tab state, detail view-model wiring, and page section rendering. It is outside this audit remediation tranche and should be handled as a dedicated detail-route split.",

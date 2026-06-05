@@ -59,7 +59,6 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   KGS: "som", NGN: "₦", XOF: "CFA ",
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
-
 const USD_PRICED_PEG_CURRENCIES = new Set(["USD", "GOLD", "SILVER", "VAR", "OTHER"]);
 
 export function pegCurrencySymbol(pegCurrency: string): string {
