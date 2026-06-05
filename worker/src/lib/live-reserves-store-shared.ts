@@ -6,7 +6,9 @@ import type {
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
+  ReserveCompositionOverview,
 } from "@shared/types/live-reserves";
+export type { ReserveCompositionOverview } from "@shared/types/live-reserves";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 export const LIVE_RESERVE_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
@@ -109,46 +111,6 @@ export interface LiveReserveHistoryPruneResult {
   cutoff: number;
   compositionHistoryDeleted: number;
   attemptHistoryDeleted: number;
-}
-
-export interface ReserveCompositionOverview {
-  configuredCoins: number;
-  freshCoins: number;
-  staleCoins: number;
-  missingCoins: number;
-  degradedCoins: number;
-  errorCoins: number;
-  corruptCoins: number;
-  independentFreshEligible: number;
-  independentFreshUnverified: number;
-  staticValidatedFresh: number;
-  weakProbeFresh: number;
-  writeTimeoutUncertain: number;
-  deferredCoins: number;
-  runBudgetTruncated: boolean;
-  deferredAt: number | null;
-  nextCursorStablecoinId: string | null;
-  cursorTailState: "recording" | "incomplete" | "complete" | null;
-  cursorTailError: string | null;
-  cursorRecordedAt: number | null;
-  cursorTailCompletedAt: number | null;
-  cursorTailFailedAt: number | null;
-  runBudgetTruncationCount: number;
-  historyWriteGaps: Array<{
-    stablecoinId: string;
-    fetchedAt: number;
-    attemptId: string;
-    compositionHistoryMissing: boolean;
-    attemptHistoryMissing: boolean;
-  }>;
-  /**
-   * Coins whose adapter is classified as `independent` but whose latest source
-   * has been stuck in `degraded` or `error` with the last successful snapshot
-   * older than {@link PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC}.
-   */
-  persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }>;
-  lastSuccessAt: number | null;
-  oldestFreshAgeSec: number | null;
 }
 
 export function emptyReserveCompositionOverview(configuredCoins = 0): ReserveCompositionOverview {

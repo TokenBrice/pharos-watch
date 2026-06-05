@@ -3,6 +3,7 @@ import type { LiquidityCoverageClass } from "./market";
 import type { MintBurnCoverageStatus } from "./mint-burn";
 import type { DiscoveryCandidate } from "./discovery";
 import type { PriceSourceHealth } from "./pricing-source-health";
+import { ReserveCompositionOverviewSchema, type ReserveCompositionOverview } from "./live-reserves";
 
 export type { DiscoveryCandidate, DiscoveryCandidatesResponse } from "./discovery";
 export type {
@@ -848,52 +849,17 @@ export interface StatusResponse {
   d1Usage: D1UsageSummary | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
-  reserveComposition: {
-    configuredCoins: number;
-    freshCoins: number;
-    staleCoins: number;
-    missingCoins: number;
-    degradedCoins: number;
-    errorCoins: number;
-    corruptCoins: number;
-    independentFreshEligible: number;
-    independentFreshUnverified: number;
-    staticValidatedFresh: number;
-    weakProbeFresh: number;
-    writeTimeoutUncertain: number;
-    deferredCoins: number;
-    runBudgetTruncated: boolean;
-    deferredAt: number | null;
-    nextCursorStablecoinId: string | null;
-    cursorTailState: "recording" | "incomplete" | "complete" | null;
-    cursorTailError: string | null;
-    cursorRecordedAt: number | null;
-    cursorTailCompletedAt: number | null;
-    cursorTailFailedAt: number | null;
-    runBudgetTruncationCount: number;
-    historyWriteGaps: Array<{
-      stablecoinId: string;
-      fetchedAt: number;
-      attemptId: string;
-      compositionHistoryMissing: boolean;
-      attemptHistoryMissing: boolean;
-    }>;
-    /**
-     * Coins whose adapter is classified as independent evidence but whose
-     * latest source has been stuck in degraded/error with the last
-     * successful snapshot older than 14 days. Sorted by age descending.
-     */
-    persistentlyStaleIndependentCoins: Array<{ stablecoinId: string; ageSec: number }>;
-    lastSuccessAt: number | null;
-    oldestFreshAgeSec: number | null;
-    status: "healthy" | "degraded" | "stale";
-    freshCoverageRatio: number;
-    authoritativeFreshCoverageRatio: number;
-  };
+  reserveComposition: StatusReserveComposition;
   cacheBlobSizes?: Record<string, number>;
   reserveDrift?: ReserveDriftEntry[];
   classificationWarnings?: ClassificationWarning[];
 }
+
+export type StatusReserveComposition = ReserveCompositionOverview & {
+  status: "healthy" | "degraded" | "stale";
+  freshCoverageRatio: number;
+  authoritativeFreshCoverageRatio: number;
+};
 
 export interface StatusHistoryResponse {
   timestamp: number;
@@ -980,48 +946,11 @@ const StatusTransitionSchema = z.object({
   at: z.number(),
 });
 
-const ReserveCompositionHistoryWriteGapSchema = z.object({
-  stablecoinId: z.string(),
-  fetchedAt: z.number(),
-  attemptId: z.string(),
-  compositionHistoryMissing: z.boolean(),
-  attemptHistoryMissing: z.boolean(),
-});
-
-const ReserveCompositionOverviewSchema = z.object({
-  configuredCoins: z.number(),
-  freshCoins: z.number(),
-  staleCoins: z.number(),
-  missingCoins: z.number(),
-  degradedCoins: z.number(),
-  errorCoins: z.number(),
-  corruptCoins: z.number(),
-  independentFreshEligible: z.number(),
-  independentFreshUnverified: z.number(),
-  staticValidatedFresh: z.number(),
-  weakProbeFresh: z.number(),
-  writeTimeoutUncertain: z.number(),
-  deferredCoins: z.number(),
-  runBudgetTruncated: z.boolean(),
-  deferredAt: z.number().nullable(),
-  nextCursorStablecoinId: z.string().nullable(),
-  cursorTailState: z.enum(["recording", "incomplete", "complete"]).nullable(),
-  cursorTailError: z.string().nullable(),
-  cursorRecordedAt: z.number().nullable(),
-  cursorTailCompletedAt: z.number().nullable(),
-  cursorTailFailedAt: z.number().nullable(),
-  runBudgetTruncationCount: z.number(),
-  historyWriteGaps: z.array(ReserveCompositionHistoryWriteGapSchema),
-  persistentlyStaleIndependentCoins: z.array(z.object({
-    stablecoinId: z.string(),
-    ageSec: z.number(),
-  })),
-  lastSuccessAt: z.number().nullable(),
-  oldestFreshAgeSec: z.number().nullable(),
+const StatusReserveCompositionSchema = ReserveCompositionOverviewSchema.extend({
   status: z.enum(["healthy", "degraded", "stale"]),
   freshCoverageRatio: z.number(),
   authoritativeFreshCoverageRatio: z.number(),
-});
+}) satisfies z.ZodType<StatusReserveComposition>;
 
 export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   timestamp: z.number(),
@@ -1057,7 +986,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z.object({
   d1Usage: StatusJsonObjectSchema.nullable(),
   discoveryCandidates: z.array(StatusJsonObjectSchema).nullable(),
   mintBurnReconciliation: StatusJsonObjectSchema.nullable(),
-  reserveComposition: ReserveCompositionOverviewSchema,
+  reserveComposition: StatusReserveCompositionSchema,
   cacheBlobSizes: z.record(z.string(), z.number()).optional(),
   reserveDrift: z.array(StatusJsonObjectSchema).optional(),
   classificationWarnings: z.array(StatusJsonObjectSchema).optional(),
@@ -1070,7 +999,7 @@ export const StatusHistoryResponseSchema: z.ZodType<StatusHistoryResponse> = z.o
   probe: StatusProbeSummarySchema,
   discrepancy: StatusDiscrepancySchema,
   transitions: z.array(StatusTransitionSchema),
-  reserveComposition: ReserveCompositionOverviewSchema.nullable(),
+  reserveComposition: StatusReserveCompositionSchema.nullable(),
 }).transform((value): StatusHistoryResponse => value as unknown as StatusHistoryResponse);
 
 export interface PublicStatusTransition {
