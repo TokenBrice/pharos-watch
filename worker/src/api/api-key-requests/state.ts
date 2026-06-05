@@ -393,24 +393,56 @@ export async function markRequestBlockedAndReleaseClaim(
   }
 }
 
+export interface IssuedKeyFailureCompensation {
+  keyDeactivated: boolean;
+  requestBlocked: boolean;
+}
+
+async function markIssuanceFailureBlockedAndReleaseClaim(
+  db: ApiKeyRequestDb,
+  row: ApiKeyRequestRow,
+  nowSec: number,
+): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE api_key_requests
+     SET status = 'blocked',
+       verification_token_hash = NULL,
+       issuance_locked_at = NULL,
+       updated_at = ?
+     WHERE request_id = ?
+       AND status IN ('pending_verification', 'issued')`,
+  )
+    .bind(nowSec, row.request_id)
+    .run();
+  const blocked = (result.meta?.changes ?? 0) > 0;
+  if (blocked) {
+    await releaseEmailClaim(db, row.email_hash, row.request_id, nowSec);
+  }
+  return blocked;
+}
+
 export async function compensateIssuedKeyFailure(
   db: ApiKeyRequestDb,
   apiKeyId: number,
   keyPrefix: string,
   row: ApiKeyRequestRow,
   nowSec: number,
-): Promise<void> {
+): Promise<IssuedKeyFailureCompensation> {
+  let keyDeactivated = false;
+  let requestBlocked = false;
   try {
-    await db.prepare("UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ?")
+    const result = await db.prepare("UPDATE api_keys SET is_active = 0, updated_at = ? WHERE id = ?")
       .bind(nowSec, apiKeyId)
       .run();
+    keyDeactivated = (result.meta?.changes ?? 0) > 0;
     clearApiKeyCache(keyPrefix);
   } catch (error) {
     console.error("[api-key-requests] failed to deactivate key during compensation:", error);
   }
   try {
-    await markRequestBlockedAndReleaseClaim(db, row, nowSec);
+    requestBlocked = await markIssuanceFailureBlockedAndReleaseClaim(db, row, nowSec);
   } catch (error) {
     console.error("[api-key-requests] failed to mark request blocked during compensation:", error);
   }
+  return { keyDeactivated, requestBlocked };
 }

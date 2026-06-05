@@ -337,21 +337,30 @@ export async function handleApiKeyRequestVerify(
         riskScore: row.risk_score,
         riskReasons: parseJsonStringArray(row.risk_reasons_json),
       }, nowSec, "self-serve");
+      const requestIssued = await finalizeRequestIssued(db, row.request_id, tokenHash, created.key.id, nowSec);
+      if (!requestIssued) {
+        throw new Error("self-serve request was not pending during issuance finalize");
+      }
       const activated = await activateTrustedApiKey(db, created.key.id, created.key.keyPrefix, nowSec);
       if (activated instanceof Response) {
         throw new Error("self-serve API key activation failed");
       }
       issuedKey = activated.key;
-      const requestIssued = await finalizeRequestIssued(db, row.request_id, tokenHash, created.key.id, nowSec);
-      if (!requestIssued) {
-        throw new Error("self-serve request was not pending during issuance finalize");
-      }
     } catch (error) {
       console.error("[api-key-requests] issuance consistency write failed:", error);
       await releaseIssuanceIpCap(db, row.ip_hash, nowSec).catch((releaseError) => {
         console.error("[api-key-requests] failed to release issuance IP cap after consistency failure:", releaseError);
       });
-      await compensateIssuedKeyFailure(db, created.key.id, created.key.keyPrefix, row, nowSec);
+      const compensation = await compensateIssuedKeyFailure(db, created.key.id, created.key.keyPrefix, row, nowSec);
+      if (!compensation.keyDeactivated || !compensation.requestBlocked) {
+        console.error("[api-key-requests] issuance compensation incomplete:", {
+          failureClass: "self_serve_issuance_compensation_incomplete",
+          requestId: row.request_id,
+          apiKeyId: created.key.id,
+          keyDeactivated: compensation.keyDeactivated,
+          requestBlocked: compensation.requestBlocked,
+        });
+      }
       return selfServeUnavailable();
     }
 

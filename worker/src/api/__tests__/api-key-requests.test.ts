@@ -16,13 +16,14 @@ interface SqliteD1Statement {
   run(): Promise<{ meta: { changes: number } }>;
 }
 
-function createSqliteD1(sqlite: DatabaseSync): D1Database {
+function createSqliteD1(sqlite: DatabaseSync, runSqlLog: string[] = []): D1Database {
   function makeStatement(sql: string, values: unknown[] = []): SqliteD1Statement {
     return {
       bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
       first: async <T>() => (sqlite.prepare(sql).get(...(values as never[])) ?? null) as T | null,
       all: async <T>() => ({ results: sqlite.prepare(sql).all(...(values as never[])) as T[] }),
       run: async () => {
+        runSqlLog.push(sql);
         const result = sqlite.prepare(sql).run(...(values as never[]));
         return { meta: { changes: Number(result.changes) } };
       },
@@ -330,6 +331,69 @@ describe("api key self-serve request handlers", () => {
     });
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "issued" });
     expect(sqlite.prepare("SELECT actor FROM api_key_audit_log").get()).toEqual({ actor: "self-serve" });
+  });
+
+  it("finalizes the self-serve request before activating the returned key", async () => {
+    const runSqlLog: string[] = [];
+    db = createSqliteD1(sqlite, runSqlLog);
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+
+    const response = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+
+    expect(response.status).toBe(201);
+    const requestFinalizeIndex = runSqlLog.findIndex((sql) =>
+      sql.includes("UPDATE api_key_requests")
+      && sql.includes("SET status = 'issued'")
+    );
+    const keyActivationIndex = runSqlLog.findIndex((sql) =>
+      sql.includes("UPDATE api_keys SET is_active = 1")
+    );
+    expect(requestFinalizeIndex).toBeGreaterThan(-1);
+    expect(keyActivationIndex).toBeGreaterThan(-1);
+    expect(keyActivationIndex).toBeGreaterThan(requestFinalizeIndex);
+  });
+
+  it("fails closed without an active orphan when final activation fails", async () => {
+    await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
+    const token = extractVerificationToken(sentEmails[0]);
+    sqlite.exec(`
+      CREATE TRIGGER deny_self_serve_activation
+      BEFORE UPDATE OF is_active ON api_keys
+      WHEN NEW.is_active = 1
+      BEGIN
+        SELECT RAISE(IGNORE);
+      END;
+    `);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await handleApiKeyRequestVerify(
+      db,
+      postRequest("/api/api-key-requests/verify", { token }),
+      env(),
+      "api-key-pepper",
+    );
+    const body = await response.json() as { token?: string };
+
+    expect(response.status).toBe(503);
+    expect(body.token).toBeUndefined();
+    expect(sqlite.prepare("SELECT is_active FROM api_keys").get()).toEqual({ is_active: 0 });
+    expect(sqlite.prepare("SELECT status, verification_token_hash, issuance_locked_at FROM api_key_requests").get()).toEqual({
+      status: "blocked",
+      verification_token_hash: null,
+      issuance_locked_at: null,
+    });
+    expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({ status: "released" });
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[api-key-requests] issuance consistency write failed:",
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
   });
 
   it("returns a non-enumerating pending response for duplicate pending emails", async () => {
