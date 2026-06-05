@@ -3,6 +3,7 @@ import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getConditionBand } from "../lib/stability-index";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
+import { round1 } from "@shared/lib/math";
 
 export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
@@ -53,7 +54,7 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
     };
   }
 
-  const score = Math.round(row.avg_score * 10) / 10;
+  const score = round1(row.avg_score);
   const band = getConditionBand(score);
   const components = {
     severity: Math.round((row.avg_severity ?? 0) * 100) / 100,

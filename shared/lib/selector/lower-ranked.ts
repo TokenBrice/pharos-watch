@@ -13,6 +13,7 @@
  * Binding: `agents/impl-plan-drafts/02-engine.md` §7.
  */
 import { PROFILE_DEFINING_EXCLUSIONS } from "./exclusions";
+import { round1 } from "../math";
 import { getLowerRankedText } from "./what-to-watch-templates";
 import type {
   ExclusionRecord,
@@ -140,7 +141,7 @@ export function selectLowerRanked(
       slot: "A",
       reasonKey: slotA.record.reason,
       failedComponent: null,
-      hypotheticalScore: Math.round(slotA.hypotheticalScore * 10) / 10,
+      hypotheticalScore: round1(slotA.hypotheticalScore),
     };
     out.push({ ...entry, ...getLowerRankedText(entry) });
   }
@@ -193,7 +194,7 @@ export function selectLowerRanked(
       slot: "B",
       reasonKey,
       failedComponent: dim,
-      hypotheticalScore: Math.round(candidate.score * 10) / 10,
+      hypotheticalScore: round1(candidate.score),
     };
     out.push({ ...entry, ...getLowerRankedText(entry) });
     break;

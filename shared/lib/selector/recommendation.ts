@@ -1,6 +1,6 @@
 import type { BluechipGrade, ReportCardGrade } from "../../types";
 import { selectLowestSubDimension } from "./lowest-sub-dimension";
-import { round1 } from "./math";
+import { round1 } from "../math";
 import type { ScoredEntry } from "./scoring";
 import type {
   ContextKey,

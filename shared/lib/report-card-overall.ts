@@ -12,6 +12,7 @@ import {
 } from "./report-card-core";
 import { activeDepegCapScore } from "./report-card-active-depeg";
 import { scoreDependencyRisk } from "./report-card-dependency";
+import { round1 } from "./math";
 
 interface OverallComputation {
   grade: ReportCardGrade;
@@ -45,7 +46,7 @@ export function computeOverallGrade(
   }
 
   let score = weightedSum / ratedWeight;
-  const baseScore = Math.round(score * 10) / 10;
+  const baseScore = round1(score);
 
   const pegScore = dimensions.pegStability.score;
   if (pegScore !== null) {

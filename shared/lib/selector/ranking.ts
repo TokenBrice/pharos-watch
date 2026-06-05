@@ -5,7 +5,7 @@ import type {
   SelectorProfile,
   SelectorRankRobustness,
 } from "./types";
-import { round1 } from "./math";
+import { round1 } from "../math";
 
 export function dedupVariants(
   entries: ScoredEntry[],

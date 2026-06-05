@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clamp, clampScore } from "../math";
+import { clamp, clampScore, round1 } from "../math";
 
 describe("clamp", () => {
   it("returns value when within range", () => {
@@ -30,5 +30,12 @@ describe("clampScore", () => {
     expect(clampScore(-1)).toBe(0);
     expect(clampScore(42)).toBe(42);
     expect(clampScore(101)).toBe(100);
+  });
+});
+
+describe("round1", () => {
+  it("rounds to one decimal", () => {
+    expect(round1(72.456)).toBe(72.5);
+    expect(round1(72.44)).toBe(72.4);
   });
 });

@@ -12,6 +12,7 @@ import type {
   SelectorProfile,
   WeightKey,
 } from "./types";
+import { round1 } from "../math";
 import { WEIGHT_VECTORS } from "./weights";
 import { yieldVariance as normYieldVariance, sourceRiskInverted } from "./normalization";
 
@@ -174,7 +175,7 @@ export function selectLowestSubDimension(
 
   return {
     key: lowestKey,
-    score: Math.round(lowestVal * 10) / 10,
+    score: round1(lowestVal),
     contextKeys: deriveContextKeys(row),
   };
 }

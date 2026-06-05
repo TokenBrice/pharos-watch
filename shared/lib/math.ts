@@ -9,3 +9,8 @@ export function clamp(value: number, min: number, max: number): number {
 export function clampScore(value: number): number {
   return clamp(value, 0, 100);
 }
+
+/** Round to one decimal place. */
+export function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}

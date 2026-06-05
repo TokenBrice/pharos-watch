@@ -1,4 +1,4 @@
-import { round1 } from "./math";
+import { round1 } from "../math";
 import type {
   ExclusionRecord,
   ExclusionReason,

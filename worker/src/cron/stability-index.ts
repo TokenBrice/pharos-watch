@@ -2,6 +2,7 @@ import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
+import { round1 } from "@shared/lib/math";
 import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
@@ -193,7 +194,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       symbol: symbolById.get(coinId) ?? coinId,
       bps: worstBps,
       mcapUsd,
-      ageDays: Math.round(ageDays * 10) / 10,
+      ageDays: round1(ageDays),
       factor: Math.round(getDepreciationFactor(ageDays) * 100) / 100,
     });
   }
