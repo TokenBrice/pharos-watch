@@ -135,6 +135,7 @@ async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Pr
     aud: accessConfig.aud,
     teamDomain: accessConfig.teamDomain,
     expectedType: "app",
+    expectedSubject: "user",
   });
   return isValid ? null : jsonError(401, "Unauthorized");
 }

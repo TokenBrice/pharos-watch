@@ -10,6 +10,7 @@ export interface JwtVerifyOptions {
   aud: string;
   teamDomain: string;
   expectedType?: "app" | "org";
+  expectedSubject?: "user";
 }
 
 interface JwksKey {
@@ -181,6 +182,17 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
   const expectedIssuer = `https://${teamDomain}.cloudflareaccess.com`;
   if (payload.iss !== expectedIssuer) return false;
   if (options.expectedType && payload.type !== options.expectedType) return false;
+  if (
+    options.expectedSubject === "user" &&
+    (
+      typeof payload.email !== "string" ||
+      payload.email.trim().length === 0 ||
+      typeof payload.sub !== "string" ||
+      payload.sub.trim().length === 0
+    )
+  ) {
+    return false;
+  }
 
   let jwks = await fetchJwks(teamDomain);
   if (!jwks) return false;

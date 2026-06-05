@@ -240,6 +240,25 @@ describe("verifyAccessJwt", () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it("rejects a service-token subject when a user subject is required", async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const { token } = makeJwtParts(validHeader(), validClaims({
+        type: "app",
+        common_name: "service-token.access",
+        sub: "",
+      }));
+
+      expect(await verifyAccessJwt({
+        token,
+        aud: AUD,
+        teamDomain: TEAM_DOMAIN,
+        expectedType: "app",
+        expectedSubject: "user",
+      })).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("accepts token with audience as array containing correct aud", async () => {
       // Claims pass, but signature verification will fail — that's OK,
       // we're testing that the claim check for array audience works.
@@ -273,6 +292,22 @@ describe("verifyAccessJwt", () => {
       );
 
       await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).resolves.toBe(true);
+    });
+
+    it("accepts a valid signed user Access JWT when a user subject is required", async () => {
+      const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })),
+      );
+
+      await expect(verifyAccessJwt({
+        token,
+        aud: AUD,
+        teamDomain: TEAM_DOMAIN,
+        expectedType: "app",
+        expectedSubject: "user",
+      })).resolves.toBe(true);
     });
   });
 
