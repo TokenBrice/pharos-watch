@@ -68,6 +68,19 @@ function logExpiredPendingCleanupRows(rows: readonly ExpiredPendingRow[], nowSec
   }
 }
 
+function logExpiredPendingDeadLetterBypass(rows: readonly ExpiredPendingRow[]): void {
+  logTelegramEvent({
+    level: "error",
+    message: "expired pending Telegram alerts removed without dead-letter copy after dead-letter write failure",
+    action: "cleanup-expired-pending-dead-letter-bypass",
+    module: "telegram-pending-cleanup",
+    reason: "ttl_expired",
+    rowCount: rows.length,
+    affectedChatCount: new Set(rows.map((row) => row.chat_id)).size,
+    dedupeKeyCount: rows.filter((row) => row.dedupe_key).length,
+  });
+}
+
 export async function countPendingAlertsForAdmin(
   db: D1Database,
   filter: { chatId: string } | { olderThanCutoffSec: number },
@@ -174,7 +187,7 @@ export async function cleanupExpiredPendingAlerts(
   if (rows.length > 0) {
     const deadLettered = await deadLetterTerminalPendingRows(db, rows, nowSec, "ttl_expired");
     if (!deadLettered) {
-      return 0;
+      logExpiredPendingDeadLetterBypass(rows);
     }
     await recordTelegramAlertTargetStatuses(
       db,

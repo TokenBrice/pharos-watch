@@ -2040,13 +2040,16 @@ describe("loadChatsInBackoff", () => {
 
 describe("cleanupExpiredPendingAlerts", () => {
   let infoSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
     infoSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("deletes alerts older than PENDING_TTL_SEC", async () => {
@@ -2194,7 +2197,7 @@ describe("cleanupExpiredPendingAlerts", () => {
     expect(await cleanupExpiredPendingAlerts(db, 5000)).toBe(0);
   });
 
-  it("fails closed when expired alerts cannot be dead-lettered", async () => {
+  it("deletes expired alerts with an error log when dead-lettering fails", async () => {
     const nowSec = 5000;
     const db = mockD1([
       {
@@ -2214,11 +2217,26 @@ describe("cleanupExpiredPendingAlerts", () => {
         }],
       },
       { match: "INSERT INTO telegram_alert_dead_letters", rows: [], throwError: new Error("D1 write failed") },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 1 } },
     ]);
 
-    expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(0);
+    expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(1);
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("DELETE FROM telegram_pending_alerts")
-    )).toBe(false);
+    )).toBe(true);
+    const errorRecords = parseLogRecords(errorSpy);
+    expect(errorRecords).toContainEqual(
+      expect.objectContaining({
+        scope: "telegram",
+        level: "error",
+        module: "telegram-pending-cleanup",
+        action: "cleanup-expired-pending-dead-letter-bypass",
+        reason: "ttl_expired",
+        rowCount: 1,
+        affectedChatCount: 1,
+        dedupeKeyCount: 1,
+      }),
+    );
   });
 });
