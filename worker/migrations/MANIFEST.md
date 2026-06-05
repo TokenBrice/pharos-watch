@@ -89,6 +89,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0143     | `0143_depeg_resolver_readiness_lock_policy.sql`          | Add nullable DDR readiness/backstop lock metadata columns and public-prediction guard checks                                                     |
 | 0144     | `0144_worker_hot_query_indexes_and_stress_latest.sql`    | Add stress-signals latest-row materialization plus hot-query indexes for mint/burn, yield, and depeg Worker paths                                |
 | 0145     | `0145_apxusd_depeg_reopen_repair.sql`                    | Reopen the APXUSD live depeg row closed by a bad near-peg soft consensus while high-TVL DEX evidence still showed the depeg                      |
+| 0146     | `0146_apxusd_ddrr_snapshot_repair.sql`                   | Reapply the guarded APXUSD reopen repair and invalidate the stale DDRR cache row that scored the still-open incident as recovered                 |
 
 ## Retired Individual Migrations
 
