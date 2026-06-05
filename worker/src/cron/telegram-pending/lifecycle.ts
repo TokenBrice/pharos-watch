@@ -54,6 +54,25 @@ export async function registerSubscriberBlockAndShouldDisable(
   }
 }
 
+export interface BlockedSubscriberCascadeResult {
+  disabled: boolean;
+  failed: boolean;
+}
+
+export async function registerSubscriberBlockAndMaybeDisable(
+  db: D1Database,
+  chatId: string,
+  nowSec: number,
+): Promise<BlockedSubscriberCascadeResult> {
+  const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, chatId, nowSec);
+  if (!shouldDisable) return { disabled: false, failed: false };
+
+  if (await disableBlockedSubscriber(db, chatId)) {
+    return { disabled: true, failed: false };
+  }
+  return { disabled: false, failed: true };
+}
+
 /** Reset the consecutive-block counter on any successful send. */
 export async function resetSubscriberBlockCount(db: D1Database, chatId: string): Promise<void> {
   try {

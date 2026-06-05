@@ -25,8 +25,7 @@ import {
   PENDING_DELETE_CHUNK_SIZE,
 } from "./dead-letter";
 import {
-  disableBlockedSubscriber,
-  registerSubscriberBlockAndShouldDisable,
+  registerSubscriberBlockAndMaybeDisable,
   resetSubscriberBlockCount,
 } from "./lifecycle";
 import {
@@ -62,6 +61,25 @@ function createPendingClaimOwner(): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cryptoObj?.randomUUID) return `pending-${cryptoObj.randomUUID()}`;
   return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function appendPendingTargetStatus(
+  targetStatusUpdates: TelegramAlertTargetStatusUpdate[],
+  row: Pick<PendingAlertRow, "dedupe_key"> | undefined,
+  status: TelegramAlertTargetStatusUpdate["status"],
+  at: number,
+  errorClass?: string | null,
+): void {
+  if (!row?.dedupe_key) return;
+  const update: TelegramAlertTargetStatusUpdate = {
+    targetKey: row.dedupe_key,
+    status,
+    at,
+  };
+  if (errorClass !== undefined) {
+    update.errorClass = errorClass;
+  }
+  targetStatusUpdates.push(update);
 }
 
 async function selectPendingClaimCandidateIds(
@@ -343,9 +361,7 @@ export async function drainPendingQueue(
       if (!isPendingRowSnoozed(row, nowSec)) return true;
       deferred++;
       deferUpdates.push({ id: row.id, notBeforeAt: Math.max(row.alert_snooze_until_ts ?? 0, nowSec + DEFAULT_RETRY_DELAY_SEC) });
-      if (row.dedupe_key) {
-        targetStatusUpdates.push({ targetKey: row.dedupe_key, status: "queued", at: nowSec });
-      }
+      appendPendingTargetStatus(targetStatusUpdates, row, "queued", nowSec);
       completedIds.add(row.id);
       return false;
     });
@@ -370,9 +386,7 @@ export async function drainPendingQueue(
         sent++;
         sentIdsToDelete.push(result.id);
         const pendingRow = pendingById.get(result.id);
-        if (pendingRow?.dedupe_key) {
-          targetStatusUpdates.push({ targetKey: pendingRow.dedupe_key, status: "sent", at: nowSec });
-        }
+        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "sent", nowSec);
         completedIds.add(result.id);
         if (!chatsResetThisLoop.has(result.chatId)) {
           chatsResetThisLoop.add(result.chatId);
@@ -383,24 +397,15 @@ export async function drainPendingQueue(
         blocked++;
         const pendingRow = pendingById.get(result.id);
         if (pendingRow) blockedRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-        if (pendingRow?.dedupe_key) {
-          targetStatusUpdates.push({
-            targetKey: pendingRow.dedupe_key,
-            status: "failed",
-            at: nowSec,
-            errorClass: result.errorClass ?? "blocked",
-          });
-        }
+        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "failed", nowSec, result.errorClass ?? "blocked");
         completedIds.add(result.id);
         if (!blockedChatsThisLoop.has(result.chatId)) {
           blockedChatsThisLoop.add(result.chatId);
-          const shouldDisable = await registerSubscriberBlockAndShouldDisable(db, result.chatId, nowSec);
-          if (shouldDisable) {
-            if (await disableBlockedSubscriber(db, result.chatId)) {
-              blockedCleanedUp++;
-            } else {
-              blockedCleanupFailed++;
-            }
+          const blockedCascade = await registerSubscriberBlockAndMaybeDisable(db, result.chatId, nowSec);
+          if (blockedCascade.disabled) {
+            blockedCleanedUp++;
+          } else if (blockedCascade.failed) {
+            blockedCleanupFailed++;
           }
         }
       } else if (result.retryable && result.attempts < PENDING_MAX_ATTEMPTS) {
@@ -418,14 +423,7 @@ export async function drainPendingQueue(
             : nowSec + pendingRetryDelaySec(result.attempts, result.retryAfterSec),
         });
         const pendingRow = pendingById.get(result.id);
-        if (pendingRow?.dedupe_key) {
-          targetStatusUpdates.push({
-            targetKey: pendingRow.dedupe_key,
-            status: "queued",
-            at: nowSec,
-            errorClass: result.errorClass ?? null,
-          });
-        }
+        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "queued", nowSec, result.errorClass ?? null);
         completedIds.add(result.id);
         if (result.errorClass === "rate_limit") {
           rateLimited = true;
@@ -443,14 +441,7 @@ export async function drainPendingQueue(
         droppedMaxAttemptsFallback++;
         const pendingRow = pendingById.get(result.id);
         if (pendingRow) maxAttemptRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-        if (pendingRow?.dedupe_key) {
-          targetStatusUpdates.push({
-            targetKey: pendingRow.dedupe_key,
-            status: "failed",
-            at: nowSec,
-            errorClass: result.errorClass ?? "max_attempts",
-          });
-        }
+        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "failed", nowSec, result.errorClass ?? "max_attempts");
         completedIds.add(result.id);
       } else {
         deliveryDiagnostics.push({ chatId: result.chatId, ok: false, errorClass: result.errorClass });
@@ -459,14 +450,7 @@ export async function drainPendingQueue(
         droppedPermanentFailure++;
         const pendingRow = pendingById.get(result.id);
         if (pendingRow) permanentRowsToDelete.push({ ...pendingRow, last_error_class: result.errorClass ?? pendingRow.last_error_class });
-        if (pendingRow?.dedupe_key) {
-          targetStatusUpdates.push({
-            targetKey: pendingRow.dedupe_key,
-            status: "failed",
-            at: nowSec,
-            errorClass: result.errorClass ?? "permanent_failure",
-          });
-        }
+        appendPendingTargetStatus(targetStatusUpdates, pendingRow, "failed", nowSec, result.errorClass ?? "permanent_failure");
         completedIds.add(result.id);
       }
     }
