@@ -1,4 +1,4 @@
-import { buildInClause, chunkArray } from "./db";
+import { runChunkedInFilter } from "./db";
 import { assertNonEmpty, assertOptionalHash, assertPositiveInteger } from "./depeg-resolver-store-validators";
 
 export type DdrPredictionErratumReason =
@@ -93,12 +93,13 @@ export async function appendPredictionErratum(
   assertOptionalHash(input.replacementRowHash, "replacementRowHash");
   assertOptionalHash(input.rowHashBefore, "rowHashBefore");
 
-  await db
+  const row = await db
     .prepare(
       `INSERT INTO depeg_resolver_prediction_errata
        (public_prediction_id, incident_key, event_id, assessment_id, reason, operator_note,
         replacement_assessment_id, replacement_row_hash, row_hash_before, created_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       RETURNING *`,
     )
     .bind(
       input.publicPredictionId,
@@ -110,31 +111,6 @@ export async function appendPredictionErratum(
       input.replacementAssessmentId ?? null,
       input.replacementRowHash ?? null,
       input.rowHashBefore ?? null,
-      input.createdAt,
-      input.createdBy,
-    )
-    .run();
-
-  const row = await db
-    .prepare(
-      `SELECT *
-       FROM depeg_resolver_prediction_errata
-       WHERE public_prediction_id = ?
-         AND incident_key = ?
-         AND event_id = ?
-         AND assessment_id = ?
-         AND reason = ?
-         AND created_at = ?
-         AND created_by = ?
-       ORDER BY id DESC
-       LIMIT 1`,
-    )
-    .bind(
-      input.publicPredictionId,
-      input.incidentKey,
-      input.eventId,
-      input.assessmentId,
-      input.reason,
       input.createdAt,
       input.createdBy,
     )
@@ -163,28 +139,31 @@ export async function loadPredictionErrata(
 
   if (filters.publicPredictionIds) {
     if (filters.publicPredictionIds.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.publicPredictionIds)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE public_prediction_id IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      [...new Set(filters.publicPredictionIds)],
+      (inClauseSql) => `WHERE public_prediction_id IN (${inClauseSql})`,
+      query,
+    );
     return [...byId.values()];
   }
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.incidentKeys)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE incident_key IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      [...new Set(filters.incidentKeys)],
+      (inClauseSql) => `WHERE incident_key IN (${inClauseSql})`,
+      query,
+    );
     return [...byId.values()];
   }
 
   if (filters.eventIds) {
     if (filters.eventIds.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.eventIds)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE event_id IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      [...new Set(filters.eventIds)],
+      (inClauseSql) => `WHERE event_id IN (${inClauseSql})`,
+      query,
+    );
     return [...byId.values()];
   }
 

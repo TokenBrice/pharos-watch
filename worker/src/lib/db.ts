@@ -1,16 +1,12 @@
 import { D1_BATCH_SIZE } from "./constants";
+import { chunkArray as chunkValues } from "./collections";
 import { runWithOverloadRetry } from "./cron-lease";
 
 export const D1_MAX_BOUND_PARAMETERS = 100;
 export const D1_SAFE_IN_CLAUSE_BIND_LIMIT = 90;
 
 export function chunkArray<T>(values: readonly T[], chunkSize: number = D1_SAFE_IN_CLAUSE_BIND_LIMIT): T[][] {
-  if (chunkSize <= 0) throw new Error("chunkArray: chunkSize must be positive");
-  const chunks: T[][] = [];
-  for (let index = 0; index < values.length; index += chunkSize) {
-    chunks.push(values.slice(index, index + chunkSize));
-  }
-  return chunks;
+  return chunkValues(values, chunkSize);
 }
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
@@ -58,6 +54,17 @@ export function buildInClause(values: readonly unknown[]): { sql: string; binds:
     sql: new Array(values.length).fill("?").join(","),
     binds: [...values],
   };
+}
+
+export async function runChunkedInFilter<T>(
+  values: readonly T[],
+  buildSql: (inClauseSql: string) => string,
+  runQuery: (whereSql: string, binds: unknown[]) => Promise<void>,
+): Promise<void> {
+  for (const chunk of chunkArray(values)) {
+    const clause = buildInClause(chunk);
+    await runQuery(buildSql(clause.sql), clause.binds);
+  }
 }
 
 export function normalizeBlacklistSyncStateKey(configKey: string): string {

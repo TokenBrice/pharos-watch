@@ -1,6 +1,6 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
-import { buildInClause, chunkArray } from "./db";
+import { runChunkedInFilter } from "./db";
 import type { DdrAssessmentCheckpoint } from "./depeg-resolver-assessment-store";
 import type { DdrIncidentDirection, DdrLockHealthStatus, DdrLockTrigger } from "./depeg-resolver-incident-store";
 import {
@@ -670,28 +670,31 @@ export async function loadSealedPublicPredictions(
 
   if (filters.publicPredictionIds) {
     if (filters.publicPredictionIds.length === 0) return [];
-    for (const chunk of chunkArray(normalizeIdSet(filters.publicPredictionIds))) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE id IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      normalizeIdSet(filters.publicPredictionIds),
+      (inClauseSql) => `WHERE id IN (${inClauseSql})`,
+      query,
+    );
     return rows;
   }
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.incidentKeys)])) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE incident_key IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      [...new Set(filters.incidentKeys)],
+      (inClauseSql) => `WHERE incident_key IN (${inClauseSql})`,
+      query,
+    );
     return rows;
   }
 
   if (filters.eventIds) {
     if (filters.eventIds.length === 0) return [];
-    for (const chunk of chunkArray(normalizeIdSet(filters.eventIds))) {
-      const clause = buildInClause(chunk);
-      await query(`WHERE event_id IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      normalizeIdSet(filters.eventIds),
+      (inClauseSql) => `WHERE event_id IN (${inClauseSql})`,
+      query,
+    );
     return rows;
   }
 
@@ -913,28 +916,31 @@ export async function loadFirstPublicationMembership(
 
   if (filters.publicPredictionIds) {
     if (filters.publicPredictionIds.length === 0) return [];
-    for (const chunk of chunkArray(normalizeIdSet(filters.publicPredictionIds))) {
-      const clause = buildInClause(chunk);
-      await query(`AND r.public_prediction_id IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      normalizeIdSet(filters.publicPredictionIds),
+      (inClauseSql) => `AND r.public_prediction_id IN (${inClauseSql})`,
+      query,
+    );
     return rows;
   }
 
   if (filters.incidentKeys) {
     if (filters.incidentKeys.length === 0) return [];
-    for (const chunk of chunkArray([...new Set(filters.incidentKeys)])) {
-      const clause = buildInClause(chunk);
-      await query(`AND r.incident_key IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      [...new Set(filters.incidentKeys)],
+      (inClauseSql) => `AND r.incident_key IN (${inClauseSql})`,
+      query,
+    );
     return rows;
   }
 
   if (filters.eventIds) {
     if (filters.eventIds.length === 0) return [];
-    for (const chunk of chunkArray(normalizeIdSet(filters.eventIds))) {
-      const clause = buildInClause(chunk);
-      await query(`AND p.event_id IN (${clause.sql})`, clause.binds);
-    }
+    await runChunkedInFilter(
+      normalizeIdSet(filters.eventIds),
+      (inClauseSql) => `AND p.event_id IN (${inClauseSql})`,
+      query,
+    );
     return rows;
   }
 

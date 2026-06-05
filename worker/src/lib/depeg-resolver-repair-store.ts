@@ -98,12 +98,13 @@ export async function authorizeEventRepair(
   if (input.requiredErratumId != null) assertPositiveInteger(input.requiredErratumId, "requiredErratumId");
 
   const columnsJson = JSON.stringify([...new Set(input.columns)].sort());
-  await db
+  const row = await db
     .prepare(
       `INSERT INTO depeg_resolver_event_repair_authorizations
        (event_id, incident_key, operation, columns_json, required_revision_id,
         required_erratum_id, reason, created_at, expires_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       RETURNING *`,
     )
     .bind(
       input.eventId,
@@ -113,31 +114,6 @@ export async function authorizeEventRepair(
       input.requiredRevisionId ?? null,
       input.requiredErratumId ?? null,
       input.reason,
-      input.createdAt,
-      input.expiresAt,
-      input.createdBy,
-    )
-    .run();
-
-  const row = await db
-    .prepare(
-      `SELECT *
-       FROM depeg_resolver_event_repair_authorizations
-       WHERE event_id = ?
-         AND incident_key = ?
-         AND operation = ?
-         AND columns_json = ?
-         AND created_at = ?
-         AND expires_at = ?
-         AND created_by = ?
-       ORDER BY id DESC
-       LIMIT 1`,
-    )
-    .bind(
-      input.eventId,
-      input.incidentKey,
-      input.operation,
-      columnsJson,
       input.createdAt,
       input.expiresAt,
       input.createdBy,

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   batchExecute,
   buildPaginatedQuery,
+  chunkArray,
   getFirstSeenDates,
   getLastBlock,
   normalizeBlacklistSyncStateKey,
@@ -128,6 +129,12 @@ describe("db utility helpers", () => {
 
     expect(batchCalls).toHaveLength(3);
     expect(batchCalls.map((chunk) => chunk.length)).toEqual([2, 2, 1]);
+  });
+
+  it("uses the shared chunkArray implementation while preserving the D1 default", () => {
+    expect(chunkArray([1, 2, 3], 2)).toEqual([[1, 2], [3]]);
+    expect(chunkArray(Array.from({ length: 91 }, (_, index) => index)).map((chunk) => chunk.length)).toEqual([90, 1]);
+    expect(() => chunkArray([1, 2, 3], 1.5)).toThrow(/positive integer chunkSize/);
   });
 
   it("builds paginated query with where + limit + offset", () => {
