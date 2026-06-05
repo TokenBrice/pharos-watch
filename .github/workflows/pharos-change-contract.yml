@@ -18,9 +18,9 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
+          install-deps: "false"
       - name: Render change contract
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}

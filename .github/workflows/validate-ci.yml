@@ -53,7 +53,6 @@ jobs:
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
           tooling-cache: "true"
           install-playwright-firefox: "true"
       - run: npm run validate:prebuild
@@ -82,7 +81,6 @@ jobs:
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
           tooling-cache: "true"
           install-playwright-chromium: "true"
           install-playwright-firefox: "true"
@@ -113,7 +111,6 @@ jobs:
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
           tooling-cache: "true"
       - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/4
 
@@ -134,7 +131,6 @@ jobs:
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
           tooling-cache: "true"
       - run: npm run coverage:critical
 
@@ -152,7 +148,6 @@ jobs:
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
           tooling-cache: "true"
       - run: npm run typecheck:worker
 

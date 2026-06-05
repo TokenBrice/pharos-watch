@@ -88,8 +88,6 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24
       - name: Capture current production version
         id: current-deployment
         run: |
@@ -154,8 +152,6 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24
       - name: Wait for validation gate
         env:
           GH_TOKEN: ${{ github.token }}

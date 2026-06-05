@@ -18,7 +18,6 @@ jobs:
           fetch-depth: 1
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24
           tooling-cache: "true"
       - run: npm run check:safe-browsing
         env:

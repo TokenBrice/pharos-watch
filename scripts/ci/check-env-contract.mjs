@@ -11,6 +11,7 @@ const {
 
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");
+const workerEnvPath = resolve(repoRoot, "worker/src/lib/env.ts");
 
 const DOC_SCAN_FILES = [
   resolve(repoRoot, "README.md"),
@@ -108,6 +109,51 @@ function parseEnvExampleKeys(filePath) {
   }
 
   return { duplicates, keys };
+}
+
+function extractExportedInterfaceBody(source, interfaceName) {
+  const match = new RegExp(`export\\s+interface\\s+${interfaceName}\\s*\\{`, "g").exec(source);
+  if (!match) {
+    return null;
+  }
+
+  let depth = 1;
+  let cursor = match.index + match[0].length;
+  const bodyStart = cursor;
+
+  while (cursor < source.length) {
+    const char = source[cursor];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(bodyStart, cursor);
+      }
+    }
+    cursor += 1;
+  }
+
+  return null;
+}
+
+function parseWorkerEnvInterfaceKeys(filePath) {
+  const source = readFileSync(filePath, "utf8");
+  const body = extractExportedInterfaceBody(source, "Env");
+  if (!body) {
+    throw new Error(`${relative(repoRoot, filePath)} is missing export interface Env`);
+  }
+
+  const keys = new Set();
+  for (const rawLine of splitLines(body)) {
+    const line = rawLine.replace(/\/\/.*$/u, "").trim();
+    const match = /^([A-Z][A-Z0-9_]*|DB)\??\s*:/u.exec(line);
+    if (match) {
+      keys.add(match[1]);
+    }
+  }
+
+  return keys;
 }
 
 function addRegexMatches(set, source, pattern, captureIndex = 1) {
@@ -314,6 +360,7 @@ function assertGeneratedBlockMatches(filePath, marker, expectedContent, errors) 
 
 const envExample = parseEnvExampleKeys(envExamplePath);
 const manifestEnvKeys = new Set(getAllEnvBindingKeys());
+const workerEnvInterfaceKeys = parseWorkerEnvInterfaceKeys(workerEnvPath);
 const sourceEnvKeys = collectSourceEnvKeys(SOURCE_SCAN_ROOTS.flatMap(collectFiles));
 const documentedEnvKeys = collectDocumentedEnvKeys(DOC_SCAN_FILES);
 const knownEnvKeys = new Set([
@@ -331,6 +378,15 @@ assertFileMatchesExpected(envExamplePath, renderEnvExample(), errors);
 
 for (const block of GENERATED_DOC_BLOCKS) {
   assertGeneratedBlockMatches(block.filePath, block.marker, block.render(), errors);
+}
+
+const workerEnvKeysMissingFromManifest = [...workerEnvInterfaceKeys]
+  .filter((key) => !manifestEnvKeys.has(key))
+  .sort();
+if (workerEnvKeysMissingFromManifest.length > 0) {
+  errors.push(
+    `worker/src/lib/env.ts Env declares keys missing from the shared env manifest: ${workerEnvKeysMissingFromManifest.join(", ")}`,
+  );
 }
 
 for (const [key, filePaths] of documentedEnvKeys) {

@@ -80,7 +80,6 @@ jobs:
           token: ${{ secrets.ACTIONS_CHECKOUT_TOKEN || github.token }}
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24
           tooling-cache: "true"
           install-playwright-chromium: "true"
           install-playwright-firefox: "true"
@@ -128,7 +127,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - run: npm run check:build-attribution
       - id: capture-pages
-        name: Capture current production Pages deployment id (best effort)
+        name: Capture current production Pages deployment id
         continue-on-error: true
         run: |
           cd worker
@@ -136,14 +135,15 @@ jobs:
           cd ..
           node .github/scripts/parse-pages-deployment-id.mjs >> "$GITHUB_OUTPUT"
       - if: ${{ steps.capture-pages.outcome == 'failure' || steps.capture-pages.outputs.deployment_id == '' }}
-        name: Warn that automated Pages rollback is disabled for this deploy
+        name: Fail because automated Pages rollback is not armed
         run: |
           {
-            echo "## Automated Pages rollback disabled for this deploy"
+            echo "## Automated Pages rollback is not armed"
             echo ""
             echo "The \`capture-pages\` step could not record the previous production Pages deployment id."
-            echo "If post-deploy smoke fails, roll back manually via the Cloudflare Pages dashboard."
+            echo "Stopping before publish so a broken deploy cannot be left live without an automated rollback target."
           } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
       - name: Start local export smoke server
         env:
           STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}

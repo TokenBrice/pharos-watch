@@ -744,7 +744,7 @@ describe("runMergeGate fetch and node_modules wiring", () => {
   it("invokes the node_modules drift check before any other work", async () => {
     const { execFile, runCommandImpl, runCommandCalls } = makeStubs();
     await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
-    expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs");
+    expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs --strict");
   });
 
   it("defaults Pages smoke on for the normal local merge gate", async () => {

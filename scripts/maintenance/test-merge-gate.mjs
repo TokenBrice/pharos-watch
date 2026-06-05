@@ -363,7 +363,7 @@ export async function runMergeGate({
   const workerSmoke = env.MERGE_GATE_WORKER_SMOKE === "1";
   const skipFetch = env.MERGE_GATE_NO_FETCH === "1";
 
-  const nodeModulesResult = await runCommandImpl("node scripts/ci/check-node-modules-fresh.mjs", {}, {});
+  const nodeModulesResult = await runCommandImpl("node scripts/ci/check-node-modules-fresh.mjs --strict", {}, {});
   const nodeModulesStatus =
     typeof nodeModulesResult === "number" ? nodeModulesResult : (nodeModulesResult?.status ?? 1);
   if (nodeModulesStatus !== 0) {

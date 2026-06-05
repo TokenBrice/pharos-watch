@@ -18,6 +18,5 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24.x
           tooling-cache: "true"
       - run: npm run check:telegram-load

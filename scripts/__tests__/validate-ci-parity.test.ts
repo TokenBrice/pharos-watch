@@ -139,19 +139,32 @@ describe("validate-ci parity", () => {
     expect(workflow).not.toContain("validate:lts");
   });
 
-  it("runs the shared validate workflow on the Node 24 baseline", () => {
-    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+  it("runs GitHub workflows through the exact shared Node 24 baseline", () => {
+    const workflowFiles = [
+      ".github/workflows/critical-coverage-ratchet.yml",
+      ".github/workflows/dependency-audit.yml",
+      ".github/workflows/deploy-cloudflare.yml",
+      ".github/workflows/og-refresh.yml",
+      ".github/workflows/pages-release.yml",
+      ".github/workflows/pharos-change-contract.yml",
+      ".github/workflows/safe-browsing-monitor.yml",
+      ".github/workflows/telegram-load.yml",
+      ".github/workflows/validate-ci.yml",
+    ];
+    const workflows = workflowFiles
+      .map((filePath) => readFileSync(resolve(process.cwd(), filePath), "utf8"))
+      .join("\n");
     const setupWorkspaceAction = readFileSync(
       resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
       "utf8",
     );
 
-    expect(extractJobBlock(workflow, "validate-prebuild", "pages-build")).toContain("node-version: 24.x");
-    expect(workflow).toContain(
+    expect(workflows).toContain(
       "runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
     );
-    expect(setupWorkspaceAction).toContain('default: "24"');
-    expect(workflow).not.toContain("node-version: 25");
+    expect(setupWorkspaceAction).toContain('default: "24.16.0"');
+    expect(workflows).not.toContain("actions/setup-node@");
+    expect(workflows).not.toContain("node-version:");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
   });
 
@@ -429,7 +442,7 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
     expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
     expect(uploadWorkerJob).toContain("uses: ./.github/actions/setup-workspace");
-    expect(uploadWorkerJob).toContain("node-version: 24");
+    expect(uploadWorkerJob).not.toContain("node-version:");
     expect(uploadWorkerJob).toContain("npx --no-install wrangler deployments status --json");
     expect(uploadWorkerJob).toContain("npx --no-install wrangler versions upload");
     expect(uploadWorkerJob).toContain("entitlements.not_available \\\\[code: 10007\\\\]");
@@ -498,6 +511,8 @@ describe("validate-ci parity", () => {
     expect(consolidatedPagesReleaseJob).toContain("Run local artifact smoke against promoted worker");
     expect(consolidatedPagesReleaseJob).toContain("Deploy Pages with retry");
     expect(consolidatedPagesReleaseJob).toContain("Capture Pages release metrics");
+    expect(consolidatedPagesReleaseJob).toContain("Fail because automated Pages rollback is not armed");
+    expect(consolidatedPagesReleaseJob).not.toContain("Warn that automated Pages rollback is disabled");
     expect(consolidatedPagesReleaseJob).toContain("Run post-publish smokes in parallel");
     expect(consolidatedPagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES: /depeg/");
     expect(consolidatedPagesReleaseJob).toContain("npm run test:smoke-ui -- --url https://pharos.watch --mode live");
@@ -516,6 +531,8 @@ describe("validate-ci parity", () => {
       "npm run check:build-size",
       "Capture Pages release metrics",
       "npm run check:build-attribution",
+      "Capture current production Pages deployment id",
+      "Fail because automated Pages rollback is not armed",
       "Start local export smoke server",
       "Run local pre-publish checks in parallel",
       "npm run seo:check",
@@ -552,6 +569,8 @@ describe("validate-ci parity", () => {
       "npm run check:build-size",
       "Capture Pages release metrics",
       "npm run check:build-attribution",
+      "Capture current production Pages deployment id",
+      "Fail because automated Pages rollback is not armed",
       "Start local export smoke server",
       "Run local pre-publish checks in parallel",
       "npm run seo:check",
