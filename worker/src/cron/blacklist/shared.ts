@@ -115,7 +115,7 @@ export function buildBlacklistRow({
   };
 }
 
-export function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
+function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
   return buildExplorerUrl({
     chainType: chain.type,
     explorerUrl: chain.explorerUrl,
@@ -124,7 +124,7 @@ export function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
   }) ?? `${chain.explorerUrl}/tx/${txHash}`;
 }
 
-export function buildExplorerAddressUrl(chain: ChainConfig, address: string): string {
+function buildExplorerAddressUrl(chain: ChainConfig, address: string): string {
   return buildExplorerUrl({
     chainType: chain.type,
     explorerUrl: chain.explorerUrl,

@@ -525,7 +525,7 @@ function computePerformanceVsUsd1y(
   return (currentPrice / anchor.price - 1) * 100;
 }
 
-export function buildMarketSnapshot(
+function buildMarketSnapshot(
   coin: StablecoinMeta,
   coinData: StablecoinData,
   supplyHistory: SupplyHistoryPoint[],
@@ -543,7 +543,7 @@ export function buildMarketSnapshot(
   };
 }
 
-export function buildPegPriceSnapshot(
+function buildPegPriceSnapshot(
   id: string,
   coin: StablecoinMeta,
   coinData: StablecoinData,
@@ -572,7 +572,7 @@ export function buildPegPriceSnapshot(
   };
 }
 
-export function buildFeatureAvailability(
+function buildFeatureAvailability(
   id: string,
   coin: StablecoinMeta,
   supplemental: StablecoinDetailViewModelSupplementalInputs,
@@ -612,7 +612,7 @@ function staleQueryFrom<T>(
   };
 }
 
-export function buildStaleQueryInputs(queries: StablecoinDetailViewModelQueryInputs): StablecoinDetailStaleQuery[] {
+function buildStaleQueryInputs(queries: StablecoinDetailViewModelQueryInputs): StablecoinDetailStaleQuery[] {
   return [
     staleQueryFrom("stablecoins", queries.stablecoinList, (data) => !!data?.peggedAssets?.length),
     staleQueryFrom("pegSummary", queries.pegSummary, (data) => !!data?.coins?.length),
