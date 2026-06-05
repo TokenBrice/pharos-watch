@@ -13,21 +13,13 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { ChartAnnotationLegend, ChartAnnotationLines } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
-import {
-  ChartCrosshairOverlay,
-  useChartSyncHandlers,
-  useMarketDataChartSync,
-} from "@/components/chart-primitives/sync";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, usePlotInsets } from "@/components/chart-primitives/axes";
+import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
-import {
-  ChartDataTable,
-  capDataForTable,
-  type ChartDataTableColumn,
-} from "@/components/chart-primitives/data-table";
-import { buildAdaptiveMonthlyTicks, computeChartYDomain } from "@/lib/chart-utils";
+import { ChartDataTable, capDataForTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
+import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
-import { useChartAnnotations } from "@/hooks/use-chart-annotations";
+import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
 
 const MCAP_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -71,7 +63,6 @@ export function McapChart({
   embedded = false,
 }: McapChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
-  const sync = useMarketDataChartSync();
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
   const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);
 
@@ -86,60 +77,52 @@ export function McapChart({
       }));
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(
-    chartData,
-    "ts",
-    undefined,
-    { externalRange: controlledRange },
-  );
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
+    externalRange: controlledRange,
+  });
 
-  const brushedRange = sync?.brushedRange ?? null;
-  // Brushed sub-window further narrows the visible data (D4).
-  // When the brush is empty the chart shows the full controlled range.
-  const visibleData = useMemo(() => {
-    if (!brushedRange) return filteredData;
-    const [lo, hi] = brushedRange;
-    return filteredData.filter((d) => d.ts >= lo && d.ts <= hi);
-  }, [filteredData, brushedRange]);
-
-  const fromMs = visibleData[0]?.ts ?? null;
-  const toMs = visibleData[visibleData.length - 1]?.ts ?? null;
-  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
-
-  // Compute explicit monthly ticks for "all" range with adaptive spacing.
-  // Cursor always snaps to the first January on or after the data start,
-  // so year boundaries always fall on a tick regardless of step size.
-  const xTicks = useMemo(() => {
-    if (range !== "all" || visibleData.length === 0) return undefined;
-    const first = visibleData[0].ts;
-    const last = visibleData[visibleData.length - 1].ts;
-    return buildAdaptiveMonthlyTicks(first, last);
-  }, [range, visibleData]);
+  // Stable margins so the crosshair overlay can position relative to the
+  // plot area without re-measuring.
+  const margin = useMemo(() => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }), [range]);
+  const {
+    annotations,
+    brushedRange,
+    handleMouseLeave,
+    handleMouseMove,
+    plotInsetBottom,
+    plotInsetLeft,
+    plotInsetRight,
+    plotInsetTop,
+    sync,
+    visibleData,
+    xDomain,
+    xTicks,
+  } = useMarketDataChartWindow({ filteredData, margin, range, stablecoinId });
 
   // Log scale is allowed only on the unbrushed `all` view (multi-year, multi-OOM).
   // Linear stays the default for short ranges where log compresses the signal.
   const logEnabled = range === "all" && !brushedRange;
   const useLog = logEnabled && logScale;
 
-  const yDomain = useMemo<[number, number | "auto"] | [number, number]>(
-    () => {
-      if (useLog) {
-        let min = Infinity;
-        let max = -Infinity;
-        for (const d of visibleData) {
-          if (d.mcap > 0) {
-            if (d.mcap < min) min = d.mcap;
-            if (d.mcap > max) max = d.mcap;
-          }
+  const yDomain = useMemo<[number, number | "auto"] | [number, number]>(() => {
+    if (useLog) {
+      let min = Infinity;
+      let max = -Infinity;
+      for (const d of visibleData) {
+        if (d.mcap > 0) {
+          if (d.mcap < min) min = d.mcap;
+          if (d.mcap > max) max = d.mcap;
         }
-        if (!Number.isFinite(min) || !Number.isFinite(max)) return [1, 10];
-        // Pad by ~10% in log space (one third of a decade roughly = factor 2.15).
-        return [min / 1.6, max * 1.4];
       }
-      return computeChartYDomain(visibleData.map((d) => d.mcap), range === "all");
-    },
-    [range, visibleData, useLog],
-  );
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return [1, 10];
+      // Pad by ~10% in log space (one third of a decade roughly = factor 2.15).
+      return [min / 1.6, max * 1.4];
+    }
+    return computeChartYDomain(
+      visibleData.map((d) => d.mcap),
+      range === "all",
+    );
+  }, [range, visibleData, useLog]);
 
   // Header readout: current mcap + 24h delta (anchor on the previous point — daily data).
   const readout = useMemo(() => {
@@ -154,22 +137,14 @@ export function McapChart({
     };
   }, [visibleData]);
 
-  // Stable margins so the crosshair overlay can position relative to the
-  // plot area without re-measuring.
-  const margin = useMemo(
-    () => ({ top: 5, right: 12, bottom: range === "all" ? 32 : 20, left: 5 }),
-    [range],
-  );
-  const { plotInsetLeft, plotInsetRight, plotInsetTop, plotInsetBottom } = usePlotInsets(margin);
-  const { handleMouseMove, handleMouseLeave } = useChartSyncHandlers(sync);
-
-  const deltaColor = readout?.deltaPct == null
-    ? "var(--color-muted-foreground)"
-    : readout.deltaPct > 0
-      ? "#22c55e"
-      : readout.deltaPct < 0
-        ? "#ef4444"
-        : "var(--color-muted-foreground)";
+  const deltaColor =
+    readout?.deltaPct == null
+      ? "var(--color-muted-foreground)"
+      : readout.deltaPct > 0
+        ? "#22c55e"
+        : readout.deltaPct < 0
+          ? "#ef4444"
+          : "var(--color-muted-foreground)";
 
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
@@ -201,105 +176,98 @@ export function McapChart({
               : "Log scale is only meaningful on the full range — switch to All."
           }
         />
-        {controlledRange ? null : (
-          <TimeRangeButtons options={options} value={range} onChange={setRange} />
-        )}
+        {controlledRange ? null : <TimeRangeButtons options={options} value={range} onChange={setRange} />}
       </div>
     </div>
   );
 
-  const xDomain = visibleData.length > 0
-    ? ([visibleData[0].ts, visibleData[visibleData.length - 1].ts] as const)
-    : null;
-
-  const chartBody = visibleData.length > 0 ? (
-    <div className="relative h-[250px] sm:h-[350px]">
-      <div
-        ref={chartContainerRef}
-        className="h-full"
-        role="figure"
-        aria-label={`Market cap chart showing ${visibleData.length} data points`}
-      >
-      {(() => {
-        const { rows, truncated } = capDataForTable(visibleData, 90);
-        return (
-          <ChartDataTable
-            caption={
-              truncated
-                ? `Market cap history — most recent ${rows.length} of ${visibleData.length} data points`
-                : `Market cap history — ${visibleData.length} data points`
-            }
-            data={rows}
-            columns={MCAP_TABLE_COLUMNS}
-          />
-        );
-      })()}
-      {isChartReady ? (
-        <AreaChart
-          width={width}
-          height={height}
-          data={visibleData}
-          margin={margin}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+  const chartBody =
+    visibleData.length > 0 ? (
+      <div className="relative h-[250px] sm:h-[350px]">
+        <div
+          ref={chartContainerRef}
+          className="h-full"
+          role="figure"
+          aria-label={`Market cap chart showing ${visibleData.length} data points`}
         >
-          <defs>
-            <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
-            </linearGradient>
-          </defs>
-          <TimeGrid />
-          <TimeXAxis
-            dataKey="ts"
-            ticks={xTicks}
-            interval={range === "all" ? 0 : "preserveStartEnd"}
-            tick={<MarketDataXTick range={range} />}
-            height={range === "all" ? 44 : 30}
+          {(() => {
+            const { rows, truncated } = capDataForTable(visibleData, 90);
+            return (
+              <ChartDataTable
+                caption={
+                  truncated
+                    ? `Market cap history — most recent ${rows.length} of ${visibleData.length} data points`
+                    : `Market cap history — ${visibleData.length} data points`
+                }
+                data={rows}
+                columns={MCAP_TABLE_COLUMNS}
+              />
+            );
+          })()}
+          {isChartReady ? (
+            <AreaChart
+              width={width}
+              height={height}
+              data={visibleData}
+              margin={margin}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+            >
+              <defs>
+                <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <TimeGrid />
+              <TimeXAxis
+                dataKey="ts"
+                ticks={xTicks}
+                interval={range === "all" ? 0 : "preserveStartEnd"}
+                tick={<MarketDataXTick range={range} />}
+                height={range === "all" ? 44 : 30}
+              />
+              <MonoYAxis
+                tickFormatter={(val: number) => formatCurrency(val)}
+                domain={yDomain}
+                scale={useLog ? "log" : "auto"}
+                allowDataOverflow={useLog}
+              />
+              <DateTooltip formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]} />
+              <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
+              {readout ? (
+                <ReferenceDot
+                  x={readout.ts}
+                  y={readout.mcap}
+                  r={3.5}
+                  fill={CHART_BLUE}
+                  stroke="var(--color-background)"
+                  strokeWidth={1.5}
+                  ifOverflow="extendDomain"
+                />
+              ) : null}
+              <ChartAnnotationLines annotations={annotations} numbered />
+            </AreaChart>
+          ) : (
+            <ChartSkeleton className="h-full w-full" />
+          )}
+        </div>
+        {sync ? (
+          <ChartCrosshairOverlay
+            hoveredTs={sync.hoveredTs}
+            domain={xDomain}
+            plotInsetLeft={plotInsetLeft}
+            plotInsetRight={plotInsetRight}
+            plotInsetTop={plotInsetTop}
+            plotInsetBottom={plotInsetBottom}
           />
-          <MonoYAxis
-            tickFormatter={(val: number) => formatCurrency(val)}
-            domain={yDomain}
-            scale={useLog ? "log" : "auto"}
-            allowDataOverflow={useLog}
-          />
-          <DateTooltip
-            formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
-          />
-          <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
-          {readout ? (
-            <ReferenceDot
-              x={readout.ts}
-              y={readout.mcap}
-              r={3.5}
-              fill={CHART_BLUE}
-              stroke="var(--color-background)"
-              strokeWidth={1.5}
-              ifOverflow="extendDomain"
-            />
-          ) : null}
-          <ChartAnnotationLines annotations={annotations} numbered />
-        </AreaChart>
-      ) : (
-        <ChartSkeleton className="h-full w-full" />
-      )}
+        ) : null}
       </div>
-      {sync ? (
-        <ChartCrosshairOverlay
-          hoveredTs={sync.hoveredTs}
-          domain={xDomain}
-          plotInsetLeft={plotInsetLeft}
-          plotInsetRight={plotInsetRight}
-          plotInsetTop={plotInsetTop}
-          plotInsetBottom={plotInsetBottom}
-        />
-      ) : null}
-    </div>
-  ) : (
-    <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
-      No market cap data available
-    </div>
-  );
+    ) : (
+      <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
+        No market cap data available
+      </div>
+    );
 
   const legend =
     !hideAnnotationLegend && annotations.length > 0 ? (
@@ -307,12 +275,6 @@ export function McapChart({
     ) : null;
 
   return (
-    <ChartCardShell
-      embedded={embedded}
-      className={cardClassName}
-      header={header}
-      body={chartBody}
-      legend={legend}
-    />
+    <ChartCardShell embedded={embedded} className={cardClassName} header={header} body={chartBody} legend={legend} />
   );
 }

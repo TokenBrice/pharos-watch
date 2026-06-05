@@ -17,6 +17,8 @@ import {
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
 
+type HeroSectionBaseProps = Omit<Parameters<typeof HeroCardMobileSection>[0], "tertiaryMetrics">;
+
 interface HeroCardProps {
   model: HeroCardViewModel;
   onOpenFeedback: () => void;
@@ -99,6 +101,34 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
   const tertiaryMetrics = model.tertiaryMetrics.map(toMetricConfig);
   const desktopTertiaryMetrics = model.desktopTertiaryMetrics.map(toMetricConfig);
   const signalRailItems = model.signalRailItems.map(toSignalRailItem);
+  const sectionBaseProps: HeroSectionBaseProps = {
+    coin,
+    coinData,
+    logoSrc,
+    reportCard,
+    verdict,
+    variantParent,
+    variantChipClass,
+    infrastructures,
+    pegRef: price.pegRef,
+    gaugeDeviationBps: price.gaugeDeviationBps,
+    deviationBps: price.deviationBps,
+    isNavToken: price.isNavToken,
+    limitedDepegCoverageNote: price.limitedDepegCoverageNote,
+    mcap: market.mcap,
+    supply: market.supply,
+    safePrevDay: market.safePrevDay,
+    prevDayTrendClass: market.prevDayTrendClass,
+    safePrevWeek: market.safePrevWeek,
+    prevWeekTrendClass: market.prevWeekTrendClass,
+    hasPrevMonth: market.hasPrevMonth,
+    safePrevMonth: market.safePrevMonth,
+    prevMonthTrendClass: market.prevMonthTrendClass,
+    chainCount,
+    earlyPegScore: peg.earlyPegScore,
+    trackingSpanDays: peg.trackingSpanDays,
+    activeDepeg: peg.activeDepeg,
+  };
 
   return (
     <Card className="rounded-xl gap-0">
@@ -109,64 +139,11 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         benchmarkSymbol={header.benchmarkSymbol}
         onOpenFeedback={onOpenFeedback}
       />
-      <HeroCardMobileSection
-        coin={coin}
-        coinData={coinData}
-        logoSrc={logoSrc}
-        reportCard={reportCard}
-        verdict={verdict}
-        variantParent={variantParent}
-        variantChipClass={variantChipClass}
-        infrastructures={infrastructures}
-        pegRef={price.pegRef}
-        gaugeDeviationBps={price.gaugeDeviationBps}
-        deviationBps={price.deviationBps}
-        isNavToken={price.isNavToken}
-        limitedDepegCoverageNote={price.limitedDepegCoverageNote}
-        mcap={market.mcap}
-        supply={market.supply}
-        safePrevDay={market.safePrevDay}
-        prevDayTrendClass={market.prevDayTrendClass}
-        safePrevWeek={market.safePrevWeek}
-        prevWeekTrendClass={market.prevWeekTrendClass}
-        hasPrevMonth={market.hasPrevMonth}
-        safePrevMonth={market.safePrevMonth}
-        prevMonthTrendClass={market.prevMonthTrendClass}
-        tertiaryMetrics={tertiaryMetrics}
-        chainCount={chainCount}
-        earlyPegScore={peg.earlyPegScore}
-        trackingSpanDays={peg.trackingSpanDays}
-        activeDepeg={peg.activeDepeg}
-      />
+      <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
       <HeroCardDesktopSection
-        coin={coin}
-        coinData={coinData}
-        logoSrc={logoSrc}
-        reportCard={reportCard}
-        verdict={verdict}
-        variantParent={variantParent}
-        variantChipClass={variantChipClass}
-        infrastructures={infrastructures}
-        pegRef={price.pegRef}
-        gaugeDeviationBps={price.gaugeDeviationBps}
-        deviationBps={price.deviationBps}
-        isNavToken={price.isNavToken}
-        limitedDepegCoverageNote={price.limitedDepegCoverageNote}
-        mcap={market.mcap}
-        supply={market.supply}
-        safePrevDay={market.safePrevDay}
-        prevDayTrendClass={market.prevDayTrendClass}
-        safePrevWeek={market.safePrevWeek}
-        prevWeekTrendClass={market.prevWeekTrendClass}
-        hasPrevMonth={market.hasPrevMonth}
-        safePrevMonth={market.safePrevMonth}
-        prevMonthTrendClass={market.prevMonthTrendClass}
+        {...sectionBaseProps}
         signalRailItems={signalRailItems}
         tertiaryMetrics={desktopTertiaryMetrics}
-        chainCount={chainCount}
-        earlyPegScore={peg.earlyPegScore}
-        trackingSpanDays={peg.trackingSpanDays}
-        activeDepeg={peg.activeDepeg}
       />
     </Card>
   );

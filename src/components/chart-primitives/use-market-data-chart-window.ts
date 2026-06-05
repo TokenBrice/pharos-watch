@@ -1,0 +1,70 @@
+"use client";
+
+import { useMemo } from "react";
+import { useChartAnnotations } from "@/hooks/use-chart-annotations";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
+import { usePlotInsets } from "@/components/chart-primitives/axes";
+import { useChartSyncHandlers, useMarketDataChartSync } from "@/components/chart-primitives/sync";
+
+interface TimePoint {
+  ts: number;
+}
+
+interface ChartMargin {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export function useMarketDataChartWindow<T extends TimePoint>({
+  filteredData,
+  margin,
+  range,
+  stablecoinId,
+}: {
+  filteredData: T[];
+  margin: ChartMargin;
+  range: TimeRangeOption;
+  stablecoinId: string;
+}) {
+  const sync = useMarketDataChartSync();
+  const brushedRange = sync?.brushedRange ?? null;
+
+  const visibleData = useMemo(() => {
+    if (!brushedRange) return filteredData;
+    const [lo, hi] = brushedRange;
+    return filteredData.filter((d) => d.ts >= lo && d.ts <= hi);
+  }, [filteredData, brushedRange]);
+
+  const fromMs = visibleData[0]?.ts ?? null;
+  const toMs = visibleData[visibleData.length - 1]?.ts ?? null;
+  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
+
+  const xTicks = useMemo(() => {
+    if (range !== "all" || visibleData.length === 0) return undefined;
+    const first = visibleData[0].ts;
+    const last = visibleData[visibleData.length - 1].ts;
+    return buildAdaptiveMonthlyTicks(first, last);
+  }, [range, visibleData]);
+
+  const xDomain = useMemo<readonly [number, number] | null>(() => {
+    if (visibleData.length === 0) return null;
+    return [visibleData[0].ts, visibleData[visibleData.length - 1].ts];
+  }, [visibleData]);
+
+  const plotInsets = usePlotInsets(margin);
+  const syncHandlers = useChartSyncHandlers(sync);
+
+  return {
+    annotations,
+    brushedRange,
+    sync,
+    visibleData,
+    xDomain,
+    xTicks,
+    ...plotInsets,
+    ...syncHandlers,
+  };
+}

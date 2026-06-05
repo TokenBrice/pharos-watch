@@ -36,6 +36,8 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 
+type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
+
 export function KeyInfoCard({
   meta,
   resolvedMechanismArchetype,
@@ -73,17 +75,18 @@ export function KeyInfoCard({
     summary: getInfrastructureSummary(value),
     href: buildInfrastructureTaxonomyUrl(value),
   }));
-  const effectiveArchetype = resolvedMechanismArchetype !== undefined
-    ? resolvedMechanismArchetype
-    : meta.mechanismArchetype ?? null;
+  const effectiveArchetype =
+    resolvedMechanismArchetype !== undefined ? resolvedMechanismArchetype : (meta.mechanismArchetype ?? null);
   const diagramOptions: MechanismDiagramOptions = {
     override: getCoinOverride(meta.id),
-    ...(isWrapper && parentArchetype ? {
-      isWrapper: true,
-      parentSymbol: parentSymbol ?? undefined,
-      parentArchetype,
-      variantKind: variantKind ?? undefined,
-    } : {}),
+    ...(isWrapper && parentArchetype
+      ? {
+          isWrapper: true,
+          parentSymbol: parentSymbol ?? undefined,
+          parentArchetype,
+          variantKind: variantKind ?? undefined,
+        }
+      : {}),
   };
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
@@ -99,9 +102,12 @@ export function KeyInfoCard({
   const openContract = hasContracts ? (contracts.find((c) => c.chain === openChain) ?? null) : null;
   const quickCopyContract = openContract ?? contracts[0] ?? null;
 
-  useEffect(() => () => {
-    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    },
+    [],
+  );
 
   function copyContractAddress(chain: string, address: string) {
     void navigator.clipboard?.writeText(address);
@@ -114,12 +120,10 @@ export function KeyInfoCard({
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <DetailSectionTitle>
-          Key Information
-        </DetailSectionTitle>
+        <DetailSectionTitle>Key Information</DetailSectionTitle>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {meta.name} ({meta.symbol}) is a {governanceFullLabel}, {backingFullLabel} stablecoin pegged to{" "}
-          {pegFullLabel}.
+          {meta.name} ({meta.symbol}) is a {governanceFullLabel}, {backingFullLabel} stablecoin pegged to {pegFullLabel}
+          .
         </p>
       </CardHeader>
       <CardContent className="space-y-3 sm:space-y-4">
@@ -192,10 +196,14 @@ export function KeyInfoCard({
                     const pillClass = `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${tierStyle.cls}`;
                     const pillText = `${tierStyle.label}${meta.proofOfReserves.provider ? ` · ${meta.proofOfReserves.provider}` : ""}`;
                     const details: Array<{ label: string; value: string }> = [];
-                    if (meta.proofOfReserves.provider) details.push({ label: "Provider", value: meta.proofOfReserves.provider });
-                    if (meta.proofOfReserves.cadence) details.push({ label: "Cadence", value: meta.proofOfReserves.cadence });
-                    if (meta.proofOfReserves.attestorJurisdiction) details.push({ label: "Jurisdiction", value: meta.proofOfReserves.attestorJurisdiction });
-                    if (meta.proofOfReserves.attestorLicense) details.push({ label: "License", value: meta.proofOfReserves.attestorLicense });
+                    if (meta.proofOfReserves.provider)
+                      details.push({ label: "Provider", value: meta.proofOfReserves.provider });
+                    if (meta.proofOfReserves.cadence)
+                      details.push({ label: "Cadence", value: meta.proofOfReserves.cadence });
+                    if (meta.proofOfReserves.attestorJurisdiction)
+                      details.push({ label: "Jurisdiction", value: meta.proofOfReserves.attestorJurisdiction });
+                    if (meta.proofOfReserves.attestorLicense)
+                      details.push({ label: "License", value: meta.proofOfReserves.attestorLicense });
                     if (details.length === 0) {
                       return <span className={pillClass}>{pillText}</span>;
                     }
@@ -265,7 +273,9 @@ export function KeyInfoCard({
           <div className="grid gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2">
             {meta.collateral && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Collateral</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Collateral
+                </p>
                 <p className="text-base leading-relaxed">{meta.collateral}</p>
               </div>
             )}
@@ -307,7 +317,9 @@ export function KeyInfoCard({
 
         {infrastructureSummaries.length > 0 && (
           <div className="border-t border-border/40 pt-3 sm:pt-4 space-y-3">
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Infrastructure</p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Infrastructure
+            </p>
             {infrastructureSummaries.map(({ value, label, summary, href }) => (
               <div key={value}>
                 <Link
@@ -332,15 +344,15 @@ export function KeyInfoCard({
               {meta.proofOfReserves ? (
                 <p className="text-sm leading-relaxed">
                   {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-                  {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
-                  {" "}
+                  {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}{" "}
                   <a
                     href={meta.proofOfReserves.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-frost-blue hover:underline sm:min-h-0 sm:py-0"
                   >
-                    View reserves<ExternalLink className="h-3 w-3" />
+                    View reserves
+                    <ExternalLink className="h-3 w-3" />
                   </a>
                 </p>
               ) : (
@@ -354,9 +366,7 @@ export function KeyInfoCard({
               </p>
               {meta.jurisdiction || meta.mica ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  {meta.jurisdiction && (
-                    <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
-                  )}
+                  {meta.jurisdiction && <span className="text-sm font-medium">{meta.jurisdiction.country}</span>}
                   {meta.jurisdiction?.regulator && (
                     <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                       {meta.jurisdiction.regulator}
@@ -391,70 +401,16 @@ export function KeyInfoCard({
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
               Contract Deployments
             </p>
-            {contractSummary && (
-              <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>
-            )}
-            {quickCopyContract &&
-              (() => {
-                const chain = CHAIN_META[quickCopyContract.chain];
-                const explorerUrl = buildExplorerUrl({
-                  chainKey: quickCopyContract.chain,
-                  entityType: "contract",
-                  value: quickCopyContract.address,
-                });
-                return (
-                  <div className="mb-3 rounded-lg border border-border/50 bg-background/55 px-3 py-2 sm:hidden">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {openContract ? "Selected contract" : "Primary contract"}
-                        </p>
-                        <Link
-                          href={`/chains/${quickCopyContract.chain}/`}
-                          className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
-                        >
-                          <span className="truncate">{chain?.name ?? quickCopyContract.chain}</span>
-                        </Link>
-                        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                          {formatAddress(quickCopyContract.address)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyContractAddress(quickCopyContract.chain, quickCopyContract.address)}
-                        className="pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
-                        title="Copy address"
-                        aria-label={`Copy ${chain?.name ?? quickCopyContract.chain} contract address`}
-                      >
-                        <span className="relative inline-flex h-4 w-4 items-center justify-center">
-                          <Copy
-                            className={`pharos-copy-icon absolute h-4 w-4 ${copiedChain === quickCopyContract.chain ? "opacity-0" : "opacity-100"}`}
-                            aria-hidden="true"
-                          />
-                          <Check
-                            className={`pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copiedChain === quickCopyContract.chain ? "opacity-100" : "opacity-0"}`}
-                            aria-hidden="true"
-                          />
-                          {copiedChain === quickCopyContract.chain ? (
-                            <span key={copiedChain} className="pharos-copy-ring" aria-hidden="true" />
-                          ) : null}
-                        </span>
-                      </button>
-                    </div>
-                    {explorerUrl && (
-                      <a
-                        href={explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
-                      >
-                        View on {chain?.name ? `${chain.name} explorer` : "explorer"}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </div>
-                );
-              })()}
+            {contractSummary && <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>}
+            {quickCopyContract ? (
+              <ContractDetailRow
+                contract={quickCopyContract}
+                copied={copiedChain === quickCopyContract.chain}
+                label={openContract ? "Selected contract" : "Primary contract"}
+                onCopy={copyContractAddress}
+                variant="quick"
+              />
+            ) : null}
             <div className="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:hidden">
               {visibleMobileContracts.map((c) => (
                 <ContractChainButton
@@ -478,9 +434,14 @@ export function KeyInfoCard({
               ))}
             </div>
             {hiddenMobileContractCount > 0 ? (
-              <button type="button"
+              <button
+                type="button"
                 onClick={() => {
-                  if (showAllContractsMobile && openChain && !mobileContractsPreview.some((c) => c.chain === openChain)) {
+                  if (
+                    showAllContractsMobile &&
+                    openChain &&
+                    !mobileContractsPreview.some((c) => c.chain === openChain)
+                  ) {
                     setOpenChain(null);
                   }
                   setShowAllContractsMobile((current) => !current);
@@ -490,64 +451,132 @@ export function KeyInfoCard({
                 {showAllContractsMobile ? "Show less" : `Show all ${contracts.length} chains`}
               </button>
             ) : null}
-            {openContract &&
-              (() => {
-                const chain = CHAIN_META[openContract.chain];
-                const explorerUrl = buildExplorerUrl({
-                  chainKey: openContract.chain,
-                  entityType: "contract",
-                  value: openContract.address,
-                });
-                return (
-                  <div className="mt-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2 space-y-1.5">
-                    <div className="text-sm font-medium">
-                      <Link href={`/chains/${openContract.chain}/`} className="pharos-focus-ring rounded-sm hover:underline">
-                        {chain?.name ?? openContract.chain}
-                      </Link>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs text-muted-foreground truncate">
-                        {formatAddress(openContract.address)}
-                      </span>
-                      <button type="button"
-                        onClick={() => copyContractAddress(openContract.chain, openContract.address)}
-                        className="pharos-focus-ring relative inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-                        title="Copy address"
-                        aria-label="Copy address"
-                      >
-                        <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
-                          <Copy
-                            className={`pharos-copy-icon absolute h-3.5 w-3.5 ${copiedChain === openContract.chain ? "opacity-0" : "opacity-100"}`}
-                            aria-hidden="true"
-                          />
-                          <Check
-                            className={`pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copiedChain === openContract.chain ? "opacity-100" : "opacity-0"}`}
-                            aria-hidden="true"
-                          />
-                          {copiedChain === openContract.chain ? (
-                            <span key={copiedChain} className="pharos-copy-ring" aria-hidden="true" />
-                          ) : null}
-                        </span>
-                      </button>
-                    </div>
-                    {explorerUrl && (
-                      <a
-                        href={explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
-                      >
-                        View on {chain?.name ? `${chain.name} explorer` : "explorer"}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </div>
-                );
-              })()}
+            {openContract ? (
+              <ContractDetailRow
+                contract={openContract}
+                copied={copiedChain === openContract.chain}
+                onCopy={copyContractAddress}
+                variant="selected"
+              />
+            ) : null}
           </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function ContractDetailRow({
+  contract,
+  copied,
+  label,
+  onCopy,
+  variant,
+}: {
+  contract: ContractDeployment;
+  copied: boolean;
+  label?: string;
+  onCopy: (chain: string, address: string) => void;
+  variant: "quick" | "selected";
+}) {
+  const chain = CHAIN_META[contract.chain];
+  const chainName = chain?.name ?? contract.chain;
+  const explorerUrl = buildExplorerUrl({
+    chainKey: contract.chain,
+    entityType: "contract",
+    value: contract.address,
+  });
+  const copyButton = (
+    <button
+      type="button"
+      onClick={() => onCopy(contract.chain, contract.address)}
+      className={
+        variant === "quick"
+          ? "pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+          : "pharos-focus-ring relative inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+      }
+      title="Copy address"
+      aria-label={variant === "quick" ? `Copy ${chainName} contract address` : "Copy address"}
+    >
+      <span
+        className={
+          variant === "quick"
+            ? "relative inline-flex h-4 w-4 items-center justify-center"
+            : "relative inline-flex h-3.5 w-3.5 items-center justify-center"
+        }
+      >
+        <Copy
+          className={
+            variant === "quick"
+              ? `pharos-copy-icon absolute h-4 w-4 ${copied ? "opacity-0" : "opacity-100"}`
+              : `pharos-copy-icon absolute h-3.5 w-3.5 ${copied ? "opacity-0" : "opacity-100"}`
+          }
+          aria-hidden="true"
+        />
+        <Check
+          className={
+            variant === "quick"
+              ? `pharos-copy-icon absolute h-4 w-4 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`
+              : `pharos-copy-icon absolute h-3.5 w-3.5 text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`
+          }
+          aria-hidden="true"
+        />
+        {copied ? <span key={contract.chain} className="pharos-copy-ring" aria-hidden="true" /> : null}
+      </span>
+    </button>
+  );
+  const explorerLink = explorerUrl ? (
+    <a
+      href={explorerUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={
+        variant === "quick"
+          ? "pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+          : "pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+      }
+    >
+      View on {chain?.name ? `${chain.name} explorer` : "explorer"}
+      <ExternalLink className="h-3 w-3" />
+    </a>
+  ) : null;
+
+  if (variant === "quick") {
+    return (
+      <div className="mb-3 rounded-lg border border-border/50 bg-background/55 px-3 py-2 sm:hidden">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="min-w-0 flex-1">
+            {label ? (
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+            ) : null}
+            <Link
+              href={`/chains/${contract.chain}/`}
+              className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
+            >
+              <span className="truncate">{chainName}</span>
+            </Link>
+            <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{formatAddress(contract.address)}</p>
+          </div>
+          {copyButton}
+        </div>
+        {explorerLink}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-1.5 rounded-lg border border-border/40 bg-background/60 px-3 py-2">
+      <div className="text-sm font-medium">
+        <Link href={`/chains/${contract.chain}/`} className="pharos-focus-ring rounded-sm hover:underline">
+          {chainName}
+        </Link>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-mono text-xs text-muted-foreground">{formatAddress(contract.address)}</span>
+        {copyButton}
+      </div>
+      {explorerLink}
+    </div>
   );
 }
 
@@ -559,7 +588,7 @@ function buildContractDeploymentSummary(contracts: StablecoinMeta["contracts"]):
   const remainingSuffix = remaining > 0 ? `, plus ${remaining} more` : "";
   const formattedChains =
     chainNames.length <= 1
-      ? chainNames[0] ?? ""
+      ? (chainNames[0] ?? "")
       : chainNames.length === 2
         ? `${chainNames[0]} and ${chainNames[1]}`
         : `${chainNames.slice(0, -1).join(", ")}, and ${chainNames[chainNames.length - 1]}`;
@@ -581,7 +610,8 @@ function ContractChainButton({
   const chain = CHAIN_META[chainKey];
 
   return (
-    <button type="button"
+    <button
+      type="button"
       onClick={onToggle}
       className={`pharos-focus-ring flex size-11 items-center justify-center rounded-full ring-2 transition-colors ${
         isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"

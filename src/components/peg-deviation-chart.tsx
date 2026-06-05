@@ -14,16 +14,12 @@ import {
   ChartAnnotationLines,
 } from "@/components/chart-primitives/annotations";
 import { MarketDataXTick } from "@/components/chart-primitives/market-data-x-tick";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, usePlotInsets } from "@/components/chart-primitives/axes";
-import {
-  ChartCrosshairOverlay,
-  useChartSyncHandlers,
-  useMarketDataChartSync,
-} from "@/components/chart-primitives/sync";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartCrosshairOverlay } from "@/components/chart-primitives/sync";
 import { ChartCardShell } from "@/components/chart-primitives/shell";
+import { useMarketDataChartWindow } from "@/components/chart-primitives/use-market-data-chart-window";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
-import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
 import { cn } from "@/lib/utils";
 
 function formatTooltip(value: number): [string, string] {
@@ -156,7 +152,6 @@ export function PegDeviationChart({
   embedded = false,
 }: PegDeviationChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
-  const sync = useMarketDataChartSync();
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -169,20 +164,33 @@ export function PegDeviationChart({
     return raw;
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(
-    chartData,
-    "ts",
-    undefined,
-    { externalRange: controlledRange },
-  );
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts", undefined, {
+    externalRange: controlledRange,
+  });
 
-  const brushedRange = sync?.brushedRange ?? null;
-  // Brushed sub-window further narrows the visible data (D4).
-  const visibleData = useMemo(() => {
-    if (!brushedRange) return filteredData;
-    const [lo, hi] = brushedRange;
-    return filteredData.filter((d) => d.ts >= lo && d.ts <= hi);
-  }, [filteredData, brushedRange]);
+  // Stable chart margins (used by both Recharts and the crosshair overlay).
+  const margin = useMemo(
+    () => ({
+      top: 5,
+      right: 12,
+      bottom: range === "all" ? 32 : 20,
+      left: 5,
+    }),
+    [range],
+  );
+  const {
+    annotations,
+    handleMouseLeave,
+    handleMouseMove,
+    plotInsetBottom,
+    plotInsetLeft,
+    plotInsetRight,
+    plotInsetTop,
+    sync,
+    visibleData,
+    xDomain,
+    xTicks,
+  } = useMarketDataChartWindow({ filteredData, margin, range, stablecoinId });
 
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
   // `priceSmoothed` is plotted on top of the raw `price` line (which is dimmed).
@@ -191,38 +199,23 @@ export function PegDeviationChart({
       return visibleData.map((d) => ({ ...d, priceSmoothed: null as number | null }));
     }
     const alpha = range === "all" ? 0.04 : 0.12;
-    const smoothed = ewma(visibleData.map((d) => d.price), alpha);
+    const smoothed = ewma(
+      visibleData.map((d) => d.price),
+      alpha,
+    );
     return visibleData.map((d, i) => ({ ...d, priceSmoothed: smoothed[i] }));
   }, [visibleData, range]);
 
   const showSmoothed = range === "all" || range === "1y";
-
-  const fromMs = visibleData[0]?.ts ?? null;
-  const toMs = visibleData[visibleData.length - 1]?.ts ?? null;
-  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
 
   // D14 — wider annotation set (the full controlled range, not brushed) for
   // the density strip. The strip reflects *available* events for the active
   // range, so brushing into a sub-window still surfaces the parent's cadence.
   const fullRangeFromMs = filteredData[0]?.ts ?? null;
   const fullRangeToMs = filteredData[filteredData.length - 1]?.ts ?? null;
-  const { data: fullRangeAnnotations } = useChartAnnotations(
-    stablecoinId,
-    fullRangeFromMs,
-    fullRangeToMs,
-  );
+  const { data: fullRangeAnnotations } = useChartAnnotations(stablecoinId, fullRangeFromMs, fullRangeToMs);
 
-  const xTicks = useMemo(() => {
-    if (range !== "all" || visibleData.length === 0) return undefined;
-    const first = visibleData[0].ts;
-    const last = visibleData[visibleData.length - 1].ts;
-    return buildAdaptiveMonthlyTicks(first, last);
-  }, [range, visibleData]);
-
-  const yAxis = useMemo(
-    () => computePegYAxis(visibleData.map((d) => d.price)),
-    [visibleData],
-  );
+  const yAxis = useMemo(() => computePegYAxis(visibleData.map((d) => d.price)), [visibleData]);
   const formatPriceTick = useMemo(() => makePriceTickFormatter(yAxis.step), [yAxis.step]);
 
   // Header readout: current price + signed bps + named band.
@@ -250,200 +243,188 @@ export function PegDeviationChart({
   const densityStripHeight = 6;
   const densityStripBottomPad = 6;
 
-  // Stable chart margins (used by both Recharts and the crosshair overlay).
-  const margin = useMemo(() => ({
-    top: 5,
-    right: 12,
-    bottom: range === "all" ? 32 : 20,
-    left: 5,
-  }), [range]);
-  const { plotInsetLeft, plotInsetRight, plotInsetTop, plotInsetBottom } = usePlotInsets(margin);
-  const { handleMouseMove, handleMouseLeave } = useChartSyncHandlers(sync);
-
   if (pegCurrency !== "USD") {
     return null;
   }
 
   const chartHeightClass = "h-[250px] sm:h-[350px]";
-  const xDomain = visibleData.length > 0
-    ? ([visibleData[0].ts, visibleData[visibleData.length - 1].ts] as const)
-    : null;
 
   // Available plot-area width inside the chart's left axis + right margin.
   // Used by the density strip so its bars share the x-pixel domain.
   const plotAreaWidth = Math.max(0, width - plotInsetLeft - plotInsetRight);
 
-  const chartBody = visibleData.length > 0 ? (
-    <div className={cn("relative", chartHeightClass)}>
-      <div
-        ref={chartContainerRef}
-        className="h-full"
-        role="figure"
-        aria-label={`Peg deviation chart showing ${visibleData.length} data points`}
-      >
-      {isChartReady ? (
-        <LineChart
-          width={width}
-          height={height}
-          data={smoothedData}
-          margin={margin}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <TimeGrid />
-          <TimeXAxis
-            dataKey="ts"
-            ticks={xTicks}
-            interval={range === "all" ? 0 : "preserveStartEnd"}
-            tick={<MarketDataXTick range={range} />}
-            height={range === "all" ? 44 : 30}
-          />
-          <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
-
-          {/* Peg severity bands — calm in-band core, warning outside. ifOverflow="hidden" clips
-              bands that extend past the visible domain so they don't push the axis. */}
-          <ReferenceArea
-            y1={bpsToPrice(PEG_BAND_BPS.tight)}
-            y2={bpsToPrice(PEG_BAND_BPS.drift)}
-            fill={PEG_BAND_HEX.drift}
-            fillOpacity={0.06}
-            ifOverflow="hidden"
-            strokeOpacity={0}
-          />
-          <ReferenceArea
-            y1={bpsToPrice(-PEG_BAND_BPS.drift)}
-            y2={bpsToPrice(-PEG_BAND_BPS.tight)}
-            fill={PEG_BAND_HEX.drift}
-            fillOpacity={0.06}
-            ifOverflow="hidden"
-            strokeOpacity={0}
-          />
-          <ReferenceArea
-            y1={bpsToPrice(PEG_BAND_BPS.drift)}
-            y2={bpsToPrice(PEG_BAND_BPS.stress)}
-            fill={PEG_BAND_HEX.stress}
-            fillOpacity={0.07}
-            ifOverflow="hidden"
-            strokeOpacity={0}
-          />
-          <ReferenceArea
-            y1={bpsToPrice(-PEG_BAND_BPS.stress)}
-            y2={bpsToPrice(-PEG_BAND_BPS.drift)}
-            fill={PEG_BAND_HEX.stress}
-            fillOpacity={0.07}
-            ifOverflow="hidden"
-            strokeOpacity={0}
-          />
-          <ReferenceArea
-            y1={bpsToPrice(PEG_BAND_BPS.stress)}
-            y2={yAxis.domain[1]}
-            fill={PEG_BAND_HEX.depeg}
-            fillOpacity={0.08}
-            ifOverflow="hidden"
-            strokeOpacity={0}
-          />
-          <ReferenceArea
-            y1={yAxis.domain[0]}
-            y2={bpsToPrice(-PEG_BAND_BPS.stress)}
-            fill={PEG_BAND_HEX.depeg}
-            fillOpacity={0.08}
-            ifOverflow="hidden"
-            strokeOpacity={0}
-          />
-
-          {/* $1 peg reference line — solid, mono-weight, with inline label */}
-          <ReferenceLine
-            y={1}
-            stroke="var(--color-foreground)"
-            strokeOpacity={0.45}
-            strokeWidth={1}
-            label={{
-              value: "$1.000",
-              position: "insideLeft",
-              fill: "var(--color-muted-foreground)",
-              fontSize: 10,
-              fontFamily: "var(--font-mono, monospace)",
-              offset: 6,
-            }}
-          />
-
-          <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
-
-          {/* Raw line: full opacity when not smoothing, dimmed when smoothed overlay is drawn */}
-          <Line
-            type="monotone"
-            dataKey="price"
-            stroke={CHART_BLUE}
-            strokeWidth={showSmoothed ? 1 : 1.75}
-            strokeOpacity={showSmoothed ? 0.35 : 1}
-            dot={false}
-            isAnimationActive={false}
-          />
-          {showSmoothed ? (
-            <Line
-              type="monotone"
-              dataKey="priceSmoothed"
-              stroke={CHART_BLUE}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-              connectNulls
-            />
-          ) : null}
-
-          {readout ? (
-            <ReferenceDot
-              x={readout.ts}
-              y={readout.price}
-              r={3.5}
-              fill={readout.bandSvgColor}
-              stroke="#0b1220"
-              strokeWidth={1.5}
-              ifOverflow="extendDomain"
-            />
-          ) : null}
-
-          <ChartAnnotationLines annotations={annotations} numbered />
-        </LineChart>
-      ) : (
-        <ChartSkeleton className="h-full w-full" />
-      )}
-      </div>
-      {sync ? (
-        <ChartCrosshairOverlay
-          hoveredTs={sync.hoveredTs}
-          domain={xDomain}
-          plotInsetLeft={plotInsetLeft}
-          plotInsetRight={plotInsetRight}
-          plotInsetTop={plotInsetTop}
-          plotInsetBottom={plotInsetBottom}
-        />
-      ) : null}
-      {showDensityStrip && xDomain ? (
+  const chartBody =
+    visibleData.length > 0 ? (
+      <div className={cn("relative", chartHeightClass)}>
         <div
-          aria-label="Annotation event density by quarter"
-          className="absolute"
-          style={{
-            left: plotInsetLeft,
-            bottom: densityStripBottomPad,
-            width: plotAreaWidth,
-            height: densityStripHeight,
-          }}
+          ref={chartContainerRef}
+          className="h-full"
+          role="figure"
+          aria-label={`Peg deviation chart showing ${visibleData.length} data points`}
         >
-          <AnnotationDensityStrip
-            annotations={fullRangeAnnotations}
-            domain={xDomain}
-            width={plotAreaWidth}
-            height={densityStripHeight}
-          />
+          {isChartReady ? (
+            <LineChart
+              width={width}
+              height={height}
+              data={smoothedData}
+              margin={margin}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+            >
+              <TimeGrid />
+              <TimeXAxis
+                dataKey="ts"
+                ticks={xTicks}
+                interval={range === "all" ? 0 : "preserveStartEnd"}
+                tick={<MarketDataXTick range={range} />}
+                height={range === "all" ? 44 : 30}
+              />
+              <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
+
+              {/* Peg severity bands — calm in-band core, warning outside. ifOverflow="hidden" clips
+              bands that extend past the visible domain so they don't push the axis. */}
+              <ReferenceArea
+                y1={bpsToPrice(PEG_BAND_BPS.tight)}
+                y2={bpsToPrice(PEG_BAND_BPS.drift)}
+                fill={PEG_BAND_HEX.drift}
+                fillOpacity={0.06}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+              />
+              <ReferenceArea
+                y1={bpsToPrice(-PEG_BAND_BPS.drift)}
+                y2={bpsToPrice(-PEG_BAND_BPS.tight)}
+                fill={PEG_BAND_HEX.drift}
+                fillOpacity={0.06}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+              />
+              <ReferenceArea
+                y1={bpsToPrice(PEG_BAND_BPS.drift)}
+                y2={bpsToPrice(PEG_BAND_BPS.stress)}
+                fill={PEG_BAND_HEX.stress}
+                fillOpacity={0.07}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+              />
+              <ReferenceArea
+                y1={bpsToPrice(-PEG_BAND_BPS.stress)}
+                y2={bpsToPrice(-PEG_BAND_BPS.drift)}
+                fill={PEG_BAND_HEX.stress}
+                fillOpacity={0.07}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+              />
+              <ReferenceArea
+                y1={bpsToPrice(PEG_BAND_BPS.stress)}
+                y2={yAxis.domain[1]}
+                fill={PEG_BAND_HEX.depeg}
+                fillOpacity={0.08}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+              />
+              <ReferenceArea
+                y1={yAxis.domain[0]}
+                y2={bpsToPrice(-PEG_BAND_BPS.stress)}
+                fill={PEG_BAND_HEX.depeg}
+                fillOpacity={0.08}
+                ifOverflow="hidden"
+                strokeOpacity={0}
+              />
+
+              {/* $1 peg reference line — solid, mono-weight, with inline label */}
+              <ReferenceLine
+                y={1}
+                stroke="var(--color-foreground)"
+                strokeOpacity={0.45}
+                strokeWidth={1}
+                label={{
+                  value: "$1.000",
+                  position: "insideLeft",
+                  fill: "var(--color-muted-foreground)",
+                  fontSize: 10,
+                  fontFamily: "var(--font-mono, monospace)",
+                  offset: 6,
+                }}
+              />
+
+              <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
+
+              {/* Raw line: full opacity when not smoothing, dimmed when smoothed overlay is drawn */}
+              <Line
+                type="monotone"
+                dataKey="price"
+                stroke={CHART_BLUE}
+                strokeWidth={showSmoothed ? 1 : 1.75}
+                strokeOpacity={showSmoothed ? 0.35 : 1}
+                dot={false}
+                isAnimationActive={false}
+              />
+              {showSmoothed ? (
+                <Line
+                  type="monotone"
+                  dataKey="priceSmoothed"
+                  stroke={CHART_BLUE}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls
+                />
+              ) : null}
+
+              {readout ? (
+                <ReferenceDot
+                  x={readout.ts}
+                  y={readout.price}
+                  r={3.5}
+                  fill={readout.bandSvgColor}
+                  stroke="#0b1220"
+                  strokeWidth={1.5}
+                  ifOverflow="extendDomain"
+                />
+              ) : null}
+
+              <ChartAnnotationLines annotations={annotations} numbered />
+            </LineChart>
+          ) : (
+            <ChartSkeleton className="h-full w-full" />
+          )}
         </div>
-      ) : null}
-    </div>
-  ) : (
-    <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
-      No price history available
-    </div>
-  );
+        {sync ? (
+          <ChartCrosshairOverlay
+            hoveredTs={sync.hoveredTs}
+            domain={xDomain}
+            plotInsetLeft={plotInsetLeft}
+            plotInsetRight={plotInsetRight}
+            plotInsetTop={plotInsetTop}
+            plotInsetBottom={plotInsetBottom}
+          />
+        ) : null}
+        {showDensityStrip && xDomain ? (
+          <div
+            aria-label="Annotation event density by quarter"
+            className="absolute"
+            style={{
+              left: plotInsetLeft,
+              bottom: densityStripBottomPad,
+              width: plotAreaWidth,
+              height: densityStripHeight,
+            }}
+          >
+            <AnnotationDensityStrip
+              annotations={fullRangeAnnotations}
+              domain={xDomain}
+              width={plotAreaWidth}
+              height={densityStripHeight}
+            />
+          </div>
+        ) : null}
+      </div>
+    ) : (
+      <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
+        No price history available
+      </div>
+    );
 
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
@@ -470,9 +451,7 @@ export function PegDeviationChart({
           </div>
         ) : null}
       </div>
-      {controlledRange ? null : (
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
-      )}
+      {controlledRange ? null : <TimeRangeButtons options={options} value={range} onChange={setRange} />}
     </div>
   );
 
@@ -482,12 +461,6 @@ export function PegDeviationChart({
     ) : null;
 
   return (
-    <ChartCardShell
-      embedded={embedded}
-      className={cardClassName}
-      header={header}
-      body={chartBody}
-      legend={legend}
-    />
+    <ChartCardShell embedded={embedded} className={cardClassName} header={header} body={chartBody} legend={legend} />
   );
 }
