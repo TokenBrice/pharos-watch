@@ -1,12 +1,12 @@
 import type { ExclusionReason, SelectorProfile, WeightKey } from "./types";
 
-export const SELECTOR_PROFILE_LABELS: Readonly<Record<SelectorProfile, string>> = {
+const SELECTOR_PROFILE_LABELS: Readonly<Record<SelectorProfile, string>> = {
   treasury: "Treasury",
   yield: "Yield",
   trading: "Active Trading",
 };
 
-export const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>> = {
+const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>> = {
   "below-supply-floor": "supply floor",
   "active-depeg": "active depeg",
   "safety-grade-floor": "safety grade",
@@ -57,7 +57,7 @@ export const SELECTOR_COMPONENT_PROSE_LABELS: Readonly<Record<WeightKey, string>
   liquidityDiversification: "liquidity diversification",
 };
 
-export const SELECTOR_COMPONENT_SCORE_LABELS: Readonly<Record<WeightKey, string>> = {
+const SELECTOR_COMPONENT_SCORE_LABELS: Readonly<Record<WeightKey, string>> = {
   safetyOverall: "Safety Score",
   resilience: "Resilience",
   dependencyRisk: "Dependency risk",
@@ -77,7 +77,7 @@ export const SELECTOR_COMPONENT_SCORE_LABELS: Readonly<Record<WeightKey, string>
   liquidityDiversification: "Liquidity diversification",
 };
 
-export const SELECTOR_COMPONENT_READING_LABELS: Readonly<Record<WeightKey, string>> = {
+const SELECTOR_COMPONENT_READING_LABELS: Readonly<Record<WeightKey, string>> = {
   safetyOverall: "Safety Score",
   resilience: "resilience",
   dependencyRisk: "dependency risk",
@@ -97,7 +97,7 @@ export const SELECTOR_COMPONENT_READING_LABELS: Readonly<Record<WeightKey, strin
   liquidityDiversification: "liquidity diversification",
 };
 
-export const SELECTOR_COMPONENT_LOWEST_SUB_DIMENSION_LABELS: Readonly<Record<WeightKey, string>> = {
+const SELECTOR_COMPONENT_LOWEST_SUB_DIMENSION_LABELS: Readonly<Record<WeightKey, string>> = {
   safetyOverall: "Safety",
   resilience: "resilience",
   dependencyRisk: "dependency risk",

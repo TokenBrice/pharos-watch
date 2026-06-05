@@ -10,7 +10,7 @@ type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 
 export const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 export const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
-export const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
 
 export type ContractRawCaller = (data: string) => Promise<string | null>;
 
