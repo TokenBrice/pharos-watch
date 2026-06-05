@@ -5,6 +5,7 @@ import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/c
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  createBreakdownCounter,
   createStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
@@ -89,7 +90,7 @@ function formatBlacklist(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   const unavailable = get(DATA_UNAVAILABLE_KIND);
   const items: CoverageBreakdownItem[] = [
     breakdownItem("live", "live", get("live")),

@@ -7,6 +7,7 @@ import type {
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
@@ -82,7 +83,7 @@ function formatFlows(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   return [
     breakdownItem("full", "full", get("full")),
     breakdownItem("partial-history", "partial", get("partial-history")),

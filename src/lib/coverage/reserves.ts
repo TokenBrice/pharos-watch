@@ -9,6 +9,7 @@ import type {
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  createBreakdownCounter,
   createStatus,
   defineCoverageFeature,
   type CoverageLegendItem,
@@ -120,7 +121,7 @@ function formatReserves(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   return [
     breakdownItem("live", "score-grade", get("live")),
     breakdownItem("live-configured", "configured", get("live-configured")),

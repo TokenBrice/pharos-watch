@@ -2,6 +2,7 @@ import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-clie
 import type { CoverageBreakdownItem, CoverageRow, CoverageStatus } from "@/lib/coverage-types";
 import {
   breakdownItem,
+  createBreakdownCounter,
   createStatus,
   defineCoverageFeature,
   type CoverageLegendItem,
@@ -30,7 +31,7 @@ function formatMintAuthority(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   return [
     breakdownItem("no-privileged-mint", "no privileged", get("no-privileged-mint")),
     breakdownItem("governed-mint", "governed", get("governed-mint")),

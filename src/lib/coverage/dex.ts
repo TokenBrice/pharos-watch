@@ -7,6 +7,7 @@ import type {
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  createBreakdownCounter,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
@@ -81,7 +82,7 @@ function formatDex(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   return [
     breakdownItem("primary", "primary", get("primary")),
     breakdownItem("mixed", "mixed", get("mixed")),

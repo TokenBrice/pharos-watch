@@ -7,6 +7,7 @@ import type {
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  createBreakdownCounter,
   createStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
@@ -68,7 +69,7 @@ function formatPrice(
   rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   const items: CoverageBreakdownItem[] = [
     breakdownItem("tracked", "tracked", get("tracked")),
     breakdownItem("price-only", "price-only", get("price-only")),

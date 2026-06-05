@@ -78,6 +78,10 @@ export function breakdownItem(key: string, label: string, count: number): Covera
   return { key, label, count };
 }
 
+export function createBreakdownCounter(breakdownMap: ReadonlyMap<string, number>): (kind: string) => number {
+  return (kind: string) => breakdownMap.get(kind) ?? 0;
+}
+
 /**
  * Shared "data-unavailable" status kind. Every feature can emit this when its
  * upstream feed has not loaded yet.

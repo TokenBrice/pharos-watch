@@ -5,6 +5,7 @@ import { REDEMPTION_MODELED_ROUTE_DISPLAY, REDEMPTION_ROUTE_FAMILY_DISPLAY } fro
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  createBreakdownCounter,
   createPresetStatus,
   createStatus,
   DATA_UNAVAILABLE_KIND,
@@ -124,7 +125,7 @@ function formatRedemption(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
-  const get = (kind: string) => breakdownMap.get(kind) ?? 0;
+  const get = createBreakdownCounter(breakdownMap);
   return [
     breakdownItem("modeled-heuristic", "heuristic", get("modeled-heuristic")),
     breakdownItem("resolved-unscored", "resolved", get("resolved-unscored")),
