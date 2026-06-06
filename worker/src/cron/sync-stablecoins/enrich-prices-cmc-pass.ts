@@ -57,6 +57,15 @@ export async function runCmcPass(
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+  const recordFailureAndReturn = async (): Promise<EnrichPassResult> => {
+    await recordProviderOutcomeSafe({
+      db,
+      circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+      attempted: 1,
+      successful: 0,
+    });
+    return { resolved, failures: [], diagnostics };
+  };
 
   const missingAfterPass1b = collectMissingPriceCandidates(assets);
   if (missingAfterPass1b.length === 0) {
@@ -137,13 +146,7 @@ export async function runCmcPass(
         } catch (error) {
           await cancelResponseBodyQuietly(cmcRes);
           diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, error));
-          await recordProviderOutcomeSafe({
-            db,
-            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
-            attempted: 1,
-            successful: 0,
-          });
-          return { resolved, failures: [], diagnostics };
+          return recordFailureAndReturn();
         }
         const parsed = CmcCategoryResponseSchema.safeParse(cmcJson);
         if (!parsed.success) {
@@ -153,13 +156,7 @@ export async function runCmcPass(
             errorMessage: "Expected CoinMarketCap category payload with data.num_tokens and quote timestamps",
             rejectionReasonCounts: { "invalid-shape": 1 },
           });
-          await recordProviderOutcomeSafe({
-            db,
-            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
-            attempted: 1,
-            successful: 0,
-          });
-          return { resolved, failures: [], diagnostics };
+          return recordFailureAndReturn();
         }
         const cmcData = parsed.data;
         if (
@@ -173,13 +170,7 @@ export async function runCmcPass(
             errorMessage: `CoinMarketCap category response may be truncated (${cmcData.data.coins.length}/${cmcData.data.num_tokens})`,
             rejectionReasonCounts: { "invalid-shape": 1 },
           });
-          await recordProviderOutcomeSafe({
-            db,
-            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
-            attempted: 1,
-            successful: 0,
-          });
-          return { resolved, failures: [], diagnostics };
+          return recordFailureAndReturn();
         }
         diagnostic.responseRowCount = cmcData.data.coins.length;
         const cmcBySymbol = new Map<string, CmcFallbackQuote>();

@@ -1,7 +1,7 @@
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { recordOutcome } from "../../lib/circuit-breaker";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
-import { buildStablecoinsUnwrittenCacheResult } from "./metadata";
+import { buildBlockedInvalidPayloadResult, buildStablecoinsUnwrittenCacheResult } from "./metadata";
 import { reportStablecoinsStage } from "./runtime";
 import {
   commitReplayPriceCache,
@@ -12,7 +12,7 @@ import {
   isAbortResult,
   runDepegPipeline,
 } from "./post-enrichment";
-import { buildSyncMetadata, type CronResult } from "./shared";
+import type { CronResult } from "./shared";
 import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import type { PeggedAsset } from "./enrich-prices";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
@@ -61,26 +61,14 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     validationContext: "main",
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
-  }, (stablecoinsCacheAgeSec) => ({
-    status: "degraded",
+  }, (stablecoinsCacheAgeSec) => buildBlockedInvalidPayloadResult({
+    rowsRead: input.rawAssetCount,
+    rowsDropped: input.droppedMalformedAssets,
+    sourceCoverage: { defillama: true },
+    fallbackMode: null,
+    validationContext: "main",
+    stablecoinsCacheAgeSec,
     itemCount: input.assets.length,
-    metadata: buildSyncMetadata({
-      rowsRead: input.rawAssetCount,
-      rowsWritten: 0,
-      rowsDropped: input.droppedMalformedAssets,
-      sourceCoverage: { defillama: true },
-      fallbackMode: null,
-      validationFailures: 1,
-      validationContext: "main",
-      stablecoinsCacheAgeSec,
-      cacheWriteMode: "blocked-invalid-payload",
-    }, {
-      cacheWriteMode: "blocked-invalid-payload",
-      capabilities: {
-        stablecoinsCache: false,
-        depegPipeline: false,
-      },
-    }),
   }));
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) {

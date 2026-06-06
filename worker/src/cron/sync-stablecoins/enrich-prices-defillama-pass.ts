@@ -47,6 +47,11 @@ interface DefiLlamaContractQuote extends FallbackPriceQuote {
   confidence: number;
 }
 
+interface DefiLlamaContractLookup {
+  index: number;
+  coinId: string;
+}
+
 function parseDefiLlamaPriceMap(json: unknown): Map<string, DefiLlamaContractQuote> {
   const prices = new Map<string, DefiLlamaContractQuote>();
   const { coins } = DLPriceResponseSchema.parse(json);
@@ -184,6 +189,33 @@ function buildPrimaryContractCoinIds(asset: PeggedAsset): string[] {
   return [addressToCoinId(rawAddress)];
 }
 
+function applyDefiLlamaContractPrices(
+  assets: PeggedAsset[],
+  lookups: readonly DefiLlamaContractLookup[],
+  prices: Map<string, DefiLlamaContractQuote>,
+  fxRates: Record<string, number> | undefined,
+): number {
+  let resolvedCount = 0;
+  const resolved = new Set<number>();
+  for (const lookup of lookups) {
+    if (resolved.has(lookup.index)) continue;
+    const quote = prices.get(lookup.coinId);
+    if (quote != null && isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)) {
+      applyResolvedPrice(
+        assets[lookup.index],
+        quote.price,
+        "defillama-contract",
+        "single-source",
+        quote.observedAt,
+        quote.observedAtMode,
+      );
+      resolvedCount += 1;
+      resolved.add(lookup.index);
+    }
+  }
+  return resolvedCount;
+}
+
 export async function runDlContractPasses(
   assets: PeggedAsset[],
   fxRates: Record<string, number> | undefined,
@@ -195,7 +227,7 @@ export async function runDlContractPasses(
   const failures: string[] = [];
 
   try {
-    const withAddress: { index: number; coinId: string }[] = [];
+    const withAddress: DefiLlamaContractLookup[] = [];
     for (let index = 0; index < assets.length; index += 1) {
       const asset = assets[index];
       if (!hasMissingPrice(asset)) continue;
@@ -213,29 +245,13 @@ export async function runDlContractPasses(
         db,
       );
       if (pass1Prices) {
-        const resolved = new Set<number>();
-        for (const lookup of withAddress) {
-          if (resolved.has(lookup.index)) continue;
-          const quote = pass1Prices.get(lookup.coinId);
-          if (quote != null && isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)) {
-            applyResolvedPrice(
-              assets[lookup.index],
-              quote.price,
-              "defillama-contract",
-              "single-source",
-              quote.observedAt,
-              quote.observedAtMode,
-            );
-            pass1Count += 1;
-            resolved.add(lookup.index);
-          }
-        }
+        pass1Count += applyDefiLlamaContractPrices(assets, withAddress, pass1Prices, fxRates);
       }
     }
 
     const stillMissingAddr = withAddress.filter((lookup) => hasMissingPrice(assets[lookup.index]));
     if (stillMissingAddr.length > 0) {
-      const altLookups: { index: number; coinId: string }[] = [];
+      const altLookups: DefiLlamaContractLookup[] = [];
       for (const lookup of stillMissingAddr) {
         const asset = assets[lookup.index];
         const primaryCoinIds = new Set(buildPrimaryContractCoinIds(asset));
@@ -254,23 +270,7 @@ export async function runDlContractPasses(
           db,
         );
         if (pass1bPrices) {
-          const resolved = new Set<number>();
-          for (const lookup of altLookups) {
-            if (resolved.has(lookup.index)) continue;
-            const quote = pass1bPrices.get(lookup.coinId);
-            if (quote != null && isDefiLlamaContractQuoteUsable(assets[lookup.index], quote, fxRates)) {
-              applyResolvedPrice(
-                assets[lookup.index],
-                quote.price,
-                "defillama-contract",
-                "single-source",
-                quote.observedAt,
-                quote.observedAtMode,
-              );
-              pass1bCount += 1;
-              resolved.add(lookup.index);
-            }
-          }
+          pass1bCount += applyDefiLlamaContractPrices(assets, altLookups, pass1bPrices, fxRates);
         }
       }
     }

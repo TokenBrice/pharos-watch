@@ -1,7 +1,7 @@
 import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import { commitReplayPriceCache, validateAndWriteStablecoinsCache } from "./cache-publication";
 import { isAbortResult, runDepegPipeline } from "./post-enrichment";
-import { buildSyncMetadata } from "./shared";
+import { buildBlockedInvalidPayloadResult, buildSkippedNewerCacheResult } from "./metadata";
 import { reportStablecoinsStage } from "./runtime";
 import type { CronResult } from "./shared";
 import type {
@@ -33,53 +33,26 @@ export async function publishFallbackStablecoinsCache(
     validationContext: "fallback",
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
-  }, (stablecoinsCacheAgeSec) => ({
-    status: "degraded",
+  }, (stablecoinsCacheAgeSec) => buildBlockedInvalidPayloadResult({
+    rowsRead: input.assets.length,
+    rowsDropped: 0,
+    sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
+    fallbackMode: "coingecko-supply-fallback",
+    validationContext: "fallback",
+    stablecoinsCacheAgeSec,
     itemCount: input.assets.length,
-    metadata: buildSyncMetadata({
-      rowsRead: input.assets.length,
-      rowsWritten: 0,
-      rowsDropped: 0,
-      sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
-      fallbackMode: "coingecko-supply-fallback",
-      validationFailures: 1,
-      validationContext: "fallback",
-      stablecoinsCacheAgeSec,
-      cacheWriteMode: "blocked-invalid-payload",
-    }, {
-      cacheWriteMode: "blocked-invalid-payload",
-      capabilities: {
-        stablecoinsCache: false,
-        depegPipeline: false,
-      },
-    }),
   }));
   if (isAbortResult(cacheResult)) return cacheResult;
   if (!cacheResult.written) {
     if (cacheResult.skippedBecauseNewer) {
-      return {
-        itemCount: 0,
-        metadata: buildSyncMetadata({
-          rowsRead: input.assets.length,
-          rowsWritten: 0,
-          rowsDropped: 0,
-          sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
-          fallbackMode: "coingecko-supply-fallback",
-          validationFailures: 0,
-          upstreamFetchOk: false,
-          payloadAccepted: true,
-          cacheWriteSucceeded: false,
-          depegPipelineSucceeded: false,
-          cacheKey: cacheResult.cacheKey,
-          syncStartSec: cacheResult.syncStartSec,
-        }, {
-          cacheWriteMode: "skipped-newer",
-          capabilities: {
-            stablecoinsCache: true,
-            depegPipeline: false,
-          },
-        }),
-      };
+      return buildSkippedNewerCacheResult({
+        rowsRead: input.assets.length,
+        rowsDropped: 0,
+        sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
+        fallbackMode: "coingecko-supply-fallback",
+        cacheKey: cacheResult.cacheKey,
+        syncStartSec: cacheResult.syncStartSec,
+      });
     }
     return cacheResult.blockedResult!;
   }

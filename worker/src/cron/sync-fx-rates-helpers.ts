@@ -449,6 +449,19 @@ export class FxSyncRunState {
 
   applyRealtimeOverlayRates(rates: Map<string, number>): number {
     let applied = 0;
+    const applyRealtimeRate = (pegKey: string, realtimeRate: number) => {
+      this.usableRates[pegKey] = realtimeRate;
+      applyRealtimeOverlaySourceMetadata(
+        pegKey,
+        this.syncStartSec,
+        this.syncStartSec,
+        this.sourceUpdatedAtByPeg,
+        this.sourceModeByPeg,
+        this.sourceCadenceByPeg,
+        this.sourceDateByPeg,
+      );
+      applied++;
+    };
 
     for (const [pegKey, realtimeRate] of rates) {
       const currentRate = this.usableRates[pegKey];
@@ -456,17 +469,7 @@ export class FxSyncRunState {
         const delta = Math.abs(realtimeRate - currentRate) / currentRate;
         if (delta <= 0.05) {
           if (this.validateRate(pegKey, realtimeRate, this.prevRates[pegKey])) {
-            this.usableRates[pegKey] = realtimeRate;
-            applyRealtimeOverlaySourceMetadata(
-              pegKey,
-              this.syncStartSec,
-              this.syncStartSec,
-              this.sourceUpdatedAtByPeg,
-              this.sourceModeByPeg,
-              this.sourceCadenceByPeg,
-              this.sourceDateByPeg,
-            );
-            applied++;
+            applyRealtimeRate(pegKey, realtimeRate);
           }
         } else {
           this.recordCronEvent({
@@ -482,17 +485,7 @@ export class FxSyncRunState {
           });
         }
       } else if (this.validateRate(pegKey, realtimeRate, this.prevRates[pegKey])) {
-        this.usableRates[pegKey] = realtimeRate;
-        applyRealtimeOverlaySourceMetadata(
-          pegKey,
-          this.syncStartSec,
-          this.syncStartSec,
-          this.sourceUpdatedAtByPeg,
-          this.sourceModeByPeg,
-          this.sourceCadenceByPeg,
-          this.sourceDateByPeg,
-        );
-        applied++;
+        applyRealtimeRate(pegKey, realtimeRate);
       }
     }
 

@@ -83,6 +83,13 @@ interface PricingSourceAuditReport {
   providerFailuresBySource: Record<string, number>;
 }
 
+interface CachePublicationMetadataBase {
+  rowsRead: number;
+  rowsDropped: number;
+  sourceCoverage: Record<string, unknown>;
+  fallbackMode: string | null;
+}
+
 function hasIndependentHardSource(asset: PeggedAsset): boolean {
   const sources = asset.agreeSources && asset.agreeSources.length > 0
     ? asset.agreeSources
@@ -222,29 +229,54 @@ export function buildStablecoinsSyncResult(input: {
   };
 }
 
-export function buildStablecoinsUnwrittenCacheResult(input: {
-  cacheResult: CacheValidationResult;
-  rawAssetCount: number;
-  droppedMalformedAssets: number;
+export function buildBlockedInvalidPayloadResult(input: CachePublicationMetadataBase & {
+  itemCount: number;
+  validationContext: "main" | "fallback";
+  stablecoinsCacheAgeSec: number | null;
 }): CronResult {
-  if (!input.cacheResult.skippedBecauseNewer) {
-    return input.cacheResult.blockedResult!;
-  }
+  return {
+    status: "degraded",
+    itemCount: input.itemCount,
+    metadata: buildSyncMetadata({
+      rowsRead: input.rowsRead,
+      rowsWritten: 0,
+      rowsDropped: input.rowsDropped,
+      sourceCoverage: input.sourceCoverage,
+      fallbackMode: input.fallbackMode,
+      validationFailures: 1,
+      validationContext: input.validationContext,
+      stablecoinsCacheAgeSec: input.stablecoinsCacheAgeSec,
+      cacheWriteMode: "blocked-invalid-payload",
+    }, {
+      cacheWriteMode: "blocked-invalid-payload",
+      capabilities: {
+        stablecoinsCache: false,
+        depegPipeline: false,
+      },
+    }),
+  };
+}
+
+export function buildSkippedNewerCacheResult(input: CachePublicationMetadataBase & {
+  cacheKey: string;
+  syncStartSec: number;
+  upstreamFetchOk?: boolean;
+}): CronResult {
   return {
     itemCount: 0,
     metadata: buildSyncMetadata({
-      rowsRead: input.rawAssetCount,
+      rowsRead: input.rowsRead,
       rowsWritten: 0,
-      rowsDropped: input.droppedMalformedAssets,
-      sourceCoverage: { defillama: true },
-      fallbackMode: null,
+      rowsDropped: input.rowsDropped,
+      sourceCoverage: input.sourceCoverage,
+      fallbackMode: input.fallbackMode,
       validationFailures: 0,
-      upstreamFetchOk: true,
+      upstreamFetchOk: input.upstreamFetchOk ?? false,
       payloadAccepted: true,
       cacheWriteSucceeded: false,
       depegPipelineSucceeded: false,
-      cacheKey: input.cacheResult.cacheKey,
-      syncStartSec: input.cacheResult.syncStartSec,
+      cacheKey: input.cacheKey,
+      syncStartSec: input.syncStartSec,
     }, {
       cacheWriteMode: "skipped-newer",
       capabilities: {
@@ -253,4 +285,23 @@ export function buildStablecoinsUnwrittenCacheResult(input: {
       },
     }),
   };
+}
+
+export function buildStablecoinsUnwrittenCacheResult(input: {
+  cacheResult: CacheValidationResult;
+  rawAssetCount: number;
+  droppedMalformedAssets: number;
+}): CronResult {
+  if (!input.cacheResult.skippedBecauseNewer) {
+    return input.cacheResult.blockedResult!;
+  }
+  return buildSkippedNewerCacheResult({
+    rowsRead: input.rawAssetCount,
+    rowsDropped: input.droppedMalformedAssets,
+    sourceCoverage: { defillama: true },
+    fallbackMode: null,
+    cacheKey: input.cacheResult.cacheKey,
+    syncStartSec: input.cacheResult.syncStartSec,
+    upstreamFetchOk: true,
+  });
 }
