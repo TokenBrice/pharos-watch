@@ -357,10 +357,6 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
 
   if (!Number.isFinite(pegReference) || pegReference <= 0) {
     if (asset && meta && !refreshedPegReferenceIsAuthoritative) {
-      console.warn(
-        `[depeg-confirm] Skipped pending mutation for ${row.symbol}: ` +
-        `thin ${meta.flags.pegCurrency} peg reference lacks FX fallback and stored peg_reference=${row.peg_reference}`,
-      );
       return { kind: "wait", reason: "peg-reference-unavailable" };
     }
     console.warn(`[depeg-confirm] Deleted pending for ${row.symbol}: invalid peg_reference=${row.peg_reference}`);

@@ -89,10 +89,6 @@ export async function fetchBlacklistAssetPriceFromCache(
 
   const ageSec = nowSec - row.updated_at;
   if (ageSec >= BLACKLIST_PRICE_CACHE_TTL_SEC) {
-    console.warn(
-      `[sync-blacklist] Ignoring stale price_cache entry for ${assetId}: ` +
-      `${ageSec}s old (max ${BLACKLIST_PRICE_CACHE_TTL_SEC}s)`,
-    );
     return null;
   }
 
