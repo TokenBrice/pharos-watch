@@ -1,10 +1,19 @@
 # Depeg Duration Resolver Methodology — Version Timeline
 
-Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.0`.
+Version timeline for the Depeg Duration Resolver (DDR) methodology. Covers DDR `v1.0` through `v3.01`.
 
 Versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. The canonical version source is `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`); the public changelog route is `/methodology/depeg-resolver-changelog/`.
 
 ---
+
+## v3.01 — Live Context Input Wiring (June 6, 2026)
+
+Wired Stage 1's documented live-context inputs into the Worker DDR precompute path.
+
+- **DEWS sub-signal mapping.** Fresh `stress_signals.signals_json` rows now derive the bank-run input from the supply sub-signal and the blacklist-surge input from the blacklist sub-signal, enabling K5 and K3 to fire from the documented DEWS evidence.
+- **DEX TVL trend mapping.** DDR now reads current `dex_liquidity.total_tvl_usd` plus recent `dex_liquidity_history` rows and uses the same 7-day trend baseline selector as `/api/dex-liquidity` before evaluating K5 exit-collapse severity.
+- **Safety Score anchor mapping.** DDR now hydrates the latest `safety_grade_history` row so R5 proven-mean-reversion anchors and public related context use the live report-card score and grade.
+- **Context health semantics.** Required context-source query failures degrade the DDR run instead of scoring with silently absent live inputs.
 
 ## v3.0 — Forecast Readiness Contract (June 4, 2026)
 

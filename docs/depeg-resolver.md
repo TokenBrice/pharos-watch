@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.0`
+- **Current methodology version:** `v3.01`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`)
 - **Version timeline:** [depeg-resolver-timeline.md](./depeg-resolver-timeline.md)
@@ -73,6 +73,8 @@ Stage 1 combines **what the coin *is*** (structural fragility — can supply be 
 **Structural fragility** (static registry plus slow scores): `mintAuthority` posture / path / confidence, `mechanismArchetype`, governance flag, collateral quality, custody model, deployment model, reserve risk, blacklistability, dependencies, redemption capacity and route family, and the Report Card overall score as a coarse prior.
 
 **Event fingerprint** (event row plus live and reconstructed signals): depth bucket from `peak_deviation_bps`; direction; speed from start-to-peak timing; supply behavior (Δ7d / Δ30d from daily supply history plus mint/burn net flow into the break — the supply-weaponization tell); live DEWS band and which sub-signals fire; liquidity and exit signals; concurrent blacklist surge; and the orphan-close flag from related closed events.
+
+Runtime DDR context hydrates those live fields from `stress_signals.signals_json` (DEWS supply and blacklist sub-signals), `dex_liquidity` plus `dex_liquidity_history` (current liquidity score and 7-day TVL change using the same trend baseline selector as `/api/dex-liquidity`), `redemption_backstop`, and the latest `safety_grade_history` row. If a required context-source query fails, the writer publishes DDR as degraded rather than scoring with silently absent live inputs.
 
 ### Kill signals (terminal pressure)
 

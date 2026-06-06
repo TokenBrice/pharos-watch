@@ -5,10 +5,16 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
+import {
+  getDexLiquidityTrendTolerances,
+  selectTrendBaseline,
+  type DexHistoryRow,
+} from "../../api/dex-liquidity-response";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
+  DAY,
   HISTORICAL_ROW_CAP,
   TRAINING_WINDOW_SEC,
 } from "./constants";
@@ -27,9 +33,11 @@ export interface DdrLoadedContext {
   incidents: DdrIncident[];
   quarantined: Set<string>;
   supplyByCoin: Map<string, { date: number; usd: number }[]>;
-  dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; computed_at: number }>;
-  liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; updated_at: number }>;
+  dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>;
+  liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; updated_at: number }>;
+  liqTvlChange7dByCoin: Map<string, number>;
   redemptionByCoin: Map<string, { stablecoin_id: string; immediate_capacity_ratio: number | null; route_family: string | null; updated_at: number }>;
+  safetyByCoin: Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>;
   lineage: DdrLineage;
 }
 
@@ -207,23 +215,55 @@ export async function loadDdrContext(
 
   const dewsResult = await queryRows("stress_signals", () => db
     .prepare(
-      `SELECT s.stablecoin_id, s.score, s.band, s.computed_at FROM stress_signals s ` +
+      `SELECT s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at FROM stress_signals s ` +
         `JOIN (SELECT stablecoin_id, MAX(computed_at) mc FROM stress_signals ` +
         `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) GROUP BY stablecoin_id) m ` +
         `ON s.stablecoin_id = m.stablecoin_id AND s.computed_at = m.mc`,
     )
     .bind(...activeCoinIds)
-    .all<{ stablecoin_id: string; score: number; band: string; computed_at: number }>());
+    .all<{ stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>());
   const dewsByCoin = new Map(dewsResult.rows.map((d) => [d.stablecoin_id, d]));
 
   const liqResult = await queryRows("dex_liquidity", () => db
     .prepare(
-      `SELECT stablecoin_id, liquidity_score, concentration_hhi, updated_at FROM dex_liquidity ` +
+      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, updated_at FROM dex_liquidity ` +
         `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)})`,
     )
     .bind(...activeCoinIds)
-    .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; updated_at: number }>());
+    .all<{
+      stablecoin_id: string;
+      liquidity_score: number | null;
+      concentration_hhi: number | null;
+      total_tvl_usd: number | null;
+      updated_at: number;
+    }>());
   const liqByCoin = new Map(liqResult.rows.map((l) => [l.stablecoin_id, l]));
+
+  const liqHistResult = await queryRows("dex_liquidity_history", () => db
+    .prepare(
+      `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence ` +
+        `FROM dex_liquidity_history ` +
+        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) AND snapshot_date >= ? ` +
+        `ORDER BY stablecoin_id, snapshot_date DESC`,
+    )
+    .bind(...activeCoinIds, nowSec - 8 * DAY)
+    .all<DexHistoryRow>());
+  const liqHistoryByCoin = new Map<string, DexHistoryRow[]>();
+  for (const row of liqHistResult.rows) {
+    const rows = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
+    rows.push(row);
+    liqHistoryByCoin.set(row.stablecoin_id, rows);
+  }
+  const liqTvlChange7dByCoin = new Map<string, number>();
+  const target7d = nowSec - 7 * DAY;
+  const { week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
+  for (const row of liqResult.rows) {
+    const currentTvl = row.total_tvl_usd;
+    if (currentTvl == null || !Number.isFinite(currentTvl)) continue;
+    const baseline = selectTrendBaseline(liqHistoryByCoin.get(row.stablecoin_id) ?? [], target7d, trend7dToleranceSec);
+    if (!baseline || baseline.total_tvl_usd <= 0) continue;
+    liqTvlChange7dByCoin.set(row.stablecoin_id, ((currentTvl - baseline.total_tvl_usd) / baseline.total_tvl_usd) * 100);
+  }
 
   const redemptionResult = await queryRows("redemption_backstop", () => db
     .prepare(
@@ -239,11 +279,24 @@ export async function loadDdrContext(
     }>());
   const redemptionByCoin = new Map(redemptionResult.rows.map((r) => [r.stablecoin_id, r]));
 
+  const safetyResult = await queryRows("safety_grade_history", () => db
+    .prepare(
+      `SELECT h.stablecoin_id, h.grade, h.score, h.recorded_at FROM safety_grade_history h ` +
+        `JOIN (SELECT stablecoin_id, MAX(recorded_at) mr FROM safety_grade_history ` +
+        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) GROUP BY stablecoin_id) m ` +
+        `ON h.stablecoin_id = m.stablecoin_id AND h.recorded_at = m.mr`,
+    )
+    .bind(...activeCoinIds)
+    .all<{ stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>());
+  const safetyByCoin = new Map(safetyResult.rows.map((s) => [s.stablecoin_id, s]));
+
   const resolverHealthFailures = [
     supplyResult.error,
     dewsResult.error,
     liqResult.error,
+    liqHistResult.error,
     redemptionResult.error,
+    safetyResult.error,
   ].filter((reason): reason is string => reason != null);
   if (resolverHealthFailures.length > 0) {
     return { kind: "degraded", reason: resolverHealthFailures.join(","), dataAsOf: currentDeviation.dataAsOf };
@@ -260,7 +313,9 @@ export async function loadDdrContext(
       supplyByCoin,
       dewsByCoin,
       liqByCoin,
+      liqTvlChange7dByCoin,
       redemptionByCoin,
+      safetyByCoin,
       lineage: {
         trainingWindow: { start: windowStart, end: nowSec },
         eventCount: historical.length,
